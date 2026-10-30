@@ -1,0 +1,22 @@
+# Publishes barmark to npm via Trusted Publishing (OIDC): no tokens,
+# provenance attested. Trigger: a GitHub release, or manual dispatch.
+# npmjs.com package settings -> Trusted Publisher must name this repo
+# and this file (release.yml).
+name: release
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+permissions:
+  contents: read
+  id-token: write # OIDC for npm provenance
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+      - run: npm publish --access public --provenance
