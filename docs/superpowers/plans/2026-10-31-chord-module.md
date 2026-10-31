@@ -19,14 +19,14 @@
 - Parsers never throw on user input. They return `{ ok: false, error }`.
 - Canonical spellings use ASCII `#` and `b`. The output never contains ♯, ♭ or 𝄫.
 - The Beatles annotations have no license. Never commit them or anything derived from them. Billboard is CC0, so a derived fixture may be committed.
-- Conventional commits, each ending with the line `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
+- Conventional commits with no attribution trailer.
 
 ## Review Focus
 
 1. **Unicode input** from phones and editors (`C♯m7♭5`, `CΔ7`, `C°7`, `Cø`) is normalized, not rejected. Test in Task 3.
 2. **A root's accidental versus an alteration:** `Ab5` is the A♭ power chord, `Bb7b9` is B♭7(♭9), and `Cb9` is C♭9. Test in Task 2.
 3. **Slash ambiguity:** `C6/9` is a chord, `Cm6/9/E` is a 6/9 chord with E in the bass, and `C/E/G` is an error. Test in Task 2.
-4. **Deep accidentals in spelling:** `Cbdim7` spells its ♭♭7 as `Bbbb`, and `B#aug` spells its ♯5 as `F##`. Spelling must not wrap or collapse to an enharmonic. Test in Task 1.
+4. **Deep accidentals in spelling:** `Cbdim7` spells its ♭♭7 as `Bbbb`, and `B#aug` spells its ♯5 as `F###`. Spelling must not wrap or collapse to an enharmonic. Test in Task 1.
 5. **Near-miss input gets a suggestion, not a bare error:** `cm7` → `Cm7`, `CM7` → `Cmaj7`, `C2` → `Csus2 or C(9)`. Test in Task 3.
 
 ---
@@ -70,7 +70,7 @@
 - [ ] **Step 1: Scaffold.** Run `bun add -d typescript @biomejs/biome @types/bun`. Write `tsconfig.json` as the Global Constraints describe, and `biome.json` with `formatter.indentStyle: "tab"`. Expected: `bunx tsc` exits 0 on an empty `src/`.
 - [ ] **Step 2: Write the failing tests** in `tests/chords/intervals.test.ts`:
   - `parseInterval("b3")` → `{degree:3, alter:-1}`. `parseInterval("#11")` → `{11,1}`. `parseInterval("bb7")` → `{7,-2}`. `parseInterval("x")` → `null`. Round trip: `formatInterval(parseInterval(s)!) === s` for each of `["1","b3","3","#5","bb7","b9","#11","13"]`.
-  - `transpose("C", b3)` = `"Eb"`. `transpose("Bb", b3)` = `"Db"` (not `C#`). `transpose("F#", 3)` = `"A#"`. `transpose("Cb", bb7)` = `"Bbbb"`. `transpose("B#", #5)` = `"F##"`. `transpose("D", 9)` = `"E"`.
+  - `transpose("C", b3)` = `"Eb"`. `transpose("Bb", b3)` = `"Db"` (not `C#`). `transpose("F#", 3)` = `"A#"`. `transpose("Cb", bb7)` = `"Bbbb"`. `transpose("B#", #5)` = `"F###"`. `transpose("D", 9)` = `"E"`.
   - `intervalKey(9) === intervalKey(2)`. `intervalKey(b3) !== intervalKey(#9)`.
   - `intervalBetween("C", "F#")` → `{4,1}` (#4).
 - [ ] **Step 3: Run** `bun test tests/chords/intervals.test.ts`. Expected: FAIL, module not found.
