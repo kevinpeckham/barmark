@@ -395,7 +395,10 @@ A canonical printer writes:
 - the fewest slots per cell: `| G / D / |` prints as `| G D |`, and
   `| -- -- |` as `| -- |`. Only a slot with no attack of its own merges
   (`/`, a repeated `--`, a repeated `N.C.`); a repeated chord name stays
-  (`| G G |`), and so does `| ? ? |`
+  (`| G G |`), and so does `| ? ? |`. A group never absorbs the holds after
+  it (`| D_E_F / |` stays: merging would move the triplet), and a cell is
+  never reduced to a slot count that is uneven for its meter
+  (`time: 3/4` keeps `| G / / D / / |`)
 - note sets with octaves in ascending order
 - one blank line before each `##`, except that consecutive headings (a run
   of replays) stay together; other blank lines are the author's, with runs

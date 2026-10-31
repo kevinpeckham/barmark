@@ -38,8 +38,41 @@ export function play(text: string) {
 	return { ...r, bars, texts: bars.map(barText), all: [...doc.diagnostics, ...r.diagnostics] };
 }
 
-import { printSlot, reduceSlots } from "../../src/chart/print.js";
-import type { ChartEvent, ChartParse } from "../../src/chart/types.js";
+import type {
+	Slot as AnySlot,
+	ChartEvent,
+	ChartParse,
+	SimpleSlot as Simple,
+} from "../../src/chart/types.js";
+
+const gcd = (a: number, b: number): number => (b === 0 ? a : gcd(b, a % b));
+
+/**
+ * When each attack in a bar lands, as exact fractions of the bar, computed
+ * without the printer's reduction: holds attack nothing, a repeated `--` or
+ * `N.C.` attacks nothing, and every chord, note set and `?` attacks.
+ */
+export function timeline(slots: AnySlot[]): string[] {
+	const out: string[] = [];
+	let sounding: Simple | null = null;
+	const k = slots.length;
+	slots.forEach((s, i) => {
+		const members = s.kind === "group" ? s.members : [s];
+		const n = members.length;
+		members.forEach((m, j) => {
+			if (m.kind === "hold") return;
+			const quiet = (m.kind === "silence" || m.kind === "nc") && sounding?.kind === m.kind;
+			sounding = m;
+			if (quiet) return;
+			const num = i * n + j;
+			const den = k * n;
+			const g = gcd(num, den) || 1;
+			const name = m.kind === "chord" ? m.chord.canonical : m.kind;
+			out.push(`${num / g}/${den / g}:${name}`);
+		});
+	});
+	return out;
+}
 
 const shape = (events: ChartEvent[]): unknown[] =>
 	events.map((e) => (e.kind === "open" ? ["open", shape(e.events)] : e.kind));
@@ -64,7 +97,7 @@ export function meaning(p: ChartParse) {
 			b.tempo,
 			b.feel,
 			b.section?.replace(/\s+/g, " ") ?? null,
-			reduceSlots(b.slots).map(printSlot).join(" "),
+			timeline(b.slots),
 		]),
 		errors: p.diagnostics
 			.filter((d) => d.severity === "error")

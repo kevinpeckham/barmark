@@ -92,6 +92,78 @@ describe("layout", () => {
 	});
 });
 
+describe("the yardstick sees timing", () => {
+	test("a held triplet is not the same as a bar of triplets", () => {
+		expect(meaning(parseChart("| D_E_F / |")).bars).not.toEqual(
+			meaning(parseChart("| D_E_F |")).bars,
+		);
+	});
+	test("G / D / means G D", () => {
+		expect(meaning(parseChart("| G / D / |")).bars).toEqual(meaning(parseChart("| G D |")).bars);
+	});
+});
+
+describe("printing never adds a warning", () => {
+	for (const [chart, cell] of <[string, string][]>[
+		["time: 3/4\n| G / / D / / |", "| G / / D / / |"],
+		["time: 2/4\n| G / D / E / |", "| G / D / E / |"],
+		["| G / / / D / / / E / / / |", "| G / / / D / / / E / / / |"],
+		["| [3/4] G / / D / / |", "| [3/4] G / / D / / |"],
+	]) {
+		test(chart, () => {
+			expect(printChart(chart).split("\n")).toContain(cell);
+			expectSameMeaning(chart);
+		});
+	}
+	test("an uneven cell does not change its warning", () => {
+		expect(printChart("| G / D / E / |")).toBe("| G / D / E / |\n");
+	});
+});
+
+describe("grammar-driven fuzz", () => {
+	test("well-formed random charts keep their meaning", () => {
+		let seed = 11;
+		const rand = () => {
+			seed = (seed * 1103515245 + 12345) % 2 ** 31;
+			return seed / 2 ** 31;
+		};
+		const pick = <T>(xs: T[]): T => xs[Math.floor(rand() * xs.length)] as T;
+		const slots = [
+			"G",
+			"D",
+			"Am7",
+			"/",
+			"/",
+			"/",
+			"--",
+			"N.C.",
+			"?",
+			"D_E",
+			"D_E_F",
+			"/_G",
+			"G_--",
+			"{E2}",
+		];
+		for (let i = 0; i < 2000; i++) {
+			const lines: string[] = [];
+			if (rand() < 0.5) lines.push(`time: ${pick(["2/4", "3/4", "4/4", "6/8", "12/8"])}`);
+			for (let l = 0; l < 1 + Math.floor(rand() * 4); l++) {
+				if (rand() < 0.2) lines.push(`## ${pick(["A", "B"])}${pick(["", " x2", " x ..."])}`);
+				const cells: string[] = [];
+				for (let c = 0; c < 1 + Math.floor(rand() * 4); c++) {
+					const n = 1 + Math.floor(rand() * 8);
+					const body = Array.from({ length: n }, () => pick(slots)).join(" ");
+					cells.push(rand() < 0.1 ? "%" : rand() < 0.1 ? `[3/4] ${body}` : body);
+				}
+				lines.push(`| ${cells.join(" | ")} |${pick(["", "", " x2"])}`);
+			}
+			const text = lines.join("\n");
+			stable(text);
+			expectSameMeaning(text);
+		}
+	}, 30_000);
+});
+
 describe("fuzz", () => {
 	test("never throws, is stable, and keeps meaning", () => {
 		const parts = [

@@ -29,6 +29,10 @@ describe("fewest slots", () => {
 		"? ?",
 		"D / / /_G",
 		"D_E D_E",
+		"D_E_F /",
+		"G_-- --",
+		"G_D / G_D /",
+		"/_G /",
 	]) {
 		test(`${same} stays`, () => expect(printed(same)).toBe(same));
 	}
