@@ -277,10 +277,12 @@ function layoutRow(
 	ctx: Context,
 ): BlockItem {
 	const cells: CellModel[] = [];
+	// A cut bar is not played: what it would play is what the line's bar played when written.
+	const written = ctx.parse.bars.filter((b) => b.line === l.line);
 	let bar = 0;
 	let prev = previous;
 	for (const cell of l.cells) {
-		const model = layoutCell(cell, played[bar], prev);
+		const model = layoutCell(cell, played[bar] ?? written[bar], prev);
 		if (cell.kind !== "fermata") bar++;
 		if (model.kind === "slots") prev = model;
 		cells.push(model);
@@ -297,7 +299,7 @@ function layoutRow(
 	};
 }
 
-/** A cell as drawn: `%` becomes the bar it copies, its slots as the parser resolved them. */
+/** A cell as drawn: `%` becomes the bar it copies, its slots as the parser resolved them; `previous` lends only its meter. */
 function layoutCell(
 	cell: Cell,
 	played: PlayedBar | undefined,
@@ -308,7 +310,7 @@ function layoutCell(
 	return {
 		kind: "slots",
 		meter: from?.meter ?? null,
-		slots: played?.slots ?? from?.slots ?? [],
+		slots: played?.slots ?? (cell.kind === "slots" ? cell.slots : []),
 		cut: false,
 	};
 }

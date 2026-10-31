@@ -12,6 +12,7 @@ import { EXAMPLE } from "../tests/fixtures.js";
 const root = join(import.meta.dir, "../../..");
 const CHARTS: Record<string, string> = {
 	example: EXAMPLE,
+	busy: "# Busy\n## A\n| Am7(b5)/G D7(b9)/F# Gm7/F C7(b9)/E |\n| {Db1 F1 Ab1 C2 Eb2} {Db1 F1 Ab1 C2 Eb2} |\n| D_E_F#m_G_A_B_C D_E_F#m_G_A_B_C |\n| F#m7(b5)/E F#m7(b5)/E F#m7(b5)/E F#m7(b5)/E |",
 	long: "# Long\n## A\n| A | B | C | D | E | F | G | A | B | C | D | E |\n| A / B / | C / D / | E / F / | G / A / | B / C / | D / E / |",
 };
 const HOSTILE = `*{margin:2em!important;padding:0!important;font-family:"Comic Sans MS",cursive!important;line-height:3!important}
@@ -67,7 +68,8 @@ function elementPage(): Response {
 			| D | A |
 		</script></barmark-chart>
 		<barmark-chart id="remote" src="/example.chart.md" rehearsal-letters></barmark-chart>
-		<barmark-chart id="missing" src="/nope.chart.md"></barmark-chart>`,
+		<barmark-chart id="missing" src="/nope.chart.md"></barmark-chart>
+		${renderChart("## Verse\n| D | A |").replace("<barmark-chart>", '<barmark-chart id="server">')}`,
 	);
 }
 

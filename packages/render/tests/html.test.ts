@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { parseHTML } from "linkedom";
-import { renderChart, renderChartUnwrapped } from "../src/index.js";
+import { loadErrorContent } from "../src/html.js";
+import { type RenderOptions, renderChart, renderChartUnwrapped } from "../src/index.js";
 import { EXAMPLE } from "./fixtures.js";
 
 const doc = (html: string) =>
@@ -174,6 +175,36 @@ describe("renderChart: chart text is never markup", () => {
 		const err = d.querySelector(".bm-error");
 		expect(err?.getAttribute("title")?.length).toBeGreaterThan(0);
 		expect(err?.querySelector(".bm-sr")?.textContent).toMatch(/^Error: /);
+	});
+});
+
+describe("options are never markup", () => {
+	// Hosts forward query strings; the type alone does not stop a stray theme.
+	const theme = 'x" onclick="alert(1)' as NonNullable<RenderOptions["theme"]>;
+	test("an unknown theme becomes auto", () => {
+		const { document: d } = parseHTML(`<div>${renderChartUnwrapped("| D |", { theme })}</div>`);
+		const chart = d.querySelector(".bm-chart");
+		expect(chart?.getAttribute("onclick")).toBeNull();
+		expect(chart?.getAttribute("data-theme")).toBe("auto");
+	});
+	test("and so does the load-error content", () => {
+		const html = loadErrorContent("not found", { theme });
+		expect(html).not.toContain("onclick");
+		expect(html).toContain('data-theme="auto"');
+	});
+});
+
+describe("renderChart: small things a reader meets", () => {
+	test("a section of only text still has a valid grid", () => {
+		expect(renderChart("## Words\nonly text")).not.toContain("--bm-cols:0");
+	});
+	test("a bare :| is spoken as playing twice, as the grammar plays it", () => {
+		const d = shadow(renderChart("## A\n|: D | A :|"));
+		expect(texts(d, ".bm-sr")).toContain("repeat end, play 2 times");
+	});
+	test("a rehearsal letter is spoken apart from its heading", () => {
+		const d = shadow(renderChart("## Intro\n| D |", { rehearsalLetters: true }));
+		expect(d.querySelector("h3")?.textContent).toStartWith("A, Intro");
 	});
 });
 

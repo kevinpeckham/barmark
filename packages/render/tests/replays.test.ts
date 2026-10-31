@@ -138,3 +138,16 @@ describe("rehearsal letters", () => {
 		expect(letters.slice(24)).toEqual(["Y", "Z", "AA", "AB"]);
 	});
 });
+
+describe("% in a cut bar", () => {
+	test("copies what the written section's bar played, not the cell drawn before it", () => {
+		// The written row's % copies G; in the cut replay the parser plays no bar for it.
+		const m = layoutChart("## A\n| D | A |\n| G | % |\n## A ->");
+		const cut = m.blocks[1]?.items.findLast((i) => i.kind === "row");
+		const cell = cut?.kind === "row" ? cut.cells[1] : undefined;
+		expect(cell?.kind === "slots" && cell.cut).toBe(true);
+		expect(
+			cell?.kind === "slots" ? cell.slots.map((s) => s.kind === "chord" && s.chord.canonical) : [],
+		).toEqual(["G"]);
+	});
+});

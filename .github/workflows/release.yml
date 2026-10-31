@@ -62,6 +62,7 @@ jobs:
       - run: bunx playwright install --with-deps chromium
       - run: bun run test:browser
       - run: bun run verify:package ${{ steps.package.outputs.key }}
+      - run: bun run build
       # bun pm pack, not npm pack: it turns workspace: ranges into versions.
       - run: bun pm pack --ignore-scripts --destination "$GITHUB_WORKSPACE/pack"
         working-directory: ${{ steps.package.outputs.dir }}

@@ -86,7 +86,7 @@ const css = `
 }
 ${FIT_STEPS.map((w) => {
 	const g = `.bm-grid[data-fit="${w}"]`;
-	return `@container bm (max-width:${w}em){${g}{display:block}${g}>.bm-row{display:flex;flex-wrap:wrap}${g} .bm-empty{display:none}${g} .bm-bar{flex:0 0 auto;border-left:.075em solid var(--bm-rule);margin-left:-.075em}}`;
+	return `@container bm (max-width:${w}em){${g}{display:block}${g}>.bm-row{display:flex;flex-wrap:wrap}${g} .bm-empty{display:none}${g} .bm-bar{flex:0 1 auto;max-width:100%;border-left:.075em solid var(--bm-rule);margin-left:-.075em}${g} :is(.bm-bar-body,.bm-group,.bm-notes){flex-wrap:wrap}}`;
 }).join("\n")}
 `;
 

@@ -75,17 +75,21 @@ test.describe("reflow", () => {
 		["400% zoom", 320, ""],
 		["large text on a phone", 360, "barmark-chart{--barmark-size:2.5rem}"],
 	] as const)
-		test(`a long row wraps on ${name} without scrolling sideways`, async ({ page }) => {
-			await page.setViewportSize({ width, height: 800 });
-			await page.goto(
-				`/chart?chart=long&css=${encodeURIComponent(`body{margin:0}barmark-chart{margin:0}${css}`)}`,
-			);
-			const { scroll, client } = await page.evaluate(() => ({
-				scroll: document.documentElement.scrollWidth,
-				client: document.documentElement.clientWidth,
-			}));
-			expect(scroll).toBeLessThanOrEqual(client);
-		});
+		for (const [chart, what] of [
+			["long", "a long row"],
+			["busy", "a busy bar"],
+		] as const)
+			test(`${what} wraps on ${name} without scrolling sideways`, async ({ page }) => {
+				await page.setViewportSize({ width, height: 800 });
+				await page.goto(
+					`/chart?chart=${chart}&css=${encodeURIComponent(`body{margin:0}barmark-chart{margin:0}${css}`)}`,
+				);
+				const { scroll, client } = await page.evaluate(() => ({
+					scroll: document.documentElement.scrollWidth,
+					client: document.documentElement.clientWidth,
+				}));
+				expect(scroll).toBeLessThanOrEqual(client);
+			});
 
 	test("a wide screen keeps the columns aligned", async ({ page }) => {
 		await page.setViewportSize({ width: 1600, height: 800 });
@@ -122,6 +126,35 @@ test.describe("the element", () => {
 			el.theme = "dark";
 		});
 		await expect(page.locator("#inline .bm-chart")).toHaveAttribute("data-theme", "dark");
+	});
+
+	test("fetches its src once, however many attributes it has", async ({ page }) => {
+		let fetches = 0;
+		page.on("request", (r) => {
+			if (r.url().endsWith("/example.chart.md")) fetches++;
+		});
+		await page.goto("/element");
+		await expect(page.locator("#remote .bm-title")).toHaveText("Example Song");
+		await page.evaluate(() => {
+			const el = document.querySelector("#remote") as HTMLElement & { theme: string };
+			el.theme = "dark";
+		});
+		await expect(page.locator("#remote .bm-chart")).toHaveAttribute("data-theme", "dark");
+		expect(fetches).toBe(1);
+	});
+
+	test("a server-rendered chart follows its attributes", async ({ page }) => {
+		await page.goto("/element");
+		await page.evaluate(() => {
+			const el = document.querySelector("#server") as HTMLElement & {
+				theme: string;
+				barNumbers: boolean;
+			};
+			el.theme = "dark";
+			el.barNumbers = false;
+		});
+		await expect(page.locator("#server .bm-chart")).toHaveAttribute("data-theme", "dark");
+		await expect(page.locator("#server .bm-chart")).toHaveAttribute("data-bar-numbers", "off");
 	});
 
 	test("registers the font once however many charts there are", async ({ page }) => {

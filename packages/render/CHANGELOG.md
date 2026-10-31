@@ -46,8 +46,9 @@ package uses [semantic versioning](https://semver.org/).
   chart from its `src` URL or a child `<script type="text/barmark">`, and
   again when either changes. Attributes (and matching properties):
   `theme`, `bar-numbers="off"`, `rehearsal-letters`. It registers the font
-  itself, reuses a server-rendered shadow root, and shows a failed load as
-  an error inside the chart.
+  itself, reuses a server-rendered shadow root (which still follows
+  `theme` and `bar-numbers`), fetches a `src` once, renders once per batch
+  of changes, and shows a failed load as an error inside the chart.
 
 ### Technical
 

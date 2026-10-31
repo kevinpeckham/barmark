@@ -36,7 +36,8 @@ const COMMON = ["package.json", "README.md", "LICENSE", "CHANGELOG.md"];
 const REQUIRED = [...COMMON, ...CONTENTS[pkg.key].required];
 const allowed = (f: string) => COMMON.includes(f) || CONTENTS[pkg.key].allowed.test(f);
 
-const build = run(["bun", "run", "build"], pkg.dir);
+// The whole workspace, in dependency order: render builds against the built barmark.
+const build = run(["bun", "run", "build"], root);
 if (build.code !== 0)
 	problems.push(`build failed: ${(build.err || build.out).trim().split("\n").slice(-3).join(" ")}`);
 

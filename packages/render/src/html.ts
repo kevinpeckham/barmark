@@ -29,13 +29,18 @@ export function renderChart(text: string, options: RenderOptions = {}): string {
 	return `${fontStyle(options)}<barmark-chart><template shadowrootmode="open">${shadowContent(text, options)}</template></barmark-chart>`;
 }
 
+export const THEMES = ["auto", "light", "dark"] as const;
+
+/** Only a known theme reaches the markup: hosts may pass any string through. */
+const themeOf = (options: RenderOptions) => THEMES.find((t) => t === options.theme) ?? "auto";
+
 /** What goes in the shadow root: the styles and the chart. */
 export const shadowContent = (text: string, options: RenderOptions = {}) =>
 	`<style>${stylesheet}</style>${chartHtml(text, options)}`;
 
 /** A chart that could not be loaded: the message, shown where the chart would be. */
 export const loadErrorContent = (message: string, options: RenderOptions = {}) =>
-	`<style>${stylesheet}</style><div class="bm-chart" data-theme="${options.theme ?? "auto"}">${errorHtml("", [message])}</div>`;
+	`<style>${stylesheet}</style><div class="bm-chart" data-theme="${themeOf(options)}">${errorHtml("", [message])}</div>`;
 
 const fontStyle = (options: RenderOptions) =>
 	options.fontUrl ? `<style>${fontFaceCss(options.fontUrl)}</style>` : "";
@@ -47,7 +52,7 @@ export function renderChartUnwrapped(text: string, options: RenderOptions = {}):
 function chartHtml(text: string, options: RenderOptions): string {
 	const model = layoutChart(text, { rehearsalLetters: options.rehearsalLetters ?? false });
 	const settings: Settings = { barNumbers: options.barNumbers ?? true };
-	return `<div class="bm-chart" data-theme="${options.theme ?? "auto"}"${settings.barNumbers ? "" : ' data-bar-numbers="off"'}>${headerHtml(model)}${model.blocks.map((b) => blockHtml(b, settings)).join("")}${options.diagnostics ? diagnosticsHtml(model) : ""}</div>`;
+	return `<div class="bm-chart" data-theme="${themeOf(options)}"${settings.barNumbers ? "" : ' data-bar-numbers="off"'}>${headerHtml(model)}${model.blocks.map((b) => blockHtml(b, settings)).join("")}${options.diagnostics ? diagnosticsHtml(model) : ""}</div>`;
 }
 
 function headerHtml(model: ChartModel): string {
@@ -74,7 +79,7 @@ function metaText(d: Directives): string {
 
 function blockHtml(block: SectionBlock, settings: Settings): string {
 	const label = block.heading === null ? "" : ` aria-label="${escapeHtml(block.heading)}"`;
-	return `<section class="bm-section"${label}>${headingHtml(block)}<div class="bm-grid" style="--bm-cols:${block.columns}" data-fit="${fitWidth(block)}">${block.items.map((i) => itemHtml(i, block.columns, settings)).join("")}</div></section>`;
+	return `<section class="bm-section"${label}>${headingHtml(block)}<div class="bm-grid" style="--bm-cols:${Math.max(1, block.columns)}" data-fit="${fitWidth(block)}">${block.items.map((i) => itemHtml(i, block.columns, settings)).join("")}</div></section>`;
 }
 
 /**
@@ -116,7 +121,7 @@ function slotWidth(slot: Slot): number {
 function headingHtml(block: SectionBlock): string {
 	if (block.heading === null) return "";
 	const letter = block.rehearsal
-		? `<span class="bm-rehearsal" part="rehearsal">${block.rehearsal}</span> `
+		? `<span class="bm-rehearsal" part="rehearsal">${block.rehearsal}</span><span class="bm-sr">,</span> `
 		: "";
 	return `<h3 class="bm-heading" part="heading">${letter}${escapeHtml(block.heading)}${repeatHtml(block.repeat)}</h3>`;
 }
@@ -173,7 +178,8 @@ function repeatMarks(row: Row, i: number): string {
 }
 
 function rowRepeatHtml(row: Row): string {
-	if (row.repeat === null) return row.closes ? `<span class="bm-sr">repeat end</span>` : "";
+	if (row.repeat === null)
+		return row.closes ? `<span class="bm-sr">repeat end, play 2 times</span>` : "";
 	return repeatHtml(row.repeat).trim();
 }
 

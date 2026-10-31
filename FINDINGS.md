@@ -177,3 +177,15 @@ with Bun, and `verify:package` fails if any `workspace:` range survives.
 The rewrite uses the version in the checkout, so `verify:release render`
 also checks that version of `barmark` is already on npm: release `barmark`
 first when the renderer needs something new in it.
+
+### A package that builds only because the other one already had (2026-10-31, workspace CI)
+
+`verify:package render` passed on the dev VM and failed on a clean
+checkout: render's build resolves `barmark` through `node_modules` to
+`packages/barmark/dist`, which only existed because something had built it
+earlier. CI's package job would have been red for render on the first PR.
+The final review caught it by running the checks in a fresh worktree.
+`verify-package` now builds the whole workspace (in dependency order)
+first, and the release workflow builds before packing. Before calling a
+CI change done, run its steps in a fresh `git worktree` after `bun
+install --frozen-lockfile`.

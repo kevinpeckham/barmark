@@ -5,14 +5,12 @@
  * registers the element (once) and the font (once per document).
  */
 import { FONT_FAMILY, fontFaceCss } from "./font.js";
-import { loadErrorContent, type RenderOptions, shadowContent } from "./html.js";
+import { loadErrorContent, type RenderOptions, shadowContent, THEMES } from "./html.js";
 
 type Attributes = {
 	getAttribute(name: string): string | null;
 	hasAttribute(name: string): boolean;
 };
-
-const THEMES = ["auto", "light", "dark"] as const;
 
 export function optionsFromAttributes(el: Attributes): RenderOptions {
 	const theme = el.getAttribute("theme");
@@ -39,22 +37,31 @@ function registerFont(doc: Document): void {
 	doc.head.append(style);
 }
 
+async function fetchText(src: string): Promise<string> {
+	const response = await fetch(src);
+	if (!response.ok) throw new Error(`${response.status} ${response.statusText}`.trim());
+	return response.text();
+}
+
 function defineElement(): void {
 	class BarmarkChart extends HTMLElement {
 		static observedAttributes = ["src", "theme", "bar-numbers", "rehearsal-letters"];
-		#observer = new MutationObserver(() => this.#render());
+		#observer = new MutationObserver(() => this.#schedule());
 		#renders = 0;
+		#scheduled = false;
+		/** The text fetched for `src`, kept so a change of options does not fetch again. */
+		#fetched: { src: string; text: Promise<string> } | null = null;
 
 		connectedCallback() {
 			registerFont(this.ownerDocument);
 			this.#observer.observe(this, { childList: true, subtree: true, characterData: true });
-			this.#render();
+			this.#schedule();
 		}
 		disconnectedCallback() {
 			this.#observer.disconnect();
 		}
 		attributeChangedCallback() {
-			if (this.isConnected) this.#render();
+			if (this.isConnected) this.#schedule();
 		}
 
 		get src() {
@@ -83,12 +90,22 @@ function defineElement(): void {
 			this.toggleAttribute("rehearsal-letters", v);
 		}
 
+		/** Every change in one task (an upgrade sets each attribute in turn) renders once. */
+		#schedule() {
+			if (this.#scheduled) return;
+			this.#scheduled = true;
+			queueMicrotask(() => {
+				this.#scheduled = false;
+				void this.#render();
+			});
+		}
+
 		async #render() {
 			const script = this.querySelector('script[type="text/barmark"]');
-			// With no source of its own, a server-rendered chart stays as it is.
-			if (!this.src && !script) return;
-			const render = ++this.#renders;
 			const options = optionsFromAttributes(this);
+			// With no source of its own, a server-rendered chart keeps its music and takes the options it can.
+			if (!this.src && !script) return this.#restyle(options);
+			const render = ++this.#renders;
 			const content = await this.#content(script, options);
 			if (render !== this.#renders) return;
 			(this.shadowRoot ?? this.attachShadow({ mode: "open" })).innerHTML = content;
@@ -97,12 +114,23 @@ function defineElement(): void {
 		async #content(script: Element | null, options: RenderOptions): Promise<string> {
 			if (!this.src) return shadowContent(inlineChartText(script?.textContent ?? ""), options);
 			try {
-				const response = await fetch(this.src);
-				if (!response.ok) throw new Error(`${response.status} ${response.statusText}`.trim());
-				return shadowContent(await response.text(), options);
+				return shadowContent(await this.#text(this.src), options);
 			} catch (e) {
+				this.#fetched = null;
 				return loadErrorContent(`Could not load ${this.src}: ${(e as Error).message}`, options);
 			}
+		}
+
+		#text(src: string): Promise<string> {
+			if (this.#fetched?.src !== src) this.#fetched = { src, text: fetchText(src) };
+			return this.#fetched.text;
+		}
+
+		#restyle(options: RenderOptions): void {
+			const chart = this.shadowRoot?.querySelector(".bm-chart");
+			chart?.setAttribute("data-theme", options.theme ?? "auto");
+			if (options.barNumbers === false) chart?.setAttribute("data-bar-numbers", "off");
+			else chart?.removeAttribute("data-bar-numbers");
 		}
 	}
 	customElements.define("barmark-chart", BarmarkChart);

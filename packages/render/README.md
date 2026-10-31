@@ -20,7 +20,9 @@ const html = renderChart(chartText, { fontUrl: "/fonts/Edwin-Roman.otf" });
 `renderChart` returns a `<barmark-chart>` element holding a declarative
 shadow root: put it in any page, server-rendered or static, and it shows
 the chart with no script. The shadow root keeps the page's CSS out, so a
-blog's resets and fonts cannot rearrange the bars.
+blog's resets and fonts cannot rearrange the bars. Browsers attach a
+declarative shadow root only while parsing HTML: to insert the markup from
+script, use `setHTMLUnsafe` (or the element below), not `innerHTML`.
 
 `renderChartUnwrapped(text, options)` returns the same markup without the
 shadow root (classes prefixed `bm-`), for pages that include `stylesheet`
@@ -43,9 +45,15 @@ themselves.
 
 The element renders from its `src` URL, or from a child
 `<script type="text/barmark">` (indentation is removed), and renders again
-whenever either changes. It registers the font itself, and a chart
-rendered on the server by `renderChart` is kept until it has a source of
-its own.
+whenever either changes; it fetches a `src` once, and renders once
+however many attributes change together. A chart rendered on the server
+by `renderChart` keeps its music until it has a source of its own, and
+still follows `theme` and `bar-numbers`.
+
+The element registers the font itself, from the `fonts/` folder beside its
+own module. If your bundler moves that file, register it yourself before
+the element loads, with `<style data-barmark-font>` holding
+`fontFaceCss(yourUrl)`; the element then leaves it alone.
 
 ## Options and attributes
 
