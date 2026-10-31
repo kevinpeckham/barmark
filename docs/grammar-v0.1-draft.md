@@ -180,6 +180,8 @@ for **that bar only**:
 ```
 
 To change the meter from a point onward, use a `time:` line (section 7).
+A `%` after a bracketed bar repeats that bar exactly, meter included:
+`| [2/4] G | % | D |` is two 2/4 bars, then a bar in the running meter.
 The brackets keep a time signature apart from the `6/9` chord. The value
 must be valid for `time:`. A bracket anywhere but the start of a cell is
 an **error**.
@@ -467,6 +469,7 @@ human to say whether the band was silent, and the structure line.
 | Modes | `key:` accepts a mode name (`A mixolydian`). A bare root means major. |
 | Elision | `->` at the end of a replay heading cuts its last bar. Written sections omit the bar. |
 | Fades and vamps | `x ...`: an open repeat. Machine output records the count as open. |
+| `%` after a one-bar meter | `%` repeats the previous bar exactly, its `[n/d]` included. |
 
 ## Open questions
 

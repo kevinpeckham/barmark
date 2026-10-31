@@ -46,3 +46,12 @@ describe("-> must end a heading", () => {
 		expect(r.diagnostics.map((d) => [d.line, d.severity])).toEqual([[1, "error"]]);
 	});
 });
+
+describe("% repeats the previous bar exactly", () => {
+	test("including a one-bar meter", () => {
+		expect(parseChart("| [2/4] G | % | D |").bars.map((b) => b.meter.n)).toEqual([2, 2, 4]);
+	});
+	test("a chain of % keeps it", () => {
+		expect(parseChart("| [3/4] G | % | % |").bars.map((b) => b.meter.n)).toEqual([3, 3, 3]);
+	});
+});

@@ -71,9 +71,9 @@ export function expand(lines: Line[]): {
 		else if (l.kind !== "title") sections.at(-1)?.lines.push(l);
 	}
 
-	// % copies the bar written before it, so a section plays the same wherever it is replayed.
+	// % copies the bar written before it, one-bar meter included, so a section plays the same wherever it is replayed.
 	const resolved = new Map<BarsLine, Played[]>();
-	let previous: Slot[] | null = null;
+	let previous: { meter: Meter | null; slots: Slot[] } | null = null;
 	for (const l of sections.flatMap((s) => s.lines)) {
 		if (l.kind !== "bars") continue;
 		const cells: Played[] = [];
@@ -83,8 +83,8 @@ export function expand(lines: Line[]): {
 				if (!previous) error(l.line, "% has no bar before it to repeat", "%");
 				cells.push({
 					kind: "bar",
-					meter: null,
-					slots: previous ?? [{ kind: "hold" }],
+					meter: previous?.meter ?? null,
+					slots: previous?.slots ?? [{ kind: "hold" }],
 					written: false,
 				});
 			} else {
@@ -93,7 +93,7 @@ export function expand(lines: Line[]): {
 				if (!previous && head?.kind === "hold")
 					error(l.line, "/ has nothing before it to hold", "/");
 				cells.push({ kind: "bar", meter: c.meter, slots: c.slots, written: true });
-				previous = c.slots;
+				previous = { meter: c.meter, slots: c.slots };
 			}
 		}
 		resolved.set(l, cells);
