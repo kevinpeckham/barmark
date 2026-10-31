@@ -1,6 +1,6 @@
 {
 	"name": "barmark",
-	"version": "0.0.2",
+	"version": "0.0.3",
 	"description": "Markdown-inspired plain-text notation for chord charts. Parser coming; spec in progress.",
 	"type": "module",
 	"main": "index.js",
