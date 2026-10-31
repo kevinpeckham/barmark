@@ -122,3 +122,78 @@ export function chordIntervals(
 	}
 	return { intervals: s.sort(byDegree), warnings, alteredOpen: parts.extension === "7alt" };
 }
+
+/**
+ * Appendix A.5, applied in this order after ♯/♭ become #/b. Each pattern
+ * reads the text after the root, so a rule can never touch the root's
+ * own accidental.
+ */
+export const ALIASES: [RegExp, string][] = [
+	[/^Δ7?/, "maj7"],
+	[/^ø7?/, "m7(b5)"],
+	[/^°7/, "dim7"],
+	[/^°/, "dim"],
+	[/^\+7/, "aug7"],
+	[/^\+/, "aug"],
+	[/^(minmaj7|m\(maj7\))/, "mmaj7"],
+	[/^(Maj7|ma7)/, "maj7"],
+	[/^min/, "m"],
+	[/^-/, "m"],
+	[/^maj(?=$|\/)/, ""],
+	[/sus(?![24])/, "sus4"],
+];
+
+const NATURALS: Record<number, string> = {
+	0: "C",
+	2: "D",
+	4: "E",
+	5: "F",
+	7: "G",
+	9: "A",
+	11: "B",
+};
+const SHARPS: Record<number, string> = { 1: "C#", 3: "D#", 6: "F#", 8: "G#", 10: "A#" };
+const FLATS: Record<number, string> = { 1: "Db", 3: "Eb", 6: "Gb", 8: "Ab", 10: "Bb" };
+
+/** The single-accidental spelling of a double-sharp or double-flat root. */
+function enharmonicRoot(semitone: number, sharp: boolean): string {
+	return NATURALS[semitone] ?? (sharp ? SHARPS : FLATS)[semitone] ?? "";
+}
+
+/** Appendix A.6: a rejection with its suggestion, or null when the symbol is not one. */
+export function rejection(symbol: string, semitoneOf: (note: string) => number): Diagnostic | null {
+	const reject = (message: string, suggestion: string): Diagnostic => ({
+		message: `${symbol}: ${message}`,
+		token: symbol,
+		suggestion,
+	});
+	if (/^[a-g]/.test(symbol)) {
+		return reject("a root is an uppercase letter", symbol[0]?.toUpperCase() + symbol.slice(1));
+	}
+	if (symbol.startsWith("H"))
+		return reject('German "H" is ambiguous; write B', `B${symbol.slice(1)}`);
+	const double = /^([A-G])(bb|##)(.*)$/.exec(symbol);
+	if (double) {
+		const [, letter = "", acc = "", rest = ""] = double;
+		const root = enharmonicRoot(semitoneOf(letter + acc), acc === "##");
+		return reject("a root takes at most one accidental", root + rest);
+	}
+	const big = /^([A-G][#b]?)M(?!aj)(.*)$/.exec(symbol);
+	if (big) {
+		const [, root = "", rest = ""] = big;
+		return reject(
+			'"M" is one shifted letter from "m"; write maj',
+			root + (/^\d/.test(rest) ? `maj${rest}` : rest),
+		);
+	}
+	const bare = /^([A-G][#b]?)([24])(?=$|\/)/.exec(symbol);
+	if (bare) {
+		const [, root = "", n = ""] = bare;
+		const [sus, add] = n === "2" ? ["sus2", "9"] : ["sus4", "11"];
+		return reject(
+			`"${n}" means different chords in different traditions`,
+			`${root}${sus} or ${root}(${add})`,
+		);
+	}
+	return null;
+}

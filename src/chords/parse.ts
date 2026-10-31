@@ -1,11 +1,13 @@
-import { transpose } from "./intervals.js";
+import { noteSemitone, transpose } from "./intervals.js";
 import { printChord } from "./print.js";
-import type { ParseResult } from "./types.js";
+import type { Diagnostic, ParseResult } from "./types.js";
 import {
+	ALIASES,
 	type ChordParts,
 	chordIntervals,
 	EXTENSIONS,
 	type Quality,
+	rejection,
 	type Sus,
 	TONES,
 	validateParts,
@@ -71,8 +73,32 @@ function tokenize(symbol: string): ChordParts | string {
 	return { root, quality, extension: ext, sus, tones, bass };
 }
 
+/** Appendix A.5 and A.6: Unicode, rejections, then aliases into canonical vocabulary. */
+export function normalizeSymbol(symbol: string): { text: string } | Diagnostic {
+	const text = symbol.replace(/♯/g, "#").replace(/♭/g, "b");
+	const rejected = rejection(text, noteSemitone);
+	if (rejected) return rejected;
+	const root = ROOT.exec(text)?.[0] ?? "";
+	let rest = text.slice(root.length);
+	for (const [pattern, replacement] of ALIASES) rest = rest.replace(pattern, replacement);
+	const added = [...rest.matchAll(/add(2|4|9|11)/g)].map((m) => m[1] ?? "");
+	if (added.length) {
+		rest = rest.replace(/add(2|4|9|11)/g, "");
+		const close = rest.indexOf(")");
+		if (close >= 0) rest = `${rest.slice(0, close)},${added.join(",")}${rest.slice(close)}`;
+		else {
+			const slash = /\/[A-G][#b]?$/.exec(rest);
+			const at = slash ? slash.index : rest.length;
+			rest = `${rest.slice(0, at)}(${added.join(",")})${rest.slice(at)}`;
+		}
+	}
+	return { text: root + rest };
+}
+
 export function parseChord(symbol: string): ParseResult {
-	const parts = tokenize(symbol);
+	const normal = normalizeSymbol(symbol);
+	if (!("text" in normal)) return { ok: false, error: normal };
+	const parts = tokenize(normal.text);
 	if (typeof parts === "string") {
 		return { ok: false, error: { message: `${symbol}: ${parts}`, token: symbol } };
 	}
