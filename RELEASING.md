@@ -85,7 +85,11 @@ which turns `workspace:` ranges into versions, and fails if one is left.
 
 1. **Start a release branch** from an up-to-date `main` with CI green:
    `git switch -c release/<pkg>-vX.Y.Z`.
-2. **Bump the version** in `packages/<pkg>/package.json`.
+2. **Bump the version** in `packages/<pkg>/package.json` **and** in that
+   package's entry in `bun.lock` (`"packages/<pkg>": { ..., "version": ... }`).
+   Bun does not update a workspace package's version in the lockfile, and
+   `bun pm pack` reads it from there when it turns `workspace:^` into a
+   range; `verify:package` fails if the two disagree.
 3. **The package's CHANGELOG.md:** move the `[Unreleased]` entries into a
    new `## [x.y.z] - YYYY-MM-DD` section, leave `[Unreleased]` empty, and
    update the compare links at the bottom. Use `### Added`, `### Changed`,

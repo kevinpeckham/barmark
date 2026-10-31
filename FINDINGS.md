@@ -189,3 +189,15 @@ The final review caught it by running the checks in a fresh worktree.
 first, and the release workflow builds before packing. Before calling a
 CI change done, run its steps in a fresh `git worktree` after `bun
 install --frozen-lockfile`.
+
+### `bun pm pack` takes a workspace dependency's version from bun.lock (2026-10-31, render 0.1.0 release)
+
+Preparing `@barmark/render` 0.1.0, its packed `package.json` depended on
+`barmark@^0.1.0`, although `barmark` was already 0.2.0 and the renderer
+needs 0.2.0's `form` and `parts`. `bun pm pack` turns `workspace:^` into
+a range using the version recorded in `bun.lock`, and neither `bun install`
+nor `bun install --lockfile-only` updates a workspace package's version
+there; `--frozen-lockfile` doesn't notice either. The `barmark` 0.2.0
+release had left it at 0.1.0. RELEASING.md now bumps the version in
+`bun.lock` too, and `verify:package` fails when a packed workspace range
+is not `^` the package's own version.
