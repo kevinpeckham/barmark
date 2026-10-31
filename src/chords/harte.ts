@@ -73,6 +73,10 @@ const INTENDED: Record<string, Shape> = {
 	"5": shape("5"),
 };
 
+/** Own keys only: a label like `C:constructor` must not find Object.prototype. */
+const intendedShape = (name: string): Shape | undefined =>
+	Object.hasOwn(INTENDED, name) ? INTENDED[name] : undefined;
+
 const HARTE = /^([A-G][#b]*)(?::([^(/]*)(?:\(([^)]*)\))?)?(?:\/([#b]*\d+))?$/;
 
 /** A Harte label's root, intervals (shorthand at its intended meaning, list applied) and bass. */
@@ -87,7 +91,7 @@ export function parseHarte(
 	if (shorthand === "1") intervals = [{ degree: 1, alter: 0 }];
 	else if (shorthand === "") intervals = [];
 	else {
-		const intended = INTENDED[shorthand];
+		const intended = intendedShape(shorthand);
 		if (intended === undefined) return null;
 		intervals = chordIntervals({ ...intended, root: "C", bass: null }, "").intervals;
 	}
@@ -114,7 +118,7 @@ export function harteToBarmark(label: string): string | null {
 	if (!h || !SINGLE_ACCIDENTAL.test(h.root)) return null;
 	const rootSounds = h.intervals.some((i) => i.degree === 1 && i.alter === 0);
 	const intended = /^[^:]+:([^(/]+)(?:\/|$)/.exec(label)?.[1];
-	const directShape = intended !== undefined ? INTENDED[intended] : undefined;
+	const directShape = intended !== undefined ? intendedShape(intended) : undefined;
 	const direct = directShape ? printSuffix(directShape) : undefined;
 	const candidates = rootSounds ? enumerateSuffixes().get(intervalSetKey(h.intervals)) : undefined;
 	// Same notes, several names (A11 and A9sus4 under the eleventh rule): take the

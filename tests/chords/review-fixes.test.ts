@@ -69,3 +69,11 @@ describe("the M rejection suggests something readable", () => {
 		});
 	}
 });
+
+describe("Harte shorthands are looked up as own keys only", () => {
+	for (const label of ["C:constructor", "C:toString", "C:__proto__", "C:hasOwnProperty(9)"]) {
+		test(`${label} is unreadable, never a throw`, () => {
+			expect(harteToBarmark(label)).toBeNull();
+		});
+	}
+});
