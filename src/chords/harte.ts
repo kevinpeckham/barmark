@@ -5,9 +5,10 @@ import {
 	parseInterval,
 	transpose,
 } from "./intervals.js";
-import { parseChord } from "./parse.js";
+import { printSuffix } from "./print.js";
+import { enumerateSuffixes, intervalSetKey } from "./suffixes.js";
 import type { ChordRecord, Interval } from "./types.js";
-import { byDegree, enumerateSuffixes, HARTE_SHORTHANDS, intervalSetKey } from "./vocabulary.js";
+import { byDegree, type ChordParts, chordIntervals, HARTE_SHORTHANDS } from "./vocabulary.js";
 
 /**
  * The Harte label for a parsed chord or note set: the largest shorthand
@@ -38,30 +39,38 @@ export function toHarte(r: ChordRecord): string {
 }
 
 /** What annotators mean by each Harte shorthand, as a barmark suffix (so `13` is barmark's 13). */
-const INTENDED: Record<string, string> = {
-	maj: "",
-	min: "m",
-	dim: "dim",
-	aug: "aug",
-	maj7: "maj7",
-	min7: "m7",
-	"7": "7",
-	dim7: "dim7",
-	hdim7: "m7(b5)",
-	minmaj7: "mmaj7",
-	maj6: "6",
-	min6: "m6",
-	"9": "9",
-	maj9: "maj9",
-	min9: "m9",
-	sus2: "sus2",
-	sus4: "sus4",
-	"11": "11",
-	min11: "m11",
-	"13": "13",
-	min13: "m13",
-	maj13: "maj13",
-	"5": "5",
+type Shape = Omit<ChordParts, "root" | "bass">;
+const shape = (
+	quality: Shape["quality"],
+	extension: Shape["extension"] = null,
+	tones: string[] = [],
+	sus: Shape["sus"] = null,
+): Shape => ({ quality, extension, sus, tones });
+
+const INTENDED: Record<string, Shape> = {
+	maj: shape(""),
+	min: shape("m"),
+	dim: shape("dim"),
+	aug: shape("aug"),
+	maj7: shape("", "maj7"),
+	min7: shape("m", "7"),
+	"7": shape("", "7"),
+	dim7: shape("dim", "7"),
+	hdim7: shape("m", "7", ["b5"]),
+	minmaj7: shape("m", "maj7"),
+	maj6: shape("", "6"),
+	min6: shape("m", "6"),
+	"9": shape("", "9"),
+	maj9: shape("", "maj9"),
+	min9: shape("m", "9"),
+	sus2: shape("", null, [], "sus2"),
+	sus4: shape("", null, [], "sus4"),
+	"11": shape("", "11"),
+	min11: shape("m", "11"),
+	"13": shape("", "13"),
+	min13: shape("m", "13"),
+	maj13: shape("", "maj13"),
+	"5": shape("5"),
 };
 
 const HARTE = /^([A-G][#b]*)(?::([^(/]*)(?:\(([^)]*)\))?)?(?:\/([#b]*\d+))?$/;
@@ -78,11 +87,9 @@ export function parseHarte(
 	if (shorthand === "1") intervals = [{ degree: 1, alter: 0 }];
 	else if (shorthand === "") intervals = [];
 	else {
-		const suffix = INTENDED[shorthand];
-		if (suffix === undefined) return null;
-		const chord = parseChord(`C${suffix}`);
-		if (!chord.ok) return null;
-		intervals = chord.value.intervals;
+		const intended = INTENDED[shorthand];
+		if (intended === undefined) return null;
+		intervals = chordIntervals({ ...intended, root: "C", bass: null }, "").intervals;
 	}
 	for (const item of list ? list.split(",").map((x) => x.trim()) : []) {
 		const omit = item.startsWith("*");
@@ -107,7 +114,8 @@ export function harteToBarmark(label: string): string | null {
 	if (!h || !SINGLE_ACCIDENTAL.test(h.root)) return null;
 	const rootSounds = h.intervals.some((i) => i.degree === 1 && i.alter === 0);
 	const intended = /^[^:]+:([^(/]+)(?:\/|$)/.exec(label)?.[1];
-	const direct = intended !== undefined ? INTENDED[intended] : undefined;
+	const directShape = intended !== undefined ? INTENDED[intended] : undefined;
+	const direct = directShape ? printSuffix(directShape) : undefined;
 	const candidates = rootSounds ? enumerateSuffixes().get(intervalSetKey(h.intervals)) : undefined;
 	// Same notes, several names (A11 and A9sus4 under the eleventh rule): take the
 	// one naming most degrees as the label wrote them, then the shortest.
