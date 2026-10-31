@@ -23,4 +23,8 @@ jobs:
         with:
           node-version: 22
           registry-url: https://registry.npmjs.org
+      # Trusted publishing's OIDC exchange with the registry needs npm >= 11.5;
+      # node 22 ships npm 10.9, which signs provenance but then PUTs
+      # unauthenticated (the 404 on this workflow's first run).
+      - run: npm install -g npm@latest
       - run: npm publish --access public --provenance
