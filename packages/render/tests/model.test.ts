@@ -6,6 +6,9 @@ import { EXAMPLE, PEACEFUL_DREAMS } from "./fixtures.js";
 type Row = Extract<BlockItem, { kind: "row" }>;
 const rows = (m: ChartModel) =>
 	m.blocks.flatMap((b) => b.items.filter((i): i is Row => i.kind === "row"));
+/** The written sections of EXAMPLE: Intro, Verse, Chorus, Outro (blocks 3 and 4 are replays). */
+const writtenRows = (m: ChartModel) =>
+	[0, 1, 2, 5].flatMap((i) => (m.blocks[i]?.items ?? []).filter((x): x is Row => x.kind === "row"));
 const block = (m: ChartModel, i: number) => {
 	const b = m.blocks[i];
 	if (!b) throw new Error(`no block ${i}`);
@@ -34,7 +37,7 @@ describe("layoutChart: written sections", () => {
 	});
 
 	test("written rows carry their first-pass bar numbers; numbering stops after an open repeat", () => {
-		const written = rows(m).map((r) => r.barNumber);
+		const written = writtenRows(m).map((r) => r.barNumber);
 		expect(written).toEqual([1, 9, 13, 17, 21, 41, null]);
 	});
 
@@ -45,15 +48,15 @@ describe("layoutChart: written sections", () => {
 	});
 
 	test("one-bar meter and fermata cells", () => {
-		const verse2 = rows(m)[2];
+		const verse2 = writtenRows(m)[2];
 		expect(verse2?.cells[3]).toMatchObject({ kind: "slots", meter: { n: 2, d: 4 } });
-		const outro2 = rows(m)[6];
+		const outro2 = writtenRows(m)[6];
 		expect(outro2?.cells[1]).toEqual({ kind: "fermata" });
 	});
 
 	test("row repeats and repeat brackets", () => {
 		expect(rows(m)[0]?.repeat).toBe(2);
-		expect(rows(m)[5]?.repeat).toBe("open");
+		expect(writtenRows(m)[5]?.repeat).toBe("open");
 		const bracket = layoutChart("## A\n|: D | A |\n| G | D :| x3");
 		const [first, second] = rows(bracket);
 		expect([first?.opens, first?.closes, second?.opens, second?.closes]).toEqual([
@@ -82,7 +85,7 @@ describe("layoutChart: written sections", () => {
 	});
 
 	test("columns are the widest row's cell count", () => {
-		expect(m.blocks.map((b) => b.columns)).toEqual([4, 4, 4, 0, 0, 4]);
+		expect(m.blocks.map((b) => b.columns)).toEqual([4, 4, 4, 4, 4, 4]);
 	});
 
 	test("form comes from the section occurrence", () => {

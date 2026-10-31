@@ -12,3 +12,7 @@ package uses [semantic versioning](https://semver.org/).
   with their play-order bar numbers (numbering stops after an open repeat),
   `%` becomes the bar it copies, and text lines, directives and lines with
   errors keep their place.
+- **Replays are drawn in full** with their own bar numbers. A replay's own
+  text lines (verse 2's words) replace the written section's in order;
+  `->` marks the bar the parser cut. Optional rehearsal letters (A, B, …,
+  AA) mark each section occurrence in play order.

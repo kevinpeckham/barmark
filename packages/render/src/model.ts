@@ -29,23 +29,39 @@ type Context = {
 	errors: Map<number, string[]>;
 	/** Bars numbered above this come after an open repeat: their number is unknown. */
 	lastKnownBar: number;
+	/** Each section's lines, by its heading's line number. */
+	written: Map<number, Group>;
 };
 
-export function layoutChart(text: string, _options: LayoutOptions = {}): ChartModel {
+export function layoutChart(text: string, options: LayoutOptions = {}): ChartModel {
 	const parse = parseChart(text);
+	const { header, body } = splitHeader(parse.lines);
+	const groups = groupLines(body);
 	const ctx: Context = {
 		parse,
 		source: text.split(/\r?\n/),
 		errors: errorsByLine(parse),
 		lastKnownBar: lastKnownBar(parse.events),
+		written: new Map(groups.flatMap((g) => (g.heading ? [[g.heading.line, g] as const] : []))),
 	};
-	const { header, body } = splitHeader(parse.lines);
-	return {
-		title: parse.title,
-		header,
-		blocks: groupLines(body).map((g) => layoutGroup(g, ctx)),
-		diagnostics: parse.diagnostics,
-	};
+	const blocks = groups.map((g) => layoutGroup(g, ctx));
+	if (options.rehearsalLetters) letterBlocks(blocks);
+	return { title: parse.title, header, blocks, diagnostics: parse.diagnostics };
+}
+
+/** Rehearsal letters mark position: every section occurrence, and leading bars, in play order. */
+function letterBlocks(blocks: SectionBlock[]): void {
+	let n = 0;
+	for (const b of blocks) {
+		if (b.form === null && !b.items.some((i) => i.kind === "row")) continue;
+		b.rehearsal = letters(n++);
+	}
+}
+
+/** 0 → A, 25 → Z, 26 → AA, as spreadsheet columns count. */
+function letters(n: number): string {
+	const head = n >= 26 ? letters(Math.floor(n / 26) - 1) : "";
+	return head + String.fromCharCode(65 + (n % 26));
 }
 
 function errorsByLine(parse: ChartParse): Map<number, string[]> {
@@ -107,16 +123,66 @@ function layoutGroup(group: Group, ctx: Context): SectionBlock {
 	const occurrence = h ? ctx.parse.sections.find((s) => s.line === h.line) : undefined;
 	// A heading with an error is drawn as written, like any line with an error.
 	const broken = h !== null && ctx.errors.has(h.line);
+	const written = occurrence?.replayOf != null ? ctx.written.get(occurrence.replayOf) : undefined;
 	const items = [
 		...(broken ? [errorItem(h.line, ctx)] : []),
-		...layoutLines(ownLines(group, occurrence), occurrence, ctx),
+		...(written && occurrence
+			? layoutReplay(written, group, occurrence, ctx)
+			: layoutLines(group.lines, occurrence, ctx)),
 	];
 	return blockOf(broken ? null : h, occurrence, items);
 }
 
-/** A replay's own text lines replace the written section's; its other lines stay its own. */
-function ownLines(group: Group, occurrence: SectionOccurrence | undefined): Line[] {
-	return occurrence?.replayOf != null ? group.lines.filter((l) => l.kind !== "text") : group.lines;
+/**
+ * A replay draws its written section with its own bar numbers. Its own
+ * text lines replace the written section's in order (extra ones follow the
+ * last row); its other lines follow. `->` marks the bar the parser cut.
+ */
+function layoutReplay(
+	written: Group,
+	replay: Group,
+	occurrence: SectionOccurrence,
+	ctx: Context,
+): BlockItem[] {
+	const isText = (l: Line) => l.kind === "text";
+	const body = layoutLines(written.lines, occurrence, ctx);
+	const ownText = layoutLines(replay.lines.filter(isText), occurrence, ctx);
+	const ownOther = layoutLines(
+		replay.lines.filter((l) => !isText(l)),
+		occurrence,
+		ctx,
+	);
+	const items = [...substituteText(body, ownText), ...ownOther];
+	return occurrence.elided ? markCut(items) : items;
+}
+
+function substituteText(items: BlockItem[], own: BlockItem[]): BlockItem[] {
+	if (!own.length) return items;
+	const queue = [...own];
+	const out = items.flatMap((i) => {
+		if (i.kind !== "text") return [i];
+		const next = queue.shift();
+		return next ? [next] : [];
+	});
+	// Extra lines continue after the last row and any text already following it.
+	const after = Math.max(
+		out.findLastIndex((i) => i.kind === "row"),
+		out.findLastIndex((i) => i.kind === "text"),
+	);
+	out.splice(after + 1, 0, ...queue);
+	return out;
+}
+
+/** The parser cuts the last bar it would play; a fermata is not a bar. */
+function markCut(items: BlockItem[]): BlockItem[] {
+	const r = items.findLastIndex((i) => i.kind === "row" && lastSlots(i.cells) !== null);
+	const row = items[r];
+	if (row?.kind !== "row") return items;
+	const c = row.cells.findLastIndex((cell) => cell.kind === "slots");
+	const cells = row.cells.map((cell, i) =>
+		i === c && cell.kind === "slots" ? { ...cell, cut: true } : cell,
+	);
+	return items.map((item, i) => (i === r ? { ...row, cells } : item));
 }
 
 function blockOf(
