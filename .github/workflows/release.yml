@@ -1,24 +1,58 @@
 # Publishes barmark to npm via Trusted Publishing (OIDC): no tokens,
-# provenance attested. Trigger: a GitHub release, or manual dispatch.
-# npmjs.com package settings -> Trusted Publisher must name this repo
-# and this file (release.yml).
+# provenance attested. Trigger: a GitHub release, or manual dispatch on a
+# release tag. npmjs.com package settings -> Trusted Publisher must name
+# this repo and this file (release.yml). The process is in RELEASING.md.
 name: release
 on:
   release:
     types: [published]
   workflow_dispatch:
-permissions: {} # nothing by default; the publish job asks for exactly what it needs
+permissions: {} # nothing by default; each job asks for exactly what it needs
 jobs:
-  publish:
+  # Every gate runs here, and the tarball is packed here, without the OIDC
+  # identity: Bun, the dev dependencies and their install scripts never run
+  # in a job that can publish.
+  verify:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      id-token: write # OIDC for npm provenance
     steps:
-      # Actions pinned to commit SHAs: with id-token write in scope, a
-      # compromised version tag could mint the OIDC token and publish as
-      # this package. SHAs verified against the v4 tags on 2026-10-30.
+      # Actions pinned to commit SHAs: a compromised version tag must not be
+      # able to change what is packed or published. SHAs verified against
+      # their tags (checkout/setup-node v4 on 2026-10-30; setup-bun v2.2.0,
+      # upload-artifact v7.0.2, download-artifact v8.0.2 on 2026-10-31).
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: 1.3.14
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+      - run: bun install --frozen-lockfile
+      - name: The tag names the package version
+        run: |
+          version=$(node -p "require('./package.json').version")
+          if [ "${GITHUB_REF_NAME}" != "v${version}" ]; then
+            echo "::error::ref ${GITHUB_REF_NAME} does not match package.json version v${version}"
+            exit 1
+          fi
+      - run: bun run check
+      - run: bun test
+      - run: bun run verify:package
+      - run: npm pack --ignore-scripts
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: package
+          path: barmark-*.tgz
+          if-no-files-found: error
+          retention-days: 7
+  publish:
+    needs: verify
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # OIDC for npm trusted publishing and provenance
+    steps:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22
@@ -29,4 +63,7 @@ jobs:
       # exactly: an unpinned install inside a job holding the OIDC
       # identity is the same supply-chain exposure as an unpinned action.
       - run: npm install -g npm@12.2.1
-      - run: npm publish --access public --provenance
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: package
+      - run: npm publish ./barmark-*.tgz --access public --provenance
