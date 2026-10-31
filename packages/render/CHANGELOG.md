@@ -28,3 +28,12 @@ package uses [semantic versioning](https://semver.org/).
 - **Spoken names:** every bar reads to a screen reader as music ("bar 9: A
   seven sus four, hold"), with sections labelled by their headings and
   repeats spoken ("play 2 times").
+- **Styles, light and dark.** The chart follows the system's colour scheme
+  (`theme: "auto"`), or is forced `light` or `dark`; printing is always
+  light, and Windows High Contrast keeps bar lines and marks visible. Both
+  palettes meet WCAG AA contrast. Everything is sized in em from
+  `--barmark-size`, and a section too wide for its container wraps its
+  rows rather than scrolling sideways. Pages restyle the chart through
+  `--barmark-font`, `--barmark-size`, `--barmark-ink`, `--barmark-paper`,
+  `--barmark-muted`, `--barmark-rule` and `--barmark-accent`, or
+  `::part()`.

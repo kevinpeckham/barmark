@@ -8,7 +8,7 @@ import { glyphs, splitPitch, typesetChord } from "./chord.js";
 import { escapeHtml } from "./escape.js";
 import { layoutChart } from "./model.js";
 import { speakBar } from "./speech.js";
-import { stylesheet } from "./styles.js";
+import { FIT_STEPS, stylesheet } from "./styles.js";
 import type { BlockItem, CellModel, ChartModel, SectionBlock } from "./types.js";
 
 export type RenderOptions = {
@@ -57,8 +57,32 @@ function metaText(d: Directives): string {
 
 function blockHtml(block: SectionBlock, settings: Settings): string {
 	const label = block.heading === null ? "" : ` aria-label="${escapeHtml(block.heading)}"`;
-	return `<section class="bm-section"${label}>${headingHtml(block)}<div class="bm-grid" style="--bm-cols:${block.columns}">${block.items.map((i) => itemHtml(i, block.columns, settings)).join("")}</div></section>`;
+	return `<section class="bm-section"${label}>${headingHtml(block)}<div class="bm-grid" style="--bm-cols:${block.columns}" data-fit="${fitWidth(block)}">${block.items.map((i) => itemHtml(i, block.columns, settings)).join("")}</div></section>`;
 }
+
+/**
+ * Roughly how many em a section needs with its columns aligned, rounded up
+ * to a step the stylesheet knows; narrower than that, its rows wrap.
+ */
+function fitWidth(block: SectionBlock): number {
+	const widths: number[] = [];
+	for (const item of block.items) {
+		if (item.kind !== "row") continue;
+		item.cells.forEach((cell, i) => {
+			widths[i] = Math.max(widths[i] ?? 0, cellWidth(cell));
+		});
+	}
+	const total = 5 + widths.reduce((a, b) => a + b, 0);
+	return FIT_STEPS.find((step) => step >= total) ?? FIT_STEPS.at(-1) ?? 0;
+}
+
+/** Em per bar: padding, plus each slot (a group's members count singly). */
+const cellWidth = (cell: CellModel) =>
+	cell.kind === "fermata"
+		? 2.6
+		: 1.6 + (cell.meter ? 0.8 : 0) + cell.slots.reduce((w, s) => w + slotWidth(s), 0);
+const slotWidth = (slot: Slot): number =>
+	slot.kind === "group" ? slot.members.reduce((w, m) => w + slotWidth(m), 0) : 2.2;
 
 function headingHtml(block: SectionBlock): string {
 	if (block.heading === null) return "";

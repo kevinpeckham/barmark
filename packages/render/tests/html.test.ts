@@ -195,3 +195,17 @@ describe("renderChartUnwrapped", () => {
 		expect(classes.filter((c) => !c.startsWith("bm-"))).toEqual([]);
 	});
 });
+
+describe("wrapping on narrow screens", () => {
+	const fit = (chart: string) =>
+		Number(shadow(renderChart(chart)).querySelector(".bm-grid")?.getAttribute("data-fit"));
+	test("each section says how wide it needs to be before its rows wrap", () => {
+		const four = fit("| A | B | C | D |");
+		const twelve = fit("| A | B | C | D | E | F | G | A | B | C | D | E |");
+		const busy = fit("| A / B / | C / D / | E / F / | G / A / |");
+		expect(four).toBeGreaterThanOrEqual(8);
+		expect(twelve).toBeGreaterThan(four);
+		expect(busy).toBeGreaterThan(four);
+		expect(twelve % 4).toBe(0);
+	});
+});
