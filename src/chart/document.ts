@@ -1,5 +1,5 @@
 import { parseChord } from "../chords/parse.js";
-import { parseBarLine, readRepeat, repeatTail } from "./barLine.js";
+import { misplacedRepeat, parseBarLine, readRepeat, repeatTail } from "./barLine.js";
 import { parseDirectiveLine } from "./directives.js";
 import type { ChartDiagnostic, Line, Repeat } from "./types.js";
 
@@ -20,6 +20,16 @@ function readHeading(text: string, line: number, diagnostics: ChartDiagnostic[])
 		repeat = readRepeat(tail.count, line, diagnostics);
 		rest = tail.rest.trim();
 	}
+	const typo = /\s(\S+)$/.exec(rest);
+	const meant = typo?.[1] ? misplacedRepeat(typo[1]) : null;
+	if (typo && meant)
+		diagnostics.push({
+			line,
+			severity: "warning",
+			message: "a section repeat is written x N",
+			token: typo[1] ?? "",
+			suggestion: `## ${rest.slice(0, typo.index)} ${meant}`,
+		});
 	if (/->|→/.test(rest))
 		diagnostics.push({
 			line,

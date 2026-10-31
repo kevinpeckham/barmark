@@ -41,7 +41,7 @@ export function readRepeat(count: string, line: number, diagnostics: ChartDiagno
 }
 
 /**
- * Split an `x N` or `x ...` tail off the end of `text`, scanning from the
+ * Split an `x N` or `x ...` tail (`X` and `×` accepted) off the end of `text`, scanning from the
  * right so long whitespace runs stay linear. With `boundary`, the `x` must
  * start the text or follow whitespace (`## Box2` is a name).
  */
@@ -50,13 +50,20 @@ export function repeatTail(
 	boundary: boolean,
 ): { rest: string; count: string } | null {
 	const t = text.trimEnd();
-	const x = t.lastIndexOf("x");
+	const x = Math.max(t.lastIndexOf("x"), t.lastIndexOf("X"), t.lastIndexOf("×"));
 	if (x < 0) return null;
 	const count = t.slice(x + 1).trim();
 	if (!/^(\d+|\.\.\.|…)$/.test(count)) return null;
 	const rest = t.slice(0, x);
 	if (boundary && rest !== "" && !/\s/.test(rest.at(-1) ?? "")) return null;
 	return { rest: rest.trimEnd(), count };
+}
+
+/** The `x N` a mistyped repeat (`x2` in a cell, `2x`, `(x2)`) most likely meant, or null. */
+export function misplacedRepeat(token: string): string | null {
+	const m =
+		/^\(?\s*[xX×]\s*(\d+|\.\.\.|…)\s*\)?$/.exec(token) ?? /^\(?\s*(\d+)\s*[xX×]\s*\)?$/.exec(token);
+	return m ? `x${m[1]}` : null;
 }
 
 /** Diagnostics listed per line before the rest are summarized. */
@@ -151,8 +158,8 @@ export function parseBarLine(
 			return { kind: "unknown" };
 		}
 		if (/^n\.?c\.?$/i.test(token)) return { kind: "nc" };
-		const misplaced = /^[xX]\s*(\d+|\.\.\.|…)$/.exec(token);
-		if (misplaced) return error("a repeat goes after the final |", token, `x${misplaced[1]}`);
+		const misplaced = misplacedRepeat(token);
+		if (misplaced) return error("a repeat is written x N after the final |", token, misplaced);
 		if (token === "%" || FERMATA.has(token))
 			return error(`${token} must be alone in a cell`, token);
 		const r = token.startsWith("{") ? parseNoteSet(token) : parseChord(token);

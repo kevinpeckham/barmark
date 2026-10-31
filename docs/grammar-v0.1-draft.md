@@ -296,6 +296,9 @@ number is an extension (`C7`, `C13`), so it can't also be an octave.
 - `x ...` repeats a whole loop, while a `...` cell holds a single chord.
   `| E7 | / | x ...` followed by `| A | ... |` is a vamp, a cue, and a final
   chord that rings.
+- `X` and `×` are accepted for `x` (`X2`, `×2`, `× ...`), because charts
+  are typed all three ways. The canonical form is a lowercase `x`. Other
+  spellings (`2x`, `(x2)`) are errors that suggest `x2`.
 - N is a whole number, at least 2. The spec sets no upper limit, and
   tools may warn above 8.
 - `|:` must open a bar line and `:|` must close one. They pair within one
@@ -469,6 +472,7 @@ human to say whether the band was silent, and the structure line.
 | Modes | `key:` accepts a mode name (`A mixolydian`). A bare root means major. |
 | Elision | `->` at the end of a replay heading cuts its last bar. Written sections omit the bar. |
 | Fades and vamps | `x ...`: an open repeat. Machine output records the count as open. |
+| Repeat spellings | `x`, `X` and `×` all accepted; canonical `x`. |
 | `%` after a one-bar meter | `%` repeats the previous bar exactly, its `[n/d]` included. |
 
 ## Open questions

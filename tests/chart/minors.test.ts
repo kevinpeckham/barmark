@@ -38,9 +38,7 @@ describe("final-review minors", () => {
 			true,
 		);
 	});
-	test("X2 after the last pipe suggests x2", () => {
-		expect(errors("| D | A | X2").map((d) => d.suggestion)).toEqual(["x2"]);
-	});
+
 	test("a repeat written inside the last cell suggests moving it", () => {
 		const e = errors("| D | A | x2 |");
 		expect(e).toHaveLength(1);
