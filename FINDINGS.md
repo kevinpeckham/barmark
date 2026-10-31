@@ -166,3 +166,14 @@ to the rule that gives a row's first bar its left border
 saw the attribute in the markup; only a screenshot showed the line
 missing. Both rules now share the same selector shape, and the repeat
 rule comes later.
+
+### npm pack would publish `workspace:*` as written (2026-10-31, workspace releases)
+
+`@barmark/render` depends on `barmark` through the workspace
+(`"barmark": "workspace:^"`). `npm pack` copies that range into the
+tarball unchanged, and npm cannot install it. `bun pm pack` rewrites it to
+`^` the local version, so the release workflow and `verify:package` pack
+with Bun, and `verify:package` fails if any `workspace:` range survives.
+The rewrite uses the version in the checkout, so `verify:release render`
+also checks that version of `barmark` is already on npm: release `barmark`
+first when the renderer needs something new in it.

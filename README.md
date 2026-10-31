@@ -17,7 +17,7 @@ key: D, time: 4/4, tempo: 145
   (draft v0.1). [examples/](examples/) has a full chart.
 - **[`barmark`](packages/barmark/)** on npm: the parser, the canonical
   printer and Harte-label conversion.
-- **[`@barmark/render`](packages/render/)** (in progress): renders a chart
+- **[`@barmark/render`](packages/render/)** renders a chart
   as a clean bar grid, as HTML or as a `<barmark-chart>` web component.
 
 This repository is a Bun workspace. [RELEASING.md](RELEASING.md) describes

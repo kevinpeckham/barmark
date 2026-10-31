@@ -47,7 +47,7 @@
 		"url": "https://github.com/kevinpeckham/barmark/issues"
 	},
 	"dependencies": {
-		"barmark": "workspace:*"
+		"barmark": "workspace:^"
 	},
 	"scripts": {
 		"build": "rm -rf dist && tsc -p tsconfig.build.json",

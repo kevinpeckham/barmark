@@ -3,9 +3,20 @@ import { join } from "node:path";
 
 export const root = join(import.meta.dir, "..");
 
-/** Each published package: its directory, npm name and release tag prefix. */
+/** Each published package: its directory, npm name, release tag prefix and Node smoke test. */
 export const PACKAGES = {
-	barmark: { dir: join(root, "packages/barmark"), name: "barmark", tagPrefix: "barmark-v" },
+	barmark: {
+		dir: join(root, "packages/barmark"),
+		name: "barmark",
+		tagPrefix: "barmark-v",
+		smoke: "scripts/smoke.mjs",
+	},
+	render: {
+		dir: join(root, "packages/render"),
+		name: "@barmark/render",
+		tagPrefix: "render-v",
+		smoke: "scripts/smoke-render.mjs",
+	},
 } as const;
 export type PackageKey = keyof typeof PACKAGES;
 

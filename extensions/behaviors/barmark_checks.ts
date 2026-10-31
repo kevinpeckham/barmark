@@ -33,12 +33,11 @@ const PackageSchema = z.object({
 	checkedAt: z.string(),
 	version: z.string(),
 	files: z.number().int(),
-	unpackedSize: z.number().int(),
+	packedSize: z.number().int(),
+	dependencies: z.record(z.string(), z.string()).describe("Runtime dependencies as published"),
 	missing: z.array(z.string()),
 	unexpected: z.array(z.string()),
-	node: z
-		.object({ bars: z.number(), diagnostics: z.number(), roundTrip: z.boolean(), harte: z.string().nullable() })
-		.nullable(),
+	node: z.record(z.string(), z.unknown()).nullable().describe("The package's Node smoke test result"),
 	ok: z.boolean(),
 	summary: z.string(),
 	problems: z.array(z.string()),

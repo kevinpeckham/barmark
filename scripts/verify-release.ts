@@ -8,7 +8,7 @@
  */
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { packageArg, run } from "./lib.js";
+import { PACKAGES, packageArg, run } from "./lib.js";
 
 const json = process.argv.includes("--json");
 const allowDirty = process.argv.includes("--allow-dirty");
@@ -43,6 +43,21 @@ if (run(["git", "ls-remote", "--tags", "origin", `refs/tags/${tag}`]).out)
 	problems.push(`tag ${tag} already exists on origin`);
 if (run(["npm", "view", `${pkg.name}@${version}`, "version"]).out === version)
 	problems.push(`${pkg.name}@${version} is already on npm`);
+
+// A workspace dependency must already be on npm at the version this package will name.
+const manifest = JSON.parse(readFileSync(join(pkg.dir, "package.json"), "utf8")) as {
+	dependencies?: Record<string, string>;
+};
+for (const [name, range] of Object.entries(manifest.dependencies ?? {})) {
+	if (!range.startsWith("workspace:")) continue;
+	const dep = Object.values(PACKAGES).find((p) => p.name === name);
+	const depVersion = dep
+		? (JSON.parse(readFileSync(join(dep.dir, "package.json"), "utf8")) as { version: string })
+				.version
+		: "";
+	if (run(["npm", "view", `${name}@${depVersion}`, "version"]).out !== depVersion)
+		problems.push(`${name}@${depVersion} (a dependency) is not on npm yet: release it first`);
+}
 
 const branch = run(["git", "branch", "--show-current"]).out;
 const dirty = run(["git", "status", "--porcelain"]).out;

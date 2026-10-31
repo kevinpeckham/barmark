@@ -73,7 +73,12 @@ Fallow, CI, Swamp), the grammar, `examples/`, the scripts and FINDINGS.md.
     example and has the round-trip `meaning` yardstick
   - its own `CHANGELOG.md` and `README.md`
 - `packages/render/`: `@barmark/render`, the bar-grid renderer and the
-  `<barmark-chart>` web component (in progress)
+  `<barmark-chart>` web component
+  - `src/model.ts` decides what to draw (`layoutChart`); `chord.ts` and
+    `speech.ts` typeset and speak chords; `html.ts` and `styles.ts` draw;
+    `element.ts` is the web component; `fonts/` holds Edwin, unmodified
+  - `tests/`: `bun test` (linkedom for markup); `browser/`: Playwright
+    suite (`bun run test:browser`) with its own page server
 - `examples/`: real charts (Peaceful Dreams must parse cleanly and print
   unchanged)
 - `docs/superpowers/`: designs (`specs/`) and implementation plans (`plans/`)
@@ -86,6 +91,7 @@ Fallow, CI, Swamp), the grammar, `examples/`, the scripts and FINDINGS.md.
 bun test                         # tests, every package
 bun run check                    # Biome (tabs) and tsc
 bun run fallow                   # dead code, duplication, complexity beyond the baseline
+bun run test:browser             # the renderer in Chromium (builds first)
 bun run verify:package <pkg>     # build, npm pack contents, Node import
 bun run verify:release <pkg>     # version, CHANGELOG, tag, clean main
 bunx varlock run -- swamp workflow run release-check [--input pkg=render]
@@ -108,4 +114,7 @@ bunx varlock run -- swamp workflow run release-check [--input pkg=render]
   surprises us: the symptom, the cause, the fix and where it lives.
 - Commit messages are conventional commits with **no** `Co-Authored-By`
   or other AI attribution trailer.
-- Releases follow `RELEASING.md` (the `/release` skill walks it).
+- Releases follow `RELEASING.md` (the `/release` skill walks it). Each
+  package is tagged on its own: `barmark-vX.Y.Z`, `render-vX.Y.Z`.
+- `@barmark/render` never changes the music: anything musical (what `%`
+  copies, bar numbers, what a replay plays) comes from the parser.
