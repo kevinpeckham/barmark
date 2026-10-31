@@ -6,16 +6,11 @@
  */
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { root, run } from "./lib.js";
 
-const root = join(import.meta.dir, "..");
 const json = process.argv.includes("--json");
 const allowDirty = process.argv.includes("--allow-dirty");
 const problems: string[] = [];
-
-const run = (cmd: string[]) => {
-	const r = Bun.spawnSync(cmd, { cwd: root, stdout: "pipe", stderr: "pipe" });
-	return { code: r.exitCode, out: r.stdout.toString().trim() };
-};
 
 const { version } = JSON.parse(readFileSync(join(root, "package.json"), "utf8")) as {
 	version: string;

@@ -18,6 +18,9 @@ jobs:
       - run: bun install --frozen-lockfile
       - run: bun run check
       - run: bun test
+      # Dead code, duplication and complexity beyond .fallow-health-baseline.json;
+      # findings show as annotations on the pull request.
+      - run: bun run fallow --format github-annotations
   # The published package must import and run under every Node it supports.
   package:
     runs-on: ubuntu-latest

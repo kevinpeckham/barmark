@@ -25,7 +25,7 @@ const ivs = (...s: string[]): Interval[] =>
 		return i;
 	});
 
-export const QUALITIES: Record<Quality, Interval[]> = {
+const QUALITIES: Record<Quality, Interval[]> = {
 	"": ivs("1", "3", "5"),
 	m: ivs("1", "b3", "5"),
 	dim: ivs("1", "b3", "b5"),

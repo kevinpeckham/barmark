@@ -2,7 +2,7 @@
  * Swamp behavior type for barmark's release checks: each method runs one of
  * the repo's own scripts (the same ones CI runs) and records what it found
  * as typed, versioned data. One definition, `barmark`, lives under models/;
- * the release-check workflow calls all three and asserts they are clean.
+ * the release-check workflow calls all four and asserts they are clean.
  * Pure scripts: no network beyond git and npm lookups, so no vault.
  */
 import { z } from "npm:zod@4";
@@ -51,6 +51,19 @@ const ReleaseSchema = z.object({
 	problems: z.array(z.string()),
 });
 
+const HealthSchema = z.object({
+	label: z.string(),
+	checkedAt: z.string(),
+	deadCode: z.number().int().describe("Unused files, exports, types and dependencies"),
+	duplicatedLines: z.number().int(),
+	newComplexity: z.number().int().describe("Complexity findings not in .fallow-health-baseline.json"),
+	baselined: z.number().int().describe("Functions above threshold that the baseline accepts"),
+	maintainability: z.number(),
+	ok: z.boolean(),
+	summary: z.string(),
+	output: z.string().describe("The tail of fallow's report when it fails"),
+});
+
 type Context = {
 	signal: AbortSignal;
 	repoDir: string;
@@ -94,8 +107,8 @@ async function verify(context: Context, script: string, extra: string[] = []) {
 
 export const behavior = {
 	type: "@kevin/barmark-checks",
-	version: "2026.10.31.1",
-	description: "barmark's release checks (lint, tests, package, release readiness) run on the checkout and kept as data",
+	version: "2026.10.31.2",
+	description: "barmark's release checks (lint, tests, Fallow, package, release readiness) run on the checkout and kept as data",
 	globalArguments: GlobalArgsSchema,
 	resources: {
 		gates: {
@@ -107,6 +120,12 @@ export const behavior = {
 		package: {
 			description: "What npm would publish, and whether Node can import and run the build",
 			schema: PackageSchema,
+			lifetime: "infinite",
+			garbageCollection: 30,
+		},
+		health: {
+			description: "Fallow: dead code, duplication and complexity beyond the baseline",
+			schema: HealthSchema,
 			lifetime: "infinite",
 			garbageCollection: 30,
 		},
@@ -160,6 +179,37 @@ export const behavior = {
 				});
 				if (!data.ok) context.logger.warning("Package check failed: {summary}", data);
 				return { dataHandles: [await context.writeResource("package", "package", data)] };
+			},
+		},
+		health: {
+			description: "Run bun run fallow: no dead code, no duplication, no complexity beyond the baseline",
+			arguments: z.object({}),
+			execute: async (_args: Record<string, never>, context: Context) => {
+				const gate = await run(context, ["run", "fallow"]);
+				const report = await run(context, ["run", "--silent", "fallow", "--format", "json"]);
+				const d = JSON.parse(report.stdout) as {
+					check: { total_issues: number };
+					dupes: { stats: { duplicated_lines: number } };
+					health: {
+						findings: unknown[];
+						summary: { functions_above_threshold: number; average_maintainability: number };
+					};
+				};
+				const ok = gate.code === 0;
+				const data: z.infer<typeof HealthSchema> = {
+					label: context.globalArgs.label,
+					checkedAt: new Date().toISOString(),
+					deadCode: d.check.total_issues,
+					duplicatedLines: d.dupes.stats.duplicated_lines,
+					newComplexity: d.health.findings.length,
+					baselined: d.health.summary.functions_above_threshold - d.health.findings.length,
+					maintainability: d.health.summary.average_maintainability,
+					ok,
+					summary: `dead code ${d.check.total_issues}; duplicated lines ${d.dupes.stats.duplicated_lines}; new complexity ${d.health.findings.length}; maintainability ${d.health.summary.average_maintainability}`,
+					output: ok ? "" : tail(gate.stdout + gate.stderr),
+				};
+				if (!ok) context.logger.warning("Fallow failed: {summary}", data);
+				return { dataHandles: [await context.writeResource("health", "health", data)] };
 			},
 		},
 		release: {

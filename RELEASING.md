@@ -26,10 +26,11 @@ The same scripts run in three places:
 |---|---|---|---|---|
 | Lint and typecheck | `bun run check` | ✓ | ✓ | ✓ |
 | Tests | `bun test` | ✓ | ✓ | ✓ |
+| Dead code, duplication, complexity | `bun run fallow` | ✓ | ✓ | ✓ |
 | Package contents, Node import | `bun run verify:package` | ✓ | ✓ (Node 20, 22, 24) | ✓ |
 | Version, CHANGELOG, tag, clean `main` | `bun run verify:release` | ✓ | | ✓ (tag = version) |
 
-Locally, `bunx varlock run -- swamp workflow run release-check` runs all four through the
+Locally, `bunx varlock run -- swamp workflow run release-check` runs all five through the
 `barmark` Swamp behavior, keeps each run's results as data, and fails on
 any problem. The scripts also run on their own; Swamp adds the record and
 the single pass/fail. Varlock loads Swamp's credential from barmark's
@@ -48,7 +49,7 @@ the single pass/fail. Varlock loads Swamp's credential from barmark's
    `git log $(git describe --tags --abbrev=0)..HEAD --oneline`.
 4. **README.md and docs:** update anything the release changes.
 5. **Commit** the bump: `git commit -m "vX.Y.Z: <one-line summary>"`.
-6. **Gate:** `bunx varlock run -- swamp workflow run release-check` (or the four commands
+6. **Gate:** `bunx varlock run -- swamp workflow run release-check` (or the five commands
    above). Fix anything it reports before going on.
 7. **Tag and push:**
    ```

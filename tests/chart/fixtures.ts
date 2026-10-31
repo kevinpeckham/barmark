@@ -52,7 +52,7 @@ const gcd = (a: number, b: number): number => (b === 0 ? a : gcd(b, a % b));
  * without the printer's reduction: holds attack nothing, a repeated `--` or
  * `N.C.` attacks nothing, and every chord, note set and `?` attacks.
  */
-export function timeline(slots: AnySlot[]): string[] {
+function timeline(slots: AnySlot[]): string[] {
 	const out: string[] = [];
 	let sounding: Simple | null = null;
 	const k = slots.length;

@@ -7,10 +7,12 @@
 			"!tests/fixtures",
 			"!**/*.md",
 			"!.swamp.yaml",
+			"!.fallow-health-baseline.json",
 			"!extensions",
 			"!models",
 			"!workflows"
 		]
 	},
-	"formatter": { "indentStyle": "tab", "lineWidth": 100 }
+	"formatter": { "indentStyle": "tab", "lineWidth": 100 },
+	"overrides": [{ "includes": [".fallowrc.json"], "json": { "parser": { "allowComments": true } } }]
 }

@@ -78,6 +78,7 @@ questions; surface them, with a recommendation.
 ```
 bun test                 # tests
 bun run check            # Biome (tabs) and tsc
+bun run fallow           # dead code, duplication, complexity beyond the baseline
 bun run verify:package   # build, npm pack contents, Node import
 bun run verify:release   # version, CHANGELOG, tag, clean main
 bunx varlock run -- swamp workflow run release-check   # all of the above, as data
@@ -87,6 +88,11 @@ bunx varlock run -- swamp workflow run release-check   # all of the above, as da
 
 - Test first: a failing test before every fix or feature, and a test that
   fails for the reason you expect.
+- Keep `bun run fallow` clean. Refactor a function that crosses Fallow's
+  complexity thresholds rather than growing the baseline; regenerate
+  `.fallow-health-baseline.json` (`bunx fallow health --save-baseline
+  .fallow-health-baseline.json`) only after paying complexity down, and
+  say so in the commit.
 - Parsers never throw on user input; every problem is a diagnostic with a
   line number.
 - Add a `CHANGELOG.md` entry under `[Unreleased]` for every user-visible

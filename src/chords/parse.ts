@@ -75,7 +75,7 @@ function tokenize(symbol: string): ChordParts | string {
 }
 
 /** Appendix A.5 and A.6: Unicode, rejections, then aliases into canonical vocabulary. */
-export function normalizeSymbol(symbol: string): { text: string } | Diagnostic {
+function normalizeSymbol(symbol: string): { text: string } | Diagnostic {
 	const text = symbol.replace(/♯/g, "#").replace(/♭/g, "b");
 	const rejected = rejection(text, noteSemitone);
 	if (rejected) return rejected;

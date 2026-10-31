@@ -90,6 +90,19 @@ package index, inside the package.
 
 ## Tooling
 
+### Fallow's first run: three exports nobody imported, and a baseline for the parser's complexity (2026-10-31, Fallow)
+
+`normalizeSymbol`, `QUALITIES` and the test fixture `timeline` were
+exported but used only inside their own modules; they lost `export`. The
+two verify scripts had grown the same six-line header, now
+`scripts/lib.ts`. Seventeen functions sit above Fallow's complexity
+thresholds, mostly the parser's line readers and `enumerateSuffixes`
+(cognitive 38); rather than refactor working, well-tested code to land
+the gate, `.fallow-health-baseline.json` accepts them as they stand and
+fails on anything new or worse (checked by adding a cognitive-35
+function: exit 1). Fallow's config is JSONC, so Biome needs
+`json.parser.allowComments` for `.fallowrc.json`.
+
 ### Biome formats files that belong to other tools (2026-10-31, release process)
 
 The first Swamp `release-check` run failed its own lint gate: Biome

@@ -4,15 +4,10 @@
  * package is sound; `--json` prints the result for the Swamp release check.
  */
 import { join } from "node:path";
+import { root, run } from "./lib.js";
 
-const root = join(import.meta.dir, "..");
 const json = process.argv.includes("--json");
 const problems: string[] = [];
-
-const run = (cmd: string[]) => {
-	const r = Bun.spawnSync(cmd, { cwd: root, stdout: "pipe", stderr: "pipe" });
-	return { code: r.exitCode, out: r.stdout.toString(), err: r.stderr.toString() };
-};
 
 const build = run(["bun", "run", "build"]);
 if (build.code !== 0)

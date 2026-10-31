@@ -66,6 +66,7 @@ harteToBarmark("A:sus4(b7,9)"); // "A9sus4"
 bun install
 bun test                 # the test suite
 bun run check            # Biome and the TypeScript typecheck
+bun run fallow           # dead code, duplication and complexity (Fallow)
 bun run verify:package   # build, check the npm package, import it in Node
 ```
 

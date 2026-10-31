@@ -1,7 +1,8 @@
 id: 980d1aa0-dfc8-447c-893f-67efc886f666
 name: release-check
 description: >-
-  barmark's release gate: lint, typecheck and tests, the npm package (contents
+  barmark's release gate: lint, typecheck and tests, Fallow (dead code,
+  duplication, complexity beyond the baseline), the npm package (contents
   and a Node import), and release readiness (version, CHANGELOG, tag and npm
   free, clean main), each run by the barmark behavior and kept as data, then
   asserted clean. Run `bunx varlock run -- swamp workflow run release-check`
@@ -25,6 +26,16 @@ jobs:
           type: behavior
           behavior: barmark
           methodName: gates
+      - name: health
+        description: Fallow - dead code, duplication, complexity beyond the baseline
+        task:
+          type: behavior
+          behavior: barmark
+          methodName: health
+        dependsOn:
+          - step: gates
+            condition:
+              type: succeeded
       - name: package
         description: Build, npm pack contents, Node import and smoke test
         task:
@@ -32,7 +43,7 @@ jobs:
           behavior: barmark
           methodName: package
         dependsOn:
-          - step: gates
+          - step: health
             condition:
               type: succeeded
       - name: release
@@ -60,6 +71,13 @@ jobs:
           type: assert
           expr: data.latest("barmark", "gates").attributes.ok
           message: '${{ "Gates: " + data.latest("barmark", "gates").attributes.summary }}'
+          severity: high
+      - name: health-clean
+        description: No dead code, no duplication, no complexity beyond the baseline
+        task:
+          type: assert
+          expr: data.latest("barmark", "health").attributes.ok
+          message: '${{ "Fallow: " + data.latest("barmark", "health").attributes.summary }}'
           severity: high
       - name: package-clean
         description: The package publishes the right files and runs in Node
