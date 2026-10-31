@@ -117,6 +117,11 @@ which turns `workspace:` ranges into versions, and fails if one is left.
 11. **Confirm:** the workflow's `confirm` job installs the new version
     from npm and reads Peaceful Dreams with it; when it passes, check the
     package's provenance on npmjs.com.
+12. **Bump barmark.dev:** on a new branch, `cd site && bun add --exact
+    <npm name>@X.Y.Z`, run `bun run check && bun test`, and open a pull
+    request `chore(site): use <npm name> X.Y.Z` (`site/package.json` and
+    `site/bun.lock`). Until it merges, CI's `site-versions` check is red
+    on purpose; it is not required, so other pull requests still merge.
 
 Release tags cannot be moved, so if the workflow fails before publishing,
 fix the problem through a pull request and release it as the next patch

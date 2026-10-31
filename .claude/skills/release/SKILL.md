@@ -33,5 +33,7 @@ Points that are easy to miss:
   unless he has already asked for the release.
 - After publishing, confirm with `gh run watch` and `npm view <npm name>
   version`, then report the npm and GitHub release links.
+- Then bump barmark.dev to the new version (RELEASING.md step 12): its own
+  pull request, `site/package.json` and `site/bun.lock`.
 - Update `FINDINGS.md` if anything in the release surprised you, and the
   Claude memory only if a convention changed.

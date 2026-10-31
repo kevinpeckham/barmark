@@ -19,6 +19,8 @@ key: D, time: 4/4, tempo: 145
   printer and Harte-label conversion.
 - **[`@barmark/render`](packages/render/)** renders a chart
   as a clean bar grid, as HTML or as a `<barmark-chart>` web component.
+- **[barmark.dev](https://barmark.dev)** ([site/](site/)): try it live, and
+  the syntax guide.
 
 This repository is a Bun workspace. [RELEASING.md](RELEASING.md) describes
 the checks and the release process, [FINDINGS.md](FINDINGS.md) what

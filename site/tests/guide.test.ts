@@ -60,7 +60,7 @@ describe("guide rows", () => {
 			const messages = chart.diagnostics.map((d) => d.message);
 			const expected = row.expect?.diagnostics ?? [];
 			expect(messages.length).toBe(expected.length);
-			expected.forEach((part, i) => expect(messages[i]).toContain(part));
+			for (const [i, part] of expected.entries()) expect(messages[i]).toContain(part);
 			if (row.expect?.bars !== undefined) expect(chart.bars.length).toBe(row.expect.bars);
 			const chord = row.expect?.chord;
 			if (chord) {
