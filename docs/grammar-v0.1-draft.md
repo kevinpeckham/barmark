@@ -604,5 +604,5 @@ Each slot parses to one record:
 The bass note counts among the chord's pitches: `C/Bb` contains B♭. For
 note sets, the Harte label uses the marked root when there is one
 (`{D E! G}` → `E:1(b3,b7)/b7`). Otherwise it uses the bass, because Harte
-requires a root: `{C E F# B}` → `C:(3,#4,7)`. That is a representation, not
+requires a root: `{C E F# B}` → `C:1(3,#4,7)`. That is a representation, not
 a claim about the chord's name. *(Claude's call)*

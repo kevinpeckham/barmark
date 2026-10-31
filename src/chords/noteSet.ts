@@ -1,5 +1,6 @@
+import { toHarte } from "./harte.js";
 import { intervalBetween, intervalKey, noteSemitone } from "./intervals.js";
-import type { Diagnostic, ParseResult } from "./types.js";
+import type { ChordRecord, Diagnostic, ParseResult } from "./types.js";
 import { byDegree } from "./vocabulary.js";
 
 type Note = { name: string; octave: number | null; root: boolean };
@@ -66,19 +67,17 @@ export function parseNoteSet(text: string): ParseResult {
 	const intervals = [...new Map(notes.map((n) => [n.name, intervalBetween(from, n.name)])).values()]
 		.filter((i, idx, all) => all.findIndex((j) => intervalKey(j) === intervalKey(i)) === idx)
 		.sort(byDegree);
-	return {
-		ok: true,
-		warnings,
-		value: {
-			kind: "notes",
-			source: text,
-			canonical: `{${notes.map((n) => `${label(n)}${n.root ? "!" : ""}`).join(" ")}}`,
-			root,
-			intervals,
-			pitches: notes.map(label),
-			bass,
-			alteredOpen: false,
-			harte: "",
-		},
+	const value: ChordRecord = {
+		kind: "notes",
+		source: text,
+		canonical: `{${notes.map((n) => `${label(n)}${n.root ? "!" : ""}`).join(" ")}}`,
+		root,
+		intervals,
+		pitches: notes.map(label),
+		bass,
+		alteredOpen: false,
+		harte: "",
 	};
+	value.harte = toHarte(value);
+	return { ok: true, warnings, value };
 }

@@ -197,3 +197,31 @@ export function rejection(symbol: string, semitoneOf: (note: string) => number):
 	}
 	return null;
 }
+
+/** Harte (2005) shorthands with Harte's own definitions, in tie-break order. */
+export const HARTE_SHORTHANDS: [string, Interval[]][] = [
+	["maj", ivs("1", "3", "5")],
+	["min", ivs("1", "b3", "5")],
+	["dim", ivs("1", "b3", "b5")],
+	["aug", ivs("1", "3", "#5")],
+	["maj7", ivs("1", "3", "5", "7")],
+	["min7", ivs("1", "b3", "5", "b7")],
+	["7", ivs("1", "3", "5", "b7")],
+	["dim7", ivs("1", "b3", "b5", "bb7")],
+	["hdim7", ivs("1", "b3", "b5", "b7")],
+	["minmaj7", ivs("1", "b3", "5", "7")],
+	["maj6", ivs("1", "3", "5", "6")],
+	["min6", ivs("1", "b3", "5", "6")],
+	["9", ivs("1", "3", "5", "b7", "9")],
+	["maj9", ivs("1", "3", "5", "7", "9")],
+	["min9", ivs("1", "b3", "5", "b7", "9")],
+	["sus2", ivs("1", "2", "5")],
+	["sus4", ivs("1", "4", "5")],
+	["11", ivs("1", "3", "5", "b7", "9", "11")],
+	["min11", ivs("1", "b3", "5", "b7", "9", "11")],
+	["13", ivs("1", "3", "5", "b7", "9", "11", "13")],
+	["min13", ivs("1", "b3", "5", "b7", "9", "11", "13")],
+	["maj13", ivs("1", "3", "5", "7", "9", "11", "13")],
+	["5", ivs("1", "5")],
+	["1", ivs("1")],
+];

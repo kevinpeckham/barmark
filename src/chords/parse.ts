@@ -1,6 +1,7 @@
+import { toHarte } from "./harte.js";
 import { noteSemitone, transpose } from "./intervals.js";
 import { printChord } from "./print.js";
-import type { Diagnostic, ParseResult } from "./types.js";
+import type { ChordRecord, Diagnostic, ParseResult } from "./types.js";
 import {
 	ALIASES,
 	type ChordParts,
@@ -107,19 +108,17 @@ export function parseChord(symbol: string): ParseResult {
 	const { intervals, warnings, alteredOpen } = chordIntervals(parts, symbol);
 	const pitches = intervals.map((i) => transpose(parts.root, i));
 	if (parts.bass && !pitches.includes(parts.bass)) pitches.push(parts.bass);
-	return {
-		ok: true,
-		warnings,
-		value: {
-			kind: "chord",
-			source: symbol,
-			canonical: printChord(parts),
-			root: parts.root,
-			intervals,
-			pitches,
-			bass: parts.bass ?? parts.root,
-			alteredOpen,
-			harte: "",
-		},
+	const value: ChordRecord = {
+		kind: "chord",
+		source: symbol,
+		canonical: printChord(parts),
+		root: parts.root,
+		intervals,
+		pitches,
+		bass: parts.bass ?? parts.root,
+		alteredOpen,
+		harte: "",
 	};
+	value.harte = toHarte(value);
+	return { ok: true, warnings, value };
 }
