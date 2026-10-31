@@ -1,3 +1,5 @@
+import { FONT_FAMILY } from "./font.js";
+
 /**
  * The chart's styles. Everything is sized in em from `--barmark-size`, so
  * text size and zoom scale the chart; colours come from the palettes below
@@ -26,7 +28,7 @@ const css = `
 :host{all:initial;display:block}
 .bm-chart{${colours(PALETTES.light)}
 	container:bm/inline-size;
-	font-family:var(--barmark-font,"barmark Edwin","Edwin",Georgia,serif);
+	font-family:var(--barmark-font,"${FONT_FAMILY}","Edwin",Georgia,serif);
 	font-size:var(--barmark-size,1.25rem);
 	line-height:1.3;color:var(--bm-ink);background:var(--bm-paper);
 	padding:1em 1.2em;box-sizing:border-box;text-align:start}

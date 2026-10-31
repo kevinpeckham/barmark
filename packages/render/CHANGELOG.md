@@ -37,3 +37,8 @@ package uses [semantic versioning](https://semver.org/).
   `--barmark-font`, `--barmark-size`, `--barmark-ink`, `--barmark-paper`,
   `--barmark-muted`, `--barmark-rule` and `--barmark-accent`, or
   `::part()`.
+- **Edwin ships with the package,** unmodified, with its OFL licence
+  (`@barmark/render/fonts/Edwin-Roman.otf`). Pass `fontUrl` to emit its
+  `@font-face` rule before the chart, or call `fontFaceCss(url)` once per
+  page. The family is registered as "barmark Edwin"; without it the chart
+  falls back to Georgia or another serif.

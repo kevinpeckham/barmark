@@ -6,6 +6,7 @@
 import type { ChordRecord, Directives, Repeat, Slot } from "barmark";
 import { glyphs, splitPitch, typesetChord } from "./chord.js";
 import { escapeHtml } from "./escape.js";
+import { fontFaceCss } from "./font.js";
 import { layoutChart } from "./model.js";
 import { speakBar } from "./speech.js";
 import { FIT_STEPS, stylesheet } from "./styles.js";
@@ -17,6 +18,7 @@ export type RenderOptions = {
 	rehearsalLetters?: boolean;
 	/** List the chart's errors and warnings below it. */
 	diagnostics?: boolean;
+	/** Where the page serves Edwin-Roman.otf: emits its @font-face rule before the chart. */
 	fontUrl?: string;
 };
 
@@ -24,10 +26,17 @@ type Row = Extract<BlockItem, { kind: "row" }>;
 type Settings = { barNumbers: boolean };
 
 export function renderChart(text: string, options: RenderOptions = {}): string {
-	return `<barmark-chart><template shadowrootmode="open"><style>${stylesheet}</style>${renderChartUnwrapped(text, options)}</template></barmark-chart>`;
+	return `${fontStyle(options)}<barmark-chart><template shadowrootmode="open"><style>${stylesheet}</style>${chartHtml(text, options)}</template></barmark-chart>`;
 }
 
+const fontStyle = (options: RenderOptions) =>
+	options.fontUrl ? `<style>${fontFaceCss(options.fontUrl)}</style>` : "";
+
 export function renderChartUnwrapped(text: string, options: RenderOptions = {}): string {
+	return `${fontStyle(options)}${chartHtml(text, options)}`;
+}
+
+function chartHtml(text: string, options: RenderOptions): string {
 	const model = layoutChart(text, { rehearsalLetters: options.rehearsalLetters ?? false });
 	const settings: Settings = { barNumbers: options.barNumbers ?? true };
 	return `<div class="bm-chart" data-theme="${options.theme ?? "auto"}"${settings.barNumbers ? "" : ' data-bar-numbers="off"'}>${headerHtml(model)}${model.blocks.map((b) => blockHtml(b, settings)).join("")}${options.diagnostics ? diagnosticsHtml(model) : ""}</div>`;
