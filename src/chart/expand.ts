@@ -1,3 +1,4 @@
+import { beatsOf } from "./directives.js";
 import type {
 	ChartDiagnostic,
 	ChartEvent,
@@ -14,12 +15,16 @@ import type {
 
 /** Nested repeats multiply; expansion stops here rather than run away. */
 export const MAX_EXPANDED_BARS = 10_000;
+/** Repeats of bodies that play no bars (fermatas only) are bounded too. */
+const MAX_WORK = MAX_EXPANDED_BARS * 10;
 
 type BarsLine = Extract<Line, { kind: "bars" }>;
 type SectionLine = Extract<Line, { kind: "section" }>;
 type Section = { heading: SectionLine | null; lines: Line[] };
 /** A cell with `%` already resolved to the slots it copies. */
-type Played = { kind: "bar"; meter: Meter | null; slots: Slot[] } | { kind: "fermata" };
+type Played =
+	| { kind: "bar"; meter: Meter | null; slots: Slot[]; written: boolean }
+	| { kind: "fermata" };
 type Entry = { line: Line; repeat: Repeat };
 type Item =
 	| ({ kind: "line" } & Entry)
@@ -32,6 +37,19 @@ export function flattenBars(events: ChartEvent[]): PlayedBar[] {
 	return events.flatMap((e) =>
 		e.kind === "bar" ? [e.bar] : e.kind === "open" ? flattenBars(e.events) : [],
 	);
+}
+
+/** Remove the last bar, looking inside a final open pass and past a final fermata. */
+function removeLastBar(events: ChartEvent[]): boolean {
+	for (let i = events.length - 1; i >= 0; i--) {
+		const e = events[i];
+		if (e?.kind === "bar") {
+			events.splice(i, 1);
+			return true;
+		}
+		if (e?.kind === "open" && removeLastBar(e.events)) return true;
+	}
+	return false;
 }
 
 /**
@@ -63,13 +81,18 @@ export function expand(lines: Line[]): {
 			if (c.kind === "fermata") cells.push({ kind: "fermata" });
 			else if (c.kind === "simile") {
 				if (!previous) error(l.line, "% has no bar before it to repeat", "%");
-				cells.push({ kind: "bar", meter: null, slots: previous ?? [{ kind: "hold" }] });
+				cells.push({
+					kind: "bar",
+					meter: null,
+					slots: previous ?? [{ kind: "hold" }],
+					written: false,
+				});
 			} else {
 				const first = c.slots[0];
 				const head = first?.kind === "group" ? first.members[0] : first;
 				if (!previous && head?.kind === "hold")
 					error(l.line, "/ has nothing before it to hold", "/");
-				cells.push({ kind: "bar", meter: c.meter, slots: c.slots });
+				cells.push({ kind: "bar", meter: c.meter, slots: c.slots, written: true });
 				previous = c.slots;
 			}
 		}
@@ -127,17 +150,38 @@ export function expand(lines: Line[]): {
 		if (set.feel) state.feel = set.feel;
 	};
 	let count = 0;
+	let work = 0;
 	let capped = false;
+	let openDepth = 0;
+	const checked = new Set<Played>();
+	const stop = (line: number) => {
+		capped = true;
+		error(line, `expansion stopped at ${MAX_EXPANDED_BARS} bars`, "x");
+	};
 	let sectionName: string | null = null;
 
 	const emit = (p: Played, line: number, out: ChartEvent[]) => {
-		if (capped || p.kind === "fermata") return;
-		if (count >= MAX_EXPANDED_BARS) {
-			capped = true;
-			error(line, `expansion stopped at ${MAX_EXPANDED_BARS} bars`, "x");
+		if (capped) return;
+		if (++work > MAX_WORK) return stop(line);
+		if (p.kind === "fermata") {
+			out.push({ kind: "fermata", line });
 			return;
 		}
+		if (count >= MAX_EXPANDED_BARS) return stop(line);
 		count++;
+		const meter = p.meter ?? state.time;
+		if (p.written && !checked.has(p)) {
+			checked.add(p);
+			const k = p.slots.length;
+			const b = beatsOf(meter);
+			if (b % k !== 0 && k % b !== 0)
+				diagnostics.push({
+					line,
+					severity: "warning",
+					message: `${k} slots divide ${b} beats unevenly`,
+					token: `${k}`,
+				});
+		}
 		const { key, tempo, feel } = state;
 		out.push({
 			kind: "bar",
@@ -145,7 +189,7 @@ export function expand(lines: Line[]): {
 				index: 0,
 				line,
 				section: sectionName,
-				meter: p.meter ?? state.time,
+				meter,
 				key,
 				tempo,
 				feel,
@@ -153,23 +197,45 @@ export function expand(lines: Line[]): {
 			},
 		});
 	};
-	const times = (repeat: Repeat, body: () => void) => {
-		const n = typeof repeat === "number" ? repeat : 1;
-		for (let i = 0; i < n && !capped; i++) body();
+	/** Play `body` `repeat` times into `out`; an open repeat plays one pass inside an open event. */
+	const times = (
+		repeat: Repeat,
+		line: number,
+		out: ChartEvent[],
+		body: (into: ChartEvent[]) => void,
+	) => {
+		if (repeat === "open") {
+			if (openDepth > 0) {
+				error(line, "an open repeat inside another open repeat", "x ...");
+				body(out);
+				return;
+			}
+			const inner: ChartEvent[] = [];
+			openDepth++;
+			body(inner);
+			openDepth--;
+			out.push({ kind: "open", line, events: inner });
+			return;
+		}
+		for (let i = 0; i < (repeat ?? 1) && !capped; i++) {
+			if (++work > MAX_WORK) return stop(line);
+			body(out);
+		}
 	};
+
 	const playLine = ({ line: l, repeat }: Entry, out: ChartEvent[]) => {
 		if (l.kind === "directive") apply(l.set);
 		if (l.kind !== "bars") return;
-		times(repeat, () => {
-			for (const c of resolved.get(l) ?? []) emit(c, l.line, out);
+		times(repeat, l.line, out, (into) => {
+			for (const c of resolved.get(l) ?? []) emit(c, l.line, into);
 		});
 	};
 	const playItems = (items: Item[], out: ChartEvent[]) => {
 		for (const it of items) {
 			if (it.kind === "line") playLine(it, out);
 			else
-				times(it.repeat, () => {
-					for (const e of it.entries) playLine(e, out);
+				times(it.repeat, it.line, out, (into) => {
+					for (const e of it.entries) playLine(e, into);
 				});
 		}
 	};
@@ -192,7 +258,7 @@ export function expand(lines: Line[]): {
 		if (isDefinition) {
 			definitions.set(normalize(h.name), s);
 			if (h.elided) error(h.line, "-> is only for a replay; leave the bar out instead", "->");
-			times(h.repeat, () => playItems(items, out));
+			times(h.repeat, h.line, out, (into) => playItems(items, into));
 		} else {
 			const source = definitions.get(normalize(h.name));
 			if (!source?.heading) {
@@ -202,13 +268,10 @@ export function expand(lines: Line[]): {
 			replayOf = source.heading.line;
 			playItems(items, out);
 			const body = itemsOf.get(source) ?? [];
-			times(h.repeat, () => playItems(body, out));
+			times(h.repeat, h.line, out, (into) => playItems(body, into));
 		}
 		const elided = !isDefinition && h.elided;
-		if (elided) {
-			const last = out.findLastIndex((e) => e.kind === "bar");
-			if (last >= 0) out.splice(last, 1);
-		}
+		if (elided) removeLastBar(out);
 		events.push(...out);
 		occurrences.push([
 			{ name: h.name, line: h.line, replayOf, firstBar: 0, lastBar: 0, elided },
@@ -223,5 +286,13 @@ export function expand(lines: Line[]): {
 		const bars = flattenBars(out);
 		return { ...occ, firstBar: bars[0]?.index ?? 0, lastBar: bars.at(-1)?.index ?? 0 };
 	});
-	return { events, sections: sectionsOut, diagnostics };
+	// A replayed section repeats its structural errors; report each once.
+	const seen = new Set<string>();
+	const unique = diagnostics.filter((d) => {
+		const k = `${d.line}|${d.severity}|${d.message}|${d.token}`;
+		if (seen.has(k)) return false;
+		seen.add(k);
+		return true;
+	});
+	return { events, sections: sectionsOut, diagnostics: unique };
 }

@@ -111,6 +111,7 @@ export function parseBarLine(
 		return { kind: "chord", chord: r.value };
 	};
 
+	if (parts.length === 0) error("a bar line needs at least one cell", text.trim());
 	const cells: Cell[] = [];
 	for (const raw of parts) {
 		let rest = raw.trim();
