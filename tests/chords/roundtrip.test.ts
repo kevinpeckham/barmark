@@ -1,8 +1,9 @@
 import { describe, expect, test } from "bun:test";
 import { harteToBarmark, parseHarte } from "../../src/chords/harte.js";
-import { transpose } from "../../src/chords/intervals.js";
+import { intervalKey, parseInterval, transpose } from "../../src/chords/intervals.js";
 import { parseNoteSet } from "../../src/chords/noteSet.js";
 import { parseChord } from "../../src/chords/parse.js";
+import { HARTE_SHORTHANDS } from "../../src/chords/vocabulary.js";
 import fixture from "../fixtures/billboard-labels.json";
 
 describe("harteToBarmark", () => {
@@ -61,6 +62,25 @@ describe("McGill Billboard round trip (CC0 fixture)", () => {
 		expect(mismatches).toEqual([]);
 	});
 
+	// The 100% above compares against parseHarte, which reads 11, 13 and maj13 at
+	// barmark's meaning (no 3rd in an 11; no 11 in a 13). Under Harte 2005's own
+	// definitions a small share of labels differ; record that figure too.
+	test("under Harte's strict definitions, at least 99% of chord labels (by count) match", () => {
+		let same = 0;
+		let total = 0;
+		for (const [label, count] of labels) {
+			total += count;
+			if (
+				barmarkNotes(harteToBarmark(label) ?? "").join(" ") === strictHarteNotes(label).join(" ")
+			) {
+				same += count;
+			}
+		}
+		const share = same / total;
+		console.log(`strict Harte agreement: ${(share * 100).toFixed(2)}% of ${total} labels`);
+		expect(share).toBeGreaterThanOrEqual(0.99);
+	});
+
 	test("at least 96% of chord labels (by count) become named chords", () => {
 		let named = 0;
 		let total = 0;
@@ -73,3 +93,20 @@ describe("McGill Billboard round trip (CC0 fixture)", () => {
 		expect(share).toBeGreaterThanOrEqual(0.96);
 	});
 });
+
+/** A label's notes under Harte 2005's own shorthand definitions. */
+function strictHarteNotes(label: string): string[] {
+	const m = /^([A-G][#b]*)(?::([^(/]*)(?:\(([^)]*)\))?)?(?:\/([#b]*\d+))?$/.exec(label);
+	const [, root = "", shorthand = "maj", list, bass] = m ?? [];
+	let intervals =
+		shorthand === "" ? [] : [...(HARTE_SHORTHANDS.find(([n]) => n === shorthand)?.[1] ?? [])];
+	for (const item of list ? list.split(",") : []) {
+		const i = parseInterval(item.replace("*", ""));
+		if (!i) continue;
+		intervals = intervals.filter((x) => intervalKey(x) !== intervalKey(i));
+		if (!item.startsWith("*")) intervals.push(i);
+	}
+	const bassInterval = bass ? parseInterval(bass) : null;
+	const notes = intervals.map((i) => transpose(root, i));
+	return [...new Set([...notes, bassInterval ? transpose(root, bassInterval) : root])].sort();
+}

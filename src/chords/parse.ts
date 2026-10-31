@@ -15,7 +15,7 @@ import {
 } from "./vocabulary.js";
 
 const ROOT = /^[A-G][#b]?/;
-const INLINE_ALTERATION = /^[b#](5|9|11|13)/;
+const INLINE_ALTERATION = /^(b5|#5|b9|#9|#11|b13)/;
 
 /** Splits a symbol into its parts, or names the text it could not read. */
 function tokenize(symbol: string): ChordParts | string {

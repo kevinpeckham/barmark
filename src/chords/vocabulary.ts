@@ -111,14 +111,15 @@ export function chordIntervals(
 		remove({ degree: 3, alter: -1 });
 		add({ degree: parts.sus === "sus2" ? 2 : 4, alter: 0 });
 	}
-	for (const tone of parts.tones) {
+	// Applied in the order the printer writes them, so a symbol and its canonical
+	// form always name the same chord.
+	const tones = [...parts.tones].sort((a, b) => byDegree(toneInterval(a), toneInterval(b)));
+	for (const tone of tones) {
 		const i = toneInterval(tone);
-		if (tone !== "7" && i.alter !== 0) {
-			remove({ degree: i.degree, alter: 0 });
-		} else if (s.some((x) => same(x, i))) {
+		if (tone !== "7" && i.alter !== 0) remove({ degree: i.degree, alter: 0 });
+		if (s.some((x) => intervalKey(x) === intervalKey(i))) {
 			warnings.push({ message: `${symbol} already contains ${tone}`, token: tone });
-		}
-		add(i);
+		} else s.push(i);
 	}
 	return { intervals: s.sort(byDegree), warnings, alteredOpen: parts.extension === "7alt" };
 }
@@ -181,10 +182,14 @@ export function rejection(symbol: string, semitoneOf: (note: string) => number):
 	const big = /^([A-G][#b]?)M(?!aj)(.*)$/.exec(symbol);
 	if (big) {
 		const [, root = "", rest = ""] = big;
-		return reject(
-			'"M" is one shifted letter from "m"; write maj',
-			root + (/^\d/.test(rest) ? `maj${rest}` : rest),
-		);
+		const fixed = /^aj/i.test(rest)
+			? `maj${rest.slice(2)}`
+			: /^\d/.test(rest)
+				? `maj${rest}`
+				: rest === "" || rest.startsWith("/")
+					? rest
+					: `m${rest}`;
+		return reject('"M" is one shifted letter from "m"; write maj', root + fixed);
 	}
 	const bare = /^([A-G][#b]?)([24])(?=$|\/)/.exec(symbol);
 	if (bare) {
@@ -215,8 +220,8 @@ export const HARTE_SHORTHANDS: [string, Interval[]][] = [
 	["9", ivs("1", "3", "5", "b7", "9")],
 	["maj9", ivs("1", "3", "5", "7", "9")],
 	["min9", ivs("1", "b3", "5", "b7", "9")],
-	["sus2", ivs("1", "2", "5")],
 	["sus4", ivs("1", "4", "5")],
+	["sus2", ivs("1", "2", "5")],
 	["11", ivs("1", "3", "5", "b7", "9", "11")],
 	["min11", ivs("1", "b3", "5", "b7", "9", "11")],
 	["13", ivs("1", "3", "5", "b7", "9", "11", "13")],
@@ -226,7 +231,7 @@ export const HARTE_SHORTHANDS: [string, Interval[]][] = [
 	["1", ivs("1")],
 ];
 
-export type Suffix = { suffix: string; intervals: Interval[] };
+export type Suffix = { suffix: string; intervals: Interval[]; tones: number };
 
 let suffixes: Map<string, Suffix[]> | null = null;
 
@@ -261,14 +266,17 @@ export function enumerateSuffixes(): Map<string, Suffix[]> {
 						continue;
 					const key = intervalSetKey(intervals);
 					const list = found.get(key) ?? [];
-					list.push({ suffix: printSuffix(parts), intervals });
+					list.push({ suffix: printSuffix(parts), intervals, tones: tones.length });
 					found.set(key, list);
 				}
 			}
 		}
 	}
 	for (const list of found.values()) {
-		list.sort((a, b) => a.suffix.length - b.suffix.length || (a.suffix < b.suffix ? -1 : 1));
+		list.sort(
+			(a, b) =>
+				a.tones - b.tones || a.suffix.length - b.suffix.length || (a.suffix < b.suffix ? -1 : 1),
+		);
 	}
 	suffixes = found;
 	return found;

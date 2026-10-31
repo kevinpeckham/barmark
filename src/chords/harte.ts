@@ -106,13 +106,16 @@ export function harteToBarmark(label: string): string | null {
 	if (h === "X") return "?";
 	if (!h || !SINGLE_ACCIDENTAL.test(h.root)) return null;
 	const rootSounds = h.intervals.some((i) => i.degree === 1 && i.alter === 0);
+	const intended = /^[^:]+:([^(/]+)(?:\/|$)/.exec(label)?.[1];
+	const direct = intended !== undefined ? INTENDED[intended] : undefined;
 	const candidates = rootSounds ? enumerateSuffixes().get(intervalSetKey(h.intervals)) : undefined;
 	// Same notes, several names (A11 and A9sus4 under the eleventh rule): take the
 	// one naming most degrees as the label wrote them, then the shortest.
 	const written = new Set(h.intervals.map(formatInterval));
 	const exact = (c: { intervals: Interval[] }) =>
 		c.intervals.filter((i) => written.has(formatInterval(i))).length;
-	const suffix = candidates?.reduce((best, c) => (exact(c) > exact(best) ? c : best)).suffix;
+	const suffix =
+		direct ?? candidates?.reduce((best, c) => (exact(c) > exact(best) ? c : best)).suffix;
 	if (suffix !== undefined && SINGLE_ACCIDENTAL.test(h.bass)) {
 		return `${h.root}${suffix}${h.bass === h.root ? "" : `/${h.bass}`}`;
 	}
