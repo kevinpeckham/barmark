@@ -93,8 +93,8 @@ export function readDocument(text: string): {
 			lines.push({ kind: "text", line, text: t });
 			return;
 		}
-		if (t.startsWith("## ")) {
-			lines.push(readHeading(t.slice(3), line, diagnostics));
+		if (t === "##" || t.startsWith("## ")) {
+			lines.push(readHeading(t.slice(2), line, diagnostics));
 			return;
 		}
 		const directive = parseDirectiveLine(t, line);

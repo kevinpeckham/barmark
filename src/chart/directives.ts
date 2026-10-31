@@ -66,7 +66,10 @@ export function parseDirectiveLine(
 	const diagnostics: ChartDiagnostic[] = [];
 	const error = (message: string, token: string) =>
 		diagnostics.push({ line, severity: "error", message, token });
-	for (const part of text.split(",").map((p) => p.trim())) {
+	for (const part of text
+		.split(",")
+		.map((p) => p.trim())
+		.filter(Boolean)) {
 		const m = /^(\w+)\s*:\s*(.*)$/.exec(part);
 		const name = m?.[1]?.toLowerCase() as Name | undefined;
 		const value = m?.[2]?.trim() ?? "";

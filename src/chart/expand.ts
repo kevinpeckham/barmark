@@ -153,6 +153,7 @@ export function expand(lines: Line[]): {
 	let work = 0;
 	let capped = false;
 	let openDepth = 0;
+	const nestedOpen = new Set<number>();
 	const checked = new Set<Played>();
 	const stop = (line: number) => {
 		capped = true;
@@ -206,7 +207,9 @@ export function expand(lines: Line[]): {
 	) => {
 		if (repeat === "open") {
 			if (openDepth > 0) {
-				error(line, "an open repeat inside another open repeat", "x ...");
+				if (!nestedOpen.has(line))
+					error(line, "an open repeat inside another open repeat", "x ...");
+				nestedOpen.add(line);
 				body(out);
 				return;
 			}
@@ -260,6 +263,8 @@ export function expand(lines: Line[]): {
 			if (h.elided) error(h.line, "-> is only for a replay; leave the bar out instead", "->");
 			times(h.repeat, h.line, out, (into) => playItems(items, into));
 		} else {
+			// A nameless heading is already an error; it has nothing to replay.
+			if (!h.name) continue;
 			const source = definitions.get(normalize(h.name));
 			if (!source?.heading) {
 				error(h.line, `no earlier section named "${h.name}" to replay`, h.name);
@@ -270,11 +275,10 @@ export function expand(lines: Line[]): {
 			const body = itemsOf.get(source) ?? [];
 			times(h.repeat, h.line, out, (into) => playItems(body, into));
 		}
-		const elided = !isDefinition && h.elided;
-		if (elided) removeLastBar(out);
+		const elided = !isDefinition && h.elided && removeLastBar(out);
 		events.push(...out);
 		occurrences.push([
-			{ name: h.name, line: h.line, replayOf, firstBar: 0, lastBar: 0, elided },
+			{ name: h.name, line: h.line, replayOf, firstBar: null, lastBar: null, elided },
 			out,
 		]);
 	}
@@ -284,15 +288,7 @@ export function expand(lines: Line[]): {
 	});
 	const sectionsOut = occurrences.map(([occ, out]) => {
 		const bars = flattenBars(out);
-		return { ...occ, firstBar: bars[0]?.index ?? 0, lastBar: bars.at(-1)?.index ?? 0 };
+		return { ...occ, firstBar: bars[0]?.index ?? null, lastBar: bars.at(-1)?.index ?? null };
 	});
-	// A replayed section repeats its structural errors; report each once.
-	const seen = new Set<string>();
-	const unique = diagnostics.filter((d) => {
-		const k = `${d.line}|${d.severity}|${d.message}|${d.token}`;
-		if (seen.has(k)) return false;
-		seen.add(k);
-		return true;
-	});
-	return { events, sections: sectionsOut, diagnostics: unique };
+	return { events, sections: sectionsOut, diagnostics };
 }

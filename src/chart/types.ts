@@ -71,8 +71,9 @@ export type SectionOccurrence = {
 	name: string;
 	line: number;
 	replayOf: number | null;
-	firstBar: number;
-	lastBar: number;
+	/** Null when the occurrence plays no bars. */
+	firstBar: number | null;
+	lastBar: number | null;
 	elided: boolean;
 };
 

@@ -12,6 +12,15 @@ const SILENCE = new Set(["--", "–", "—"]);
 export function readRepeat(count: string, line: number, diagnostics: ChartDiagnostic[]): Repeat {
 	if (FERMATA.has(count)) return "open";
 	const n = Number(count);
+	if (!Number.isSafeInteger(n)) {
+		diagnostics.push({
+			line,
+			severity: "error",
+			message: "a repeat count this large is not a number of passes",
+			token: `x${count}`,
+		});
+		return null;
+	}
 	if (n < 2) {
 		diagnostics.push({
 			line,
@@ -50,6 +59,22 @@ export function repeatTail(
 	return { rest: rest.trimEnd(), count };
 }
 
+/** Diagnostics listed per line before the rest are summarized. */
+const MAX_LINE_DIAGNOSTICS = 20;
+
+/** Split a group on `_`, leaving any `_` inside braces to the note set. */
+function groupMembers(token: string): string[] {
+	const out = [""];
+	let depth = 0;
+	for (const ch of token) {
+		if (ch === "{") depth++;
+		if (ch === "}") depth = Math.max(0, depth - 1);
+		if (ch === "_" && depth === 0) out.push("");
+		else out[out.length - 1] += ch;
+	}
+	return out;
+}
+
 /** Whitespace-separated tokens, keeping a brace group whole. */
 function tokens(text: string): string[] {
 	const out: string[] = [];
@@ -76,24 +101,29 @@ export function parseBarLine(
 	line: number,
 ): { bars: BarsLine | null; diagnostics: ChartDiagnostic[] } {
 	const diagnostics: ChartDiagnostic[] = [];
+	let listed = 0;
+	const add = (d: ChartDiagnostic) => {
+		listed++;
+		if (listed <= MAX_LINE_DIAGNOSTICS) diagnostics.push(d);
+		else if (listed === MAX_LINE_DIAGNOSTICS + 1)
+			diagnostics.push({
+				line,
+				severity: "error",
+				message: "further problems on this line are not listed",
+				token: "",
+			});
+	};
 	const error = (message: string, token: string, suggestion?: string): null => {
-		diagnostics.push({
-			line,
-			severity: "error",
-			message,
-			token,
-			...(suggestion ? { suggestion } : {}),
-		});
+		add({ line, severity: "error", message, token, ...(suggestion ? { suggestion } : {}) });
 		return null;
 	};
-	const warn = (message: string, token: string) => {
-		diagnostics.push({ line, severity: "warning", message, token });
-	};
+	const warn = (message: string, token: string) =>
+		add({ line, severity: "warning", message, token });
 
 	let body = text.trim();
 	let repeat: Repeat = null;
 	const lastPipe = body.lastIndexOf("|");
-	const tail = repeatTail(body.slice(lastPipe + 1), false);
+	const tail = repeatTail(body.slice(lastPipe + 1), true);
 	if (tail) {
 		body = body.slice(0, lastPipe + 1) + tail.rest;
 		repeat = readRepeat(tail.count, line, diagnostics);
@@ -121,6 +151,8 @@ export function parseBarLine(
 			return { kind: "unknown" };
 		}
 		if (/^n\.?c\.?$/i.test(token)) return { kind: "nc" };
+		const misplaced = /^[xX]\s*(\d+|\.\.\.|…)$/.exec(token);
+		if (misplaced) return error("a repeat goes after the final |", token, `x${misplaced[1]}`);
 		if (token === "%" || FERMATA.has(token))
 			return error(`${token} must be alone in a cell`, token);
 		const r = token.startsWith("{") ? parseNoteSet(token) : parseChord(token);
@@ -153,6 +185,10 @@ export function parseBarLine(
 			error("a cell needs at least one slot", raw.trim());
 			continue;
 		}
+		if (list.length === 1 && meter && (list[0] === "%" || FERMATA.has(list[0] ?? ""))) {
+			error("a one-bar meter cannot go on % or ...", rest);
+			continue;
+		}
 		if (list.length === 1 && !meter && list[0] === "%") {
 			cells.push({ kind: "simile" });
 			continue;
@@ -163,13 +199,14 @@ export function parseBarLine(
 		}
 		const slots: Slot[] = [];
 		for (const token of list) {
-			if (!token.includes("_")) {
+			const parts = groupMembers(token);
+			if (parts.length === 1) {
 				const s = simple(token);
 				if (s) slots.push(s);
 				continue;
 			}
 			const members: SimpleSlot[] = [];
-			for (const m of token.split("_")) {
+			for (const m of parts) {
 				if (!m) error("an empty member in a group", token);
 				else {
 					const s = simple(m);

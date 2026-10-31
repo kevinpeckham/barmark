@@ -35,14 +35,14 @@ describe("Peaceful Dreams", () => {
 			"VI Interlude",
 			"VII Outro",
 		]);
-		expect(r.sections.map((s) => s.lastBar - s.firstBar + 1)).toEqual([
+		expect(r.sections.map((s) => (s.lastBar ?? 0) - (s.firstBar ?? 0) + 1)).toEqual([
 			20, 20, 8, 20, 8, 8, 20, 20, 8, 20,
 		]);
 	});
 	test("section starts land on the stem-bench times", () => {
 		const bench = [0, 33.1, 66.21, 79.45, 112.55, 125.79, 139.03, 172.14, 205.24, 218.48];
 		r.sections.forEach((s, i) => {
-			expect(Math.abs(((s.firstBar - 1) * 240) / 145 - (bench[i] ?? -1))).toBeLessThan(0.01);
+			expect(Math.abs((((s.firstBar ?? 0) - 1) * 240) / 145 - (bench[i] ?? -1))).toBeLessThan(0.01);
 		});
 	});
 });
