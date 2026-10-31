@@ -42,3 +42,9 @@ package uses [semantic versioning](https://semver.org/).
   `@font-face` rule before the chart, or call `fontFaceCss(url)` once per
   page. The family is registered as "barmark Edwin"; without it the chart
   falls back to Georgia or another serif.
+- **`<barmark-chart>`** (`import "@barmark/render/element"`): renders a
+  chart from its `src` URL or a child `<script type="text/barmark">`, and
+  again when either changes. Attributes (and matching properties):
+  `theme`, `bar-numbers="off"`, `rehearsal-letters`. It registers the font
+  itself, reuses a server-rendered shadow root, and shows a failed load as
+  an error inside the chart.

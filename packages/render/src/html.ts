@@ -26,8 +26,16 @@ type Row = Extract<BlockItem, { kind: "row" }>;
 type Settings = { barNumbers: boolean };
 
 export function renderChart(text: string, options: RenderOptions = {}): string {
-	return `${fontStyle(options)}<barmark-chart><template shadowrootmode="open"><style>${stylesheet}</style>${chartHtml(text, options)}</template></barmark-chart>`;
+	return `${fontStyle(options)}<barmark-chart><template shadowrootmode="open">${shadowContent(text, options)}</template></barmark-chart>`;
 }
+
+/** What goes in the shadow root: the styles and the chart. */
+export const shadowContent = (text: string, options: RenderOptions = {}) =>
+	`<style>${stylesheet}</style>${chartHtml(text, options)}`;
+
+/** A chart that could not be loaded: the message, shown where the chart would be. */
+export const loadErrorContent = (message: string, options: RenderOptions = {}) =>
+	`<style>${stylesheet}</style><div class="bm-chart" data-theme="${options.theme ?? "auto"}">${errorHtml("", [message])}</div>`;
 
 const fontStyle = (options: RenderOptions) =>
 	options.fontUrl ? `<style>${fontFaceCss(options.fontUrl)}</style>` : "";
