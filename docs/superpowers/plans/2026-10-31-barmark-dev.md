@@ -73,7 +73,7 @@
 - Test: `site/tests/chart.test.ts`
 
 **Interfaces:**
-- Consumes: `renderChart`, `fontFaceCss` from `@barmark/render`.
+- Consumes: `renderChart` from `@barmark/render`.
 - Produces:
   - `chartHtml(text: string): string` in `chart.ts`: `renderChart(text, { theme: "dark" })`; never throws (wrap: on an exception return `renderChart("", …)` with nothing else).
   - `ChartRender.svelte` props `{ text: string; label?: string }`: prerenders `{@html initial}` where `initial = chartHtml(text)` is computed **once** from the first prop value; an `$effect` calls `host.setHTMLUnsafe(chartHtml(text))` when `text` changes after mount. Wrapper classes set `[--barmark-size:1rem]`.
