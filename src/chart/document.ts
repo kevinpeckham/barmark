@@ -1,9 +1,8 @@
 import { parseChord } from "../chords/parse.js";
-import { parseBarLine, readRepeat } from "./barLine.js";
+import { parseBarLine, readRepeat, repeatTail } from "./barLine.js";
 import { parseDirectiveLine } from "./directives.js";
 import type { ChartDiagnostic, Line, Repeat } from "./types.js";
 
-const HEADING_REPEAT = /(?:^|\s+)x\s*(\d+|\.\.\.|…)$/;
 const NEAR_DIRECTIVES: Record<string, string> = {
 	meter: "time",
 	signature: "time",
@@ -16,11 +15,18 @@ function readHeading(text: string, line: number, diagnostics: ChartDiagnostic[])
 	const elided = /(->|→)$/.test(rest);
 	if (elided) rest = rest.replace(/(->|→)$/, "").trim();
 	let repeat: Repeat = null;
-	const tail = HEADING_REPEAT.exec(rest);
+	const tail = repeatTail(rest, true);
 	if (tail) {
-		repeat = readRepeat(tail[1] ?? "", line, diagnostics);
-		rest = rest.slice(0, tail.index).trim();
+		repeat = readRepeat(tail.count, line, diagnostics);
+		rest = tail.rest.trim();
 	}
+	if (/->|→/.test(rest))
+		diagnostics.push({
+			line,
+			severity: "error",
+			message: "-> goes at the end of a replay heading",
+			token: "->",
+		});
 	if (!rest)
 		diagnostics.push({
 			line,
@@ -69,7 +75,7 @@ export function readDocument(text: string): {
 		if (t.startsWith("|")) {
 			const r = parseBarLine(t, line);
 			diagnostics.push(...r.diagnostics);
-			if (r.bars) lines.push(r.bars);
+			lines.push(r.bars ?? { kind: "invalid", line, text: t });
 			return;
 		}
 		if (t.startsWith("# ")) {

@@ -5,7 +5,6 @@ import type { Cell, ChartDiagnostic, Line, Meter, Repeat, SimpleSlot, Slot } fro
 
 type BarsLine = Extract<Line, { kind: "bars" }>;
 
-const REPEAT_TAIL = /\s*x\s*(\d+|\.\.\.|…)\s*$/;
 const FERMATA = new Set(["...", "…"]);
 const SILENCE = new Set(["--", "–", "—"]);
 
@@ -30,6 +29,25 @@ export function readRepeat(count: string, line: number, diagnostics: ChartDiagno
 			token: `x${count}`,
 		});
 	return n;
+}
+
+/**
+ * Split an `x N` or `x ...` tail off the end of `text`, scanning from the
+ * right so long whitespace runs stay linear. With `boundary`, the `x` must
+ * start the text or follow whitespace (`## Box2` is a name).
+ */
+export function repeatTail(
+	text: string,
+	boundary: boolean,
+): { rest: string; count: string } | null {
+	const t = text.trimEnd();
+	const x = t.lastIndexOf("x");
+	if (x < 0) return null;
+	const count = t.slice(x + 1).trim();
+	if (!/^(\d+|\.\.\.|…)$/.test(count)) return null;
+	const rest = t.slice(0, x);
+	if (boundary && rest !== "" && !/\s/.test(rest.at(-1) ?? "")) return null;
+	return { rest: rest.trimEnd(), count };
 }
 
 /** Whitespace-separated tokens, keeping a brace group whole. */
@@ -75,10 +93,10 @@ export function parseBarLine(
 	let body = text.trim();
 	let repeat: Repeat = null;
 	const lastPipe = body.lastIndexOf("|");
-	const tail = REPEAT_TAIL.exec(body.slice(lastPipe + 1));
+	const tail = repeatTail(body.slice(lastPipe + 1), false);
 	if (tail) {
-		body = body.slice(0, lastPipe + 1 + tail.index);
-		repeat = readRepeat(tail[1] ?? "", line, diagnostics);
+		body = body.slice(0, lastPipe + 1) + tail.rest;
+		repeat = readRepeat(tail.count, line, diagnostics);
 	}
 	const opens = body.startsWith("|:");
 	if (opens) body = `|${body.slice(2)}`;

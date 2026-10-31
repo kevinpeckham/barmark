@@ -45,7 +45,9 @@ export type Line =
 	| { kind: "section"; line: number; name: string; repeat: Repeat; elided: boolean }
 	| { kind: "directive"; line: number; set: Directives }
 	| { kind: "bars"; line: number; opens: boolean; closes: boolean; cells: Cell[]; repeat: Repeat }
-	| { kind: "text"; line: number; text: string };
+	| { kind: "text"; line: number; text: string }
+	/** A bar line dropped for an error, kept as written so its section still counts as written out. */
+	| { kind: "invalid"; line: number; text: string };
 
 export type PlayedBar = {
 	/** 1-based measure number in play order; fermatas are not counted. */

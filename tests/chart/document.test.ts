@@ -105,7 +105,10 @@ describe("physical layout", () => {
 	test("blank lines count toward line numbers", () => {
 		expect(readDocument("\n\n| D | Hm |").diagnostics[0]?.line).toBe(3);
 	});
-	test("a bar line with an error is left out", () => {
-		expect(readDocument("| D | Hm |\n| A |").lines.map((l) => l.line)).toEqual([2]);
+	test("a bar line with an error is kept only as invalid", () => {
+		expect(readDocument("| D | Hm |\n| A |").lines.map((l) => [l.kind, l.line])).toEqual([
+			["invalid", 1],
+			["bars", 2],
+		]);
 	});
 });

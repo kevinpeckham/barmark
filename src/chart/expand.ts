@@ -253,7 +253,7 @@ export function expand(lines: Line[]): {
 		}
 		sectionName = h.name;
 		const out: ChartEvent[] = [];
-		const isDefinition = s.lines.some((l) => l.kind === "bars");
+		const isDefinition = s.lines.some((l) => l.kind === "bars" || l.kind === "invalid");
 		let replayOf: number | null = null;
 		if (isDefinition) {
 			definitions.set(normalize(h.name), s);
