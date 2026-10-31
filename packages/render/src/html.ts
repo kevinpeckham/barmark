@@ -93,13 +93,25 @@ function fitWidth(block: SectionBlock): number {
 	return FIT_STEPS.find((step) => step >= total) ?? FIT_STEPS.at(-1) ?? 0;
 }
 
-/** Em per bar: padding, plus each slot (a group's members count singly). */
+/** Em per bar: padding, plus each slot's text and the gap after it. */
 const cellWidth = (cell: CellModel) =>
 	cell.kind === "fermata"
 		? 2.6
-		: 1.6 + (cell.meter ? 0.8 : 0) + cell.slots.reduce((w, s) => w + slotWidth(s), 0);
-const slotWidth = (slot: Slot): number =>
-	slot.kind === "group" ? slot.members.reduce((w, m) => w + slotWidth(m), 0) : 2.2;
+		: Math.max(
+				2.6,
+				1.5 + (cell.meter ? 0.8 : 0) + cell.slots.reduce((w, s) => w + slotWidth(s), 0),
+			);
+
+/** Roughly: 0.65em a baseline character, 0.4em a superscript one, 0.6em between slots. */
+function slotWidth(slot: Slot): number {
+	if (slot.kind === "group") return slot.members.reduce((w, m) => w + slotWidth(m), 0.2);
+	if (slot.kind !== "chord") return slot.kind === "nc" ? 1.8 : 1.4;
+	const { chord } = slot;
+	if (chord.kind === "notes" || !chord.parts) return 0.65 * chord.canonical.length + 0.6;
+	const p = typesetChord(chord.parts);
+	const base = p.root.length + p.quality.length + (p.bass ? p.bass.length + 1 : 0);
+	return 0.65 * base + 0.4 * p.superscript.length + 0.6;
+}
 
 function headingHtml(block: SectionBlock): string {
 	if (block.heading === null) return "";

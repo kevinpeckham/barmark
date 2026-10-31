@@ -48,3 +48,11 @@ package uses [semantic versioning](https://semver.org/).
   `theme`, `bar-numbers="off"`, `rehearsal-letters`. It registers the font
   itself, reuses a server-rendered shadow root, and shows a failed load as
   an error inside the chart.
+
+### Technical
+
+- **Browser tests** (Playwright, Chromium) in CI: the chart looks pixel
+  for pixel the same on a page with hostile CSS, themes follow the system
+  and the page's custom properties, long rows wrap on a phone and at 400%
+  zoom without sideways scrolling, the element renders and re-renders, and
+  a screen reader hears "bar 9: D". Run them with `bun run test:browser`.

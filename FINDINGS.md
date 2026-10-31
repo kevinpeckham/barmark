@@ -142,3 +142,27 @@ unauthenticated: the first release run failed with a 404. The workflow
 installs an exactly pinned npm (`npm install -g npm@12.2.1`) before
 publishing. Pin anything installed in a job that holds the OIDC identity,
 exactly as the actions are pinned to SHAs.
+
+### Identical charts screenshot differently on two pages (2026-10-31, renderer browser suite)
+
+The hostile-CSS test compares the chart's screenshot on a plain page and
+on a page with hostile CSS. The charts were identical, yet 864 pixels
+differed. Two causes, neither in the chart. Text anti-aliasing varies with
+where an element sits on the page, and the hostile page's margins put the
+chart 64 pixels further along. And the chart was 1007.3 pixels tall, so
+its last pixel row was mostly page background, black on one page and
+white on the other. The plain page now places the chart at the hostile
+page's exact position, and both screenshots are clipped to whole pixels
+(`packages/render/browser/`). To check that the test still catches leaks,
+removing `:host{all:initial}` made it fail, after the hostile page gained
+inherited properties the chart doesn't set itself (letter-spacing,
+text-transform, font-style).
+
+### A specificity race between bar lines (2026-10-31, renderer styles)
+
+The repeat bar line (`.bm-bar[data-repeat-start]`, a double border) lost
+to the rule that gives a row's first bar its left border
+(`.bm-row>div.bm-bar:first-of-type`), so `‖:` never showed. Unit tests
+saw the attribute in the markup; only a screenshot showed the line
+missing. Both rules now share the same selector shape, and the repeat
+rule comes later.

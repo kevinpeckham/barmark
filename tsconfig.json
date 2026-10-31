@@ -15,5 +15,5 @@
 		"lib": ["ESNext", "DOM"],
 		"paths": { "barmark": ["./packages/barmark/src/index.ts"] }
 	},
-	"include": ["packages/*/src", "packages/*/tests", "scripts"]
+	"include": ["packages/*/src", "packages/*/tests", "packages/*/browser", "scripts"]
 }
