@@ -490,11 +490,11 @@ human to say whether the band was silent, and the structure line.
 | Canonical printing | Spelling and layout only. Lines with errors and text lines print as written; a repeated chord name is kept. |
 | Repeat spellings | `x`, `X` and `×` all accepted; canonical `x`. |
 | `%` after a one-bar meter | `%` repeats the previous bar exactly, its `[n/d]` included. |
+| Appendix A's provisional calls | Approved by Kevin: `C2`/`C4` are rejected with `Csus2` or `C(9)` suggested, and a note set's Harte label uses the bass as root when none is marked. |
 | Section form and chord parts | Machine output gains `form` on each section occurrence and `parts` on each chord (A.7), for renderers and hosts such as stem-shovel's section timeline. No change to what any chart means. |
 
 ## Open questions
 
-- Appendix A calls marked *(Claude's call)* below, for review.
 - The ending syntax for v0.2.
 - Whether pushes need a shorter mark once real charts are written.
 - Articulation (short, choked hits) beyond slot length.
@@ -603,7 +603,7 @@ Accepted on input, printed canonically:
 | Input | Why | Suggestion |
 |---|---|---|
 | `M`, `M7`, `CM` | one shifted letter from `m` | `maj7`, or `C` |
-| `C2`, `C4` | means sus2 in some traditions and add9 in others | `Csus2` or `C(9)` *(Claude's call)* |
+| `C2`, `C4` | means sus2 in some traditions and add9 in others | `Csus2` or `C(9)` |
 | lowercase root (`d`) | ambiguous with prose | `D` |
 | double accidentals (`Cbb`) | never needed for a root | the enharmonic root |
 | German `H` | ambiguous with B | `B` |
@@ -631,4 +631,4 @@ The bass note counts among the chord's pitches: `C/Bb` contains B♭. For
 note sets, the Harte label uses the marked root when there is one
 (`{D E! G}` → `E:1(b3,b7)/b7`). Otherwise it uses the bass, because Harte
 requires a root: `{C E F# B}` → `C:1(3,#4,7)`. That is a representation, not
-a claim about the chord's name. *(Claude's call)*
+a claim about the chord's name.
