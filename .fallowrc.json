@@ -1,8 +1,8 @@
 {
 	// This file is JSONC: fallow reads these comments; generic JSON tools may not.
 	"$schema": "./node_modules/fallow/schema.json",
-	// The scripts and tests run on their own; package.json's exports names src's entry.
-	"entry": ["scripts/**/*.{ts,mjs}", "tests/**/*.test.ts"],
+	// The scripts and tests run on their own; each package.json's exports names its src entry.
+	"entry": ["scripts/**/*.{ts,mjs}", "packages/*/tests/**/*.test.ts"],
 	// extensions/ holds Swamp behavior types: Deno code with npm: specifiers, run by Swamp's own runtime.
 	"ignorePatterns": ["extensions/**", ".swamp/**"],
 	// Complexity as it stood at 0.1.0 (FINDINGS.md). A new finding, or a file that gets worse, fails.

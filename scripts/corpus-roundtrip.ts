@@ -5,10 +5,10 @@
  */
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { harteToBarmark, parseHarte } from "../src/chords/harte.js";
-import { transpose } from "../src/chords/intervals.js";
-import { parseNoteSet } from "../src/chords/noteSet.js";
-import { parseChord } from "../src/chords/parse.js";
+import { harteToBarmark, parseHarte } from "../packages/barmark/src/chords/harte.js";
+import { transpose } from "../packages/barmark/src/chords/intervals.js";
+import { parseNoteSet } from "../packages/barmark/src/chords/noteSet.js";
+import { parseChord } from "../packages/barmark/src/chords/parse.js";
 
 const dir = process.argv[2];
 if (!dir) throw new Error("usage: corpus-roundtrip.ts <isophonics dir>");

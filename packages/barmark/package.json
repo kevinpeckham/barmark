@@ -1,0 +1,50 @@
+{
+	"name": "barmark",
+	"version": "0.1.0",
+	"description": "Markdown-inspired plain-text notation for chord charts: a parser, a canonical printer and Harte-label conversion.",
+	"type": "module",
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"import": "./dist/index.js"
+		}
+	},
+	"types": "./dist/index.d.ts",
+	"sideEffects": false,
+	"files": [
+		"dist",
+		"CHANGELOG.md"
+	],
+	"engines": {
+		"node": ">=20"
+	},
+	"keywords": [
+		"chord-chart",
+		"chords",
+		"music",
+		"notation",
+		"markdown",
+		"harte",
+		"lead-sheet",
+		"parser",
+		"barmark"
+	],
+	"author": "Kevin Peckham",
+	"license": "MIT",
+	"homepage": "https://github.com/kevinpeckham/barmark/tree/main/packages/barmark#readme",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/kevinpeckham/barmark.git",
+		"directory": "packages/barmark"
+	},
+	"devDependencies": {
+		"@types/bun": "^1.4.4"
+	},
+	"scripts": {
+		"build": "rm -rf dist && tsc -p tsconfig.build.json",
+		"prepack": "bun run build"
+	},
+	"bugs": {
+		"url": "https://github.com/kevinpeckham/barmark/issues"
+	}
+}

@@ -1,7 +1,7 @@
 {
   "kind": "health",
   "finding_counts": {
-    "src/chart/barLine.ts": {
+    "packages/barmark/src/chart/barLine.ts": {
       "complexity_critical": {
         "count": 1
       },
@@ -12,17 +12,17 @@
         "count": 1
       }
     },
-    "src/chart/directives.ts": {
+    "packages/barmark/src/chart/directives.ts": {
       "complexity_high": {
         "count": 1
       }
     },
-    "src/chart/document.ts": {
+    "packages/barmark/src/chart/document.ts": {
       "crap_moderate": {
         "count": 3
       }
     },
-    "src/chart/expand.ts": {
+    "packages/barmark/src/chart/expand.ts": {
       "complexity_critical": {
         "count": 1
       },
@@ -33,22 +33,22 @@
         "count": 1
       }
     },
-    "src/chart/print.ts": {
+    "packages/barmark/src/chart/print.ts": {
       "complexity_high": {
         "count": 1
       }
     },
-    "src/chords/harte.ts": {
+    "packages/barmark/src/chords/harte.ts": {
       "complexity_moderate": {
         "count": 1
       }
     },
-    "src/chords/noteSet.ts": {
+    "packages/barmark/src/chords/noteSet.ts": {
       "complexity_high": {
         "count": 1
       }
     },
-    "src/chords/parse.ts": {
+    "packages/barmark/src/chords/parse.ts": {
       "complexity_critical": {
         "count": 1
       },
@@ -56,22 +56,22 @@
         "count": 1
       }
     },
-    "src/chords/suffixes.ts": {
+    "packages/barmark/src/chords/suffixes.ts": {
       "complexity_high": {
         "count": 1
       }
     },
-    "src/chords/vocabulary.ts": {
+    "packages/barmark/src/chords/vocabulary.ts": {
       "complexity_moderate": {
         "count": 2
       }
     },
-    "tests/chart/printChart.test.ts": {
+    "packages/barmark/tests/chart/printChart.test.ts": {
       "complexity_moderate": {
         "count": 1
       }
     },
-    "tests/chords/roundtrip.test.ts": {
+    "packages/barmark/tests/chords/roundtrip.test.ts": {
       "crap_moderate": {
         "count": 1
       }
@@ -79,15 +79,15 @@
   },
   "runtime_coverage_findings": [],
   "target_keys": [
-    "src/chords/harte.ts:high impact",
-    "src/chords/noteSet.ts:high impact",
-    "src/chart/barLine.ts:high impact",
-    "src/chords/suffixes.ts:complexity",
-    "tests/chart/fixtures.ts:high impact",
-    "src/chart/expand.ts:high impact",
-    "src/chart/print.ts:high impact",
-    "src/chords/parse.ts:high impact",
-    "src/chart/directives.ts:high impact",
-    "src/chords/intervals.ts:high impact"
+    "packages/barmark/src/chords/suffixes.ts:complexity",
+    "packages/barmark/src/chords/harte.ts:high impact",
+    "packages/barmark/src/chords/noteSet.ts:high impact",
+    "packages/barmark/tests/chart/fixtures.ts:high impact",
+    "packages/barmark/src/chart/barLine.ts:high impact",
+    "packages/barmark/src/chart/expand.ts:high impact",
+    "packages/barmark/src/chords/parse.ts:high impact",
+    "packages/barmark/src/chart/print.ts:high impact",
+    "packages/barmark/src/chords/intervals.ts:high impact",
+    "packages/barmark/src/chart/directives.ts:high impact"
   ]
 }

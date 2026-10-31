@@ -44,8 +44,8 @@ The same scripts run in three places:
 | Lint and typecheck | `bun run check` | ✓ | ✓ | ✓ |
 | Tests | `bun test` | ✓ | ✓ | ✓ |
 | Dead code, duplication, complexity | `bun run fallow` | ✓ | ✓ | ✓ |
-| Package contents, Node import | `bun run verify:package` | ✓ | ✓ (Node 20, 22, 24) | ✓ |
-| Version, CHANGELOG, tag, clean `main` | `bun run verify:release` | ✓ | | ✓ (tag = version) |
+| Package contents, Node import | `bun run verify:package barmark` | ✓ | ✓ (Node 20, 22, 24) | ✓ |
+| Version, CHANGELOG, tag, clean `main` | `bun run verify:release barmark` | ✓ | | ✓ (tag = version) |
 
 Locally, `bunx varlock run -- swamp workflow run release-check` runs all five through the
 `barmark` Swamp behavior, keeps each run's results as data, and fails on

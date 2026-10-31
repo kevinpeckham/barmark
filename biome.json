@@ -4,7 +4,7 @@
 	"files": {
 		"includes": [
 			"**",
-			"!tests/fixtures",
+			"!packages/*/tests/fixtures",
 			"!**/*.md",
 			"!.swamp.yaml",
 			"!.fallow-health-baseline.json",

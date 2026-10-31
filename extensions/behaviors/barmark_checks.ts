@@ -22,8 +22,14 @@ const GatesSchema = z.object({
 	output: z.string().describe("The tail of any failing command's output"),
 });
 
+const PkgArg = z
+	.enum(["barmark", "render"])
+	.default("barmark")
+	.describe("The workspace package to check: barmark or render (@barmark/render)");
+
 const PackageSchema = z.object({
 	label: z.string(),
+	pkg: z.string(),
 	checkedAt: z.string(),
 	version: z.string(),
 	files: z.number().int(),
@@ -40,6 +46,7 @@ const PackageSchema = z.object({
 
 const ReleaseSchema = z.object({
 	label: z.string(),
+	pkg: z.string(),
 	checkedAt: z.string(),
 	version: z.string(),
 	tag: z.string(),
@@ -107,7 +114,7 @@ async function verify(context: Context, script: string, extra: string[] = []) {
 
 export const behavior = {
 	type: "@kevin/barmark-checks",
-	version: "2026.10.31.2",
+	version: "2026.10.31.3",
 	description: "barmark's release checks (lint, tests, Fallow, package, release readiness) run on the checkout and kept as data",
 	globalArguments: GlobalArgsSchema,
 	resources: {
@@ -167,12 +174,13 @@ export const behavior = {
 			},
 		},
 		package: {
-			description: "Run scripts/verify-package.ts: build, npm pack contents, Node import and smoke test",
-			arguments: z.object({}),
-			execute: async (_args: Record<string, never>, context: Context) => {
-				const r = await verify(context, "scripts/verify-package.ts");
+			description: "Run scripts/verify-package.ts for one package: build, npm pack contents, Node import and smoke test",
+			arguments: z.object({ pkg: PkgArg }),
+			execute: async (args: { pkg: string }, context: Context) => {
+				const r = await verify(context, "scripts/verify-package.ts", [args.pkg]);
 				const data = PackageSchema.parse({
 					label: context.globalArgs.label,
+					pkg: args.pkg,
 					checkedAt: new Date().toISOString(),
 					...r,
 					summary: r.ok ? `${r.files} files, Node import ok` : r.problems.join("; "),
@@ -213,14 +221,19 @@ export const behavior = {
 			},
 		},
 		release: {
-			description: "Run scripts/verify-release.ts: version, CHANGELOG section, tag and npm free, clean main",
+			description: "Run scripts/verify-release.ts for one package: version, CHANGELOG section, tag and npm free, clean main",
 			arguments: z.object({
+				pkg: PkgArg,
 				allowDirty: z.boolean().default(false).describe("Skip the clean-tree and on-main checks while preparing"),
 			}),
-			execute: async (args: { allowDirty: boolean }, context: Context) => {
-				const r = await verify(context, "scripts/verify-release.ts", args.allowDirty ? ["--allow-dirty"] : []);
+			execute: async (args: { pkg: string; allowDirty: boolean }, context: Context) => {
+				const r = await verify(context, "scripts/verify-release.ts", [
+					args.pkg,
+					...(args.allowDirty ? ["--allow-dirty"] : []),
+				]);
 				const data = ReleaseSchema.parse({
 					label: context.globalArgs.label,
+					pkg: args.pkg,
 					checkedAt: new Date().toISOString(),
 					...r,
 					summary: r.ok ? `ready to release ${r.tag}` : r.problems.join("; "),
