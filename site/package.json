@@ -3,6 +3,9 @@
 	"private": true,
 	"type": "module",
 	"description": "barmark.dev: the home page and syntax guide for barmark.",
+	"imports": {
+		"#lib/*": "./src/lib/*"
+	},
 	"scripts": {
 		"fonts": "bun scripts/fonts.ts",
 		"dev": "bun run fonts && vite dev",
