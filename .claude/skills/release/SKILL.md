@@ -16,7 +16,11 @@ Points that are easy to miss:
   version-bump commit. If varlock cannot load (no `.env.local`), ask Kevin
   for it, or run the five checks the workflow wraps.
 - The commit is `vX.Y.Z: <summary>` with no `Co-Authored-By` trailer.
-- `gh release create` publishes to npm. Ask Kevin before running it
+- `main` takes changes only through pull requests with green CI, and
+  release tags can never be moved: a failed release becomes the next
+  patch. After `gh release create`, Kevin approves the publish in the
+  `npm` environment; tell him when it is waiting.
+- `gh release create` starts the publish. Ask Kevin before running it
   unless he has already asked for the release.
 - After publishing, confirm with `gh run watch` and `npm view barmark
   version`, then report the npm and GitHub release links.

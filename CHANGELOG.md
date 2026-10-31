@@ -11,6 +11,8 @@ Releases follow the process in [RELEASING.md](RELEASING.md).
 
 ### Technical
 
+- **`main` and release tags are protected, and publishing needs approval.** Changes reach `main` through pull requests that pass CI; `v*` tags cannot be moved or deleted; the npm publish job runs in an `npm` environment that waits for approval and that npm's trusted publisher requires. After publishing, the release workflow installs the new version from npm and reads a real chart with it (`scripts/smoke.mjs`, shared with `verify:package`).
+- **Dependabot** proposes monthly, grouped updates for actions and dev dependencies, with a two-week cooldown. Jobs have time limits, superseded pull-request runs are cancelled, and releases never run concurrently. `actions/checkout` is now v7.0.1 and `actions/setup-node` v7.1.0, which ends the Node 20 deprecation warnings.
 - **Fallow guards the code's health.** `bun run fallow` fails on dead code, duplicated code, or complexity beyond `.fallow-health-baseline.json` (the 17 functions above threshold at 0.1.0). It runs in CI (findings annotate the pull request), in the release workflow, and in the Swamp `release-check` as a fourth assertion. Three internal-only exports lost `export`, and the verify scripts share `scripts/lib.ts`.
 
 ## [0.1.0] - 2026-10-31
