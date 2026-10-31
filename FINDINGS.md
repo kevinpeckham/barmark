@@ -90,6 +90,15 @@ package index, inside the package.
 
 ## Tooling
 
+### npm can take minutes to serve a version it has accepted (2026-10-31, 0.1.0 release)
+
+The release workflow logged `+ barmark@0.1.0` and its provenance, yet
+`npm view barmark version` said 0.0.3 for about three minutes, and the
+`latest` tag lagged the version itself. Anything that checks a publish
+must wait and retry: the release workflow's `confirm` job polls `npm view
+barmark@<version> --prefer-online` for up to ten minutes before
+installing.
+
 ### Fallow's first run: three exports nobody imported, and a baseline for the parser's complexity (2026-10-31, Fallow)
 
 `normalizeSymbol`, `QUALITIES` and the test fixture `timeline` were

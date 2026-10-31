@@ -3,8 +3,7 @@
  * built output in Node to parse and print a real chart. Exit 0 when the
  * package is sound; `--json` prints the result for the Swamp release check.
  */
-import { join } from "node:path";
-import { root, run } from "./lib.js";
+import { run } from "./lib.js";
 
 const json = process.argv.includes("--json");
 const problems: string[] = [];
@@ -44,33 +43,22 @@ if (missing.length) problems.push(`missing from the package: ${missing.join(", "
 if (unexpected.length) problems.push(`unexpected in the package: ${unexpected.join(", ")}`);
 
 // The built package, imported by Node rather than Bun: what an npm user gets.
-const smokeScript = `
-import { readFileSync } from "node:fs";
-const m = await import(${JSON.stringify(join(root, "dist/index.js"))});
-const text = readFileSync(${JSON.stringify(join(root, "examples/peaceful-dreams.chart.md"))}, "utf8");
-const parsed = m.parseChart(text);
-const chord = m.parseChord("Bm7(b5)");
-console.log(JSON.stringify({
-	bars: parsed.bars.length,
-	diagnostics: parsed.diagnostics.length,
-	roundTrip: m.printChart(text) === text,
-	harte: chord.ok ? chord.value.harte : null,
-}));`;
-const smoke = run(["node", "--input-type=module", "-e", smokeScript]);
+const smoke = run([
+	"node",
+	"scripts/smoke.mjs",
+	"./dist/index.js",
+	"examples/peaceful-dreams.chart.md",
+]);
 let node: { bars: number; diagnostics: number; roundTrip: boolean; harte: string | null } | null =
 	null;
 try {
 	node = JSON.parse(smoke.out);
 } catch {
 	problems.push(
-		`Node could not import the built package: ${smoke.err.trim().split("\n").slice(-3).join(" ")}`,
+		`Node could not import the built package: ${smoke.err.split("\n").slice(-3).join(" ")}`,
 	);
 }
-if (
-	node &&
-	(node.bars !== 152 || node.diagnostics !== 0 || !node.roundTrip || node.harte !== "B:hdim7")
-)
-	problems.push(`Node smoke test gave ${JSON.stringify(node)}`);
+if (node && smoke.code !== 0) problems.push(`Node smoke test gave ${JSON.stringify(node)}`);
 
 const result = {
 	ok: problems.length === 0,
