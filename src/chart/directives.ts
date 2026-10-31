@@ -44,7 +44,7 @@ function parseKey(text: string): Key | null {
 function parseTempo(text: string): number | null {
 	const m = /^(\d+(?:\.\d+)?)(?:\s*bpm)?$/i.exec(text);
 	const n = m ? Number(m[1]) : 0;
-	return n > 0 ? n : null;
+	return n >= 1 && n <= 999 ? n : null;
 }
 
 function parseFeel(text: string): Feel | null {
@@ -63,6 +63,7 @@ export function parseDirectiveLine(
 	const head = /^(\w+)\s*:/.exec(text.trim());
 	if (!head || !DIRECTIVE_NAMES.includes(head[1]?.toLowerCase() as Name)) return null;
 	const set: Directives = {};
+	const seen = new Set<Name>();
 	const diagnostics: ChartDiagnostic[] = [];
 	const error = (message: string, token: string) =>
 		diagnostics.push({ line, severity: "error", message, token });
@@ -77,6 +78,11 @@ export function parseDirectiveLine(
 			error("unknown directive (key, time, tempo, feel)", part);
 			continue;
 		}
+		if (seen.has(name)) {
+			error(`${name} is given twice on this line`, name);
+			continue;
+		}
+		seen.add(name);
 		if (name === "key") {
 			const key = parseKey(value);
 			if (key) set.key = key;
@@ -88,7 +94,7 @@ export function parseDirectiveLine(
 		} else if (name === "tempo") {
 			const tempo = parseTempo(value);
 			if (tempo) set.tempo = tempo;
-			else error("tempo must be beats per minute", value);
+			else error("tempo must be beats per minute, from 1 to 999", value);
 		} else {
 			const feel = parseFeel(value);
 			if (feel) set.feel = feel;

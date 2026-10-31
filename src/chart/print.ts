@@ -1,6 +1,5 @@
 import { beatsOf } from "./directives.js";
-import { readDocument } from "./document.js";
-import { expand, flattenBars } from "./expand.js";
+import { parseChart } from "./parse.js";
 import type { Cell, Directives, Key, Line, Repeat, SimpleSlot, Slot } from "./types.js";
 
 /** A slot with no attack of its own continues whatever sounds before it. A repeated chord name is a re-attack. */
@@ -99,17 +98,14 @@ export function printLine(l: Line, beats: (number | undefined)[] = []): string {
  * fences stay. Never throws.
  */
 export function printChart(text: string): string {
-	const doc = readDocument(text);
-	const byLine = new Map(doc.lines.map((l) => [l.line, l]));
-	const played = expand(doc.lines);
+	const parsed = parseChart(text);
+	const byLine = new Map(parsed.lines.map((l) => [l.line, l]));
 	const errored = new Set(
-		[...doc.diagnostics, ...played.diagnostics]
-			.filter((d) => d.severity === "error")
-			.map((d) => d.line),
+		parsed.diagnostics.filter((d) => d.severity === "error").map((d) => d.line),
 	);
 	// Each cell's beat count on its first play, which is when its slot count is checked.
 	const firstPlay = new Map<number, number[]>();
-	for (const b of flattenBars(played.events)) {
+	for (const b of parsed.bars) {
 		const l = byLine.get(b.line);
 		const meters = firstPlay.get(b.line) ?? [];
 		const cells = l?.kind === "bars" ? l.cells.filter((c) => c.kind !== "fermata").length : 0;

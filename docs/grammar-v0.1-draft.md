@@ -349,7 +349,7 @@ key: D, time: 4/4, tempo: 145, feel: swing
 |---|---|---|
 | `key:` | a root plus optional `m` (`D`, `Bm`, `F#m`; `B minor` accepted), or a root and a mode: `A mixolydian`, `E dorian` | none (key unknown) |
 | `time:` | `n/d` where d is 2, 4, 8 or 16 | `4/4` |
-| `tempo:` | beats per minute, counting the meter's beat (2.1): `145` (`145 bpm` accepted). In 6/8, `tempo: 60` is 60 dotted quarters a minute. | none (tempo unknown) |
+| `tempo:` | beats per minute from 1 to 999, counting the meter's beat (2.1): `145` (`145 bpm` accepted). In 6/8, `tempo: 60` is 60 dotted quarters a minute. | none (tempo unknown) |
 | `feel:` | `straight`, `swing`, `shuffle`, `swing 16` | `straight` |
 
 - **Modes.** `key:` accepts `major`, `minor`, and the seven church modes
@@ -360,7 +360,8 @@ key: D, time: 4/4, tempo: 145, feel: swing
 - Directives before the first bar set the starting values.
 - A directive after bars takes effect **at the next bar**, never
   retroactively.
-- Several directives may share a line, separated by commas.
+- Several directives may share a line, separated by commas. Naming the same
+  directive twice on one line is an error.
 - Tempo is optional. A chart without one is complete; tools that need time
   ask for it.
 - The four names are a closed set with no aliases. A text line starting
