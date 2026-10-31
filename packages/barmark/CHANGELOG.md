@@ -9,6 +9,14 @@ Releases follow the process in [RELEASING.md](RELEASING.md).
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-10-31
+
+Machine output for renderers and hosts (`form`, `parts`), the first
+grammar decision since 0.1.0 (directives under a replay heading), and the
+move to a workspace beside `@barmark/render`. Implements the
+[grammar v0.1 draft](https://github.com/kevinpeckham/barmark/blob/main/docs/grammar-v0.1-draft.md),
+with Appendix A's provisional calls now approved (no behaviour change).
+
 ### Added
 
 - **`form` on each section occurrence:** which distinct section it plays, numbered from 0 in order of first appearance. Every replay shares its written section's number, so a host can label the form (A B A B C) or mark repeated sections in a timeline.
@@ -63,7 +71,8 @@ The first working release: the reference parser and printer for the
 
 - **A placeholder package that holds the `barmark` name** while the spec and parser are written.
 
-[Unreleased]: https://github.com/kevinpeckham/barmark/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.2.0...HEAD
+[0.2.0]: https://github.com/kevinpeckham/barmark/compare/v0.1.0...barmark-v0.2.0
 [0.1.0]: https://github.com/kevinpeckham/barmark/compare/v0.0.3...v0.1.0
 [0.0.3]: https://github.com/kevinpeckham/barmark/compare/v0.0.2...v0.0.3
 [0.0.2]: https://github.com/kevinpeckham/barmark/releases/tag/v0.0.2
