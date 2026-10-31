@@ -1,13 +1,27 @@
 {
 	"name": "barmark",
-	"version": "0.0.1",
+	"version": "0.0.2",
 	"description": "Markdown-inspired plain-text notation for chord charts. Parser coming; spec in progress.",
 	"type": "module",
 	"main": "index.js",
-	"files": ["index.js", "README.md"],
-	"keywords": ["chord-chart", "music", "notation", "markdown", "chart", "parser", "barmark"],
+	"files": [
+		"index.js",
+		"README.md"
+	],
+	"keywords": [
+		"chord-chart",
+		"music",
+		"notation",
+		"markdown",
+		"chart",
+		"parser",
+		"barmark"
+	],
 	"author": "Kevin Peckham",
 	"license": "MIT",
 	"homepage": "https://github.com/kevinpeckham/barmark#readme",
-	"repository": { "type": "git", "url": "git+https://github.com/kevinpeckham/barmark.git" }
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/kevinpeckham/barmark.git"
+	}
 }
