@@ -29,10 +29,12 @@ The same scripts run in three places:
 | Package contents, Node import | `bun run verify:package` | ✓ | ✓ (Node 20, 22, 24) | ✓ |
 | Version, CHANGELOG, tag, clean `main` | `bun run verify:release` | ✓ | | ✓ (tag = version) |
 
-Locally, `swamp workflow run release-check` runs all four through the
+Locally, `bunx varlock run -- swamp workflow run release-check` runs all four through the
 `barmark` Swamp behavior, keeps each run's results as data, and fails on
 any problem. The scripts also run on their own; Swamp adds the record and
-the single pass/fail.
+the single pass/fail. Varlock loads Swamp's credential from barmark's
+1Password environment; `.env.local` (gitignored) holds `OP_ENV_ID` and
+`OP_TOKEN`.
 
 ## Steps
 
@@ -46,7 +48,7 @@ the single pass/fail.
    `git log $(git describe --tags --abbrev=0)..HEAD --oneline`.
 4. **README.md and docs:** update anything the release changes.
 5. **Commit** the bump: `git commit -m "vX.Y.Z: <one-line summary>"`.
-6. **Gate:** `swamp workflow run release-check` (or the four commands
+6. **Gate:** `bunx varlock run -- swamp workflow run release-check` (or the four commands
    above). Fix anything it reports before going on.
 7. **Tag and push:**
    ```

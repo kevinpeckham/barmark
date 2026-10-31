@@ -93,8 +93,13 @@ package index, inside the package.
 ### Swamp needs a signed-in account before `swamp repo init` (2026-10-31, release process)
 
 `swamp repo init` stopped with "Run `swamp auth login`" because the VM's
-Swamp session had expired. Sign-in is interactive (`! swamp auth login`
-in Claude Code). Running Swamp in GitHub Actions would need
+Swamp session had expired. Sign-in is interactive, and `! swamp auth
+login` in Claude Code fails ("Username and password are required")
+because `!` gives the command no terminal to prompt on. The fix is an API
+token: `SWAMP_API_KEY` (and `SWAMP_SIGNIN_TOKEN`) in barmark's 1Password
+environment, loaded by varlock (`.env.schema`), with Swamp run as
+`bunx varlock run -- swamp …`, as replicator does. Running Swamp in
+GitHub Actions would need
 `SWAMP_API_KEY` and `SWAMP_SIGNIN_TOKEN` as repository secrets, which is
 why CI runs the same checks as plain `bun run` scripts, and Swamp wraps
 those scripts locally as the release check.

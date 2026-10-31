@@ -27,7 +27,7 @@ bun test                 # tests
 bun run check            # Biome (tabs) and tsc
 bun run verify:package   # build, npm pack contents, Node import
 bun run verify:release   # version, CHANGELOG, tag, clean main
-swamp workflow run release-check   # all of the above, recorded as data
+bunx varlock run -- swamp workflow run release-check   # all of the above, as data
 ```
 
 ## Working agreement

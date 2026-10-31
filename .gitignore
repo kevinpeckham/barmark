@@ -2,3 +2,5 @@ node_modules/
 .superpowers/
 dist/
 *.tgz
+.env.local
+.env.*.local

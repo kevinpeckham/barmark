@@ -12,9 +12,9 @@ minor for grammar or API changes, a patch for fixes).
 
 Points that are easy to miss:
 
-- Run `swamp workflow run release-check` after the version-bump commit.
-  If Swamp is not signed in (`swamp auth whoami`), ask Kevin to run
-  `! swamp auth login`, or run the four `bun run` checks it wraps.
+- Run `bunx varlock run -- swamp workflow run release-check` after the
+  version-bump commit. If varlock cannot load (no `.env.local`), ask Kevin
+  for it, or run the four `bun run` checks the workflow wraps.
 - The commit is `vX.Y.Z: <summary>` with no `Co-Authored-By` trailer.
 - `gh release create` publishes to npm. Ask Kevin before running it
   unless he has already asked for the release.
