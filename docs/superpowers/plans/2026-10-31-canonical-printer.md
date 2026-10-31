@@ -32,11 +32,12 @@ Slot reduction is a pure function shared by the printer and the round-trip test.
    - There are no blank lines at the start or end, and the file ends with one `\n`.
    - A stanza break in lyrics survives.
 4. **Code-fence lines are kept as written**, so a fenced chart stays fenced for markdown previews.
-5. **The fewest slots** (§8) treats a slot as a continuation of the one before it when it is:
+5. **The fewest slots** (§8) treats a slot as a continuation of the one before it only when it has no attack of its own:
    - `/`
-   - or the same symbol again: the same chord canonical, `--` after `--`, or `N.C.` after `N.C.`
+   - `--` after `--`
+   - `N.C.` after `N.C.`
 
-   So `| G G |` prints `| G |`, matching the §10 row `| Am7 Am7 Am7 G7 |` = `| Am7 / / G7 |`. Two exceptions: `?` is never a continuation, because two unknown chords may differ, and a group is never one either.
+   A repeated chord name is **not** a continuation, because players read `| G G |` as a re-attack. It prints as written, and §2.3 says so. `?` and groups are never continuations either. (Kevin's ruling, 2026-10-31.)
 6. **`%` and `...` stay as written.** Simile is notation, so `%` isn't expanded into the bar it copies.
 7. **Heading names have their whitespace runs collapsed to single spaces.** Names already match that way.
 8. **Separate directive lines stay separate lines.** Each line's parts print in the order key, time, tempo, feel.
@@ -97,10 +98,11 @@ Slot reduction is a pure function shared by the printer and the round-trip test.
   - Reduction:
     - `G / D /` → `G D`
     - `-- --` → `--`
-    - `G G` → `G`
+    - `G G` stays (a repeated chord name is kept)
     - `N.C. N.C. N.C. N.C.` → `N.C.`
     - `/ /` → `/`
-    - `Am7 Am7 Am7 G7` stays: no block split works, and the printer doesn't rewrite a repeated chord as `/` (that would turn the spec's `G -- -- --` into `G -- / /`)
+    - `Am7 Am7 Am7 G7` stays
+    - `G / G /` → `G G`
     - `C / / D` stays
     - `G -- -- --` stays
     - `? ?` stays
@@ -201,6 +203,8 @@ Slot reduction is a pure function shared by the printer and the round-trip test.
 - [ ] **Step 3: Implement** `printChart` and export the printer from `src/chart/index.ts`.
 - [ ] **Step 4: Amend spec §8:**
   - Add Decisions 1 to 5 as bullets.
+  - In §2.3, add: "A repeated chord name keeps its slot: barmark does not merge `G G` into `G`, and players may read it as a re-attack."
+  - In §10, change the `| Am7 Am7 Am7 G7 |` row's note to "a converter rewrites old repeated names to `/`".
   - Replace the round-trip sentence with: "Printing preserves meaning: the printed chart plays the same bars with the same directives and sections and reports the same errors (formatting warnings such as a missing `|` may disappear), and `print` is stable when applied twice."
   - Add a decisions-log row, "Canonical printing | spelling and layout only; lines with errors and text lines print as written".
 - [ ] **Step 5: Run** `bun test && bunx tsc && bunx biome check .`. Expected: all pass.
