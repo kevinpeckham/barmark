@@ -1,18 +1,9 @@
 import { beforeAll, describe, expect, test } from "bun:test";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { build, out, site } from "./built.ts";
 
-const site = join(import.meta.dir, "..");
-const out = join(site, ".vercel/output/static");
-
-beforeAll(() => {
-	const build = Bun.spawnSync(["bun", "run", "build"], {
-		cwd: site,
-		stdout: "pipe",
-		stderr: "pipe",
-	});
-	if (build.exitCode !== 0) throw new Error(build.stderr.toString().slice(-2000));
-}, 120_000);
+beforeAll(build, 120_000);
 
 describe("the site builds", () => {
 	test("the home page is prerendered", () => {
