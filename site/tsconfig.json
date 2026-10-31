@@ -1,0 +1,9 @@
+{
+	"extends": "$app/tsconfig",
+	"compilerOptions": {
+		"rewriteRelativeImportExtensions": true,
+		"strict": true,
+		"types": ["$app/types", "bun"]
+	},
+	"include": ["src", "vite.config.ts", "uno.config.ts", "scripts", "tests", "browser"]
+}

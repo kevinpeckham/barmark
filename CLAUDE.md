@@ -81,6 +81,11 @@ Fallow, CI, Swamp), the grammar, `examples/`, the scripts and FINDINGS.md.
     suite (`bun run test:browser`) with its own page server
 - `examples/`: real charts (Peaceful Dreams must parse cleanly and print
   unchanged)
+- `site/`: barmark.dev (SvelteKit, UnoCSS, prerendered). **Not a workspace
+  member**: it installs `barmark` and `@barmark/render` from npm at exact
+  versions, so it runs what readers install. Its own `bun.lock`,
+  `svelte-check` (TypeScript 6: see FINDINGS) and tests; the root
+  `bun test` skips it (`bunfig.toml`), Fallow ignores it
 - `docs/superpowers/`: designs (`specs/`) and implementation plans (`plans/`)
 - `scripts/verify-package.ts`, `scripts/verify-release.ts`: release checks
   shared by CI and Swamp; both take the package (`barmark` or `render`)
@@ -95,6 +100,7 @@ bun run test:browser             # the renderer in Chromium (builds first)
 bun run verify:package <pkg>     # build, npm pack contents, Node import
 bun run verify:release <pkg>     # version, CHANGELOG, tag, clean main
 bunx varlock run -- swamp workflow run release-check [--input pkg=render]
+cd site && bun run dev|build|check|test|test:browser   # barmark.dev
 ```
 
 ## Working agreement

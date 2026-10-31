@@ -10,9 +10,23 @@
 			"!.fallow-health-baseline.json",
 			"!extensions",
 			"!models",
-			"!workflows"
+			"!workflows",
+			"!site/.svelte-kit",
+			"!site/.vercel",
+			"!site/static/fonts"
 		]
 	},
 	"formatter": { "indentStyle": "tab", "lineWidth": 100 },
-	"overrides": [{ "includes": [".fallowrc.json"], "json": { "parser": { "allowComments": true } } }]
+	"overrides": [
+		{ "includes": [".fallowrc.json"], "json": { "parser": { "allowComments": true } } },
+		{
+			"includes": ["**/*.svelte"],
+			"linter": {
+				"rules": {
+					"style": { "useConst": "off", "useImportType": "off" },
+					"correctness": { "noUnusedVariables": "off", "noUnusedImports": "off" }
+				}
+			}
+		}
+	]
 }

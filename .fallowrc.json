@@ -8,7 +8,8 @@
 		"packages/*/browser/*.{ts,pw.ts}"
 	],
 	// extensions/ holds Swamp behavior types: Deno code with npm: specifiers, run by Swamp's own runtime.
-	"ignorePatterns": ["extensions/**", ".swamp/**"],
+	// site/ is its own SvelteKit project (Fallow does not model its routes); svelte-check and its tests cover it.
+	"ignorePatterns": ["extensions/**", ".swamp/**", "site/**"],
 	// Complexity as it stood at 0.1.0 (FINDINGS.md). A new finding, or a file that gets worse, fails.
 	"audit": { "healthBaseline": ".fallow-health-baseline.json" },
 	"rules": {}
