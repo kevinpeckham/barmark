@@ -18,6 +18,8 @@ Points that are easy to miss:
 - When `@barmark/render` needs unreleased `barmark` changes, release
   `barmark` first: the render release check fails until the `barmark`
   version it depends on is on npm.
+- Bump the version in `bun.lock` too (the package's workspace entry):
+  Bun leaves it stale, and `bun pm pack` reads it.
 - Run `bunx varlock run -- swamp workflow run release-check --input
   pkg=<pkg>` after the version-bump commit. If varlock cannot load (no
   `.env.local`), ask Kevin for it, or run the checks the workflow wraps.

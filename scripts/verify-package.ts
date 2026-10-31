@@ -5,10 +5,10 @@
  *
  *   bun scripts/verify-package.ts <package> [--json]
  */
-import { mkdtempSync, rmSync, statSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
-import { type PackageKey, packageArg, root, run } from "./lib.js";
+import { PACKAGES, type PackageKey, packageArg, root, run } from "./lib.js";
 
 const json = process.argv.includes("--json");
 const pkg = packageArg();
@@ -70,6 +70,17 @@ const unresolved = Object.entries(dependencies).filter(([, range]) =>
 );
 if (unresolved.length)
 	problems.push(`dependencies left as workspace ranges: ${unresolved.map(([n]) => n).join(", ")}`);
+// bun pm pack takes a workspace package's version from bun.lock, which a version bump does not update.
+for (const dep of Object.values(PACKAGES)) {
+	const range = dependencies[dep.name];
+	const { version: local } = JSON.parse(readFileSync(join(dep.dir, "package.json"), "utf8")) as {
+		version: string;
+	};
+	if (range && range !== `^${local}`)
+		problems.push(
+			`${dep.name} packs as ${range}, but its version is ${local}: update its "version" in bun.lock`,
+		);
+}
 
 // The built package, imported by Node rather than Bun: what an npm user gets.
 const smoke = run(
