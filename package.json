@@ -1,59 +1,27 @@
 {
-	"name": "barmark",
-	"version": "0.1.0",
-	"description": "Markdown-inspired plain-text notation for chord charts: a parser, a canonical printer and Harte-label conversion.",
+	"name": "barmark-workspace",
+	"private": true,
 	"type": "module",
-	"exports": {
-		".": {
-			"types": "./dist/index.d.ts",
-			"import": "./dist/index.js"
-		}
-	},
-	"types": "./dist/index.d.ts",
-	"sideEffects": false,
-	"files": [
-		"dist",
-		"CHANGELOG.md"
+	"workspaces": [
+		"packages/*"
 	],
-	"engines": {
-		"node": ">=20"
-	},
-	"keywords": [
-		"chord-chart",
-		"chords",
-		"music",
-		"notation",
-		"markdown",
-		"harte",
-		"lead-sheet",
-		"parser",
-		"barmark"
-	],
-	"author": "Kevin Peckham",
-	"license": "MIT",
-	"homepage": "https://github.com/kevinpeckham/barmark#readme",
-	"repository": {
-		"type": "git",
-		"url": "git+https://github.com/kevinpeckham/barmark.git"
-	},
 	"devDependencies": {
 		"@biomejs/biome": "^2.6.4",
+		"@playwright/test": "1.64.1",
 		"@types/bun": "^1.4.4",
 		"@varlock/1password-plugin": "^2.0.5",
 		"fallow": "3.36.0",
+		"linkedom": "0.18.13",
 		"typescript": "^7.0.2",
 		"varlock": "^1.23.0"
 	},
 	"scripts": {
 		"test": "bun test",
 		"check": "biome check . && tsc",
-		"build": "rm -rf dist && tsc -p tsconfig.build.json",
+		"build": "bun run --filter '*' build",
 		"fallow": "fallow --health-baseline .fallow-health-baseline.json",
 		"verify:package": "bun scripts/verify-package.ts",
 		"verify:release": "bun scripts/verify-release.ts",
-		"prepack": "bun run build"
-	},
-	"bugs": {
-		"url": "https://github.com/kevinpeckham/barmark/issues"
+		"test:browser": "bun run build && playwright test -c packages/render/browser"
 	}
 }

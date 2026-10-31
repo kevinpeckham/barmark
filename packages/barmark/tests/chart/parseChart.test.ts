@@ -24,16 +24,16 @@ describe("Peaceful Dreams", () => {
 	});
 	test("sections in play order", () => {
 		expect(r.sections.map((s) => s.name)).toEqual([
-			"I Intro",
-			"II Verse",
-			"III Chorus",
-			"II Verse",
-			"III Chorus",
-			"IV Bridge",
-			"V Verse (Triads)",
-			"II Verse",
-			"VI Interlude",
-			"VII Outro",
+			"Intro",
+			"Verse",
+			"Chorus",
+			"Verse",
+			"Chorus",
+			"Bridge",
+			"Verse (Triads)",
+			"Verse",
+			"Interlude",
+			"Outro",
 		]);
 		expect(r.sections.map((s) => (s.lastBar ?? 0) - (s.firstBar ?? 0) + 1)).toEqual([
 			20, 20, 8, 20, 8, 8, 20, 20, 8, 20,

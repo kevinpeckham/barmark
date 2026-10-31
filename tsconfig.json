@@ -11,7 +11,9 @@
 		"exactOptionalPropertyTypes": true,
 		"skipLibCheck": true,
 		"noEmit": true,
-		"types": ["bun"]
+		"types": ["bun"],
+		"lib": ["ESNext", "DOM"],
+		"paths": { "barmark": ["./packages/barmark/src/index.ts"] }
 	},
-	"include": ["src", "scripts", "tests"]
+	"include": ["packages/*/src", "packages/*/tests", "packages/*/browser", "scripts"]
 }

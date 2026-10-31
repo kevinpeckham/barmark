@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
-const root = join(import.meta.dir, "../..");
+const root = join(import.meta.dir, "../../../..");
 
 /** The spec's "At a glance" chart, read from the grammar so the test tracks the spec. */
 export const AT_A_GLANCE = (() => {

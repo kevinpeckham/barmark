@@ -1,5 +1,5 @@
 /**
- * Builds tests/fixtures/billboard-labels.json from a local copy of the
+ * Builds packages/barmark/tests/fixtures/billboard-labels.json from a local copy of the
  * McGill Billboard 2.0 salami_chords annotations (CC0):
  *   bun scripts/extract-billboard-labels.ts <dir containing NNNN/salami_chords.txt>
  */
@@ -29,7 +29,7 @@ for (const song of readdirSync(dir)) {
 }
 const sorted = Object.fromEntries(Object.entries(labels).sort(([a], [b]) => a.localeCompare(b)));
 writeFileSync(
-	join(import.meta.dir, "../tests/fixtures/billboard-labels.json"),
+	join(import.meta.dir, "../packages/barmark/tests/fixtures/billboard-labels.json"),
 	`${JSON.stringify({ source: "McGill Billboard 2.0 salami_chords (CC0)", labels: sorted }, null, "\t")}\n`,
 );
 const total = Object.values(labels).reduce((a, b) => a + b, 0);

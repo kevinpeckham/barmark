@@ -7,11 +7,17 @@ description: >-
   free, clean main), each run by the barmark behavior and kept as data, then
   asserted clean. Run `bunx varlock run -- swamp workflow run release-check`
   after the version-bump commit (RELEASING.md); pass `--input allowDirty=true`
-  while preparing on a branch.
+  while preparing on a branch, and `--input pkg=render` to check
+  @barmark/render instead of barmark.
 tags:
   area: release
 inputs:
   properties:
+    pkg:
+      type: string
+      enum: [barmark, render]
+      default: barmark
+      description: The workspace package whose package and release checks run
     allowDirty:
       type: boolean
       default: false
@@ -42,6 +48,8 @@ jobs:
           type: behavior
           behavior: barmark
           methodName: package
+          inputs:
+            pkg: ${{ inputs.pkg }}
         dependsOn:
           - step: health
             condition:
@@ -53,6 +61,7 @@ jobs:
           behavior: barmark
           methodName: release
           inputs:
+            pkg: ${{ inputs.pkg }}
             allowDirty: ${{ inputs.allowDirty }}
         dependsOn:
           - step: package

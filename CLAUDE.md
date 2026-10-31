@@ -61,27 +61,40 @@ questions; surface them, with a recommendation.
 
 ## Layout
 
-- `src/chords/`: chord symbols, note sets, intervals, Harte labels
-- `src/chart/`: the chart reader (`document.ts`, `barLine.ts`,
-  `directives.ts`), play-order expansion (`expand.ts`), `parseChart`
-  (`parse.ts`) and the canonical printer (`print.ts`)
-- `tests/`: `bun test`; `tests/chart/fixtures.ts` reads the spec's own
-  example and has the round-trip `meaning` yardstick
+A Bun workspace. Root holds the shared config (Biome, `tsconfig.json`,
+Fallow, CI, Swamp), the grammar, `examples/`, the scripts and FINDINGS.md.
+
+- `packages/barmark/`: the `barmark` npm package
+  - `src/chords/`: chord symbols, note sets, intervals, Harte labels
+  - `src/chart/`: the chart reader (`document.ts`, `barLine.ts`,
+    `directives.ts`), play-order expansion (`expand.ts`), `parseChart`
+    (`parse.ts`) and the canonical printer (`print.ts`)
+  - `tests/`: `bun test`; `tests/chart/fixtures.ts` reads the spec's own
+    example and has the round-trip `meaning` yardstick
+  - its own `CHANGELOG.md` and `README.md`
+- `packages/render/`: `@barmark/render`, the bar-grid renderer and the
+  `<barmark-chart>` web component
+  - `src/model.ts` decides what to draw (`layoutChart`); `chord.ts` and
+    `speech.ts` typeset and speak chords; `html.ts` and `styles.ts` draw;
+    `element.ts` is the web component; `fonts/` holds Edwin, unmodified
+  - `tests/`: `bun test` (linkedom for markup); `browser/`: Playwright
+    suite (`bun run test:browser`) with its own page server
 - `examples/`: real charts (Peaceful Dreams must parse cleanly and print
   unchanged)
-- `docs/superpowers/plans/`: the implementation plans
+- `docs/superpowers/`: designs (`specs/`) and implementation plans (`plans/`)
 - `scripts/verify-package.ts`, `scripts/verify-release.ts`: release checks
-  shared by CI and Swamp
+  shared by CI and Swamp; both take the package (`barmark` or `render`)
 
 ## Commands
 
 ```
-bun test                 # tests
-bun run check            # Biome (tabs) and tsc
-bun run fallow           # dead code, duplication, complexity beyond the baseline
-bun run verify:package   # build, npm pack contents, Node import
-bun run verify:release   # version, CHANGELOG, tag, clean main
-bunx varlock run -- swamp workflow run release-check   # all of the above, as data
+bun test                         # tests, every package
+bun run check                    # Biome (tabs) and tsc
+bun run fallow                   # dead code, duplication, complexity beyond the baseline
+bun run test:browser             # the renderer in Chromium (builds first)
+bun run verify:package <pkg>     # build, npm pack contents, Node import
+bun run verify:release <pkg>     # version, CHANGELOG, tag, clean main
+bunx varlock run -- swamp workflow run release-check [--input pkg=render]
 ```
 
 ## Working agreement
@@ -95,10 +108,13 @@ bunx varlock run -- swamp workflow run release-check   # all of the above, as da
   say so in the commit.
 - Parsers never throw on user input; every problem is a diagnostic with a
   line number.
-- Add a `CHANGELOG.md` entry under `[Unreleased]` for every user-visible
-  change.
+- Add an entry under `[Unreleased]` in the changed package's
+  `CHANGELOG.md` for every user-visible change.
 - Add a `FINDINGS.md` entry whenever a tool, a pattern or our own process
   surprises us: the symptom, the cause, the fix and where it lives.
 - Commit messages are conventional commits with **no** `Co-Authored-By`
   or other AI attribution trailer.
-- Releases follow `RELEASING.md` (the `/release` skill walks it).
+- Releases follow `RELEASING.md` (the `/release` skill walks it). Each
+  package is tagged on its own: `barmark-vX.Y.Z`, `render-vX.Y.Z`.
+- `@barmark/render` never changes the music: anything musical (what `%`
+  copies, bar numbers, what a replay plays) comes from the parser.

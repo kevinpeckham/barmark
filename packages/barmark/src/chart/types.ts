@@ -75,6 +75,11 @@ export type SectionOccurrence = {
 	firstBar: number | null;
 	lastBar: number | null;
 	elided: boolean;
+	/**
+	 * Which distinct section this plays, numbered in first-appearance order
+	 * from 0: every replay shares its written section's number.
+	 */
+	form: number;
 };
 
 export type ChartParse = {

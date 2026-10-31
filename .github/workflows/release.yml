@@ -1,8 +1,10 @@
-# Publishes barmark to npm via Trusted Publishing (OIDC): no tokens,
-# provenance attested. Trigger: a GitHub release, or manual dispatch on a
-# release tag. npmjs.com package settings -> Trusted Publisher must name
-# this repo, this file (release.yml) and the npm environment. The process
-# is in RELEASING.md.
+# Publishes one workspace package to npm via Trusted Publishing (OIDC): no
+# tokens, provenance attested. The tag names the package: barmark-vX.Y.Z
+# publishes packages/barmark (barmark), render-vX.Y.Z publishes
+# packages/render (@barmark/render). Trigger: a GitHub release, or manual
+# dispatch on a release tag. Each package's npmjs.com settings -> Trusted
+# Publisher must name this repo, this file (release.yml) and the npm
+# environment. The process is in RELEASING.md.
 name: release
 on:
   release:
@@ -19,9 +21,13 @@ jobs:
   # in a job that can publish.
   verify:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     permissions:
       contents: read
+    outputs:
+      name: ${{ steps.package.outputs.name }}
+      version: ${{ steps.package.outputs.version }}
+      smoke: ${{ steps.package.outputs.smoke }}
     steps:
       # Actions pinned to commit SHAs: a compromised version tag must not be
       # able to change what is packed or published. Dependabot proposes
@@ -34,22 +40,36 @@ jobs:
         with:
           node-version: 22
       - run: bun install --frozen-lockfile
-      - name: The tag names the package version
+      - name: The tag names a package and its version
+        id: package
         run: |
-          version=$(node -p "require('./package.json').version")
-          if [ "${GITHUB_REF_NAME}" != "v${version}" ]; then
-            echo "::error::ref ${GITHUB_REF_NAME} does not match package.json version v${version}"
+          case "${GITHUB_REF_NAME}" in
+            barmark-v*) key=barmark; smoke=scripts/smoke.mjs ;;
+            render-v*) key=render; smoke=scripts/smoke-render.mjs ;;
+            *) echo "::error::${GITHUB_REF_NAME} is not a release tag (barmark-vX.Y.Z or render-vX.Y.Z)"; exit 1 ;;
+          esac
+          dir="packages/${key}"
+          name=$(node -p "require('./${dir}/package.json').name")
+          version=$(node -p "require('./${dir}/package.json').version")
+          if [ "${GITHUB_REF_NAME}" != "${key}-v${version}" ]; then
+            echo "::error::ref ${GITHUB_REF_NAME} does not match ${dir}/package.json version ${version}"
             exit 1
           fi
+          { echo "key=${key}"; echo "dir=${dir}"; echo "name=${name}"; echo "version=${version}"; echo "smoke=${smoke}"; } >> "$GITHUB_OUTPUT"
       - run: bun run check
       - run: bun test
       - run: bun run fallow
-      - run: bun run verify:package
-      - run: npm pack --ignore-scripts
+      - run: bunx playwright install --with-deps chromium
+      - run: bun run test:browser
+      - run: bun run verify:package ${{ steps.package.outputs.key }}
+      - run: bun run build
+      # bun pm pack, not npm pack: it turns workspace: ranges into versions.
+      - run: bun pm pack --ignore-scripts --destination "$GITHUB_WORKSPACE/pack"
+        working-directory: ${{ steps.package.outputs.dir }}
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: package
-          path: barmark-*.tgz
+          path: pack/*.tgz
           if-no-files-found: error
           retention-days: 7
   publish:
@@ -76,12 +96,12 @@ jobs:
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: package
-      - run: npm publish ./barmark-*.tgz --access public --provenance
+      - run: npm publish ./*.tgz --access public --provenance
   # Install the version just published, from npm, as a user would, and read
   # a real chart with it. The registry can take a few minutes to serve a new
   # version (FINDINGS.md), so wait for it first.
   confirm:
-    needs: publish
+    needs: [verify, publish]
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -92,20 +112,26 @@ jobs:
         with:
           node-version: 22
       - name: Wait for npm to serve the new version
+        env:
+          PKG: ${{ needs.verify.outputs.name }}@${{ needs.verify.outputs.version }}
+          VERSION: ${{ needs.verify.outputs.version }}
         run: |
-          version="${GITHUB_REF_NAME#v}"
           for i in $(seq 1 60); do
-            if [ "$(npm view "barmark@${version}" version --prefer-online 2>/dev/null)" = "${version}" ]; then
-              echo "barmark@${version} is on npm"; exit 0
+            if [ "$(npm view "${PKG}" version --prefer-online 2>/dev/null)" = "${VERSION}" ]; then
+              echo "${PKG} is on npm"; exit 0
             fi
             sleep 10
           done
-          echo "::error::barmark@${version} is not visible on npm after 10 minutes"; exit 1
+          echo "::error::${PKG} is not visible on npm after 10 minutes"; exit 1
       - name: Install from npm and read Peaceful Dreams
+        env:
+          NAME: ${{ needs.verify.outputs.name }}
+          VERSION: ${{ needs.verify.outputs.version }}
+          SMOKE: ${{ needs.verify.outputs.smoke }}
         run: |
           dir="$RUNNER_TEMP/confirm"
           mkdir -p "$dir" && cd "$dir"
           npm init -y >/dev/null
-          npm install --ignore-scripts "barmark@${GITHUB_REF_NAME#v}"
-          cp "$GITHUB_WORKSPACE/scripts/smoke.mjs" .
-          node smoke.mjs barmark "$GITHUB_WORKSPACE/examples/peaceful-dreams.chart.md"
+          npm install --ignore-scripts "${NAME}@${VERSION}"
+          cp "$GITHUB_WORKSPACE/${SMOKE}" smoke.mjs
+          node smoke.mjs "${NAME}" "$GITHUB_WORKSPACE/examples/peaceful-dreams.chart.md"

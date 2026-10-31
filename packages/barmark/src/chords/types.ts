@@ -1,3 +1,4 @@
+import type { ChordParts } from "./vocabulary.js";
 /** A scale degree above a root: `b3` is `{ degree: 3, alter: -1 }`. Degrees above 7 stay as written. */
 export type Interval = { degree: number; alter: number };
 
@@ -14,6 +15,8 @@ export type ChordRecord = {
 	bass: string;
 	alteredOpen: boolean;
 	harte: string;
+	/** The canonical parts a chord symbol is spelled from; null for a note set. */
+	parts: ChordParts | null;
 };
 
 export type ParseResult =

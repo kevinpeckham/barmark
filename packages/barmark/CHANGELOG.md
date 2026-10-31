@@ -9,16 +9,27 @@ Releases follow the process in [RELEASING.md](RELEASING.md).
 
 ## [Unreleased]
 
+### Added
+
+- **`form` on each section occurrence:** which distinct section it plays, numbered from 0 in order of first appearance. Every replay shares its written section's number, so a host can label the form (A B A B C) or mark repeated sections in a timeline.
+- **`parts` on each chord record:** the canonical root, quality, extension, sus, tones and bass the canonical spelling is built from (`null` for a note set), so renderers can typeset and speak a chord without re-reading its text.
+
+### Changed
+
+- **Peaceful Dreams uses plain section names** (`## Verse`, not `## II Verse`): headings are the author's text, and form now comes from `form`.
+
 ### Technical
 
 - **`main` and release tags are protected, and publishing needs approval.** Changes reach `main` through pull requests that pass CI; `v*` tags cannot be moved or deleted; the npm publish job runs in an `npm` environment that waits for approval and that npm's trusted publisher requires. After publishing, the release workflow installs the new version from npm and reads a real chart with it (`scripts/smoke.mjs`, shared with `verify:package`).
 - **Dependabot** proposes monthly, grouped updates for actions and dev dependencies, with a two-week cooldown. Jobs have time limits, superseded pull-request runs are cancelled, and releases never run concurrently. `actions/checkout` is now v7.0.1 and `actions/setup-node` v7.1.0, which ends the Node 20 deprecation warnings.
+- **The repository is a Bun workspace.** The package lives in `packages/barmark/` (`package.json` names the directory), beside the coming `@barmark/render`; the verify scripts, CI's package check and the Swamp `release-check` take the package to check.
+- **Releases are tagged per package:** `barmark-vX.Y.Z` (and `render-vX.Y.Z` for `@barmark/render`); the release workflow publishes the package its tag names, packed with `bun pm pack`.
 - **Fallow guards the code's health.** `bun run fallow` fails on dead code, duplicated code, or complexity beyond `.fallow-health-baseline.json` (the 17 functions above threshold at 0.1.0). It runs in CI (findings annotate the pull request), in the release workflow, and in the Swamp `release-check` as a fourth assertion. Three internal-only exports lost `export`, and the verify scripts share `scripts/lib.ts`.
 
 ## [0.1.0] - 2026-10-31
 
 The first working release: the reference parser and printer for the
-[grammar v0.1 draft](docs/grammar-v0.1-draft.md).
+[grammar v0.1 draft](https://github.com/kevinpeckham/barmark/blob/main/docs/grammar-v0.1-draft.md).
 
 ### Added
 

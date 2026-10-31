@@ -1,0 +1,56 @@
+{
+	"name": "@barmark/render",
+	"version": "0.0.0",
+	"description": "Render barmark chord charts as a clean, accessible bar grid: HTML with Declarative Shadow DOM, or the <barmark-chart> web component.",
+	"type": "module",
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"import": "./dist/index.js"
+		},
+		"./element": {
+			"types": "./dist/element.d.ts",
+			"import": "./dist/element.js"
+		},
+		"./fonts/*": "./fonts/*"
+	},
+	"types": "./dist/index.d.ts",
+	"sideEffects": [
+		"./dist/element.js"
+	],
+	"files": [
+		"dist",
+		"fonts",
+		"CHANGELOG.md"
+	],
+	"engines": {
+		"node": ">=20"
+	},
+	"keywords": [
+		"barmark",
+		"chord-chart",
+		"chords",
+		"music",
+		"lead-sheet",
+		"web-component",
+		"renderer"
+	],
+	"author": "Kevin Peckham",
+	"license": "MIT",
+	"homepage": "https://github.com/kevinpeckham/barmark/tree/main/packages/render#readme",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/kevinpeckham/barmark.git",
+		"directory": "packages/render"
+	},
+	"bugs": {
+		"url": "https://github.com/kevinpeckham/barmark/issues"
+	},
+	"dependencies": {
+		"barmark": "workspace:^"
+	},
+	"scripts": {
+		"build": "rm -rf dist && tsc -p tsconfig.build.json",
+		"prepack": "bun run build"
+	}
+}

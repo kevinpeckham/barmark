@@ -77,6 +77,7 @@ export function parseNoteSet(text: string): ParseResult {
 		bass,
 		alteredOpen: false,
 		harte: "",
+		parts: null,
 	};
 	value.harte = toHarte(value);
 	return { ok: true, warnings, value };

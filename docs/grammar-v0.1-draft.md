@@ -491,6 +491,7 @@ human to say whether the band was silent, and the structure line.
 | Repeat spellings | `x`, `X` and `×` all accepted; canonical `x`. |
 | `%` after a one-bar meter | `%` repeats the previous bar exactly, its `[n/d]` included. |
 | Appendix A's provisional calls | Approved by Kevin: `C2`/`C4` are rejected with `Csus2` or `C(9)` suggested, and a note set's Harte label uses the bass as root when none is marked. |
+| Section form and chord parts | Machine output gains `form` on each section occurrence and `parts` on each chord (A.7), for renderers and hosts such as stem-shovel's section timeline. No change to what any chart means. |
 
 ## Open questions
 
@@ -620,6 +621,8 @@ Each slot parses to one record:
 | `bass` | spelled bass note: the slash bass, the first note of a set, otherwise the root |
 | `alteredOpen` | true for `7alt` |
 | `elided` | on a section occurrence: true when `->` cut its last bar |
+| `form` | on a section occurrence: which distinct section it plays, numbered from 0 in order of first appearance; a replay shares its written section's number, so hosts can label form (A, B, A, B, C) |
+| `parts` | on a chord: the canonical root, quality, extension, sus, tones (in canonical order) and bass its spelling is built from; empty for a note set |
 | `repeat` | on a bar line, section or repeat bracket in the parse tree: a count, or `open` for `x ...` |
 | `harte` | the Harte label: `C:7(b9)`, `N` for N.C. and silence (`--`), `X` for `?` |
 | `source` | the symbol as written |
