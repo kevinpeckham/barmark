@@ -149,6 +149,8 @@ equally**. Triplets are three-member groups.
 
 How the symbols relate:
 
+- A repeated chord name keeps its slot: barmark does not merge `G G` into
+  `G`, and players may read it as a re-attack.
 - `/` and `%` differ after a bar with more than one slot:
   `| C G | / |` holds G, while `| C G | % |` plays C then G again.
 - `N.C.` and `--` differ in who plays. A drum break or a vocal-only line is
@@ -391,9 +393,16 @@ A canonical printer writes:
 - canonical chord spellings (Appendix A) with ASCII `#` and `b`.
   Typography (♯ ♭, superscripts, small caps for N.C.) is the renderer's job.
 - the fewest slots per cell: `| G / D / |` prints as `| G D |`, and
-  `| -- -- |` as `| -- |`
+  `| -- -- |` as `| -- |`. Only a slot with no attack of its own merges
+  (`/`, a repeated `--`, a repeated `N.C.`); a repeated chord name stays
+  (`| G G |`), and so does `| ? ? |`
 - note sets with octaves in ascending order
-- one blank line before each `##`
+- one blank line before each `##`, except that consecutive headings (a run
+  of replays) stay together; other blank lines are the author's, with runs
+  collapsed to one
+- text lines, and any line with an error, exactly as written (trailing
+  whitespace trimmed), so a re-read reports the same errors
+- code-fence lines as written
 - directives lowercased, comma-separated, in the order key, time, tempo,
   feel
 
@@ -401,8 +410,10 @@ Canonicalizing changes spelling only. It never rewrites one chord as a
 different chord with the same notes (`aug7` stays `aug7`; `7(#5)` stays
 `7(#5)`).
 
-`parse(print(parse(x)))` must equal `parse(x)`, and `print` must be stable
-when applied twice.
+Printing preserves meaning: the printed chart plays the same bars with the
+same directives and sections and reports the same errors (formatting
+warnings such as a missing `|` may disappear), and `print` is stable when
+applied twice.
 
 ## 9. Errors and warnings
 
@@ -435,7 +446,7 @@ Every message gives the line number and quotes the offending token.
 
 | Old | New |
 |---|---|
-| `\| Am7 Am7 Am7 G7 \|` | `\| Am7 / / G7 \|` (the old form is still valid) |
+| `\| Am7 Am7 Am7 G7 \|` | `\| Am7 / / G7 \|` (a converter rewrites old repeated names to `/`; in barmark a repeated name may read as a re-attack) |
 | `\| G \| \| \|` (empty = hold) | `\| G \| / \| / \|` |
 | `/` alone = repeat bar | `%` (`/` alone now means hold) |
 | `D A Bm G` (bare line) | `\| D \| A \| Bm \| G \|` |
@@ -472,6 +483,7 @@ human to say whether the band was silent, and the structure line.
 | Modes | `key:` accepts a mode name (`A mixolydian`). A bare root means major. |
 | Elision | `->` at the end of a replay heading cuts its last bar. Written sections omit the bar. |
 | Fades and vamps | `x ...`: an open repeat. Machine output records the count as open. |
+| Canonical printing | Spelling and layout only. Lines with errors and text lines print as written; a repeated chord name is kept. |
 | Repeat spellings | `x`, `X` and `×` all accepted; canonical `x`. |
 | `%` after a one-bar meter | `%` repeats the previous bar exactly, its `[n/d]` included. |
 

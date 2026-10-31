@@ -1,3 +1,5 @@
+import { readDocument } from "./document.js";
+import { expand } from "./expand.js";
 import type { Cell, Directives, Key, Line, Repeat, SimpleSlot, Slot } from "./types.js";
 
 /** A slot with no attack of its own continues whatever sounds before it. A repeated chord name is a re-attack. */
@@ -75,4 +77,38 @@ export function printLine(l: Line): string {
 		default:
 			return l.text;
 	}
+}
+
+/**
+ * A chart in canonical form (spec §8). Spelling and layout only: lines with
+ * errors and text lines print as written, and the author's blank lines and
+ * fences stay. Never throws.
+ */
+export function printChart(text: string): string {
+	const doc = readDocument(text);
+	const byLine = new Map(doc.lines.map((l) => [l.line, l]));
+	const errored = new Set(
+		[...doc.diagnostics, ...expand(doc.lines).diagnostics]
+			.filter((d) => d.severity === "error")
+			.map((d) => d.line),
+	);
+	const out: string[] = [];
+	let lastWasHeading = false;
+	const physical = text.replace(/^\uFEFF/, "").split(/\r?\n/);
+	for (const [i, raw] of physical.entries()) {
+		const t = raw.trim();
+		if (!t) {
+			if (out.length > 0 && out.at(-1) !== "") out.push("");
+			continue;
+		}
+		const l = t.startsWith("```") ? undefined : byLine.get(i + 1);
+		// Consecutive headings (a run of replays) stay together, as the spec's examples write them.
+		if (l?.kind === "section" && !lastWasHeading && out.length > 0 && out.at(-1) !== "")
+			out.push("");
+		lastWasHeading = l?.kind === "section";
+		if (!l) out.push(t.startsWith("```") ? t : raw.trimEnd());
+		else out.push(l.kind === "text" || errored.has(l.line) ? raw.trimEnd() : printLine(l));
+	}
+	while (out.at(-1) === "") out.pop();
+	return out.length ? `${out.join("\n")}\n` : "";
 }
