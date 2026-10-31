@@ -6,6 +6,12 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-10-31
+
+The first release: barmark charts as an evenly spaced bar grid, as HTML
+that needs no script or as the `<barmark-chart>` web component. Requires
+`barmark` 0.2.0 or later.
+
 ### Added
 
 - **`layoutChart(text)`**: the chart as data to draw. Bar lines become rows
@@ -57,3 +63,6 @@ package uses [semantic versioning](https://semver.org/).
   and the page's custom properties, long rows wrap on a phone and at 400%
   zoom without sideways scrolling, the element renders and re-renders, and
   a screen reader hears "bar 9: D". Run them with `bun run test:browser`.
+
+[Unreleased]: https://github.com/kevinpeckham/barmark/compare/render-v0.1.0...HEAD
+[0.1.0]: https://github.com/kevinpeckham/barmark/releases/tag/render-v0.1.0
