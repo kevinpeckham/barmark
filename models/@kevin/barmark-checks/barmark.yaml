@@ -1,0 +1,9 @@
+type: '@kevin/barmark-checks'
+typeVersion: 2026.10.31.1
+id: 504864e2-c55f-4a49-8520-ec37175f3248
+name: barmark
+version: 1
+tags: {}
+globalArguments:
+  label: barmark
+methods: {}

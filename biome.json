@@ -1,14 +1,15 @@
 {
 	"$schema": "https://biomejs.dev/schemas/2.6.4/schema.json",
+	"vcs": { "enabled": true, "clientKind": "git", "useIgnoreFile": true },
 	"files": {
 		"includes": [
 			"**",
-			"!**/node_modules",
-			"!**/.superpowers",
 			"!tests/fixtures",
 			"!**/*.md",
-			"!dist",
-			"!.swamp"
+			"!.swamp.yaml",
+			"!extensions",
+			"!models",
+			"!workflows"
 		]
 	},
 	"formatter": { "indentStyle": "tab", "lineWidth": 100 }

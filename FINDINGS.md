@@ -90,6 +90,15 @@ package index, inside the package.
 
 ## Tooling
 
+### Biome formats files that belong to other tools (2026-10-31, release process)
+
+The first Swamp `release-check` run failed its own lint gate: Biome
+reformatted Swamp's generated YAML, its Deno extension and the gitignored
+`.claude/settings.local.json`. `biome.json` now reads `.gitignore`
+(`vcs.useIgnoreFile`) and excludes `extensions/`, `models/`,
+`workflows/` and `.swamp.yaml`, which Swamp owns. When a tool generates
+files into the repo, exclude them from the formatter in the same commit.
+
 ### Swamp needs a signed-in account before `swamp repo init` (2026-10-31, release process)
 
 `swamp repo init` stopped with "Run `swamp auth login`" because the VM's

@@ -1,0 +1,78 @@
+id: 980d1aa0-dfc8-447c-893f-67efc886f666
+name: release-check
+description: >-
+  barmark's release gate: lint, typecheck and tests, the npm package (contents
+  and a Node import), and release readiness (version, CHANGELOG, tag and npm
+  free, clean main), each run by the barmark behavior and kept as data, then
+  asserted clean. Run `bunx varlock run -- swamp workflow run release-check`
+  after the version-bump commit (RELEASING.md); pass `--input allowDirty=true`
+  while preparing on a branch.
+tags:
+  area: release
+inputs:
+  properties:
+    allowDirty:
+      type: boolean
+      default: false
+      description: Skip the clean-tree and on-main checks (while preparing a release)
+jobs:
+  - name: checks
+    description: Run every check against the checkout
+    steps:
+      - name: gates
+        description: Biome, tsc and bun test
+        task:
+          type: behavior
+          behavior: barmark
+          methodName: gates
+      - name: package
+        description: Build, npm pack contents, Node import and smoke test
+        task:
+          type: behavior
+          behavior: barmark
+          methodName: package
+        dependsOn:
+          - step: gates
+            condition:
+              type: succeeded
+      - name: release
+        description: Version, CHANGELOG section, tag and npm version free, clean main
+        task:
+          type: behavior
+          behavior: barmark
+          methodName: release
+          inputs:
+            allowDirty: ${{ inputs.allowDirty }}
+        dependsOn:
+          - step: package
+            condition:
+              type: succeeded
+  - name: verify
+    description: Fail the run when any check found a problem
+    dependsOn:
+      - job: checks
+        condition:
+          type: succeeded
+    steps:
+      - name: gates-clean
+        description: Lint, typecheck and every test pass
+        task:
+          type: assert
+          expr: data.latest("barmark", "gates").attributes.ok
+          message: '${{ "Gates: " + data.latest("barmark", "gates").attributes.summary }}'
+          severity: high
+      - name: package-clean
+        description: The package publishes the right files and runs in Node
+        task:
+          type: assert
+          expr: data.latest("barmark", "package").attributes.ok
+          message: '${{ "Package: " + data.latest("barmark", "package").attributes.summary }}'
+          severity: high
+      - name: release-ready
+        description: The version is ready to tag and publish
+        task:
+          type: assert
+          expr: data.latest("barmark", "release").attributes.ok
+          message: '${{ "Release: " + data.latest("barmark", "release").attributes.summary }}'
+          severity: high
+version: 1
