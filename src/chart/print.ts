@@ -1,4 +1,4 @@
-import type { Cell, SimpleSlot, Slot } from "./types.js";
+import type { Cell, Directives, Key, Line, Repeat, SimpleSlot, Slot } from "./types.js";
 
 /** A slot with no attack of its own continues whatever sounds before it. A repeated chord name is a re-attack. */
 function continues(sounding: SimpleSlot | null, s: Slot): boolean {
@@ -42,4 +42,37 @@ export function printCell(c: Cell): string {
 	if (c.kind === "fermata") return "...";
 	const meter = c.meter ? `[${c.meter.n}/${c.meter.d}] ` : "";
 	return meter + reduceSlots(c.slots).map(printSlot).join(" ");
+}
+
+const printRepeat = (r: Repeat) => (r === null ? "" : r === "open" ? " x ..." : ` x${r}`);
+
+function printKey(k: Key): string {
+	if (k.mode === "major") return k.tonic;
+	if (k.mode === "minor") return `${k.tonic}m`;
+	return `${k.tonic} ${k.mode}`;
+}
+
+function printDirectives(d: Directives): string {
+	const parts: string[] = [];
+	if (d.key) parts.push(`key: ${printKey(d.key)}`);
+	if (d.time) parts.push(`time: ${d.time.n}/${d.time.d}`);
+	if (d.tempo !== undefined) parts.push(`tempo: ${d.tempo}`);
+	if (d.feel) parts.push(`feel: ${d.feel}`);
+	return parts.join(", ");
+}
+
+/** One parsed line in canonical form. Text and invalid lines print as stored. */
+export function printLine(l: Line): string {
+	switch (l.kind) {
+		case "title":
+			return `# ${l.text}`;
+		case "section":
+			return `## ${l.name.replace(/\s+/g, " ")}${printRepeat(l.repeat)}${l.elided ? " ->" : ""}`;
+		case "directive":
+			return printDirectives(l.set);
+		case "bars":
+			return `${l.opens ? "|:" : "|"} ${l.cells.map(printCell).join(" | ")} ${l.closes ? ":|" : "|"}${printRepeat(l.repeat)}`;
+		default:
+			return l.text;
+	}
 }
