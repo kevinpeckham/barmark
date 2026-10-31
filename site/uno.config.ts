@@ -98,7 +98,7 @@ export default defineConfig({
 		],
 		[
 			"button-outline",
-			"inline-flex items-center gap-2 px-4 py-2 rounded-md border border-white/25 hover-(border-accent text-accent) focus-visible-(outline-2 outline-accent)",
+			"inline-flex items-center gap-2 px-4 py-2 rounded-md border border-white/45 hover-(border-accent text-accent) focus-visible-(outline-2 outline-accent)",
 		],
 		["device-window", "bg-dark border-2 border-blue-200/10 rounded-lg overflow-hidden"],
 		[

@@ -50,6 +50,27 @@ test.describe("home: the live editor", () => {
 		expect(dialog).toBe(false);
 	});
 
+	test("typing stays responsive in a 2,000-line chart", async ({ page }) => {
+		await page.goto("/");
+		const source = page.getByRole("textbox", { name: "barmark source of the chart" });
+		await source.fill("| D | G |\n".repeat(2000));
+		await source.press("ControlOrMeta+End");
+		const start = Date.now();
+		await source.pressSequentially("| Em |");
+		expect(Date.now() - start).toBeLessThan(1500);
+		await expect
+			.poll(
+				() =>
+					page.evaluate(() =>
+						document.querySelector("main barmark-chart")?.shadowRoot?.textContent?.includes("Em"),
+					),
+				{
+					timeout: 5000,
+				},
+			)
+			.toBe(true);
+	});
+
 	test("Reset restores the demo", async ({ page }) => {
 		await page.goto("/");
 		const source = page.getByRole("textbox", { name: "barmark source of the chart" });
@@ -109,6 +130,31 @@ test.describe("the guide", () => {
 	});
 });
 
+test.describe("navigating inside the site", () => {
+	const unrendered = (page: Page) =>
+		page.evaluate(
+			() =>
+				[...document.querySelectorAll("main barmark-chart")].filter(
+					(c) => !c.shadowRoot?.textContent?.trim(),
+				).length,
+		);
+
+	test("Read the syntax shows every example rendered", async ({ page }) => {
+		await page.goto("/");
+		await page.getByRole("link", { name: "Read the syntax" }).click();
+		await expect(page).toHaveURL(/\/syntax$/);
+		await expect.poll(() => page.locator("main barmark-chart").count()).toBeGreaterThan(30);
+		expect(await unrendered(page)).toBe(0);
+	});
+
+	test("coming back home shows the demo rendered", async ({ page }) => {
+		await page.goto("/syntax");
+		await page.getByRole("link", { name: "barmark", exact: true }).click();
+		await expect(page).toHaveURL(/\/$/);
+		await expect.poll(() => chartText(page)).toContain("Peaceful Dreams");
+	});
+});
+
 test.describe("without JavaScript", () => {
 	test.use({ javaScriptEnabled: false });
 
@@ -137,6 +183,57 @@ test.describe("on a phone", () => {
 			]);
 			expect(scroll).toBeLessThanOrEqual(client);
 		});
+});
+
+test("the source editor shows keyboard focus", async ({ page }) => {
+	await page.goto("/");
+	const source = page.getByRole("textbox", { name: "barmark source of the chart" });
+	await source.focus();
+	await page.keyboard.press("Shift+Tab");
+	await page.keyboard.press("Tab");
+	await expect(source).toBeFocused();
+	const outline = await source.evaluate((el) => getComputedStyle(el).outlineStyle);
+	expect(outline).not.toBe("none");
+});
+
+test("the guide's controls meet WCAG contrast on the dark ground", async ({ page }) => {
+	await page.goto("/syntax");
+	const ratios = await page.evaluate(() => {
+		const canvas = document.createElement("canvas");
+		canvas.width = canvas.height = 1;
+		const ctx = canvas.getContext("2d", { willReadFrequently: true });
+		if (!ctx) throw new Error("no canvas");
+		const ground = getComputedStyle(document.body).backgroundColor;
+		// The colour as painted over the ground, in sRGB.
+		const paint = (color: string) => {
+			ctx.fillStyle = ground;
+			ctx.fillRect(0, 0, 1, 1);
+			ctx.fillStyle = color;
+			ctx.fillRect(0, 0, 1, 1);
+			return [...ctx.getImageData(0, 0, 1, 1).data.slice(0, 3)];
+		};
+		const luminance = (rgb: number[]) => {
+			const [r, g, b] = rgb.map((v) => {
+				const c = v / 255;
+				return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+			});
+			return 0.2126 * (r ?? 0) + 0.7152 * (g ?? 0) + 0.0722 * (b ?? 0);
+		};
+		const ratio = (color: string) => {
+			const [a, b] = [luminance(paint(color)), luminance(paint(ground))].sort((x, y) => y - x);
+			return ((a ?? 0) + 0.05) / ((b ?? 0) + 0.05);
+		};
+		const input = document.querySelector("#guide-search") as HTMLElement;
+		const chip = document.querySelector('[data-chip="bars"]') as HTMLElement;
+		return {
+			searchBorder: ratio(getComputedStyle(input.parentElement as HTMLElement).borderTopColor),
+			chipBorder: ratio(getComputedStyle(chip).borderTopColor),
+			placeholder: ratio(getComputedStyle(input, "::placeholder").color),
+		};
+	});
+	expect(ratios.searchBorder).toBeGreaterThanOrEqual(3);
+	expect(ratios.chipBorder).toBeGreaterThanOrEqual(3);
+	expect(ratios.placeholder).toBeGreaterThanOrEqual(4.5);
 });
 
 test("every input has a name and every link has text", async ({ page }) => {

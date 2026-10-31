@@ -55,7 +55,7 @@ const description =
 				<select
 					id="guide-sort"
 					bind:value={query.sort}
-					class="rounded-md border border-white/25 bg-dark px-3 py-2 focus-visible-(outline-2 outline-accent)"
+					class="rounded-md border border-white/45 bg-dark px-3 py-2 focus-visible-(outline-2 outline-accent)"
 				>
 					<option value="category">By category</option>
 					<option value="name">By name</option>

@@ -21,9 +21,9 @@ anywhere.
 ## Repository rules
 
 - **`main`** (ruleset "main"): changes arrive by pull request, CI's
-  `check`, `browser` and `package (<node>, <package>)` jobs (Node 20, 22
-  and 24 for each package) must pass, and force-pushes and deletion are
-  blocked. Renaming a CI job or changing a matrix means updating the
+  `check`, `browser`, `site` and `package (<node>, <package>)` jobs (Node
+  20, 22 and 24 for each package) must pass, and force-pushes and deletion
+  are blocked. `site-versions` is deliberately not required (step 12). Renaming a CI job or changing a matrix means updating the
   ruleset's required checks.
 - **Release tags** (ruleset "release tags", `v*`, `barmark-v*` and
   `render-v*`): a tag can be created but never moved or deleted, so a

@@ -74,6 +74,21 @@ describe("guide rows", () => {
 		});
 });
 
+describe("guide sentences say no more than the grammar", () => {
+	const meaning = (id: string) => ROWS.find((r) => r.id === id)?.meaning ?? "";
+	test("an altered tone replaces only when the chord has that tone", () => {
+		const added = parseChord("C(b9)");
+		expect(added.ok && added.value.pitches).toEqual(["C", "E", "G", "Db"]);
+		expect(meaning("altered")).toContain("otherwise it adds");
+	});
+	test("under N.C. others may carry on, not must", () => {
+		expect(meaning("no-chord")).toContain("may");
+	});
+	test("x N says how many times", () => {
+		expect(meaning("repeat-line")).toContain("N times");
+	});
+});
+
 describe("guide query", () => {
 	test("reads a shared link", () => {
 		expect(readQuery(new URLSearchParams("q=repeat&cat=repeats"))).toEqual({
