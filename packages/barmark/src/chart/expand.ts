@@ -271,11 +271,12 @@ export function expand(lines: Line[]): {
 				continue;
 			}
 			replayOf = source.heading.line;
-			playItems(items, out);
 			const body = itemsOf.get(source) ?? [];
 			times(h.repeat, h.line, out, (into) => playItems(body, into));
 		}
 		const elided = !isDefinition && h.elided && removeLastBar(out);
+		// A replay heading stands for its bars: its own lines (directives) come after them.
+		if (!isDefinition) playItems(items, out);
 		events.push(...out);
 		occurrences.push([
 			{ name: h.name, line: h.line, replayOf, firstBar: null, lastBar: null, elided },

@@ -75,9 +75,18 @@ describe("directives", () => {
 		const b = play("| D |").bars[0];
 		expect([b?.meter, b?.key, b?.tempo, b?.feel]).toEqual([{ n: 4, d: 4 }, null, null, "straight"]);
 	});
-	test("a replay's own directives apply to that replay", () => {
-		const r = play("key: D\n## C\n| G |\n## C\nkey: E");
-		expect(r.bars.map((b) => b.key?.tonic)).toEqual(["D", "E"]);
+	test("a directive under a replay heading takes effect after the replay", () => {
+		// The heading stands for its bars, so the directive comes after them.
+		const r = play("key: D\n## C\n| G |\n## C\nkey: E\n## Outro\n| E |");
+		expect(r.bars.map((b) => b.key?.tonic)).toEqual(["D", "D", "E"]);
+	});
+	test("a key change before a replay heading changes the replay", () => {
+		const r = play("key: D\n## C\n| G |\n## B\n| A |\nkey: E\n## C");
+		expect(r.bars.map((b) => b.key?.tonic)).toEqual(["D", "D", "E"]);
+	});
+	test("a replay after the change keeps the new key, and an elided replay too", () => {
+		const r = play("key: D\n## C\n| G | A |\n## C ->\ntempo: 90\n## O\n| E |");
+		expect(r.bars.map((b) => b.tempo)).toEqual([null, null, null, 90]);
 	});
 	test("directives inside a repeated section replay with it", () => {
 		const r = play("## A x2\n| D |\nkey: E\n| G |");

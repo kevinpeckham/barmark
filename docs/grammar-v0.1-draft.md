@@ -337,7 +337,17 @@ number is an extension (`C7`, `C13`), so it can't also be an octave.
   under the same name: replays use the most recent section with that name.
   `→` is accepted for `->`.
 - Bars before the first heading belong to an unnamed section.
-- The written order is the play order.
+- The written order is the play order. A replay heading stands for the bars
+  it replays, so a directive written under it takes effect after the replay,
+  at the next section's first bar. To change the replay itself (the last
+  chorus up a step), write the directive before its heading.
+
+  ```
+  key: E
+  ## Chorus      (in E)
+  key: F
+  ## Outro       (in F)
+  ```
 
 ## 7. Directives
 
@@ -492,6 +502,7 @@ human to say whether the band was silent, and the structure line.
 | `%` after a one-bar meter | `%` repeats the previous bar exactly, its `[n/d]` included. |
 | Appendix A's provisional calls | Approved by Kevin: `C2`/`C4` are rejected with `Csus2` or `C(9)` suggested, and a note set's Harte label uses the bass as root when none is marked. |
 | Section form and chord parts | Machine output gains `form` on each section occurrence and `parts` on each chord (A.7), for renderers and hosts such as stem-shovel's section timeline. No change to what any chart means. |
+| Directives under a replay heading | Decided by Kevin: they take effect after the replay, because the heading stands for its bars (written order is play order). Before, the parser applied them to the replay. |
 
 ## Open questions
 

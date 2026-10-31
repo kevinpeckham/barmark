@@ -16,6 +16,7 @@ Releases follow the process in [RELEASING.md](RELEASING.md).
 
 ### Changed
 
+- **A directive under a replay heading takes effect after the replay.** A chart with `## Chorus` (a replay) followed by `key: E` used to play that Chorus in E; now the change starts at the next section, as the grammar's "written order is play order" says. Write the directive before the heading to change the replay itself.
 - **Peaceful Dreams uses plain section names** (`## Verse`, not `## II Verse`): headings are the author's text, and form now comes from `form`.
 
 ### Technical
