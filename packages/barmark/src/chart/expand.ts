@@ -244,7 +244,7 @@ export function expand(lines: Line[]): {
 	};
 
 	const events: ChartEvent[] = [];
-	const occurrences: [SectionOccurrence, ChartEvent[]][] = [];
+	const occurrences: [Omit<SectionOccurrence, "form">, ChartEvent[]][] = [];
 	const definitions = new Map<string, Section>();
 	for (const s of sections) {
 		const h = s.heading;
@@ -286,9 +286,17 @@ export function expand(lines: Line[]): {
 	flattenBars(events).forEach((b, i) => {
 		b.index = i + 1;
 	});
-	const sectionsOut = occurrences.map(([occ, out]) => {
+	const forms = new Map<number, number>();
+	const sectionsOut = occurrences.map(([occ, out]): SectionOccurrence => {
 		const bars = flattenBars(out);
-		return { ...occ, firstBar: bars[0]?.index ?? null, lastBar: bars.at(-1)?.index ?? null };
+		const written = occ.replayOf ?? occ.line;
+		if (!forms.has(written)) forms.set(written, forms.size);
+		return {
+			...occ,
+			firstBar: bars[0]?.index ?? null,
+			lastBar: bars.at(-1)?.index ?? null,
+			form: forms.get(written) ?? 0,
+		};
 	});
 	return { events, sections: sectionsOut, diagnostics };
 }
