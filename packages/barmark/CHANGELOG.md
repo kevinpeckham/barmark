@@ -9,6 +9,12 @@ Releases follow the process in [RELEASING.md](RELEASING.md).
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-11-01
+
+A chart in another format no longer reads as an empty one. A grammar
+decision (two new warnings, §9); no chart's meaning changes. Implements the
+[grammar v0.1 draft](https://github.com/kevinpeckham/barmark/blob/main/docs/grammar-v0.1-draft.md).
+
 ### Added
 
 - **A chart with no bar lines warns.** A chart with text but no bar line
@@ -79,7 +85,8 @@ The first working release: the reference parser and printer for the
 
 - **A placeholder package that holds the `barmark` name** while the spec and parser are written.
 
-[Unreleased]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.2.0...HEAD
+[Unreleased]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.3.0...HEAD
+[0.3.0]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.2.0...barmark-v0.3.0
 [0.2.0]: https://github.com/kevinpeckham/barmark/compare/v0.1.0...barmark-v0.2.0
 [0.1.0]: https://github.com/kevinpeckham/barmark/compare/v0.0.3...v0.1.0
 [0.0.3]: https://github.com/kevinpeckham/barmark/compare/v0.0.2...v0.0.3
