@@ -1,5 +1,5 @@
 import { beforeAll, describe, expect, test } from "bun:test";
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { build, out, site } from "./built.ts";
 
@@ -11,17 +11,19 @@ describe("the site builds", () => {
 	});
 	test("the packages come from npm at exact versions", () => {
 		const pkg = JSON.parse(readFileSync(join(site, "package.json"), "utf8"));
-		expect(pkg.dependencies).toEqual({ barmark: "0.2.0", "@barmark/render": "0.2.0" });
+		expect(pkg.dependencies).toEqual({ barmark: "0.3.0", "@barmark/render": "0.2.1" });
 	});
 	test("Edwin and its licence ship with the site", () => {
 		expect(existsSync(join(out, "fonts/Edwin-Roman.otf"))).toBe(true);
 		expect(existsSync(join(out, "fonts/OFL.txt"))).toBe(true);
 	});
-	test("UnoCSS registers Edwin through presetWebFonts", () => {
-		const css = readdirSync(join(out, "_app/immutable/assets"))
-			.filter((f) => f.endsWith(".css"))
-			.map((f) => readFileSync(join(out, "_app/immutable/assets", f), "utf8"))
-			.join("");
-		expect(css).toMatch(/@font-face\{[^}]*font-family:"?barmark Edwin"?[;}]/);
+	test("every page registers Edwin once, where the element looks for it", () => {
+		for (const path of ["index.html", "syntax.html"]) {
+			const html = readFileSync(join(out, path), "utf8");
+			const marked = html.match(/<style data-barmark-font>[^<]*<\/style>/g) ?? [];
+			expect(marked.length).toBe(1);
+			expect(marked[0]).toContain("/fonts/Edwin-Roman.otf");
+			expect(html.match(/font-family:\s*"?barmark Edwin"?\s*;/g)?.length).toBe(1);
+		}
 	});
 });
