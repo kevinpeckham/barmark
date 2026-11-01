@@ -73,9 +73,12 @@ describe("edges", () => {
 		const r = parseChart("");
 		expect([r.bars, r.diagnostics, r.title]).toEqual([[], [], null]);
 	});
-	test("a file of only text", () => {
+	test("a file of only text has no bars, and says so", () => {
 		const r = parseChart("just words\nmore words");
-		expect([r.bars, r.diagnostics]).toEqual([[], []]);
+		expect(r.bars).toEqual([]);
+		expect(r.diagnostics.map((d) => [d.line, d.severity, d.message])).toEqual([
+			[1, "warning", "no bar lines in this chart; a bar line starts with |"],
+		]);
 	});
 	test("an error drops only its own line", () => {
 		const r = parseChart("# T\nkey: D\n| A |\n| D | Hm |\n| G |");
