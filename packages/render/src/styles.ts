@@ -34,6 +34,8 @@ const SIZES = {
 const GUTTER = 2.06;
 export const MIN_BAR = 4.68;
 const HEADING_GAP = 0.645;
+/** Space between consecutive bar rows, so one row's bar lines don't run into the next. */
+const ROW_GAP = 0.35;
 /**
  * The triplet bracket, in chord sizes: its line sits this far below the top
  * of the number, with hooks this long, drawn either side of the number so
@@ -95,6 +97,8 @@ const css = `
 .bm-grid{display:grid;grid-template-columns:${em(GUTTER)} repeat(var(--bm-cols),auto) auto;width:max-content;max-width:100%}
 .bm-chart[data-bar-numbers="off"] .bm-grid{grid-template-columns:repeat(var(--bm-cols),auto) auto}
 .bm-row{display:contents}
+.bm-row+.bm-row>*{margin-top:${em(ROW_GAP)}}
+.bm-row+.bm-row>.bm-bar-number{margin-top:${at(SIZES.barNumber, ROW_GAP)}}
 .bm-bar-number{display:flex;flex:none;align-items:baseline;width:${at(SIZES.barNumber, GUTTER)};padding-top:${at(SIZES.barNumber, 0.65)};font:${em(SIZES.barNumber)}/1 ${SANS};color:var(--bm-muted)}
 .bm-bar-number::before{content:"\\200b";font:${em(1 / SIZES.barNumber)}/1.3 ${CHART_FONT}}
 .bm-chart[data-bar-numbers="off"] :is(.bm-heading,.bm-text,.bm-directive){margin-left:0}
@@ -140,7 +144,7 @@ const css = `
 }
 ${FIT_STEPS.map((w) => {
 	const g = `.bm-grid[data-fit="${w}"]`;
-	return `@container bm (max-width:${w}em){${g}{display:block}${g}>.bm-row{display:flex;flex-wrap:wrap}${g} .bm-empty{display:none}${g} .bm-bar{flex:0 1 auto;max-width:100%;border-left:.075em solid var(--bm-rule);margin-left:-.075em}${g} :is(.bm-bar-body,.bm-group,.bm-notes){flex-wrap:wrap}${g} .bm-bar-body>*{flex:1 1 auto;min-width:auto}}`;
+	return `@container bm (max-width:${w}em){${g}{display:block}${g}>.bm-row{display:flex;flex-wrap:wrap;row-gap:${em(ROW_GAP)}}${g} .bm-empty{display:none}${g} .bm-bar{flex:0 1 auto;max-width:100%;border-left:.075em solid var(--bm-rule);margin-left:-.075em}${g} :is(.bm-bar-body,.bm-group,.bm-notes){flex-wrap:wrap}${g} .bm-bar-body>*{flex:1 1 auto;min-width:auto}}`;
 }).join("\n")}
 `;
 

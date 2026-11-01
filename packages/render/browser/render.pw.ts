@@ -360,6 +360,34 @@ test.describe("layout", () => {
 	});
 });
 
+test.describe("row spacing", () => {
+	/** The vertical gaps between bars on consecutive lines, in px. */
+	const gaps = (page: Page) =>
+		inChart(page, (root) => {
+			const boxes = [...root.querySelectorAll(".bm-bar")].map((b) => b.getBoundingClientRect());
+			const lines = [...new Set(boxes.map((b) => Math.round(b.top)))].sort((a, b) => a - b);
+			return lines.slice(1).map((top, i) => {
+				const above = boxes.filter((b) => Math.round(b.top) === lines[i]);
+				return top - Math.max(...above.map((b) => b.bottom));
+			});
+		});
+
+	test("bar lines of consecutive rows don't touch", async ({ page }) => {
+		await page.goto("/chart?chart=long");
+		const g = await gaps(page);
+		expect(g.length).toBeGreaterThan(0);
+		for (const gap of g) expect(gap).toBeGreaterThanOrEqual(4);
+	});
+
+	test("nor do bars on wrapped lines, on a phone", async ({ page }) => {
+		await page.setViewportSize({ width: 360, height: 800 });
+		await page.goto("/chart?chart=long");
+		const g = await gaps(page);
+		expect(g.length).toBeGreaterThan(2);
+		for (const gap of g) expect(gap).toBeGreaterThanOrEqual(4);
+	});
+});
+
 test.describe("tempo changes", () => {
 	test("bars inside a rit. carry a dashed line in the directive colour", async ({ page }) => {
 		await page.goto(
