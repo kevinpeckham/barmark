@@ -12,7 +12,7 @@ describe("the site builds", () => {
 	});
 	test("the packages come from npm at exact versions", () => {
 		const pkg = JSON.parse(readFileSync(join(site, "package.json"), "utf8"));
-		expect(pkg.dependencies).toEqual({ barmark: "0.5.0", "@barmark/render": "0.3.0" });
+		expect(pkg.dependencies).toEqual({ barmark: "0.6.0", "@barmark/render": "0.4.0" });
 	});
 	test("Edwin and its licence ship with the site", () => {
 		expect(existsSync(join(out, "fonts/Edwin-Roman.otf"))).toBe(true);

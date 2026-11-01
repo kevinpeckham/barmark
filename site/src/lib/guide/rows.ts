@@ -331,7 +331,7 @@ export const ROWS: GuideRow[] = [
 		syntax: "key: D  | D | A |",
 		category: "chords",
 		meaning:
-			"Nashville numbers and Roman numerals aren't input: write chord names under a key:, which says what each chord is in that key.",
+			'Write chord names under a key:, and the renderer can show them as numbers: numerals: "nashville" (Bm7 in D is 6m7) or "roman" (vi7), each bar counted in its own key. Numerals aren\'t input.',
 		terms: [
 			"Nashville",
 			"number system",
@@ -577,7 +577,7 @@ export const ROWS: GuideRow[] = [
 		syntax: "key: Eb",
 		category: "directives",
 		meaning:
-			"barmark doesn't transpose a chart yet: write the chords in the key you play, and name that key with key:.",
+			'Name the key with key:, and the library moves the whole chart: transposeChart(text, { to: "Eb" }) or { semitones: -2 }. Every chord keeps its place in the key, so C in D becomes Db in Eb; key changes move too, and words stay as written.',
 		terms: [
 			"transpose",
 			"transposition",
@@ -586,7 +586,7 @@ export const ROWS: GuideRow[] = [
 			"semitone",
 			"half step",
 		],
-		example: "key: Eb\n| Eb | Bb | Cm | Ab |",
+		example: "key: D\n| D | A | Bm | G |",
 		ref: "§7",
 		expect: { bars: 4 },
 	},
