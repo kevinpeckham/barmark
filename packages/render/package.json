@@ -1,6 +1,6 @@
 {
 	"name": "@barmark/render",
-	"version": "0.1.0",
+	"version": "0.2.0",
 	"description": "Render barmark chord charts as a clean, accessible bar grid: HTML with Declarative Shadow DOM, or the <barmark-chart> web component.",
 	"type": "module",
 	"exports": {
