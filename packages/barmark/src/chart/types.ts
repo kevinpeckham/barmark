@@ -23,7 +23,16 @@ export type Mode =
 /** The tonic is spelled with ASCII `#` and `b`. */
 export type Key = { tonic: string; mode: Mode };
 export type Feel = "straight" | "swing" | "shuffle" | "swing 16";
-export type Directives = { key?: Key; time?: Meter; tempo?: number; feel?: Feel };
+/** A gradual change of tempo (rit., accel.) to an optional target, or the return from one (a tempo). */
+export type TempoChange = { kind: "rit" | "accel"; to: number | null } | { kind: "a tempo" };
+/** `tempo:` gives either `tempo` (a steady tempo) or `tempoChange`, never both. */
+export type Directives = {
+	key?: Key;
+	time?: Meter;
+	tempo?: number;
+	tempoChange?: TempoChange;
+	feel?: Feel;
+};
 
 /** A chord slot holds a chord symbol or a note set; `chord.kind` tells which. */
 export type SimpleSlot =
@@ -57,7 +66,10 @@ export type PlayedBar = {
 	section: string | null;
 	meter: Meter;
 	key: Key | null;
+	/** The steady tempo: where a change starts from, and what `a tempo` returns to. */
 	tempo: number | null;
+	/** Set on every bar inside a rit. or accel.; `from` is the steady tempo, `to` the target if written. */
+	tempoChange: { kind: "rit" | "accel"; from: number | null; to: number | null } | null;
 	feel: Feel;
 	/** `%` resolved to the copied slots; holds stay holds. */
 	slots: Slot[];

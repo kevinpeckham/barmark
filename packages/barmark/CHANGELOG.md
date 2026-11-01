@@ -9,6 +9,19 @@ Releases follow the process in [RELEASING.md](RELEASING.md).
 
 ## [Unreleased]
 
+### Added
+
+- Gradual tempo changes (grammar §7.2). `tempo:` also takes `rit.`,
+  `accel.`, either one `to` a tempo (`tempo: rit. to 90`), and
+  `a tempo`; `rall.`, `ritardando`, `rallentando` and `accelerando`
+  read too. A change runs from the next bar to the next `tempo:` or the
+  end of the chart. Each played bar inside one has `tempoChange`
+  (`{ kind, from, to }`), so a host knows the beat is not steady there;
+  `tempo` stays the steady tempo. The printer writes `rit.`, `accel.`
+  and `a tempo`.
+- Two warnings: `a tempo` with no change in force, and `rit. to` a
+  tempo that isn't slower (or `accel. to` one that isn't faster).
+
 ## [0.4.0] - 2026-11-01
 
 Charts written in Logic Pro's chord spelling read as they are. A grammar

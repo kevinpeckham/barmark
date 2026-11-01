@@ -1,6 +1,15 @@
 import { beatsOf } from "./directives.js";
 import { parseChart } from "./parse.js";
-import type { Cell, Directives, Key, Line, Repeat, SimpleSlot, Slot } from "./types.js";
+import type {
+	Cell,
+	Directives,
+	Key,
+	Line,
+	Repeat,
+	SimpleSlot,
+	Slot,
+	TempoChange,
+} from "./types.js";
 
 /** A slot with no attack of its own continues whatever sounds before it. A repeated chord name is a re-attack. */
 function continues(sounding: SimpleSlot | null, s: Slot): boolean {
@@ -64,11 +73,17 @@ function printKey(k: Key): string {
 	return `${k.tonic} ${k.mode}`;
 }
 
+function printTempoChange(c: TempoChange): string {
+	if (c.kind === "a tempo") return "a tempo";
+	return `${c.kind}.${c.to === null ? "" : ` to ${c.to}`}`;
+}
+
 function printDirectives(d: Directives): string {
 	const parts: string[] = [];
 	if (d.key) parts.push(`key: ${printKey(d.key)}`);
 	if (d.time) parts.push(`time: ${d.time.n}/${d.time.d}`);
 	if (d.tempo !== undefined) parts.push(`tempo: ${d.tempo}`);
+	if (d.tempoChange) parts.push(`tempo: ${printTempoChange(d.tempoChange)}`);
 	if (d.feel) parts.push(`feel: ${d.feel}`);
 	return parts.join(", ");
 }

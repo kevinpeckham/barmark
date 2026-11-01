@@ -1,4 +1,4 @@
-import type { ChartDiagnostic, Directives, Feel, Key, Meter, Mode } from "./types.js";
+import type { ChartDiagnostic, Directives, Feel, Key, Meter, Mode, TempoChange } from "./types.js";
 
 export const DIRECTIVE_NAMES = ["key", "time", "tempo", "feel"] as const;
 type Name = (typeof DIRECTIVE_NAMES)[number];
@@ -47,6 +47,18 @@ function parseTempo(text: string): number | null {
 	return n >= 1 && n <= 999 ? n : null;
 }
 
+const CHANGE = /^(?:(rit|rall|ritardando|rallentando)|accel|accelerando)\.?(?:\s+to\s+(.+))?$/i;
+
+/** `rit.`, `accel.` (and their long and `rall.` spellings), optionally `to` a tempo; or `a tempo`. */
+function parseTempoChange(text: string): TempoChange | null {
+	if (/^a\s+tempo$/i.test(text)) return { kind: "a tempo" };
+	const m = CHANGE.exec(text);
+	if (!m) return null;
+	const kind = m[1] ? "rit" : "accel";
+	const to = m[2] === undefined ? null : parseTempo(m[2]);
+	return m[2] !== undefined && to === null ? null : { kind, to };
+}
+
 function parseFeel(text: string): Feel | null {
 	const lower = text.toLowerCase();
 	return FEELS.find((f) => f === lower) ?? null;
@@ -93,8 +105,10 @@ export function parseDirectiveLine(
 			else error("time must be n/d with d of 2, 4, 8 or 16", value);
 		} else if (name === "tempo") {
 			const tempo = parseTempo(value);
+			const change = tempo ? null : parseTempoChange(value);
 			if (tempo) set.tempo = tempo;
-			else error("tempo must be beats per minute, from 1 to 999", value);
+			else if (change) set.tempoChange = change;
+			else error("tempo must be beats per minute (1 to 999), rit., accel. or a tempo", value);
 		} else {
 			const feel = parseFeel(value);
 			if (feel) set.feel = feel;
