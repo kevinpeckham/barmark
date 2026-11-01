@@ -13,6 +13,7 @@ const root = join(import.meta.dir, "../../..");
 const CHARTS: Record<string, string> = {
 	example: EXAMPLE,
 	busy: "# Busy\n## A\n| Am7(b5)/G D7(b9)/F# Gm7/F C7(b9)/E |\n| {Db1 F1 Ab1 C2 Eb2} {Db1 F1 Ab1 C2 Eb2} |\n| D_E_F#m_G_A_B_C D_E_F#m_G_A_B_C |\n| F#m7(b5)/E F#m7(b5)/E F#m7(b5)/E F#m7(b5)/E |",
+	triplets: "# Triplets\n| C D_E_F | A_B_C_D_E_F_G_A_B_C_D_E | G |",
 	layout:
 		"# Layout\nkey: G, time: 4/4\n\n## Verse\n| G | D7sus4 | {E1} | {C3 G3 E4} |\nWalking down the line\n### Watch for the cutoff\n| N.C. | C D_E_F | [2/4] G | G |\ntime: 3/4, tempo: 120\n| Am | D | ? | x2\n## Verse ->",
 	long: "# Long\n## A\n| A | B | C | D | E | F | G | A | B | C | D | E |\n| A / B / | C / D / | E / F / | G / A / | B / C / | D / E / |",
