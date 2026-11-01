@@ -71,6 +71,25 @@ test.describe("home: the live editor", () => {
 			.toBe(true);
 	});
 
+	test("a 1 MB paste is not rendered, and the page stays responsive", async ({ page }) => {
+		const errors = watchErrors(page);
+		await page.goto("/");
+		const source = page.getByRole("textbox", { name: "barmark source of the chart" });
+		const start = Date.now();
+		// Playwright's fill inserts text like typing and takes minutes for 1 MB;
+		// a paste lands as one value change and one input event.
+		await source.evaluate((el: HTMLTextAreaElement) => {
+			el.value = "| D | G |\n".repeat(100_000);
+			el.dispatchEvent(new Event("input", { bubbles: true }));
+		});
+		await expect(page.getByText(/Too long to preview here: 1,000,000 characters/)).toBeVisible();
+		expect(Date.now() - start).toBeLessThan(3000);
+		await source.fill("| Em |");
+		await expect(page.getByText(/Too long to preview/)).toBeHidden();
+		await expect.poll(() => chartText(page)).toContain("Em");
+		expect(errors).toEqual([]);
+	});
+
 	test("Reset restores the demo", async ({ page }) => {
 		await page.goto("/");
 		const source = page.getByRole("textbox", { name: "barmark source of the chart" });
