@@ -307,7 +307,7 @@ function layoutCell(
 ): CellModel {
 	if (cell.kind === "fermata") return { kind: "fermata" };
 	const from = cell.kind === "slots" ? cell : previous;
-	return withTempoChange(
+	return withPlayed(
 		{
 			kind: "slots",
 			meter: from?.meter ?? null,
@@ -318,8 +318,9 @@ function layoutCell(
 	);
 }
 
-/** Marks a bar played inside a rit. or accel. */
-function withTempoChange(cell: SlotsCell, played: PlayedBar | undefined): SlotsCell {
+/** What the parser says about the bar as played: inside a rit. or accel., and its key. */
+function withPlayed(cell: SlotsCell, played: PlayedBar | undefined): SlotsCell {
 	const change = played?.tempoChange?.kind;
-	return change ? { ...cell, tempoChange: change } : cell;
+	const key = played?.key;
+	return { ...cell, ...(change ? { tempoChange: change } : {}), ...(key ? { key } : {}) };
 }

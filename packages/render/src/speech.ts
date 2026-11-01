@@ -2,7 +2,7 @@
  * Spoken names: how a screen reader reads a chart as music. Built from the
  * parsed structure, never from the symbol's text.
  */
-import type { ChordParts, ChordRecord, Slot } from "barmark";
+import { type ChordParts, type ChordRecord, degreeOf, type Key, type Slot } from "barmark";
 import type { CellModel } from "./types.js";
 
 const NUMBERS: Record<string, string> = {
@@ -96,15 +96,25 @@ function speakNotes(record: ChordRecord): string {
 	return `${spoken.length === 1 ? "note" : "notes"} ${spoken.join(", ")}`;
 }
 
-export function speakChord(record: ChordRecord): string {
-	if (record.kind === "notes" || !record.parts) return speakNotes(record);
-	return speakParts(record.parts);
+/** "five", "flat seven": a root's degree in a key. */
+function speakDegree(root: string, key: Key): string {
+	const d = degreeOf(root, key);
+	if (!d) return "";
+	const accidental = ACCIDENTAL[(d.alter < 0 ? "b" : "#").repeat(Math.abs(d.alter))] ?? "";
+	return `${accidental.trim()} ${number(String(d.degree))}`.trim();
 }
 
-export function speakSlot(slot: Slot): string {
+/** A chord's name; with a key, its degree first: "five, A seven". */
+export function speakChord(record: ChordRecord, key?: Key): string {
+	if (record.kind === "notes" || !record.parts) return speakNotes(record);
+	const degree = key ? speakDegree(record.parts.root, key) : "";
+	return `${degree ? `${degree}, ` : ""}${speakParts(record.parts)}`;
+}
+
+export function speakSlot(slot: Slot, key?: Key): string {
 	switch (slot.kind) {
 		case "chord":
-			return speakChord(slot.chord);
+			return speakChord(slot.chord, key);
 		case "hold":
 			return "hold";
 		case "nc":
@@ -114,14 +124,14 @@ export function speakSlot(slot: Slot): string {
 		case "unknown":
 			return "unknown chord";
 		case "group":
-			return `${GROUPS[slot.members.length] ?? `group of ${slot.members.length}`}: ${slot.members.map(speakSlot).join(", ")}`;
+			return `${GROUPS[slot.members.length] ?? `group of ${slot.members.length}`}: ${slot.members.map((m) => speakSlot(m, key)).join(", ")}`;
 	}
 }
 
-/** "bar 9: G, hold, D, hold"; a fermata is held until cued. */
-export function speakBar(barNumber: number | null, cell: CellModel): string {
+/** "bar 9: G, hold, D, hold"; a fermata is held until cued. With `numerals`, each chord's degree comes first. */
+export function speakBar(barNumber: number | null, cell: CellModel, numerals = false): string {
 	if (cell.kind === "fermata") return "fermata: hold until cued";
 	const meter = cell.meter ? `, in ${cell.meter.n}/${cell.meter.d}` : "";
 	const cut = cell.cut ? ", cut on this pass" : "";
-	return `bar${barNumber === null ? "" : ` ${barNumber}`}${meter}: ${cell.slots.map(speakSlot).join(", ")}${cut}`;
+	return `bar${barNumber === null ? "" : ` ${barNumber}`}${meter}: ${cell.slots.map((s) => speakSlot(s, numerals ? cell.key : undefined)).join(", ")}${cut}`;
 }

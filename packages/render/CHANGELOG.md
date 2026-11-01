@@ -6,6 +6,23 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- **A numerals view**: `numerals: "nashville" | "roman"` (the `numerals`
+  attribute and property on `<barmark-chart>`). Each chord shows as its
+  degree in its bar's key, counted from the tonic against the major
+  scale (in A minor, C is ♭3). Nashville keeps the chord's quality and
+  superscript (Bm7 in D is 6m⁷, D/F♯ is 1/3); Roman shows minor and
+  diminished in lower case (vi⁷, vii°, ♭VII). Bars with no key, note
+  sets, N.C., `?` and `--` are unchanged. Screen readers hear the
+  numeral and the chord: "bar 5: five, A seven". Uses barmark 0.6.0's
+  `degreeOf`; each bar in the model now carries its `key`.
+
+### Changed
+
+- **A small gap between rows** (0.35em), so the bar lines of one row no
+  longer run into the next.
+
 ### Changed
 
 - A little space (0.35 of the chord size) between consecutive bar rows,

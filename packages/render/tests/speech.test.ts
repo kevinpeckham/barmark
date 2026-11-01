@@ -26,8 +26,8 @@ describe("spoken names: the design's examples", () => {
 		test(`${symbol} → ${spoken}`, () => expect(speakChord(chord(symbol))).toBe(spoken));
 
 	test("a group, and the other slot symbols", () => {
-		expect(slotsOf("D_E_F#m").map(speakSlot)).toEqual(["triplet: D, E, F sharp minor"]);
-		expect(slotsOf("N.C. -- ? /").map(speakSlot)).toEqual([
+		expect(slotsOf("D_E_F#m").map((s) => speakSlot(s))).toEqual(["triplet: D, E, F sharp minor"]);
+		expect(slotsOf("N.C. -- ? /").map((s) => speakSlot(s))).toEqual([
 			"no chord",
 			"stop",
 			"unknown chord",
