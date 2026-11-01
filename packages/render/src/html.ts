@@ -26,7 +26,17 @@ type Row = Extract<BlockItem, { kind: "row" }>;
 type Settings = { barNumbers: boolean };
 
 export function renderChart(text: string, options: RenderOptions = {}): string {
-	return `${fontStyle(options)}<barmark-chart><template shadowrootmode="open">${shadowContent(text, options)}</template></barmark-chart>`;
+	return `${fontStyle(options)}<barmark-chart${elementAttributes(options)}><template shadowrootmode="open">${shadowContent(text, options)}</template></barmark-chart>`;
+}
+
+/** The options as the element's attributes, so it keeps them when it loads or takes new text. */
+function elementAttributes(options: RenderOptions): string {
+	const theme = themeOf(options);
+	return [
+		theme === "auto" ? "" : ` theme="${theme}"`,
+		options.barNumbers === false ? ' bar-numbers="off"' : "",
+		options.rehearsalLetters ? " rehearsal-letters" : "",
+	].join("");
 }
 
 export const THEMES = ["auto", "light", "dark"] as const;

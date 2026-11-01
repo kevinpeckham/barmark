@@ -73,7 +73,8 @@ function elementPage(): Response {
 		</script></barmark-chart>
 		<barmark-chart id="remote" src="/example.chart.md" rehearsal-letters></barmark-chart>
 		<barmark-chart id="missing" src="/nope.chart.md"></barmark-chart>
-		${renderChart("## Verse\n| D | A |").replace("<barmark-chart>", '<barmark-chart id="server">')}
+		${renderChart("## Verse\n| D | A |").replace("<barmark-chart", '<barmark-chart id="server"')}
+		${renderChart("## Verse\n| D | A |", { theme: "dark", rehearsalLetters: true }).replace("<barmark-chart", '<barmark-chart id="styled"')}
 		<barmark-chart id="early"></barmark-chart>
 		<script>document.querySelector("#early").text = "## Early\\n| E |";</script>
 		<textarea id="editor"></textarea>
