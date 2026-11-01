@@ -30,7 +30,10 @@ export default defineConfig({
 			provider: "bunny",
 			fonts: {
 				mono: "Noto Mono",
-				serif: "Noto Serif:400",
+				serif: [
+					{ name: "Noto Serif", weights: ["400"] },
+					{ name: "Noto Serif", weights: ["400"], italic: true },
+				],
 				sans: "Noto Sans:400,600,700",
 				chart: { name: "barmark Edwin", provider: edwin },
 			},
@@ -83,6 +86,18 @@ export default defineConfig({
 		"w-full",
 	],
 	shortcuts: [
+		// The rendered chart, as chosen in the 2026-11-01 preview: @barmark/render's
+		// --barmark-* settings, with lyrics in Noto Serif and labels in Noto Sans.
+		[
+			"barmark-look",
+			[
+				"[--barmark-size:15.5px] [--barmark-paper:oklch(96.89%_0.01_251.56/0.12)]",
+				"[--barmark-ink:#fff] [--barmark-note:#ece8e0] [--barmark-accent:#e8a56a]",
+				"[--barmark-muted:oklch(98.51%_0_0/0.8)] [--barmark-rule:oklch(98.51%_0_0/0.8)]",
+				"[--barmark-directive:oklch(98.51%_0_0/0.8)]",
+				'[--barmark-text-font:"Noto_Serif",Georgia,serif] [--barmark-label-font:"Noto_Sans",system-ui,sans-serif]',
+			].join(" "),
+		],
 		["home-page-x-padding", "px-4 sm:px-6 md:px-7 lg:px-8 xl:px-24 2xl:px-48"],
 		[
 			"marketing-headline",

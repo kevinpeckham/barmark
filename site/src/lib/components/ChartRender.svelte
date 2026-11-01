@@ -46,7 +46,7 @@ $effect(() => {
 <div
 	bind:this={host}
 	hidden={tooLong}
-	class="[--barmark-size:1rem] [--barmark-paper:transparent] min-w-0"
+	class="barmark-look min-w-0"
 	role={label ? "region" : undefined}
 	aria-label={label}
 >

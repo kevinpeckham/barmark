@@ -239,3 +239,12 @@ column (lyrics, notes, mid-chart changes) with a margin feed their size
 into the `auto` tracks they span. The bar-number column is now a fixed
 width (`GUTTER` in `packages/render/src/styles.ts`), so every section's
 first bar line lines up.
+
+### `italic: true` in UnoCSS web fonts loads only the italic (2026-11-01, site chart look)
+
+Adding Noto Serif's italic to barmark.dev with `{ name: "Noto Serif",
+weights: ["400"], italic: true }` made every lyric italic too: the preset
+then requests only the italic faces, and a browser with no upright face
+draws upright text in the italic. Two entries, one upright and one
+italic, give both faces (`site/uno.config.ts`). The site's browser suite
+now checks an upright Noto Serif exists as well as the italic.
