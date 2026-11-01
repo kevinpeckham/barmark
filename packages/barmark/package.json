@@ -1,6 +1,6 @@
 {
 	"name": "barmark",
-	"version": "0.2.0",
+	"version": "0.3.0",
 	"description": "Markdown-inspired plain-text notation for chord charts: a parser, a canonical printer and Harte-label conversion.",
 	"type": "module",
 	"exports": {
