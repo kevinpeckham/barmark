@@ -9,6 +9,13 @@ Releases follow the process in [RELEASING.md](RELEASING.md).
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-11-01
+
+Charts written in Logic Pro's chord spelling read as they are. A grammar
+decision (two new aliases, §3 and Appendix A.5); no chart that read
+before changes meaning. Implements the
+[grammar v0.1 draft](https://github.com/kevinpeckham/barmark/blob/main/docs/grammar-v0.1-draft.md).
+
 ### Added
 
 - **Logic Pro's parentheses are read.** Groups in a row are one list
@@ -92,7 +99,8 @@ The first working release: the reference parser and printer for the
 
 - **A placeholder package that holds the `barmark` name** while the spec and parser are written.
 
-[Unreleased]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.3.0...HEAD
+[Unreleased]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.4.0...HEAD
+[0.4.0]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.3.0...barmark-v0.4.0
 [0.3.0]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.2.0...barmark-v0.3.0
 [0.2.0]: https://github.com/kevinpeckham/barmark/compare/v0.1.0...barmark-v0.2.0
 [0.1.0]: https://github.com/kevinpeckham/barmark/compare/v0.0.3...v0.1.0
