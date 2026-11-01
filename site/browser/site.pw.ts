@@ -157,6 +157,43 @@ test.describe("navigating inside the site", () => {
 	});
 });
 
+test.describe("in a browser without setHTMLUnsafe", () => {
+	test.beforeEach(async ({ page }) => {
+		await page.addInitScript(() => {
+			// Chrome before 124, Safari before 17.4, Firefox before 133.
+			delete (Element.prototype as { setHTMLUnsafe?: unknown }).setHTMLUnsafe;
+		});
+	});
+
+	test("typing still re-renders the chart", async ({ page }) => {
+		const errors = watchErrors(page);
+		await page.goto("/");
+		const source = page.getByRole("textbox", { name: "barmark source of the chart" });
+		await source.press("ControlOrMeta+End");
+		await source.pressSequentially("\n| Ebm7 |");
+		await expect.poll(() => chartText(page)).toContain("E♭m");
+		expect(errors).toEqual([]);
+	});
+
+	test("Read the syntax still shows every example rendered", async ({ page }) => {
+		const errors = watchErrors(page);
+		await page.goto("/");
+		await page.getByRole("link", { name: "Read the syntax" }).click();
+		await expect(page).toHaveURL(/\/syntax$/);
+		await expect
+			.poll(() =>
+				page.evaluate(
+					() =>
+						[...document.querySelectorAll("main barmark-chart")].filter(
+							(c) => !c.shadowRoot?.textContent?.trim(),
+						).length,
+				),
+			)
+			.toBe(0);
+		expect(errors).toEqual([]);
+	});
+});
+
 test.describe("without JavaScript", () => {
 	test.use({ javaScriptEnabled: false });
 
