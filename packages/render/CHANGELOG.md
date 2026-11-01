@@ -6,6 +6,11 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-11-01
+
+Two fixes found while moving barmark.dev to the element. Depends on
+`barmark` ^0.3.0, which warns when a chart has no bar lines.
+
 ### Fixed
 
 - **Triplet brackets work on any paper.** The bracket is drawn either
@@ -112,6 +117,7 @@ that needs no script or as the `<barmark-chart>` web component. Requires
   zoom without sideways scrolling, the element renders and re-renders, and
   a screen reader hears "bar 9: D". Run them with `bun run test:browser`.
 
-[Unreleased]: https://github.com/kevinpeckham/barmark/compare/render-v0.2.0...HEAD
+[Unreleased]: https://github.com/kevinpeckham/barmark/compare/render-v0.2.1...HEAD
+[0.2.1]: https://github.com/kevinpeckham/barmark/compare/render-v0.2.0...render-v0.2.1
 [0.2.0]: https://github.com/kevinpeckham/barmark/compare/render-v0.1.0...render-v0.2.0
 [0.1.0]: https://github.com/kevinpeckham/barmark/releases/tag/render-v0.1.0
