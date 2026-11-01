@@ -23,6 +23,25 @@ key: D, time: 4/4, tempo: 145
 
 ## Chorus
 
+## Bridge
+
+| Bm7 | % | Em7 | % |
+| G7 | % | A7sus4 | % |
+
+## Verse (Triads)
+
+| D | % | A | % |
+| G | % | D | % |
+| A | Bm | G | % |
+| % | % | D | % |
+| A | Gm | D | % |
+
+## Verse
+
+## Interlude
+| D7sus4 | % | % | % |
+| % | % | % | % |
+
 ## Outro
 | D5 | % | % | % | x5
 | D5 | ... |
