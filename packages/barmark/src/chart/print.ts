@@ -2,6 +2,7 @@ import { beatsOf } from "./directives.js";
 import { parseChart } from "./parse.js";
 import type {
 	Cell,
+	ChartParse,
 	Directives,
 	Key,
 	Line,
@@ -113,7 +114,11 @@ export function printLine(l: Line, beats: (number | undefined)[] = []): string {
  * fences stay. Never throws.
  */
 export function printChart(text: string): string {
-	const parsed = parseChart(text);
+	return printParsed(text, parseChart(text), (l) => l);
+}
+
+/** `printChart` over an existing parse, with each line it prints passed through `edit` first. */
+export function printParsed(text: string, parsed: ChartParse, edit: (l: Line) => Line): string {
 	const byLine = new Map(parsed.lines.map((l) => [l.line, l]));
 	const errored = new Set(
 		parsed.diagnostics.filter((d) => d.severity === "error").map((d) => d.line),
@@ -149,7 +154,7 @@ export function printChart(text: string): string {
 		if (!l) out.push(t.startsWith("```") ? t : raw.trimEnd());
 		else
 			out.push(
-				l.kind === "text" || errored.has(l.line) ? raw.trimEnd() : printLine(l, beatsFor(l)),
+				l.kind === "text" || errored.has(l.line) ? raw.trimEnd() : printLine(edit(l), beatsFor(l)),
 			);
 	}
 	while (out.at(-1) === "") out.pop();

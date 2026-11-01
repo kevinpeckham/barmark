@@ -35,7 +35,7 @@ declarations included and no runtime dependencies.
 ## Use
 
 ```ts
-import { parseChart, printChart, parseChord, harteToBarmark } from "barmark";
+import { degreeOf, harteToBarmark, parseChart, parseChord, printChart, transposeChart } from "barmark";
 
 const chart = parseChart(text);
 chart.title; // "Example Song"
@@ -44,6 +44,11 @@ chart.sections; // each section as played, with its first and last bar
 chart.diagnostics; // errors and warnings, each with a line number
 
 printChart(text); // the chart in canonical form (same meaning, standard spelling)
+
+transposeChart("key: D\n| D | A | Bm | G |", { to: "Eb" }).text; // "key: Eb\n| Eb | Bb | Cm | Ab |\n"
+transposeChart(text, { semitones: -2 }); // { text, diagnostics }
+
+degreeOf("C", { tonic: "D", mode: "major" }); // { degree: 7, alter: -1 }: C is b7 in D
 
 const chord = parseChord("Bm7(b5)");
 if (chord.ok) chord.value.pitches; // ["B", "D", "F", "A"]
@@ -56,6 +61,15 @@ harteToBarmark("A:sus4(b7,9)"); // "A9sus4"
   play order and reported, and the rest of the chart still reads.
 - **`printChart`** changes spelling and layout only: lines with errors and
   lyrics print exactly as written.
+- **`transposeChart`** moves every chord root, slash bass, note set and
+  `key:` line, and never the words. Chords are spelled by their interval
+  from the chart's first key, so each keeps its place in the key: C in D
+  becomes Db in Eb, not C#. Given semitones, the new key takes the
+  signature with fewer accidentals (Eb, not D#; F# wins the tie with Gb).
+  A chart with no `key:` spells roots C C# D Eb E F F# G Ab A Bb B. Lines
+  with errors stay as written, with a warning. The output is canonical.
+- **`degreeOf`** gives a root's degree above a key's tonic, against the
+  major scale for every mode: in A minor, C is b3.
 - **Harte labels** ([Harte et al., 2005](https://ismir2005.ismir.net/proceedings/1080.pdf))
   convert both ways. Every label in the McGill Billboard and Isophonics
   Beatles datasets converts to barmark with exactly the same notes.

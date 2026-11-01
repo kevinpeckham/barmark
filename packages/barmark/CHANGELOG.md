@@ -9,6 +9,24 @@ Releases follow the process in [RELEASING.md](RELEASING.md).
 
 ## [Unreleased]
 
+### Added
+
+- **`transposeChart(text, { to } | { semitones })`** returns the chart in
+  another key as canonical text, with diagnostics. Chord roots, slash
+  basses, note sets (octaves included) and every `key:` line move, so a
+  modulation moves too; text lines never change. Chords are spelled by
+  their interval from the first key, so each keeps its place in the key,
+  and double sharps and flats are written as the plain note. Given
+  semitones, the new key takes the signature with fewer accidentals (F#
+  over Gb on a tie; minor keys and modes by their own signatures); a chart
+  with no `key:` spells roots from one table. Lines with errors stay as
+  written, with a warning, as does a note pushed outside octaves 0–8. A
+  target key for a chart with no `key:`, or a target that isn't a key, is
+  an error and returns the text unchanged.
+- **`degreeOf(root, key)`**: a root's scale degree above the key's tonic,
+  measured against the major scale for every mode (in A minor, C is b3),
+  for numeral views such as `@barmark/render`'s.
+
 ## [0.5.0] - 2026-11-01
 
 Charts can say where the tempo slows down or speeds up. A grammar
