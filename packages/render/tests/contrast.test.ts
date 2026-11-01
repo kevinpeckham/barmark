@@ -31,7 +31,19 @@ describe("the stylesheet", () => {
 		expect(stylesheet).toContain(":host{all:initial;display:block}");
 	});
 	test("exposes every public custom property, with a palette fallback", () => {
-		for (const v of ["font", "size", "ink", "paper", "muted", "rule", "accent"])
+		for (const v of [
+			"font",
+			"text-font",
+			"label-font",
+			"size",
+			"ink",
+			"paper",
+			"muted",
+			"rule",
+			"accent",
+			"directive",
+			"note",
+		])
 			expect(stylesheet).toContain(`var(--barmark-${v},`);
 	});
 	test("dark follows the system in auto, print is always light, forced colours are respected", () => {

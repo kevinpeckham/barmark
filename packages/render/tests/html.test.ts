@@ -240,3 +240,28 @@ describe("wrapping on narrow screens", () => {
 		expect(twelve % 4).toBe(0);
 	});
 });
+
+describe("mid-chart directives", () => {
+	const line = (text: string) =>
+		doc(renderChartUnwrapped(`## A\n| G |\n${text}\n| C |`)).querySelector(".bm-directive");
+
+	test("name what changes, so a lone value never looks like a stray note", () => {
+		expect(line("time: 3/4")?.textContent).toContain("Time 3/4");
+		expect(line("key: E, tempo: 120, feel: swing")?.textContent).toContain(
+			"Key E major · Tempo ♩ = 120 · Feel swing",
+		);
+	});
+
+	test("start with an arrow a screen reader skips", () => {
+		const arrow = line("time: 3/4")?.querySelector(".bm-change");
+		expect(arrow?.textContent).toBe("→");
+		expect(arrow?.getAttribute("aria-hidden")).toBe("true");
+	});
+
+	test("the header's meta line stays unlabelled", () => {
+		const meta = doc(renderChartUnwrapped("key: D, time: 4/4\n## A\n| G |")).querySelector(
+			".bm-meta",
+		);
+		expect(meta?.textContent).toBe("D major · 4/4");
+	});
+});

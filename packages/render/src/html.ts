@@ -9,7 +9,7 @@ import { escapeHtml } from "./escape.js";
 import { fontFaceCss } from "./font.js";
 import { layoutChart } from "./model.js";
 import { speakBar } from "./speech.js";
-import { FIT_STEPS, stylesheet } from "./styles.js";
+import { FIT_STEPS, MIN_BAR, stylesheet } from "./styles.js";
 import type { BlockItem, CellModel, ChartModel, SectionBlock } from "./types.js";
 
 export type RenderOptions = {
@@ -64,16 +64,16 @@ function headerHtml(model: ChartModel): string {
 	return `<header class="bm-header">${title}${meta ? `<p class="bm-meta" part="meta">${meta}</p>` : ""}</header>`;
 }
 
-/** "D major · 4/4 · ♩ = 145 · swing", escaped. */
-function metaText(d: Directives): string {
+/** "D major · 4/4 · ♩ = 145 · swing", escaped; labelled, "Key D major · Time 4/4 · …". */
+function metaText(d: Directives, labelled = false): string {
 	return [
-		d.key ? `${glyphs(d.key.tonic)} ${d.key.mode}` : "",
-		d.time ? `${d.time.n}/${d.time.d}` : "",
-		d.tempo ? `♩ = ${d.tempo}` : "",
-		d.feel ?? "",
+		["Key", d.key ? `${glyphs(d.key.tonic)} ${d.key.mode}` : ""],
+		["Time", d.time ? `${d.time.n}/${d.time.d}` : ""],
+		["Tempo", d.tempo ? `♩ = ${d.tempo}` : ""],
+		["Feel", d.feel ?? ""],
 	]
-		.filter(Boolean)
-		.map(escapeHtml)
+		.filter(([, value]) => value)
+		.map(([label, value]) => escapeHtml(labelled ? `${label} ${value}` : (value ?? "")))
 		.join(" · ");
 }
 
@@ -101,9 +101,9 @@ function fitWidth(block: SectionBlock): number {
 /** Em per bar: padding, plus each slot's text and the gap after it. */
 const cellWidth = (cell: CellModel) =>
 	cell.kind === "fermata"
-		? 2.6
+		? MIN_BAR
 		: Math.max(
-				2.6,
+				MIN_BAR,
 				1.5 + (cell.meter ? 0.8 : 0) + cell.slots.reduce((w, s) => w + slotWidth(s), 0),
 			);
 
@@ -141,7 +141,8 @@ function itemHtml(item: BlockItem, columns: number, settings: Settings): string 
 		case "text":
 			return `<p class="bm-text${item.note ? " bm-note" : ""}" part="text">${escapeHtml(item.text)}</p>`;
 		case "directive":
-			return `<p class="bm-directive" part="meta">${metaText(item.set)}</p>`;
+			// Mid-chart, a change names itself: "→ Time 3/4", never a lone "3/4".
+			return `<p class="bm-directive" part="meta"><span class="bm-change" aria-hidden="true">→</span><span>${metaText(item.set, true)}</span></p>`;
 		case "error":
 			return errorHtml(item.source, item.messages);
 	}

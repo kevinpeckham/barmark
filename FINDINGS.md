@@ -218,3 +218,24 @@ there; `--frozen-lockfile` doesn't notice either. The `barmark` 0.2.0
 release had left it at 0.1.0. RELEASING.md now bumps the version in
 `bun.lock` too, and `verify:package` fails when a packed workspace range
 is not `^` the package's own version.
+
+### Even flex slots wrap a triplet that had room (2026-11-01, render layout)
+
+Left-aligning chords in even shares of a bar (`flex:1 1 0` on each slot)
+broke a triplet group onto two lines below about 670px, with plenty of
+room left. A zero flex basis lets a slot shrink to its minimum content
+width, and once the chart switches to its wrapping layout a group's
+minimum is a single chord. `min-width:max-content` keeps slots whole on
+a wide screen, but it also stopped a busy bar wrapping on a phone at
+large text. The wide layout now keeps slots whole and the wrapping
+layout gives them `flex:1 1 auto`, so they shrink only when they do not
+fit. Browser tests cover both widths and the phone (`packages/render/browser/render.pw.ts`).
+
+### A grid's auto column grows for items that span it (2026-11-01, render layout)
+
+Indenting lyrics to the first bar line with a margin left the bar-number
+column 4px wider in one section than the rest: items spanning every
+column (lyrics, notes, mid-chart changes) with a margin feed their size
+into the `auto` tracks they span. The bar-number column is now a fixed
+width (`GUTTER` in `packages/render/src/styles.ts`), so every section's
+first bar line lines up.
