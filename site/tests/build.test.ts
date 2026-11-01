@@ -1,7 +1,8 @@
 import { beforeAll, describe, expect, test } from "bun:test";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { build, out, site } from "./built.ts";
+import { LINKS } from "../src/lib/site.ts";
+import { build, out, page, site } from "./built.ts";
 
 beforeAll(build, 120_000);
 
@@ -26,4 +27,20 @@ describe("the site builds", () => {
 			expect(html.match(/font-family:\s*"?barmark Edwin"?\s*;/g)?.length).toBe(1);
 		}
 	});
+	test("the OG image is a 1200×630 PNG", () => {
+		const png = readFileSync(join(out, "og.png"));
+		expect(png.subarray(1, 4).toString()).toBe("PNG");
+		expect([png.readUInt32BE(16), png.readUInt32BE(20)]).toEqual([1200, 630]);
+	});
+	for (const path of ["index.html", "syntax.html"])
+		test(`${path} shares the OG image as a large card`, () => {
+			const meta = (key: string) =>
+				page(path)
+					.querySelector(`meta[property="${key}"], meta[name="${key}"]`)
+					?.getAttribute("content");
+			expect(meta("og:image")).toBe(`${LINKS.origin}/og.png`);
+			expect([meta("og:image:width"), meta("og:image:height")]).toEqual(["1200", "630"]);
+			expect(meta("og:image:alt")).toContain("chord chart");
+			expect(meta("twitter:card")).toBe("summary_large_image");
+		});
 });

@@ -8,6 +8,7 @@
 	},
 	"scripts": {
 		"fonts": "bun scripts/fonts.ts",
+		"og": "bun scripts/og.ts",
 		"dev": "bun run fonts && vite dev",
 		"build": "bun run fonts && vite build",
 		"preview": "vite preview",
