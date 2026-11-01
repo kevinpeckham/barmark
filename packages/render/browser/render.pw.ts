@@ -21,6 +21,15 @@ async function chartPixels(page: Page, path: string) {
 	return page.screenshot({ clip, fullPage: true });
 }
 
+/** Counts the page's requests for a path, from now on. */
+function countFetches(page: Page, path: string): { count: number } {
+	const fetches = { count: 0 };
+	page.on("request", (r) => {
+		if (r.url().endsWith(path)) fetches.count++;
+	});
+	return fetches;
+}
+
 const paper = (page: Page) =>
 	inChart(
 		page,
@@ -129,10 +138,7 @@ test.describe("the element", () => {
 	});
 
 	test("fetches its src once, however many attributes it has", async ({ page }) => {
-		let fetches = 0;
-		page.on("request", (r) => {
-			if (r.url().endsWith("/example.chart.md")) fetches++;
-		});
+		const fetches = countFetches(page, "/example.chart.md");
 		await page.goto("/element");
 		await expect(page.locator("#remote .bm-title")).toHaveText("Example Song");
 		await page.evaluate(() => {
@@ -140,7 +146,7 @@ test.describe("the element", () => {
 			el.theme = "dark";
 		});
 		await expect(page.locator("#remote .bm-chart")).toHaveAttribute("data-theme", "dark");
-		expect(fetches).toBe(1);
+		expect(fetches.count).toBe(1);
 	});
 
 	test("a server-rendered chart follows its attributes", async ({ page }) => {
@@ -447,6 +453,33 @@ test.describe("triplet brackets", () => {
 test.describe("the element's text property", () => {
 	const heading = (page: Page, id: string) => page.locator(`#${id} .bm-heading`).first();
 
+	test("the numerals property redraws chords as degrees, and null brings the names back", async ({
+		page,
+	}) => {
+		await page.goto("/element");
+		const chord = page.locator("#inline .bm-chord").first();
+		await page.evaluate(() => {
+			const el = document.querySelector("#inline") as HTMLElement & {
+				text: string | null;
+				numerals: string | null;
+			};
+			el.text = "key: D\n| A7 | Bm |";
+			el.numerals = "nashville";
+		});
+		await expect(chord).toHaveText("57");
+		await expect(page.locator("#inline")).toHaveAttribute("numerals", "nashville");
+		await page.evaluate(() => {
+			(document.querySelector("#inline") as HTMLElement & { numerals: string | null }).numerals =
+				"roman";
+		});
+		await expect(chord).toHaveText("V7");
+		await page.evaluate(() => {
+			(document.querySelector("#inline") as HTMLElement & { numerals: string | null }).numerals =
+				null;
+		});
+		await expect(chord).toHaveText("A7");
+	});
+
 	test("typing into a textarea that sets text updates the chart", async ({ page }) => {
 		await page.goto("/element");
 		await page.locator("#editor").fill("## Bridge\n| C | G |");
@@ -458,10 +491,7 @@ test.describe("the element's text property", () => {
 	test("an element made by script renders its text, and text beats src and a script child without fetching", async ({
 		page,
 	}) => {
-		let fetches = 0;
-		page.on("request", (r) => {
-			if (r.url().endsWith("/example.chart.md")) fetches++;
-		});
+		const fetches = countFetches(page, "/example.chart.md");
 		await page.goto("/element");
 		await page.evaluate(() => {
 			const el = document.createElement("barmark-chart") as HTMLElement & { text: string | null };
@@ -472,7 +502,7 @@ test.describe("the element's text property", () => {
 			document.body.append(el);
 		});
 		await expect(heading(page, "made")).toHaveText("Made");
-		expect(fetches).toBe(1); // only #remote's
+		expect(fetches.count).toBe(1); // only #remote's
 	});
 
 	test("text set back to null falls back to the script child", async ({ page }) => {

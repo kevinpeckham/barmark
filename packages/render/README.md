@@ -75,9 +75,22 @@ the element loads, with `<style data-barmark-font>` holding
 | `theme` | `theme` (`theme`) | `"auto"` | `"auto"` follows the system; `"light"` or `"dark"` force one |
 | `barNumbers` | `bar-numbers="off"` (`barNumbers`) | `true` | bar numbers at the start of each row |
 | `rehearsalLetters` | `rehearsal-letters` (`rehearsalLetters`) | `false` | boxed A, B, C… on each section as played |
+| `numerals` | `numerals` (`numerals`) | none | `"nashville"` (6m⁷) or `"roman"` (vi⁷): each chord as its degree in its bar's key |
 | `diagnostics` | | `false` | list the chart's errors and warnings below it |
 | `fontUrl` | | none | emit Edwin's `@font-face` rule before the chart |
 | (the `text` argument) | (`text`) | `null` | the chart to draw; wins over `src` and the script child |
+
+### Numerals
+
+With `numerals`, each chord shows as its degree in the key its bar is
+played in, so a modulation renumbers from its next bar. Degrees count
+from the key's tonic against the major scale, in every mode: in `key:
+Am`, Am is 1m and C is ♭3. Nashville keeps the chord's quality and
+superscript after the number (Bm7 in D is 6m⁷, D/F♯ is 1/3); Roman
+shows minor and diminished in lower case (ii, vii°, ♭VII). A bar with
+no key, note sets, N.C., `?` and `--` look as they always do, and a
+screen reader hears both: "bar 5: five, A seven". Numbered chords carry
+`data-numeral`. It's a view: the music and bar numbers don't change.
 
 ## Styling on purpose
 

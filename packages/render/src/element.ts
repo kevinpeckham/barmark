@@ -4,6 +4,8 @@
  * changes. A shadow root rendered on the server is reused. Importing this
  * module registers the element (once) and the font (once per document).
  */
+
+import { NUMERALS } from "./chord.js";
 import { FONT_FAMILY, fontFaceCss } from "./font.js";
 import { loadErrorContent, type RenderOptions, shadowContent, THEMES } from "./html.js";
 
@@ -14,10 +16,12 @@ type Attributes = {
 
 export function optionsFromAttributes(el: Attributes): RenderOptions {
 	const theme = el.getAttribute("theme");
+	const numerals = NUMERALS.find((n) => n === el.getAttribute("numerals"));
 	return {
 		theme: THEMES.find((t) => t === theme) ?? "auto",
 		barNumbers: el.getAttribute("bar-numbers") !== "off",
 		rehearsalLetters: el.hasAttribute("rehearsal-letters"),
+		...(numerals ? { numerals } : {}),
 	};
 }
 
@@ -58,7 +62,7 @@ async function fetchText(src: string): Promise<string> {
 
 function defineElement(): void {
 	class BarmarkChart extends HTMLElement {
-		static observedAttributes = ["src", "theme", "bar-numbers", "rehearsal-letters"];
+		static observedAttributes = ["src", "theme", "bar-numbers", "rehearsal-letters", "numerals"];
 		#observer = new MutationObserver(() => this.#schedule());
 		#renders = 0;
 		#scheduled = false;
@@ -116,6 +120,14 @@ function defineElement(): void {
 		}
 		set rehearsalLetters(v: boolean) {
 			this.toggleAttribute("rehearsal-letters", v);
+		}
+		/** "nashville", "roman", or null for chord names. */
+		get numerals() {
+			return optionsFromAttributes(this).numerals ?? null;
+		}
+		set numerals(v: string | null) {
+			if (v === null) this.removeAttribute("numerals");
+			else this.setAttribute("numerals", v);
 		}
 
 		/** Every change in one task (an upgrade sets each attribute in turn) renders once. */
