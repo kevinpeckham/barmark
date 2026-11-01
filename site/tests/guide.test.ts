@@ -48,6 +48,17 @@ describe("guide rows", () => {
 		])
 			expect(syntax).toContain(s);
 	});
+	test("code fences, endings, bare alterations, other spellings and the missing | have rows", () => {
+		const ids = new Set(ROWS.map((r) => r.id));
+		for (const id of [
+			"code-fence",
+			"endings",
+			"bare-alteration",
+			"spellings",
+			"missing-trailing-pipe",
+		])
+			expect(ids).toContain(id);
+	});
 	test("at least two rows show an error", () => {
 		const errors = ROWS.filter((r) =>
 			parseChart(r.example).diagnostics.some((d) => d.severity === "error"),

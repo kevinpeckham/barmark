@@ -141,6 +141,25 @@ export const ROWS: GuideRow[] = [
 		ref: "§2",
 		expect: { diagnostics: ["empty"] },
 	},
+	{
+		id: "missing-trailing-pipe",
+		syntax: "| D | A",
+		category: "bars",
+		meaning: "A bar line without its closing pipe is still read, with a warning.",
+		example: "| D | A",
+		ref: "§2",
+		expect: { bars: 2, diagnostics: ["missing trailing |"] },
+	},
+	{
+		id: "spellings",
+		syntax: "NC  X2  …  –",
+		category: "bars",
+		meaning:
+			"Spellings phones and editors produce are accepted: NC for N.C., X or × for x, … for ..., and a dash for --.",
+		example: "| NC | D | X2\n| G – – – |\n| A | … |",
+		ref: "§2.3",
+		expect: { bars: 6 },
+	},
 
 	// Chords
 	{
@@ -174,6 +193,16 @@ export const ROWS: GuideRow[] = [
 		example: "| Am7(b5) | C(b9) | Gm |",
 		ref: "§3",
 		expect: { bars: 3, chord: { symbol: "Am7b5", canonical: "Am7(b5)", harte: "A:hdim7" } },
+	},
+	{
+		id: "bare-alteration",
+		syntax: "C7b9",
+		category: "chords",
+		meaning:
+			"An alteration may skip the parentheses, but only straight after an extension; the canonical form adds them.",
+		example: "| C7b9 | Fm |",
+		ref: "§3",
+		expect: { bars: 2, chord: { symbol: "C7b9", canonical: "C7(b9)", harte: "C:7(b9)" } },
 	},
 	{
 		id: "slash-chord",
@@ -252,6 +281,15 @@ export const ROWS: GuideRow[] = [
 		ref: "§5",
 		// the open pass counts once
 		expect: { bars: 3 },
+	},
+	{
+		id: "endings",
+		syntax: "|1  |2",
+		category: "repeats",
+		meaning: "First and second endings are reserved for v0.2, so for now they are an error.",
+		example: "| D | A |\n|1 G | D |",
+		ref: "§5",
+		expect: { diagnostics: ["endings are not supported"] },
 	},
 
 	// Sections
@@ -374,6 +412,16 @@ export const ROWS: GuideRow[] = [
 		category: "text",
 		meaning: "Headings of three or more hashes are text, for notes to the band.",
 		example: "### Watch Kevin for the cutoff\n| D | A |",
+		ref: "§1",
+		expect: { bars: 2 },
+	},
+	{
+		id: "code-fence",
+		syntax: "```barmark",
+		category: "text",
+		meaning:
+			"Fence lines are ignored and the chart inside is read as usual; fence a chart so markdown previews keep its lines apart.",
+		example: "```barmark\n| D | A |\n```",
 		ref: "§1",
 		expect: { bars: 2 },
 	},
