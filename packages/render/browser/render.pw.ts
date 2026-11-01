@@ -359,3 +359,118 @@ test.describe("layout", () => {
 		for (const f of got.labels) expect(f).toContain("Label Test");
 	});
 });
+
+test.describe("the element's text property", () => {
+	const heading = (page: Page, id: string) => page.locator(`#${id} .bm-heading`).first();
+
+	test("typing into a textarea that sets text updates the chart", async ({ page }) => {
+		await page.goto("/element");
+		await page.locator("#editor").fill("## Bridge\n| C | G |");
+		await expect(heading(page, "typed")).toHaveText("Bridge");
+		await page.locator("#editor").fill("## Coda\n| D |");
+		await expect(heading(page, "typed")).toHaveText("Coda");
+	});
+
+	test("an element made by script renders its text, and text beats src and a script child without fetching", async ({
+		page,
+	}) => {
+		let fetches = 0;
+		page.on("request", (r) => {
+			if (r.url().endsWith("/example.chart.md")) fetches++;
+		});
+		await page.goto("/element");
+		await page.evaluate(() => {
+			const el = document.createElement("barmark-chart") as HTMLElement & { text: string | null };
+			el.id = "made";
+			el.setAttribute("src", "/example.chart.md");
+			el.innerHTML = '<script type="text/barmark">## Inline\n| A |</script>';
+			el.text = "## Made\n| G |";
+			document.body.append(el);
+		});
+		await expect(heading(page, "made")).toHaveText("Made");
+		expect(fetches).toBe(1); // only #remote's
+	});
+
+	test("text set back to null falls back to the script child", async ({ page }) => {
+		await page.goto("/element");
+		await page.evaluate(() => {
+			(document.querySelector("#inline") as HTMLElement & { text: string | null }).text =
+				"## Set\n| G |";
+		});
+		await expect(heading(page, "inline")).toHaveText("Set");
+		await page.evaluate(() => {
+			(document.querySelector("#inline") as HTMLElement & { text: string | null }).text = null;
+		});
+		await expect(heading(page, "inline")).toHaveText("Verse");
+	});
+
+	test("a server-rendered chart takes new text into its own shadow root", async ({ page }) => {
+		await page.goto("/element");
+		const same = await page.evaluate(async () => {
+			const el = document.querySelector("#server") as HTMLElement & { text: string | null };
+			const root = el.shadowRoot;
+			el.text = "## Chorus\n| G |";
+			await new Promise((r) => setTimeout(r, 50));
+			return el.shadowRoot === root;
+		});
+		expect(same).toBe(true);
+		await expect(heading(page, "server")).toHaveText("Chorus");
+	});
+
+	test("text set before the element is defined is kept", async ({ page }) => {
+		await page.goto("/element");
+		await expect(heading(page, "early")).toHaveText("Early");
+	});
+
+	test("several changes in one task render once", async ({ page }) => {
+		await page.goto("/element");
+		await expect(heading(page, "server")).toHaveText("Verse");
+		const renders = await page.evaluate(async () => {
+			const el = document.querySelector("#server") as HTMLElement & {
+				text: string | null;
+				theme: string;
+				rehearsalLetters: boolean;
+			};
+			let records = 0;
+			new MutationObserver((list) => {
+				records += list.length;
+			}).observe(el.shadowRoot as ShadowRoot, { childList: true });
+			el.text = "## One\n| G |";
+			el.theme = "dark";
+			el.rehearsalLetters = true;
+			el.text = "## Two\n| C |";
+			await new Promise((r) => setTimeout(r, 50));
+			return records;
+		});
+		expect(renders).toBe(1);
+		await expect(heading(page, "server")).toContainText("Two");
+	});
+
+	test("any string draws without an error, escaped", async ({ page }) => {
+		const errors: string[] = [];
+		page.on("pageerror", (e) => errors.push(e.message));
+		await page.goto("/element");
+		const result = await page.evaluate(async () => {
+			const el = document.querySelector("#typed") as HTMLElement & { text: string | null };
+			const wait = () => new Promise((r) => setTimeout(r, 30));
+			const seen: string[] = [];
+			for (const text of [
+				"",
+				"<script>window.hacked = 1</script>\n<img src=x onerror=window.hacked=1>",
+				"& &amp; <b>",
+				Array.from({ length: 2000 }, (_, i) => `| C${i % 7 ? "" : "m"} | G |`).join("\n"),
+			]) {
+				el.text = text;
+				await wait();
+				const root = el.shadowRoot as ShadowRoot;
+				seen.push(
+					`${root.querySelectorAll("script, img, b").length}:${root.querySelector(".bm-chart") ? "chart" : "none"}`,
+				);
+			}
+			return { seen, hacked: "hacked" in window };
+		});
+		expect(result.seen).toEqual(["0:chart", "0:chart", "0:chart", "0:chart"]);
+		expect(result.hacked).toBe(false);
+		expect(errors).toEqual([]);
+	});
+});

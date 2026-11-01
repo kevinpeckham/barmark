@@ -1,8 +1,8 @@
 /**
- * `<barmark-chart>`: renders itself from a `src` URL or from a child
- * `<script type="text/barmark">`, and again whenever either changes. A
- * shadow root rendered on the server is reused. Importing this module
- * registers the element (once) and the font (once per document).
+ * `<barmark-chart>`: renders itself from its `text` property, a `src` URL
+ * or a child `<script type="text/barmark">`, and again whenever one
+ * changes. A shadow root rendered on the server is reused. Importing this
+ * module registers the element (once) and the font (once per document).
  */
 import { FONT_FAMILY, fontFaceCss } from "./font.js";
 import { loadErrorContent, type RenderOptions, shadowContent, THEMES } from "./html.js";
@@ -19,6 +19,19 @@ export function optionsFromAttributes(el: Attributes): RenderOptions {
 		barNumbers: el.getAttribute("bar-numbers") !== "off",
 		rehearsalLetters: el.hasAttribute("rehearsal-letters"),
 	};
+}
+
+export type ChartSource = "text" | "src" | "script" | "none";
+
+/** What a chart draws: its `text` while that is a string, else `src`, else its script child. */
+export function chartSource(from: {
+	text: string | null;
+	src: string;
+	script: boolean;
+}): ChartSource {
+	if (from.text !== null) return "text";
+	if (from.src) return "src";
+	return from.script ? "script" : "none";
 }
 
 /** Chart text from a script element: blank edges and common indentation removed. */
@@ -51,8 +64,15 @@ function defineElement(): void {
 		#scheduled = false;
 		/** The text fetched for `src`, kept so a change of options does not fetch again. */
 		#fetched: { src: string; text: Promise<string> } | null = null;
+		#text: string | null = null;
 
 		connectedCallback() {
+			// Text set before the element was defined landed on the instance: route it through the setter.
+			if (Object.hasOwn(this, "text")) {
+				const text = (this as { text?: string | null }).text ?? null;
+				delete (this as { text?: string | null }).text;
+				this.text = text;
+			}
 			registerFont(this.ownerDocument);
 			this.#observer.observe(this, { childList: true, subtree: true, characterData: true });
 			this.#schedule();
@@ -64,6 +84,14 @@ function defineElement(): void {
 			if (this.isConnected) this.#schedule();
 		}
 
+		/** Chart text to draw; while it is a string it wins over `src` and a script child. */
+		get text(): string | null {
+			return this.#text;
+		}
+		set text(v: string | null) {
+			this.#text = v === null || v === undefined ? null : String(v);
+			if (this.isConnected) this.#schedule();
+		}
 		get src() {
 			return this.getAttribute("src") ?? "";
 		}
@@ -103,25 +131,32 @@ function defineElement(): void {
 		async #render() {
 			const script = this.querySelector('script[type="text/barmark"]');
 			const options = optionsFromAttributes(this);
+			const source = chartSource({ text: this.#text, src: this.src, script: script !== null });
 			// With no source of its own, a server-rendered chart keeps its music and takes the options it can.
-			if (!this.src && !script) return this.#restyle(options);
+			if (source === "none") return this.#restyle(options);
 			const render = ++this.#renders;
-			const content = await this.#content(script, options);
+			const content = await this.#content(source, script, options);
 			if (render !== this.#renders) return;
 			(this.shadowRoot ?? this.attachShadow({ mode: "open" })).innerHTML = content;
 		}
 
-		async #content(script: Element | null, options: RenderOptions): Promise<string> {
-			if (!this.src) return shadowContent(inlineChartText(script?.textContent ?? ""), options);
+		async #content(
+			source: ChartSource,
+			script: Element | null,
+			options: RenderOptions,
+		): Promise<string> {
+			if (source === "text") return shadowContent(this.#text ?? "", options);
+			if (source !== "src")
+				return shadowContent(inlineChartText(script?.textContent ?? ""), options);
 			try {
-				return shadowContent(await this.#text(this.src), options);
+				return shadowContent(await this.#fetch(this.src), options);
 			} catch (e) {
 				this.#fetched = null;
 				return loadErrorContent(`Could not load ${this.src}: ${(e as Error).message}`, options);
 			}
 		}
 
-		#text(src: string): Promise<string> {
+		#fetch(src: string): Promise<string> {
 			if (this.#fetched?.src !== src) this.#fetched = { src, text: fetchText(src) };
 			return this.#fetched.text;
 		}

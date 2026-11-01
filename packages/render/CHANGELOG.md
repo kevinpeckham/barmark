@@ -29,6 +29,10 @@ style it.
 
 ### Added
 
+- A `text` property on `<barmark-chart>` for live editing: set it and the
+  chart redraws, batched with attribute changes. While it is a string it
+  wins over `src` (no fetch) and the script child; `null` returns to them.
+  Text set before the element is defined is kept.
 - `--barmark-text-font` and `--barmark-label-font`: the fonts for lyrics
   and note lines, and for the meta line, mid-chart changes, headings and
   diagnostics.
