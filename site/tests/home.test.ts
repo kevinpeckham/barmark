@@ -35,7 +35,7 @@ describe("the home page, prerendered", () => {
 	test("has a title, canonical URL and Open Graph tags", () => {
 		expect(doc.title).toBe("barmark: plain-text chord charts");
 		expect(doc.querySelector('link[rel="canonical"]')?.getAttribute("href")).toBe(
-			"https://barmark.dev/",
+			"https://www.barmark.dev/",
 		);
 		expect(doc.querySelector('meta[property="og:title"]')).not.toBeNull();
 		expect(doc.querySelector('meta[property="og:description"]')).not.toBeNull();

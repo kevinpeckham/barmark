@@ -5,7 +5,7 @@ export const LINKS = {
 	article: "https://www.lightningjar.com/blog/introducing-barmark",
 	stemShovel: "https://www.stemshovel.com",
 	grammar: "https://github.com/kevinpeckham/barmark/blob/main/docs/grammar-v0.1-draft.md",
-	origin: "https://barmark.dev",
+	origin: "https://www.barmark.dev",
 } as const;
 
 export const HEADLINE =

@@ -37,7 +37,7 @@ describe("the syntax guide, prerendered", () => {
 		expect(hrefs).toContain(LINKS.grammar);
 		expect(doc.title).toBe("Syntax · barmark");
 		expect(doc.querySelector('link[rel="canonical"]')?.getAttribute("href")).toBe(
-			"https://barmark.dev/syntax",
+			"https://www.barmark.dev/syntax",
 		);
 	});
 });

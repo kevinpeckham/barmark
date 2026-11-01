@@ -201,15 +201,15 @@ Follow Stem Shovel (`~/projects/stem-shovel`):
   labels for the source window and the search box, real buttons and
   links, visible focus, and WCAG AA contrast in the site's own colours.
 - **SEO and sharing:** page titles and descriptions, canonical URLs on
-  `https://barmark.dev`, Open Graph tags *(an OG image is the builder's
+  `https://www.barmark.dev`, Open Graph tags *(an OG image is the builder's
   call; a screenshot of the home page windows is enough)*.
 
 ## Deploying
 
 - **Vercel, the Lightning Jar team**, a new project whose root directory is
   `site/`, deploying `main`; preview deployments for pull requests.
-- **Domain:** `barmark.dev` (Kevin owns it) pointed at the Vercel project,
-  with `www.barmark.dev` redirecting to it. Kevin does the domain and
+- **Domain:** `www.barmark.dev` is the site's address (Kevin, 2026-11-01),
+  with `barmark.dev` redirecting to it. Kevin does the domain and
   Vercel project steps (or approves them).
 - Nothing on the site needs secrets or environment variables.
 
