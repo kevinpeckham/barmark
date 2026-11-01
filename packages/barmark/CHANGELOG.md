@@ -9,6 +9,12 @@ Releases follow the process in [RELEASING.md](RELEASING.md).
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-11-01
+
+Transposition, and scale degrees for numeral views. No grammar change:
+every chart reads as before. Implements the
+[grammar v0.1 draft](https://github.com/kevinpeckham/barmark/blob/main/docs/grammar-v0.1-draft.md).
+
 ### Added
 
 - **`transposeChart(text, { to } | { semitones })`** returns the chart in
@@ -136,7 +142,8 @@ The first working release: the reference parser and printer for the
 
 - **A placeholder package that holds the `barmark` name** while the spec and parser are written.
 
-[Unreleased]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.5.0...HEAD
+[Unreleased]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.6.0...HEAD
+[0.6.0]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.5.0...barmark-v0.6.0
 [0.5.0]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.4.0...barmark-v0.5.0
 [0.4.0]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.3.0...barmark-v0.4.0
 [0.3.0]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.2.0...barmark-v0.3.0

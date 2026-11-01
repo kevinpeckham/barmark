@@ -1,4 +1,4 @@
-import type { ChartDiagnostic, Directives, Meter, Repeat, Slot } from "barmark";
+import type { ChartDiagnostic, Directives, Key, Meter, Repeat, Slot } from "barmark";
 
 export type LayoutOptions = { rehearsalLetters?: boolean };
 
@@ -48,5 +48,7 @@ export type CellModel =
 			cut: boolean;
 			/** Set on a bar played inside a rit. or accel. */
 			tempoChange?: "rit" | "accel";
+			/** The key the bar is played in, when the chart names one. */
+			key?: Key;
 	  }
 	| { kind: "fermata" };

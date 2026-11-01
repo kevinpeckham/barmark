@@ -6,6 +6,28 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-11-01
+
+Chords as Nashville numbers or Roman numerals, and a little air between
+rows. Depends on `barmark` ^0.6.0, for `degreeOf`.
+
+### Added
+
+- **A numerals view**: `numerals: "nashville" | "roman"` (the `numerals`
+  attribute and property on `<barmark-chart>`). Each chord shows as its
+  degree in its bar's key, counted from the tonic against the major
+  scale (in A minor, C is ♭3). Nashville keeps the chord's quality and
+  superscript (Bm7 in D is 6m⁷, D/F♯ is 1/3); Roman shows minor and
+  diminished in lower case (vi⁷, vii°, ♭VII). Bars with no key, note
+  sets, N.C., `?` and `--` are unchanged. Screen readers hear the
+  numeral and the chord: "bar 5: five, A seven". Uses barmark 0.6.0's
+  `degreeOf`; each bar in the model now carries its `key`.
+
+### Changed
+
+- **A small gap between rows** (0.35em), so the bar lines of one row no
+  longer run into the next.
+
 ### Changed
 
 - A little space (0.35 of the chord size) between consecutive bar rows,
@@ -136,7 +158,8 @@ that needs no script or as the `<barmark-chart>` web component. Requires
   zoom without sideways scrolling, the element renders and re-renders, and
   a screen reader hears "bar 9: D". Run them with `bun run test:browser`.
 
-[Unreleased]: https://github.com/kevinpeckham/barmark/compare/render-v0.3.0...HEAD
+[Unreleased]: https://github.com/kevinpeckham/barmark/compare/render-v0.4.0...HEAD
+[0.4.0]: https://github.com/kevinpeckham/barmark/compare/render-v0.3.0...render-v0.4.0
 [0.3.0]: https://github.com/kevinpeckham/barmark/compare/render-v0.2.1...render-v0.3.0
 [0.2.1]: https://github.com/kevinpeckham/barmark/compare/render-v0.2.0...render-v0.2.1
 [0.2.0]: https://github.com/kevinpeckham/barmark/compare/render-v0.1.0...render-v0.2.0

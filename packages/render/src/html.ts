@@ -3,8 +3,16 @@
  * root, or the bare markup for pages that bring the stylesheet themselves.
  * Every string from the chart is escaped; every bar carries its spoken name.
  */
-import type { ChordRecord, Directives, Repeat, Slot, TempoChange } from "barmark";
-import { glyphs, splitPitch, typesetChord } from "./chord.js";
+import type { ChordRecord, Directives, Key, Repeat, Slot, TempoChange } from "barmark";
+import {
+	type ChordPieces,
+	glyphs,
+	NUMERALS,
+	type Numerals,
+	splitPitch,
+	typesetChord,
+	typesetNumeral,
+} from "./chord.js";
 import { escapeHtml } from "./escape.js";
 import { fontFaceCss } from "./font.js";
 import { layoutChart } from "./model.js";
@@ -20,10 +28,14 @@ export type RenderOptions = {
 	diagnostics?: boolean;
 	/** Where the page serves Edwin-Roman.otf: emits its @font-face rule before the chart. */
 	fontUrl?: string;
+	/** Show each chord as its degree in the bar's key, where the chart names one. Off by default. */
+	numerals?: Numerals;
 };
 
 type Row = Extract<BlockItem, { kind: "row" }>;
-type Settings = { barNumbers: boolean };
+type Settings = { barNumbers: boolean; numerals: Numerals | null };
+/** A chord drawn as a numeral: the style, and the key of its bar. */
+type View = { style: Numerals; key: Key } | null;
 
 export function renderChart(text: string, options: RenderOptions = {}): string {
 	return `${fontStyle(options)}<barmark-chart${elementAttributes(options)}><template shadowrootmode="open">${shadowContent(text, options)}</template></barmark-chart>`;
@@ -36,6 +48,7 @@ function elementAttributes(options: RenderOptions): string {
 		theme === "auto" ? "" : ` theme="${theme}"`,
 		options.barNumbers === false ? ' bar-numbers="off"' : "",
 		options.rehearsalLetters ? " rehearsal-letters" : "",
+		numeralsOf(options) ? ` numerals="${numeralsOf(options)}"` : "",
 	].join("");
 }
 
@@ -43,6 +56,7 @@ export const THEMES = ["auto", "light", "dark"] as const;
 
 /** Only a known theme reaches the markup: hosts may pass any string through. */
 const themeOf = (options: RenderOptions) => THEMES.find((t) => t === options.theme) ?? "auto";
+const numeralsOf = (options: RenderOptions) => NUMERALS.find((n) => n === options.numerals) ?? null;
 
 /** What goes in the shadow root: the styles and the chart. */
 export const shadowContent = (text: string, options: RenderOptions = {}) =>
@@ -61,7 +75,10 @@ export function renderChartUnwrapped(text: string, options: RenderOptions = {}):
 
 function chartHtml(text: string, options: RenderOptions): string {
 	const model = layoutChart(text, { rehearsalLetters: options.rehearsalLetters ?? false });
-	const settings: Settings = { barNumbers: options.barNumbers ?? true };
+	const settings: Settings = {
+		barNumbers: options.barNumbers ?? true,
+		numerals: numeralsOf(options),
+	};
 	return `<div class="bm-chart" data-theme="${themeOf(options)}"${settings.barNumbers ? "" : ' data-bar-numbers="off"'}>${headerHtml(model)}${model.blocks.map((b) => blockHtml(b, settings)).join("")}${options.diagnostics ? diagnosticsHtml(model) : ""}</div>`;
 }
 
@@ -180,7 +197,7 @@ function rowHtml(row: Row, columns: number, settings: Settings): string {
 		: "";
 	let n = row.barNumber;
 	const cells = row.cells.map((cell, i) => {
-		const html = cellHtml(cell, n, repeatMarks(row, i));
+		const html = cellHtml(cell, n, repeatMarks(row, i), settings.numerals);
 		if (n !== null && cell.kind === "slots") n++;
 		return html;
 	});
@@ -205,8 +222,15 @@ function rowRepeatHtml(row: Row): string {
 	return repeatHtml(row.repeat).trim();
 }
 
-function cellHtml(cell: CellModel, barNumber: number | null, marks: string): string {
-	const spoken = `<span class="bm-sr">${escapeHtml(speakBar(barNumber, cell))}</span>`;
+function cellHtml(
+	cell: CellModel,
+	barNumber: number | null,
+	marks: string,
+	numerals: Numerals | null,
+): string {
+	const view: View =
+		numerals && cell.kind === "slots" && cell.key ? { style: numerals, key: cell.key } : null;
+	const spoken = `<span class="bm-sr">${escapeHtml(speakBar(barNumber, cell, view !== null))}</span>`;
 	if (cell.kind === "fermata")
 		return `<div class="bm-bar bm-fermata" part="bar"${marks}>${spoken}<span aria-hidden="true">${FERMATA}</span></div>`;
 	const meter = cell.meter
@@ -214,15 +238,15 @@ function cellHtml(cell: CellModel, barNumber: number | null, marks: string): str
 		: "";
 	const cut = cell.cut ? `<span class="bm-cut">cut</span>` : "";
 	const change = cell.tempoChange ? ` data-tempo-change="${cell.tempoChange}"` : "";
-	return `<div class="bm-bar" part="bar"${cell.cut ? " data-cut" : ""}${change}${marks}>${spoken}<span class="bm-bar-body" aria-hidden="true">${meter}${cell.slots.map(slotHtml).join("")}${cut}</span></div>`;
+	return `<div class="bm-bar" part="bar"${cell.cut ? " data-cut" : ""}${change}${marks}>${spoken}<span class="bm-bar-body" aria-hidden="true">${meter}${cell.slots.map((s) => slotHtml(s, view)).join("")}${cut}</span></div>`;
 }
 
 const FERMATA = `<svg class="bm-fermata-glyph" viewBox="0 0 24 14" width="1.4em" height="0.8em"><path d="M2 13 A10 10 0 0 1 22 13" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="11" r="1.8" fill="currentColor"/></svg>`;
 
-function slotHtml(slot: Slot): string {
+function slotHtml(slot: Slot, view: View): string {
 	switch (slot.kind) {
 		case "chord":
-			return chordHtml(slot.chord);
+			return chordHtml(slot.chord, view);
 		case "hold":
 			return `<span class="bm-hold">/</span>`;
 		case "nc":
@@ -232,17 +256,22 @@ function slotHtml(slot: Slot): string {
 		case "unknown":
 			return `<span class="bm-unknown">?</span>`;
 		case "group":
-			return `<span class="bm-group" data-count="${slot.members.length}"><span class="bm-tuplet">${slot.members.length}</span>${slot.members.map(slotHtml).join("")}</span>`;
+			return `<span class="bm-group" data-count="${slot.members.length}"><span class="bm-tuplet">${slot.members.length}</span>${slot.members.map((m) => slotHtml(m, view)).join("")}</span>`;
 	}
 }
 
-function chordHtml(record: ChordRecord): string {
+function chordHtml(record: ChordRecord, view: View): string {
 	if (record.kind === "notes" || !record.parts) return notesHtml(record);
-	const p = typesetChord(record.parts);
+	const numeral = view ? typesetNumeral(record.parts, view.key, view.style) : null;
+	if (!numeral) return piecesHtml(typesetChord(record.parts), "");
+	return piecesHtml(numeral, ` data-numeral="${view?.style}"`);
+}
+
+function piecesHtml(p: ChordPieces, attributes: string): string {
 	const quality = p.quality ? `<span class="bm-quality">${p.quality}</span>` : "";
 	const sup = p.superscript ? `<sup>${escapeHtml(p.superscript)}</sup>` : "";
 	const bass = p.bass ? `<span class="bm-bass">/${escapeHtml(p.bass)}</span>` : "";
-	return `<span class="bm-chord" part="chord">${escapeHtml(p.root)}${quality}${sup}${bass}</span>`;
+	return `<span class="bm-chord" part="chord"${attributes}>${escapeHtml(p.root)}${quality}${sup}${bass}</span>`;
 }
 
 /** A single note is ringed; a set sits in faint braces with its root underlined. */
