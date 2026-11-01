@@ -74,6 +74,20 @@ function tokenize(symbol: string): ChordParts | string {
 	return { root, quality, extension: ext, sus, tones, bass };
 }
 
+/**
+ * Logic Pro's spellings (Appendix A.5): groups in a row are one list
+ * (`(5)(7)` is `(5,7)`), and `5` in a bare root's group is the power chord
+ * (`F#(5,7)` is `F#5(7)`). After a quality or extension, `(5)` stays an error.
+ */
+function logicGroups(rest: string): string {
+	const joined = rest.replace(/\)\(/g, ",");
+	const group = /^\(([^)]*)\)/.exec(joined);
+	const tones = group?.[1]?.split(",").map((t) => t.trim()) ?? [];
+	if (!group || !tones.includes("5")) return joined;
+	const others = tones.filter((t) => t !== "5");
+	return `5${others.length ? `(${others.join(",")})` : ""}${joined.slice(group[0].length)}`;
+}
+
 /** Appendix A.5 and A.6: Unicode, rejections, then aliases into canonical vocabulary. */
 function normalizeSymbol(symbol: string): { text: string } | Diagnostic {
 	const text = symbol.replace(/♯/g, "#").replace(/♭/g, "b");
@@ -82,6 +96,7 @@ function normalizeSymbol(symbol: string): { text: string } | Diagnostic {
 	const root = ROOT.exec(text)?.[0] ?? "";
 	let rest = text.slice(root.length);
 	for (const [pattern, replacement] of ALIASES) rest = rest.replace(pattern, replacement);
+	rest = logicGroups(rest);
 	const added = [...rest.matchAll(/add(2|4|9|11)/g)].map((m) => m[1] ?? "");
 	if (added.length) {
 		rest = rest.replace(/add(2|4|9|11)/g, "");

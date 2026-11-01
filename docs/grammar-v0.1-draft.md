@@ -197,7 +197,7 @@ accidental = "#" | "b"                     (♯ ♭ accepted)
 quality    = "m" | "dim" | "aug" | "5"
 extension  = "6" | "6/9" | "7" | "maj7" | "9" | "maj9" | "11" | "13" | "maj13" | "7alt"
 sus        = "sus2" | "sus4"
-tones      = "(" tone ("," tone)* ")"
+tones      = ( "(" tone ("," tone)* ")" )+  (groups in a row are one list)
 tone       = accidental? ("2" | "4" | "5" | "6" | "7" | "9" | "11" | "13")
 bass       = "/" root
 ```
@@ -208,7 +208,10 @@ bass       = "/" root
 define the chord, and a parenthesis adds exactly the tones listed. An
 altered tone (`b5`, `#5`, `b9`, `#9`, `#11`, `b13`) **replaces** the
 natural tone of the same number if the chord has one; otherwise it adds.
-`5` means no third.
+`5` means no third: on a bare root, `(5)` is the power chord, so
+`F#(5,7)` is `F#5(7)`; after a quality or an extension it is an
+**error**. Groups in a row read as one list, as Logic Pro writes them:
+`F#(5)(7)` is `F#5(7)` and `C7(b9)(#11)` is `C7(b9,#11)`.
 
 | Symbol | Pitches |
 |---|---|
@@ -505,6 +508,7 @@ human to say whether the band was silent, and the structure line.
 | Appendix A's provisional calls | Approved by Kevin: `C2`/`C4` are rejected with `Csus2` or `C(9)` suggested, and a note set's Harte label uses the bass as root when none is marked. |
 | Section form and chord parts | Machine output gains `form` on each section occurrence and `parts` on each chord (A.7), for renderers and hosts such as stem-shovel's section timeline. No change to what any chart means. |
 | Charts with no bar lines | Decided by Kevin (2026-11-01, issue #1): a chart with text but no bar line warns once, at its first text line, and a text line with escaped pipes (`\\|`) that reads as a bar line once unescaped warns with that bar line as its fix. A legacy stem-shovel chart had parsed to 0 bars and 0 warnings, like an empty file. Empty charts and charts of only a title and directives stay silent. |
+| Logic Pro's parentheses | Decided by Kevin (2026-11-01): groups in a row are one list (`C7(b9)(#11)` = `C7(b9,#11)`), and `(5)` on a bare root is the power chord (`F#(5)(7)` = `F#5(7)`, F♯ C♯ E). Both are aliases: the canonical form keeps one group and the `5` quality, and no chart that read before changes meaning. `(5)` after a quality or an extension stays an error. |
 | Directives under a replay heading | Decided by Kevin: they take effect after the replay, because the heading stands for its bars (written order is play order). Before, the parser applied them to the replay. |
 
 ## Open questions
@@ -610,6 +614,8 @@ Accepted on input, printed canonically:
 | `m(maj7)`, `minmaj7` | `mmaj7` |
 | `add2`, `add4`, `add9`, `add11` | `(2)`, `(4)`, `(9)`, `(11)` |
 | `7b9`, `m7b5` (alteration after an extension) | `7(b9)`, `m7(b5)` |
+| groups in a row (`(b9)(#11)`, Logic Pro) | one group (`(b9,#11)`) |
+| `(5)` on a bare root (`F#(5)`, `F#(5,7)`) | `5` (`F#5`, `F#5(7)`) |
 | `♯`, `♭` | `#`, `b` |
 
 ### A.6 Rejected, with a suggestion

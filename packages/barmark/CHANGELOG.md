@@ -9,6 +9,13 @@ Releases follow the process in [RELEASING.md](RELEASING.md).
 
 ## [Unreleased]
 
+### Added
+
+- **Logic Pro's parentheses are read.** Groups in a row are one list
+  (`C7(b9)(#11)` is `C7(b9,#11)`), and `(5)` on a bare root is the power
+  chord (`F#(5)(7)` is `F#5(7)`: F♯ C♯ E). Both print in the canonical
+  form. Grammar §3, Appendix A.5 and the decisions log.
+
 ## [0.3.0] - 2026-11-01
 
 A chart in another format no longer reads as an empty one. A grammar
