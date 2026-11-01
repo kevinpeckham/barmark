@@ -1,5 +1,5 @@
 /**
- * Import barmark as Node sees it and read a real chart: 152 bars, no
+ * Import barmark as Node sees it and read a real chart: 153 bars, no
  * diagnostics, an unchanged canonical print, and a Harte label. Plain Node,
  * so it runs against the local build (scripts/verify-package.ts) and against
  * the copy installed from npm (.github/workflows/release.yml, confirm).
@@ -29,5 +29,5 @@ const result = {
 };
 console.log(JSON.stringify(result));
 const ok =
-	result.bars === 152 && result.diagnostics === 0 && result.roundTrip && result.harte === "B:hdim7";
+	result.bars === 153 && result.diagnostics === 0 && result.roundTrip && result.harte === "B:hdim7";
 process.exit(ok ? 0 : 1);

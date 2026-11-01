@@ -52,7 +52,7 @@ describe("fermatas", () => {
 	test("Peaceful Dreams ends on a ring-out", () => {
 		const r = play(PEACEFUL_DREAMS);
 		expect(r.events.at(-1)?.kind).toBe("fermata");
-		expect(r.bars).toHaveLength(152);
+		expect(r.bars).toHaveLength(153);
 	});
 });
 

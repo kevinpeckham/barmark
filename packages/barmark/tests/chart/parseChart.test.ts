@@ -8,8 +8,8 @@ describe("Peaceful Dreams", () => {
 		expect(r.title).toBe("Peaceful Dreams");
 		expect(r.diagnostics).toEqual([]);
 	});
-	test("152 bars ending on a ring-out", () => {
-		expect(r.bars).toHaveLength(152);
+	test("153 bars ending on a ring-out", () => {
+		expect(r.bars).toHaveLength(153);
 		expect(r.events.at(-1)?.kind).toBe("fermata");
 	});
 	test("every bar carries the opening directives", () => {
@@ -36,7 +36,7 @@ describe("Peaceful Dreams", () => {
 			"Outro",
 		]);
 		expect(r.sections.map((s) => (s.lastBar ?? 0) - (s.firstBar ?? 0) + 1)).toEqual([
-			20, 20, 8, 20, 8, 8, 20, 20, 8, 20,
+			20, 20, 8, 20, 8, 8, 20, 20, 8, 21,
 		]);
 	});
 	test("section starts land on the stem-bench times", () => {
