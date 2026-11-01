@@ -101,6 +101,16 @@ test.describe("home: the live editor", () => {
 });
 
 test.describe("the guide", () => {
+	/**
+	 * The guide is prerendered, so its controls exist before the page's script
+	 * runs; an action taken that early never reaches the URL. Repeat it until
+	 * the URL follows (it failed on CI that way once: FINDINGS.md).
+	 */
+	const untilUrl = (page: Page, action: () => Promise<void>, url: RegExp) =>
+		expect(async () => {
+			await action();
+			await expect(page).toHaveURL(url, { timeout: 1_000 });
+		}).toPass({ timeout: 15_000 });
 	const visible = (page: Page) =>
 		page.evaluate(() =>
 			[...document.querySelectorAll<HTMLElement>("[data-row]")]
@@ -131,8 +141,8 @@ test.describe("the guide", () => {
 
 	test("typing filters and keeps the query in the URL", async ({ page }) => {
 		await page.goto("/syntax");
-		await page.getByRole("searchbox", { name: "Search" }).fill("sus4");
-		await expect(page).toHaveURL(/\?q=sus4$/);
+		const search = page.getByRole("searchbox", { name: "Search" });
+		await untilUrl(page, () => search.fill("sus4"), /\?q=sus4$/);
 		expect(await visible(page)).toContain("chord");
 	});
 
@@ -144,8 +154,7 @@ test.describe("the guide", () => {
 	test("sorting moves rows and keeps every example rendered", async ({ page }) => {
 		await page.goto("/syntax");
 		const sort = page.getByRole("combobox", { name: "Sort" });
-		await sort.selectOption("name");
-		await expect(page).toHaveURL(/sort=name/);
+		await untilUrl(page, async () => void (await sort.selectOption("name")), /sort=name/);
 		await sort.selectOption("category");
 		expect(await unrendered(page)).toBe(0);
 	});
