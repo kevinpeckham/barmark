@@ -71,18 +71,23 @@ Set these custom properties on the element or anything above it:
 
 | Property | What it sets |
 |---|---|
-| `--barmark-font` | the chart's typeface |
-| `--barmark-size` | the base size everything scales from (default `1.25rem`) |
+| `--barmark-font` | the chords' typeface |
+| `--barmark-text-font` | lyrics and `###` note lines (default Georgia) |
+| `--barmark-label-font` | the meta line, mid-chart changes, headings and diagnostics (default the system sans) |
+| `--barmark-size` | the chord size everything scales from (default `1rem`) |
 | `--barmark-ink` | chords and text |
 | `--barmark-paper` | the background |
 | `--barmark-muted` | holds, bar numbers, braces, meta lines |
 | `--barmark-rule` | bar lines |
 | `--barmark-accent` | errors |
+| `--barmark-directive` | mid-chart changes (default the muted colour) |
+| `--barmark-note` | `###` note lines (default the ink colour) |
 
 ```css
 barmark-chart {
-	--barmark-size: 1rem;
+	--barmark-size: 0.9rem;
 	--barmark-paper: transparent;
+	--barmark-text-font: "Noto Serif", Georgia, serif;
 }
 barmark-chart::part(heading) {
 	color: teal;
@@ -120,6 +125,12 @@ Edwin". Serve the file and pass its URL as `fontUrl`, or call
 another serif.
 
 ## What it draws
+
+Bar numbers sit in a gutter at the left edge; section headings, lyrics,
+note lines and mid-chart changes start at the first bar line. Chords start
+at the left of their share of the bar. A change written mid-chart names
+itself: `time: 3/4, tempo: 120` draws as "→ Time 3/4 · Tempo ♩ = 120".
+At the default size chords are 16px and no label is under 12px.
 
 Chords appear in their canonical form whatever the author typed (`Cø`
 shows as Cm⁷(♭5)). `%` is drawn as the bar it copies; a replayed section
