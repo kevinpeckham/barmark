@@ -23,6 +23,7 @@ describe("guide rows", () => {
 			"§6",
 			"§7",
 			"§7.1",
+			"§7.2",
 		])
 			expect(refs).toContain(ref);
 	});
@@ -43,6 +44,8 @@ describe("guide rows", () => {
 			"key:",
 			"time:",
 			"tempo:",
+			"tempo: rit. to 90",
+			"tempo: a tempo",
 			"feel:",
 			"### Note",
 		])
@@ -148,9 +151,79 @@ describe("guide query", () => {
 			["time signature", "time"],
 			["swing", "feel"],
 			["rehearsal", "section"],
+			// Tempo changes
+			["ritardando", "tempo-change"],
+			["rall", "tempo-change"],
+			["accelerando", "tempo-change"],
+			["slow down", "tempo-change"],
+			["speed up", "tempo-change"],
+			["back to tempo", "a-tempo"],
+			// Chord words
+			["maj7", "chord"],
+			["minor", "chord"],
+			["diminished", "chord"],
+			["half-diminished", "altered"],
+			["m7b5", "altered"],
+			["add9", "ambiguous-2"],
+			["sus2", "ambiguous-2"],
+			["inversion", "slash-chord"],
+			["no third", "power-chord"],
+			// Bars and rhythm
+			["measure", "bar-line"],
+			["ditto", "simile"],
+			["two chords in a bar", "slots"],
+			["sustain", "hold"],
+			["let ring", "fermata"],
+			["no chord", "no-chord"],
+			["cutoff", "silence"],
+			["mixed meter", "one-bar-meter"],
+			// Form
+			["verse", "section"],
+			["da capo", "replay"],
+			["dal segno", "replay"],
+			["coda", "replay"],
+			["repeat section", "section-repeat"],
+			["first ending", "endings"],
+			["loop", "repeat-line"],
+			["repeat sign", "repeat-signs"],
+			["ad lib", "open-repeat"],
+			// Directives and text
+			["key change", "directives-line"],
+			["modulation", "directives-line"],
+			["key signature", "key"],
+			["dorian", "key"],
+			["waltz", "time"],
+			["speed", "tempo"],
+			["shuffle", "feel"],
+			["song title", "title"],
+			["comment", "notes-heading"],
+			["words", "lyrics"],
+			["markdown", "code-fence"],
+			// Shorthand and other software
+			["Δ", "chord-aliases"],
+			["triangle", "chord-aliases"],
+			["°", "chord-aliases"],
+			["ø", "chord-aliases"],
+			["min7", "chord-aliases"],
+			["Logic Pro", "logic-parentheses"],
+			["pickup", "one-bar-meter"],
+			["anacrusis", "one-bar-meter"],
+			["6/9", "chord"],
+			["half diminished", "altered"],
+			["pre-chorus", "section"],
+			["tag", "section-repeat"],
 		])
 			expect(found(term)).toContain(id);
 	});
+	test("each word of a search may match anywhere in the row, in any order", () => {
+		const found = (text: string) =>
+			ROWS.filter((r) => matches(r, { q: text, cat: null, sort: "category" })).map((r) => r.id);
+		expect(found("change key")).toContain("directives-line");
+		expect(found("minor seventh")).toContain("chord");
+		expect(found("  slow   down ")).toContain("tempo-change");
+		expect(found("minor zebra")).toEqual([]);
+	});
+
 	test("a category narrows exactly", () => {
 		const rows = ROWS.filter((r) => matches(r, { q: "", cat: "notes", sort: "category" }));
 		expect(rows.every((r) => r.category === "notes")).toBe(true);

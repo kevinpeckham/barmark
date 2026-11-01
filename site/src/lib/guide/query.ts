@@ -26,11 +26,12 @@ export function writeQuery(query: GuideQuery): string {
 
 export function matches(row: GuideRow, query: GuideQuery): boolean {
 	if (query.cat && row.category !== query.cat) return false;
-	const q = query.q.trim().toLowerCase();
-	if (!q) return true;
-	return [row.syntax, row.meaning, row.category, ...(row.terms ?? [])].some((field) =>
-		field.toLowerCase().includes(q),
+	const words = query.q.toLowerCase().split(/\s+/).filter(Boolean);
+	const fields = [row.syntax, row.meaning, row.category, ...(row.terms ?? [])].map((f) =>
+		f.toLowerCase(),
 	);
+	// Every word must appear somewhere in the row, in any order: "change key" finds "key change".
+	return words.every((word) => fields.some((field) => field.includes(word)));
 }
 
 export function sorted(rows: GuideRow[], sort: GuideQuery["sort"]): GuideRow[] {
