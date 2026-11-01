@@ -6,6 +6,15 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+
+- **A chart from `renderChart` keeps its options when the element
+  loads.** The `<barmark-chart>` it wraps the chart in now carries them as
+  attributes (`theme`, `bar-numbers="off"`, `rehearsal-letters`). Before,
+  a page that rendered a dark chart on the server and imported
+  `@barmark/render/element` saw it switch to the system theme, and lose
+  its rehearsal letters once given new `text`.
+
 ## [0.2.0] - 2026-11-01
 
 Easier to read, and the bar numbers easier to scan. Every size below was

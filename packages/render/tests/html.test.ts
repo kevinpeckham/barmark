@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { parseHTML } from "linkedom";
+import { optionsFromAttributes } from "../src/element.js";
 import { loadErrorContent } from "../src/html.js";
 import { type RenderOptions, renderChart, renderChartUnwrapped } from "../src/index.js";
 import { EXAMPLE } from "./fixtures.js";
@@ -263,5 +264,23 @@ describe("mid-chart directives", () => {
 			".bm-meta",
 		);
 		expect(meta?.textContent).toBe("D major · 4/4");
+	});
+});
+
+describe("the element renderChart wraps the chart in", () => {
+	const wrapper = (options: Parameters<typeof renderChart>[1]) =>
+		doc(renderChart("| D |", options)).querySelector("barmark-chart") as Element;
+	test("carries the options, so the element keeps them when it loads or takes new text", () => {
+		const options = { theme: "dark", barNumbers: false, rehearsalLetters: true } as const;
+		expect(optionsFromAttributes(wrapper(options))).toEqual(options);
+	});
+	test("has no attributes at the defaults", () => {
+		expect(wrapper({}).attributes.length).toBe(0);
+		expect(
+			wrapper({ theme: "auto", barNumbers: true, rehearsalLetters: false }).attributes.length,
+		).toBe(0);
+	});
+	test("an unknown theme is not written", () => {
+		expect(wrapper({ theme: '"><script>' as "dark" }).hasAttribute("theme")).toBe(false);
 	});
 });

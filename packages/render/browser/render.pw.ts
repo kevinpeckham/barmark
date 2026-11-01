@@ -417,6 +417,25 @@ test.describe("the element's text property", () => {
 		await expect(heading(page, "server")).toHaveText("Chorus");
 	});
 
+	test("a server-rendered chart keeps its theme and letters when the element loads and takes text", async ({
+		page,
+	}) => {
+		await page.goto("/element");
+		const look = () =>
+			page.locator("#styled").evaluate((el) => {
+				const root = el.shadowRoot as ShadowRoot;
+				const chart = root.querySelector(".bm-chart") as HTMLElement;
+				return `${chart.dataset.theme} ${root.querySelector(".bm-rehearsal")?.textContent ?? "-"}`;
+			});
+		await expect.poll(look).toBe("dark A");
+		await page.evaluate(() => {
+			(document.querySelector("#styled") as HTMLElement & { text: string | null }).text =
+				"## Bridge\n| C |";
+		});
+		await expect(heading(page, "styled")).toContainText("Bridge");
+		expect(await look()).toBe("dark A");
+	});
+
 	test("text set before the element is defined is kept", async ({ page }) => {
 		await page.goto("/element");
 		await expect(heading(page, "early")).toHaveText("Early");
