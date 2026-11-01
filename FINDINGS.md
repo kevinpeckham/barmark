@@ -259,3 +259,14 @@ timeout" while fetching Noto from fonts.bunny.net. A rerun passed.
 takes longer. `site/uno.config.ts` now allows 30 s and warns at 5 s.
 Stem Shovel sidesteps the same problem with the `"none"` provider
 under tests.
+### A misspelt custom property removes the whole border (2026-11-01, renderer)
+
+The dashed line over bars inside a rit. didn't appear, and no test
+failed. The rule used `var(--bm-directive)`, which doesn't exist; the
+directive colour is `var(--barmark-directive,var(--bm-muted))`. A
+`var()` with no value and no fallback makes the whole declaration
+invalid at computed-value time, so `border-top` became `none` rather
+than falling back to a default colour. The linkedom tests check
+markup, not computed style, so only a browser can catch it: the
+Playwright test "bars inside a rit. carry a dashed line in the
+directive colour" now does.

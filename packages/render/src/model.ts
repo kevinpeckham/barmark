@@ -307,10 +307,19 @@ function layoutCell(
 ): CellModel {
 	if (cell.kind === "fermata") return { kind: "fermata" };
 	const from = cell.kind === "slots" ? cell : previous;
-	return {
-		kind: "slots",
-		meter: from?.meter ?? null,
-		slots: played?.slots ?? (cell.kind === "slots" ? cell.slots : []),
-		cut: false,
-	};
+	return withTempoChange(
+		{
+			kind: "slots",
+			meter: from?.meter ?? null,
+			slots: played?.slots ?? (cell.kind === "slots" ? cell.slots : []),
+			cut: false,
+		},
+		played,
+	);
+}
+
+/** Marks a bar played inside a rit. or accel. */
+function withTempoChange(cell: SlotsCell, played: PlayedBar | undefined): SlotsCell {
+	const change = played?.tempoChange?.kind;
+	return change ? { ...cell, tempoChange: change } : cell;
 }

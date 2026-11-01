@@ -11,6 +11,7 @@ import type {
 	Repeat,
 	SectionOccurrence,
 	Slot,
+	TempoChange,
 } from "./types.js";
 
 /** Nested repeats multiply; expansion stops here rather than run away. */
@@ -137,16 +138,51 @@ export function expand(lines: Line[]): {
 		itemsOf.set(s, items);
 	}
 
-	const state: { key: Key | null; time: Meter; tempo: number | null; feel: Feel } = {
+	const state: {
+		key: Key | null;
+		time: Meter;
+		tempo: number | null;
+		change: PlayedBar["tempoChange"];
+		feel: Feel;
+	} = {
 		key: null,
 		time: { n: 4, d: 4 },
 		tempo: null,
+		change: null,
 		feel: "straight",
 	};
-	const apply = (set: Directives) => {
+	const warned = new Set<number>();
+	const warn = (line: number, message: string, token: string) => {
+		if (warned.has(line)) return;
+		warned.add(line);
+		diagnostics.push({ line, severity: "warning", message, token });
+	};
+	/** A rit. or accel. runs from the next bar to the next `tempo:`; `a tempo` ends it. */
+	const changeTempo = (c: TempoChange, line: number) => {
+		if (c.kind === "a tempo") {
+			if (!state.change) warn(line, "a tempo, but no rit. or accel. is in force", "a tempo");
+			state.change = null;
+			return;
+		}
+		const from = state.tempo;
+		const wrongWay =
+			c.kind === "rit" ? (to: number, f: number) => to >= f : (to: number, f: number) => to <= f;
+		if (c.to !== null && from !== null && wrongWay(c.to, from))
+			warn(
+				line,
+				`${c.kind}. to ${c.to} is not ${c.kind === "rit" ? "slower" : "faster"} than ${from}`,
+				`${c.kind}. to ${c.to}`,
+			);
+		state.change = { kind: c.kind, from, to: c.to };
+	};
+	const apply = (set: Directives, line: number) => {
 		if (set.key) state.key = set.key;
 		if (set.time) state.time = set.time;
-		if (set.tempo) state.tempo = set.tempo;
+		if (set.tempo) {
+			state.tempo = set.tempo;
+			state.change = null;
+		}
+		if (set.tempoChange) changeTempo(set.tempoChange, line);
 		if (set.feel) state.feel = set.feel;
 	};
 	let count = 0;
@@ -183,7 +219,7 @@ export function expand(lines: Line[]): {
 					token: `${k}`,
 				});
 		}
-		const { key, tempo, feel } = state;
+		const { key, tempo, change: tempoChange, feel } = state;
 		out.push({
 			kind: "bar",
 			bar: {
@@ -193,6 +229,7 @@ export function expand(lines: Line[]): {
 				meter,
 				key,
 				tempo,
+				tempoChange,
 				feel,
 				slots: p.slots,
 			},
@@ -227,7 +264,7 @@ export function expand(lines: Line[]): {
 	};
 
 	const playLine = ({ line: l, repeat }: Entry, out: ChartEvent[]) => {
-		if (l.kind === "directive") apply(l.set);
+		if (l.kind === "directive") apply(l.set, l.line);
 		if (l.kind !== "bars") return;
 		times(repeat, l.line, out, (into) => {
 			for (const c of resolved.get(l) ?? []) emit(c, l.line, into);

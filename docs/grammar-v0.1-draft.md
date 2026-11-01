@@ -362,7 +362,7 @@ key: D, time: 4/4, tempo: 145, feel: swing
 |---|---|---|
 | `key:` | a root plus optional `m` (`D`, `Bm`, `F#m`; `B minor` accepted), or a root and a mode: `A mixolydian`, `E dorian` | none (key unknown) |
 | `time:` | `n/d` where d is 2, 4, 8 or 16 | `4/4` |
-| `tempo:` | beats per minute from 1 to 999, counting the meter's beat (2.1): `145` (`145 bpm` accepted). In 6/8, `tempo: 60` is 60 dotted quarters a minute. | none (tempo unknown) |
+| `tempo:` | beats per minute from 1 to 999, counting the meter's beat (2.1): `145` (`145 bpm` accepted). In 6/8, `tempo: 60` is 60 dotted quarters a minute. Or a gradual change (7.2): `rit.`, `accel.`, either `to` a tempo, or `a tempo`. | none (tempo unknown) |
 | `feel:` | `straight`, `swing`, `shuffle`, `swing 16` | `straight` |
 
 - **Modes.** `key:` accepts `major`, `minor`, and the seven church modes
@@ -398,6 +398,38 @@ Feel matters to barmark in one place: **where off-beat subdivisions land.**
   reads more easily.
 - Any other value is an **error**. Feels that move no chord (half-time,
   double-time, laid back) belong in a text line.
+
+### 7.2 Gradual tempo changes
+
+```
+## Outro
+| D5 | % | % | % | x5
+tempo: rit. to 90
+| D5 | % | % | % |
+| D5 | ... |
+```
+
+| Written | Means |
+|---|---|
+| `tempo: rit.` | slowing down from the next bar; the end tempo is open |
+| `tempo: rit. to 90` | slowing down, to arrive at 90 |
+| `tempo: accel.`, `tempo: accel. to 160` | the same, speeding up |
+| `tempo: a tempo` | back to the steady tempo the change started from |
+
+- **Spellings.** `rit`, `ritardando`, `rall` and `rallentando` all mean
+  `rit.`; `accelerando` means `accel.`. The period is optional, case
+  doesn't matter, and `to 90 bpm` is accepted. Canonical: `rit.`,
+  `accel.`, `a tempo`.
+- **Extent.** A change runs from the next bar until the next `tempo:`
+  line (a number, another change, or `a tempo`) or the end of the chart.
+  A replayed section plays its change again.
+- **Shape.** A chart says only which way and, optionally, where to. How
+  the tempo moves inside the change (steadily, or slowing more and more,
+  as a ritardando usually does) is the players' and is never written.
+- **The steady tempo stays.** Bars inside a change keep `tempo:` as the
+  steady tempo the change started from; `a tempo` returns to it.
+- **Warnings.** `a tempo` with no change in force; `rit. to` a tempo that
+  isn't slower than the steady one, or `accel. to` one that isn't faster.
 
 ## 8. The canonical form
 
@@ -445,11 +477,12 @@ applied twice.
 | error | empty section that references no earlier section |
 | error | `->` anywhere but the end of a replay heading |
 | error | `/` or `%` with nothing before it |
-| error | invalid directive value (`time: 4/3`, `tempo: fast`, `feel: lazy`) |
+| error | invalid directive value (`time: 4/3`, `tempo: fast`, `rit. to fast`, `feel: lazy`) |
 | error | `[n/d]` not at the start of a cell, or with an invalid meter |
 | error | a note set mixing octave and no octave, or an octave outside 0–8 |
 | error | more than one root mark `!` in a note set |
 | warning | `?` (unknown harmony) |
+| warning | `tempo: a tempo` with no rit. or accel. in force; `rit. to` a tempo not slower than the steady one, or `accel. to` one not faster |
 | warning | missing trailing `\|` |
 | warning | top-level slot count uneven for the meter |
 | warning | `x N` with N > 8 |
@@ -510,6 +543,7 @@ human to say whether the band was silent, and the structure line.
 | Charts with no bar lines | Decided by Kevin (2026-11-01, issue #1): a chart with text but no bar line warns once, at its first text line, and a text line with escaped pipes (`\\|`) that reads as a bar line once unescaped warns with that bar line as its fix. A legacy stem-shovel chart had parsed to 0 bars and 0 warnings, like an empty file. Empty charts and charts of only a title and directives stay silent. |
 | Logic Pro's parentheses | Decided by Kevin (2026-11-01): groups in a row are one list (`C7(b9)(#11)` = `C7(b9,#11)`), and `(5)` on a bare root is the power chord (`F#(5)(7)` = `F#5(7)`, F♯ C♯ E). Both are aliases: the canonical form keeps one group and the `5` quality, and no chart that read before changes meaning. `(5)` after a quality or an extension stays an error. |
 | Directives under a replay heading | Decided by Kevin: they take effect after the replay, because the heading stands for its bars (written order is play order). Before, the parser applied them to the replay. |
+| Gradual tempo changes | Decided by Kevin (2026-11-01): `tempo:` also takes `rit.`, `accel.` (each optionally `to` a tempo) and `a tempo`. A change runs from the next bar to the next `tempo:` or the end; its shape is never written; machine output marks every bar inside one (7.2, A.7). |
 
 ## Open questions
 
@@ -643,6 +677,8 @@ Each slot parses to one record:
 | `elided` | on a section occurrence: true when `->` cut its last bar |
 | `form` | on a section occurrence: which distinct section it plays, numbered from 0 in order of first appearance; a replay shares its written section's number, so hosts can label form (A, B, A, B, C) |
 | `parts` | on a chord: the canonical root, quality, extension, sus, tones (in canonical order) and bass its spelling is built from; empty for a note set |
+| `tempo` | on a played bar: the steady tempo, or empty when unknown |
+| `tempoChange` | on a played bar inside a rit. or accel.: its `kind` (`rit` or `accel`), `from` (the steady tempo) and `to` (the target, or empty when open); empty outside one |
 | `repeat` | on a bar line, section or repeat bracket in the parse tree: a count, or `open` for `x ...` |
 | `harte` | the Harte label: `C:7(b9)`, `N` for N.C. and silence (`--`), `X` for `?` |
 | `source` | the symbol as written |

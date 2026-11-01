@@ -6,6 +6,14 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- Gradual tempo changes. A `tempo: rit. to 90` line reads
+  "→ Tempo rit. to ♩ = 90" (`a tempo` reads as itself), and every bar
+  played inside a rit. or accel. has a dashed line along its top, in
+  the directive colour, with `data-tempo-change="rit"` or `"accel"`.
+  Needs barmark's `tempoChange` (the next barmark release).
+
 ## [0.2.1] - 2026-11-01
 
 Two fixes found while moving barmark.dev to the element. Depends on

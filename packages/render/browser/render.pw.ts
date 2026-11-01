@@ -360,6 +360,21 @@ test.describe("layout", () => {
 	});
 });
 
+test.describe("tempo changes", () => {
+	test("bars inside a rit. carry a dashed line in the directive colour", async ({ page }) => {
+		await page.goto(
+			`/chart?chart=rit&css=${encodeURIComponent("barmark-chart{--barmark-directive:rgb(1, 2, 3)}")}`,
+		);
+		const lines = await inChart(page, (root) =>
+			[...root.querySelectorAll(".bm-bar")].map((bar) => {
+				const s = getComputedStyle(bar, "::before");
+				return s.borderTopStyle === "none" ? "none" : `${s.borderTopStyle} ${s.borderTopColor}`;
+			}),
+		);
+		expect(lines).toEqual(["none", "none", "dashed rgb(1, 2, 3)", "dashed rgb(1, 2, 3)"]);
+	});
+});
+
 test.describe("triplet brackets", () => {
 	test("leave a gap for the number instead of painting over the line, so any paper works", async ({
 		page,
