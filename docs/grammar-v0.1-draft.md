@@ -547,9 +547,15 @@ human to say whether the band was silent, and the structure line.
 
 ## Open questions
 
-- The ending syntax for v0.2.
+- The ending syntax for v0.2. To be decided together with accents (Kevin,
+  2026-11-01), since both mark one bar or one slot.
 - Whether pushes need a shorter mark once real charts are written.
-- Articulation (short, choked hits) beyond slot length.
+- Articulation (short, choked hits) beyond slot length, and an accent mark
+  on a slot (`>D`). Until then, dynamics and accents are note lines.
+- Not planned as syntax (Kevin, 2026-11-01): a capo (a note line), ChordPro
+  inline chords (barmark places chords in bars, not over words), and
+  numerals as input. Transposition and a numerals view are tools: a
+  library function and a renderer option, both reading `key:`.
 - Exact voicings on named chords (`Cmaj7{E3 G3 B3 C4}`).
 - Omissions (`(no3)`, `(no5)`).
 - Custom swing ratios.
