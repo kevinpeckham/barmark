@@ -126,6 +126,31 @@ describe("guide query", () => {
 		expect(ROWS.filter((r) => matches(r, q("N.C."))).map((r) => r.id)).toContain("no-chord");
 		expect(ROWS.filter((r) => matches(r, q("directives"))).length).toBeGreaterThanOrEqual(4);
 	});
+	test("musicians' names for things find their rows", () => {
+		const found = (text: string) =>
+			ROWS.filter((r) => matches(r, { q: text, cat: null, sort: "category" })).map((r) => r.id);
+		for (const [term, id] of [
+			["elision", "elision"],
+			["Simile", "simile"],
+			["fermata", "fermata"],
+			["triplet", "group"],
+			["vamp", "open-repeat"],
+			["fade", "open-repeat"],
+			["volta", "endings"],
+			["power chord", "power-chord"],
+			["slash chord", "slash-chord"],
+			["push", "group"],
+			["rest", "silence"],
+			["stop", "silence"],
+			["placeholder", "unknown"],
+			["bpm", "tempo"],
+			["meter", "time"],
+			["time signature", "time"],
+			["swing", "feel"],
+			["rehearsal", "section"],
+		])
+			expect(found(term)).toContain(id);
+	});
 	test("a category narrows exactly", () => {
 		const rows = ROWS.filter((r) => matches(r, { q: "", cat: "notes", sort: "category" }));
 		expect(rows.every((r) => r.category === "notes")).toBe(true);

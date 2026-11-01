@@ -23,6 +23,8 @@ export type GuideRow = {
 	category: Category;
 	/** one plain sentence */
 	meaning: string;
+	/** other names musicians search for (simile, fermata, volta); found, not shown */
+	terms?: string[];
 	/** a small chart */
 	example: string;
 	/** the grammar section, e.g. "§5" */
@@ -71,6 +73,7 @@ export const ROWS: GuideRow[] = [
 		syntax: "%",
 		category: "bars",
 		meaning: "A percent sign alone in a cell plays the previous bar again, exactly.",
+		terms: ["simile", "repeat the bar"],
 		example: "| C G | % | D | % |",
 		ref: "§2.3",
 		expect: { bars: 4 },
@@ -80,6 +83,7 @@ export const ROWS: GuideRow[] = [
 		syntax: "D_E_F",
 		category: "bars",
 		meaning: "Underscores join chords into one slot, divided equally: three make a triplet.",
+		terms: ["tuplet", "push", "anticipation"],
 		example: "| C D_E_F |",
 		ref: "§2.2",
 		expect: { bars: 1 },
@@ -99,6 +103,7 @@ export const ROWS: GuideRow[] = [
 		syntax: "--",
 		category: "bars",
 		meaning: "Silence: the whole band stops for the slot.",
+		terms: ["rest", "stop", "break", "tacet"],
 		example: "| G -- -- -- |",
 		ref: "§2.3",
 		expect: { bars: 1 },
@@ -108,6 +113,7 @@ export const ROWS: GuideRow[] = [
 		syntax: "?",
 		category: "bars",
 		meaning: "A chord goes here but isn't written down yet; it always warns.",
+		terms: ["placeholder", "TBD"],
 		example: "| D | ? | G | A |",
 		ref: "§2.3",
 		expect: { bars: 4, diagnostics: ["unknown harmony"] },
@@ -118,6 +124,7 @@ export const ROWS: GuideRow[] = [
 		category: "bars",
 		meaning:
 			"An unmeasured hold, such as a fermata or a final ring-out; it isn't counted as a bar.",
+		terms: ["pause"],
 		example: "| A | ... |",
 		ref: "§2.3",
 		expect: { bars: 1 },
@@ -128,6 +135,7 @@ export const ROWS: GuideRow[] = [
 		category: "bars",
 		meaning:
 			"A time signature in brackets at the start of a cell sets the meter for that bar only.",
+		terms: ["meter change", "odd bar", "time signature change"],
 		example: "| D | A | [2/4] G | D |",
 		ref: "§2.4",
 		expect: { bars: 4 },
@@ -180,6 +188,7 @@ export const ROWS: GuideRow[] = [
 		syntax: "G5(7)",
 		category: "chords",
 		meaning: "5 means no third; parentheses add exactly the tones listed.",
+		terms: ["power chord"],
 		example: "| G5(7) | D5 |",
 		ref: "§3",
 		expect: { bars: 2, chord: { symbol: "G5(7)", canonical: "G5(7)", harte: "G:5(b7)" } },
@@ -209,6 +218,7 @@ export const ROWS: GuideRow[] = [
 		syntax: "D/F#",
 		category: "chords",
 		meaning: "A slash and a note after a chord puts that note in the bass.",
+		terms: ["slash chord", "inversion", "bass note"],
 		example: "| D | D/F# | G | A |",
 		ref: "§3",
 		expect: { bars: 4, chord: { symbol: "D/F#", canonical: "D/F#", harte: "D:maj/3" } },
@@ -277,6 +287,7 @@ export const ROWS: GuideRow[] = [
 		syntax: "x ...",
 		category: "repeats",
 		meaning: "An open repeat plays at least once, an unknown number of times: a vamp or a fade.",
+		terms: ["repeat until cue"],
 		example: "| E7 | / | x ...\n| A | ... |",
 		ref: "§5",
 		// the open pass counts once
@@ -287,6 +298,7 @@ export const ROWS: GuideRow[] = [
 		syntax: "|1  |2",
 		category: "repeats",
 		meaning: "First and second endings are reserved for v0.2, so for now they are an error.",
+		terms: ["volta", "first ending", "second ending"],
 		example: "| D | A |\n|1 G | D |",
 		ref: "§5",
 		expect: { diagnostics: ["endings are not supported"] },
@@ -298,6 +310,7 @@ export const ROWS: GuideRow[] = [
 		syntax: "## Verse",
 		category: "sections",
 		meaning: "A level-two heading begins a section, which runs to the next one.",
+		terms: ["rehearsal mark", "part", "form"],
 		example: "## Verse\n| D | A | Bm | G |",
 		ref: "§6",
 		expect: { bars: 4 },
@@ -325,6 +338,7 @@ export const ROWS: GuideRow[] = [
 		syntax: "->",
 		category: "sections",
 		meaning: "An arrow on a replay heading cuts its last bar, so the next section starts there.",
+		terms: ["elision", "cut", "skip the last bar"],
 		example: "## Chorus\n| G | C | G | D |\n## Chorus ->\n## Outro\n| G |",
 		ref: "§6",
 		expect: { bars: 8 },
@@ -354,6 +368,7 @@ export const ROWS: GuideRow[] = [
 		syntax: "time:",
 		category: "directives",
 		meaning: "The meter from here on; 4/4 if never set.",
+		terms: ["meter", "time signature"],
 		example: "time: 6/8\n| D | A |",
 		ref: "§7",
 		expect: { bars: 2 },
@@ -363,6 +378,7 @@ export const ROWS: GuideRow[] = [
 		syntax: "tempo:",
 		category: "directives",
 		meaning: "Beats per minute, counting the meter's beat.",
+		terms: ["bpm", "metronome"],
 		example: "tempo: 145\n| D | A |",
 		ref: "§7",
 		expect: { bars: 2 },
@@ -372,6 +388,7 @@ export const ROWS: GuideRow[] = [
 		syntax: "feel:",
 		category: "directives",
 		meaning: "Where off-beats land: straight, swing, shuffle or swing 16.",
+		terms: ["groove"],
 		example: "feel: swing\n| C7 | F7 |",
 		ref: "§7.1",
 		expect: { bars: 2 },
