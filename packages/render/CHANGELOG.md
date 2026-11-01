@@ -6,6 +6,12 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- A little space (0.35 of the chord size) between consecutive bar rows,
+  and between bars that wrap onto another line on a narrow screen, so
+  one row's bar lines no longer run into the next row's.
+
 ## [0.3.0] - 2026-11-01
 
 Draws gradual tempo changes. Depends on `barmark` ^0.5.0, which reads
