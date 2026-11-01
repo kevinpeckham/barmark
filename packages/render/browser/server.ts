@@ -73,7 +73,15 @@ function elementPage(): Response {
 		</script></barmark-chart>
 		<barmark-chart id="remote" src="/example.chart.md" rehearsal-letters></barmark-chart>
 		<barmark-chart id="missing" src="/nope.chart.md"></barmark-chart>
-		${renderChart("## Verse\n| D | A |").replace("<barmark-chart>", '<barmark-chart id="server">')}`,
+		${renderChart("## Verse\n| D | A |").replace("<barmark-chart>", '<barmark-chart id="server">')}
+		<barmark-chart id="early"></barmark-chart>
+		<script>document.querySelector("#early").text = "## Early\\n| E |";</script>
+		<textarea id="editor"></textarea>
+		<barmark-chart id="typed"></barmark-chart>
+		<script>
+			const typed = document.querySelector("#typed");
+			document.querySelector("#editor").addEventListener("input", (e) => { typed.text = e.target.value; });
+		</script>`,
 	);
 }
 

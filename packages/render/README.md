@@ -43,12 +43,25 @@ themselves.
 </barmark-chart>
 ```
 
-The element renders from its `src` URL, or from a child
+The element renders from its `text` property, its `src` URL, or a child
 `<script type="text/barmark">` (indentation is removed), and renders again
-whenever either changes; it fetches a `src` once, and renders once
-however many attributes change together. A chart rendered on the server
-by `renderChart` keeps its music until it has a source of its own, and
-still follows `theme` and `bar-numbers`.
+whenever one changes; it fetches a `src` once, and renders once however
+many properties and attributes change together. A chart rendered on the
+server by `renderChart` keeps its music until it has a source of its own,
+and still follows `theme` and `bar-numbers`.
+
+For a live editor, set `text`:
+
+```js
+const chart = document.querySelector("barmark-chart");
+editor.addEventListener("input", () => { chart.text = editor.value; });
+```
+
+While `text` is a string it wins over `src` and the script child, and no
+fetch happens; set it to `null` to go back to them. Any string is safe:
+the chart escapes it, and problems show as diagnostics, never errors.
+There is no `text` attribute: chart text belongs in the property or the
+script child.
 
 The element registers the font itself, from the `fonts/` folder beside its
 own module. If your bundler moves that file, register it yourself before
@@ -64,6 +77,7 @@ the element loads, with `<style data-barmark-font>` holding
 | `rehearsalLetters` | `rehearsal-letters` (`rehearsalLetters`) | `false` | boxed A, B, C… on each section as played |
 | `diagnostics` | | `false` | list the chart's errors and warnings below it |
 | `fontUrl` | | none | emit Edwin's `@font-face` rule before the chart |
+| (the `text` argument) | (`text`) | `null` | the chart to draw; wins over `src` and the script child |
 
 ## Styling on purpose
 
