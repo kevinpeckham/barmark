@@ -1,6 +1,6 @@
 import { renderChart, renderChartUnwrapped, stylesheet } from "@barmark/render";
 
-const options = { theme: "dark" } as const;
+const options = { theme: "dark", rehearsalLetters: true } as const;
 
 /** The chart's markup, or an empty chart's: a keystroke can never break the page. */
 function safely(render: (text: string) => string, text: string): string {

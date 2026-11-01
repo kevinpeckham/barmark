@@ -213,6 +213,49 @@ test.describe("in a browser without setHTMLUnsafe", () => {
 	});
 });
 
+test("the chart wears the site's look: 15.5px chords, its colours and the Noto fonts", async ({
+	page,
+}) => {
+	await page.goto("/");
+	await page
+		.getByRole("textbox", { name: "barmark source of the chart" })
+		.fill("# Look\nkey: D\n## Verse\n| D | G |\nWords to sing\n### A note\ntime: 3/4\n| A |");
+	await expect.poll(() => chartText(page)).toContain("Words to sing");
+	await page.evaluate(() => document.fonts.ready);
+	const look = await page.evaluate(() => {
+		const root = document.querySelector("main barmark-chart")?.shadowRoot as ShadowRoot;
+		const style = (sel: string) => getComputedStyle(root.querySelector(sel) as Element);
+		return {
+			chord: style(".bm-chord").fontSize,
+			ink: style(".bm-chord").color,
+			muted: style(".bm-meta").color,
+			directive: style(".bm-directive").color,
+			note: style(".bm-note").color,
+			accent: style(".bm-chart").getPropertyValue("--bm-accent").trim(),
+			lyrics: style(".bm-text:not(.bm-note)").fontFamily,
+			noteFont: `${style(".bm-note").fontStyle} ${style(".bm-note").fontFamily}`,
+			labels: [".bm-meta", ".bm-directive", ".bm-heading"].map((s) => style(s).fontFamily),
+			letter: root.querySelector(".bm-rehearsal")?.textContent,
+			italic: document.fonts.check('italic 14px "Noto Serif"'),
+			upright: [...document.fonts].some(
+				(f) => f.family.replaceAll('"', "") === "Noto Serif" && f.style === "normal",
+			),
+		};
+	});
+	expect(look.chord).toBe("15.5px");
+	expect(look.ink).toBe("rgb(255, 255, 255)");
+	expect(look.muted).toBe(look.directive);
+	expect(look.muted).toContain("0.8)");
+	expect(look.note).toBe("rgb(236, 232, 224)");
+	expect(look.accent).toBe("#e8a56a");
+	expect(look.lyrics).toContain("Noto Serif");
+	expect(look.noteFont).toMatch(/^italic .*Noto Serif/);
+	for (const family of look.labels) expect(family).toContain("Noto Sans");
+	expect(look.letter).toBe("A");
+	expect(look.italic).toBe(true);
+	expect(look.upright).toBe(true);
+});
+
 test.describe("without JavaScript", () => {
 	test.use({ javaScriptEnabled: false });
 

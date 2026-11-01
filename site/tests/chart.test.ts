@@ -16,6 +16,9 @@ describe("chartHtml", () => {
 	test("charts use the dark palette", () => {
 		expect(chartHtml(demo)).toContain('data-theme="dark"');
 	});
+	test("sections are lettered A, B, C in play order", () => {
+		expect(chartHtml(demo)).toContain('<span class="bm-rehearsal"');
+	});
 	test("a 2,000-line paste renders quickly", () => {
 		const start = performance.now();
 		chartHtml("| D | G |\n".repeat(2000));
