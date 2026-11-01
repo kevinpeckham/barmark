@@ -248,3 +248,14 @@ then requests only the italic faces, and a browser with no upright face
 draws upright text in the italic. Two entries, one upright and one
 italic, give both faces (`site/uno.config.ts`). The site's browser suite
 now checks an upright Noto Serif exists as well as the italic.
+
+### UnoCSS gives up on web fonts after 2 seconds (2026-11-01, CI site job)
+
+`main`'s CI went red on the merge of the barmark 0.4.0 release PR, in
+the `site` job: the build stopped with "[unocss] Fetch web fonts
+timeout" while fetching Noto from fonts.bunny.net. A rerun passed.
+`presetWebFonts` fails the build when the font CSS takes longer than
+2 s (`timeouts.failure`, default 2000), and a CI runner sometimes
+takes longer. `site/uno.config.ts` now allows 30 s and warns at 5 s.
+Stem Shovel sidesteps the same problem with the `"none"` provider
+under tests.

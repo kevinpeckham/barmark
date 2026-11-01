@@ -16,6 +16,8 @@ export default defineConfig({
 		presetIcons({ warn: true }),
 		presetWebFonts({
 			provider: "bunny",
+			// The default gives up after 2 s, which failed CI's build once (FINDINGS.md).
+			timeouts: { warning: 5_000, failure: 30_000 },
 			fonts: {
 				mono: "Noto Mono",
 				serif: [

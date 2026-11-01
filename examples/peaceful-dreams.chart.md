@@ -1,4 +1,5 @@
 # Peaceful Dreams
+
 key: D, time: 4/4, tempo: 145
 
 ## Intro
@@ -14,17 +15,21 @@ key: D, time: 4/4, tempo: 145
 | A5 | G5(7) | D5 | % |
 
 ## Chorus
+
 | G5(7) | % | D5 | % |
 | C5 | G5(7) | D7sus4 | % |
 
 ## Verse
+
 ## Chorus
 
 ## Bridge
+
 | Bm7 | % | Em7 | % |
 | G7 | % | A7sus4 | % |
 
 ## Verse (Triads)
+
 | D | % | A | % |
 | G | % | D | % |
 | A | Bm | G | % |
@@ -34,8 +39,9 @@ key: D, time: 4/4, tempo: 145
 ## Verse
 
 ## Interlude
-| D7sus4 | % | % | % | x2
+| D7sus4 | % | % | % |
+| % | % | % | % |
 
 ## Outro
 | D5 | % | % | % | x5
-| ... |
+| D5 | ... |
