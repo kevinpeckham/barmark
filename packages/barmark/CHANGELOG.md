@@ -9,6 +9,14 @@ Releases follow the process in [RELEASING.md](RELEASING.md).
 
 ## [Unreleased]
 
+### Added
+
+- **A chart with no bar lines warns.** A chart with text but no bar line
+  at all warns once, at its first text line, instead of looking like an
+  empty file (issue #1). Grammar §9 and its decisions log.
+- **Escaped pipes warn, with the fix.** A text line such as `D \| A \| G`,
+  as some editors save a bar line, warns and suggests `| D | A | G |`.
+
 ## [0.2.0] - 2026-10-31
 
 Machine output for renderers and hosts (`form`, `parts`), the first

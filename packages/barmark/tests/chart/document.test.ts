@@ -67,7 +67,7 @@ describe("headings", () => {
 	});
 	test("deeper headings are text", () => expect(only("### Notes")?.kind).toBe("text"));
 	test("a second title is text with a warning", () => {
-		const doc = readDocument("# One\n# Two");
+		const doc = readDocument("# One\n# Two\n| D |");
 		expect(doc.title).toBe("One");
 		expect(doc.lines[1]?.kind).toBe("text");
 		expect(doc.diagnostics.map((d) => [d.line, d.severity])).toEqual([[2, "warning"]]);
@@ -84,8 +84,44 @@ describe("text-line warnings for old formats", () => {
 		expect(suggestionFor("groove: swing")).toBe("feel: swing");
 	});
 	test("prose is left alone", () =>
-		expect(readDocument("Watch for the cutoff").diagnostics).toEqual([]));
+		expect(readDocument("| D |\nWatch for the cutoff").diagnostics).toEqual([]));
+	test("escaped pipes", () => {
+		expect(suggestionFor("\\| D \\| A \\|")).toBe("| D | A |");
+		expect(suggestionFor("D \\| A \\| Bm \\| G")).toBe("| D | A | Bm | G |");
+	});
+	test("an escaped pipe in prose is left alone", () =>
+		expect(readDocument("| D |\nuse \\| for a bar line").diagnostics).toEqual([]));
 	test("text lines stay text", () => expect(only("D A Bm G")?.kind).toBe("text"));
+});
+
+describe("a chart with no bar lines", () => {
+	const LEGACY = "**I - Part 1**\nD \\| A \\| Bm \\| G\n**Structure** I II I";
+	const nothing = (text: string) =>
+		readDocument(text).diagnostics.filter((d) => d.message.startsWith("no bar lines"));
+	test("warns once, at the first line read as text", () => {
+		expect(nothing(LEGACY)).toEqual([
+			{
+				line: 1,
+				severity: "warning",
+				message: "no bar lines in this chart; a bar line starts with |",
+				token: "**I - Part 1**",
+			},
+		]);
+		expect(nothing("# Song\nkey: D\n\njust some words\nmore").map((d) => d.line)).toEqual([4]);
+	});
+	test("the escaped-pipe line still gets its own fix", () => {
+		expect(readDocument(LEGACY).diagnostics.map((d) => [d.line, d.suggestion])).toEqual([
+			[2, "| D | A | Bm | G |"],
+			[1, undefined],
+		]);
+	});
+	test("an empty chart, a title and directives, or one bar say nothing", () => {
+		for (const text of ["", "\n\n", "# Song\nkey: D, time: 3/4", "| D |\nwords"])
+			expect(nothing(text)).toEqual([]);
+	});
+	test("a bar line with an error counts: it already says what is wrong", () => {
+		expect(nothing("| Hm |\nwords")).toEqual([]);
+	});
 });
 
 describe("physical layout", () => {

@@ -452,7 +452,8 @@ applied twice.
 | warning | `x N` with N > 8 |
 | warning | note set with octaves out of ascending order; repeated note without octaves |
 | warning | a natural tone in parentheses that the chord already has (`C7(7)`) |
-| warning | a text line that looks like an old-style label (`Chorus:`, `[Chorus]`), an old bare chord line, or a misnamed directive (`meter:`, `bpm:`), with a suggested fix |
+| warning | a text line that looks like an old-style label (`Chorus:`, `[Chorus]`), an old bare chord line, a bar line written with escaped pipes (`D \\| A \\|`), or a misnamed directive (`meter:`, `bpm:`), with a suggested fix |
+| warning | a chart with text but no bar line at all (reported once, at the first text line), so a chart in another format never reads as empty |
 
 Every message gives the line number and quotes the offending token.
 
@@ -464,6 +465,7 @@ Every message gives the line number and quotes the offending token.
 | `\| G \| \| \|` (empty = hold) | `\| G \| / \| / \|` |
 | `/` alone = repeat bar | `%` (`/` alone now means hold) |
 | `D A Bm G` (bare line) | `\| D \| A \| Bm \| G \|` |
+| `D \\| A \\| Bm \\| G` (pipes escaped by an editor) | `\| D \| A \| Bm \| G \|` |
 | `[Chorus]`, `Chorus:` | `## Chorus` |
 | `Key: D · 4/4 · 145 bpm` in prose | `key: D, time: 4/4, tempo: 145` |
 | `N.C.` meaning silence | `--` (`N.C.` now means no harmony only) |
@@ -502,6 +504,7 @@ human to say whether the band was silent, and the structure line.
 | `%` after a one-bar meter | `%` repeats the previous bar exactly, its `[n/d]` included. |
 | Appendix A's provisional calls | Approved by Kevin: `C2`/`C4` are rejected with `Csus2` or `C(9)` suggested, and a note set's Harte label uses the bass as root when none is marked. |
 | Section form and chord parts | Machine output gains `form` on each section occurrence and `parts` on each chord (A.7), for renderers and hosts such as stem-shovel's section timeline. No change to what any chart means. |
+| Charts with no bar lines | Decided by Kevin (2026-11-01, issue #1): a chart with text but no bar line warns once, at its first text line, and a text line with escaped pipes (`\\|`) that reads as a bar line once unescaped warns with that bar line as its fix. A legacy stem-shovel chart had parsed to 0 bars and 0 warnings, like an empty file. Empty charts and charts of only a title and directives stay silent. |
 | Directives under a replay heading | Decided by Kevin: they take effect after the replay, because the heading stands for its bars (written order is play order). Before, the parser applied them to the replay. |
 
 ## Open questions

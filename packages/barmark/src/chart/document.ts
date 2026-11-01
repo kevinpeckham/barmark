@@ -62,10 +62,35 @@ function oldFormat(text: string, line: number): ChartDiagnostic | null {
 	const near = /^(\w+)\s*:\s*(.*)$/.exec(text);
 	const name = near?.[1] ? NEAR_DIRECTIVES[near[1].toLowerCase()] : undefined;
 	if (near && name) return warn(`not a directive; did you mean ${name}:?`, `${name}: ${near[2]}`);
+	const unescaped = escapedBarLine(text);
+	if (unescaped) return warn("escaped pipes; a bar line uses a plain |", unescaped);
 	const words = text.split(/\s+/);
 	if (words.length >= 2 && words.every((w) => parseChord(w).ok))
 		return warn("chords outside a bar line are text", `| ${words.join(" | ")} |`);
 	return null;
+}
+
+/** `D \| A \|` (an editor's escaping) as the bar line it would be, if it reads cleanly. */
+function escapedBarLine(text: string): string | null {
+	if (!text.includes("\\|")) return null;
+	let fixed = text.replaceAll("\\|", "|").trim();
+	if (!fixed.startsWith("|")) fixed = `| ${fixed}`;
+	if (!fixed.endsWith("|")) fixed = `${fixed} |`;
+	const read = parseBarLine(fixed, 0);
+	return read.bars && read.diagnostics.length === 0 ? fixed : null;
+}
+
+/** A chart whose text holds no bar line at all says so, rather than looking empty. */
+function noBarLines(lines: Line[]): ChartDiagnostic | null {
+	if (lines.some((l) => l.kind === "bars" || l.kind === "invalid")) return null;
+	const first = lines.find((l) => l.kind === "text");
+	if (first?.kind !== "text") return null;
+	return {
+		line: first.line,
+		severity: "warning",
+		message: "no bar lines in this chart; a bar line starts with |",
+		token: first.text,
+	};
 }
 
 /** Classify every line of a chart: title, sections, directives, bar lines and text. */
@@ -117,5 +142,7 @@ export function readDocument(text: string): {
 		if (old) diagnostics.push(old);
 		lines.push({ kind: "text", line, text: t });
 	});
+	const empty = noBarLines(lines);
+	if (empty) diagnostics.push(empty);
 	return { title, lines, diagnostics };
 }
