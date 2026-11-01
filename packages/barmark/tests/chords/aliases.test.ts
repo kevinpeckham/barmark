@@ -39,12 +39,42 @@ const A5: [string, string][] = [
 	["C7b9", "C7(b9)"],
 	["Cm7b5", "Cm7(b5)"],
 	["C7b9#11", "C7(b9,#11)"],
+	// Logic Pro's spellings: groups in a row are one list, and (5) on a bare root is the power chord.
+	["F#(5)(7)", "F#5(7)"],
+	["C7(b9)(#11)", "C7(b9,#11)"],
+	["C(9)(11)", "C(9,11)"],
+	["F#(5)", "F#5"],
+	["F#(5,7)", "F#5(7)"],
+	["F#(7,5)", "F#5(7)"],
+	["F#(5)(7)/A", "F#5(7)/A"],
 ];
 
 describe("Appendix A.5 aliases", () => {
 	for (const [input, out] of A5) {
 		test(`${input} → ${out}`, () => expect(canonical(input)).toBe(out));
 	}
+});
+
+describe("Logic's spellings mean what the canonical ones do", () => {
+	const same = (a: string, b: string) => {
+		const [x, y] = [parseChord(a), parseChord(b)];
+		expect(x.ok && y.ok && [x.value.pitches, x.value.harte]).toEqual(
+			y.ok && [y.value.pitches, y.value.harte],
+		);
+	};
+	test("F#(5)(7) is F#5(7): F# C# E", () => {
+		same("F#(5)(7)", "F#5(7)");
+		const r = parseChord("F#(5)(7)");
+		expect(r.ok && r.value.pitches).toEqual(["F#", "C#", "E"]);
+		expect(r.ok && r.value.harte).toBe("F#:5(b7)");
+	});
+	test("C7(b9)(#11) is C7(b9,#11)", () => same("C7(b9)(#11)", "C7(b9,#11)"));
+	test("(5) after a quality or an extension is still an error", () => {
+		for (const s of ["Cm(5)", "C7(5)", "Csus4(5)"]) expect(parseChord(s).ok).toBe(false);
+	});
+	test("an empty group is still an error", () => {
+		for (const s of ["C()", "C(9)()"]) expect(parseChord(s).ok).toBe(false);
+	});
 });
 
 describe("Unicode from phones and editors", () => {
