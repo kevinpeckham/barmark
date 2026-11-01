@@ -100,7 +100,9 @@ test.describe("the guide", () => {
 		page,
 	}) => {
 		await page.goto("/syntax?q=repeat&cat=repeats");
-		await expect.poll(() => visible(page)).toEqual(["repeat-line", "repeat-signs", "open-repeat"]);
+		await expect
+			.poll(() => visible(page))
+			.toEqual(["repeat-line", "repeat-signs", "open-repeat", "endings"]);
 		await page.getByRole("searchbox", { name: "Search" }).fill("");
 		await page.getByRole("button", { name: "All" }).click();
 		await expect(page).toHaveURL(/\/syntax$/);
