@@ -41,5 +41,12 @@ export type BlockItem =
 	| { kind: "error"; line: number; source: string; messages: string[] };
 
 export type CellModel =
-	| { kind: "slots"; meter: Meter | null; slots: Slot[]; cut: boolean }
+	| {
+			kind: "slots";
+			meter: Meter | null;
+			slots: Slot[];
+			cut: boolean;
+			/** Set on a bar played inside a rit. or accel. */
+			tempoChange?: "rit" | "accel";
+	  }
 	| { kind: "fermata" };

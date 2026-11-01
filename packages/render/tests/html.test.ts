@@ -253,6 +253,38 @@ describe("mid-chart directives", () => {
 		);
 	});
 
+	test("a gradual tempo change names its direction and target", () => {
+		expect(line("tempo: rit. to 90")?.textContent).toContain("Tempo rit. to ♩ = 90");
+		expect(line("tempo: accel.")?.textContent).toContain("Tempo accel.");
+		expect(line("tempo: rall.")?.textContent).toContain("Tempo rit.");
+	});
+
+	test("a tempo reads as itself, without a label", () => {
+		const text = doc(
+			renderChartUnwrapped("## A\n| G |\ntempo: rit.\n| G |\ntempo: a tempo\n| C |"),
+		).querySelectorAll(".bm-directive")[1]?.textContent;
+		expect(text).toContain("a tempo");
+		expect(text).not.toContain("Tempo a tempo");
+	});
+
+	test("bars inside a rit. or accel. are marked, and only those", () => {
+		const d = doc(
+			renderChartUnwrapped(
+				"tempo: 120\n## A\n| G | G |\ntempo: rit.\n| G | G |\ntempo: a tempo\n| C |",
+			),
+		);
+		expect(
+			[...d.querySelectorAll(".bm-bar")].map((b) => b.getAttribute("data-tempo-change")),
+		).toEqual([null, null, "rit", "rit", null]);
+	});
+
+	test("the header shows a change it opens with", () => {
+		const meta = doc(renderChartUnwrapped("tempo: accel. to 160\n## A\n| G |")).querySelector(
+			".bm-meta",
+		);
+		expect(meta?.textContent).toBe("accel. to ♩ = 160");
+	});
+
 	test("start with an arrow a screen reader skips", () => {
 		const arrow = line("time: 3/4")?.querySelector(".bm-change");
 		expect(arrow?.textContent).toBe("→");

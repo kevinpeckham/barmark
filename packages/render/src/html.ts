@@ -3,7 +3,7 @@
  * root, or the bare markup for pages that bring the stylesheet themselves.
  * Every string from the chart is escaped; every bar carries its spoken name.
  */
-import type { ChordRecord, Directives, Repeat, Slot } from "barmark";
+import type { ChordRecord, Directives, Repeat, Slot, TempoChange } from "barmark";
 import { glyphs, splitPitch, typesetChord } from "./chord.js";
 import { escapeHtml } from "./escape.js";
 import { fontFaceCss } from "./font.js";
@@ -74,16 +74,27 @@ function headerHtml(model: ChartModel): string {
 	return `<header class="bm-header">${title}${meta ? `<p class="bm-meta" part="meta">${meta}</p>` : ""}</header>`;
 }
 
+/** "rit. to ♩ = 90", "accel.", "a tempo". */
+function tempoChangeText(c: TempoChange): string {
+	if (c.kind === "a tempo") return c.kind;
+	return `${c.kind}.${c.to === null ? "" : ` to ♩ = ${c.to}`}`;
+}
+
 /** "D major · 4/4 · ♩ = 145 · swing", escaped; labelled, "Key D major · Time 4/4 · …". */
 function metaText(d: Directives, labelled = false): string {
 	return [
 		["Key", d.key ? `${glyphs(d.key.tonic)} ${d.key.mode}` : ""],
 		["Time", d.time ? `${d.time.n}/${d.time.d}` : ""],
 		["Tempo", d.tempo ? `♩ = ${d.tempo}` : ""],
+		// "a tempo" names itself; "Tempo a tempo" would stutter.
+		[
+			d.tempoChange?.kind === "a tempo" ? "" : "Tempo",
+			d.tempoChange ? tempoChangeText(d.tempoChange) : "",
+		],
 		["Feel", d.feel ?? ""],
 	]
 		.filter(([, value]) => value)
-		.map(([label, value]) => escapeHtml(labelled ? `${label} ${value}` : (value ?? "")))
+		.map(([label, value]) => escapeHtml(labelled && label ? `${label} ${value}` : (value ?? "")))
 		.join(" · ");
 }
 
@@ -202,7 +213,8 @@ function cellHtml(cell: CellModel, barNumber: number | null, marks: string): str
 		? `<span class="bm-meter"><span>${cell.meter.n}</span><span>${cell.meter.d}</span></span>`
 		: "";
 	const cut = cell.cut ? `<span class="bm-cut">cut</span>` : "";
-	return `<div class="bm-bar" part="bar"${cell.cut ? " data-cut" : ""}${marks}>${spoken}<span class="bm-bar-body" aria-hidden="true">${meter}${cell.slots.map(slotHtml).join("")}${cut}</span></div>`;
+	const change = cell.tempoChange ? ` data-tempo-change="${cell.tempoChange}"` : "";
+	return `<div class="bm-bar" part="bar"${cell.cut ? " data-cut" : ""}${change}${marks}>${spoken}<span class="bm-bar-body" aria-hidden="true">${meter}${cell.slots.map(slotHtml).join("")}${cut}</span></div>`;
 }
 
 const FERMATA = `<svg class="bm-fermata-glyph" viewBox="0 0 24 14" width="1.4em" height="0.8em"><path d="M2 13 A10 10 0 0 1 22 13" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="11" r="1.8" fill="currentColor"/></svg>`;

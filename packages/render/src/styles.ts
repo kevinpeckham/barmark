@@ -123,6 +123,7 @@ const css = `
 .bm-tuplet::after{border-left:none;margin-left:.3em}
 .bm-meter{display:inline-flex;flex-direction:column;align-items:center;align-self:center;font:700 ${em(SIZES.meter)}/.95 ${SANS};color:var(--bm-muted)}
 .bm-fermata-glyph{display:block;color:var(--bm-ink)}
+.bm-bar[data-tempo-change]::before{content:"";position:absolute;inset:.15em 0 auto;border-top:.08em dashed var(--barmark-directive,var(--bm-muted))}
 .bm-bar[data-cut]{outline:.08em dashed var(--bm-muted);outline-offset:-.25em}
 .bm-cut{position:absolute;top:.3em;right:.45em;font:${em(SIZES.cut)}/1 ${SANS};color:var(--bm-muted)}
 .bm-text{grid-column:1/-1;margin:.2em 0 .5em ${at(SIZES.text, GUTTER)};font-family:${TEXT};font-size:${em(SIZES.text)}}
