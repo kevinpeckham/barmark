@@ -90,6 +90,17 @@ package index, inside the package.
 
 ## Tooling
 
+### A stacked PR merged after its base lands on the base branch, not main (2026-11-01, #33/#34)
+
+- **The symptom.** #34 (numerals) was opened against #33's branch
+  `feat/transpose`. Both showed "merged", but `main` had only #33.
+- **The cause.** GitHub retargets a stacked PR to `main` only when its
+  base branch is deleted. #33 merged without deleting `feat/transpose`,
+  so #34 stayed based on it and merged into that branch.
+- **The fix.** The release PR (#35) carried #34's commit to `main`. When
+  stacking, either delete the base branch when merging the first PR, or
+  check that the second PR shows `main` as its base before merging it.
+
 ### svelte-check cannot run on TypeScript 7 (2026-10-31, site scaffold)
 
 With `typescript` 7.0.2 (the native compiler the root uses), `svelte-kit
