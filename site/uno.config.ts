@@ -1,20 +1,8 @@
-import { fontFaceCss } from "@barmark/render";
 import extractorSvelte from "@unocss/extractor-svelte";
 import presetIcons from "@unocss/preset-icons";
-import presetWebFonts, { type Provider } from "@unocss/preset-web-fonts";
+import presetWebFonts from "@unocss/preset-web-fonts";
 import presetWind4 from "@unocss/preset-wind4";
 import { defineConfig, transformerDirectives, transformerVariantGroup } from "unocss";
-
-/**
- * Edwin ships inside @barmark/render, not on a font service, so it gets a
- * provider of its own: the package's @font-face rule, pointing at the copy
- * scripts/fonts.ts puts in static/fonts.
- */
-const edwin = {
-	name: "barmark-edwin" as Provider["name"],
-	getPreflight: () => fontFaceCss("/fonts/Edwin-Roman.otf"),
-	getFontName: (font) => `"${font.name}"`,
-} satisfies Provider;
 
 /**
  * Mirrors Stem Shovel's uno.config (~/projects/stem-shovel): wind4 with its
@@ -35,7 +23,6 @@ export default defineConfig({
 					{ name: "Noto Serif", weights: ["400"], italic: true },
 				],
 				sans: "Noto Sans:400,600,700",
-				chart: { name: "barmark Edwin", provider: edwin },
 			},
 		}),
 	],

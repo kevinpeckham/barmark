@@ -1,6 +1,6 @@
 <script lang="ts">
 import { onMount, untrack } from "svelte";
-import { chartHtml, showChart } from "#lib/chart.js";
+import { chartHtml } from "#lib/chart.js";
 
 let { text, label }: { text: string; label?: string } = $props();
 
@@ -11,17 +11,19 @@ const PAUSE_MS = 250;
 const MAX = 50_000;
 const tooLong = $derived(text.length > MAX);
 
-// The prerendered chart: computed once, so Svelte never rewrites it.
-// A declarative shadow root attaches only when HTML is parsed, which is
-// why later renders go through showChart, not {@html} or innerHTML.
+// The prerendered chart: computed once, so Svelte never rewrites it. From
+// then on the <barmark-chart> element draws, from its text property.
 let rendered = untrack(() => text);
 const initial = chartHtml(rendered);
 let host: HTMLDivElement;
 
-// After navigating inside the site, Svelte inserts {@html} without the
-// parser, so the shadow root never attached: render it properly.
+const chart = () => host.querySelector("barmark-chart") as HTMLElement & { text: string | null };
+
 onMount(() => {
-	if (!host.querySelector("barmark-chart")?.shadowRoot) showChart(host, rendered);
+	void import("@barmark/render/element");
+	// After navigating inside the site, Svelte inserts {@html} without the
+	// parser, so the declarative shadow root never attached: give the element its text.
+	if (!chart().shadowRoot) chart().text = rendered;
 });
 
 $effect(() => {
@@ -29,7 +31,7 @@ $effect(() => {
 	const next = text;
 	const render = () => {
 		rendered = next;
-		showChart(host, next);
+		chart().text = next;
 	};
 	if (next.length < LONG) return render();
 	const timer = setTimeout(render, PAUSE_MS);

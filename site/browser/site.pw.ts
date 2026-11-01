@@ -256,6 +256,45 @@ test("the chart wears the site's look: 15.5px chords, its colours and the Noto f
 	expect(look.upright).toBe(true);
 });
 
+test("the editor drives one <barmark-chart> element through its text property", async ({
+	page,
+}) => {
+	const errors = watchErrors(page);
+	await page.goto("/");
+	await page.waitForFunction(() => customElements.get("barmark-chart"));
+	const chart = await page.evaluateHandle(() => document.querySelector("main barmark-chart"));
+	await page
+		.getByRole("textbox", { name: "barmark source of the chart" })
+		.fill("## Bridge\n| Ebm7 |");
+	await expect.poll(() => chartText(page)).toContain("E♭m");
+	const same = await chart.evaluate((el) => ({
+		connected: el?.isConnected,
+		text: (el as HTMLElement & { text: string | null }).text,
+		theme: el?.shadowRoot?.querySelector(".bm-chart")?.getAttribute("data-theme"),
+	}));
+	expect(same).toEqual({ connected: true, text: "## Bridge\n| Ebm7 |", theme: "dark" });
+	expect(errors).toEqual([]);
+});
+
+test("Edwin is registered once, from one file", async ({ page }) => {
+	const files = new Set<string>();
+	page.on("request", (r) => {
+		if (/Edwin/i.test(r.url())) files.add(new URL(r.url()).pathname);
+	});
+	await page.goto("/");
+	await page.waitForFunction(() => customElements.get("barmark-chart"));
+	await page.evaluate(() => document.fonts.ready);
+	const faces = await page.evaluate(
+		() =>
+			[...document.styleSheets]
+				.flatMap((sheet) => [...sheet.cssRules])
+				.filter((r) => r instanceof CSSFontFaceRule && r.style.fontFamily.includes("barmark Edwin"))
+				.length,
+	);
+	expect(faces).toBe(1);
+	expect([...files]).toEqual(["/fonts/Edwin-Roman.otf"]);
+});
+
 test.describe("without JavaScript", () => {
 	test.use({ javaScriptEnabled: false });
 
