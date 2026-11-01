@@ -142,6 +142,12 @@ parse then print should round-trip).
 1. `barmark` (npm): parser → AST (bars, sections, stated values,
    warnings) + canonical printer.
 2. `@barmark/render`: the grid renderer (HTML + text).
+   - Next: a `text` property on the `<barmark-chart>` element, so a page
+     can hand it new chart text directly
+     ([brief](docs/briefs/2026-11-01-element-text-property.md)); then
+     barmark.dev's editor and guide switch from `renderChart` plus
+     `setHTMLUnsafe` to the element, so the site shows off the component
+     it ships.
 3. `@barmark/cli`: validate, render, canonicalize `.chart.md` files.
 4. Later: the Nashville converter; a conformance-test runner the
    bench can point at any implementation.

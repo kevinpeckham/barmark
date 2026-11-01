@@ -1,0 +1,40 @@
+{
+	"name": "barmark-site",
+	"private": true,
+	"type": "module",
+	"description": "barmark.dev: the home page and syntax guide for barmark.",
+	"imports": {
+		"#lib/*": "./src/lib/*"
+	},
+	"scripts": {
+		"fonts": "bun scripts/fonts.ts",
+		"dev": "bun run fonts && vite dev",
+		"build": "bun run fonts && vite build",
+		"preview": "vite preview",
+		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
+		"test": "bun test tests",
+		"test:browser": "playwright test -c browser"
+	},
+	"dependencies": {
+		"barmark": "0.2.0",
+		"@barmark/render": "0.1.0"
+	},
+	"devDependencies": {
+		"@iconify-json/ph": "1.2.2",
+		"@playwright/test": "1.64.1",
+		"@sveltejs/adapter-vercel": "7.0.2",
+		"@sveltejs/kit": "3.1.1",
+		"@sveltejs/vite-plugin-svelte": "7.3.1",
+		"@types/bun": "1.4.4",
+		"@unocss/extractor-svelte": "66.12.0",
+		"@unocss/preset-icons": "66.12.0",
+		"@unocss/preset-web-fonts": "66.12.0",
+		"@unocss/preset-wind4": "66.12.0",
+		"linkedom": "0.18.14",
+		"svelte": "5.57.3",
+		"svelte-check": "4.7.7",
+		"typescript": "6.0.3",
+		"unocss": "66.12.0",
+		"vite": "8.3.5"
+	}
+}

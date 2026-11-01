@@ -1,0 +1,6 @@
+node_modules
+.svelte-kit
+.vercel
+/static/fonts
+test-results
+playwright-report

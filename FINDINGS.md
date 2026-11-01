@@ -90,6 +90,23 @@ package index, inside the package.
 
 ## Tooling
 
+### svelte-check cannot run on TypeScript 7 (2026-10-31, site scaffold)
+
+With `typescript` 7.0.2 (the native compiler the root uses), `svelte-kit
+sync` fails with "Cannot read properties of undefined (reading
+'readFile')": TypeScript 7's JavaScript API has no `ts.sys`, which Kit's
+tsconfig handling reads. `site/` pins `typescript` 6.0.3 for
+`svelte-check` alone; the root stays on 7. Retry 7 when Kit or
+svelte-check announce support.
+
+### Biome reads only the script of a `.svelte` file (2026-10-31, site scaffold)
+
+Biome 2.6 formats and lints the `<script>` block of a Svelte component but
+not its markup, so a prop used only in the template (`children` in
+`+layout.svelte`) is "unused". `biome.json` has Biome's documented Svelte
+override (unused variables and imports, `useConst`, `useImportType` off for
+`**/*.svelte`); `svelte-check` covers the markup.
+
 ### npm can take minutes to serve a version it has accepted (2026-10-31, 0.1.0 release)
 
 The release workflow logged `+ barmark@0.1.0` and its provenance, yet

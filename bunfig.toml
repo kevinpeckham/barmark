@@ -1,0 +1,4 @@
+# The root `bun test` runs the packages only: site/ is its own project with its own
+# dependencies (cd site && bun test).
+[test]
+root = "./packages"

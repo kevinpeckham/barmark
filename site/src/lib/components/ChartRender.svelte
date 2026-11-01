@@ -1,0 +1,54 @@
+<script lang="ts">
+import { onMount, untrack } from "svelte";
+import { chartHtml, showChart } from "#lib/chart.js";
+
+let { text, label }: { text: string; label?: string } = $props();
+
+/** Charts longer than this re-render once typing pauses, not on every key. */
+const LONG = 10_000;
+const PAUSE_MS = 250;
+/** Past this a paste would freeze the tab for seconds: the text stays, the preview stops. */
+const MAX = 50_000;
+const tooLong = $derived(text.length > MAX);
+
+// The prerendered chart: computed once, so Svelte never rewrites it.
+// A declarative shadow root attaches only when HTML is parsed, which is
+// why later renders go through showChart, not {@html} or innerHTML.
+let rendered = untrack(() => text);
+const initial = chartHtml(rendered);
+let host: HTMLDivElement;
+
+// After navigating inside the site, Svelte inserts {@html} without the
+// parser, so the shadow root never attached: render it properly.
+onMount(() => {
+	if (!host.querySelector("barmark-chart")?.shadowRoot) showChart(host, rendered);
+});
+
+$effect(() => {
+	if (tooLong || text === rendered) return;
+	const next = text;
+	const render = () => {
+		rendered = next;
+		showChart(host, next);
+	};
+	if (next.length < LONG) return render();
+	const timer = setTimeout(render, PAUSE_MS);
+	return () => clearTimeout(timer);
+});
+</script>
+
+{#if tooLong}
+	<p class="text-sm opacity-80" role="status">
+		Too long to preview here: {text.length.toLocaleString("en-US")} characters (the limit is
+		{MAX.toLocaleString("en-US")}).
+	</p>
+{/if}
+<div
+	bind:this={host}
+	hidden={tooLong}
+	class="[--barmark-size:1rem] [--barmark-paper:transparent] min-w-0"
+	role={label ? "region" : undefined}
+	aria-label={label}
+>
+	{@html initial}
+</div>
