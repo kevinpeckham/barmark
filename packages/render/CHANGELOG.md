@@ -6,13 +6,18 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-11-01
+
+Draws gradual tempo changes. Depends on `barmark` ^0.5.0, which reads
+them.
+
 ### Added
 
 - Gradual tempo changes. A `tempo: rit. to 90` line reads
   "→ Tempo rit. to ♩ = 90" (`a tempo` reads as itself), and every bar
   played inside a rit. or accel. has a dashed line along its top, in
   the directive colour, with `data-tempo-change="rit"` or `"accel"`.
-  Needs barmark's `tempoChange` (the next barmark release).
+  Uses barmark 0.5.0's `tempoChange`.
 
 ## [0.2.1] - 2026-11-01
 
@@ -125,7 +130,8 @@ that needs no script or as the `<barmark-chart>` web component. Requires
   zoom without sideways scrolling, the element renders and re-renders, and
   a screen reader hears "bar 9: D". Run them with `bun run test:browser`.
 
-[Unreleased]: https://github.com/kevinpeckham/barmark/compare/render-v0.2.1...HEAD
+[Unreleased]: https://github.com/kevinpeckham/barmark/compare/render-v0.3.0...HEAD
+[0.3.0]: https://github.com/kevinpeckham/barmark/compare/render-v0.2.1...render-v0.3.0
 [0.2.1]: https://github.com/kevinpeckham/barmark/compare/render-v0.2.0...render-v0.2.1
 [0.2.0]: https://github.com/kevinpeckham/barmark/compare/render-v0.1.0...render-v0.2.0
 [0.1.0]: https://github.com/kevinpeckham/barmark/releases/tag/render-v0.1.0
