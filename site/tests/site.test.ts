@@ -4,6 +4,10 @@ import { parseChart } from "barmark";
 import { HEADLINE, LINKS, TAGLINE_AFTER, TAGLINE_BEFORE, TAGLINE_LINK } from "../src/lib/site.ts";
 
 const demo = await Bun.file(join(import.meta.dir, "../src/lib/demo.chart.md")).text();
+/** Peaceful Dreams as Stem Shovel has it, kept in the repository's examples. */
+const official = await Bun.file(
+	join(import.meta.dir, "../../examples/peaceful-dreams.chart.md"),
+).text();
 
 describe("site copy", () => {
 	test("the headline is the project in one sentence", () => {
@@ -26,7 +30,10 @@ describe("the demo chart", () => {
 	test("parses cleanly", () => {
 		expect(chart.diagnostics).toEqual([]);
 	});
-	test("is Peaceful Dreams, opening to outro", () => {
+	test("is Peaceful Dreams exactly as the repository's example has it", () => {
+		expect(demo).toBe(official);
+	});
+	test("is the whole song, opening to outro", () => {
 		expect(chart.title).toBe("Peaceful Dreams");
 		expect(chart.sections.map((s) => s.name)).toEqual([
 			"Intro",
@@ -34,6 +41,10 @@ describe("the demo chart", () => {
 			"Chorus",
 			"Verse",
 			"Chorus",
+			"Bridge",
+			"Verse (Triads)",
+			"Verse",
+			"Interlude",
 			"Outro",
 		]);
 	});
