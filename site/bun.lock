@@ -6,7 +6,7 @@
       "name": "barmark-site",
       "dependencies": {
         "@barmark/render": "0.2.1",
-        "barmark": "0.3.0",
+        "barmark": "0.4.0",
       },
       "devDependencies": {
         "@iconify-json/ph": "1.2.2",
@@ -219,7 +219,7 @@
 
     "balanced-match": ["balanced-match@4.0.4", "", {}, "sha512-BLrgEcRTwX2o6gGxGOCNyMvGSp35YofuYzw9h1IMTRmKqttAZZVU67bdb9Pr2vUHA8+j3i2tJfjO6C6+4myGTA=="],
 
-    "barmark": ["barmark@0.3.0", "", {}, "sha512-kUVY+4vBuq6p9FP5OQGSSqmWwRdDALhzB4HasfMtJcwfD9TMrIn/ApfecwMdkSYJ4gH0PjTHw/DSjxq0dasvjA=="],
+    "barmark": ["barmark@0.4.0", "", {}, "sha512-uvcpLn54X/ZxPnaSHBECKKN1P/vMBpgVyR7o3eAo9Gq9B6ZuqTCctMDKnkiHdaHivpFmxwZUsaypel8Mq/HJnQ=="],
 
     "bindings": ["bindings@1.5.0", "", { "dependencies": { "file-uri-to-path": "1.0.0" } }, "sha512-p2q/t/mhvuOj/UeLlV6566GD/guowlr0hHxClI0W9m7MWYkL1F0hLo+0Aexs9HSPCtR1SXQ0TD3MMKrXZajbiQ=="],
 
@@ -454,6 +454,8 @@
     "yallist": ["yallist@5.0.0", "", {}, "sha512-YgvUTfwqyc7UXVMrB+SImsVYSmTS8X/tSrtdNZMImM+n7+QTriRXyXim0mBrTXNeqzVF0KWGgHPeiyViFFrNDw=="],
 
     "zimmerframe": ["zimmerframe@1.1.5", "", {}, "sha512-msJxIvYDYcoNL+PJsu+7qmpDWsYmAxTY+2TNYXXF0hzBzBk0BMecOqDOG/EckUoKCuKwObfbugIl8QpqHDXeFA=="],
+
+    "@barmark/render/barmark": ["barmark@0.3.0", "", {}, "sha512-kUVY+4vBuq6p9FP5OQGSSqmWwRdDALhzB4HasfMtJcwfD9TMrIn/ApfecwMdkSYJ4gH0PjTHw/DSjxq0dasvjA=="],
 
     "@types/node/undici-types": ["undici-types@8.9.0", "", {}, "sha512-KTDyRTYX8sWmKXAikPHHSyc63CRPETMctyjKFupcC6OBLXT3xsN0e9aF7m+mIXutFWpUXuedtowG7iLOzp0kQg=="],
 
