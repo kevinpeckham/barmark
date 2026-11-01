@@ -270,3 +270,15 @@ than falling back to a default colour. The linkedom tests check
 markup, not computed style, so only a browser can catch it: the
 Playwright test "bars inside a rit. carry a dashed line in the
 directive colour" now does.
+
+### A prerendered control used before the page's script runs is lost (2026-11-01, site CI)
+
+PR #32's `site` job failed in "sorting moves rows and keeps every
+example rendered": the test chose a sort and the URL never gained
+`sort=name`. It passed locally. The guide is prerendered, so its search
+box and sort select exist and accept input before SvelteKit hydrates;
+a change made in that window never reaches the page's state, and
+hydration doesn't replay it. More guide rows made hydration slower on
+the CI runner, which opened the window. Delaying the site's scripts by
+3 s reproduces it. The guide's interaction tests now repeat the action
+until the URL follows (`untilUrl` in `site/browser/site.pw.ts`).

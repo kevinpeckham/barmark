@@ -212,6 +212,16 @@ describe("guide query", () => {
 			["half diminished", "altered"],
 			["pre-chorus", "section"],
 			["tag", "section-repeat"],
+			// Things barmark doesn't write: the guide says what to write instead
+			["capo", "capo"],
+			["transpose", "transpose"],
+			["ChordPro", "inline-chords"],
+			["chords over lyrics", "inline-chords"],
+			["Nashville", "numerals"],
+			["roman numerals", "numerals"],
+			["crescendo", "dynamics"],
+			["accent", "dynamics"],
+			["second ending", "endings"],
 		])
 			expect(found(term)).toContain(id);
 	});
