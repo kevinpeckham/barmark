@@ -360,6 +360,47 @@ test.describe("layout", () => {
 	});
 });
 
+test.describe("triplet brackets", () => {
+	test("leave a gap for the number instead of painting over the line, so any paper works", async ({
+		page,
+	}) => {
+		await page.goto(
+			`/chart?chart=triplets&css=${encodeURIComponent("barmark-chart{--barmark-paper:rgba(255,0,0,.3)}")}`,
+		);
+		const marks = await inChart(page, (root) =>
+			[...root.querySelectorAll(".bm-group")].map((group) => {
+				const tuplet = group.querySelector(".bm-tuplet") as HTMLElement;
+				const range = document.createRange();
+				range.selectNodeContents(tuplet);
+				const digits = [...range.getClientRects()].find((r) => r.width > 0) as DOMRect;
+				const box = tuplet.getBoundingClientRect();
+				const span = group.getBoundingClientRect();
+				const half = (which: "::before" | "::after") =>
+					Number.parseFloat(getComputedStyle(tuplet, which).width);
+				return {
+					text: tuplet.textContent,
+					background: getComputedStyle(tuplet).backgroundColor,
+					spans: Math.abs(box.left - span.left) < 1 && Math.abs(box.right - span.right) < 1,
+					clear:
+						half("::before") > 0 &&
+						half("::after") > 0 &&
+						box.left + half("::before") <= digits.left &&
+						box.right - half("::after") >= digits.right,
+					oldLine: getComputedStyle(group, "::before").content,
+				};
+			}),
+		);
+		expect(marks.map((m) => m.text)).toEqual(["3", "12"]);
+		for (const m of marks)
+			expect(m).toMatchObject({
+				background: "rgba(0, 0, 0, 0)",
+				spans: true,
+				clear: true,
+				oldLine: "none",
+			});
+	});
+});
+
 test.describe("the element's text property", () => {
 	const heading = (page: Page, id: string) => page.locator(`#${id} .bm-heading`).first();
 

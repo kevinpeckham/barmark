@@ -8,6 +8,10 @@ package uses [semantic versioning](https://semver.org/).
 
 ### Fixed
 
+- **Triplet brackets work on any paper.** The bracket is drawn either
+  side of its number, leaving a gap, instead of under it with the number
+  painted over in the paper colour. A see-through `--barmark-paper` used
+  to show the number in a box.
 - **A chart from `renderChart` keeps its options when the element
   loads.** The `<barmark-chart>` it wraps the chart in now carries them as
   attributes (`theme`, `bar-numbers="off"`, `rehearsal-letters`). Before,

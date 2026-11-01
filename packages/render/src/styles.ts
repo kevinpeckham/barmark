@@ -34,6 +34,12 @@ const SIZES = {
 const GUTTER = 2.06;
 export const MIN_BAR = 4.68;
 const HEADING_GAP = 0.645;
+/**
+ * The triplet bracket, in chord sizes: its line sits this far below the top
+ * of the number, with hooks this long, drawn either side of the number so
+ * nothing is painted over it and any paper shows through.
+ */
+const BRACKET = { top: 0.6, hook: 0.3, line: 0.06 };
 /** The single note's ring, in its own em: padding, and the border it spills past. */
 const RING = { y: 0.21, x: 0.5, border: 0.07 };
 
@@ -111,8 +117,10 @@ const css = `
 .bm-notes{display:inline-flex;gap:.3em;align-items:baseline}
 .bm-notes u{text-decoration-thickness:.08em;text-underline-offset:.15em}
 .bm-group{position:relative;display:inline-flex;gap:.45em;align-items:baseline}
-.bm-group::before{content:"";position:absolute;left:0;right:0;top:-.45em;height:.3em;border:.06em solid var(--bm-muted);border-bottom:none}
-.bm-tuplet{position:absolute;left:50%;top:-1.25em;transform:translateX(-50%);font:italic 600 ${em(SIZES.tuplet)}/1 Georgia,serif;color:var(--bm-muted);background:var(--bm-paper);padding:0 .3em}
+.bm-tuplet{position:absolute;left:0;right:0;top:-1.25em;display:flex;justify-content:center;font:italic 600 ${em(SIZES.tuplet)}/1 Georgia,serif;color:var(--bm-muted)}
+.bm-tuplet::before,.bm-tuplet::after{content:"";flex:1;align-self:flex-start;margin-top:${at(SIZES.tuplet, BRACKET.top)};height:${at(SIZES.tuplet, BRACKET.hook)};border:${at(SIZES.tuplet, BRACKET.line)} solid var(--bm-muted);border-bottom:none}
+.bm-tuplet::before{border-right:none;margin-right:.3em}
+.bm-tuplet::after{border-left:none;margin-left:.3em}
 .bm-meter{display:inline-flex;flex-direction:column;align-items:center;align-self:center;font:700 ${em(SIZES.meter)}/.95 ${SANS};color:var(--bm-muted)}
 .bm-fermata-glyph{display:block;color:var(--bm-ink)}
 .bm-bar[data-cut]{outline:.08em dashed var(--bm-muted);outline-offset:-.25em}
@@ -125,7 +133,7 @@ const css = `
 .bm-diagnostics .bm-error{color:var(--bm-accent)}
 @media (forced-colors:active){
 	.bm-bar,.bm-row>div.bm-bar:first-of-type,.bm-row>div.bm-bar[data-repeat-start],.bm-row>div.bm-bar[data-repeat-end]{border-color:CanvasText}
-	.bm-ring,.bm-group::before{border-color:CanvasText}
+	.bm-ring,.bm-tuplet::before,.bm-tuplet::after{border-color:CanvasText}
 	.bm-silence{background:CanvasText;forced-color-adjust:none}
 	.bm-bar[data-cut]{outline-color:CanvasText}
 }
