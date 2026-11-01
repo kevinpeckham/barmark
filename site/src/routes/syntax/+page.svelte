@@ -69,7 +69,7 @@ const description =
 
 	<p class="text-sm opacity-80">
 		The full rules are in the
-		<a href={LINKS.grammar} rel="noopener" class="underline decoration-accent/60 underline-offset-3 hover-text-accent"
+		<a href={LINKS.grammar} class="underline decoration-accent/60 underline-offset-3 hover-text-accent"
 			>barmark grammar</a
 		>, which this guide follows.
 	</p>

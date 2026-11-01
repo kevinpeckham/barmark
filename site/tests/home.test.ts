@@ -48,3 +48,12 @@ describe("the home page, prerendered", () => {
 		expect(styled.map((el) => el.outerHTML.slice(0, 80))).toEqual([]);
 	});
 });
+
+describe("links", () => {
+	test("no rel=noopener on links that open in the same tab", () => {
+		for (const path of ["index.html", "syntax.html"]) {
+			const stray = [...page(path).querySelectorAll('a[rel~="noopener"]:not([target])')];
+			expect(stray.map((a) => a.getAttribute("href"))).toEqual([]);
+		}
+	});
+});

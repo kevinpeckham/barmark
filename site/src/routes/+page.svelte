@@ -27,7 +27,6 @@ const description =
 		<p class="max-w-prose opacity-80">
 			{TAGLINE_BEFORE}<a
 				href={LINKS.stemShovel}
-				rel="noopener"
 				class="underline decoration-accent/60 underline-offset-3 hover-text-accent">{TAGLINE_LINK}</a
 			>{TAGLINE_AFTER}
 		</p>
@@ -35,11 +34,11 @@ const description =
 
 	<div class="flex flex-wrap items-center gap-3">
 		<Button href="/syntax" variant="accent">Read the syntax</Button>
-		<Button href={LINKS.github} external>
+		<Button href={LINKS.github}>
 			<span class="i-ph-github-logo" aria-hidden="true"></span>GitHub
 		</Button>
-		<Button href={LINKS.npm} external><code class="font-mono text-sm">npm i barmark</code></Button>
-		<Button href={LINKS.article} external>Why we built it</Button>
+		<Button href={LINKS.npm}><code class="font-mono text-sm">npm i barmark</code></Button>
+		<Button href={LINKS.article}>Why we built it</Button>
 	</div>
 
 	<div class="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)] gap-4">
