@@ -19,6 +19,8 @@ key: D, time: 4/4, tempo: 145
   printer and Harte-label conversion.
 - **[`@barmark/render`](packages/render/)** renders a chart
   as a clean bar grid, as HTML or as a `<barmark-chart>` web component.
+- **[`@barmark/cli`](packages/cli/)**: the `barmark` command, to check,
+  format, render and transpose `.chart.md` files in a terminal or in CI.
 - **[barmark.dev](https://www.barmark.dev)** ([site/](site/)): try it live, and
   the syntax guide.
 

@@ -14,3 +14,47 @@ Options:
 
 Exit codes: 0 done, 1 the charts have problems, 2 usage.
 `;
+
+/** Each command's own help: `barmark <command> --help`. */
+export const COMMAND_HELP: Record<string, string> = {
+	check: `Usage: barmark check <paths…> [options]
+
+Report each chart's errors and warnings. Folders mean every *.chart.md
+inside them; - reads stdin.
+
+  --strict                 Warnings fail too (exit 1)
+  --format text|github|json
+                           text: path:line: severity: message (default)
+                           github: annotations on a pull request
+                           json: an array of { file, diagnostics }
+`,
+	format: `Usage: barmark format <paths…> [options]
+
+Charts in standard form. With one chart and no option, prints it.
+
+  --write                  Rewrite each chart that changes, and list it
+  --check                  List each chart that would change; exit 1 if any
+`,
+	render: `Usage: barmark render <file> [options]
+
+A standalone HTML page of the chart, with the Edwin font embedded.
+
+  --out <file>             Write to a file instead of stdout
+  --theme auto|light|dark  Colors (default auto: follows the reader's system)
+  --numerals nashville|roman
+                           Show chords as degrees of the key
+  --no-bar-numbers         Hide bar numbers
+  --rehearsal-letters      Letter each section A, B, C…
+  --no-wrap                Keep each row on one line
+  --diagnostics            List the chart's problems below it
+  --font-url <url>         Link the font instead of embedding it
+`,
+	transpose: `Usage: barmark transpose <file> (--to <key> | --semitones <n>) [options]
+
+The chart in another key. Problems go to stderr.
+
+  --to <key>               The new key, e.g. E or Bb
+  --semitones <n>          Move by a whole number of semitones, e.g. -2
+  --out <file>             Write to a file instead of stdout
+`,
+};

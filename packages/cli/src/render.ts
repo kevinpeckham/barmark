@@ -13,7 +13,7 @@ const NUMERALS = ["nashville", "roman"] as const;
 const escapeHtml = (text: string) =>
 	text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
-export function htmlDocument(title: string, body: string): string {
+function htmlDocument(title: string, body: string): string {
 	return `<!doctype html>
 <html lang="en">
 <head>

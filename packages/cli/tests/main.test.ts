@@ -43,4 +43,18 @@ describe("main", () => {
 		expect(io.err()).toBe("barmark: boom\n");
 		expect(io.err()).not.toContain("    at ");
 	});
+	test("<command> --help prints that command's flags, exit 0", async () => {
+		const flags: Record<string, string[]> = {
+			check: ["--strict", "--format"],
+			format: ["--write", "--check"],
+			render: ["--out", "--theme", "--numerals", "--font-url"],
+			transpose: ["--to", "--semitones", "--out"],
+		};
+		for (const [command, names] of Object.entries(flags)) {
+			const io = fakeIo();
+			expect(await main([command, "--help"], io)).toBe(0);
+			expect(io.out()).toContain(`Usage: barmark ${command}`);
+			for (const name of names) expect(io.out()).toContain(name);
+		}
+	});
 });

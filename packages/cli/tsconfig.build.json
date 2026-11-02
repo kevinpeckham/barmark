@@ -2,10 +2,10 @@
 	"extends": "../../tsconfig.json",
 	"compilerOptions": {
 		"noEmit": false,
-		"declaration": true,
+		"declaration": false,
 		"outDir": "dist",
 		"rootDir": "src",
-		"types": [],
+		"types": ["node"],
 		"lib": ["ESNext", "DOM"],
 		"paths": {}
 	},

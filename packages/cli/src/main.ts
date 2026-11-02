@@ -1,7 +1,7 @@
 /** The barmark command: dispatch to a subcommand, and turn every failure into one line and an exit code. */
 import { check } from "./check.js";
 import { format } from "./format.js";
-import { HELP } from "./help.js";
+import { COMMAND_HELP, HELP } from "./help.js";
 import { type Io, UsageError } from "./io.js";
 import { render } from "./render.js";
 import { transpose } from "./transpose.js";
@@ -27,6 +27,11 @@ export async function main(argv: string[], io: Io): Promise<number> {
 		return 2;
 	}
 	const command = COMMANDS[name];
+	const help = COMMAND_HELP[name];
+	if (help && (args.includes("--help") || args.includes("-h"))) {
+		io.stdout(help);
+		return 0;
+	}
 	try {
 		if (!command) throw new UsageError(`unknown command "${name}"; run barmark --help`);
 		return await command(args, io);
