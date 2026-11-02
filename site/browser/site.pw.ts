@@ -28,6 +28,14 @@ const untilUrl = (page: Page, action: () => Promise<void>, url: RegExp) =>
 		await expect(page).toHaveURL(url, { timeout: 1_000 });
 	}).toPass({ timeout: 15_000 });
 
+// Vercel serves the analytics script on its own deployments; the local
+// preview has none, so the tests answer it with an empty one.
+test.beforeEach(async ({ page }) => {
+	await page.route("**/_vercel/insights/**", (route) =>
+		route.fulfill({ status: 200, contentType: "text/javascript", body: "" }),
+	);
+});
+
 test.describe("home: the live editor", () => {
 	test("typing in the source re-renders the chart", async ({ page }) => {
 		const errors = watchErrors(page);
@@ -610,6 +618,16 @@ test("every input has a name and every link has text", async ({ page }) => {
 	}
 });
 
+test("Vercel Analytics loads once, from the site's own origin", async ({ page }) => {
+	await page.goto("/");
+	await page.getByRole("link", { name: "FAQ" }).click();
+	await expect(page).toHaveURL(/\/faq$/);
+	const scripts = await page.evaluate(() =>
+		[...document.querySelectorAll("script[src*='insights']")].map((s) => s.getAttribute("src")),
+	);
+	expect(scripts).toEqual(["/_vercel/insights/script.js"]);
+});
+
 test("the home page's buttons share one size and one font", async ({ page }) => {
 	await page.goto("/");
 	const looks = await page.evaluate(() =>
@@ -626,4 +644,39 @@ test("the home page's buttons share one size and one font", async ({ page }) => 
 	);
 	expect(looks.length).toBeGreaterThan(1);
 	expect(new Set(looks).size, looks.join("\n")).toBe(1);
+});
+
+test.describe("the FAQ", () => {
+	const questions = (page: Page) => page.getByRole("navigation", { name: "Questions" });
+
+	test("on a wide screen the questions sit beside the answers and stay in view", async ({
+		page,
+	}) => {
+		await page.setViewportSize({ width: 1280, height: 800 });
+		await page.goto("/faq");
+		const nav = await questions(page).boundingBox();
+		const answer = await page.locator("main section").first().boundingBox();
+		expect(nav && answer && nav.x + nav.width <= answer.x).toBe(true);
+		await page.locator("#help").scrollIntoViewIfNeeded();
+		const after = await questions(page).boundingBox();
+		expect(after && after.y >= 0 && after.y < 200).toBe(true);
+	});
+
+	test("the question being read is marked in the list", async ({ page }) => {
+		await page.setViewportSize({ width: 1280, height: 800 });
+		await page.goto("/faq");
+		await page.locator("#open-source").evaluate((h) => h.scrollIntoView({ block: "start" }));
+		await expect(questions(page).locator('a[aria-current="true"]')).toHaveAttribute(
+			"href",
+			"#open-source",
+		);
+	});
+
+	test("on a phone the questions come first, above the answers", async ({ page }) => {
+		await page.setViewportSize({ width: 390, height: 800 });
+		await page.goto("/faq");
+		const nav = await questions(page).boundingBox();
+		const answer = await page.locator("main section").first().boundingBox();
+		expect(nav && answer && nav.y + nav.height <= answer.y).toBe(true);
+	});
 });

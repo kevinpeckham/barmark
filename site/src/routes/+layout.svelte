@@ -1,11 +1,16 @@
 <script lang="ts">
 import "virtual:uno.css";
 import { fontFaceCss } from "@barmark/render";
+import { trackRoute } from "#lib/analytics.js";
 import SiteFooter from "#lib/components/SiteFooter.svelte";
 import SiteNav from "#lib/components/SiteNav.svelte";
 import { LINKS } from "#lib/site.js";
+import { afterNavigate } from "$app/navigation";
+import { page } from "$app/state";
 
 let { children } = $props();
+
+afterNavigate(() => trackRoute(page.route.id, page.url.pathname));
 
 // Edwin, from the copy scripts/fonts.ts puts in static/fonts. The element
 // finds this marked style and registers no second copy of its own.
