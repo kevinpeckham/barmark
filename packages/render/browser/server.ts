@@ -56,6 +56,7 @@ function chartPage(url: URL, hostile: boolean): Response {
 		rehearsalLetters: p.has("letters"),
 		diagnostics: p.has("diagnostics"),
 		barNumbers: p.get("numbers") !== "off",
+		wrap: p.get("wrap") !== "off",
 	};
 	const chart = CHARTS[param(p, "chart", "example")] ?? "";
 	const charts = renderChart(chart, options).repeat(Number(param(p, "count", "1")));

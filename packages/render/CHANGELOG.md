@@ -6,6 +6,13 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- **`wrap: false`** (attribute `wrap="off"`, property `wrap`): a section
+  wider than the chart's box keeps its rows and columns rather than
+  wrapping them, and the chart overflows for its page to scroll.
+  barmark.dev's home page uses it.
+
 ## [0.5.0] - 2026-11-02
 
 The spoken name of a chord, for other tools. barmark.dev's /try page

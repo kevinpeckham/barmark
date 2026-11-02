@@ -100,6 +100,23 @@ test.describe("reflow", () => {
 				expect(scroll).toBeLessThanOrEqual(client);
 			});
 
+	test("with wrap off, a long row stays one row on a phone, wider than its box", async ({
+		page,
+	}) => {
+		await page.setViewportSize({ width: 360, height: 800 });
+		await page.goto("/chart?chart=long&wrap=off");
+		const { display, grid, chart } = await inChart(page, (root) => {
+			const g = root.querySelector(".bm-grid") as Element;
+			return {
+				display: getComputedStyle(g).display,
+				grid: g.getBoundingClientRect().width,
+				chart: (root.querySelector(".bm-chart") as Element).getBoundingClientRect().width,
+			};
+		});
+		expect(display).toBe("grid");
+		expect(grid).toBeGreaterThan(chart);
+	});
+
 	test("a wide screen keeps the columns aligned", async ({ page }) => {
 		await page.setViewportSize({ width: 1600, height: 800 });
 		await page.goto("/chart?chart=long");
@@ -155,12 +172,15 @@ test.describe("the element", () => {
 			const el = document.querySelector("#server") as HTMLElement & {
 				theme: string;
 				barNumbers: boolean;
+				wrap: boolean;
 			};
 			el.theme = "dark";
 			el.barNumbers = false;
+			el.wrap = false;
 		});
 		await expect(page.locator("#server .bm-chart")).toHaveAttribute("data-theme", "dark");
 		await expect(page.locator("#server .bm-chart")).toHaveAttribute("data-bar-numbers", "off");
+		await expect(page.locator("#server .bm-chart")).toHaveAttribute("data-wrap", "off");
 	});
 
 	test("registers the font once however many charts there are", async ({ page }) => {

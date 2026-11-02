@@ -21,6 +21,7 @@ export function optionsFromAttributes(el: Attributes): RenderOptions {
 		theme: THEMES.find((t) => t === theme) ?? "auto",
 		barNumbers: el.getAttribute("bar-numbers") !== "off",
 		rehearsalLetters: el.hasAttribute("rehearsal-letters"),
+		wrap: el.getAttribute("wrap") !== "off",
 		...(numerals ? { numerals } : {}),
 	};
 }
@@ -62,7 +63,14 @@ async function fetchText(src: string): Promise<string> {
 
 function defineElement(): void {
 	class BarmarkChart extends HTMLElement {
-		static observedAttributes = ["src", "theme", "bar-numbers", "rehearsal-letters", "numerals"];
+		static observedAttributes = [
+			"src",
+			"theme",
+			"bar-numbers",
+			"rehearsal-letters",
+			"numerals",
+			"wrap",
+		];
 		#observer = new MutationObserver(() => this.#schedule());
 		#renders = 0;
 		#scheduled = false;
@@ -114,6 +122,13 @@ function defineElement(): void {
 		set barNumbers(v: boolean) {
 			if (v) this.removeAttribute("bar-numbers");
 			else this.setAttribute("bar-numbers", "off");
+		}
+		get wrap() {
+			return optionsFromAttributes(this).wrap ?? true;
+		}
+		set wrap(v: boolean) {
+			if (v) this.removeAttribute("wrap");
+			else this.setAttribute("wrap", "off");
 		}
 		get rehearsalLetters() {
 			return this.hasAttribute("rehearsal-letters");
@@ -178,6 +193,8 @@ function defineElement(): void {
 			chart?.setAttribute("data-theme", options.theme ?? "auto");
 			if (options.barNumbers === false) chart?.setAttribute("data-bar-numbers", "off");
 			else chart?.removeAttribute("data-bar-numbers");
+			if (options.wrap === false) chart?.setAttribute("data-wrap", "off");
+			else chart?.removeAttribute("data-wrap");
 		}
 	}
 	customElements.define("barmark-chart", BarmarkChart);
