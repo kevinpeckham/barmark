@@ -8,6 +8,7 @@ const link = "opacity-80 hover-(opacity-100 text-accent) focus-visible-(outline-
 	<a href="/" class="font-mono font-700 text-lg tracking-tight text-accent">barmark</a>
 	<ul class="flex flex-wrap items-center gap-x-5 gap-y-1 text-sm">
 		<li><a href="/syntax" class={link}>Syntax</a></li>
+		<li><a href="/try" class={link}>Try it</a></li>
 		<li>
 			<a href={LINKS.github} class="{link} inline-flex items-center gap-1.5">
 				<span class="i-ph-github-logo" aria-hidden="true"></span>GitHub
