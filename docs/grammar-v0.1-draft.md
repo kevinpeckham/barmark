@@ -1,5 +1,11 @@
 # barmark grammar — v0.1 draft (for review)
 
+© 2026 Kevin Peckham. This specification is licensed under
+[CC BY 4.0](LICENSE) (https://creativecommons.org/licenses/by/4.0/):
+you may share and adapt it, and build implementations of it, with credit:
+"Barmark grammar by Kevin Peckham, barmark.dev". The reference code is MIT
+([LICENSE](../LICENSE)).
+
 Status: proposal. Clean-sheet redesign, revised 2026-10-31 with the
 decisions recorded at the end. It keeps what musicians already write and
 drops what the stem-shovel parser did only for historical reasons.

@@ -114,3 +114,19 @@ describe("the name in prose", () => {
 			expect(words.match(/\bbarmark\b(?![./-])/g) ?? []).toEqual([]);
 		});
 });
+
+describe("licences", () => {
+	test("the FAQ names both: MIT for the code, CC BY 4.0 for the grammar", () => {
+		const doc = page("faq.html");
+		const hrefs = [...doc.querySelectorAll("main a")].map((a) => a.getAttribute("href"));
+		expect(hrefs).toContain(LINKS.license);
+		expect(hrefs).toContain(LINKS.specLicense);
+		expect(text(doc.querySelector("#open-source")?.parentElement)).toContain("CC BY 4.0");
+	});
+	for (const path of ["index.html", "faq.html"])
+		test(`${path}'s footer links both licences`, () => {
+			const hrefs = [...page(path).querySelectorAll("footer a")].map((a) => a.getAttribute("href"));
+			expect(hrefs).toContain(LINKS.license);
+			expect(hrefs).toContain(LINKS.specLicense);
+		});
+});
