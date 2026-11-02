@@ -213,8 +213,9 @@ onMount(() => {
 				<p>
 					Yes. The code is MIT-licensed (<a href={LINKS.license} class={link}>LICENSE</a>) and on
 					<a href={LINKS.github} class={link}>GitHub</a>, and the packages are free on
-					<a href={LINKS.npm} class={link}>npm</a>. The grammar is public in the same repository, and
-					anyone may write their own reader for it.
+					<a href={LINKS.npm} class={link}>npm</a>. The <a href={LINKS.grammar} class={link}>grammar</a>
+					is licensed under CC BY 4.0 (<a href={LINKS.specLicense} class={link}>licence</a>): anyone may
+					copy it, adapt it or write their own reader for it, as long as they credit it.
 				</p>
 			</section>
 

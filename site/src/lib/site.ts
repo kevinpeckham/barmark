@@ -6,6 +6,7 @@ export const LINKS = {
 	stemShovel: "https://www.stemshovel.com",
 	grammar: "https://github.com/kevinpeckham/barmark/blob/main/docs/grammar-v0.1-draft.md",
 	license: "https://github.com/kevinpeckham/barmark/blob/main/LICENSE",
+	specLicense: "https://github.com/kevinpeckham/barmark/blob/main/docs/LICENSE",
 	issues: "https://github.com/kevinpeckham/barmark/issues",
 	renderReadme: "https://github.com/kevinpeckham/barmark/tree/main/packages/render#readme",
 	parserReadme: "https://github.com/kevinpeckham/barmark/tree/main/packages/barmark#readme",

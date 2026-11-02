@@ -5,6 +5,8 @@ const link = "underline decoration-white/30 underline-offset-3 hover-text-accent
 </script>
 
 <footer class="home-page-x-padding py-6 border-t border-line text-xs opacity-70">
-	MIT · by <a href="https://www.lightningjar.com" class={link}>Lightning Jar</a> ·
-	part of <a href={LINKS.stemShovel} class={link}>Stem Shovel</a>
+	Code <a href={LINKS.license} class={link}>MIT</a> · grammar
+	<a href={LINKS.specLicense} class={link}>CC BY 4.0</a> · by
+	<a href={LINKS.lightningJar} class={link}>Lightning Jar</a> · part of
+	<a href={LINKS.stemShovel} class={link}>Stem Shovel</a>
 </footer>
