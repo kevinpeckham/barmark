@@ -6,6 +6,10 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-11-02
+
+Power chords in the numerals views. Requires `barmark` 0.7.0.
+
 ### Changed
 
 - **A power chord's 5 is raised in the numerals views:** D5 in D shows as
@@ -186,7 +190,8 @@ that needs no script or as the `<barmark-chart>` web component. Requires
   zoom without sideways scrolling, the element renders and re-renders, and
   a screen reader hears "bar 9: D". Run them with `bun run test:browser`.
 
-[Unreleased]: https://github.com/kevinpeckham/barmark/compare/render-v0.6.0...HEAD
+[Unreleased]: https://github.com/kevinpeckham/barmark/compare/render-v0.7.0...HEAD
+[0.7.0]: https://github.com/kevinpeckham/barmark/compare/render-v0.6.0...render-v0.7.0
 [0.6.0]: https://github.com/kevinpeckham/barmark/compare/render-v0.5.0...render-v0.6.0
 [0.5.0]: https://github.com/kevinpeckham/barmark/compare/render-v0.4.0...render-v0.5.0
 [0.4.0]: https://github.com/kevinpeckham/barmark/compare/render-v0.3.0...render-v0.4.0
