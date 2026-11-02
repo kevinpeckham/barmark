@@ -1,0 +1,18 @@
+{
+	"source": "Mop Heart by Badverbs — the stored Stem Shovel chart, migrated by script with the band's confirmation, fetched from the public song page 2026-11-01 (stem-bench corpus/badverbs-charts)",
+	"verified": "stem-bench Study 16 (exploratory arm): 140 bars in 3/4 at 224 bpm with a mid-chart key change; all eight declared section starts grid-exact; first alignment of the song passed the two-clause same-piece gates (results/study16.json)",
+	"key": "A major",
+	"tempo": 224,
+	"meter": "3/4",
+	"barCount": 140,
+	"sections": [
+		{ "name": "Intro", "bars": 4, "first": "A" },
+		{ "name": "Verse", "bars": 16, "first": "A" },
+		{ "name": "Chorus", "bars": 28, "first": "G" },
+		{ "name": "Verse", "bars": 16, "first": "A" },
+		{ "name": "Chorus", "bars": 28, "first": "G" },
+		{ "name": "Verse", "bars": 16, "first": "A" },
+		{ "name": "Verse", "bars": 16, "first": "A" },
+		{ "name": "Outro", "bars": 16, "first": "B", "key": "B major" }
+	]
+}

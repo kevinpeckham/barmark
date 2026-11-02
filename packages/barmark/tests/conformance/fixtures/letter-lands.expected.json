@@ -1,0 +1,20 @@
+{
+	"source": "Letter Lands by Badverbs — the stored Stem Shovel chart, fetched from the public song page 2026-11-01 (stem-bench corpus/badverbs-charts)",
+	"verified": "stem-bench Study 16: 76 bars by the band's verified list; every declared section start grid-exact; content matches the Study 12 gated transcription (BRIEF-STUDY16.md, results/study16.json)",
+	"key": "F# major",
+	"tempo": 132,
+	"meter": "4/4",
+	"barCount": 76,
+	"sections": [
+		{ "name": "Intro", "bars": 4, "first": "F#5(7) Esus4" },
+		{ "name": "Verse", "bars": 8, "first": "F#5(7) Esus4" },
+		{ "name": "Chorus", "bars": 8, "first": "B5(7)" },
+		{ "name": "Verse", "bars": 8, "first": "F#5(7) Esus4" },
+		{ "name": "Chorus", "bars": 8, "first": "B5(7)" },
+		{ "name": "Bridge", "bars": 8, "first": "D5(7)" },
+		{ "name": "Verse", "bars": 8, "first": "F#5(7) Esus4" },
+		{ "name": "Chorus", "bars": 8, "first": "B5(7)" },
+		{ "name": "Verse", "bars": 8, "first": "F#5(7) Esus4" },
+		{ "name": "Outro", "bars": 8, "first": "B5(7) Asus4" }
+	]
+}
