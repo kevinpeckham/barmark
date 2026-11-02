@@ -1,20 +1,10 @@
 import { describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
 import { readCharts } from "../src/inputs.js";
 import { UsageError } from "../src/io.js";
-import { fakeIo } from "./io.js";
+import { folder as at } from "./charts.js";
 
-/** A temp folder holding these files (path → text), and an Io rooted there. */
-function folder(files: Record<string, string>, stdin?: string) {
-	const cwd = mkdtempSync(join(tmpdir(), "barmark-cli-"));
-	for (const [path, text] of Object.entries(files)) {
-		mkdirSync(dirname(join(cwd, path)), { recursive: true });
-		writeFileSync(join(cwd, path), text);
-	}
-	return fakeIo({ cwd, ...(stdin === undefined ? {} : { stdin }) });
-}
+const folder = (files: Record<string, string>, stdin?: string) =>
+	at(files, stdin === undefined ? {} : { stdin });
 
 describe("readCharts", () => {
 	test("a folder means every .chart.md under it, sorted", async () => {
