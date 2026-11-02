@@ -16,6 +16,7 @@ describe("the site builds", () => {
 			barmark: "0.8.0",
 			"@barmark/render": "0.7.1",
 			"@vercel/analytics": "2.0.1",
+			"@vercel/speed-insights": "2.0.0",
 		});
 	});
 	test("the Noto fonts are served from the site, with long-cached hashed names", () => {

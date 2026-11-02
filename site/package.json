@@ -19,6 +19,7 @@
 	"dependencies": {
 		"@barmark/render": "0.7.1",
 		"@vercel/analytics": "2.0.1",
+		"@vercel/speed-insights": "2.0.0",
 		"barmark": "0.8.0"
 	},
 	"devDependencies": {

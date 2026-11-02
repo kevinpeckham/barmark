@@ -28,12 +28,14 @@ const untilUrl = (page: Page, action: () => Promise<void>, url: RegExp) =>
 		await expect(page).toHaveURL(url, { timeout: 1_000 });
 	}).toPass({ timeout: 15_000 });
 
-// Vercel serves the analytics script on its own deployments; the local
-// preview has none, so the tests answer it with an empty one.
+// Vercel serves the Analytics and Speed Insights scripts on its own
+// deployments; the local preview has neither, so the tests answer them with
+// empty ones.
 test.beforeEach(async ({ page }) => {
-	await page.route("**/_vercel/insights/**", (route) =>
-		route.fulfill({ status: 200, contentType: "text/javascript", body: "" }),
-	);
+	for (const path of ["**/_vercel/insights/**", "**/_vercel/speed-insights/**"])
+		await page.route(path, (route) =>
+			route.fulfill({ status: 200, contentType: "text/javascript", body: "" }),
+		);
 });
 
 test.describe("home: the live editor", () => {
@@ -618,14 +620,19 @@ test("every input has a name and every link has text", async ({ page }) => {
 	}
 });
 
-test("Vercel Analytics loads once, from the site's own origin", async ({ page }) => {
+test("Vercel Analytics and Speed Insights load once each, from the site's own origin", async ({
+	page,
+}) => {
 	await page.goto("/");
 	await page.getByRole("link", { name: "FAQ" }).click();
 	await expect(page).toHaveURL(/\/faq$/);
 	const scripts = await page.evaluate(() =>
 		[...document.querySelectorAll("script[src*='insights']")].map((s) => s.getAttribute("src")),
 	);
-	expect(scripts).toEqual(["/_vercel/insights/script.js"]);
+	expect(scripts.toSorted()).toEqual([
+		"/_vercel/insights/script.js",
+		"/_vercel/speed-insights/script.js",
+	]);
 });
 
 test("the home page's buttons share one size and one font", async ({ page }) => {
