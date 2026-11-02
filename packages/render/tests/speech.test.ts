@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { type ChordRecord, parseChart, parseChord, parseNoteSet, type Slot } from "barmark";
 import { enumerateSuffixes } from "../../barmark/src/chords/suffixes.js";
+import * as render from "../src/index.js";
 import { speakBar, speakChord, speakSlot } from "../src/speech.js";
 
 const chord = (s: string): ChordRecord => {
@@ -109,4 +110,9 @@ describe("speakBar", () => {
 		);
 		expect(speakBar(null, { kind: "fermata" })).toBe("fermata: hold until cued");
 	});
+});
+
+test("speakChord is public and speaks as the chart does", () => {
+	expect(render.speakChord(chord("Cø"))).toBe("C minor seven flat five");
+	expect(render.renderChart("| Cø |")).toContain("C minor seven flat five");
 });

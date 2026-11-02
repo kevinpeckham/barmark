@@ -92,6 +92,21 @@ no key, note sets, N.C., `?` and `--` look as they always do, and a
 screen reader hears both: "bar 5: five, A seven". Numbered chords carry
 `data-numeral`. It's a view: the music and bar numbers don't change.
 
+### Spoken names
+
+`speakChord(record, key?)` gives a chord the name a screen reader hears
+in the chart, for other tools that want to say a chord aloud:
+
+```ts
+import { parseChord } from "barmark";
+import { speakChord } from "@barmark/render";
+
+const r = parseChord("Cø");
+if (r.ok) speakChord(r.value); // "C minor seven flat five"
+```
+
+With a key, it speaks the degree too, as the numerals view does.
+
 ## Styling on purpose
 
 Set these custom properties on the element or anything above it:

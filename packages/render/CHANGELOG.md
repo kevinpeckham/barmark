@@ -6,6 +6,11 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- `speakChord(record, key?)`, the spoken name the chart gives a chord,
+  for screen readers and other tools.
+
 ## [0.4.0] - 2026-11-01
 
 Chords as Nashville numbers or Roman numerals, and a little air between
