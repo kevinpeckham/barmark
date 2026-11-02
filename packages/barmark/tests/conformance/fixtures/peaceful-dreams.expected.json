@@ -1,0 +1,20 @@
+{
+	"source": "Peaceful Dreams by Badverbs — the stored Stem Shovel chart, migrated by the band's hand, fetched from the public song page 2026-11-01 (stem-bench corpus/badverbs-charts)",
+	"verified": "stem-bench Study 16: the verified 152 bars plus the ring-out attack bar (the `...` cell is uncounted); all ten declared section starts grid-exact; content matches the band's committed revision (BRIEF-STUDY16.md, results/study16.json)",
+	"key": "D major",
+	"tempo": 145,
+	"meter": "4/4",
+	"barCount": 153,
+	"sections": [
+		{ "name": "Intro", "bars": 20, "first": "D7sus4" },
+		{ "name": "Verse", "bars": 20, "first": "D5" },
+		{ "name": "Chorus", "bars": 8, "first": "G5(7)" },
+		{ "name": "Verse", "bars": 20, "first": "D5" },
+		{ "name": "Chorus", "bars": 8, "first": "G5(7)" },
+		{ "name": "Bridge", "bars": 8, "first": "Bm7" },
+		{ "name": "Verse (Triads)", "bars": 20, "first": "D" },
+		{ "name": "Verse", "bars": 20, "first": "D5" },
+		{ "name": "Interlude", "bars": 8, "first": "D7sus4" },
+		{ "name": "Outro", "bars": 21, "first": "D5" }
+	]
+}

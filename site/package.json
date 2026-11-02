@@ -17,7 +17,7 @@
 		"test:browser": "playwright test -c browser"
 	},
 	"dependencies": {
-		"@barmark/render": "0.4.0",
+		"@barmark/render": "0.5.0",
 		"barmark": "0.6.0"
 	},
 	"devDependencies": {
