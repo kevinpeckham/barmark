@@ -32,6 +32,12 @@ export type Directives = {
 	tempo?: number;
 	tempoChange?: TempoChange;
 	feel?: Feel;
+	/**
+	 * How far a swing or shuffle swings: where the swung note lands, as a
+	 * percentage of its pair (50 to 75). Absent for the bare word, which
+	 * means 66.7 (the triplet feel), and for straight.
+	 */
+	swingPercent?: number;
 };
 
 /** A chord slot holds a chord symbol or a note set; `chord.kind` tells which. */
@@ -71,6 +77,8 @@ export type PlayedBar = {
 	/** Set on every bar inside a rit. or accel.; `from` is the steady tempo, `to` the target if written. */
 	tempoChange: { kind: "rit" | "accel"; from: number | null; to: number | null } | null;
 	feel: Feel;
+	/** The swing amount in force (Directives.swingPercent); absent when the feel has none. */
+	swingPercent?: number;
 	/** `%` resolved to the copied slots; holds stay holds. */
 	slots: Slot[];
 };

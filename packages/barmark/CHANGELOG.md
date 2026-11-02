@@ -9,6 +9,19 @@ Releases follow the process in [RELEASING.md](RELEASING.md).
 
 ## [Unreleased]
 
+### Added
+
+- **A swing amount** (grammar 7.1, issue #66): `feel: swing 58%`,
+  `feel: shuffle 62.5%`, `feel: swing 16 55%`. The amount is where the
+  swung note lands, as a percentage of its pair, from 50% to 75%
+  inclusive, with the `%` required. It reaches `Directives.swingPercent`
+  and each played bar's `swingPercent`; both are absent for the bare word,
+  which stays the triplet feel (66.7%). `swing 66.7%` reads and prints as
+  `swing`, so every chart that read before reads and prints the same.
+- Errors, each on its line: an amount outside 50% to 75%, more than one
+  decimal place, a missing `%` (`swing 58` suggests `swing 58%`), an amount
+  on `straight` (suggests `swing` with it), and an amount with no kind.
+
 ## [0.8.0] - 2026-11-02
 
 `(add9)` and friends inside parentheses, clearer messages for an empty

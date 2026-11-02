@@ -59,9 +59,40 @@ function parseTempoChange(text: string): TempoChange | null {
 	return m[2] !== undefined && to === null ? null : { kind, to };
 }
 
-function parseFeel(text: string): Feel | null {
+/** The amount that means the same as the bare word: the triplet feel, ⅔ written to one decimal. */
+const TRIPLET_PERCENT = 66.7;
+
+type FeelValue = { feel: Feel; swingPercent?: number } | { error: string };
+
+const FEEL_ERROR =
+	"feel must be straight, swing, shuffle or swing 16, optionally with an amount (swing 58%)";
+
+/** A feel and an amount: `swing 16 55%` is "swing 16", "55", "%". */
+const WITH_AMOUNT = /^(.*?)\s*(\d+(?:\.\d+)?)(%?)$/;
+
+/** Why `head digits sign` isn't a feel with an amount, or null when it is (7.1). */
+function amountError(head: string, digits: string, sign: string): string | null {
+	const feel = FEELS.find((f) => f === head);
+	if (head && !feel) return FEEL_ERROR;
+	if (!feel) return `a swing amount follows a feel: swing ${digits}%`;
+	if (feel === "straight") return `straight takes no amount; write swing ${digits}%`;
+	if (!sign) return `a swing amount needs a % sign: ${feel} ${digits}%`;
+	if (/\.\d{2}/.test(digits)) return "a swing amount takes at most one decimal place";
+	const amount = Number(digits);
+	return amount < 50 || amount > 75 ? "a swing amount must be from 50% to 75%" : null;
+}
+
+/** `swing`, `swing 58%`, `swing 16 55%`: a kind, then an optional amount (7.1). */
+function parseFeel(text: string): FeelValue {
 	const lower = text.toLowerCase();
-	return FEELS.find((f) => f === lower) ?? null;
+	const bare = FEELS.find((f) => f === lower);
+	if (bare) return { feel: bare };
+	const [, head = "", digits = "", sign = ""] = WITH_AMOUNT.exec(lower) ?? [];
+	const error = digits ? amountError(head, digits, sign) : FEEL_ERROR;
+	const feel = FEELS.find((f) => f === head);
+	if (error || !feel) return { error: error ?? FEEL_ERROR };
+	const amount = Number(digits);
+	return amount === TRIPLET_PERCENT ? { feel } : { feel, swingPercent: amount };
 }
 
 /**
@@ -111,8 +142,8 @@ export function parseDirectiveLine(
 			else error("tempo must be beats per minute (1 to 999), rit., accel. or a tempo", value);
 		} else {
 			const feel = parseFeel(value);
-			if (feel) set.feel = feel;
-			else error("feel must be straight, swing, shuffle or swing 16", value);
+			if ("error" in feel) error(feel.error, value);
+			else Object.assign(set, feel);
 		}
 	}
 	return { set, diagnostics };

@@ -85,6 +85,17 @@ describe("directives", () => {
 	test("a one-bar meter applies to that bar only", () => {
 		expect(play("| D | [2/4] A | G |").bars.map((b) => b.meter.n)).toEqual([4, 2, 4]);
 	});
+	test("a bar carries the swing amount in force; a later feel without one clears it", () => {
+		const r = play("feel: swing 58%\n| D |\nfeel: shuffle\n| A |\nfeel: swing 16 55%\n| G |");
+		expect(r.bars.map((b) => [b.feel, b.swingPercent])).toEqual([
+			["swing", 58],
+			["shuffle", undefined],
+			["swing 16", 55],
+		]);
+	});
+	test("a bar outside any amount has no swingPercent field", () => {
+		expect("swingPercent" in (play("feel: swing\n| D |").bars[0] ?? {})).toBe(false);
+	});
 	test("defaults", () => {
 		const b = play("| D |").bars[0];
 		expect([b?.meter, b?.key, b?.tempo, b?.feel]).toEqual([{ n: 4, d: 4 }, null, null, "straight"]);

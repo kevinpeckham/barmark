@@ -65,3 +65,51 @@ describe("directive lines", () => {
 	}
 	test("prose is not a directive", () => expect(parseDirectiveLine("Keys are hard", 1)).toBeNull());
 });
+
+describe("a swing amount (issue #66)", () => {
+	const set = (text: string) => parseDirectiveLine(text, 1)?.set;
+	const only = (text: string) => {
+		const d = parseDirectiveLine(text, 4)?.diagnostics ?? [];
+		expect(d).toHaveLength(1);
+		expect([d[0]?.line, d[0]?.severity]).toEqual([4, "error"]);
+		return d[0]?.message;
+	};
+	test("swing, shuffle and swing 16 each take a percentage", () => {
+		expect(set("feel: swing 58%")).toEqual({ feel: "swing", swingPercent: 58 });
+		expect(set("feel: shuffle 62.5%")).toEqual({ feel: "shuffle", swingPercent: 62.5 });
+		expect(set("feel: swing 16 55%")).toEqual({ feel: "swing 16", swingPercent: 55 });
+	});
+	test("50% and 75% are the ends of the range, inclusive", () => {
+		expect(set("feel: swing 50%")).toEqual({ feel: "swing", swingPercent: 50 });
+		expect(set("feel: swing 75%")).toEqual({ feel: "swing", swingPercent: 75 });
+	});
+	test("the bare word has no amount, and 66.7% is the bare word", () => {
+		expect(set("feel: swing")).toEqual({ feel: "swing" });
+		expect(set("feel: swing 66.7%")).toEqual({ feel: "swing" });
+	});
+	test("any case, as the kinds already are", () => {
+		expect(set("FEEL: Shuffle 54%")).toEqual({ feel: "shuffle", swingPercent: 54 });
+	});
+	test("outside 50% to 75% is an error", () => {
+		expect(only("feel: swing 49%")).toBe("a swing amount must be from 50% to 75%");
+		expect(only("feel: swing 76%")).toBe("a swing amount must be from 50% to 75%");
+	});
+	test("more than one decimal place is an error", () => {
+		expect(only("feel: swing 66.75%")).toBe("a swing amount takes at most one decimal place");
+	});
+	test("a number without % is an error", () => {
+		expect(only("feel: swing 58")).toBe("a swing amount needs a % sign: swing 58%");
+		expect(only("feel: shuffle 62.5")).toBe("a swing amount needs a % sign: shuffle 62.5%");
+	});
+	test("straight takes no amount", () => {
+		expect(only("feel: straight 55%")).toBe("straight takes no amount; write swing 55%");
+	});
+	test("an amount needs a kind", () => {
+		expect(only("feel: 58%")).toBe("a swing amount follows a feel: swing 58%");
+	});
+	test("other values keep the error, now naming the amount", () => {
+		expect(only("feel: lazy")).toBe(
+			"feel must be straight, swing, shuffle or swing 16, optionally with an amount (swing 58%)",
+		);
+	});
+});

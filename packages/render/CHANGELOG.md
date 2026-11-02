@@ -6,6 +6,12 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- **A swing amount shows with its feel** (barmark's `swingPercent`): the
+  header reads "D major · swing 58%", and a mid-chart change "Feel shuffle
+  58%". A later header `feel:` without an amount drops the earlier one.
+
 ## [0.7.1] - 2026-11-02
 
 Requires `barmark` 0.8.0. No change to the renderer's code: it now reads

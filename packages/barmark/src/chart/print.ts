@@ -85,7 +85,8 @@ function printDirectives(d: Directives): string {
 	if (d.time) parts.push(`time: ${d.time.n}/${d.time.d}`);
 	if (d.tempo !== undefined) parts.push(`tempo: ${d.tempo}`);
 	if (d.tempoChange) parts.push(`tempo: ${printTempoChange(d.tempoChange)}`);
-	if (d.feel) parts.push(`feel: ${d.feel}`);
+	if (d.feel)
+		parts.push(`feel: ${d.feel}${d.swingPercent === undefined ? "" : ` ${d.swingPercent}%`}`);
 	return parts.join(", ");
 }
 

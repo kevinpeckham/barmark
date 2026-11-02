@@ -127,6 +127,30 @@ describe("printing never adds a warning", () => {
 	});
 });
 
+describe("swing amounts (issue #66)", () => {
+	test("an amount prints as written, normalized", () => {
+		expect(printChart("FEEL: Swing 58.0%\n| D |")).toBe("feel: swing 58%\n| D |\n");
+		expect(printChart("feel: swing 16 62.5%\n| D |")).toBe("feel: swing 16 62.5%\n| D |\n");
+	});
+	test("66.7% prints as the bare word", () => {
+		expect(printChart("feel: swing 66.7%\n| D |")).toBe("feel: swing\n| D |\n");
+	});
+	test("50% stays as written", () => {
+		expect(printChart("feel: shuffle 50%\n| D |")).toBe("feel: shuffle 50%\n| D |\n");
+	});
+	for (const chart of [
+		"feel: swing 54%\n| D | A |",
+		"feel: shuffle 70%, tempo: 90\n| D |\nfeel: straight\n| A |",
+	])
+		test(chart, () => {
+			stable(chart);
+			expectSameMeaning(chart);
+		});
+	test("a line with an amount error prints as written", () => {
+		expect(printChart("feel: swing 80%\n| D |")).toBe("feel: swing 80%\n| D |\n");
+	});
+});
+
 describe("grammar-driven fuzz", () => {
 	test("well-formed random charts keep their meaning", () => {
 		let seed = 11;
@@ -154,6 +178,10 @@ describe("grammar-driven fuzz", () => {
 		for (let i = 0; i < 2000; i++) {
 			const lines: string[] = [];
 			if (rand() < 0.5) lines.push(`time: ${pick(["2/4", "3/4", "4/4", "6/8", "12/8"])}`);
+			if (rand() < 0.3)
+				lines.push(
+					`feel: ${pick(["straight", "swing", "shuffle", "swing 16"])}${pick(["", " 50%", " 54%", " 62.5%", " 66.7%", " 75%"])}`,
+				);
 			for (let l = 0; l < 1 + Math.floor(rand() * 4); l++) {
 				if (rand() < 0.2) lines.push(`## ${pick(["A", "B"])}${pick(["", " x2", " x ..."])}`);
 				const cells: string[] = [];

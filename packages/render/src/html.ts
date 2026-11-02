@@ -103,7 +103,7 @@ function tempoChangeText(c: TempoChange): string {
 	return `${c.kind}.${c.to === null ? "" : ` to ♩ = ${c.to}`}`;
 }
 
-/** "D major · 4/4 · ♩ = 145 · swing", escaped; labelled, "Key D major · Time 4/4 · …". */
+/** "D major · 4/4 · ♩ = 145 · swing" (or "swing 58%"), escaped; labelled, "Key D major · Time 4/4 · …". */
 function metaText(d: Directives, labelled = false): string {
 	return [
 		["Key", d.key ? `${glyphs(d.key.tonic)} ${d.key.mode}` : ""],
@@ -114,7 +114,7 @@ function metaText(d: Directives, labelled = false): string {
 			d.tempoChange?.kind === "a tempo" ? "" : "Tempo",
 			d.tempoChange ? tempoChangeText(d.tempoChange) : "",
 		],
-		["Feel", d.feel ?? ""],
+		["Feel", d.feel ? `${d.feel}${d.swingPercent === undefined ? "" : ` ${d.swingPercent}%`}` : ""],
 	]
 		.filter(([, value]) => value)
 		.map(([label, value]) => escapeHtml(labelled && label ? `${label} ${value}` : (value ?? "")))
