@@ -1,4 +1,4 @@
-# `@barmark/cli` and the Badverbs songs repository: design
+# `@barmark/cli` and Kevin's songs repository: design
 
 Approved in conversation with Kevin, 2026-11-02. Two pieces, built in
 order: the CLI (a third package in this workspace), then a public songs
@@ -13,7 +13,7 @@ on every push, whether each chart reads cleanly and is in standard form,
 the way `cargo fmt --check` and a linter do for code.
 
 Kevin's first use is his own songs. He has no songs repository yet; this
-work creates one with his Badverbs charts, so the CLI has real charts to
+work creates one, starting with his Badverbs charts, so the CLI has real charts to
 check from day one and every Barmark release is tested against them.
 
 ## Decisions (Kevin's)
@@ -165,8 +165,11 @@ printed as one line and exits 2.
 
 ## The songs repository
 
-- **`kevinpeckham/badverbs-songs`** (name is Claude's call; Kevin can
-  rename), public.
+- **`kevinpeckham/songs`** (Kevin's name), public. It holds every song
+  Kevin has written, not only Badverbs ones; it starts with the four
+  Badverbs charts below. Each song is one file in `songs/`, flat, named by
+  its slug; `COPYRIGHT.md` records each song's writer and, where there is
+  one, the band that recorded it.
 - **Charts:** Eat All the Clocks, Letter Lands, Mop Heart and Peaceful
   Dreams, one `<slug>.chart.md` each, in `songs/`. They start as the text
   in barmark's conformance fixtures (as Stem Shovel stores them); the first
@@ -201,7 +204,7 @@ site bump, RELEASING.md step 12), the same session:
    changed) that moves it onto the new library versions, with a CHANGELOG
    line naming them; runs the release check; tags `cli-vX.Y.Z` after the
    merge; Kevin approves the publish as for the other packages.
-2. Opens a PR in `badverbs-songs` raising its pinned CLI version. Its CI
+2. Opens a PR in `kevinpeckham/songs` raising its pinned CLI version. Its CI
    runs the new libraries over the real songs: green means no song reads
    differently; red shows exactly which song and line changed, before
    Kevin accepts the release.
@@ -216,7 +219,7 @@ up.
   publisher (RELEASING.md, "A new package's first release").
 - Add `cli-v*` to the "release tags" ruleset, and the new
   `package (<node>, cli)` checks to the "main" ruleset's required checks.
-- Confirm, then create (empty) and attach `badverbs-songs` to this VM's
+- Confirm, then create (empty) and attach `kevinpeckham/songs` to this VM's
   GitHub integration before the first push.
 
 ## Left to the builder
@@ -228,7 +231,6 @@ up.
 
 ## Calls Claude made (Kevin to check)
 
-- The songs repository's name, `badverbs-songs`.
 - Edwin embedded by default in `render`'s output (self-contained files over
   a 160 KB saving).
 - Exit code 2 for usage errors, separate from 1 for chart problems.
