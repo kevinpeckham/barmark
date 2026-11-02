@@ -148,7 +148,10 @@ runs, and `verify:package cli` fails on anything else.
     `packages/barmark/src`, `packages/render/src` or `packages/render/fonts`
     changed since their own tags. Its release workflow also
     attaches the binaries; check the release page lists all five and
-    `Edwin-OFL.txt`.
+    `Edwin-OFL.txt`. Then bump barmark.dev as in step 12: the site
+    installs the CLI as a dev dependency (`bun add --dev --exact
+    @barmark/cli@X.Y.Z`), because Get Started's commands are tested
+    against it and its CI example shows that version.
 14. **Bump `kevinpeckham/songs`:** a pull request there raising its
     pinned `@barmark/cli` version in `.github/workflows/check.yml`. Its CI
     runs the new libraries over Kevin's real songs: green means no song

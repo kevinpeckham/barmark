@@ -1,4 +1,8 @@
 /** Get Started's chart and code samples. tests/pages.test.ts runs the claims they make. */
+import pkg from "../../package.json" with { type: "json" };
+
+/** The CLI the site installs (a dev dependency, so the tests run it), for the CI example's pin. */
+const CLI_VERSION = pkg.devDependencies["@barmark/cli"];
 
 export const SAMPLE_CHART = `# Example Song
 key: D, time: 4/4, tempo: 145
@@ -52,3 +56,14 @@ export const LIVE_EDITOR = `const chart = document.querySelector("barmark-chart"
 editor.addEventListener("input", () => {
 	chart.text = editor.value;
 });`;
+
+export const USE_CLI = `npx @barmark/cli check songs          # every .chart.md in songs/, problems by line
+npx @barmark/cli format --write songs # rewrite them in standard form
+npx @barmark/cli transpose example-song.chart.md --to E
+npx @barmark/cli render example-song.chart.md --out example-song.html`;
+
+export const CLI_CI = `- uses: actions/setup-node@v4
+  with:
+    node-version: 22
+- run: npx -y @barmark/cli@${CLI_VERSION} check --strict --format github songs
+- run: npx -y @barmark/cli@${CLI_VERSION} format --check songs`;

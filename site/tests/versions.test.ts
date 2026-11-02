@@ -24,3 +24,11 @@ describe("behind", () => {
 		expect(behind(pins, ["barmark-v0.2.0", "barmark-v0.1.0", "render-v0.1.0"])).toEqual([]);
 	});
 });
+
+describe("the CLI", () => {
+	test("its tags are cli-v, so the site's pin is checked too", () => {
+		expect(behind({ "@barmark/cli": "0.1.0" }, ["cli-v0.2.0"])).toEqual([
+			"@barmark/cli 0.1.0 < 0.2.0",
+		]);
+	});
+});
