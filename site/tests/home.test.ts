@@ -1,6 +1,13 @@
 import { beforeAll, describe, expect, test } from "bun:test";
 import { join } from "node:path";
-import { HEADLINE, LINKS, TAGLINE_AFTER, TAGLINE_BEFORE, TAGLINE_LINK } from "../src/lib/site.ts";
+import {
+	HEADLINE,
+	LINKS,
+	TAGLINE_AFTER,
+	TAGLINE_BEFORE,
+	TAGLINE_LINK,
+	VALUE,
+} from "../src/lib/site.ts";
 import { build, page } from "./built.ts";
 
 const demo = await Bun.file(join(import.meta.dir, "../src/lib/demo.chart.md")).text();
@@ -11,12 +18,12 @@ beforeAll(() => {
 }, 120_000);
 
 describe("the home page, prerendered", () => {
-	test("leads with the headline, then Stem Shovel", () => {
+	test("leads with the headline, then Stem Shovel and what Barmark offers", () => {
 		const h1 = doc.querySelector("h1");
 		expect(h1?.textContent?.trim()).toBe(HEADLINE);
 		const next = h1?.nextElementSibling;
 		expect(next?.textContent?.replace(/\s+/g, " ").trim()).toBe(
-			TAGLINE_BEFORE + TAGLINE_LINK + TAGLINE_AFTER,
+			`${TAGLINE_BEFORE}${TAGLINE_LINK}${TAGLINE_AFTER} ${VALUE}`,
 		);
 		expect(next?.querySelector("a")?.getAttribute("href")).toBe(LINKS.stemShovel);
 	});
@@ -48,7 +55,7 @@ describe("the home page, prerendered", () => {
 		expect(radios.map((r) => r.hasAttribute("checked"))).toEqual([true, false, false]);
 	});
 	test("has a title, canonical URL and Open Graph tags", () => {
-		expect(doc.title).toBe("barmark: plain-text chord charts");
+		expect(doc.title).toBe("Barmark: plain-text chord charts");
 		expect(doc.querySelector('link[rel="canonical"]')?.getAttribute("href")).toBe(
 			"https://www.barmark.dev/",
 		);

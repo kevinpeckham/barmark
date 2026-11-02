@@ -26,12 +26,12 @@ const QUESTIONS = [
 </script>
 
 <svelte:head>
-	<title>FAQ · barmark</title>
+	<title>FAQ · Barmark</title>
 	<meta name="description" content={description} />
 	<link rel="canonical" href="{LINKS.origin}/faq" />
 	<meta property="og:type" content="website" />
 	<meta property="og:url" content="{LINKS.origin}/faq" />
-	<meta property="og:title" content="FAQ · barmark" />
+	<meta property="og:title" content="FAQ · Barmark" />
 	<meta property="og:description" content={description} />
 </svelte:head>
 

@@ -50,7 +50,7 @@ const code = "font-mono text-accent";
 		{@render chord(reading.chord)}
 	{:else if reading.kind === "harte"}
 		<p>
-			Harte label <code class={code}>{reading.label}</code> → barmark
+			Harte label <code class={code}>{reading.label}</code> → Barmark
 			<code class={code}>{reading.chord.typed}</code>
 		</p>
 		{@render chord(reading.chord)}
