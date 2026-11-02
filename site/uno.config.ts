@@ -11,10 +11,7 @@ import { defineConfig, transformerDirectives, transformerVariantGroup } from "un
  */
 export default defineConfig({
 	extractors: [extractorSvelte()],
-	presets: [
-		presetWind4({ preflights: { reset: true } }),
-		presetIcons({ warn: true }),
-	],
+	presets: [presetWind4({ preflights: { reset: true } }), presetIcons({ warn: true })],
 	transformers: [transformerDirectives(), transformerVariantGroup()],
 	theme: {
 		// The stacks presetWebFonts built for these families, now that the files ship with the site.
