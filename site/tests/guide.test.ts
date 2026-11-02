@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { parseChart, parseChord } from "barmark";
+import { parseChart, parseChord, transposeChart } from "barmark";
 import { matches, readQuery, sorted, writeQuery } from "../src/lib/guide/query.ts";
 import { CATEGORIES, ROWS } from "../src/lib/guide/rows.ts";
 
@@ -253,5 +253,21 @@ describe("guide query", () => {
 		const before = ROWS.map((r) => r.id);
 		sorted(ROWS, "name");
 		expect(ROWS.map((r) => r.id)).toEqual(before);
+	});
+});
+
+describe("tools the guide points to", () => {
+	const meaning = (id: string) => ROWS.find((r) => r.id === id)?.meaning ?? "";
+	test("transposing names transposeChart, and its example moves as the row says", () => {
+		expect(meaning("transpose")).toContain("transposeChart");
+		expect(meaning("transpose")).not.toContain("yet");
+		const row = ROWS.find((r) => r.id === "transpose");
+		expect(transposeChart(row?.example ?? "", { to: "Eb" }).text).toBe(
+			"key: Eb\n| Eb | Bb | Cm | Ab |\n",
+		);
+	});
+	test("numerals name the renderer's numerals option", () => {
+		expect(meaning("numerals")).toContain('numerals: "nashville"');
+		expect(meaning("numerals")).toContain('"roman"');
 	});
 });
