@@ -1,4 +1,11 @@
 <script lang="ts">
+// The Noto families, served from the site: Vite hashes the files into /_app/immutable.
+import "@fontsource/noto-mono/400.css";
+import "@fontsource/noto-sans/400.css";
+import "@fontsource/noto-sans/600.css";
+import "@fontsource/noto-sans/700.css";
+import "@fontsource/noto-serif/400.css";
+import "@fontsource/noto-serif/400-italic.css";
 import "virtual:uno.css";
 import { fontFaceCss } from "@barmark/render";
 import { trackRoute } from "#lib/analytics.js";

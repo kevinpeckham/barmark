@@ -371,9 +371,19 @@ the `site` job: the build stopped with "[unocss] Fetch web fonts
 timeout" while fetching Noto from fonts.bunny.net. A rerun passed.
 `presetWebFonts` fails the build when the font CSS takes longer than
 2 s (`timeouts.failure`, default 2000), and a CI runner sometimes
-takes longer. `site/uno.config.ts` now allows 30 s and warns at 5 s.
+takes longer. `site/uno.config.ts` then allowed 30 s and warned at 5 s.
 Stem Shovel sidesteps the same problem with the `"none"` provider
 under tests.
+
+It failed again on 2026-11-02 (barmark 0.8.0's release PR), at 30 s, so
+a longer timeout was never the fix: the build depended on a third
+party's response time. The site now serves Noto itself: the
+`@fontsource` packages (pinned) are imported in `+layout.svelte`, Vite
+emits the files with hashed names under `/_app/immutable/`, and Vercel's
+adapter serves that folder with `immutable, max-age=31536000`. The build
+makes no font request, and readers no longer fetch fonts from bunny.
+`presetWebFonts` is gone; the font stacks are in `uno.config.ts`'s
+theme.
 ### A misspelt custom property removes the whole border (2026-11-01, renderer)
 
 The dashed line over bars inside a rit. didn't appear, and no test

@@ -1,5 +1,5 @@
 import { beforeAll, describe, expect, test } from "bun:test";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { LINKS } from "../src/lib/site.ts";
 import { build, out, page, site } from "./built.ts";
@@ -17,6 +17,39 @@ describe("the site builds", () => {
 			"@barmark/render": "0.7.1",
 			"@vercel/analytics": "2.0.1",
 		});
+	});
+	test("the Noto fonts are served from the site, with long-cached hashed names", () => {
+		const assets = join(out, "_app/immutable/assets");
+		const css = readdirSync(assets)
+			.filter((f) => f.endsWith(".css"))
+			.map((f) => readFileSync(join(assets, f), "utf8"))
+			.join("\n");
+		expect(css).not.toContain("fonts.bunny.net");
+		const faces = css.match(/@font-face\{[^}]*\}/g) ?? [];
+		const noto = faces.filter((f) => /font-family:\s*"?Noto (Sans|Serif|Mono)"?;/.test(f));
+		const has = (family: string, style: string, weight: string) =>
+			noto.some(
+				(f) =>
+					f.includes(family) &&
+					new RegExp(`font-style:\\s*${style}`).test(f) &&
+					new RegExp(`font-weight:\\s*${weight}`).test(f),
+			);
+		for (const weight of ["400", "600", "700"])
+			expect(has("Noto Sans", "normal", weight)).toBe(true);
+		expect(has("Noto Serif", "normal", "400")).toBe(true);
+		expect(has("Noto Serif", "italic", "400")).toBe(true);
+		expect(has("Noto Mono", "normal", "400")).toBe(true);
+		for (const face of noto)
+			for (const [, url] of face.matchAll(/url\(([^)]+)\)/g)) {
+				// Relative to the stylesheet, which sits in the same hashed folder.
+				expect(url).toMatch(/^\.\/[^/]+\.[\w-]{8}\.woff2?$/);
+				expect(existsSync(join(assets, url ?? ""))).toBe(true);
+			}
+	});
+	test("Noto's licence ships with the site", () => {
+		expect(readFileSync(join(out, "fonts/Noto-OFL.txt"), "utf8")).toContain(
+			"SIL OPEN FONT LICENSE",
+		);
 	});
 	test("Edwin and its licence ship with the site", () => {
 		expect(existsSync(join(out, "fonts/Edwin-Roman.otf"))).toBe(true);
