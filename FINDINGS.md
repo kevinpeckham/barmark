@@ -137,6 +137,27 @@ package index, inside the package.
 - **The fix.** The window's scrolling body is `position: relative`
   (`site/src/lib/components/Window.svelte`).
 
+### `</script>` in a Svelte component's string ends its script (2026-11-02, /try)
+
+- **The symptom.** `/try` puts a small inline script in `<svelte:head>`
+  with `{@html}`, from a template string in the component. svelte-check
+  failed with "Unterminated template" and "`</script>` attempted to
+  close an element that was not open".
+- **The cause.** Svelte, like the HTML parser, ends the component's
+  `<script>` block at the first `</script>`, even inside a string.
+- **The fix.** Write it as `<\/script>` in the string (as
+  `site/src/routes/try/+page.svelte` does).
+
+### SvelteKit 3 deprecates `replaceState` (2026-11-02, /try)
+
+- **The symptom.** In development every keystroke in `/syntax` or `/try`
+  logged "`replaceState(...)` is deprecated. Use `goto(url, { state,
+  shallow: true, replace: true })` instead."
+- **The fix.** Both pages write their query through `keepQuery` in
+  `site/src/lib/url.ts`: `goto` with `replace` and `shallow`, after a
+  300 ms pause, since Safari refuses rapid history writes. A build test
+  fails if a page imports `replaceState` again.
+
 ### svelte-check cannot run on TypeScript 7 (2026-10-31, site scaffold)
 
 With `typescript` 7.0.2 (the native compiler the root uses), `svelte-kit

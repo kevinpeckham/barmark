@@ -97,11 +97,12 @@ export function read(input: string): Reading {
 	const text = input.trim();
 	const kind = classify(text);
 	if (kind === "empty") return { kind };
+	// A chart is read as typed, so its line numbers match the box's.
 	if (kind === "chart")
 		return {
 			kind,
-			canonical: printChart(text),
-			diagnostics: parseChart(text).diagnostics.map(({ line, severity, message }) => ({
+			canonical: printChart(input),
+			diagnostics: parseChart(input).diagnostics.map(({ line, severity, message }) => ({
 				line,
 				severity,
 				message,
@@ -110,10 +111,24 @@ export function read(input: string): Reading {
 	if (kind === "notes") return readParsed(kind, text, parseNoteSet(text));
 	if (kind === "harte") {
 		const spelling = harteToBarmark(text) ?? text;
-		const reading = readParsed("chord", spelling, parseChord(spelling));
-		return reading.kind === "chord" ? { kind, label: text, chord: reading.chord } : reading;
+		// "C:(1,3)" has no chord name in barmark; it is the note set {C E}.
+		const reading = spelling.startsWith("{")
+			? readParsed("notes", spelling, parseNoteSet(spelling))
+			: readParsed("chord", spelling, parseChord(spelling));
+		return "chord" in reading ? { kind, label: text, chord: reading.chord } : reading;
 	}
 	return readParsed(kind, text, parseChord(text));
+}
+
+/** Past this many characters a link is too long to share safely, so the text stays out of it. */
+export const MAX_LINK = 2_000;
+
+/** The page link's query for the text: "" for the opening example, null when too long to share. */
+export function linkQuery(text: string): string | null {
+	if (text === EXAMPLES[0]) return "";
+	if (text.length > MAX_LINK) return null;
+	const search = new URLSearchParams({ q: text }).toString();
+	return search.length > MAX_LINK ? null : search;
 }
 
 /** Which guide rows to show under a reading; null: none (a chart). */

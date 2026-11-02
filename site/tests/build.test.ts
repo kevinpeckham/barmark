@@ -27,6 +27,22 @@ describe("the site builds", () => {
 			expect(html.match(/font-family:\s*"?barmark Edwin"?\s*;/g)?.length).toBe(1);
 		}
 	});
+	test("every page names an icon that ships, so browsers don't ask for /favicon.ico", () => {
+		for (const path of ["index.html", "syntax.html", "try.html"]) {
+			const href = page(path).querySelector('link[rel="icon"]')?.getAttribute("href") ?? "";
+			expect(href).toStartWith("/");
+			expect(existsSync(join(out, href))).toBe(true);
+		}
+	});
+	test("no page keeps its URL with SvelteKit's deprecated replaceState", () => {
+		const glob = new Bun.Glob("src/**/*.{svelte,ts}");
+		const users = [...glob.scanSync(site)].filter((f) =>
+			/import\s*\{[^}]*\breplaceState\b[^}]*\}\s*from\s*"\$app\/navigation"/.test(
+				readFileSync(join(site, f), "utf8"),
+			),
+		);
+		expect(users).toEqual([]);
+	});
 	test("the OG image is a 1200×630 PNG", () => {
 		const png = readFileSync(join(out, "og.png"));
 		expect(png.subarray(1, 4).toString()).toBe("PNG");

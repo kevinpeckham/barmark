@@ -3,7 +3,9 @@ import {
 	classify,
 	EXAMPLES,
 	guideQuery,
+	linkQuery,
 	MAX_LENGTH,
+	MAX_LINK,
 	type Reading,
 	read,
 	summarize,
@@ -61,6 +63,15 @@ describe("reading what's typed", () => {
 		expect(r.label).toBe("C:maj7");
 		expect(r.chord.canonical).toBe("Cmaj7");
 	});
+	test("a Harte label that barmark spells as a note set reads as one", () => {
+		for (const [label, notes, spoken] of [
+			["C:(1,3)", "{C E}", "notes C, E"],
+			["C:", "{C}", "note C"],
+		] as const) {
+			const r = as(read(label), "harte");
+			expect([r.chord.canonical, r.chord.spoken]).toEqual([notes, spoken]);
+		}
+	});
 	test("an error with a suggestion", () => {
 		expect(read("H7")).toEqual({
 			kind: "error",
@@ -82,6 +93,20 @@ describe("reading what's typed", () => {
 		expect(as(read("## Verse"), "chart").diagnostics[0]?.message).toBe(
 			'no earlier section named "Verse" to replay',
 		);
+	});
+	test("a chart's problems name the line in the box, blank lines above it included", () => {
+		expect(as(read("\n\n## Verse"), "chart").diagnostics[0]?.line).toBe(3);
+		expect(as(read("\n\n| D |\n"), "chart").canonical).toBe("| D |\n");
+	});
+	test("linkQuery keeps the text in the link while it is short enough to share", () => {
+		expect(linkQuery("Cø")).toBe("");
+		expect(linkQuery("C7b9/E")).toBe("q=C7b9%2FE");
+		expect(linkQuery("")).toBe("q=");
+		const near = "| C |\n".repeat(100);
+		expect(linkQuery(near)).toBe(new URLSearchParams({ q: near }).toString());
+		expect(linkQuery("| C |\n".repeat(200))).toBeNull();
+		expect(linkQuery("| C |\n".repeat(10_000))).toBeNull();
+		expect(MAX_LINK).toBe(2_000);
 	});
 	test("every example chip reads without an error", () => {
 		expect(EXAMPLES).toEqual(["Cø", "C7b9/E", "{C E G}", "C:maj7", "| D | % | x2"]);
