@@ -31,5 +31,7 @@ surprised us along the way, and [BRIEF.md](BRIEF.md) why barmark exists.
 - **The grammar** (`docs/grammar-*.md`): © 2026 Kevin Peckham,
   [CC BY 4.0](docs/LICENSE). Copy it, adapt it or implement it, with
   credit: "Barmark grammar by Kevin Peckham, barmark.dev".
+- **The song charts** (Peaceful Dreams and the conformance fixtures):
+  © Kevin Peckham, all rights reserved, see [COPYRIGHT.md](COPYRIGHT.md).
 - **Everything else** (the packages, the site, the scripts): MIT, see
   [LICENSE](LICENSE).

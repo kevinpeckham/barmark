@@ -99,4 +99,8 @@ const description =
 			</div>
 		</Window>
 	</div>
+	<p data-credit class="text-xs opacity-60">
+		The demo is “Peaceful Dreams” by Kevin Peckham, recorded by Badverbs. © Kevin Peckham, all rights
+		reserved.
+	</p>
 </main>
