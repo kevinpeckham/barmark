@@ -303,14 +303,27 @@ describe("the element renderChart wraps the chart in", () => {
 	const wrapper = (options: Parameters<typeof renderChart>[1]) =>
 		doc(renderChart("| D |", options)).querySelector("barmark-chart") as Element;
 	test("carries the options, so the element keeps them when it loads or takes new text", () => {
-		const options = { theme: "dark", barNumbers: false, rehearsalLetters: true } as const;
+		const options = {
+			theme: "dark",
+			barNumbers: false,
+			rehearsalLetters: true,
+			wrap: false,
+		} as const;
 		expect(optionsFromAttributes(wrapper(options))).toEqual(options);
 	});
 	test("has no attributes at the defaults", () => {
 		expect(wrapper({}).attributes.length).toBe(0);
 		expect(
-			wrapper({ theme: "auto", barNumbers: true, rehearsalLetters: false }).attributes.length,
+			wrapper({ theme: "auto", barNumbers: true, rehearsalLetters: false, wrap: true }).attributes
+				.length,
 		).toBe(0);
+	});
+	test("wrap: false marks the chart, so its rows never wrap", () => {
+		const chart = shadow(renderChart("| D |", { wrap: false })).querySelector(".bm-chart");
+		expect(chart?.getAttribute("data-wrap")).toBe("off");
+		expect(shadow(renderChart("| D |")).querySelector(".bm-chart")?.hasAttribute("data-wrap")).toBe(
+			false,
+		);
 	});
 	test("an unknown theme is not written", () => {
 		expect(wrapper({ theme: '"><script>' as "dark" }).hasAttribute("theme")).toBe(false);

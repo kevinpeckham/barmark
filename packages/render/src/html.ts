@@ -30,6 +30,11 @@ export type RenderOptions = {
 	fontUrl?: string;
 	/** Show each chord as its degree in the bar's key, where the chart names one. Off by default. */
 	numerals?: Numerals;
+	/**
+	 * Wrap a section's rows when it is wider than the chart's box (the default).
+	 * With `false` rows keep their columns, and the page scrolls the chart instead.
+	 */
+	wrap?: boolean;
 };
 
 type Row = Extract<BlockItem, { kind: "row" }>;
@@ -49,6 +54,7 @@ function elementAttributes(options: RenderOptions): string {
 		options.barNumbers === false ? ' bar-numbers="off"' : "",
 		options.rehearsalLetters ? " rehearsal-letters" : "",
 		numeralsOf(options) ? ` numerals="${numeralsOf(options)}"` : "",
+		options.wrap === false ? ' wrap="off"' : "",
 	].join("");
 }
 
@@ -79,7 +85,7 @@ function chartHtml(text: string, options: RenderOptions): string {
 		barNumbers: options.barNumbers ?? true,
 		numerals: numeralsOf(options),
 	};
-	return `<div class="bm-chart" data-theme="${themeOf(options)}"${settings.barNumbers ? "" : ' data-bar-numbers="off"'}>${headerHtml(model)}${model.blocks.map((b) => blockHtml(b, settings)).join("")}${options.diagnostics ? diagnosticsHtml(model) : ""}</div>`;
+	return `<div class="bm-chart" data-theme="${themeOf(options)}"${settings.barNumbers ? "" : ' data-bar-numbers="off"'}${options.wrap === false ? ' data-wrap="off"' : ""}>${headerHtml(model)}${model.blocks.map((b) => blockHtml(b, settings)).join("")}${options.diagnostics ? diagnosticsHtml(model) : ""}</div>`;
 }
 
 function headerHtml(model: ChartModel): string {

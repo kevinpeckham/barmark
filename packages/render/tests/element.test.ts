@@ -12,12 +12,15 @@ describe("attributes → render options", () => {
 			theme: "auto",
 			barNumbers: true,
 			rehearsalLetters: false,
+			wrap: true,
 		});
 	});
-	test("theme, bar-numbers=off, rehearsal-letters", () => {
+	test("theme, bar-numbers=off, rehearsal-letters, wrap=off", () => {
 		expect(
-			optionsFromAttributes(el({ theme: "dark", "bar-numbers": "off", "rehearsal-letters": "" })),
-		).toEqual({ theme: "dark", barNumbers: false, rehearsalLetters: true });
+			optionsFromAttributes(
+				el({ theme: "dark", "bar-numbers": "off", "rehearsal-letters": "", wrap: "off" }),
+			),
+		).toEqual({ theme: "dark", barNumbers: false, rehearsalLetters: true, wrap: false });
 	});
 	test("an unknown theme is auto", () => {
 		expect(optionsFromAttributes(el({ theme: "sepia" })).theme).toBe("auto");

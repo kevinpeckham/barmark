@@ -96,6 +96,7 @@ const css = `
 .bm-times{font:italic 1.2em/1 Georgia,serif;text-transform:none;letter-spacing:0;color:var(--bm-muted)}
 .bm-grid{display:grid;grid-template-columns:${em(GUTTER)} repeat(var(--bm-cols),auto) auto;width:max-content;max-width:100%}
 .bm-chart[data-bar-numbers="off"] .bm-grid{grid-template-columns:repeat(var(--bm-cols),auto) auto}
+.bm-chart[data-wrap="off"] .bm-grid{max-width:none}
 .bm-row{display:contents}
 .bm-row+.bm-row>*{margin-top:${em(ROW_GAP)}}
 .bm-row+.bm-row>.bm-bar-number{margin-top:${at(SIZES.barNumber, ROW_GAP)}}
@@ -143,7 +144,7 @@ const css = `
 	.bm-bar[data-cut]{outline-color:CanvasText}
 }
 ${FIT_STEPS.map((w) => {
-	const g = `.bm-grid[data-fit="${w}"]`;
+	const g = `.bm-chart:not([data-wrap="off"]) .bm-grid[data-fit="${w}"]`;
 	return `@container bm (max-width:${w}em){${g}{display:block}${g}>.bm-row{display:flex;flex-wrap:wrap;row-gap:${em(ROW_GAP)}}${g} .bm-empty{display:none}${g} .bm-bar{flex:0 1 auto;max-width:100%;border-left:.075em solid var(--bm-rule);margin-left:-.075em}${g} :is(.bm-bar-body,.bm-group,.bm-notes){flex-wrap:wrap}${g} .bm-bar-body>*{flex:1 1 auto;min-width:auto}}`;
 }).join("\n")}
 `;
