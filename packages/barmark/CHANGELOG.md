@@ -9,6 +9,12 @@ Releases follow the process in [RELEASING.md](RELEASING.md).
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-11-02
+
+An optional swing amount for `feel:` (`swing 58%`), issue #66. Charts
+that read before read and print the same. Implements the
+[grammar v0.1 draft](https://github.com/kevinpeckham/barmark/blob/main/docs/grammar-v0.1-draft.md).
+
 ### Added
 
 - **A swing amount** (grammar 7.1, issue #66): `feel: swing 58%`,
@@ -215,7 +221,8 @@ The first working release: the reference parser and printer for the
 
 - **A placeholder package that holds the `barmark` name** while the spec and parser are written.
 
-[Unreleased]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.8.0...HEAD
+[Unreleased]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.9.0...HEAD
+[0.9.0]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.8.0...barmark-v0.9.0
 [0.8.0]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.7.0...barmark-v0.8.0
 [0.7.0]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.6.0...barmark-v0.7.0
 [0.6.0]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.5.0...barmark-v0.6.0

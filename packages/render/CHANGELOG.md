@@ -6,6 +6,10 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.7.2] - 2026-11-02
+
+Requires `barmark` 0.9.0, and shows its swing amount.
+
 ### Added
 
 - **A swing amount shows with its feel** (barmark's `swingPercent`): the
@@ -209,7 +213,8 @@ that needs no script or as the `<barmark-chart>` web component. Requires
   zoom without sideways scrolling, the element renders and re-renders, and
   a screen reader hears "bar 9: D". Run them with `bun run test:browser`.
 
-[Unreleased]: https://github.com/kevinpeckham/barmark/compare/render-v0.7.1...HEAD
+[Unreleased]: https://github.com/kevinpeckham/barmark/compare/render-v0.7.2...HEAD
+[0.7.2]: https://github.com/kevinpeckham/barmark/compare/render-v0.7.1...render-v0.7.2
 [0.7.1]: https://github.com/kevinpeckham/barmark/compare/render-v0.7.0...render-v0.7.1
 [0.7.0]: https://github.com/kevinpeckham/barmark/compare/render-v0.6.0...render-v0.7.0
 [0.6.0]: https://github.com/kevinpeckham/barmark/compare/render-v0.5.0...render-v0.6.0
