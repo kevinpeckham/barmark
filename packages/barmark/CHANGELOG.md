@@ -9,6 +9,16 @@ Releases follow the process in [RELEASING.md](RELEASING.md).
 
 ## [Unreleased]
 
+### Added
+
+- The stem-bench conformance fixtures (`tests/conformance/`): the four
+  public Badverbs charts exactly as stored in Stem Shovel, with expected
+  readings derived from the band's declared section starts and
+  stem-bench's independently-built verified bar lists (Study 16), plus
+  the grammar's trap rules as tests. A parser change that alters what a
+  real chart means now fails CI before it ships. No grammar or API
+  change.
+
 ## [0.6.0] - 2026-11-01
 
 Transposition, and scale degrees for numeral views. No grammar change:

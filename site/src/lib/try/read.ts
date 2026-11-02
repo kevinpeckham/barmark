@@ -1,0 +1,119 @@
+import { speakChord } from "@barmark/render";
+import {
+	type ChordRecord,
+	DIRECTIVE_NAMES,
+	harteToBarmark,
+	type Interval,
+	type ParseResult,
+	parseChart,
+	parseChord,
+	parseNoteSet,
+	printChart,
+} from "barmark";
+import type { GuideQuery } from "#lib/guide/query.js";
+
+/** The chips under the box, in order. */
+export const EXAMPLES: readonly string[] = ["Cø", "C7b9/E", "{C E G}", "C:maj7", "| D | % | x2"];
+
+export type Kind = "empty" | "chart" | "notes" | "harte" | "chord";
+
+/** What barmark makes of a chord, all of it from the packages. */
+export type ChordReading = {
+	/** What was read: the input, or a Harte label's barmark spelling. */
+	typed: string;
+	canonical: string;
+	spoken: string;
+	harte: string;
+	notes: string[];
+	/** The intervals above the root, as degrees: "1", "♭3", "♯11". */
+	degrees: string[];
+	/** The bass when it isn't the root. */
+	bass: string | null;
+	warnings: string[];
+};
+
+export type Reading =
+	| { kind: "empty" }
+	| { kind: "text" }
+	| {
+			kind: "chart";
+			canonical: string;
+			diagnostics: { line: number; severity: "error" | "warning"; message: string }[];
+	  }
+	| { kind: "chord" | "notes"; chord: ChordReading }
+	| { kind: "harte"; label: string; chord: ChordReading }
+	| { kind: "error"; message: string; suggestion: string | null };
+
+const DIRECTIVE = new RegExp(`^(?:${DIRECTIVE_NAMES.join("|")})\\s*:`, "i");
+
+export function classify(input: string): Kind {
+	const text = input.trim();
+	if (!text) return "empty";
+	if (/[\n|]/.test(text) || text.startsWith("#") || DIRECTIVE.test(text)) return "chart";
+	if (text.startsWith("{")) return "notes";
+	if (text.includes(":") && harteToBarmark(text) !== null) return "harte";
+	return "chord";
+}
+
+const degree = ({ degree, alter }: Interval) =>
+	(alter < 0 ? "♭" : "♯").repeat(Math.abs(alter)) + degree;
+
+function chordReading(typed: string, record: ChordRecord, warnings: string[]): ChordReading {
+	return {
+		typed,
+		canonical: record.canonical,
+		spoken: speakChord(record),
+		harte: record.harte,
+		notes: record.pitches,
+		degrees: record.intervals.map(degree),
+		bass: record.bass && record.bass !== record.root ? record.bass : null,
+		warnings,
+	};
+}
+
+/** A failed parse is an error when the text was trying to be a chord; otherwise just text. */
+function readParsed(kind: "chord" | "notes", text: string, r: ParseResult): Reading {
+	if (r.ok)
+		return {
+			kind,
+			chord: chordReading(
+				text,
+				r.value,
+				r.warnings.map((w) => w.message),
+			),
+		};
+	if (!/^[A-H{]/.test(text)) return { kind: "text" };
+	return { kind: "error", message: r.error.message, suggestion: r.error.suggestion ?? null };
+}
+
+/** What barmark makes of the text in the box. Never throws on input. */
+export function read(input: string): Reading {
+	const text = input.trim();
+	const kind = classify(text);
+	if (kind === "empty") return { kind };
+	if (kind === "chart")
+		return {
+			kind,
+			canonical: printChart(text),
+			diagnostics: parseChart(text).diagnostics.map(({ line, severity, message }) => ({
+				line,
+				severity,
+				message,
+			})),
+		};
+	if (kind === "notes") return readParsed(kind, text, parseNoteSet(text));
+	if (kind === "harte") {
+		const spelling = harteToBarmark(text) ?? text;
+		const reading = readParsed("chord", spelling, parseChord(spelling));
+		return reading.kind === "chord" ? { kind, label: text, chord: reading.chord } : reading;
+	}
+	return readParsed(kind, text, parseChord(text));
+}
+
+/** Which guide rows to show under a reading; null: none (a chart). */
+export function guideQuery(reading: Reading, input: string): GuideQuery | null {
+	if (reading.kind === "chart") return null;
+	if (reading.kind === "empty" || reading.kind === "text")
+		return { q: input.trim(), cat: null, sort: "category" };
+	return { q: "", cat: "chords", sort: "category" };
+}

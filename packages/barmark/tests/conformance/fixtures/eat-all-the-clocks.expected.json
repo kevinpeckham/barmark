@@ -1,0 +1,19 @@
+{
+	"source": "Eat All the Clocks by Badverbs — the stored Stem Shovel chart, migrated by the band's hand, fetched from the public song page 2026-11-01 (stem-bench corpus/badverbs-charts)",
+	"verified": "stem-bench Study 16: 71 bars in play order across nine sections via elision, every declared section start grid-exact; the one-bar Outro is the ring-out attack, its `...` cell uncounted (BRIEF-STUDY16.md, results/study16.json)",
+	"key": "E minor",
+	"tempo": 120,
+	"meter": "4/4",
+	"barCount": 71,
+	"sections": [
+		{ "name": "Part 1", "bars": 14, "first": "Em Am" },
+		{ "name": "Part 2", "bars": 8, "first": "D5" },
+		{ "name": "Verse", "bars": 6, "first": "E5(7)" },
+		{ "name": "Chorus", "bars": 8, "first": "D5" },
+		{ "name": "Bridge", "bars": 12, "first": "E5(7)" },
+		{ "name": "Verse", "bars": 6, "first": "E5(7)" },
+		{ "name": "Chorus", "bars": 8, "first": "D5" },
+		{ "name": "Chorus", "bars": 8, "first": "D5" },
+		{ "name": "Outro", "bars": 1, "first": "Em" }
+	]
+}

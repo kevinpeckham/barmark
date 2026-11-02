@@ -2,7 +2,11 @@
 import { onMount, untrack } from "svelte";
 import { chartHtml } from "#lib/chart.js";
 
-let { text, label }: { text: string; label?: string } = $props();
+let {
+	text,
+	label,
+	barNumbers = true,
+}: { text: string; label?: string; barNumbers?: boolean } = $props();
 
 /** Charts longer than this re-render once typing pauses, not on every key. */
 const LONG = 10_000;
@@ -14,7 +18,10 @@ const tooLong = $derived(text.length > MAX);
 // The prerendered chart: computed once, so Svelte never rewrites it. From
 // then on the <barmark-chart> element draws, from its text property.
 let rendered = untrack(() => text);
-const initial = chartHtml(rendered);
+const initial = chartHtml(
+	rendered,
+	untrack(() => barNumbers),
+);
 let host: HTMLDivElement;
 
 const chart = () => host.querySelector("barmark-chart") as HTMLElement & { text: string | null };
