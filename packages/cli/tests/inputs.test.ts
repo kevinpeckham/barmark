@@ -1,4 +1,7 @@
 import { describe, expect, test } from "bun:test";
+import { mkdtempSync, symlinkSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { readCharts } from "../src/inputs.js";
 import { UsageError } from "../src/io.js";
 import { folder as at } from "./charts.js";
@@ -57,5 +60,15 @@ describe("readCharts", () => {
 		await expect(readCharts(["-", "-"], folder({}), { folders: true })).rejects.toThrow(
 			new UsageError("- (stdin) given twice"),
 		);
+	});
+	test("symlinks inside a folder are skipped; a symlink named directly is read", async () => {
+		const outside = join(mkdtempSync(join(tmpdir(), "barmark-out-")), "target.chart.md");
+		writeFileSync(outside, "| T |");
+		const io = folder({ "songs/a.chart.md": "| A |" });
+		symlinkSync(outside, join(io.cwd, "songs/link.chart.md"));
+		const inFolder = await readCharts(["songs"], io, { folders: true });
+		expect(inFolder.map((c) => c.path)).toEqual(["songs/a.chart.md"]);
+		const named = await readCharts(["songs/link.chart.md"], io, { folders: true });
+		expect(named.map((c) => c.text)).toEqual(["| T |"]);
 	});
 });

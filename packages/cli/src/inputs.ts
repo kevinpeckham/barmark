@@ -7,11 +7,15 @@ export type Chart = { path: string; text: string };
 
 const STDIN = "<stdin>";
 
-/** Every `*.chart.md` under a folder, sorted, skipping node_modules and dot-folders. */
+/**
+ * Every `*.chart.md` under a folder, sorted, skipping node_modules and dot-folders.
+ * Symlinks are skipped too, so `format --write` never rewrites a file outside the folder.
+ */
 function chartsUnder(dir: string): string[] {
 	const found: string[] = [];
 	for (const entry of readdirSync(dir, { withFileTypes: true })) {
 		const path = join(dir, entry.name);
+		if (entry.isSymbolicLink()) continue;
 		if (entry.isDirectory()) {
 			if (entry.name !== "node_modules" && !entry.name.startsWith("."))
 				found.push(...chartsUnder(path));
