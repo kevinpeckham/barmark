@@ -1,35 +1,28 @@
 import extractorSvelte from "@unocss/extractor-svelte";
 import presetIcons from "@unocss/preset-icons";
-import presetWebFonts from "@unocss/preset-web-fonts";
 import presetWind4 from "@unocss/preset-wind4";
 import { defineConfig, transformerDirectives, transformerVariantGroup } from "unocss";
 
 /**
  * Mirrors Stem Shovel's uno.config (~/projects/stem-shovel): wind4 with its
- * reset, Phosphor icons, Noto from bunny, the same palette, and the
- * shortcuts this site uses.
+ * reset, Phosphor icons, the Noto families, the same palette, and the
+ * shortcuts this site uses. The Noto files are served from the site
+ * (@fontsource, imported in +layout.svelte), not fetched at build.
  */
 export default defineConfig({
 	extractors: [extractorSvelte()],
 	presets: [
 		presetWind4({ preflights: { reset: true } }),
 		presetIcons({ warn: true }),
-		presetWebFonts({
-			provider: "bunny",
-			// The default gives up after 2 s, which failed CI's build once (FINDINGS.md).
-			timeouts: { warning: 5_000, failure: 30_000 },
-			fonts: {
-				mono: "Noto Mono",
-				serif: [
-					{ name: "Noto Serif", weights: ["400"] },
-					{ name: "Noto Serif", weights: ["400"], italic: true },
-				],
-				sans: "Noto Sans:400,600,700",
-			},
-		}),
 	],
 	transformers: [transformerDirectives(), transformerVariantGroup()],
 	theme: {
+		// The stacks presetWebFonts built for these families, now that the files ship with the site.
+		font: {
+			sans: '"Noto Sans",ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,"Noto Sans",sans-serif,"Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol","Noto Color Emoji"',
+			serif: '"Noto Serif",ui-serif,Georgia,Cambria,"Times New Roman",Times,serif',
+			mono: '"Noto Mono",ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace',
+		},
 		colors: {
 			accent: "#ebf92f",
 			"accent-1": "#ebf92f",
