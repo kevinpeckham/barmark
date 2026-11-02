@@ -11,6 +11,12 @@ Releases follow the process in [RELEASING.md](RELEASING.md).
 
 ### Added
 
+- **`printParsed(text, parsed)`**: the canonical text from a `parseChart`
+  result you already have, so a caller that needs both the parse and the
+  printed chart reads the text once. barmark.dev's /try uses it.
+
+### Added
+
 - The stem-bench conformance fixtures (`tests/conformance/`): the four
   public Badverbs charts exactly as stored in Stem Shovel, with expected
   readings derived from the band's declared section starts and

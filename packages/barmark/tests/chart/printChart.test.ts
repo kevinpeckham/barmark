@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { parseChart, printChart } from "../../src/index.js";
+import { parseChart, printChart, printParsed } from "../../src/index.js";
 import { AT_A_GLANCE, meaning, PEACEFUL_DREAMS } from "./fixtures.js";
 
 /** Printing keeps the meaning: same everything, and warnings may only disappear. */
@@ -19,6 +19,13 @@ describe("conformance", () => {
 	test("At a glance is stable and keeps its meaning", () => {
 		stable(AT_A_GLANCE);
 		expectSameMeaning(AT_A_GLANCE);
+	});
+});
+
+describe("printParsed", () => {
+	test("prints a chart already parsed, as printChart would", () => {
+		for (const text of [PEACEFUL_DREAMS, AT_A_GLANCE, "| D7 | %|x2\n## Verse\n|G|"])
+			expect(printParsed(text, parseChart(text))).toBe(printChart(text));
 	});
 });
 
