@@ -1,5 +1,14 @@
 import { describe, expect, test } from "bun:test";
-import { chmodSync, cpSync, linkSync, readdirSync, readFileSync, statSync } from "node:fs";
+import {
+	chmodSync,
+	cpSync,
+	linkSync,
+	readdirSync,
+	readFileSync,
+	statSync,
+	symlinkSync,
+	writeFileSync,
+} from "node:fs";
 import { join } from "node:path";
 import { printChart } from "barmark";
 import { format } from "../src/format.js";
@@ -43,6 +52,16 @@ describe("barmark format", () => {
 		expect(readFileSync(join(io.dir, "a.chart.md"), "utf8")).toBe(CANONICAL);
 		expect(readFileSync(join(io.dir, "old.txt"), "utf8")).toBe(LOOSE);
 		expect(readdirSync(io.dir).sort()).toEqual(["a.chart.md", "old.txt"]);
+	});
+	test("--write never follows a link planted where its temporary file would go", async () => {
+		const io = folder({ "a.chart.md": LOOSE });
+		const victim = join(io.dir, "victim.txt");
+		writeFileSync(victim, "keep me");
+		// The name a predictable scheme would use, for this process.
+		symlinkSync(victim, join(io.dir, `.a.chart.md.${process.pid}.tmp`));
+		expect(await format(["--write", "a.chart.md"], io)).toBe(0);
+		expect(readFileSync(victim, "utf8")).toBe("keep me");
+		expect(readFileSync(join(io.dir, "a.chart.md"), "utf8")).toBe(CANONICAL);
 	});
 	test("--write keeps each file's permissions", async () => {
 		const io = folder({ "a.chart.md": LOOSE });
