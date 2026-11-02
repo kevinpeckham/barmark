@@ -33,6 +33,24 @@ type Item =
 
 const normalize = (name: string) => name.toLowerCase().replace(/\s+/g, " ").trim();
 
+const isWritten = (s: Section) => s.lines.some((l) => l.kind === "bars" || l.kind === "invalid");
+
+/** Grammar §6: an empty section that matches nothing, and how to fix it. */
+function unmatchedReplay(heading: SectionLine, sections: Section[]): string {
+	const name = normalize(heading.name);
+	const later = sections.find(
+		(s) =>
+			s.heading &&
+			s.heading.line > heading.line &&
+			normalize(s.heading.name) === name &&
+			isWritten(s),
+	)?.heading;
+	const fix = later
+		? `replays use only earlier sections (it is written at line ${later.line})`
+		: "write its bars under it, or remove the heading";
+	return `"${heading.name}" has no bars and no earlier section has that name; ${fix}`;
+}
+
 /** Every played bar in order, with an open repeat's pass included once. */
 export function flattenBars(events: ChartEvent[]): PlayedBar[] {
 	return events.flatMap((e) =>
@@ -293,7 +311,7 @@ export function expand(lines: Line[]): {
 		}
 		sectionName = h.name;
 		const out: ChartEvent[] = [];
-		const isDefinition = s.lines.some((l) => l.kind === "bars" || l.kind === "invalid");
+		const isDefinition = isWritten(s);
 		let replayOf: number | null = null;
 		if (isDefinition) {
 			definitions.set(normalize(h.name), s);
@@ -304,7 +322,7 @@ export function expand(lines: Line[]): {
 			if (!h.name) continue;
 			const source = definitions.get(normalize(h.name));
 			if (!source?.heading) {
-				error(h.line, `no earlier section named "${h.name}" to replay`, h.name);
+				error(h.line, unmatchedReplay(h, sections), h.name);
 				continue;
 			}
 			replayOf = source.heading.line;

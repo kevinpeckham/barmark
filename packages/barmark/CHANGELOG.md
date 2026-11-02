@@ -9,6 +9,41 @@ Releases follow the process in [RELEASING.md](RELEASING.md).
 
 ## [Unreleased]
 
+### Added
+
+- **`(addN)` reads inside parentheses** (issue #62). `Am(add9)`,
+  `C(add2)`, `C(add4)` and `C(add11)` are aliases of `Am(9)`, `C(2)`,
+  `C(4)` and `C(11)`, alone or in a list (`C(b9,add11)` is `C(b9,11)`),
+  and print in the canonical form. `add13` and `add#11` stay errors.
+  Grammar Appendix A.5 and the decisions log.
+
+### Changed
+
+- **An empty section that matches nothing says how to fix it** (issue
+  #63). `## Progression` with no bars and no earlier section of that name
+  reported `no earlier section named "Progression" to replay`; it now
+  reports `"Progression" has no bars and no earlier section has that
+  name; write its bars under it, or remove the heading`. When the name is
+  written out later in the chart, the message says replays use only
+  earlier sections and gives that line. It is still an error: a section
+  with no bars replays (grammar §6), and there is no intentionally empty
+  section.
+- **Grammar notes; no chart changes meaning.** §8 gains a note for
+  generators: write one slot per beat (the 2.1 beat, so 6/8 has two),
+  then canonicalize; a length that is not a whole number of beats needs
+  an eighth-note grid or a `_` group; leave out a section with no bars
+  (issue #64). §2.3: a tool that knows only the chord part writes `N.C.`
+  for its rests, not `--` (issue #65). §7.1: `feel:` names a kind of
+  groove, not an amount, so `swing 60%` stays an error, and the "custom
+  swing ratios" open question is closed (issue #66).
+
+### Fixed
+
+- **A rejected tone in parentheses is named as written.** `C(add9x)`
+  reported `"x" is not a tone a parenthesis can add`, and `Am(add9)`
+  reported `""`, because a bare `add9` was looked for inside the group
+  too; the message now quotes the tone as written (`"add9x"`).
+
 ## [0.7.0] - 2026-11-02
 
 Print a chart you have already parsed, and conformance fixtures from real

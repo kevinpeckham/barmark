@@ -97,9 +97,13 @@ function normalizeSymbol(symbol: string): { text: string } | Diagnostic {
 	let rest = text.slice(root.length);
 	for (const [pattern, replacement] of ALIASES) rest = rest.replace(pattern, replacement);
 	rest = logicGroups(rest);
-	const added = [...rest.matchAll(/add(2|4|9|11)/g)].map((m) => m[1] ?? "");
+	// `(add9)` is `(9)`: inside a group, `add` before a tone it may add is dropped.
+	rest = rest.replace(/(?<=[(,]\s*)add(2|4|9|11)(?=\s*[,)])/g, "$1");
+	// A bare `add9` outside any group; what is left inside one is the tokenizer's to name.
+	const bare = /add(2|4|9|11)(?![^(]*\))/g;
+	const added = [...rest.matchAll(bare)].map((m) => m[1] ?? "");
 	if (added.length) {
-		rest = rest.replace(/add(2|4|9|11)/g, "");
+		rest = rest.replace(bare, "");
 		const close = rest.indexOf(")");
 		if (close >= 0) rest = `${rest.slice(0, close)},${added.join(",")}${rest.slice(close)}`;
 		else {

@@ -30,6 +30,20 @@ describe("replays", () => {
 		const e = errors("## Verse\n| D |\n## Verse 2");
 		expect(e.map((d) => d.line)).toEqual([3]);
 	});
+	test("an empty section that matches nothing says how to fix it (issue #63)", () => {
+		expect(errors("key: C\n\n## Progression\n").map((d) => d.message)).toEqual([
+			'"Progression" has no bars and no earlier section has that name; write its bars under it, or remove the heading',
+		]);
+	});
+	test("a replay of a section written only later names that line", () => {
+		const e = errors("## Chorus\n## Verse\n| D |\n## chorus\n| G |");
+		expect(e.map((d) => [d.line, d.message])).toEqual([
+			[
+				1,
+				'"Chorus" has no bars and no earlier section has that name; replays use only earlier sections (it is written at line 4)',
+			],
+		]);
+	});
 	test("lyrics alone still replay", () => {
 		expect(play("## V\n| D |\n## V\nsecond verse words").texts).toEqual(["D", "D"]);
 	});

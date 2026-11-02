@@ -162,6 +162,9 @@ How the symbols relate:
 - `N.C.` and `--` differ in who plays. A drum break or a vocal-only line is
   `N.C.`, and a full stop is `--`. Stop-time is `| G -- -- -- |`, and
   `| G / / / |` lets the chord ring.
+  A tool that knows only the chord part, such as a chord player writing
+  its own rests, writes `N.C.`; only a source that knows the whole band
+  stopped writes `--`.
 - Silence is a double hyphen so that a single `-` stays free as the jazz
   minor sign (`C-7`). The two can't be silently confused: `C-` is C minor,
   `C--` is an error, and a lone `-` is an error suggesting `--`. An en or em
@@ -327,7 +330,10 @@ number is an extension (`C7`, `C13`), so it can't also be an octave.
   replays the changes.
 - Names match case-insensitively with whitespace collapsed; otherwise the
   match is exact. `## Verse 2` does not match `## Verse`. An empty section
-  that matches nothing is an **error**.
+  that matches nothing is an **error**, and there is no intentionally empty
+  section: write its bars under it, or leave the heading out. A replay looks
+  only backward, so a heading whose bars are written later in the chart is
+  the same error, and its message gives the line where they are written.
 - A heading may carry any label, including numerals that tie it to outside
   data (`## II - Verse`). Matching uses the full text.
 - **Elision.** `->` at the end of a replay heading cuts the replay's last
@@ -404,6 +410,9 @@ Feel matters to barmark in one place: **where off-beat subdivisions land.**
   reads more easily.
 - Any other value is an **error**. Feels that move no chord (half-time,
   double-time, laid back) belong in a text line.
+- `feel:` names the kind of groove, not an amount. How far a player
+  swings is a performance setting that a player or a DAW holds; a chart
+  writes `swing`, and `feel: swing 60%` is an error.
 
 ### 7.2 Gradual tempo changes
 
@@ -470,6 +479,30 @@ same directives and sections and reports the same errors (formatting
 warnings such as a missing `|` may disappear), and `print` is stable when
 applied twice.
 
+**Generators.** A tool that writes charts from timed chords writes one
+slot per beat and canonicalizes (`printChart`). A beat the chord holds
+through is `/`, and a chord that crosses a bar line continues as `/` in
+the next bar. The printer reduces each cell to the fewest even slots and
+keeps what cannot reduce:
+
+| Written | Printed (4/4) |
+|---|---|
+| `\| C / / / \|` | `\| C \|` |
+| `\| C / G / \|` | `\| C G \|` |
+| `\| C / G D \|` | `\| C / G D \|` |
+| `\| C / / / \| / / G / \|` | `\| C \| / G \|` |
+
+- "Beat" is the beat of 2.1, so a 6/8 bar has 2 slots (`| C / |` prints as
+  `| C |`). A grid of six eighths reduces correctly too:
+  `| C / / G / / |` in 6/8 prints as `| C G |`.
+- A length that is not a whole number of beats needs a finer even grid,
+  one slot per eighth (`| C / / G / / / / |`: C for a beat and a half),
+  or a `_` group (`| C /_G / / |`, G on the "and" of 2). Both print as
+  written.
+- A section with no bars is left out, heading and all: an empty `##`
+  heading replays an earlier section (section 6), and one that matches
+  nothing is an error.
+
 ## 9. Errors and warnings
 
 | Kind | Situation |
@@ -480,7 +513,7 @@ applied twice.
 | error | `%` or `...` sharing a cell with other slots or inside a group |
 | error | unpaired `\|:` or `:\|` |
 | error | ending marks (`\|1`, `\|2`): reserved for v0.2 |
-| error | empty section that references no earlier section |
+| error | empty section that references no earlier section (the message suggests writing its bars or removing the heading, or names the line where a later section of that name is written) |
 | error | `->` anywhere but the end of a replay heading |
 | error | `/` or `%` with nothing before it |
 | error | invalid directive value (`time: 4/3`, `tempo: fast`, `rit. to fast`, `feel: lazy`) |
@@ -550,6 +583,8 @@ human to say whether the band was silent, and the structure line.
 | Logic Pro's parentheses | Decided by Kevin (2026-11-01): groups in a row are one list (`C7(b9)(#11)` = `C7(b9,#11)`), and `(5)` on a bare root is the power chord (`F#(5)(7)` = `F#5(7)`, F♯ C♯ E). Both are aliases: the canonical form keeps one group and the `5` quality, and no chart that read before changes meaning. `(5)` after a quality or an extension stays an error. |
 | Directives under a replay heading | Decided by Kevin: they take effect after the replay, because the heading stands for its bars (written order is play order). Before, the parser applied them to the replay. |
 | Gradual tempo changes | Decided by Kevin (2026-11-01): `tempo:` also takes `rit.`, `accel.` (each optionally `to` a tempo) and `a tempo`. A change runs from the next bar to the next `tempo:` or the end; its shape is never written; machine output marks every bar inside one (7.2, A.7). |
+| `(addN)` in parentheses | Decided by Kevin (2026-11-02, issue #62): `(add2)`, `(add4)`, `(add9)` and `(add11)` are aliases of `(2)`, `(4)`, `(9)` and `(11)`, alone or in a list (`C(b9,add11)` = `C(b9,11)`), because chord players and DAWs spell `Am(add9)` that way. Only the four tones `addN` already takes: `add13` and `add#11` stay errors, in or out of parentheses. |
+| Custom swing ratios | Decided by Kevin (2026-11-02, issue #66): not planned. `feel:` names the kind of groove (7.1); how far a player swings is a performance setting a player or DAW holds, so a chart writes `swing` and `feel: swing 60%` stays an error. Closed from the open questions. |
 
 ## Open questions
 
@@ -564,7 +599,6 @@ human to say whether the band was silent, and the structure line.
   library function and a renderer option, both reading `key:`.
 - Exact voicings on named chords (`Cmaj7{E3 G3 B3 C4}`).
 - Omissions (`(no3)`, `(no5)`).
-- Custom swing ratios.
 
 ---
 
@@ -659,6 +693,7 @@ Accepted on input, printed canonically:
 | `ø`, `ø7` | `m7(b5)` |
 | `m(maj7)`, `minmaj7` | `mmaj7` |
 | `add2`, `add4`, `add9`, `add11` | `(2)`, `(4)`, `(9)`, `(11)` |
+| `(add2)`, `(add4)`, `(add9)`, `(add11)`, also in a list (`(b9,add11)`) | `(2)`, `(4)`, `(9)`, `(11)` (`(b9,11)`) |
 | `7b9`, `m7b5` (alteration after an extension) | `7(b9)`, `m7(b5)` |
 | groups in a row (`(b9)(#11)`, Logic Pro) | one group (`(b9,#11)`) |
 | `(5)` on a bare root (`F#(5)`, `F#(5,7)`) | `5` (`F#5`, `F#5(7)`) |
