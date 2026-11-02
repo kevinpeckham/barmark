@@ -96,14 +96,16 @@ export default defineConfig({
 			"button",
 			"border border-current flex gap-2 items-center max-w-fit opacity-90 px-3 py-1.5 rounded text-[0.9em] disabled-opacity-40 disabled-pointer-events-none hover-text-oxford hover-bg-accent hover-opacity-100",
 		],
+		// The two link buttons share one box and one type size, so a row of them lines up.
+		[
+			"button-link",
+			"inline-flex items-center gap-2 px-4 py-2 rounded-md border font-sans text-sm leading-normal focus-visible-(outline-2 outline-accent outline-offset-2)",
+		],
 		[
 			"button-accent-solid",
-			"button text-oxford bg-accent hover-outline outline-accent outline-offset-4 hover-text-oxford hover-shadow-lg",
+			"button-link border-accent text-oxford bg-accent hover-(outline outline-accent outline-offset-4 shadow-lg)",
 		],
-		[
-			"button-outline",
-			"inline-flex items-center gap-2 px-4 py-2 rounded-md border border-white/45 hover-(border-accent text-accent) focus-visible-(outline-2 outline-accent)",
-		],
+		["button-outline", "button-link border-white/45 hover-(border-accent text-accent)"],
 		["device-window", "bg-dark border-2 border-blue-200/10 rounded-lg overflow-hidden"],
 		[
 			"window-bar",

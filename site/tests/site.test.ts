@@ -1,7 +1,14 @@
 import { describe, expect, test } from "bun:test";
 import { join } from "node:path";
 import { parseChart } from "barmark";
-import { HEADLINE, LINKS, TAGLINE_AFTER, TAGLINE_BEFORE, TAGLINE_LINK } from "../src/lib/site.ts";
+import {
+	HEADLINE,
+	LINKS,
+	TAGLINE_AFTER,
+	TAGLINE_BEFORE,
+	TAGLINE_LINK,
+	VALUE,
+} from "../src/lib/site.ts";
 
 const demo = await Bun.file(join(import.meta.dir, "../src/lib/demo.chart.md")).text();
 /** Peaceful Dreams as Stem Shovel has it, kept in the repository's examples. */
@@ -17,7 +24,12 @@ describe("site copy", () => {
 	});
 	test("the second sentence names Stem Shovel", () => {
 		expect(TAGLINE_BEFORE + TAGLINE_LINK + TAGLINE_AFTER).toBe(
-			"barmark was developed as part of Stem Shovel, an open-source platform for musician collaboration.",
+			"Barmark was developed as part of Stem Shovel, an open-source platform for musician collaboration.",
+		);
+	});
+	test("then what it offers musicians and music apps", () => {
+		expect(VALUE).toBe(
+			"It gives musicians a way to write charts that is predictable, precise, and easy to read and write, so a band can agree on one style. And it gives modern music applications charts they can read, transpose and display exactly as the band means them.",
 		);
 	});
 	test("every link is https", () => {

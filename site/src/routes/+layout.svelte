@@ -21,7 +21,7 @@ const edwin = `<style data-barmark-font>${fontFaceCss("/fonts/Edwin-Roman.otf")}
 	<meta property="og:image:height" content="630" />
 	<meta
 		property="og:image:alt"
-		content="barmark: a chord chart's plain-text source beside the chart @barmark/render draws from it."
+		content="Barmark: a chord chart's plain-text source beside the chart @barmark/render draws from it."
 	/>
 	<meta name="twitter:card" content="summary_large_image" />
 </svelte:head>

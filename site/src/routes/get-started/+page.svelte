@@ -14,19 +14,19 @@ import {
 } from "#lib/start.js";
 
 const description =
-	"Write a Barmark chart, read it with the barmark parser, and draw it with @barmark/render or the <barmark-chart> web component.";
+	"Write a Barmark chart, read it with the parser, and draw it with @barmark/render or the <barmark-chart> web component.";
 const step = "font-serif text-xl text-ink";
 const link = "underline decoration-accent/60 underline-offset-3 hover-text-accent";
 const code = "font-mono text-accent";
 </script>
 
 <svelte:head>
-	<title>Get Started · barmark</title>
+	<title>Get Started · Barmark</title>
 	<meta name="description" content={description} />
 	<link rel="canonical" href="{LINKS.origin}/get-started" />
 	<meta property="og:type" content="website" />
 	<meta property="og:url" content="{LINKS.origin}/get-started" />
-	<meta property="og:title" content="Get Started · barmark" />
+	<meta property="og:title" content="Get Started · Barmark" />
 	<meta property="og:description" content={description} />
 </svelte:head>
 
@@ -61,7 +61,7 @@ const code = "font-mono text-accent";
 	</section>
 
 	<section class="flex flex-col gap-4 min-w-0">
-		<h2 class={step}>2. Read it with barmark</h2>
+		<h2 class={step}>2. Read it with the parser</h2>
 		<p class="max-w-prose opacity-80">
 			<code class={code}>parseChart</code> gives you every bar in play order, with its chords, section,
 			key, meter and tempo, and a list of problems, each with a line number. It never throws on what
@@ -71,7 +71,7 @@ const code = "font-mono text-accent";
 		<Code title="Terminal" code={INSTALL_PARSER} />
 		<Code title="app.ts" code={USE_PARSER} />
 		<p class="text-sm opacity-80">
-			Everything it exports is in the <a href={LINKS.parserReadme} class={link}>barmark README</a>.
+			Everything it exports is in the <a href={LINKS.parserReadme} class={link}>parser's README</a>.
 		</p>
 	</section>
 
@@ -100,7 +100,7 @@ const code = "font-mono text-accent";
 		<Code title="editor.js" code={LIVE_EDITOR} />
 		<p class="text-sm opacity-80">
 			Every option and attribute is in the
-			<a href={LINKS.renderReadme} class={link}>@barmark/render README</a>.
+			<a href={LINKS.renderReadme} class={link}>renderer's README</a>.
 		</p>
 	</section>
 </main>

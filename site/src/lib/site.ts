@@ -17,6 +17,10 @@ export const HEADLINE =
 	"A markdown-inspired plain-text notation for chord charts that bands and machines can both read.";
 
 // The second sentence, split around its link.
-export const TAGLINE_BEFORE = "barmark was developed as part of ";
+export const TAGLINE_BEFORE = "Barmark was developed as part of ";
 export const TAGLINE_LINK = "Stem Shovel";
 export const TAGLINE_AFTER = ", an open-source platform for musician collaboration.";
+
+// What it offers, after the Stem Shovel sentence.
+export const VALUE =
+	"It gives musicians a way to write charts that is predictable, precise, and easy to read and write, so a band can agree on one style. And it gives modern music applications charts they can read, transpose and display exactly as the band means them.";

@@ -62,19 +62,19 @@ const SHARED_LINK = `<script>if (/[?&]q=/.test(location.search)) {
 	setTimeout(() => delete document.documentElement.dataset.tryLink, 4000);
 }</${"script"}>`;
 
-const description = "Type a chord, a Harte label or a bit of chart and see how barmark reads it.";
+const description = "Type a chord, a Harte label or a bit of chart and see how Barmark reads it.";
 const chip =
 	"px-3 py-1 rounded-full border text-sm font-mono border-white/45 hover-border-accent focus-visible-(outline-2 outline-accent outline-offset-2)";
 </script>
 
 <svelte:head>
 	{@html SHARED_LINK}
-	<title>Try it · barmark</title>
+	<title>Try it · Barmark</title>
 	<meta name="description" content={description} />
 	<link rel="canonical" href="{LINKS.origin}/try" />
 	<meta property="og:type" content="website" />
 	<meta property="og:url" content="{LINKS.origin}/try" />
-	<meta property="og:title" content="Try it · barmark" />
+	<meta property="og:title" content="Try it · Barmark" />
 	<meta property="og:description" content={description} />
 </svelte:head>
 
@@ -82,7 +82,7 @@ const chip =
 	<div>
 		<h1 class="marketing-headline text-ink">Try it</h1>
 		<p class="max-w-prose opacity-80">
-			Type a chord symbol, a Harte label, a set of notes or a few bars, and see what barmark makes of
+			Type a chord symbol, a Harte label, a set of notes or a few bars, and see what Barmark makes of
 			it, with the guide rows that go with it.
 		</p>
 	</div>
@@ -90,7 +90,7 @@ const chip =
 	<div class="flex flex-col gap-6 min-w-0 [html[data-try-link]_&]:invisible">
 		<div class="flex flex-col gap-3">
 			<div class="flex flex-col gap-1.5 min-w-0">
-				<label for="try-input" class="text-xs uppercase tracking-wider opacity-60">barmark to read</label>
+				<label for="try-input" class="text-xs uppercase tracking-wider opacity-60">Barmark to read</label>
 				<textarea
 					id="try-input"
 					bind:this={box}
@@ -112,7 +112,7 @@ const chip =
 			</div>
 		</div>
 
-		<Window title="barmark reads">
+		<Window title="Barmark reads">
 			<TryReading {reading} text={settled} ontry={tryFix} />
 		</Window>
 

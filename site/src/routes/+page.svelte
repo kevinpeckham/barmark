@@ -4,7 +4,7 @@ import ChartRender from "#lib/components/ChartRender.svelte";
 import SourceEditor from "#lib/components/SourceEditor.svelte";
 import Window from "#lib/components/Window.svelte";
 import demo from "#lib/demo.chart.md?raw";
-import { HEADLINE, LINKS, TAGLINE_AFTER, TAGLINE_BEFORE, TAGLINE_LINK } from "#lib/site.js";
+import { HEADLINE, LINKS, TAGLINE_AFTER, TAGLINE_BEFORE, TAGLINE_LINK, VALUE } from "#lib/site.js";
 
 let text = $state(demo);
 
@@ -16,16 +16,16 @@ const SPELLINGS = [
 ] as const;
 let spelling: (typeof SPELLINGS)[number]["id"] = $state("names");
 const description =
-	"barmark is a markdown-inspired plain-text notation for chord charts. Edit a chart and watch it render.";
+	"Barmark is a markdown-inspired plain-text notation for chord charts. Edit a chart and watch it render.";
 </script>
 
 <svelte:head>
-	<title>barmark: plain-text chord charts</title>
+	<title>Barmark: plain-text chord charts</title>
 	<meta name="description" content={description} />
 	<link rel="canonical" href="{LINKS.origin}/" />
 	<meta property="og:type" content="website" />
 	<meta property="og:url" content="{LINKS.origin}/" />
-	<meta property="og:title" content="barmark: plain-text chord charts" />
+	<meta property="og:title" content="Barmark: plain-text chord charts" />
 	<meta property="og:description" content={description} />
 </svelte:head>
 
@@ -37,6 +37,7 @@ const description =
 				href={LINKS.stemShovel}
 				class="underline decoration-accent/60 underline-offset-3 hover-text-accent">{TAGLINE_LINK}</a
 			>{TAGLINE_AFTER}
+			{VALUE}
 		</p>
 	</div>
 
@@ -45,14 +46,14 @@ const description =
 		<Button href={LINKS.github}>
 			<span class="i-ph-github-logo" aria-hidden="true"></span>GitHub
 		</Button>
-		<Button href={LINKS.npm}><code class="font-mono text-sm">npm i barmark</code></Button>
+		<Button href={LINKS.npm}><code class="font-sans">npm i barmark</code></Button>
 		<Button href={LINKS.article}>Why we built it</Button>
 	</div>
 
 	<div class="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)] gap-4">
 		<Window title="Source · edit me">
 			<div class="flex flex-col h-full">
-				<SourceEditor bind:value={text} label="barmark source of the chart" />
+				<SourceEditor bind:value={text} label="Barmark source of the chart" />
 				<div class="flex justify-end border-t border-line px-3 py-2">
 					<button
 						type="button"

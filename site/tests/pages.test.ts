@@ -25,7 +25,7 @@ describe("the sample chart Get Started shows", () => {
 describe("Get Started, prerendered", () => {
 	const doc = () => page("get-started.html");
 	test("has its title and canonical link", () => {
-		expect(doc().title).toBe("Get Started · barmark");
+		expect(doc().title).toBe("Get Started · Barmark");
 		expect(doc().querySelector('link[rel="canonical"]')?.getAttribute("href")).toBe(
 			`${LINKS.origin}/get-started`,
 		);
@@ -34,7 +34,7 @@ describe("Get Started, prerendered", () => {
 		const steps = [...doc().querySelectorAll("main section > h2")].map(text);
 		expect(steps).toEqual([
 			"1. Write a chart",
-			"2. Read it with barmark",
+			"2. Read it with the parser",
 			"3. Render it as HTML",
 			"4. Or use the web component",
 		]);
@@ -57,7 +57,7 @@ describe("Get Started, prerendered", () => {
 describe("the FAQ, prerendered", () => {
 	const doc = () => page("faq.html");
 	test("has its title and canonical link", () => {
-		expect(doc().title).toBe("FAQ · barmark");
+		expect(doc().title).toBe("FAQ · Barmark");
 		expect(doc().querySelector('link[rel="canonical"]')?.getAttribute("href")).toBe(
 			`${LINKS.origin}/faq`,
 		);
@@ -100,4 +100,17 @@ describe("the nav", () => {
 			["/faq", "FAQ"],
 		]);
 	});
+});
+
+describe("the name in prose", () => {
+	// Barmark, the notation, is capitalized in text; the package name stays in code.
+	for (const path of ["index.html", "syntax.html", "try.html", "get-started.html", "faq.html"])
+		test(`${path} writes Barmark with a capital B`, () => {
+			const doc = page(path);
+			for (const el of doc.querySelectorAll("code, pre, script, style, template, barmark-chart"))
+				el.remove();
+			doc.querySelector("nav a[href='/']")?.remove(); // the wordmark
+			const words = [doc.title, doc.querySelector("main")?.textContent ?? ""].join(" ");
+			expect(words.match(/\bbarmark\b(?![./-])/g) ?? []).toEqual([]);
+		});
 });
