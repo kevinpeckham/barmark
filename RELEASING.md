@@ -134,7 +134,11 @@ runs, and `verify:package cli` fails on anything else.
     reaches CLI users only through a CLI release. On a new branch, bump
     `packages/cli` (a patch, unless the CLI itself changed) with a
     CHANGELOG line "Uses barmark A.B.C and @barmark/render D.E.F", and
-    release it with steps 1–11 (`pkg=cli`). Its release workflow also
+    release it with steps 1–11 (`pkg=cli`). Release the libraries first:
+    the CLI's binaries bundle the libraries' code from the repository, so
+    `verify:release cli` (and the release workflow) fail if
+    `packages/barmark/src`, `packages/render/src` or `packages/render/fonts`
+    changed since their own tags. Its release workflow also
     attaches the binaries; check the release page lists all five and
     `Edwin-OFL.txt`.
 14. **Bump `kevinpeckham/songs`:** a pull request there raising its

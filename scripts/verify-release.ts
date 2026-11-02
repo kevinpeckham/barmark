@@ -59,6 +59,25 @@ for (const [name, range] of Object.entries(manifest.dependencies ?? {})) {
 		problems.push(`${name}@${depVersion} (a dependency) is not on npm yet: release it first`);
 }
 
+// The CLI's binaries bundle the libraries from this checkout, so their code must be what was
+// released under the version they report: no change since each library's own tag.
+const RELEASED_CODE = { barmark: ["src"], render: ["src", "fonts"] } as const;
+if (pkg.key === "cli")
+	for (const [key, folders] of Object.entries(RELEASED_CODE)) {
+		const dep = PACKAGES[key as keyof typeof RELEASED_CODE];
+		const { version: depVersion } = JSON.parse(
+			readFileSync(join(dep.dir, "package.json"), "utf8"),
+		) as { version: string };
+		const depTag = `${dep.tagPrefix}${depVersion}`;
+		const paths = folders.map((f) => `packages/${key}/${f}`);
+		if (run(["git", "rev-parse", "--quiet", "--verify", `refs/tags/${depTag}`]).code !== 0)
+			problems.push(`tag ${depTag} is not in this checkout: git fetch --tags`);
+		else if (run(["git", "diff", "--quiet", depTag, "--", ...paths]).code !== 0)
+			problems.push(
+				`${dep.name} has changed since ${depTag} (${paths.join(", ")}): release ${dep.name} first, so the binaries carry only released code`,
+			);
+	}
+
 const branch = run(["git", "branch", "--show-current"]).out;
 const dirty = run(["git", "status", "--porcelain"]).out;
 if (!allowDirty) {
