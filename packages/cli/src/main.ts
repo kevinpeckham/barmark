@@ -26,8 +26,9 @@ export async function main(argv: string[], io: Io): Promise<number> {
 		io.stderr(HELP);
 		return 2;
 	}
-	const command = COMMANDS[name];
-	const help = COMMAND_HELP[name];
+	// Own keys only: "constructor" and friends are not commands.
+	const command = Object.hasOwn(COMMANDS, name) ? COMMANDS[name] : undefined;
+	const help = Object.hasOwn(COMMAND_HELP, name) ? COMMAND_HELP[name] : undefined;
 	if (help && (args.includes("--help") || args.includes("-h"))) {
 		io.stdout(help);
 		return 0;

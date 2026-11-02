@@ -57,4 +57,11 @@ describe("main", () => {
 			for (const name of names) expect(io.out()).toContain(name);
 		}
 	});
+	test("names inherited from Object are unknown commands, not crashes", async () => {
+		for (const argv of [["constructor"], ["toString", "--help"], ["hasOwnProperty", "x"]]) {
+			const io = fakeIo();
+			expect(await main(argv, io)).toBe(2);
+			expect(io.err()).toBe(`barmark: unknown command "${argv[0]}"; run barmark --help\n`);
+		}
+	});
 });

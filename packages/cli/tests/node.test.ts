@@ -54,4 +54,15 @@ describe("the built bin under Node", () => {
 		});
 		expect(run.stdout.toString()).toBe("| D A |\n");
 	});
+	test("a reader that closes early ends it quietly, with no stack trace", () => {
+		const run = Bun.spawnSync(
+			[
+				"sh",
+				"-c",
+				`node "${BIN}" render peaceful-dreams.chart.md 2>err.txt | head -c 10 >/dev/null; cat err.txt`,
+			],
+			{ cwd: dir },
+		);
+		expect(run.stdout.toString()).toBe("");
+	});
 });

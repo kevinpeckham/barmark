@@ -22,8 +22,18 @@ async function readStdin(): Promise<string> {
 	return Buffer.concat(chunks).toString("utf8");
 }
 
+/** A reader that stops early (`barmark render x | head`) is not an error: stop quietly. */
+function quietOnClosedPipe(stream: NodeJS.WriteStream): void {
+	stream.on("error", (error: NodeJS.ErrnoException) => {
+		if (error.code !== "EPIPE") throw error;
+		process.exit(process.exitCode ?? 0);
+	});
+}
+
 /** The process's streams and folder: the part of an Io every runtime shares. */
 export function processIo(): Pick<Io, "stdout" | "stderr" | "readStdin" | "cwd"> {
+	quietOnClosedPipe(process.stdout);
+	quietOnClosedPipe(process.stderr);
 	return {
 		stdout: (text) => process.stdout.write(text),
 		stderr: (text) => process.stderr.write(text),
