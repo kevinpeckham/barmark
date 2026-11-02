@@ -22,15 +22,28 @@
         "@types/bun": "^1.4.4",
       },
     },
+    "packages/cli": {
+      "name": "@barmark/cli",
+      "version": "0.1.0",
+      "bin": {
+        "barmark": "./dist/cli.js",
+      },
+      "dependencies": {
+        "@barmark/render": "workspace:*",
+        "barmark": "workspace:*",
+      },
+    },
     "packages/render": {
       "name": "@barmark/render",
       "version": "0.7.0",
       "dependencies": {
-        "barmark": "workspace:*",
+        "barmark": "workspace:^",
       },
     },
   },
   "packages": {
+    "@barmark/cli": ["@barmark/cli@workspace:packages/cli"],
+
     "@barmark/render": ["@barmark/render@workspace:packages/render"],
 
     "@biomejs/biome": ["@biomejs/biome@2.6.4", "", { "optionalDependencies": { "@biomejs/cli-android-arm64": "2.6.4", "@biomejs/cli-android-x64": "2.6.4", "@biomejs/cli-darwin-arm64": "2.6.4", "@biomejs/cli-darwin-x64": "2.6.4", "@biomejs/cli-linux-arm64": "2.6.4", "@biomejs/cli-linux-arm64-musl": "2.6.4", "@biomejs/cli-linux-x64": "2.6.4", "@biomejs/cli-linux-x64-musl": "2.6.4", "@biomejs/cli-win32-arm64": "2.6.4", "@biomejs/cli-win32-x64": "2.6.4" }, "bin": { "biome": "bin/biome" } }, "sha512-8sKKwaNW4ot22awZ3lBjwWLHnUFXgXnrBPYS2gNlBAXRbDC++7kqjK2H7dR/FgCDtPvO1xfKpgEhJkGxAKYkxA=="],
