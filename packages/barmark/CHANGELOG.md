@@ -28,6 +28,14 @@ Releases follow the process in [RELEASING.md](RELEASING.md).
   earlier sections and gives that line. It is still an error: a section
   with no bars replays (grammar §6), and there is no intentionally empty
   section.
+- **Grammar notes; no chart changes meaning.** §8 gains a note for
+  generators: write one slot per beat (the 2.1 beat, so 6/8 has two),
+  then canonicalize; a length that is not a whole number of beats needs
+  an eighth-note grid or a `_` group; leave out a section with no bars
+  (issue #64). §2.3: a tool that knows only the chord part writes `N.C.`
+  for its rests, not `--` (issue #65). §7.1: `feel:` names a kind of
+  groove, not an amount, so `swing 60%` stays an error, and the "custom
+  swing ratios" open question is closed (issue #66).
 
 ### Fixed
 
