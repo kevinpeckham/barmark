@@ -1,5 +1,13 @@
 import { describe, expect, test } from "bun:test";
-import { classify, EXAMPLES, guideQuery, type Reading, read } from "../src/lib/try/read.ts";
+import {
+	classify,
+	EXAMPLES,
+	guideQuery,
+	MAX_LENGTH,
+	type Reading,
+	read,
+	summarize,
+} from "../src/lib/try/read.ts";
 
 const as = <K extends Reading["kind"]>(r: Reading, kind: K): Reading & { kind: K } => {
 	expect(r.kind).toBe(kind);
@@ -82,6 +90,28 @@ describe("reading what's typed", () => {
 			expect(r.kind).not.toBe("error");
 			if (r.kind === "chart") expect(r.diagnostics).toEqual([]);
 		}
+	});
+	test("text past the preview limit isn't read", () => {
+		const long = "| C |\n".repeat(10_000);
+		const start = performance.now();
+		expect(read(long)).toEqual({ kind: "long", length: 60_000, limit: MAX_LENGTH });
+		expect(performance.now() - start).toBeLessThan(50);
+		expect(MAX_LENGTH).toBe(50_000);
+		expect(guideQuery(read(long), long)).toBeNull();
+	});
+	test("a word the guide knows shows its rows, even when capitalized", () => {
+		for (const word of ["Coda", "Chorus"])
+			expect(guideQuery(read(word), word)).toEqual({ q: word, cat: null, sort: "category" });
+		expect(guideQuery(read("H7"), "H7")?.cat).toBe("chords");
+	});
+	test("summarize says the reading in one short line", () => {
+		expect(summarize(read("Cø"))).toBe("Cm7(b5): C minor seven flat five");
+		expect(summarize(read("C:maj7"))).toBe("C:maj7 is Cmaj7: C major seven");
+		expect(summarize(read("H7"))).toBe('H7: German "H" is ambiguous; write B');
+		expect(summarize(read("| D | A |"))).toBe("a chart, no problems");
+		expect(summarize(read("## Verse"))).toBe("a chart, 1 problem");
+		expect(summarize(read("repeat"))).toBe("not a chord or a chart");
+		expect(summarize(read(""))).toBe("");
 	});
 	test("guideQuery", () => {
 		expect(guideQuery(read("Cø"), "Cø")?.cat).toBe("chords");

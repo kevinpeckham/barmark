@@ -10,10 +10,14 @@ import {
 	parseNoteSet,
 	printChart,
 } from "barmark";
-import type { GuideQuery } from "#lib/guide/query.js";
+import { type GuideQuery, matches } from "../guide/query.ts";
+import { ROWS } from "../guide/rows.ts";
 
 /** The chips under the box, in order. */
 export const EXAMPLES: readonly string[] = ["Cø", "C7b9/E", "{C E G}", "C:maj7", "| D | % | x2"];
+
+/** Past this the page stops reading, as the home page stops previewing (ChartRender's limit). */
+export const MAX_LENGTH = 50_000;
 
 export type Kind = "empty" | "chart" | "notes" | "harte" | "chord";
 
@@ -35,6 +39,7 @@ export type ChordReading = {
 export type Reading =
 	| { kind: "empty" }
 	| { kind: "text" }
+	| { kind: "long"; length: number; limit: number }
 	| {
 			kind: "chart";
 			canonical: string;
@@ -88,6 +93,7 @@ function readParsed(kind: "chord" | "notes", text: string, r: ParseResult): Read
 
 /** What barmark makes of the text in the box. Never throws on input. */
 export function read(input: string): Reading {
+	if (input.length > MAX_LENGTH) return { kind: "long", length: input.length, limit: MAX_LENGTH };
 	const text = input.trim();
 	const kind = classify(text);
 	if (kind === "empty") return { kind };
@@ -112,8 +118,33 @@ export function read(input: string): Reading {
 
 /** Which guide rows to show under a reading; null: none (a chart). */
 export function guideQuery(reading: Reading, input: string): GuideQuery | null {
-	if (reading.kind === "chart") return null;
-	if (reading.kind === "empty" || reading.kind === "text")
-		return { q: input.trim(), cat: null, sort: "category" };
+	if (reading.kind === "chart" || reading.kind === "long") return null;
+	const words: GuideQuery = { q: input.trim(), cat: null, sort: "category" };
+	if (reading.kind === "empty" || reading.kind === "text") return words;
+	// "Coda" isn't a chord, but the guide has rows for it.
+	if (reading.kind === "error" && ROWS.some((row) => matches(row, words))) return words;
 	return { q: "", cat: "chords", sort: "category" };
+}
+
+/** The reading in one short line, for a screen reader to hear as it changes. */
+export function summarize(reading: Reading): string {
+	switch (reading.kind) {
+		case "chord":
+		case "notes":
+			return `${reading.chord.canonical}: ${reading.chord.spoken}`;
+		case "harte":
+			return `${reading.label} is ${reading.chord.canonical}: ${reading.chord.spoken}`;
+		case "chart": {
+			const n = reading.diagnostics.length;
+			return `a chart, ${n === 0 ? "no problems" : `${n} problem${n === 1 ? "" : "s"}`}`;
+		}
+		case "error":
+			return reading.message;
+		case "long":
+			return `too long to preview: ${reading.length.toLocaleString("en-US")} characters`;
+		case "text":
+			return "not a chord or a chart";
+		default:
+			return "";
+	}
 }
