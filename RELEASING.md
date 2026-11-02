@@ -17,8 +17,9 @@ which reads the package from the tag, re-runs every gate and packs that
 package, waits for Kevin to approve the publish (the `npm` environment),
 publishes it through npm trusted publishing with provenance, then installs
 it back from npm and reads a real chart with it. For `@barmark/cli` it
-then compiles the standalone binaries, runs the Linux one, and attaches
-all five to the GitHub release with Edwin's licence. No npm token exists
+then compiles the standalone binaries in a read-only job, runs the
+Linux one, and a separate job with no checkout or install attaches all
+five to the GitHub release with Edwin's licence. No npm token exists
 anywhere.
 
 ## Repository rules
