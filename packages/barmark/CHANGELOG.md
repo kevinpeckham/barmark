@@ -9,21 +9,23 @@ Releases follow the process in [RELEASING.md](RELEASING.md).
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-11-02
+
+Print a chart you have already parsed, and conformance fixtures from real
+charts. No grammar change: every chart reads as before. Implements the
+[grammar v0.1 draft](https://github.com/kevinpeckham/barmark/blob/main/docs/grammar-v0.1-draft.md).
+
 ### Added
 
 - **`printParsed(text, parsed)`**: the canonical text from a `parseChart`
   result you already have, so a caller that needs both the parse and the
-  printed chart reads the text once. barmark.dev's /try uses it.
-
-### Added
-
+  printed chart reads the text once.
 - The stem-bench conformance fixtures (`tests/conformance/`): the four
   public Badverbs charts exactly as stored in Stem Shovel, with expected
   readings derived from the band's declared section starts and
   stem-bench's independently-built verified bar lists (Study 16), plus
   the grammar's trap rules as tests. A parser change that alters what a
-  real chart means now fails CI before it ships. No grammar or API
-  change.
+  real chart means now fails CI before it ships.
 
 ## [0.6.0] - 2026-11-01
 
@@ -158,7 +160,8 @@ The first working release: the reference parser and printer for the
 
 - **A placeholder package that holds the `barmark` name** while the spec and parser are written.
 
-[Unreleased]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.6.0...HEAD
+[Unreleased]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.7.0...HEAD
+[0.7.0]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.6.0...barmark-v0.7.0
 [0.6.0]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.5.0...barmark-v0.6.0
 [0.5.0]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.4.0...barmark-v0.5.0
 [0.4.0]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.3.0...barmark-v0.4.0
