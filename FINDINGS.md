@@ -90,6 +90,21 @@ package index, inside the package.
 
 ## Tooling
 
+### In 0.x a caret range stops at the next minor, so a `barmark` minor leaves the renderer behind (2026-11-02, barmark 0.8.0)
+
+- **The symptom.** Bumping barmark.dev to `barmark` 0.8.0 installed two
+  copies: 0.8.0 for the site and 0.7.0 nested under `@barmark/render`
+  0.7.0, whose dependency is `^0.7.0`. The renderer would have drawn
+  `Am(add9)` as an error while the site's own reader accepted it, and
+  `@barmark/cli` (pinning `barmark` 0.8.0 and the renderer exactly) would
+  have run two grammars in one command.
+- **The cause.** Semver carets treat 0.x minors as breaking: `^0.7.0`
+  means `>=0.7.0 <0.8.0`. The design assumed npm would resolve one copy;
+  that holds only within a minor.
+- **The fix.** A `barmark` minor release is followed by a renderer patch
+  that requires it (`@barmark/render` 0.7.1). RELEASING.md, "Versions",
+  says so.
+
 ### Vercel Analytics' SvelteKit entry breaks every page on SvelteKit 3 (2026-11-02, barmark.dev)
 
 - **The symptom.** With `injectAnalytics` from `@vercel/analytics/sveltekit`
