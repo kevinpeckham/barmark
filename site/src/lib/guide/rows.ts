@@ -733,7 +733,7 @@ export const ROWS: GuideRow[] = [
 		syntax: "lyrics under bars",
 		category: "text",
 		meaning:
-			"barmark places chords in bars, not over words: put a lyric on its own line under its bars. ChordPro's inline [C] chords aren't read.",
+			"Barmark places chords in bars, not over words: put a lyric on its own line under its bars. ChordPro's inline [C] chords aren't read.",
 		terms: [
 			"ChordPro",
 			"inline chords",

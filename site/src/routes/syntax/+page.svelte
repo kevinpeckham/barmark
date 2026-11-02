@@ -24,16 +24,16 @@ $effect(() => {
 });
 
 const description =
-	"Everything you can write in barmark, one row each: search it, filter it, and see each example rendered.";
+	"Everything you can write in Barmark, one row each: search it, filter it, and see each example rendered.";
 </script>
 
 <svelte:head>
-	<title>Syntax · barmark</title>
+	<title>Syntax · Barmark</title>
 	<meta name="description" content={description} />
 	<link rel="canonical" href="{LINKS.origin}/syntax" />
 	<meta property="og:type" content="website" />
 	<meta property="og:url" content="{LINKS.origin}/syntax" />
-	<meta property="og:title" content="Syntax · barmark" />
+	<meta property="og:title" content="Syntax · Barmark" />
 	<meta property="og:description" content={description} />
 </svelte:head>
 
@@ -41,7 +41,7 @@ const description =
 	<div>
 		<h1 class="marketing-headline text-ink">The syntax</h1>
 		<p class="max-w-prose opacity-80">
-			Everything you can write in a barmark chart, one row each, with an example and how it
+			Everything you can write in a Barmark chart, one row each, with an example and how it
 			renders. A line is chords only when it starts with <code class="font-mono text-accent">|</code
 			>; everything else is a heading, a directive or text.
 		</p>
@@ -70,7 +70,7 @@ const description =
 	<p class="text-sm opacity-80">
 		The full rules are in the
 		<a href={LINKS.grammar} class="underline decoration-accent/60 underline-offset-3 hover-text-accent"
-			>barmark grammar</a
+			>Barmark grammar</a
 		>, which this guide follows.
 	</p>
 </main>

@@ -35,7 +35,7 @@ describe("the syntax guide, prerendered", () => {
 	test("links to the grammar, and has its title", () => {
 		const hrefs = [...doc.querySelectorAll("a")].map((a) => a.getAttribute("href"));
 		expect(hrefs).toContain(LINKS.grammar);
-		expect(doc.title).toBe("Syntax · barmark");
+		expect(doc.title).toBe("Syntax · Barmark");
 		expect(doc.querySelector('link[rel="canonical"]')?.getAttribute("href")).toBe(
 			"https://www.barmark.dev/syntax",
 		);

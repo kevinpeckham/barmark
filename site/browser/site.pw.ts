@@ -32,7 +32,7 @@ test.describe("home: the live editor", () => {
 	test("typing in the source re-renders the chart", async ({ page }) => {
 		const errors = watchErrors(page);
 		await page.goto("/");
-		const source = page.getByRole("textbox", { name: "barmark source of the chart" });
+		const source = page.getByRole("textbox", { name: "Barmark source of the chart" });
 		await source.press("ControlOrMeta+End");
 		await source.pressSequentially("\n| Ebm7 |");
 		await expect.poll(() => chartText(page), { timeout: 1000 }).toContain("E♭m");
@@ -42,7 +42,7 @@ test.describe("home: the live editor", () => {
 	test("an empty source is an empty chart, without errors", async ({ page }) => {
 		const errors = watchErrors(page);
 		await page.goto("/");
-		await page.getByRole("textbox", { name: "barmark source of the chart" }).fill("");
+		await page.getByRole("textbox", { name: "Barmark source of the chart" }).fill("");
 		await expect.poll(() => chartText(page)).not.toContain("Peaceful Dreams");
 		expect(errors).toEqual([]);
 	});
@@ -55,7 +55,7 @@ test.describe("home: the live editor", () => {
 		});
 		await page.goto("/");
 		await page
-			.getByRole("textbox", { name: "barmark source of the chart" })
+			.getByRole("textbox", { name: "Barmark source of the chart" })
 			.fill("# <script>alert(1)</script><img src=x onerror=alert(2)>\n| D |");
 		await expect.poll(() => chartText(page)).toContain("<script>alert(1)</script>");
 		expect(dialog).toBe(false);
@@ -63,7 +63,7 @@ test.describe("home: the live editor", () => {
 
 	test("typing stays responsive in a 2,000-line chart", async ({ page }) => {
 		await page.goto("/");
-		const source = page.getByRole("textbox", { name: "barmark source of the chart" });
+		const source = page.getByRole("textbox", { name: "Barmark source of the chart" });
 		await source.fill("| D | G |\n".repeat(2000));
 		await source.press("ControlOrMeta+End");
 		const start = Date.now();
@@ -85,7 +85,7 @@ test.describe("home: the live editor", () => {
 	test("a 1 MB paste is not rendered, and the page stays responsive", async ({ page }) => {
 		const errors = watchErrors(page);
 		await page.goto("/");
-		const source = page.getByRole("textbox", { name: "barmark source of the chart" });
+		const source = page.getByRole("textbox", { name: "Barmark source of the chart" });
 		const start = Date.now();
 		// Playwright's fill inserts text like typing and takes minutes for 1 MB;
 		// a paste lands as one value change and one input event.
@@ -126,7 +126,7 @@ test.describe("home: the live editor", () => {
 		await spelling.getByRole("radio", { name: "Roman" }).check();
 		await expect.poll(numerals).toEqual(["roman"]);
 		// Editing keeps the spelling.
-		const source = page.getByRole("textbox", { name: "barmark source of the chart" });
+		const source = page.getByRole("textbox", { name: "Barmark source of the chart" });
 		await source.press("ControlOrMeta+End");
 		await source.pressSequentially("\n| Bm7 |");
 		await expect.poll(() => chartText(page)).toContain("vi");
@@ -139,7 +139,7 @@ test.describe("home: the live editor", () => {
 
 	test("Reset restores the demo", async ({ page }) => {
 		await page.goto("/");
-		const source = page.getByRole("textbox", { name: "barmark source of the chart" });
+		const source = page.getByRole("textbox", { name: "Barmark source of the chart" });
 		await source.fill("| D |");
 		await page.getByRole("button", { name: "Reset" }).click();
 		await expect(source).toHaveValue(/# Peaceful Dreams/);
@@ -198,7 +198,7 @@ test.describe("the guide", () => {
 });
 
 test.describe("try it", () => {
-	const box = (page: Page) => page.getByRole("textbox", { name: "barmark to read" });
+	const box = (page: Page) => page.getByRole("textbox", { name: "Barmark to read" });
 	const reading = (page: Page) => page.locator("[data-reading]");
 	let errors: string[] = [];
 	test.beforeEach(({ page }) => {
@@ -362,7 +362,7 @@ test.describe("in a browser without setHTMLUnsafe", () => {
 	test("typing still re-renders the chart", async ({ page }) => {
 		const errors = watchErrors(page);
 		await page.goto("/");
-		const source = page.getByRole("textbox", { name: "barmark source of the chart" });
+		const source = page.getByRole("textbox", { name: "Barmark source of the chart" });
 		await source.press("ControlOrMeta+End");
 		await source.pressSequentially("\n| Ebm7 |");
 		await expect.poll(() => chartText(page)).toContain("E♭m");
@@ -393,7 +393,7 @@ test("the chart wears the site's look: 15.5px chords, its colours and the Noto f
 }) => {
 	await page.goto("/");
 	await page
-		.getByRole("textbox", { name: "barmark source of the chart" })
+		.getByRole("textbox", { name: "Barmark source of the chart" })
 		.fill("# Look\nkey: D\n## Verse\n| D | G |\nWords to sing\n### A note\ntime: 3/4\n| A |");
 	await expect.poll(() => chartText(page)).toContain("Words to sing");
 	await page.evaluate(() => document.fonts.ready);
@@ -439,7 +439,7 @@ test("the editor drives one <barmark-chart> element through its text property", 
 	await page.waitForFunction(() => customElements.get("barmark-chart"));
 	const chart = await page.evaluateHandle(() => document.querySelector("main barmark-chart"));
 	await page
-		.getByRole("textbox", { name: "barmark source of the chart" })
+		.getByRole("textbox", { name: "Barmark source of the chart" })
 		.fill("## Bridge\n| Ebm7 |");
 	await expect.poll(() => chartText(page)).toContain("E♭m");
 	const same = await chart.evaluate((el) => ({
@@ -540,7 +540,7 @@ test.describe("on a phone", () => {
 
 test("the source editor shows keyboard focus", async ({ page }) => {
 	await page.goto("/");
-	const source = page.getByRole("textbox", { name: "barmark source of the chart" });
+	const source = page.getByRole("textbox", { name: "Barmark source of the chart" });
 	await source.focus();
 	await page.keyboard.press("Shift+Tab");
 	await page.keyboard.press("Tab");
@@ -608,4 +608,22 @@ test("every input has a name and every link has text", async ({ page }) => {
 		});
 		expect(unnamed, path).toEqual([]);
 	}
+});
+
+test("the home page's buttons share one size and one font", async ({ page }) => {
+	await page.goto("/");
+	const looks = await page.evaluate(() =>
+		[...document.querySelectorAll("main a.button-accent-solid, main a.button-outline")].map((a) => {
+			const fonts = [a, ...a.querySelectorAll("*")]
+				.filter((el) => el.textContent?.trim())
+				.map((el) => `${getComputedStyle(el).fontFamily} ${getComputedStyle(el).fontSize}`);
+			return JSON.stringify({
+				height: Math.round(a.getBoundingClientRect().height),
+				radius: getComputedStyle(a).borderRadius,
+				fonts: [...new Set(fonts)],
+			});
+		}),
+	);
+	expect(looks.length).toBeGreaterThan(1);
+	expect(new Set(looks).size, looks.join("\n")).toBe(1);
 });
