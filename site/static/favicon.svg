@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+	<title>barmark</title>
+	<rect width="32" height="32" rx="6" fill="#0b1426" />
+	<path d="M7 7v18M25 7v18" stroke="#ebf92f" stroke-width="2.5" stroke-linecap="round" />
+	<path
+		d="M12 22V10l8 3.5v8.5"
+		fill="none"
+		stroke="#f5f5f5"
+		stroke-width="2"
+		stroke-linejoin="round"
+		stroke-linecap="round"
+	/>
+</svg>

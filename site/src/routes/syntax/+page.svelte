@@ -5,7 +5,7 @@ import GuideSearch from "#lib/components/GuideSearch.svelte";
 import GuideTable from "#lib/components/GuideTable.svelte";
 import { type GuideQuery, readQuery, writeQuery } from "#lib/guide/query.js";
 import { LINKS } from "#lib/site.js";
-import { replaceState } from "$app/navigation";
+import { keepQuery } from "#lib/url.js";
 
 // The prerendered page has no query, so every row shows without
 // JavaScript; a shared link's query is read once the page runs.
@@ -20,7 +20,7 @@ onMount(() => {
 $effect(() => {
 	const search = writeQuery(query);
 	if (!ready) return;
-	replaceState(search ? `?${search}` : location.pathname, {});
+	return keepQuery(search);
 });
 
 const description =

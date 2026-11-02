@@ -1,17 +1,19 @@
 <script lang="ts">
-import { onMount, untrack } from "svelte";
+import { onMount, tick, untrack } from "svelte";
 import GuideTable from "#lib/components/GuideTable.svelte";
 import TryReading from "#lib/components/TryReading.svelte";
 import Window from "#lib/components/Window.svelte";
 import { LINKS } from "#lib/site.js";
-import { EXAMPLES, guideQuery, read } from "#lib/try/read.js";
-import { replaceState } from "$app/navigation";
+import { EXAMPLES, guideQuery, linkQuery, read } from "#lib/try/read.js";
+import { keepQuery } from "#lib/url.js";
 
 const first = EXAMPLES[0] ?? "";
 
 // The prerendered page reads the first example; a shared link's query is read once the page runs.
+// Until then the page stays hidden (SHARED_LINK), so the link never shows the example first.
 let text = $state(first);
 let ready = $state(false);
+let box: HTMLTextAreaElement | undefined = $state();
 
 /** Past this the reading waits for typing to pause, as ChartRender's preview does. */
 const LONG = 10_000;
@@ -29,23 +31,36 @@ $effect(() => {
 
 const reading = $derived(read(settled));
 const query = $derived(guideQuery(reading, settled));
+/** null: too long to keep in the link. */
+const link = $derived(linkQuery(settled));
 const rows = $derived(Math.min(8, text.split("\n").length));
 
-onMount(() => {
+onMount(async () => {
 	const q = new URLSearchParams(location.search).get("q");
 	if (q !== null) text = q;
 	ready = true;
+	await tick();
+	delete document.documentElement.dataset.tryLink;
 });
 
 $effect(() => {
-	// A text too long to read stays out of the URL too.
-	const search =
-		settled === first || reading.kind === "long"
-			? ""
-			: new URLSearchParams({ q: settled }).toString();
+	const search = link ?? "";
 	if (!ready) return;
-	replaceState(search ? `?${search}` : location.pathname, {});
+	return keepQuery(search);
 });
+
+/** The fix replaces the error, its button with it, so the keyboard goes back to the box. */
+function tryFix(suggestion: string) {
+	text = suggestion;
+	box?.focus();
+}
+
+// Runs before the first paint; JavaScript that never arrives shows the page after 4 s.
+// The closing tag is spelt in two pieces: written whole, it would end this script block (FINDINGS.md).
+const SHARED_LINK = `<script>if (/[?&]q=/.test(location.search)) {
+	document.documentElement.dataset.tryLink = "";
+	setTimeout(() => delete document.documentElement.dataset.tryLink, 4000);
+}</${"script"}>`;
 
 const description = "Type a chord, a Harte label or a bit of chart and see how barmark reads it.";
 const chip =
@@ -53,6 +68,7 @@ const chip =
 </script>
 
 <svelte:head>
+	{@html SHARED_LINK}
 	<title>Try it · barmark</title>
 	<meta name="description" content={description} />
 	<link rel="canonical" href="{LINKS.origin}/try" />
@@ -71,38 +87,44 @@ const chip =
 		</p>
 	</div>
 
-	<div class="flex flex-col gap-3">
-		<div class="flex flex-col gap-1.5 min-w-0">
-			<label for="try-input" class="text-xs uppercase tracking-wider opacity-60">barmark to read</label>
-			<textarea
-				id="try-input"
-				bind:value={text}
-				{rows}
-				autocomplete="off"
-				spellcheck="false"
-				wrap="off"
-				class="w-full rounded-md border border-white/45 bg-transparent px-3 py-2 font-mono resize-y focus-visible-(border-accent outline-2 outline-accent/40)"
-			></textarea>
+	<div class="flex flex-col gap-6 min-w-0 [html[data-try-link]_&]:invisible">
+		<div class="flex flex-col gap-3">
+			<div class="flex flex-col gap-1.5 min-w-0">
+				<label for="try-input" class="text-xs uppercase tracking-wider opacity-60">barmark to read</label>
+				<textarea
+					id="try-input"
+					bind:this={box}
+					bind:value={text}
+					{rows}
+					autocomplete="off"
+					spellcheck="false"
+					wrap="off"
+					class="w-full rounded-md border border-white/45 bg-transparent px-3 py-2 font-mono resize-y focus-visible-(border-accent outline-2 outline-accent/40)"
+				></textarea>
+				{#if link === null}
+					<p class="text-xs opacity-60">Too long to keep in the link: copy the text to share it.</p>
+				{/if}
+			</div>
+			<div role="group" aria-label="Examples" class="flex flex-wrap gap-2">
+				{#each EXAMPLES as example (example)}
+					<button type="button" data-example class={chip} onclick={() => (text = example)}>{example}</button>
+				{/each}
+			</div>
 		</div>
-		<div role="group" aria-label="Examples" class="flex flex-wrap gap-2">
-			{#each EXAMPLES as example (example)}
-				<button type="button" data-example class={chip} onclick={() => (text = example)}>{example}</button>
-			{/each}
+
+		<Window title="barmark reads">
+			<TryReading {reading} text={settled} ontry={tryFix} />
+		</Window>
+
+		{#if query === null}
+			<p class="text-sm opacity-80">
+				<a href="/syntax" class="underline decoration-accent/60 underline-offset-3 hover-text-accent"
+					>See the whole syntax</a
+				>
+			</p>
+		{/if}
+		<div hidden={query === null} class="flex flex-col gap-4 min-w-0">
+			<GuideTable query={query ?? { q: "", cat: null, sort: "category" }} />
 		</div>
-	</div>
-
-	<Window title="barmark reads">
-		<TryReading {reading} text={settled} ontry={(suggestion) => (text = suggestion)} />
-	</Window>
-
-	{#if query === null}
-		<p class="text-sm opacity-80">
-			<a href="/syntax" class="underline decoration-accent/60 underline-offset-3 hover-text-accent"
-				>See the whole syntax</a
-			>
-		</p>
-	{/if}
-	<div hidden={query === null} class="flex flex-col gap-4 min-w-0">
-		<GuideTable query={query ?? { q: "", cat: null, sort: "category" }} />
 	</div>
 </main>

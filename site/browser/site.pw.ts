@@ -221,11 +221,67 @@ test.describe("try it", () => {
 		await expect.poll(() => chartText(page, "[data-reading]")).toMatch(/bar 1: D.*bar 2: A/);
 	});
 
+	test("a shared link never shows the opening example first", async ({ page }) => {
+		// Hold the page's script back, as a slow connection would.
+		let release = () => {};
+		const held = new Promise<void>((resolve) => {
+			release = resolve;
+		});
+		await page.route("**/_app/immutable/**/*.js", async (route) => {
+			await held;
+			await route.continue();
+		});
+		await page.goto("/try?q=G7", { waitUntil: "commit" });
+		await page.locator("[data-reading]").waitFor({ state: "attached" });
+		await expect(reading(page)).toBeHidden();
+		release();
+		await expect(reading(page)).toContainText("G seven");
+		await expect(reading(page)).toBeVisible();
+	});
+
+	test("typing writes the URL once it pauses, not on every key", async ({ page }) => {
+		await page.addInitScript(() => {
+			const replace = history.replaceState.bind(history);
+			Object.assign(window, { urlWrites: 0 });
+			history.replaceState = (...args) => {
+				Object.assign(window, {
+					urlWrites: (window as unknown as { urlWrites: number }).urlWrites + 1,
+				});
+				return replace(...args);
+			};
+		});
+		const writes = () =>
+			page.evaluate(() => (window as unknown as { urlWrites: number }).urlWrites);
+		await page.goto("/try");
+		await untilUrl(page, () => box(page).fill("C"), /q=C$/);
+		const before = await writes();
+		await box(page).press("End");
+		await box(page).pressSequentially("maj7(#11)/E");
+		await expect(page).toHaveURL(/q=Cmaj7%28%2311%29%2FE$/);
+		expect((await writes()) - before).toBeLessThanOrEqual(2);
+	});
+
+	test("a text too long to share stays out of the link, and the page says so", async ({ page }) => {
+		await page.goto("/try");
+		await untilUrl(page, () => box(page).fill("| D |"), /q=/);
+		await box(page).evaluate((el: HTMLTextAreaElement) => {
+			el.value = "| C |\n".repeat(400);
+			el.dispatchEvent(new Event("input", { bubbles: true }));
+		});
+		await expect(page).toHaveURL(/\/try$/);
+		await expect(page.getByText("Too long to keep in the link")).toBeVisible();
+		await box(page).fill("| D |");
+		await expect(page).toHaveURL(/q=/);
+		await expect(page.getByText("Too long to keep in the link")).toBeHidden();
+	});
+
 	test("the suggestion fixes the chord", async ({ page }) => {
 		await page.goto("/try");
 		await untilUrl(page, () => box(page).fill("H7"), /q=H7$/);
 		await page.getByRole("button", { name: "Try B7" }).click();
 		await expect(box(page)).toHaveValue("B7");
+		// The button goes with the error; the keyboard stays in the box.
+		await expect(box(page)).toBeFocused();
 		await expect(reading(page)).toContainText("B seven");
 	});
 
