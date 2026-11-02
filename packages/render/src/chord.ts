@@ -43,8 +43,13 @@ const ROMAN_QUALITY: Record<ChordParts["quality"], string> = {
 	m: "",
 	dim: "°",
 	aug: "+",
-	"5": "5",
+	// Raised into the superscript with the other numerals (raisePower).
+	"5": "",
 };
+
+/** A power chord's 5 goes up with the superscript: on the baseline it joins the number (1 and 5 read as 15). */
+const raisePower = (p: ChordPieces): ChordPieces =>
+	p.quality === "5" ? { ...p, quality: "", superscript: `5${p.superscript}` } : p;
 
 const accidentals = (alter: number) => (alter < 0 ? "b" : "#").repeat(Math.abs(alter));
 
@@ -54,12 +59,13 @@ const degreeText = (d: Interval) => glyphs(`${accidentals(d.alter)}${d.degree}`)
 /**
  * A chord as its degree in `key`: Nashville keeps the chord's quality and
  * superscript after the number; Roman shows minor and diminished in lower
- * case. A slash bass is a number in both. Null if the root has no degree.
+ * case. Both raise a power chord's 5 into the superscript (1⁵, I⁵). A
+ * slash bass is a number in both. Null if the root has no degree.
  */
 export function typesetNumeral(parts: ChordParts, key: Key, style: Numerals): ChordPieces | null {
 	const degree = degreeOf(parts.root, key);
 	if (!degree) return null;
-	const pieces = typesetChord(parts);
+	const pieces = raisePower(typesetChord(parts));
 	const bass = parts.bass ? degreeOf(parts.bass, key) : null;
 	const withBass = { ...pieces, bass: bass ? degreeText(bass) : pieces.bass };
 	if (style === "nashville") return { ...withBass, root: degreeText(degree) };

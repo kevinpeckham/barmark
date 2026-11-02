@@ -88,10 +88,11 @@ played in, so a modulation renumbers from its next bar. Degrees count
 from the key's tonic against the major scale, in every mode: in `key:
 Am`, Am is 1m and C is ♭3. Nashville keeps the chord's quality and
 superscript after the number (Bm7 in D is 6m⁷, D/F♯ is 1/3); Roman
-shows minor and diminished in lower case (ii, vii°, ♭VII). A bar with
-no key, note sets, N.C., `?` and `--` look as they always do, and a
-screen reader hears both: "bar 5: five, A seven". Numbered chords carry
-`data-numeral`. It's a view: the music and bar numbers don't change.
+shows minor and diminished in lower case (ii, vii°, ♭VII). Both raise a
+power chord's 5 into the superscript (D5 in D is 1⁵ and I⁵, never 15).
+A bar with no key, note sets, N.C., `?` and `--` look as they always
+do, and a screen reader hears both: "bar 5: five, A seven". Numbered
+chords carry `data-numeral`. It's a view: the music and bar numbers don't change.
 
 ### Spoken names
 
