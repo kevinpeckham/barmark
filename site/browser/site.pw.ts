@@ -450,6 +450,23 @@ test.describe("on a phone", () => {
 		expect(sizes.scrolls).toBe(true);
 	});
 
+	test("the home chart keeps its rows in columns rather than wrapping them", async ({ page }) => {
+		await page.goto("/");
+		await expect
+			.poll(() =>
+				page.evaluate(() => [
+					...new Set(
+						[
+							...(document
+								.querySelector("main barmark-chart")
+								?.shadowRoot?.querySelectorAll(".bm-grid") ?? []),
+						].map((g) => getComputedStyle(g).display),
+					),
+				]),
+			)
+			.toEqual(["grid"]);
+	});
+
 	for (const path of ["/", "/syntax", "/try"])
 		test(`${path} never scrolls sideways`, async ({ page }) => {
 			await page.goto(path);

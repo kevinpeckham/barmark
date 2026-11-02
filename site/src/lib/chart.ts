@@ -7,8 +7,11 @@ const options = { theme: "dark", rehearsalLetters: true } as const;
  * the prerendered page; the element takes it from there. The parser reports
  * problems as diagnostics rather than throwing; the catch is a last guard.
  */
-export function chartHtml(text: string, barNumbers = true): string {
-	const chosen = { ...options, barNumbers };
+export function chartHtml(
+	text: string,
+	{ barNumbers = true, wrap = true }: { barNumbers?: boolean; wrap?: boolean } = {},
+): string {
+	const chosen = { ...options, barNumbers, wrap };
 	try {
 		return renderChart(text, chosen);
 	} catch {
