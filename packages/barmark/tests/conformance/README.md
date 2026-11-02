@@ -32,4 +32,5 @@ a code change: the music these charts describe is fixed by recordings.
 Kevin decides grammar questions.
 
 The recordings and charts are by Badverbs, who share them publicly on
-Stem Shovel; Kevin holds the rights.
+Stem Shovel. The songs are © Kevin Peckham, all rights reserved; the
+repository's licences don't cover them (see COPYRIGHT.md at the root).

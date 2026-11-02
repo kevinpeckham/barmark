@@ -71,6 +71,14 @@ describe("the home page, prerendered", () => {
 	});
 });
 
+describe("the demo song", () => {
+	test("is credited to its writer, all rights reserved", () => {
+		const credit = doc.querySelector("[data-credit]")?.textContent?.replace(/\s+/g, " ");
+		expect(credit).toContain("Peaceful Dreams");
+		expect(credit).toContain("© Kevin Peckham, all rights reserved");
+	});
+});
+
 describe("links", () => {
 	test("no rel=noopener on links that open in the same tab", () => {
 		for (const path of ["index.html", "syntax.html", "get-started.html", "faq.html"]) {
