@@ -13,6 +13,11 @@ describe("chartHtml", () => {
 		expect(html).toContain("A &amp; &lt;b&gt;");
 		expect(html).not.toContain("<b>");
 	});
+	test("a chart can leave out bar numbers", () => {
+		const host = (html: string) => html.slice(0, html.indexOf(">") + 1);
+		expect(host(chartHtml("| C |", false))).toContain('bar-numbers="off"');
+		expect(host(chartHtml("| C |"))).not.toContain("bar-numbers");
+	});
 	test("charts use the dark palette", () => {
 		expect(chartHtml(demo)).toContain('data-theme="dark"');
 	});

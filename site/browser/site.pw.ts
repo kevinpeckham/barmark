@@ -17,6 +17,17 @@ const watchErrors = (page: Page) => {
 	return errors;
 };
 
+/**
+ * Prerendered controls exist before the page's script runs; an action taken
+ * that early never reaches the URL. Repeat it until the URL follows (it
+ * failed on CI that way once: FINDINGS.md).
+ */
+const untilUrl = (page: Page, action: () => Promise<void>, url: RegExp) =>
+	expect(async () => {
+		await action();
+		await expect(page).toHaveURL(url, { timeout: 1_000 });
+	}).toPass({ timeout: 15_000 });
+
 test.describe("home: the live editor", () => {
 	test("typing in the source re-renders the chart", async ({ page }) => {
 		const errors = watchErrors(page);
@@ -101,16 +112,6 @@ test.describe("home: the live editor", () => {
 });
 
 test.describe("the guide", () => {
-	/**
-	 * The guide is prerendered, so its controls exist before the page's script
-	 * runs; an action taken that early never reaches the URL. Repeat it until
-	 * the URL follows (it failed on CI that way once: FINDINGS.md).
-	 */
-	const untilUrl = (page: Page, action: () => Promise<void>, url: RegExp) =>
-		expect(async () => {
-			await action();
-			await expect(page).toHaveURL(url, { timeout: 1_000 });
-		}).toPass({ timeout: 15_000 });
 	const visible = (page: Page) =>
 		page.evaluate(() =>
 			[...document.querySelectorAll<HTMLElement>("[data-row]")]
@@ -157,6 +158,79 @@ test.describe("the guide", () => {
 		await untilUrl(page, async () => void (await sort.selectOption("name")), /sort=name/);
 		await sort.selectOption("category");
 		expect(await unrendered(page)).toBe(0);
+	});
+});
+
+test.describe("try it", () => {
+	const box = (page: Page) => page.getByRole("textbox", { name: "barmark to read" });
+	const reading = (page: Page) => page.locator("[data-reading]");
+	let errors: string[] = [];
+	test.beforeEach(({ page }) => {
+		errors = watchErrors(page);
+	});
+	test.afterEach(() => {
+		expect(errors).toEqual([]);
+	});
+
+	test("typing reads at once and keeps the URL", async ({ page }) => {
+		await page.goto("/try");
+		await untilUrl(page, () => box(page).fill("C7b9/E"), /\/try\?q=C7b9%2FE$/);
+		await expect(reading(page)).toContainText("C seven flat nine over E");
+	});
+
+	test("a shared link opens with its reading", async ({ page }) => {
+		await page.goto("/try?q=key%3A%20D%0A%7C%20D%20%7C%20A%20%7C");
+		await expect(box(page)).toHaveValue("key: D\n| D | A |");
+		await expect(reading(page).locator("pre")).toContainText("| D | A |");
+		await expect.poll(() => chartText(page, "[data-reading]")).toMatch(/bar 1: D.*bar 2: A/);
+	});
+
+	test("the suggestion fixes the chord", async ({ page }) => {
+		await page.goto("/try");
+		await untilUrl(page, () => box(page).fill("H7"), /q=H7$/);
+		await page.getByRole("button", { name: "Try B7" }).click();
+		await expect(box(page)).toHaveValue("B7");
+		await expect(reading(page)).toContainText("B seven");
+	});
+
+	test("chips fill the box", async ({ page }) => {
+		await page.goto("/try");
+		await untilUrl(
+			page,
+			() => page.getByRole("button", { name: "{C E G}" }).click(),
+			/q=%7BC\+E\+G%7D$/,
+		);
+		await expect(reading(page)).toContainText("notes C, E, G");
+	});
+
+	test("typing in a large chart doesn't wait for each reading", async ({ page }) => {
+		await page.goto("/try");
+		await expect(box(page)).toHaveValue("Cø");
+		await box(page).evaluate((el: HTMLTextAreaElement) => {
+			el.value = "| D | G |\n".repeat(4_000);
+			el.dispatchEvent(new Event("input", { bubbles: true }));
+		});
+		await expect(reading(page).locator("pre")).toContainText("| D | G |");
+		await box(page).press("End");
+		const start = Date.now();
+		await box(page).pressSequentially("| A |");
+		expect(Date.now() - start).toBeLessThan(1_500);
+		await expect(reading(page).locator("pre")).toContainText("| A |");
+	});
+
+	test("a long paste does not freeze the page", async ({ page }) => {
+		await page.goto("/try");
+		await expect(box(page)).toHaveValue("Cø");
+		const start = Date.now();
+		// fill() is itself slow on this much text: set it as a paste would.
+		await box(page).evaluate((el: HTMLTextAreaElement) => {
+			el.value = "| C |\n".repeat(10_000);
+			el.dispatchEvent(new Event("input", { bubbles: true }));
+		});
+		await expect(page.getByText(/Too long to preview here: 60,000 characters/)).toBeVisible();
+		expect(Date.now() - start).toBeLessThan(3000);
+		await box(page).fill("Cø");
+		await expect(reading(page)).toContainText("C minor seven flat five");
 	});
 });
 
@@ -323,7 +397,7 @@ test.describe("without JavaScript", () => {
 test.describe("on a phone", () => {
 	test.use({ viewport: { width: 360, height: 800 } });
 
-	for (const path of ["/", "/syntax"])
+	for (const path of ["/", "/syntax", "/try"])
 		test(`${path} never scrolls sideways`, async ({ page }) => {
 			await page.goto(path);
 			const [scroll, client] = await page.evaluate(() => [
@@ -386,7 +460,7 @@ test("the guide's controls meet WCAG contrast on the dark ground", async ({ page
 });
 
 test("every input has a name and every link has text", async ({ page }) => {
-	for (const path of ["/", "/syntax"]) {
+	for (const path of ["/", "/syntax", "/try"]) {
 		await page.goto(path);
 		const unnamed = await page.evaluate(() => {
 			const bad: string[] = [];
