@@ -6,6 +6,19 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.7.1] - 2026-11-02
+
+Requires `barmark` 0.8.0. No change to the renderer's code: it now reads
+charts with `barmark` 0.8.0's rules (`(add9)` and friends inside
+parentheses, the clearer empty-section message), so a page that installs
+`barmark` 0.8.0 alongside it gets one copy instead of two.
+
+### Changed
+
+- **Depends on `barmark` `^0.8.0`** (was `^0.7.0`, which in 0.x stops
+  short of 0.8.0 and made npm install a second, older copy for the
+  renderer).
+
 ## [0.7.0] - 2026-11-02
 
 Power chords in the numerals views. Requires `barmark` 0.7.0.
@@ -190,7 +203,8 @@ that needs no script or as the `<barmark-chart>` web component. Requires
   zoom without sideways scrolling, the element renders and re-renders, and
   a screen reader hears "bar 9: D". Run them with `bun run test:browser`.
 
-[Unreleased]: https://github.com/kevinpeckham/barmark/compare/render-v0.7.0...HEAD
+[Unreleased]: https://github.com/kevinpeckham/barmark/compare/render-v0.7.1...HEAD
+[0.7.1]: https://github.com/kevinpeckham/barmark/compare/render-v0.7.0...render-v0.7.1
 [0.7.0]: https://github.com/kevinpeckham/barmark/compare/render-v0.6.0...render-v0.7.0
 [0.6.0]: https://github.com/kevinpeckham/barmark/compare/render-v0.5.0...render-v0.6.0
 [0.5.0]: https://github.com/kevinpeckham/barmark/compare/render-v0.4.0...render-v0.5.0

@@ -58,6 +58,14 @@ something new in `barmark`, **release `barmark` first**: the render
 release check fails while the `barmark` version it would name is not on
 npm.
 
+**A `barmark` minor release needs a renderer release too**, even with no
+renderer change. In 0.x a caret range stops at the next minor (`^0.7.0`
+allows 0.7.x, not 0.8.0), so a page or the CLI that installs the new
+`barmark` beside the old renderer gets two copies, and the renderer
+reads charts with the old rules. Release `@barmark/render` as a patch
+("Requires `barmark` X.Y.0") right after the `barmark` release, then bump
+the site to both.
+
 ## Checks
 
 The same scripts run in three places; `<pkg>` is `barmark`, `render` or `cli`:
