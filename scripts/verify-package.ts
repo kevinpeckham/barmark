@@ -2,8 +2,10 @@
  * Build a package, check what `npm pack` would publish, and import the
  * built output in Node to read a real chart. Exit 0 when the package is
  * sound; `--json` prints the result for the Swamp release check.
+ * `--no-build` checks what is already built: CI builds with a current Node,
+ * then checks the CLI on its oldest (TypeScript 7's tsc needs a newer one).
  *
- *   bun scripts/verify-package.ts <package> [--json]
+ *   bun scripts/verify-package.ts <package> [--json] [--no-build]
  */
 import { mkdtempSync, readFileSync, rmSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -11,6 +13,7 @@ import { basename, join } from "node:path";
 import { PACKAGES, type PackageKey, packageArg, root, run } from "./lib.js";
 
 const json = process.argv.includes("--json");
+const noBuild = process.argv.includes("--no-build");
 const pkg = packageArg();
 const problems: string[] = [];
 
@@ -41,7 +44,7 @@ const REQUIRED = [...COMMON, ...CONTENTS[pkg.key].required];
 const allowed = (f: string) => COMMON.includes(f) || CONTENTS[pkg.key].allowed.test(f);
 
 // The whole workspace, in dependency order: render builds against the built barmark.
-const build = run(["bun", "run", "build"], root);
+const build = noBuild ? { code: 0, out: "", err: "" } : run(["bun", "run", "build"], root);
 if (build.code !== 0)
 	problems.push(`build failed: ${(build.err || build.out).trim().split("\n").slice(-3).join(" ")}`);
 

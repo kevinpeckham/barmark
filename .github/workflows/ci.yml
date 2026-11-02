@@ -51,11 +51,6 @@ jobs:
       matrix:
         node: [20, 22, 24]
         pkg: [barmark, render, cli]
-        # The CLI's floor (engines: >=20.6): node-io.ts uses
-        # import.meta.resolve, unflagged in Node 20.6. The libraries' is 20.
-        include:
-          - node: "20.6.0"
-            pkg: cli
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
@@ -66,6 +61,29 @@ jobs:
           node-version: ${{ matrix.node }}
       - run: bun install --frozen-lockfile
       - run: bun run verify:package ${{ matrix.pkg }}
+  # The CLI's floor (engines: >=20.6): node-io.ts uses import.meta.resolve,
+  # unflagged in Node 20.6. TypeScript 7's tsc can't run on 20.6 (an
+  # extensionless ESM bin), so this builds with Node 24, then packs,
+  # installs and runs the CLI with 20.6.
+  cli-node-floor:
+    name: package (20.6.0, cli)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: 1.3.14
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+      - run: bun install --frozen-lockfile
+      - run: bun run build
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "20.6.0"
+      - run: node --version
+      - run: bun run verify:package cli --no-build
   # barmark.dev (site/): its own install from npm, svelte-check, its tests
   # (the guide's examples against the published parser) and its browser suite.
   site:

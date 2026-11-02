@@ -90,6 +90,21 @@ package index, inside the package.
 
 ## Tooling
 
+### TypeScript 7's `tsc` won't run on Node 20.6, though the CLI it builds does (2026-11-02, @barmark/cli)
+
+- **The symptom.** A CI job testing the CLI on its `engines` floor,
+  Node 20.6.0, failed in `verify:package cli` with only "build failed".
+  The build's own error: `ERR_UNKNOWN_FILE_EXTENSION` for
+  `typescript/bin/tsc`.
+- **The cause.** TypeScript 7's `bin/tsc` is an extensionless file in a
+  `"type": "module"` package; Node only loads those from 20.10 or so. The
+  CLI's own `dist/` runs fine on 20.6 (`--version`, `check`, `render`).
+- **The fix.** The floor gets its own job (`cli-node-floor` in ci.yml,
+  "package (20.6.0, cli)"): build with Node 24, switch to 20.6, then
+  `verify:package cli --no-build` packs, installs and runs the CLI.
+  `verify-package.ts`'s build failure also hides the build's output; to
+  see it, run `bun run build` with the same Node.
+
 ### Node's `parseArgs` message for an unknown option ends on an unbalanced quote (2026-11-02, @barmark/cli)
 
 - **The symptom.** `barmark check --foo` printed `Unknown option
