@@ -42,6 +42,7 @@
 	},
 	"scripts": {
 		"build": "rm -rf dist && tsc -p tsconfig.build.json",
-		"prepack": "bun run build"
+		"prepack": "bun run build",
+		"compile": "bun scripts/compile.ts"
 	}
 }

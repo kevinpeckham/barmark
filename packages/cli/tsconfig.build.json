@@ -9,5 +9,6 @@
 		"lib": ["ESNext", "DOM"],
 		"paths": {}
 	},
-	"include": ["src"]
+	"include": ["src"],
+	"exclude": ["src/binary.ts"]
 }

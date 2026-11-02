@@ -22,12 +22,19 @@ async function readStdin(): Promise<string> {
 	return Buffer.concat(chunks).toString("utf8");
 }
 
-export function nodeIo(): Io {
+/** The process's streams and folder: the part of an Io every runtime shares. */
+export function processIo(): Pick<Io, "stdout" | "stderr" | "readStdin" | "cwd"> {
 	return {
 		stdout: (text) => process.stdout.write(text),
 		stderr: (text) => process.stderr.write(text),
 		readStdin,
 		cwd: process.cwd(),
+	};
+}
+
+export function nodeIo(): Io {
+	return {
+		...processIo(),
 		font: () =>
 			readFileSync(fileURLToPath(import.meta.resolve("@barmark/render/fonts/Edwin-Roman.otf"))),
 		versions: versions(),

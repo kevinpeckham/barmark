@@ -5,7 +5,10 @@
 	"entry": [
 		"scripts/**/*.{ts,mjs}",
 		"packages/*/tests/**/*.test.ts",
-		"packages/*/browser/*.{ts,pw.ts}"
+		"packages/*/browser/*.{ts,pw.ts}",
+		// The CLI's standalone-binary entry and its compile script, run by Bun rather than imported.
+		"packages/cli/src/binary.ts",
+		"packages/cli/scripts/*.ts"
 	],
 	// extensions/ holds Swamp behavior types: Deno code with npm: specifiers, run by Swamp's own runtime.
 	// site/ is its own SvelteKit project (Fallow does not model its routes); svelte-check and its tests cover it.
