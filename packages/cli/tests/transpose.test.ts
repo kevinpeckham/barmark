@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { transposeChart } from "barmark";
 import { textLine } from "../src/report.js";
@@ -52,5 +52,11 @@ describe("barmark transpose", () => {
 		expect(readFileSync(join(io.dir, "e.chart.md"), "utf8")).toBe(
 			transposeChart(SONG, { to: "E" }).text,
 		);
+	});
+	test("an error leaves --out unwritten, and says so", async () => {
+		const io = folder({ "s.chart.md": SONG });
+		expect(await transpose(["s.chart.md", "--to", "H", "--out", "h.chart.md"], io)).toBe(1);
+		expect(existsSync(join(io.dir, "h.chart.md"))).toBe(false);
+		expect(io.err()).toEndWith("h.chart.md not written: the chart has errors\n");
 	});
 });

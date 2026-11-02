@@ -62,6 +62,18 @@ jobs:
             exit 1
           fi
           { echo "key=${key}"; echo "dir=${dir}"; echo "name=${name}"; echo "version=${version}"; echo "smoke=${smoke}"; } >> "$GITHUB_OUTPUT"
+      # The binaries go on the tag's GitHub release, after the npm publish. A
+      # manual run with no release would publish to npm and then fail to
+      # attach them, so it stops here, before anything is published.
+      - name: The CLI's tag has a GitHub release for its binaries
+        if: steps.package.outputs.key == 'cli'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if ! gh release view "${GITHUB_REF_NAME}" --repo "${{ github.repository }}" > /dev/null; then
+            echo "::error::${GITHUB_REF_NAME} has no GitHub release to attach the binaries to; create it (gh release create ${GITHUB_REF_NAME} --verify-tag), which starts this workflow itself"
+            exit 1
+          fi
       # The binaries bundle the libraries from this checkout, and npm users get
       # the published ones: they must be the same code (verify-release.ts
       # checks the same before tagging).
