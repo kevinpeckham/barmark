@@ -90,6 +90,21 @@ package index, inside the package.
 
 ## Tooling
 
+### Vercel Analytics' SvelteKit entry breaks every page on SvelteKit 3 (2026-11-02, barmark.dev)
+
+- **The symptom.** With `injectAnalytics` from `@vercel/analytics/sveltekit`
+  (2.0.1) the pages stopped hydrating: "`$app/stores` has been removed in
+  favour of `$app/state`". svelte-check had already refused
+  `$app/environment`, which Kit 3 renamed `$app/env`.
+- **The cause.** The package's `/sveltekit` entry still imports
+  `$app/environment` and `$app/stores`.
+- **The fix.** Stem Shovel's pattern (its FINDINGS and
+  `src/lib/observability.ts`): inject the generic entry once from the root
+  `+layout.ts` and report each route from `afterNavigate`
+  (`site/src/lib/analytics.ts`). The local preview has no
+  `/_vercel/insights/script.js`, so the browser tests answer it with an
+  empty script.
+
 ### A commit pushed after its PR merged never reaches main (2026-11-02, /try)
 
 - **The symptom.** /try's follow-up fixes were on `feat/site-try` and on
