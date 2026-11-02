@@ -32,6 +32,16 @@ describe("the home page, prerendered", () => {
 		const template = doc.querySelector("barmark-chart template[shadowrootmode=open]");
 		expect(template?.innerHTML).toContain("Peaceful Dreams");
 	});
+	test("the render window offers chord names, Nashville numbers and Roman numerals, names first", () => {
+		const group = doc.querySelector('[role="radiogroup"][aria-label="Chord spelling"]');
+		const radios = [...(group?.querySelectorAll('input[type="radio"]') ?? [])];
+		expect(radios.map((r) => r.closest("label")?.textContent?.trim())).toEqual([
+			"Names",
+			"Nashville",
+			"Roman",
+		]);
+		expect(radios.map((r) => r.hasAttribute("checked"))).toEqual([true, false, false]);
+	});
 	test("has a title, canonical URL and Open Graph tags", () => {
 		expect(doc.title).toBe("barmark: plain-text chord charts");
 		expect(doc.querySelector('link[rel="canonical"]')?.getAttribute("href")).toBe(
