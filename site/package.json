@@ -19,7 +19,7 @@
 	"dependencies": {
 		"@barmark/render": "0.7.0",
 		"@vercel/analytics": "2.0.1",
-		"barmark": "0.7.0"
+		"barmark": "0.8.0"
 	},
 	"devDependencies": {
 		"@iconify-json/ph": "1.2.2",
