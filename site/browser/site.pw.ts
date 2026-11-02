@@ -203,6 +203,21 @@ test.describe("try it", () => {
 		await expect(reading(page)).toContainText("notes C, E, G");
 	});
 
+	test("typing in a large chart doesn't wait for each reading", async ({ page }) => {
+		await page.goto("/try");
+		await expect(box(page)).toHaveValue("Cø");
+		await box(page).evaluate((el: HTMLTextAreaElement) => {
+			el.value = "| D | G |\n".repeat(4_000);
+			el.dispatchEvent(new Event("input", { bubbles: true }));
+		});
+		await expect(reading(page).locator("pre")).toContainText("| D | G |");
+		await box(page).press("End");
+		const start = Date.now();
+		await box(page).pressSequentially("| A |");
+		expect(Date.now() - start).toBeLessThan(1_500);
+		await expect(reading(page).locator("pre")).toContainText("| A |");
+	});
+
 	test("a long paste does not freeze the page", async ({ page }) => {
 		await page.goto("/try");
 		await expect(box(page)).toHaveValue("Cø");

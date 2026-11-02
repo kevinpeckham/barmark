@@ -1,6 +1,6 @@
 <script lang="ts">
 import ChartRender from "#lib/components/ChartRender.svelte";
-import type { ChordReading, Reading } from "#lib/try/read.js";
+import { type ChordReading, type Reading, summarize } from "#lib/try/read.js";
 
 let {
 	reading,
@@ -44,7 +44,8 @@ const code = "font-mono text-accent";
 	{/each}
 {/snippet}
 
-<div data-reading aria-live="polite" class="flex flex-col gap-4 p-4 min-w-0">
+<p data-summary aria-live="polite" class="sr-only">{summarize(reading)}</p>
+<div data-reading class="flex flex-col gap-4 p-4 min-w-0">
 	{#if reading.kind === "chord" || reading.kind === "notes"}
 		{@render chord(reading.chord)}
 	{:else if reading.kind === "harte"}
@@ -75,7 +76,7 @@ const code = "font-mono text-accent";
 			</div>
 		{/if}
 	{:else if reading.kind === "long"}
-		<p class="opacity-80" role="status">
+		<p class="opacity-80">
 			Too long to preview here: {reading.length.toLocaleString("en-US")} characters (the limit is
 			{reading.limit.toLocaleString("en-US")}).
 		</p>

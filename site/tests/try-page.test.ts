@@ -15,6 +15,14 @@ describe("/try, prerendered", () => {
 		expect(reading).toContain("C minor seven flat five");
 		expect(reading).toContain("C:hdim7");
 	});
+	test("a screen reader hears a one-line summary, not the whole reading", () => {
+		expect(doc.querySelector("[data-reading]")?.getAttribute("aria-live")).toBeNull();
+		const live = [...doc.querySelectorAll("[aria-live]")];
+		expect(live.map((el) => el.textContent?.trim())).toEqual([
+			"Cm7(b5): C minor seven flat five",
+			"Showing 9 of 49",
+		]);
+	});
 	test("draws the chord as one bar, without a bar number", () => {
 		const chart = doc.querySelector("[data-reading] barmark-chart");
 		expect(chart?.getAttribute("bar-numbers")).toBe("off");

@@ -1,5 +1,5 @@
 <script lang="ts">
-import { onMount } from "svelte";
+import { onMount, untrack } from "svelte";
 import GuideTable from "#lib/components/GuideTable.svelte";
 import TryReading from "#lib/components/TryReading.svelte";
 import Window from "#lib/components/Window.svelte";
@@ -12,8 +12,23 @@ const first = EXAMPLES[0] ?? "";
 // The prerendered page reads the first example; a shared link's query is read once the page runs.
 let text = $state(first);
 let ready = $state(false);
-const reading = $derived(read(text));
-const query = $derived(guideQuery(reading, text));
+
+/** Past this the reading waits for typing to pause, as ChartRender's preview does. */
+const LONG = 10_000;
+const PAUSE_MS = 250;
+let settled = $state(untrack(() => text));
+$effect(() => {
+	const next = text;
+	if (next.length < LONG) {
+		settled = next;
+		return;
+	}
+	const timer = setTimeout(() => (settled = next), PAUSE_MS);
+	return () => clearTimeout(timer);
+});
+
+const reading = $derived(read(settled));
+const query = $derived(guideQuery(reading, settled));
 const rows = $derived(Math.min(8, text.split("\n").length));
 
 onMount(() => {
@@ -25,7 +40,9 @@ onMount(() => {
 $effect(() => {
 	// A text too long to read stays out of the URL too.
 	const search =
-		text === first || reading.kind === "long" ? "" : new URLSearchParams({ q: text }).toString();
+		settled === first || reading.kind === "long"
+			? ""
+			: new URLSearchParams({ q: settled }).toString();
 	if (!ready) return;
 	replaceState(search ? `?${search}` : location.pathname, {});
 });
@@ -75,7 +92,7 @@ const chip =
 	</div>
 
 	<Window title="barmark reads">
-		<TryReading {reading} {text} ontry={(suggestion) => (text = suggestion)} />
+		<TryReading {reading} text={settled} ontry={(suggestion) => (text = suggestion)} />
 	</Window>
 
 	{#if query === null}
