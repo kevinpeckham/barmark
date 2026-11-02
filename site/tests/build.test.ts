@@ -19,7 +19,7 @@ describe("the site builds", () => {
 		expect(existsSync(join(out, "fonts/OFL.txt"))).toBe(true);
 	});
 	test("every page registers Edwin once, where the element looks for it", () => {
-		for (const path of ["index.html", "syntax.html"]) {
+		for (const path of ["index.html", "syntax.html", "get-started.html"]) {
 			const html = readFileSync(join(out, path), "utf8");
 			const marked = html.match(/<style data-barmark-font>[^<]*<\/style>/g) ?? [];
 			expect(marked.length).toBe(1);
@@ -28,7 +28,7 @@ describe("the site builds", () => {
 		}
 	});
 	test("every page names an icon that ships, so browsers don't ask for /favicon.ico", () => {
-		for (const path of ["index.html", "syntax.html", "try.html"]) {
+		for (const path of ["index.html", "syntax.html", "try.html", "get-started.html", "faq.html"]) {
 			const href = page(path).querySelector('link[rel="icon"]')?.getAttribute("href") ?? "";
 			expect(href).toStartWith("/");
 			expect(existsSync(join(out, href))).toBe(true);

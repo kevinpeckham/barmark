@@ -66,7 +66,7 @@ describe("the home page, prerendered", () => {
 
 describe("links", () => {
 	test("no rel=noopener on links that open in the same tab", () => {
-		for (const path of ["index.html", "syntax.html"]) {
+		for (const path of ["index.html", "syntax.html", "get-started.html", "faq.html"]) {
 			const stray = [...page(path).querySelectorAll('a[rel~="noopener"]:not([target])')];
 			expect(stray.map((a) => a.getAttribute("href"))).toEqual([]);
 		}

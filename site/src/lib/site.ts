@@ -5,6 +5,11 @@ export const LINKS = {
 	article: "https://www.lightningjar.com/blog/introducing-barmark",
 	stemShovel: "https://www.stemshovel.com",
 	grammar: "https://github.com/kevinpeckham/barmark/blob/main/docs/grammar-v0.1-draft.md",
+	license: "https://github.com/kevinpeckham/barmark/blob/main/LICENSE",
+	issues: "https://github.com/kevinpeckham/barmark/issues",
+	renderReadme: "https://github.com/kevinpeckham/barmark/tree/main/packages/render#readme",
+	parserReadme: "https://github.com/kevinpeckham/barmark/tree/main/packages/barmark#readme",
+	lightningJar: "https://www.lightningjar.com",
 	origin: "https://www.barmark.dev",
 } as const;
 
