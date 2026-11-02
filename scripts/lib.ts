@@ -17,6 +17,12 @@ export const PACKAGES = {
 		tagPrefix: "render-v",
 		smoke: "scripts/smoke-render.mjs",
 	},
+	cli: {
+		dir: join(root, "packages/cli"),
+		name: "@barmark/cli",
+		tagPrefix: "cli-v",
+		smoke: "scripts/smoke-cli.mjs",
+	},
 } as const;
 export type PackageKey = keyof typeof PACKAGES;
 

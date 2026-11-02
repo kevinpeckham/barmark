@@ -31,6 +31,10 @@ const CONTENTS: Record<PackageKey, { required: string[]; allowed: RegExp }> = {
 		],
 		allowed: /^(dist\/.+\.(js|d\.ts)|fonts\/(Edwin-Roman\.otf|OFL\.txt|README\.md))$/,
 	},
+	cli: {
+		required: ["dist/cli.js", "dist/main.js"],
+		allowed: /^dist\/.+\.(js|d\.ts)$/,
+	},
 };
 const COMMON = ["package.json", "README.md", "LICENSE", "CHANGELOG.md"];
 const REQUIRED = [...COMMON, ...CONTENTS[pkg.key].required];
@@ -71,22 +75,22 @@ const unresolved = Object.entries(dependencies).filter(([, range]) =>
 if (unresolved.length)
 	problems.push(`dependencies left as workspace ranges: ${unresolved.map(([n]) => n).join(", ")}`);
 // bun pm pack takes a workspace package's version from bun.lock, which a version bump does not update.
+// The CLI pins its libraries exactly, so --version names what runs; the libraries take a caret.
 for (const dep of Object.values(PACKAGES)) {
 	const range = dependencies[dep.name];
 	const { version: local } = JSON.parse(readFileSync(join(dep.dir, "package.json"), "utf8")) as {
 		version: string;
 	};
-	if (range && range !== `^${local}`)
+	const expected = pkg.key === "cli" ? local : `^${local}`;
+	if (range && range !== expected)
 		problems.push(
 			`${dep.name} packs as ${range}, but its version is ${local}: update its "version" in bun.lock`,
 		);
 }
 
-// The built package, imported by Node rather than Bun: what an npm user gets.
-const smoke = run(
-	["node", pkg.smoke, join(pkg.dir, "dist/index.js"), "examples/peaceful-dreams.chart.md"],
-	root,
-);
+// The built package, imported (or, for the CLI, run) by Node rather than Bun: what an npm user gets.
+const entry = join(pkg.dir, pkg.key === "cli" ? "dist/cli.js" : "dist/index.js");
+const smoke = run(["node", pkg.smoke, entry, "examples/peaceful-dreams.chart.md"], root);
 let node: Record<string, unknown> | null = null;
 try {
 	node = JSON.parse(smoke.out);

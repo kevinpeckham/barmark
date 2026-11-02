@@ -149,8 +149,13 @@ parse then print should round-trip).
      `setHTMLUnsafe` to the element, so the site shows off the component
      it ships.
 3. `@barmark/cli`: validate, render, canonicalize `.chart.md` files.
-4. Later: the Nashville converter; a conformance-test runner the
-   bench can point at any implementation.
+4. Later: the Nashville converter; converters to and from MIDI and to
+   and from MusicXML; a conformance-test runner the bench can point at
+   any implementation.
+5. Grammar, later: a structured lyric line that places words or
+   syllables by bar and beat under the row of chords above it (today a
+   lyric is free text between rows). A grammar change, so Kevin decides
+   its shape.
 
 ## What the bench contributes (standing offer, already promised)
 

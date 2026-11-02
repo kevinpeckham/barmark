@@ -23,9 +23,9 @@ const GatesSchema = z.object({
 });
 
 const PkgArg = z
-	.enum(["barmark", "render"])
+	.enum(["barmark", "render", "cli"])
 	.default("barmark")
-	.describe("The workspace package to check: barmark or render (@barmark/render)");
+	.describe("The workspace package to check: barmark, render (@barmark/render) or cli (@barmark/cli)");
 
 const PackageSchema = z.object({
 	label: z.string(),

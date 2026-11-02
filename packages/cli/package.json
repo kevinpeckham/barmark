@@ -1,0 +1,48 @@
+{
+	"name": "@barmark/cli",
+	"version": "0.1.0",
+	"description": "The barmark command: check, format, render and transpose barmark chord charts (.chart.md) from the terminal and in CI.",
+	"type": "module",
+	"bin": {
+		"barmark": "./dist/cli.js"
+	},
+	"exports": {
+		"./package.json": "./package.json"
+	},
+	"files": [
+		"dist",
+		"CHANGELOG.md"
+	],
+	"engines": {
+		"node": ">=20.6"
+	},
+	"keywords": [
+		"barmark",
+		"chord-chart",
+		"chords",
+		"music",
+		"cli",
+		"formatter",
+		"linter"
+	],
+	"author": "Kevin Peckham",
+	"license": "MIT",
+	"homepage": "https://github.com/kevinpeckham/barmark/tree/main/packages/cli#readme",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/kevinpeckham/barmark.git",
+		"directory": "packages/cli"
+	},
+	"bugs": {
+		"url": "https://github.com/kevinpeckham/barmark/issues"
+	},
+	"dependencies": {
+		"barmark": "workspace:*",
+		"@barmark/render": "workspace:*"
+	},
+	"scripts": {
+		"build": "rm -rf dist && tsc -p tsconfig.build.json",
+		"prepack": "bun run build",
+		"compile": "bun scripts/compile.ts"
+	}
+}
