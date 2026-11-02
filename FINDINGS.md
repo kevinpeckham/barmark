@@ -90,6 +90,18 @@ package index, inside the package.
 
 ## Tooling
 
+### Node's `parseArgs` message for an unknown option ends on an unbalanced quote (2026-11-02, @barmark/cli)
+
+- **The symptom.** `barmark check --foo` printed `Unknown option
+  '--foo'. To specify a positional argument starting with a '-', place it
+  at the end of the command after '--', as in '-- "--foo"`: the last
+  quote never closes.
+- **The cause.** Node's own `ERR_PARSE_ARGS_UNKNOWN_OPTION` message
+  (seen on Node 22.23); the CLI passed it through.
+- **The fix.** `packages/cli/src/args.ts` recognises that error and
+  writes its own: `unknown flag "--foo"; a file name starting with -
+  goes after --`. Other `parseArgs` messages still pass through.
+
 ### A new package's tags need the `npm` environment's tag rule too (2026-11-02, @barmark/cli 0.1.0)
 
 - **The symptom.** The first `cli-v0.1.0` release run failed its

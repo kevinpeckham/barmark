@@ -39,6 +39,9 @@ export async function transpose(args: string[], io: Io): Promise<number> {
 	);
 	const result = transposeChart(text, by);
 	for (const d of result.diagnostics) io.stderr(`${textLine(path, d)}\n`);
-	writeOutput(result.text, values.out, io);
-	return result.diagnostics.some((d) => d.severity === "error") ? 1 : 0;
+	const failed = result.diagnostics.some((d) => d.severity === "error");
+	if (failed && values.out !== undefined)
+		io.stderr(`${values.out} not written: the chart has errors\n`);
+	else writeOutput(result.text, values.out, io);
+	return failed ? 1 : 0;
 }

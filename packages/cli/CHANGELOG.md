@@ -6,6 +6,18 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+
+- **`format --write` replaces each file whole.** The new text goes to a
+  temporary file beside the chart, with its permissions, which then
+  takes its name; a failure part-way (a full disk, a folder it can't
+  write) leaves the chart as it was and reports "cannot write <file>".
+- **`transpose --out` writes nothing when the chart has errors**, and
+  says "<file> not written: the chart has errors".
+- **An unknown flag reads `unknown flag "--strct"`**, with how to pass a
+  file name that starts with `-`, instead of Node's message, which ended
+  on an unbalanced quote.
+
 ## [0.1.0] - 2026-11-02
 
 The first release of the `barmark` command. Uses `barmark` 0.8.0 and

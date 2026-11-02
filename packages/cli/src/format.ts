@@ -1,10 +1,9 @@
 /** barmark format: charts in standard form, printed, rewritten in place, or checked. */
-import { writeFileSync } from "node:fs";
-import { resolve } from "node:path";
 import { printChart } from "barmark";
 import { parseFlags } from "./args.js";
 import { type Chart, readCharts } from "./inputs.js";
 import { type Io, UsageError } from "./io.js";
+import { replaceFile } from "./output.js";
 
 type Flags = { write: boolean; check: boolean };
 
@@ -21,7 +20,7 @@ function rewriteAll(charts: Chart[], write: boolean, io: Io): number {
 		const canonical = printChart(text);
 		if (canonical === text) continue;
 		changed++;
-		if (write) writeFileSync(resolve(io.cwd, path), canonical);
+		if (write) replaceFile(path, canonical, io);
 		io.stdout(`${write ? "formatted" : "would format"} ${path}\n`);
 	}
 	return changed;

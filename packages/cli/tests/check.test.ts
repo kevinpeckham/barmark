@@ -62,7 +62,9 @@ describe("barmark check", () => {
 	});
 	test("an unknown flag is a usage error", async () => {
 		const io = folder({ "ok.chart.md": "| D |\n" });
-		await expect(check(["--strct", "ok.chart.md"], io)).rejects.toThrow("--strct");
+		await expect(check(["--strct", "ok.chart.md"], io)).rejects.toThrow(
+			/^unknown flag "--strct"; a file name starting with - goes after --$/,
+		);
 	});
 	test("the four Badverbs fixtures check clean", async () => {
 		const io = folder({}, { cwd: ROOT });

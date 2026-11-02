@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { cpSync, readdirSync, readFileSync } from "node:fs";
+import { chmodSync, cpSync, linkSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { printChart } from "barmark";
 import { format } from "../src/format.js";
@@ -35,6 +35,33 @@ describe("barmark format", () => {
 		expect(io.out()).toBe("formatted a.chart.md\n");
 		expect(readFileSync(join(io.dir, "a.chart.md"), "utf8")).toBe(CANONICAL);
 		expect(readFileSync(join(io.dir, "b.chart.md"), "utf8")).toBe(CANONICAL);
+	});
+	test("--write replaces each file whole, not in place: a hard link keeps the old text", async () => {
+		const io = folder({ "a.chart.md": LOOSE });
+		linkSync(join(io.dir, "a.chart.md"), join(io.dir, "old.txt"));
+		expect(await format(["--write", "a.chart.md"], io)).toBe(0);
+		expect(readFileSync(join(io.dir, "a.chart.md"), "utf8")).toBe(CANONICAL);
+		expect(readFileSync(join(io.dir, "old.txt"), "utf8")).toBe(LOOSE);
+		expect(readdirSync(io.dir).sort()).toEqual(["a.chart.md", "old.txt"]);
+	});
+	test("--write keeps each file's permissions", async () => {
+		const io = folder({ "a.chart.md": LOOSE });
+		chmodSync(join(io.dir, "a.chart.md"), 0o640);
+		await format(["--write", "a.chart.md"], io);
+		expect(statSync(join(io.dir, "a.chart.md")).mode & 0o777).toBe(0o640);
+	});
+	test("--write into a folder it can't write is a usage error, and the chart is untouched", async () => {
+		const io = folder({ "songs/a.chart.md": LOOSE });
+		chmodSync(join(io.dir, "songs"), 0o555);
+		try {
+			await expect(format(["--write", "songs"], io)).rejects.toThrow(
+				"cannot write songs/a.chart.md",
+			);
+			expect(readFileSync(join(io.dir, "songs/a.chart.md"), "utf8")).toBe(LOOSE);
+			expect(readdirSync(join(io.dir, "songs"))).toEqual(["a.chart.md"]);
+		} finally {
+			chmodSync(join(io.dir, "songs"), 0o755);
+		}
 	});
 	test("--check lists files that would change and exits 1", async () => {
 		const io = folder({ "a.chart.md": LOOSE, "b.chart.md": CANONICAL });
