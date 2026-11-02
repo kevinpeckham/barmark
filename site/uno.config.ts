@@ -67,6 +67,8 @@ export default defineConfig({
 		"text-ink",
 		"max-w-screen",
 		"overflow-x-hidden",
+		// clip, not hidden, on the page's wrapper: hidden makes it a scroll box, and the FAQ's sticky column would scroll away.
+		"overflow-x-clip",
 		"grid",
 		"grid-cols-1",
 		"grid-rows-[auto_1fr_auto]",
