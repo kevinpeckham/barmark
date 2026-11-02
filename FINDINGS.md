@@ -90,6 +90,22 @@ package index, inside the package.
 
 ## Tooling
 
+### A new package's tags need the `npm` environment's tag rule too (2026-11-02, @barmark/cli 0.1.0)
+
+- **The symptom.** The first `cli-v0.1.0` release run failed its
+  `publish` job in two seconds, with no steps run and no approval asked
+  for. The log was empty; the only clue was the job's annotation: "Tag
+  "cli-v0.1.0" is not allowed to deploy to npm due to environment
+  protection rules."
+- **The cause.** Besides its required reviewer, the `npm` environment
+  allows deployments only from listed tag patterns (`barmark-v*`,
+  `render-v*`, `v*`). The first-release checklist covered npm's trusted
+  publisher and the repository rulesets, but not this list.
+- **The fix.** Kevin added `cli-v*`; the failed jobs were rerun on the
+  same tag, so no version was lost. RELEASING.md's "A new package's
+  first release" now has the step. When a job fails with no log, read its
+  annotations (`gh api repos/<repo>/check-runs/<job id>/annotations`).
+
 ### In 0.x a caret range stops at the next minor, so a `barmark` minor leaves the renderer behind (2026-11-02, barmark 0.8.0)
 
 - **The symptom.** Bumping barmark.dev to `barmark` 0.8.0 installed two

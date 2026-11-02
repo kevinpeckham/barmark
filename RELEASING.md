@@ -179,4 +179,10 @@ manual step before its first release (the same for `@barmark/cli`):
    (`cli-v*` for the CLI) to "release tags", and the new package job's
    checks (`package (20, cli)`, `package (22, cli)`, `package (24, cli)`)
    to the "main" ruleset's required checks.
-4. Release normally from here on.
+4. **The `npm` environment** (repository settings → Environments →
+   npm → Deployment branches and tags): add a tag rule for the same
+   pattern (`cli-v*`). Without it the publish job is rejected at once,
+   before any approval is asked for ("Tag … is not allowed to deploy to
+   npm due to environment protection rules"), and nothing reaches npm;
+   after adding it, rerun the failed jobs (`gh run rerun <id> --failed`).
+5. Release normally from here on.
