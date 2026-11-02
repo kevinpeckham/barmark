@@ -6,12 +6,15 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-11-02
+
+Charts that scroll instead of wrapping. barmark.dev's home page uses it.
+
 ### Added
 
 - **`wrap: false`** (attribute `wrap="off"`, property `wrap`): a section
   wider than the chart's box keeps its rows and columns rather than
   wrapping them, and the chart overflows for its page to scroll.
-  barmark.dev's home page uses it.
 
 ## [0.5.0] - 2026-11-02
 
@@ -176,7 +179,8 @@ that needs no script or as the `<barmark-chart>` web component. Requires
   zoom without sideways scrolling, the element renders and re-renders, and
   a screen reader hears "bar 9: D". Run them with `bun run test:browser`.
 
-[Unreleased]: https://github.com/kevinpeckham/barmark/compare/render-v0.5.0...HEAD
+[Unreleased]: https://github.com/kevinpeckham/barmark/compare/render-v0.6.0...HEAD
+[0.6.0]: https://github.com/kevinpeckham/barmark/compare/render-v0.5.0...render-v0.6.0
 [0.5.0]: https://github.com/kevinpeckham/barmark/compare/render-v0.4.0...render-v0.5.0
 [0.4.0]: https://github.com/kevinpeckham/barmark/compare/render-v0.3.0...render-v0.4.0
 [0.3.0]: https://github.com/kevinpeckham/barmark/compare/render-v0.2.1...render-v0.3.0
