@@ -1,12 +1,13 @@
 /** The barmark command: dispatch to a subcommand, and turn every failure into one line and an exit code. */
 import { check } from "./check.js";
+import { format } from "./format.js";
 import { HELP } from "./help.js";
 import { type Io, UsageError } from "./io.js";
 
 export type Command = (args: string[], io: Io) => Promise<number>;
 
 /** Each subcommand by name. */
-export const COMMANDS: Record<string, Command> = { check };
+export const COMMANDS: Record<string, Command> = { check, format };
 
 export async function main(argv: string[], io: Io): Promise<number> {
 	const [name, ...args] = argv;
