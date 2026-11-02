@@ -8,14 +8,11 @@ let {
 	text,
 	label,
 	barNumbers = true,
-	wrap = true,
 	numerals = null,
 }: {
 	text: string;
 	label?: string;
 	barNumbers?: boolean;
-	/** false: a section wider than the box keeps its rows, and the box scrolls. */
-	wrap?: boolean;
 	/** Each chord as its degree in its bar's key; null: chord names. */
 	numerals?: Numerals | null;
 } = $props();
@@ -32,7 +29,7 @@ const tooLong = $derived(text.length > MAX);
 let rendered = untrack(() => text);
 const initial = chartHtml(
 	rendered,
-	untrack(() => ({ barNumbers, wrap })),
+	untrack(() => ({ barNumbers })),
 );
 let host: HTMLDivElement;
 
