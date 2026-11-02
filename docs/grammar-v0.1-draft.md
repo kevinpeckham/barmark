@@ -327,7 +327,10 @@ number is an extension (`C7`, `C13`), so it can't also be an octave.
   replays the changes.
 - Names match case-insensitively with whitespace collapsed; otherwise the
   match is exact. `## Verse 2` does not match `## Verse`. An empty section
-  that matches nothing is an **error**.
+  that matches nothing is an **error**, and there is no intentionally empty
+  section: write its bars under it, or leave the heading out. A replay looks
+  only backward, so a heading whose bars are written later in the chart is
+  the same error, and its message gives the line where they are written.
 - A heading may carry any label, including numerals that tie it to outside
   data (`## II - Verse`). Matching uses the full text.
 - **Elision.** `->` at the end of a replay heading cuts the replay's last
@@ -480,7 +483,7 @@ applied twice.
 | error | `%` or `...` sharing a cell with other slots or inside a group |
 | error | unpaired `\|:` or `:\|` |
 | error | ending marks (`\|1`, `\|2`): reserved for v0.2 |
-| error | empty section that references no earlier section |
+| error | empty section that references no earlier section (the message suggests writing its bars or removing the heading, or names the line where a later section of that name is written) |
 | error | `->` anywhere but the end of a replay heading |
 | error | `/` or `%` with nothing before it |
 | error | invalid directive value (`time: 4/3`, `tempo: fast`, `rit. to fast`, `feel: lazy`) |

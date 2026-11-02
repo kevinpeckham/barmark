@@ -17,6 +17,18 @@ Releases follow the process in [RELEASING.md](RELEASING.md).
   and print in the canonical form. `add13` and `add#11` stay errors.
   Grammar Appendix A.5 and the decisions log.
 
+### Changed
+
+- **An empty section that matches nothing says how to fix it** (issue
+  #63). `## Progression` with no bars and no earlier section of that name
+  reported `no earlier section named "Progression" to replay`; it now
+  reports `"Progression" has no bars and no earlier section has that
+  name; write its bars under it, or remove the heading`. When the name is
+  written out later in the chart, the message says replays use only
+  earlier sections and gives that line. It is still an error: a section
+  with no bars replays (grammar §6), and there is no intentionally empty
+  section.
+
 ### Fixed
 
 - **A rejected tone in parentheses is named as written.** `C(add9x)`
