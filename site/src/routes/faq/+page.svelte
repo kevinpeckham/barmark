@@ -19,6 +19,7 @@ const QUESTIONS = [
 	["not-fit", "What isn't it for?"],
 	["open-source", "Is Barmark open source?"],
 	["stable", "Is the notation finished?"],
+	["cli", "Can I check my charts without writing code?"],
 	["numerals", "Can I write Nashville numbers or Roman numerals?"],
 	["lyrics", "Can a chart hold lyrics?"],
 	["tested", "How do you know it reads charts correctly?"],
@@ -96,8 +97,9 @@ onMount(() => {
 					which bars, in which sections, in what key, meter and tempo, and in what order the song plays.
 				</p>
 				<p>
-					It is also a pair of npm packages: <code class={code}>barmark</code> reads and writes charts, and
-					<code class={code}>@barmark/render</code> draws them as a clean bar grid on any web page.
+					It is also three npm packages: <code class={code}>barmark</code> reads and writes charts,
+					<code class={code}>@barmark/render</code> draws them as a clean bar grid on any web page, and
+					<code class={code}>@barmark/cli</code> does both from the terminal.
 				</p>
 			</section>
 
@@ -225,6 +227,19 @@ onMount(() => {
 					Not yet. The <a href={LINKS.grammar} class={link}>grammar</a> is a v0.1 draft, and the packages
 					are at 0.x, so a minor release can still change the notation or the API. Every change is
 					recorded in the packages' changelogs.
+				</p>
+			</section>
+
+			<section>
+				{@render heading("cli")}
+				<p>
+					Yes. With Node installed, <code class={code}>npx @barmark/cli check songs</code> reads every
+					chart in a folder and names each problem by file and line, and
+					<code class={code}>format --write</code> puts them in standard form. Run in GitHub Actions, it
+					fails a pull request that breaks a chart and marks the line;
+					<a href={LINKS.songs} class={link}>kevinpeckham/songs</a> works this way. There are also
+					standalone binaries that need no Node. <a href="/get-started#terminal" class={link}>Get
+					Started</a> shows the commands.
 				</p>
 			</section>
 

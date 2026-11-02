@@ -1,8 +1,11 @@
 import { beforeAll, describe, expect, test } from "bun:test";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { dirname, join } from "node:path";
 import { parseChart, printChart, transposeChart } from "barmark";
 import { LINKS } from "../src/lib/site.ts";
-import { SAMPLE_CHART } from "../src/lib/start.ts";
-import { build, page } from "./built.ts";
+import { CLI_CI, SAMPLE_CHART, USE_CLI } from "../src/lib/start.ts";
+import { build, page, site } from "./built.ts";
 
 beforeAll(build, 120_000);
 
@@ -22,6 +25,52 @@ describe("the sample chart Get Started shows", () => {
 	});
 });
 
+describe("the commands Get Started shows", () => {
+	const bin = join(dirname(Bun.resolveSync("@barmark/cli/package.json", site)), "dist/cli.js");
+	const version = JSON.parse(readFileSync(join(site, "package.json"), "utf8")).devDependencies[
+		"@barmark/cli"
+	];
+	/** Runs a line of the snippet with the installed CLI, in a folder holding the sample chart. */
+	const run = (line: string, cwd: string) => {
+		const args = line
+			.replace(/\s+#.*$/, "")
+			.split(/\s+/)
+			.slice(2); // drop "npx @barmark/cli"
+		return Bun.spawnSync(["node", bin, ...args], { cwd, stdout: "pipe", stderr: "pipe" });
+	};
+	const folder = () => {
+		const dir = mkdtempSync(join(tmpdir(), "barmark-start-"));
+		mkdirSync(join(dir, "songs"));
+		writeFileSync(join(dir, "example-song.chart.md"), SAMPLE_CHART);
+		writeFileSync(join(dir, "songs/example-song.chart.md"), SAMPLE_CHART);
+		return dir;
+	};
+	test("every line runs, with the npx form", () => {
+		const lines = USE_CLI.split("\n");
+		expect(lines.length).toBeGreaterThan(3);
+		const dir = folder();
+		for (const line of lines) {
+			expect(line).toStartWith("npx @barmark/cli ");
+			const result = run(line, dir);
+			expect([line, result.exitCode, result.stderr.toString()]).toEqual([line, 0, ""]);
+		}
+	});
+	test("check reads the sample chart cleanly, and transpose and render do what they say", () => {
+		const dir = folder();
+		const line = (command: string) =>
+			USE_CLI.split("\n").find((l) => l.includes(` ${command} `)) ?? "";
+		expect(run(line("check"), dir).stdout.toString()).toContain("1 file, 0 errors, 0 warnings");
+		expect(run(line("transpose"), dir).stdout.toString()).toContain("|: E | B | C#m | A :|");
+		run(line("render"), dir);
+		expect(existsSync(join(dir, "example-song.html"))).toBe(true);
+	});
+	test("the CI example pins the version the site installs", () => {
+		expect(version).toMatch(/^\d+\.\d+\.\d+$/);
+		expect(CLI_CI).toContain(`npx -y @barmark/cli@${version} check --strict --format github`);
+		expect(CLI_CI).toContain(`npx -y @barmark/cli@${version} format --check`);
+	});
+});
+
 describe("Get Started, prerendered", () => {
 	const doc = () => page("get-started.html");
 	test("has its title and canonical link", () => {
@@ -37,6 +86,7 @@ describe("Get Started, prerendered", () => {
 			"2. Read it with the parser",
 			"3. Render it as HTML",
 			"4. Or use the web component",
+			"5. Check charts from the terminal",
 		]);
 		const page = text(doc().querySelector("main")) ?? "";
 		for (const line of [
@@ -46,6 +96,7 @@ describe("Get Started, prerendered", () => {
 			"<barmark-chart",
 			"renderChart(",
 			"parseChart(",
+			"npx @barmark/cli check",
 		])
 			expect(page).toContain(line);
 	});
@@ -77,6 +128,15 @@ describe("the FAQ, prerendered", () => {
 		expect(new Set(ids).size).toBe(ids.length);
 		const contents = [...doc().querySelectorAll("main nav a")].map((a) => a.getAttribute("href"));
 		expect(contents).toEqual(ids.map((id) => `#${id}`));
+	});
+	test("names the three packages, and answers how to check charts without code", () => {
+		const what = text(doc().querySelector("#what")?.parentElement) ?? "";
+		for (const name of ["barmark", "@barmark/render", "@barmark/cli"]) expect(what).toContain(name);
+		const cli = doc().querySelector("#cli")?.parentElement;
+		expect(text(cli)).toContain("npx @barmark/cli check");
+		const hrefs = [...(cli?.querySelectorAll("a") ?? [])].map((a) => a.getAttribute("href"));
+		expect(hrefs).toContain("/get-started#terminal");
+		expect(hrefs).toContain(LINKS.songs);
 	});
 	test("links to Stem Shovel, the code and the licence", () => {
 		const hrefs = [...doc().querySelectorAll("main a")].map((a) => a.getAttribute("href"));

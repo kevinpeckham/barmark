@@ -1,12 +1,18 @@
 /**
- * Fails when barmark.dev runs an older barmark or @barmark/render than the
- * latest release tag: after a release, bump site/package.json (RELEASING.md).
+ * Fails when barmark.dev runs an older barmark, @barmark/render or
+ * @barmark/cli (a dev dependency: Get Started's commands run against it, and
+ * its CI example names its version) than the latest release tag: after a
+ * release, bump site/package.json (RELEASING.md).
  * Run from the repository root with the tags fetched: bun site/scripts/check-versions.ts
  */
 import { join } from "node:path";
 
 /** Each package's tag prefix, by npm name. */
-const PREFIXES: Record<string, string> = { barmark: "barmark-v", "@barmark/render": "render-v" };
+const PREFIXES: Record<string, string> = {
+	barmark: "barmark-v",
+	"@barmark/render": "render-v",
+	"@barmark/cli": "cli-v",
+};
 
 const parse = (version: string) => {
 	const m = /^(\d+)\.(\d+)\.(\d+)$/.exec(version);
@@ -44,7 +50,7 @@ if (import.meta.main) {
 		.stdout.toString()
 		.split("\n")
 		.filter(Boolean);
-	const lagging = behind(pkg.dependencies, tags);
+	const lagging = behind({ ...pkg.dependencies, ...pkg.devDependencies }, tags);
 	if (lagging.length) {
 		console.error(`barmark.dev is behind the latest release:\n  ${lagging.join("\n  ")}`);
 		console.error("Bump site/package.json and site/bun.lock (RELEASING.md).");

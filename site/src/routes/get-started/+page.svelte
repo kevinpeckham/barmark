@@ -4,17 +4,19 @@ import Code from "#lib/components/Code.svelte";
 import Window from "#lib/components/Window.svelte";
 import { LINKS } from "#lib/site.js";
 import {
+	CLI_CI,
 	INSTALL_PARSER,
 	INSTALL_RENDER,
 	LIVE_EDITOR,
 	SAMPLE_CHART,
+	USE_CLI,
 	USE_ELEMENT,
 	USE_PARSER,
 	USE_RENDER,
 } from "#lib/start.js";
 
 const description =
-	"Write a Barmark chart, read it with the parser, and draw it with @barmark/render or the <barmark-chart> web component.";
+	"Write a Barmark chart, read it with the parser, draw it with @barmark/render or the <barmark-chart> web component, and check charts from the terminal with @barmark/cli.";
 const step = "font-serif text-xl text-ink";
 const link = "underline decoration-accent/60 underline-offset-3 hover-text-accent";
 const code = "font-mono text-accent";
@@ -37,7 +39,8 @@ const code = "font-mono text-accent";
 			A Barmark chart is a plain-text file. Two packages read and draw it:
 			<code class={code}>barmark</code>, the parser, and <code class={code}>@barmark/render</code>, which
 			draws the bar grid as HTML or as a web component. Both are ESM, with TypeScript types, and run in
-			Node 20 or later, Bun, Deno and the browser.
+			Node 20 or later, Bun, Deno and the browser. A third, <code class={code}>@barmark/cli</code>, puts
+			them in the terminal, for checking charts without writing any code.
 		</p>
 	</div>
 
@@ -101,6 +104,30 @@ const code = "font-mono text-accent";
 		<p class="text-sm opacity-80">
 			Every option and attribute is in the
 			<a href={LINKS.renderReadme} class={link}>renderer's README</a>.
+		</p>
+	</section>
+
+	<section class="flex flex-col gap-4 min-w-0">
+		<h2 id="terminal" class="{step} scroll-mt-6">5. Check charts from the terminal</h2>
+		<p class="max-w-prose opacity-80">
+			<code class={code}>@barmark/cli</code> is the <code class={code}>barmark</code> command. It
+			checks a folder of charts and names each problem by file and line, rewrites charts in their
+			standard form, transposes them, and renders one as a page that opens in any browser. It runs
+			with <code class={code}>npx</code> on Node 20.6 or later, with nothing to install; without Node,
+			download a standalone binary from its
+			<a href={LINKS.cliReleases} class={link}>GitHub releases</a>.
+		</p>
+		<Code title="Terminal" code={USE_CLI} />
+		<p class="max-w-prose opacity-80">
+			In CI it keeps a repository of charts readable: a chart with a mistake fails the build, and on
+			GitHub each problem is marked on its line in the pull request. Pin the version, so a new release
+			arrives as a change you review.
+		</p>
+		<Code title=".github/workflows/check.yml" code={CLI_CI} />
+		<p class="text-sm opacity-80">
+			Every command and flag is in the <a href={LINKS.cliReadme} class={link}>CLI's README</a>, and
+			<a href={LINKS.songs} class={link}>kevinpeckham/songs</a> is a repository of charts checked this
+			way.
 		</p>
 	</section>
 </main>
