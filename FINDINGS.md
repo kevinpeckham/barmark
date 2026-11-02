@@ -101,6 +101,30 @@ package index, inside the package.
   stacking, either delete the base branch when merging the first PR, or
   check that the second PR shows `main` as its base before merging it.
 
+### `bun test` can't resolve the site's `#lib/…` imports at runtime (2026-11-02, /try)
+
+- **The symptom.** `site/src/lib/try/read.ts` imported `matches` from
+  `#lib/guide/query.js`, and `bun test` failed with "Cannot find module
+  '#lib/guide/query.js'". Its earlier `import type` from the same path
+  had worked.
+- **The cause.** `package.json` maps `#lib/*` to `./src/lib/*`, so the
+  `.js` specifier names a file that doesn't exist. Vite and svelte-check
+  map `.js` to `.ts`; Bun's runtime doesn't. A type-only import is erased
+  before it runs, which hid the problem.
+- **The fix.** Modules under `src/lib/` that tests run import each other
+  relatively, with `.ts` (as `guide/query.ts` does). `#lib/…` stays for
+  `.svelte` files and routes.
+
+### Playwright's `fill()` is itself slow on tens of thousands of characters (2026-11-02, /try)
+
+- **The symptom.** A test pasting 60,000 characters into `/try` timed
+  out inside `locator.fill`. That looked like a frozen page, but the
+  page wasn't the slow part.
+- **The fix.** Set the value in the page and send an `input` event
+  (`locator.evaluate`), as the home page's long-text test already did.
+  Before trusting a slow-input test, check that it fails against the
+  code without the fix (here: with the length limit disabled).
+
 ### svelte-check cannot run on TypeScript 7 (2026-10-31, site scaffold)
 
 With `typescript` 7.0.2 (the native compiler the root uses), `svelte-kit
