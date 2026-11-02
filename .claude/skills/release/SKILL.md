@@ -7,14 +7,18 @@ argument-hint: [package version, e.g. barmark 0.2.0 or render 0.1.0]
 # Release $ARGUMENTS
 
 Follow `RELEASING.md` step by step; it is the source of truth. The
-package is `barmark` (`packages/barmark`) or `render`
-(`packages/render`, published as `@barmark/render`); its tag is
+package is `barmark` (`packages/barmark`), `render`
+(`packages/render`, published as `@barmark/render`) or `cli`
+(`packages/cli`, published as `@barmark/cli`); its tag is
 `<pkg>-vX.Y.Z`. If the package or version is missing, read the package's
 `package.json` and ask (0.x: a minor for grammar or API changes, a patch
 for fixes).
 
 Points that are easy to miss:
 
+- After a `barmark` or `render` release, RELEASING.md steps 13–14
+  follow: a CLI patch on the new versions, then a PR in
+  `kevinpeckham/songs` raising its pinned CLI version.
 - When `@barmark/render` needs unreleased `barmark` changes, release
   `barmark` first: the render release check fails until the `barmark`
   version it depends on is on npm.

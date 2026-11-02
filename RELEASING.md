@@ -1,12 +1,13 @@
 # Releasing
 
-This repository publishes two npm packages from one Bun workspace, each
+This repository publishes three npm packages from one Bun workspace, each
 versioned and released on its own:
 
 | Package | Directory | Release tag |
 |---|---|---|
 | `barmark` | `packages/barmark` | `barmark-vX.Y.Z` |
 | `@barmark/render` | `packages/render` | `render-vX.Y.Z` |
+| `@barmark/cli` | `packages/cli` | `cli-vX.Y.Z` |
 
 (`barmark` 0.0.x and 0.1.0 were tagged `vX.Y.Z`, before the workspace.)
 
@@ -15,7 +16,9 @@ release. The GitHub release triggers `.github/workflows/release.yml`,
 which reads the package from the tag, re-runs every gate and packs that
 package, waits for Kevin to approve the publish (the `npm` environment),
 publishes it through npm trusted publishing with provenance, then installs
-it back from npm and reads a real chart with it. No npm token exists
+it back from npm and reads a real chart with it. For `@barmark/cli` it
+then compiles the standalone binaries, runs the Linux one, and attaches
+all five to the GitHub release with Edwin's licence. No npm token exists
 anywhere.
 
 ## Repository rules
@@ -56,7 +59,7 @@ npm.
 
 ## Checks
 
-The same scripts run in three places; `<pkg>` is `barmark` or `render`:
+The same scripts run in three places; `<pkg>` is `barmark`, `render` or `cli`:
 
 | Check | Command | Local (Swamp) | CI (every push and PR) | Release workflow |
 |---|---|---|---|---|
@@ -77,10 +80,13 @@ credential from barmark's 1Password environment; `.env.local`
 
 `verify:package` packs with `bun pm pack` (as the release workflow does),
 which turns `workspace:` ranges into versions, and fails if one is left.
+The libraries pack as caret ranges (`^0.7.0`); `@barmark/cli` pins both
+libraries exactly (`0.7.0`), so `barmark --version` names what actually
+runs, and `verify:package cli` fails on anything else.
 
 ## Steps
 
-`<pkg>` is the package's key (`barmark` or `render`) and the tag is
+`<pkg>` is the package's key (`barmark`, `render` or `cli`) and the tag is
 `<pkg>-vX.Y.Z`.
 
 1. **Start a release branch** from an up-to-date `main` with CI green:
@@ -122,6 +128,19 @@ which turns `workspace:` ranges into versions, and fails if one is left.
     request `chore(site): use <npm name> X.Y.Z` (`site/package.json` and
     `site/bun.lock`). Until it merges, CI's `site-versions` check is red
     on purpose; it is not required, so other pull requests still merge.
+13. **Release the CLI** (after a `barmark` or `@barmark/render` release):
+    `@barmark/cli` pins the libraries exactly, so a library release
+    reaches CLI users only through a CLI release. On a new branch, bump
+    `packages/cli` (a patch, unless the CLI itself changed) with a
+    CHANGELOG line "Uses barmark A.B.C and @barmark/render D.E.F", and
+    release it with steps 1–11 (`pkg=cli`). Its release workflow also
+    attaches the binaries; check the release page lists all five and
+    `Edwin-OFL.txt`.
+14. **Bump `kevinpeckham/songs`:** a pull request there raising its
+    pinned `@barmark/cli` version in `.github/workflows/check.yml`. Its CI
+    runs the new libraries over Kevin's real songs: green means no song
+    reads differently; red shows which song and line changed, before
+    Kevin accepts the release.
 
 Release tags cannot be moved, so if the workflow fails before publishing,
 fix the problem through a pull request and release it as the next patch
@@ -133,7 +152,7 @@ the fix as the next patch as soon as possible.
 
 npm's trusted publisher can only be configured for a package that
 already exists, so a new package (as `@barmark/render` was) needs one
-manual step before its first release:
+manual step before its first release (the same for `@barmark/cli`):
 
 1. **Kevin, on his own machine,** publishes a placeholder 0.0.0 under the
    name (a `package.json` with the name, version `0.0.0` and a one-line
@@ -143,4 +162,8 @@ manual step before its first release:
    Actions, repository `kevinpeckham/barmark`, workflow `release.yml`,
    environment `npm`. Then set publishing access to require two-factor
    authentication and disallow tokens.
-3. Release normally from here on.
+3. **Rulesets** (repository settings → Rules): add the new tag pattern
+   (`cli-v*` for the CLI) to "release tags", and the new package job's
+   checks (`package (20, cli)`, `package (22, cli)`, `package (24, cli)`)
+   to the "main" ruleset's required checks.
+4. Release normally from here on.
