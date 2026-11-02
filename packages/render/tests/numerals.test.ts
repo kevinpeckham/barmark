@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { type Key, parseChord } from "barmark";
 import { parseHTML } from "linkedom";
-import { typesetNumeral } from "../src/chord.js";
+import { typesetChord, typesetNumeral } from "../src/chord.js";
 import { optionsFromAttributes } from "../src/element.js";
 import { layoutChart, renderChart, renderChartUnwrapped } from "../src/index.js";
 
@@ -43,6 +43,32 @@ describe("typesetNumeral: Nashville", () => {
 		expect(nashville("Am", Am)).toEqual({ root: "1", quality: "m", superscript: "", bass: null });
 		expect(nashville("C", Am)?.root).toBe("♭3");
 		expect(nashville("G", Am)?.root).toBe("♭7");
+	});
+});
+
+describe("typesetNumeral: power chords", () => {
+	// On the baseline a power chord's 5 would join the number: D5 in D read as "15".
+	test("Nashville raises the 5 into the superscript", () => {
+		expect(nashville("D5")).toEqual({ root: "1", quality: "", superscript: "5", bass: null });
+		expect(nashville("G5(7)")).toEqual({
+			root: "4",
+			quality: "",
+			superscript: "5(7)",
+			bass: null,
+		});
+		expect(nashville("C5")?.root).toBe("♭7");
+	});
+	test("Roman does the same", () => {
+		expect(roman("D5")).toEqual({ root: "I", quality: "", superscript: "5", bass: null });
+		expect(roman("G5(7)")).toEqual({ root: "IV", quality: "", superscript: "5(7)", bass: null });
+	});
+	test("chord names keep the 5 on the baseline", () => {
+		expect(typesetChord(parts("D5"))).toEqual({
+			root: "D",
+			quality: "5",
+			superscript: "",
+			bass: null,
+		});
 	});
 });
 

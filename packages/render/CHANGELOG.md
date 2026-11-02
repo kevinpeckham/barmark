@@ -6,6 +6,13 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- **A power chord's 5 is raised in the numerals views:** D5 in D shows as
+  1⁵ (Nashville) and I⁵ (Roman), G5(7) as 4⁵⁽⁷⁾. On the baseline the
+  Nashville 5 joined the number and read as 15. Chord names are
+  unchanged (D5).
+
 ## [0.6.0] - 2026-11-02
 
 Charts that scroll instead of wrapping. barmark.dev's home page uses it.
