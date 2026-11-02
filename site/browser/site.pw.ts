@@ -506,22 +506,26 @@ test.describe("on a phone", () => {
 		expect(sizes.scrolls).toBe(true);
 	});
 
-	test("the home chart keeps its rows in columns rather than wrapping them", async ({ page }) => {
-		await page.goto("/");
-		await expect
-			.poll(() =>
-				page.evaluate(() => [
-					...new Set(
-						[
-							...(document
-								.querySelector("main barmark-chart")
-								?.shadowRoot?.querySelectorAll(".bm-grid") ?? []),
-						].map((g) => getComputedStyle(g).display),
-					),
-				]),
-			)
-			.toEqual(["grid"]);
-	});
+	const WIDE = `?q=${encodeURIComponent("| C | F | G | C | Am | F | G | C |")}`;
+	for (const path of ["/", "/syntax", `/try${WIDE}`])
+		test(`${path.split("?")[0]} charts keep their rows in columns rather than wrapping them`, async ({
+			page,
+		}) => {
+			await page.goto(path);
+			await expect
+				.poll(() =>
+					page.evaluate(() => [
+						...new Set(
+							[...document.querySelectorAll("main barmark-chart")].flatMap((chart) =>
+								[...(chart.shadowRoot?.querySelectorAll(".bm-grid") ?? [])].map(
+									(g) => getComputedStyle(g).display,
+								),
+							),
+						),
+					]),
+				)
+				.toEqual(["grid"]);
+		});
 
 	for (const path of ["/", "/syntax", "/try"])
 		test(`${path} never scrolls sideways`, async ({ page }) => {

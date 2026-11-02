@@ -90,6 +90,23 @@ package index, inside the package.
 
 ## Tooling
 
+### A commit pushed after its PR merged never reaches main (2026-11-02, /try)
+
+- **The symptom.** /try's follow-up fixes were on `feat/site-try` and on
+  GitHub, yet main and the dev server still showed the old page.
+- **The cause.** They were pushed six minutes after #42 had merged. A
+  merged PR takes no more commits into main, and nothing says so.
+- **The fix.** Cherry-picked into #51. Before pushing more to a PR's
+  branch, check it is still open (`gh pr view <n> --json state`).
+
+### The dev server can keep serving the branch it started on (2026-11-02, barmark.dev)
+
+- **The symptom.** After several branch switches, barmark.bench.lj.dev
+  served chart markup the working tree no longer produced (no
+  `wrap="off"`), while `chartHtml` itself returned the new markup.
+- **The fix.** Restart Vite after switching branches before judging the
+  dev site.
+
 ### A stacked PR merged after its base lands on the base branch, not main (2026-11-01, #33/#34)
 
 - **The symptom.** #34 (numerals) was opened against #33's branch

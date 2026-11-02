@@ -92,7 +92,6 @@ const description =
 			<div class="p-4 min-w-[26rem]">
 				<ChartRender
 					{text}
-					wrap={false}
 					numerals={spelling === "names" ? null : spelling}
 					label="The chart, rendered"
 				/>

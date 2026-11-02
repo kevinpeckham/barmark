@@ -44,8 +44,11 @@ const cell = "px-3 py-3 align-top lt-sm:(block px-0 py-1)";
 				<td class="{cell}">
 					<pre class="font-mono text-xs leading-relaxed whitespace-pre overflow-x-auto max-w-full">{row.example}</pre>
 				</td>
-				<td class="{cell} min-w-0 sm:min-w-80">
-					<ChartRender text={row.example} />
+				<td class="{cell} min-w-0 sm:min-w-[25rem]">
+					<!-- A wide example scrolls here; relative keeps the chart's screen-reader labels inside the scroll box. -->
+					<div class="relative overflow-x-auto max-w-[calc(100vw-4rem)]">
+						<ChartRender text={row.example} />
+					</div>
 				</td>
 			</tr>
 		{/each}
