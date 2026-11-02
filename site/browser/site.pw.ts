@@ -101,6 +101,42 @@ test.describe("home: the live editor", () => {
 		expect(errors).toEqual([]);
 	});
 
+	test("the chord spelling redraws the chart as numerals and back", async ({ page }) => {
+		const errors = watchErrors(page);
+		/** The numbered chords in the rendered chart, by their data-numeral. */
+		const numerals = () =>
+			page.evaluate(() => [
+				...new Set(
+					[
+						...(document
+							.querySelector("main barmark-chart")
+							?.shadowRoot?.querySelectorAll("[data-numeral]") ?? []),
+					].map((el) => el.getAttribute("data-numeral")),
+				),
+			]);
+		await page.goto("/");
+		const spelling = page.getByRole("radiogroup", { name: "Chord spelling" });
+		await expect(spelling.getByRole("radio", { name: "Names" })).toBeChecked();
+		expect(await numerals()).toEqual([]);
+		// A choice made before the page's script runs is lost: repeat it until the chart redraws.
+		await expect(async () => {
+			await spelling.getByRole("radio", { name: "Nashville" }).check();
+			await expect.poll(numerals, { timeout: 1_000 }).toEqual(["nashville"]);
+		}).toPass({ timeout: 15_000 });
+		await spelling.getByRole("radio", { name: "Roman" }).check();
+		await expect.poll(numerals).toEqual(["roman"]);
+		// Editing keeps the spelling.
+		const source = page.getByRole("textbox", { name: "barmark source of the chart" });
+		await source.press("ControlOrMeta+End");
+		await source.pressSequentially("\n| Bm7 |");
+		await expect.poll(() => chartText(page)).toContain("vi");
+		expect(await numerals()).toEqual(["roman"]);
+		await spelling.getByRole("radio", { name: "Names" }).check();
+		await expect.poll(numerals).toEqual([]);
+		await expect.poll(() => chartText(page)).toContain("Bm");
+		expect(errors).toEqual([]);
+	});
+
 	test("Reset restores the demo", async ({ page }) => {
 		await page.goto("/");
 		const source = page.getByRole("textbox", { name: "barmark source of the chart" });
@@ -397,6 +433,23 @@ test.describe("without JavaScript", () => {
 test.describe("on a phone", () => {
 	test.use({ viewport: { width: 360, height: 800 } });
 
+	test("the rendered chart keeps four bars' width and scrolls inside its window", async ({
+		page,
+	}) => {
+		await page.goto("/");
+		const sizes = await page.evaluate(() => {
+			const chart = document.querySelector("main barmark-chart") as HTMLElement;
+			const body = chart.closest(".overflow-x-auto") as HTMLElement;
+			const rem = Number.parseFloat(getComputedStyle(document.documentElement).fontSize);
+			return {
+				chart: chart.getBoundingClientRect().width / rem,
+				scrolls: body.scrollWidth > body.clientWidth,
+			};
+		});
+		expect(sizes.chart).toBeGreaterThanOrEqual(24);
+		expect(sizes.scrolls).toBe(true);
+	});
+
 	for (const path of ["/", "/syntax", "/try"])
 		test(`${path} never scrolls sideways`, async ({ page }) => {
 			await page.goto(path);
@@ -466,7 +519,9 @@ test("every input has a name and every link has text", async ({ page }) => {
 			const bad: string[] = [];
 			for (const el of document.querySelectorAll("input, textarea, select")) {
 				const id = el.getAttribute("id");
-				if (!(id && document.querySelector(`label[for="${id}"]`)) && !el.getAttribute("aria-label"))
+				const labelled =
+					(id && document.querySelector(`label[for="${id}"]`)) || el.closest("label");
+				if (!labelled?.textContent?.trim() && !el.getAttribute("aria-label"))
 					bad.push(el.outerHTML.slice(0, 60));
 			}
 			for (const a of document.querySelectorAll("a"))

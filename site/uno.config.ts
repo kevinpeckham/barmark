@@ -106,8 +106,9 @@ export default defineConfig({
 		],
 		["device-window", "bg-dark border-2 border-blue-200/10 rounded-lg overflow-hidden"],
 		[
-			"window-label",
-			"text-xs uppercase tracking-wider opacity-60 px-3.5 py-2.5 border-b border-line",
+			"window-bar",
+			"flex flex-wrap items-center justify-between gap-x-4 gap-y-2 px-3.5 py-2.5 border-b border-line",
 		],
+		["window-label", "text-xs uppercase tracking-wider opacity-60"],
 	],
 });

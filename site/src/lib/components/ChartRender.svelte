@@ -2,11 +2,20 @@
 import { onMount, untrack } from "svelte";
 import { chartHtml } from "#lib/chart.js";
 
+type Numerals = "nashville" | "roman";
+
 let {
 	text,
 	label,
 	barNumbers = true,
-}: { text: string; label?: string; barNumbers?: boolean } = $props();
+	numerals = null,
+}: {
+	text: string;
+	label?: string;
+	barNumbers?: boolean;
+	/** Each chord as its degree in its bar's key; null: chord names. */
+	numerals?: Numerals | null;
+} = $props();
 
 /** Charts longer than this re-render once typing pauses, not on every key. */
 const LONG = 10_000;
@@ -24,13 +33,29 @@ const initial = chartHtml(
 );
 let host: HTMLDivElement;
 
-const chart = () => host.querySelector("barmark-chart") as HTMLElement & { text: string | null };
+const chart = () =>
+	host.querySelector("barmark-chart") as HTMLElement & {
+		text: string | null;
+		numerals: Numerals | null;
+	};
 
 onMount(() => {
 	void import("@barmark/render/element");
 	// After navigating inside the site, Svelte inserts {@html} without the
 	// parser, so the declarative shadow root never attached: give the element its text.
 	if (!chart().shadowRoot) chart().text = rendered;
+});
+
+let spelled = untrack(() => numerals);
+$effect(() => {
+	const next = numerals;
+	if (next === spelled) return;
+	spelled = next;
+	void import("@barmark/render/element").then(() => {
+		chart().numerals = next;
+		// The prerendered chart has no text of its own, and the attribute alone only restyles it.
+		chart().text = rendered;
+	});
 });
 
 $effect(() => {

@@ -125,6 +125,18 @@ package index, inside the package.
   Before trusting a slow-input test, check that it fails against the
   code without the fix (here: with the length limit disabled).
 
+### A scrolling box doesn't hold an absolutely placed child (2026-11-02, home page)
+
+- **The symptom.** Giving the home page's chart a 26rem minimum width
+  inside its window (`overflow-x: auto`) made the whole page scroll
+  sideways on a phone, by 17px, though the window itself scrolled.
+- **The cause.** The renderer's screen-reader labels (`.bm-sr`) are
+  `position: absolute`. A scroll container clips only descendants whose
+  containing block is inside it; with no positioned ancestor in
+  between, the labels sat against the page and widened it.
+- **The fix.** The window's scrolling body is `position: relative`
+  (`site/src/lib/components/Window.svelte`).
+
 ### svelte-check cannot run on TypeScript 7 (2026-10-31, site scaffold)
 
 With `typescript` 7.0.2 (the native compiler the root uses), `svelte-kit
