@@ -5,8 +5,8 @@
     "": {
       "name": "barmark-site",
       "dependencies": {
-        "@barmark/render": "0.6.0",
-        "barmark": "0.6.0",
+        "@barmark/render": "0.7.0",
+        "barmark": "0.7.0",
       },
       "devDependencies": {
         "@iconify-json/ph": "1.2.2",
@@ -33,7 +33,7 @@
 
     "@antfu/install-pkg": ["@antfu/install-pkg@2.1.0", "", { "dependencies": { "package-manager-detector": "^1.8.0", "tinyexec": "^1.3.1" } }, "sha512-sdg9NxU3zR4Mnawfbc/x6GB5Wf17WYud5qOuEuxXjaKpYpMkISSJEjItGebXJ2bQ4DIcly4NYH23mtkGJjvKUw=="],
 
-    "@barmark/render": ["@barmark/render@0.6.0", "", { "dependencies": { "barmark": "^0.6.0" } }, "sha512-b8AOtANxXcfTbZfFzAW9pFOGwwWEkj2nP6tTwvl3kHlR2n/MxPU0VGqCw+dseRuKULOfM8ZHX4IpyUXJnOWA5g=="],
+    "@barmark/render": ["@barmark/render@0.7.0", "", { "dependencies": { "barmark": "^0.7.0" } }, "sha512-yfRsHHNjHpQgjTd7wULZx1b4GchDbyDl/CEDqgOwrwtaXXJKdwjx/DK2Obti3VuKQUFs0mEQ4jerUvn1axZbbA=="],
 
     "@iconify-json/ph": ["@iconify-json/ph@1.2.2", "", { "dependencies": { "@iconify/types": "*" } }, "sha512-PgkEZNtqa8hBGjHXQa4pMwZa93hmfu8FUSjs/nv4oUU6yLsgv+gh9nu28Kqi8Fz9CCVu4hj1MZs9/60J57IzFw=="],
 
@@ -219,7 +219,7 @@
 
     "balanced-match": ["balanced-match@4.0.4", "", {}, "sha512-BLrgEcRTwX2o6gGxGOCNyMvGSp35YofuYzw9h1IMTRmKqttAZZVU67bdb9Pr2vUHA8+j3i2tJfjO6C6+4myGTA=="],
 
-    "barmark": ["barmark@0.6.0", "", {}, "sha512-A2Z2Qpt/bWqRswVXEHJWbF4vFDnJIehoMIgXX/gC5DXqodibe4e4s45oVVAXvoE7q0074idYALBwxp8bJz1Blg=="],
+    "barmark": ["barmark@0.7.0", "", {}, "sha512-bdACOfy6oQnsx8XvLzTY/9Ty3B/ZZa6DViOQnUtrALZf8hl3sJL1wOrBKs8PGC+P0K1bLIVx2/lqFxwtmMd0Lw=="],
 
     "bindings": ["bindings@1.5.0", "", { "dependencies": { "file-uri-to-path": "1.0.0" } }, "sha512-p2q/t/mhvuOj/UeLlV6566GD/guowlr0hHxClI0W9m7MWYkL1F0hLo+0Aexs9HSPCtR1SXQ0TD3MMKrXZajbiQ=="],
 

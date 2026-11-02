@@ -8,7 +8,7 @@ import {
 	parseChart,
 	parseChord,
 	parseNoteSet,
-	printChart,
+	printParsed,
 } from "barmark";
 import { type GuideQuery, matches } from "../guide/query.ts";
 import { ROWS } from "../guide/rows.ts";
@@ -98,16 +98,18 @@ export function read(input: string): Reading {
 	const kind = classify(text);
 	if (kind === "empty") return { kind };
 	// A chart is read as typed, so its line numbers match the box's.
-	if (kind === "chart")
+	if (kind === "chart") {
+		const parsed = parseChart(input);
 		return {
 			kind,
-			canonical: printChart(input),
-			diagnostics: parseChart(input).diagnostics.map(({ line, severity, message }) => ({
+			canonical: printParsed(input, parsed),
+			diagnostics: parsed.diagnostics.map(({ line, severity, message }) => ({
 				line,
 				severity,
 				message,
 			})),
 		};
+	}
 	if (kind === "notes") return readParsed(kind, text, parseNoteSet(text));
 	if (kind === "harte") {
 		const spelling = harteToBarmark(text) ?? text;
