@@ -47,6 +47,15 @@ const A5: [string, string][] = [
 	["F#(5,7)", "F#5(7)"],
 	["F#(7,5)", "F#5(7)"],
 	["F#(5)(7)/A", "F#5(7)/A"],
+	// addN inside parentheses (issue #62): a chord player's and a DAW's spelling.
+	["C(add2)", "C(2)"],
+	["C(add4)", "C(4)"],
+	["Am(add9)", "Am(9)"],
+	["C(add11)", "C(11)"],
+	["C(b9,add11)", "C(b9,11)"],
+	["C7(add9,#11)", "C7(9,#11)"],
+	["C(add9)/E", "C(9)/E"],
+	["C(add9)(add11)", "C(9,11)"],
 ];
 
 describe("Appendix A.5 aliases", () => {
@@ -74,6 +83,41 @@ describe("Logic's spellings mean what the canonical ones do", () => {
 	});
 	test("an empty group is still an error", () => {
 		for (const s of ["C()", "C(9)()"]) expect(parseChord(s).ok).toBe(false);
+	});
+});
+
+describe("(addN) inside parentheses (issue #62)", () => {
+	test("reads as the canonical spelling: same pitches, same Harte label", () => {
+		for (const [a, b] of [
+			["Am(add9)", "Am(9)"],
+			["C(add2)", "C(2)"],
+			["C(add4)", "C(4)"],
+			["C(add11)", "C(11)"],
+			["C(b9,add11)", "C(b9,11)"],
+		] as const) {
+			const [x, y] = [parseChord(a), parseChord(b)];
+			expect(x.ok && [x.value.pitches, x.value.harte]).toEqual(
+				y.ok && [y.value.pitches, y.value.harte],
+			);
+		}
+	});
+	test("(add13) and (add#11) stay rejected, with a message that names what was written", () => {
+		for (const [input, token] of [
+			["C(add13)", "add13"],
+			["C(add#11)", "add#11"],
+			["Am(b9,add13)", "add13"],
+			["C(add9x)", "add9x"],
+		] as const) {
+			const r = parseChord(input);
+			expect(r.ok).toBe(false);
+			if (!r.ok)
+				expect(r.error.message).toBe(`${input}: "${token}" is not a tone a parenthesis can add`);
+		}
+	});
+	test("a rejected group after a bare addN still names what was written", () => {
+		const r = parseChord("Cm7(add13)add9");
+		expect(r.ok).toBe(false);
+		if (!r.ok) expect(r.error.message).toContain('"add13"');
 	});
 });
 

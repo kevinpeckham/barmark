@@ -9,6 +9,21 @@ Releases follow the process in [RELEASING.md](RELEASING.md).
 
 ## [Unreleased]
 
+### Added
+
+- **`(addN)` reads inside parentheses** (issue #62). `Am(add9)`,
+  `C(add2)`, `C(add4)` and `C(add11)` are aliases of `Am(9)`, `C(2)`,
+  `C(4)` and `C(11)`, alone or in a list (`C(b9,add11)` is `C(b9,11)`),
+  and print in the canonical form. `add13` and `add#11` stay errors.
+  Grammar Appendix A.5 and the decisions log.
+
+### Fixed
+
+- **A rejected tone in parentheses is named as written.** `C(add9x)`
+  reported `"x" is not a tone a parenthesis can add`, and `Am(add9)`
+  reported `""`, because a bare `add9` was looked for inside the group
+  too; the message now quotes the tone as written (`"add9x"`).
+
 ## [0.7.0] - 2026-11-02
 
 Print a chart you have already parsed, and conformance fixtures from real

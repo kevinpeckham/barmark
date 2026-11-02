@@ -550,6 +550,7 @@ human to say whether the band was silent, and the structure line.
 | Logic Pro's parentheses | Decided by Kevin (2026-11-01): groups in a row are one list (`C7(b9)(#11)` = `C7(b9,#11)`), and `(5)` on a bare root is the power chord (`F#(5)(7)` = `F#5(7)`, F♯ C♯ E). Both are aliases: the canonical form keeps one group and the `5` quality, and no chart that read before changes meaning. `(5)` after a quality or an extension stays an error. |
 | Directives under a replay heading | Decided by Kevin: they take effect after the replay, because the heading stands for its bars (written order is play order). Before, the parser applied them to the replay. |
 | Gradual tempo changes | Decided by Kevin (2026-11-01): `tempo:` also takes `rit.`, `accel.` (each optionally `to` a tempo) and `a tempo`. A change runs from the next bar to the next `tempo:` or the end; its shape is never written; machine output marks every bar inside one (7.2, A.7). |
+| `(addN)` in parentheses | Decided by Kevin (2026-11-02, issue #62): `(add2)`, `(add4)`, `(add9)` and `(add11)` are aliases of `(2)`, `(4)`, `(9)` and `(11)`, alone or in a list (`C(b9,add11)` = `C(b9,11)`), because chord players and DAWs spell `Am(add9)` that way. Only the four tones `addN` already takes: `add13` and `add#11` stay errors, in or out of parentheses. |
 
 ## Open questions
 
@@ -659,6 +660,7 @@ Accepted on input, printed canonically:
 | `ø`, `ø7` | `m7(b5)` |
 | `m(maj7)`, `minmaj7` | `mmaj7` |
 | `add2`, `add4`, `add9`, `add11` | `(2)`, `(4)`, `(9)`, `(11)` |
+| `(add2)`, `(add4)`, `(add9)`, `(add11)`, also in a list (`(b9,add11)`) | `(2)`, `(4)`, `(9)`, `(11)` (`(b9,11)`) |
 | `7b9`, `m7b5` (alteration after an extension) | `7(b9)`, `m7(b5)` |
 | groups in a row (`(b9)(#11)`, Logic Pro) | one group (`(b9,#11)`) |
 | `(5)` on a bare root (`F#(5)`, `F#(5,7)`) | `5` (`F#5`, `F#5(7)`) |
