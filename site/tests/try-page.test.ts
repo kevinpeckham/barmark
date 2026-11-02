@@ -45,12 +45,13 @@ describe("/try, prerendered", () => {
 });
 
 describe("the nav", () => {
-	test("links to Try it, after Syntax", () => {
+	test("links to Try It, after Syntax Guide", () => {
 		const links = [...page("index.html").querySelectorAll("nav a")].map((a) => [
 			a.getAttribute("href"),
 			a.textContent?.trim(),
 		]);
 		const syntax = links.findIndex(([href]) => href === "/syntax");
-		expect(links[syntax + 1]).toEqual(["/try", "Try it"]);
+		expect(links[syntax]).toEqual(["/syntax", "Syntax Guide"]);
+		expect(links[syntax + 1]).toEqual(["/try", "Try It"]);
 	});
 });
