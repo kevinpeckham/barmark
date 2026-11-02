@@ -1,5 +1,5 @@
 import { beforeAll, describe, expect, test } from "bun:test";
-import { cpSync, mkdtempSync, readdirSync } from "node:fs";
+import { cpSync, mkdtempSync, readdirSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { FIXTURES } from "./charts.js";
@@ -31,8 +31,10 @@ describe("the built bin under Node", () => {
 		expect(barmark("format", "--check", ".")).toEqual({ code: 0, out: "", err: "" });
 	});
 	test("--version names the three packages", () => {
-		expect(barmark("--version").out).toMatch(
-			/^@barmark\/cli 0\.1\.0 \(barmark \d+\.\d+\.\d+, @barmark\/render \d+\.\d+\.\d+\)\n$/,
+		const version = (name: string) =>
+			JSON.parse(readFileSync(join(PACKAGE, "..", name, "package.json"), "utf8")).version;
+		expect(barmark("--version").out).toBe(
+			`@barmark/cli ${version("cli")} (barmark ${version("barmark")}, @barmark/render ${version("render")})\n`,
 		);
 	});
 	test("render embeds Edwin", () => {

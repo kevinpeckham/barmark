@@ -6,6 +6,11 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-11-02
+
+Uses `barmark` 0.9.0 and `@barmark/render` 0.7.2, pinned exactly: charts
+may now write a swing amount (`feel: swing 58%`), and `render` shows it.
+
 ### Fixed
 
 - **`format --write` replaces each file whole.** The new text goes to a
@@ -28,5 +33,6 @@ The first release of the `barmark` command. Uses `barmark` 0.8.0 and
 - **The `barmark` command:** `check`, `format`, `render` and `transpose`
   for `.chart.md` files, on npm and as standalone binaries.
 
-[Unreleased]: https://github.com/kevinpeckham/barmark/compare/cli-v0.1.0...HEAD
+[Unreleased]: https://github.com/kevinpeckham/barmark/compare/cli-v0.1.1...HEAD
+[0.1.1]: https://github.com/kevinpeckham/barmark/compare/cli-v0.1.0...cli-v0.1.1
 [0.1.0]: https://github.com/kevinpeckham/barmark/releases/tag/cli-v0.1.0
