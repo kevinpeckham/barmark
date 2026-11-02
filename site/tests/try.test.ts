@@ -91,7 +91,7 @@ describe("reading what's typed", () => {
 		expect(r.canonical).toBe("| D | % | x2\n");
 		expect(r.diagnostics).toEqual([]);
 		expect(as(read("## Verse"), "chart").diagnostics[0]?.message).toBe(
-			'no earlier section named "Verse" to replay',
+			'"Verse" has no bars and no earlier section has that name; write its bars under it, or remove the heading',
 		);
 	});
 	test("a chart's problems name the line in the box, blank lines above it included", () => {
