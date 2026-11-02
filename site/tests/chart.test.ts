@@ -15,8 +15,10 @@ describe("chartHtml", () => {
 	});
 	test("a chart can leave out bar numbers", () => {
 		const host = (html: string) => html.slice(0, html.indexOf(">") + 1);
-		expect(host(chartHtml("| C |", false))).toContain('bar-numbers="off"');
+		expect(host(chartHtml("| C |", { barNumbers: false }))).toContain('bar-numbers="off"');
 		expect(host(chartHtml("| C |"))).not.toContain("bar-numbers");
+		expect(host(chartHtml("| C |", { wrap: false }))).toContain('wrap="off"');
+		expect(host(chartHtml("| C |"))).not.toContain("wrap");
 	});
 	test("charts use the dark palette", () => {
 		expect(chartHtml(demo)).toContain('data-theme="dark"');
