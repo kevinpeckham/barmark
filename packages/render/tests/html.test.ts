@@ -42,6 +42,12 @@ describe("renderChart: the wrapper", () => {
 			expect(d.querySelector(`[part~="${part}"]`)).not.toBeNull();
 	});
 
+	test("the header shows a swing amount, and a later header feel without one drops it", () => {
+		const meta = (text: string) => texts(shadow(renderChart(text)), ".bm-header [part~='meta']")[0];
+		expect(meta("key: D, feel: swing 58%\n| D |")).toBe("D major · swing 58%");
+		expect(meta("feel: swing 58%\nfeel: shuffle\n| D |")).toBe("shuffle");
+	});
+
 	test("title and meta", () => {
 		const d = shadow(html);
 		expect(texts(d, '[part~="title"]')).toEqual(["Example Song"]);
@@ -251,6 +257,11 @@ describe("mid-chart directives", () => {
 		expect(line("key: E, tempo: 120, feel: swing")?.textContent).toContain(
 			"Key E major · Tempo ♩ = 120 · Feel swing",
 		);
+	});
+
+	test("a swing amount shows with its feel (issue #66)", () => {
+		expect(line("feel: shuffle 58%")?.textContent).toContain("Feel shuffle 58%");
+		expect(line("feel: swing 16 62.5%")?.textContent).toContain("Feel swing 16 62.5%");
 	});
 
 	test("a gradual tempo change names its direction and target", () => {

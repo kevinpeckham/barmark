@@ -100,6 +100,8 @@ function splitHeader(lines: Line[]): { header: Directives; body: Line[] } {
 		const l = lines[i];
 		if (l?.kind === "title") continue;
 		if (l?.kind !== "directive") break;
+		// A new feel replaces the old one whole, its amount included.
+		if (l.set.feel) delete header.swingPercent;
 		Object.assign(header, l.set);
 	}
 	return { header, body: lines.slice(i).filter((l) => l.kind !== "title") };

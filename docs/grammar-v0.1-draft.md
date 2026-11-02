@@ -375,7 +375,7 @@ key: D, time: 4/4, tempo: 145, feel: swing
 | `key:` | a root plus optional `m` (`D`, `Bm`, `F#m`; `B minor` accepted), or a root and a mode: `A mixolydian`, `E dorian` | none (key unknown) |
 | `time:` | `n/d` where d is 2, 4, 8 or 16 | `4/4` |
 | `tempo:` | beats per minute from 1 to 999, counting the meter's beat (2.1): `145` (`145 bpm` accepted). In 6/8, `tempo: 60` is 60 dotted quarters a minute. Or a gradual change (7.2): `rit.`, `accel.`, either `to` a tempo, or `a tempo`. | none (tempo unknown) |
-| `feel:` | `straight`, `swing`, `shuffle`, `swing 16` | `straight` |
+| `feel:` | `straight`, `swing`, `shuffle`, `swing 16`; the last three with an optional amount (`swing 58%`, 7.1) | `straight` |
 
 - **Modes.** `key:` accepts `major`, `minor`, and the seven church modes
   (`ionian`, `dorian`, `phrygian`, `lydian`, `mixolydian`, `aeolian`,
@@ -410,9 +410,30 @@ Feel matters to barmark in one place: **where off-beat subdivisions land.**
   reads more easily.
 - Any other value is an **error**. Feels that move no chord (half-time,
   double-time, laid back) belong in a text line.
-- `feel:` names the kind of groove, not an amount. How far a player
-  swings is a performance setting that a player or a DAW holds; a chart
-  writes `swing`, and `feel: swing 60%` is an error.
+- `feel:` names the groove, and may state how far it swings. The bare word
+  means the triplet feel; a percentage, where the swung note lands, states
+  another amount. Tools that hold a continuous swing should write the
+  percentage rather than round to the word.
+
+**Swing amounts.** `swing`, `shuffle` and `swing 16` may each take an
+amount after one space: `feel: swing 58%`, `feel: shuffle 62.5%`,
+`feel: swing 16 55%`.
+
+- The amount is where the swung note lands, as a percentage of the pair it
+  belongs to (the beat's two eighths, or for `swing 16` the eighth's two
+  sixteenths): 50% is even, 66.7% is the triplet feel, 75% the dotted feel.
+  This is the drum-machine convention (MPC) musicians already know.
+- From 50% to 75%, inclusive; a whole number or one decimal place; the `%`
+  is required. Anything else is an **error**: `swing 80%`, `swing 66.75%`,
+  `swing 58`, an amount with no kind (`feel: 58%`), and an amount on
+  `straight` (the message suggests `swing` with that amount).
+- `swing 66.7%` means exactly `swing`, and prints as `swing`, so the bare
+  word stays the canonical spelling of the classic feel. Every other
+  amount prints as written (`58.0%` as `58%`); `swing 50%` stays as
+  written rather than becoming `straight`, because the band wrote a groove
+  name.
+- A later `feel:` replaces the whole feel: `feel: shuffle` after
+  `feel: swing 58%` means a shuffle at the triplet feel.
 
 ### 7.2 Gradual tempo changes
 
@@ -516,7 +537,7 @@ keeps what cannot reduce:
 | error | empty section that references no earlier section (the message suggests writing its bars or removing the heading, or names the line where a later section of that name is written) |
 | error | `->` anywhere but the end of a replay heading |
 | error | `/` or `%` with nothing before it |
-| error | invalid directive value (`time: 4/3`, `tempo: fast`, `rit. to fast`, `feel: lazy`) |
+| error | invalid directive value (`time: 4/3`, `tempo: fast`, `rit. to fast`, `feel: lazy`, `feel: swing 80%`, `feel: swing 58`, `feel: straight 55%`) |
 | error | `[n/d]` not at the start of a cell, or with an invalid meter |
 | error | a note set mixing octave and no octave, or an octave outside 0–8 |
 | error | more than one root mark `!` in a note set |
@@ -584,7 +605,7 @@ human to say whether the band was silent, and the structure line.
 | Directives under a replay heading | Decided by Kevin: they take effect after the replay, because the heading stands for its bars (written order is play order). Before, the parser applied them to the replay. |
 | Gradual tempo changes | Decided by Kevin (2026-11-01): `tempo:` also takes `rit.`, `accel.` (each optionally `to` a tempo) and `a tempo`. A change runs from the next bar to the next `tempo:` or the end; its shape is never written; machine output marks every bar inside one (7.2, A.7). |
 | `(addN)` in parentheses | Decided by Kevin (2026-11-02, issue #62): `(add2)`, `(add4)`, `(add9)` and `(add11)` are aliases of `(2)`, `(4)`, `(9)` and `(11)`, alone or in a list (`C(b9,add11)` = `C(b9,11)`), because chord players and DAWs spell `Am(add9)` that way. Only the four tones `addN` already takes: `add13` and `add#11` stay errors, in or out of parentheses. |
-| Custom swing ratios | Decided by Kevin (2026-11-02, issue #66): not planned. `feel:` names the kind of groove (7.1); how far a player swings is a performance setting a player or DAW holds, so a chart writes `swing` and `feel: swing 60%` stays an error. Closed from the open questions. |
+| Custom swing ratios | Decided by Kevin (2026-11-02, issue #66): first not planned, then reopened the same day with the evidence of Stem Shovel's chart export, whose swing is a continuous amount that `swing` alone could only round to 2:1 or nothing. Decided: `swing`, `shuffle` and `swing 16` take an optional amount (`swing 58%`), where the swung note lands, from 50% to 75% inclusive (MPC style); `shuffle` takes one on the same scale; the `%` is required. The bare word is 66.7% and prints as the word, so no chart that read before changes meaning or form (7.1). |
 
 ## Open questions
 
@@ -726,6 +747,7 @@ Each slot parses to one record:
 | `parts` | on a chord: the canonical root, quality, extension, sus, tones (in canonical order) and bass its spelling is built from; empty for a note set |
 | `tempo` | on a played bar: the steady tempo, or empty when unknown |
 | `tempoChange` | on a played bar inside a rit. or accel.: its `kind` (`rit` or `accel`), `from` (the steady tempo) and `to` (the target, or empty when open); empty outside one |
+| `swingPercent` | on a played bar and a directive: the swing amount in force (50 to 75), or empty for the bare word (66.7) and for `straight` |
 | `repeat` | on a bar line, section or repeat bracket in the parse tree: a count, or `open` for `x ...` |
 | `harte` | the Harte label: `C:7(b9)`, `N` for N.C. and silence (`--`), `X` for `?` |
 | `source` | the symbol as written |

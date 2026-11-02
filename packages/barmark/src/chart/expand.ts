@@ -162,12 +162,14 @@ export function expand(lines: Line[]): {
 		tempo: number | null;
 		change: PlayedBar["tempoChange"];
 		feel: Feel;
+		swingPercent: number | undefined;
 	} = {
 		key: null,
 		time: { n: 4, d: 4 },
 		tempo: null,
 		change: null,
 		feel: "straight",
+		swingPercent: undefined,
 	};
 	const warned = new Set<number>();
 	const warn = (line: number, message: string, token: string) => {
@@ -201,7 +203,10 @@ export function expand(lines: Line[]): {
 			state.change = null;
 		}
 		if (set.tempoChange) changeTempo(set.tempoChange, line);
-		if (set.feel) state.feel = set.feel;
+		if (set.feel) {
+			state.feel = set.feel;
+			state.swingPercent = set.swingPercent;
+		}
 	};
 	let count = 0;
 	let work = 0;
@@ -237,7 +242,7 @@ export function expand(lines: Line[]): {
 					token: `${k}`,
 				});
 		}
-		const { key, tempo, change: tempoChange, feel } = state;
+		const { key, tempo, change: tempoChange, feel, swingPercent } = state;
 		out.push({
 			kind: "bar",
 			bar: {
@@ -249,6 +254,7 @@ export function expand(lines: Line[]): {
 				tempo,
 				tempoChange,
 				feel,
+				...(swingPercent === undefined ? {} : { swingPercent }),
 				slots: p.slots,
 			},
 		});
