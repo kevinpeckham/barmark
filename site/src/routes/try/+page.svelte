@@ -56,10 +56,11 @@ function tryFix(suggestion: string) {
 }
 
 // Runs before the first paint; JavaScript that never arrives shows the page after 4 s.
+// The closing tag is spelt in two pieces: written whole, it would end this script block (FINDINGS.md).
 const SHARED_LINK = `<script>if (/[?&]q=/.test(location.search)) {
 	document.documentElement.dataset.tryLink = "";
 	setTimeout(() => delete document.documentElement.dataset.tryLink, 4000);
-}<\/script>`;
+}</${"script"}>`;
 
 const description = "Type a chord, a Harte label or a bit of chart and see how barmark reads it.";
 const chip =

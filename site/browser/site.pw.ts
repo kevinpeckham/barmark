@@ -244,11 +244,14 @@ test.describe("try it", () => {
 			const replace = history.replaceState.bind(history);
 			Object.assign(window, { urlWrites: 0 });
 			history.replaceState = (...args) => {
-				Object.assign(window, { urlWrites: (window as unknown as { urlWrites: number }).urlWrites + 1 });
+				Object.assign(window, {
+					urlWrites: (window as unknown as { urlWrites: number }).urlWrites + 1,
+				});
 				return replace(...args);
 			};
 		});
-		const writes = () => page.evaluate(() => (window as unknown as { urlWrites: number }).urlWrites);
+		const writes = () =>
+			page.evaluate(() => (window as unknown as { urlWrites: number }).urlWrites);
 		await page.goto("/try");
 		await untilUrl(page, () => box(page).fill("C"), /q=C$/);
 		const before = await writes();

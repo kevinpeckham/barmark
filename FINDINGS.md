@@ -145,7 +145,7 @@ package index, inside the package.
   close an element that was not open".
 - **The cause.** Svelte, like the HTML parser, ends the component's
   `<script>` block at the first `</script>`, even inside a string.
-- **The fix.** Write it as `<\/script>` in the string (as
+- **The fix.** Spell the tag in two pieces, `</${"script"}>` (as
   `site/src/routes/try/+page.svelte` does).
 
 ### SvelteKit 3 deprecates `replaceState` (2026-11-02, /try)
