@@ -3,11 +3,12 @@ import { check } from "./check.js";
 import { format } from "./format.js";
 import { HELP } from "./help.js";
 import { type Io, UsageError } from "./io.js";
+import { render } from "./render.js";
 
 export type Command = (args: string[], io: Io) => Promise<number>;
 
 /** Each subcommand by name. */
-export const COMMANDS: Record<string, Command> = { check, format };
+export const COMMANDS: Record<string, Command> = { check, format, render };
 
 export async function main(argv: string[], io: Io): Promise<number> {
 	const [name, ...args] = argv;
