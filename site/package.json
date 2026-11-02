@@ -17,7 +17,7 @@
 		"test:browser": "playwright test -c browser"
 	},
 	"dependencies": {
-		"@barmark/render": "0.7.0",
+		"@barmark/render": "0.7.1",
 		"@vercel/analytics": "2.0.1",
 		"barmark": "0.8.0"
 	},
