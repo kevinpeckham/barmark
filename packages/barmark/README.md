@@ -35,7 +35,15 @@ declarations included and no runtime dependencies.
 ## Use
 
 ```ts
-import { degreeOf, harteToBarmark, parseChart, parseChord, printChart, transposeChart } from "barmark";
+import {
+	degreeOf,
+	harteToBarmark,
+	parseChart,
+	parseChord,
+	printChart,
+	printParsed,
+	transposeChart,
+} from "barmark";
 
 const chart = parseChart(text);
 chart.title; // "Example Song"
@@ -44,6 +52,7 @@ chart.sections; // each section as played, with its first and last bar
 chart.diagnostics; // errors and warnings, each with a line number
 
 printChart(text); // the chart in canonical form (same meaning, standard spelling)
+printParsed(text, chart); // the same, from a parse you already have
 
 transposeChart("key: D\n| D | A | Bm | G |", { to: "Eb" }).text; // "key: Eb\n| Eb | Bb | Cm | Ab |\n"
 transposeChart(text, { semitones: -2 }); // { text, diagnostics }
@@ -60,7 +69,8 @@ harteToBarmark("A:sus4(b7,9)"); // "A9sus4"
 - **`parseChart`** never throws. A line with an error is left out of the
   play order and reported, and the rest of the chart still reads.
 - **`printChart`** changes spelling and layout only: lines with errors and
-  lyrics print exactly as written.
+  lyrics print exactly as written. **`printParsed`** does the same from an
+  existing `parseChart` result, for a caller that needs both.
 - **`transposeChart`** moves every chord root, slash bass, note set and
   `key:` line, and never the words. Chords are spelled by their interval
   from the chart's first key, so each keeps its place in the key: C in D

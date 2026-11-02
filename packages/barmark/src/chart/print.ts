@@ -114,11 +114,18 @@ export function printLine(l: Line, beats: (number | undefined)[] = []): string {
  * fences stay. Never throws.
  */
 export function printChart(text: string): string {
-	return printParsed(text, parseChart(text), (l) => l);
+	return printParsed(text, parseChart(text));
 }
 
-/** `printChart` over an existing parse, with each line it prints passed through `edit` first. */
-export function printParsed(text: string, parsed: ChartParse, edit: (l: Line) => Line): string {
+/**
+ * `printChart` over a parse you already have (`parseChart(text)`), so the
+ * text isn't read twice. `edit`, if given, changes each line before it prints.
+ */
+export function printParsed(
+	text: string,
+	parsed: ChartParse,
+	edit: (l: Line) => Line = (l) => l,
+): string {
 	const byLine = new Map(parsed.lines.map((l) => [l.line, l]));
 	const errored = new Set(
 		parsed.diagnostics.filter((d) => d.severity === "error").map((d) => d.line),

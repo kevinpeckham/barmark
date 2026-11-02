@@ -4,6 +4,6 @@ export { beatsOf, DIRECTIVE_NAMES, parseDirectiveLine, parseMeter } from "./dire
 export { readDocument } from "./document.js";
 export { expand, flattenBars, MAX_EXPANDED_BARS } from "./expand.js";
 export { parseChart } from "./parse.js";
-export { printCell, printChart, printLine, printSlot, reduceSlots } from "./print.js";
+export { printCell, printChart, printLine, printParsed, printSlot, reduceSlots } from "./print.js";
 export { type TransposeBy, transposeChart } from "./transpose.js";
 export type * from "./types.js";
