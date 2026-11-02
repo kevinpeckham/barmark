@@ -527,7 +527,7 @@ test.describe("on a phone", () => {
 				.toEqual(["grid"]);
 		});
 
-	for (const path of ["/", "/syntax", "/try"])
+	for (const path of ["/", "/syntax", "/try", "/get-started", "/faq"])
 		test(`${path} never scrolls sideways`, async ({ page }) => {
 			await page.goto(path);
 			const [scroll, client] = await page.evaluate(() => [
@@ -590,7 +590,7 @@ test("the guide's controls meet WCAG contrast on the dark ground", async ({ page
 });
 
 test("every input has a name and every link has text", async ({ page }) => {
-	for (const path of ["/", "/syntax", "/try"]) {
+	for (const path of ["/", "/syntax", "/try", "/get-started", "/faq"]) {
 		await page.goto(path);
 		const unnamed = await page.evaluate(() => {
 			const bad: string[] = [];
