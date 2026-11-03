@@ -9,6 +9,28 @@ Releases follow the process in [RELEASING.md](RELEASING.md).
 
 ## [Unreleased]
 
+Rehearsal marks and words on a bar, issue #70 (grammar 2.5 and 2.6).
+
+### Added
+
+- **Rehearsal marks:** `@` and a label of letters and digits, alone in a
+  cell (`| @B | D | A |`), marks the bar after it. A mark is not a bar
+  and takes no time; a repeat or replay plays it with its bar. Cells
+  gain `kind: "rehearsal"`, and played bars `rehearsal`, the label.
+- **Words on a bar:** quoted words in a cell (`| "solo" D |`,
+  `| D "rit." G |`) sit before the slot they precede, or at the bar's
+  end after the last. Curly quotes are accepted. They carry no musical
+  meaning. Cells and played bars gain `words` (`{ text, at }`), present
+  only when written.
+- **Errors with line numbers** for a mark that shares its cell (with
+  the fix), a bad label, a mark with no bar after it, two marks on one
+  bar, an unclosed quote, empty quotes and words with no bar.
+
+### Fixed
+
+- **A bar line dropped for an error no longer counts its directions as
+  bars** in the written numbers of the bars after it.
+
 ## [0.11.0] - 2026-11-03
 
 Endings and directions, issue #70 (grammar 5.1 and 5.2).

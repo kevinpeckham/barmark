@@ -285,7 +285,7 @@ function layoutRow(
 	let prev = previous;
 	for (const cell of l.cells) {
 		const model = layoutCell(cell, played[bar] ?? written[bar], prev);
-		if (cell.kind !== "fermata" && cell.kind !== "direction") bar++;
+		if (cell.kind === "slots" || cell.kind === "simile") bar++;
 		if (model.kind === "slots") prev = model;
 		cells.push(model);
 	}
@@ -309,18 +309,29 @@ function layoutCell(
 	previous: SlotsCell | null,
 ): CellModel {
 	if (cell.kind === "fermata") return { kind: "fermata" };
-	if (cell.kind === "direction") return cell;
-	const from = cell.kind === "slots" ? cell : previous;
-	return withPlayed(
-		{
-			kind: "slots",
-			meter: from?.meter ?? null,
-			slots: played?.slots ?? (cell.kind === "slots" ? cell.slots : []),
-			cut: false,
-		},
-		played,
-	);
+	if (cell.kind === "direction" || cell.kind === "rehearsal") return cell;
+	return withPlayed(layoutBar(cell, played, previous), played);
 }
+
+/** A bar or `%`, with the slots it plays. */
+function layoutBar(
+	cell: Extract<Cell, { kind: "slots" | "simile" }>,
+	played: PlayedBar | undefined,
+	previous: SlotsCell | null,
+): SlotsCell {
+	const own = cell.kind === "slots" ? cell : null;
+	return {
+		kind: "slots",
+		meter: (own ?? previous)?.meter ?? null,
+		slots: played?.slots ?? own?.slots ?? [],
+		cut: false,
+		...wordsOf(cell),
+	};
+}
+
+/** The words written on a bar, as a field to spread; nothing when it has none. */
+const wordsOf = (cell: Extract<Cell, { kind: "slots" | "simile" }>) =>
+	cell.words ? { words: cell.words } : {};
 
 /** What the parser says about the bar as played: inside a rit. or accel., and its key. */
 function withPlayed(cell: SlotsCell, played: PlayedBar | undefined): SlotsCell {

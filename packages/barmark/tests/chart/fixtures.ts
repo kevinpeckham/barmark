@@ -98,6 +98,8 @@ export function meaning(p: ChartParse) {
 			b.feel,
 			b.section?.replace(/\s+/g, " ") ?? null,
 			timeline(b.slots),
+			b.rehearsal ?? null,
+			b.words ?? null,
 		]),
 		errors: p.diagnostics
 			.filter((d) => d.severity === "error")

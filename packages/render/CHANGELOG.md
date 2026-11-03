@@ -6,6 +6,14 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- **Rehearsal marks** draw as a boxed label at the start of their bar
+  (`part="mark"`), spoken "rehearsal B". Bar numbers skip them.
+- **Words on a bar** draw small, above the slot they precede, or at the
+  bar's end (`part="words"`), and are spoken in place: "bar 1: “solo” D,
+  A".
+
 ## [0.8.0] - 2026-11-03
 
 Requires `barmark` 0.11.0.

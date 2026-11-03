@@ -59,12 +59,23 @@ export type Direction =
 	| { kind: "to coda" }
 	| { kind: "fine" }
 	| { kind: "jump"; to: "start" | "segno"; al: "fine" | "coda" | null };
-/** `meter` is a one-bar `[n/d]` override. `...` and a direction are not bars. */
+/**
+ * Quoted words on a bar (grammar 2.6), placed before the slot numbered
+ * `at` (0-based); `at` equal to the slot count places them after the last
+ * slot. They carry no musical meaning.
+ */
+export type Words = { text: string; at: number };
+/**
+ * `meter` is a one-bar `[n/d]` override. `...`, a direction and a
+ * rehearsal mark are not bars. `words` is present only when written.
+ */
 export type Cell =
-	| { kind: "slots"; meter: Meter | null; slots: Slot[] }
-	| { kind: "simile" }
+	| { kind: "slots"; meter: Meter | null; slots: Slot[]; words?: Words[] }
+	| { kind: "simile"; words?: Words[] }
 	| { kind: "fermata" }
-	| { kind: "direction"; direction: Direction };
+	| { kind: "direction"; direction: Direction }
+	/** `@B`: a mark on the bar after it (grammar 2.5). */
+	| { kind: "rehearsal"; label: string };
 export type Repeat = number | "open" | null;
 
 export type Line =
@@ -111,6 +122,10 @@ export type PlayedBar = {
 	swingPercent?: number;
 	/** `%` resolved to the copied slots; holds stay holds. */
 	slots: Slot[];
+	/** The rehearsal mark written just before this bar (`@B` gives "B"); absent when none. */
+	rehearsal?: string;
+	/** Words written on this bar; absent when none. `%` copies chords, not words. */
+	words?: Words[];
 };
 /** An open repeat shows one pass; the number of passes is unknown. */
 export type ChartEvent =

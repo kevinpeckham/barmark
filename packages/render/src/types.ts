@@ -1,4 +1,13 @@
-import type { ChartDiagnostic, Direction, Directives, Key, Meter, Repeat, Slot } from "barmark";
+import type {
+	ChartDiagnostic,
+	Direction,
+	Directives,
+	Key,
+	Meter,
+	Repeat,
+	Slot,
+	Words,
+} from "barmark";
 
 export type LayoutOptions = { rehearsalLetters?: boolean };
 
@@ -52,7 +61,11 @@ export type CellModel =
 			tempoChange?: "rit" | "accel";
 			/** The key the bar is played in, when the chart names one. */
 			key?: Key;
+			/** Words written on the bar (barmark's grammar 2.6), each before slot `at`. */
+			words?: Words[];
 	  }
 	| { kind: "fermata" }
 	/** A segno, coda or jump between bars (barmark's grammar 5.2). */
-	| { kind: "direction"; direction: Direction };
+	| { kind: "direction"; direction: Direction }
+	/** A rehearsal mark on the bar after it (barmark's grammar 2.5). */
+	| { kind: "rehearsal"; label: string };

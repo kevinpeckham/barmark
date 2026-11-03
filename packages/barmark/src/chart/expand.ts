@@ -15,6 +15,7 @@ import type {
 	SectionOccurrence,
 	Slot,
 	TempoChange,
+	Words,
 } from "./types.js";
 
 /** Nested repeats multiply; expansion stops here rather than run away. */
@@ -27,7 +28,15 @@ type SectionLine = Extract<Line, { kind: "section" }>;
 type Section = { heading: SectionLine | null; lines: Line[] };
 /** A cell with `%` already resolved to the slots it copies. */
 type Played =
-	| { kind: "bar"; meter: Meter | null; slots: Slot[]; own: boolean; written: number }
+	| {
+			kind: "bar";
+			meter: Meter | null;
+			slots: Slot[];
+			own: boolean;
+			written: number;
+			rehearsal?: string;
+			words?: Words[];
+	  }
 	| { kind: "fermata" }
 	| { kind: "direction"; direction: Direction };
 /**
@@ -128,33 +137,59 @@ export function expand(lines: Line[]): {
 	const resolved = new Map<BarsLine, Played[]>();
 	let previous: { meter: Meter | null; slots: Slot[] } | null = null;
 	let written = 0;
+	/** A rehearsal mark waiting for the bar after it (grammar 2.5). */
+	const pending: { mark: { label: string; line: number } | null } = { mark: null };
+	/** The bar as written, with the mark before it and its own words. */
+	const marked = (bar: Extract<Played, { kind: "bar" }>, words: Words[] | undefined): Played => {
+		const out: Extract<Played, { kind: "bar" }> = { ...bar };
+		if (pending.mark) out.rehearsal = pending.mark.label;
+		if (words) out.words = words;
+		pending.mark = null;
+		return out;
+	};
+	type WrittenCell = BarsLine["cells"][number];
+	const markBar = (c: Extract<WrittenCell, { kind: "rehearsal" }>, line: number): null => {
+		if (pending.mark) error(line, "two rehearsal marks on one bar", `@${c.label}`);
+		pending.mark = { label: c.label, line };
+		return null;
+	};
+	const simile = (c: Extract<WrittenCell, { kind: "simile" }>, line: number): Played => {
+		if (!previous) error(line, "% has no bar before it to repeat", "%");
+		const meter = previous?.meter ?? null;
+		const slots: Slot[] = previous?.slots ?? [{ kind: "hold" }];
+		return marked({ kind: "bar", meter, slots, own: false, written: ++written }, c.words);
+	};
+	const ownBar = (c: Extract<WrittenCell, { kind: "slots" }>, line: number): Played => {
+		const first = c.slots[0];
+		const head = first?.kind === "group" ? first.members[0] : first;
+		if (!previous && head?.kind === "hold") error(line, "/ has nothing before it to hold", "/");
+		previous = { meter: c.meter, slots: c.slots };
+		const bar = {
+			kind: "bar",
+			meter: c.meter,
+			slots: c.slots,
+			own: true,
+			written: ++written,
+		} as const;
+		return marked(bar, c.words);
+	};
+	const resolveCell = (c: WrittenCell, line: number): Played | null => {
+		if (c.kind === "fermata") return { kind: "fermata" };
+		if (c.kind === "direction") return c;
+		if (c.kind === "rehearsal") return markBar(c, line);
+		return c.kind === "simile" ? simile(c, line) : ownBar(c, line);
+	};
 	for (const l of sections.flatMap((s) => s.lines)) {
 		if (l.kind === "invalid") written += l.written;
 		if (l.kind !== "bars") continue;
-		const cells: Played[] = [];
-		for (const c of l.cells) {
-			if (c.kind === "fermata") cells.push({ kind: "fermata" });
-			else if (c.kind === "direction") cells.push(c);
-			else if (c.kind === "simile") {
-				if (!previous) error(l.line, "% has no bar before it to repeat", "%");
-				cells.push({
-					kind: "bar",
-					meter: previous?.meter ?? null,
-					slots: previous?.slots ?? [{ kind: "hold" }],
-					own: false,
-					written: ++written,
-				});
-			} else {
-				const first = c.slots[0];
-				const head = first?.kind === "group" ? first.members[0] : first;
-				if (!previous && head?.kind === "hold")
-					error(l.line, "/ has nothing before it to hold", "/");
-				cells.push({ kind: "bar", meter: c.meter, slots: c.slots, own: true, written: ++written });
-				previous = { meter: c.meter, slots: c.slots };
-			}
-		}
-		resolved.set(l, cells);
+		resolved.set(
+			l,
+			l.cells.map((c) => resolveCell(c, l.line)).filter((p): p is Played => p !== null),
+		);
 	}
+	const unused = pending.mark;
+	if (unused)
+		error(unused.line, "a rehearsal mark marks the bar after it; none follows", `@${unused.label}`);
 
 	// Pair |: and :| within each section, with any endings.
 	const itemsOf = new Map(sections.map((s) => [s, pairRepeats(s.lines, error)]));
@@ -254,6 +289,8 @@ export function expand(lines: Line[]): {
 			feel,
 			...(swingPercent === undefined ? {} : { swingPercent }),
 			slots: p.slots,
+			...(p.rehearsal === undefined ? {} : { rehearsal: p.rehearsal }),
+			...(p.words === undefined ? {} : { words: p.words }),
 		};
 	};
 	const emit = (p: Played, line: number, out: ChartEvent[]) => {

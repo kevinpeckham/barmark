@@ -12,6 +12,7 @@ import type {
 	SimpleSlot,
 	Slot,
 	TempoChange,
+	Words,
 } from "./types.js";
 
 /** A slot with no attack of its own continues whatever sounds before it. A repeated chord name is a re-attack. */
@@ -60,13 +61,34 @@ export function printSlot(s: Slot): string {
 	return s.kind === "group" ? s.members.map(printSimple).join("_") : printSimple(s);
 }
 
-/** A cell in canonical form: `%`, `...`, or an optional `[n/d]` and the fewest slots. */
+/** Each slot with the words written before it, and any words after the last. */
+function withWords(slots: string[], words: Words[] = []): string {
+	const said = (at: number) => words.filter((w) => w.at === at).map((w) => `"${w.text}"`);
+	return [...slots.flatMap((s, i) => [...said(i), s]), ...said(slots.length)].join(" ");
+}
+
+/** The fewest slots, unless merging them would lose the place of some words. */
+function reduceWithWords(
+	slots: Slot[],
+	words: Words[] | undefined,
+	beats?: number,
+): [Slot[], Words[]] {
+	const reduced = reduceSlots(slots, beats);
+	const size = slots.length / reduced.length;
+	if (!words) return [reduced, []];
+	if (words.some((w) => w.at % size !== 0)) return [slots, words];
+	return [reduced, words.map((w) => ({ ...w, at: w.at / size }))];
+}
+
+/** A cell in canonical form: `%`, `...`, a mark, or an optional `[n/d]` and the fewest slots, with any words. */
 export function printCell(c: Cell, beats?: number): string {
-	if (c.kind === "simile") return "%";
+	if (c.kind === "simile") return withWords(["%"], c.words);
 	if (c.kind === "fermata") return "...";
 	if (c.kind === "direction") return printDirection(c.direction);
+	if (c.kind === "rehearsal") return `@${c.label}`;
 	const meter = c.meter ? `[${c.meter.n}/${c.meter.d}] ` : "";
-	return meter + reduceSlots(c.slots, beats).map(printSlot).join(" ");
+	const [slots, words] = reduceWithWords(c.slots, c.words, beats);
+	return meter + withWords(slots.map(printSlot), words);
 }
 
 /** An ending's passes as printed after its `|`: in order, runs of three or more as a range (`1-3`, `1,2`, `1,3-5`). */
