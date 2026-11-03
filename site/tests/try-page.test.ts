@@ -20,7 +20,7 @@ describe("/try, prerendered", () => {
 		const live = [...doc.querySelectorAll("[aria-live]")];
 		expect(live.map((el) => el.textContent?.trim())).toEqual([
 			"Cm7(b5): C minor seven flat five",
-			`Showing 9 of ${ROWS.length}`,
+			`Showing ${ROWS.filter((r) => r.category === "chords").length} of ${ROWS.length}`,
 		]);
 	});
 	test("draws the chord as one bar, without a bar number", () => {
