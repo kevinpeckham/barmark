@@ -9,6 +9,8 @@ Releases follow the process in [RELEASING.md](RELEASING.md).
 
 ## [Unreleased]
 
+## [0.14.1] - 2026-11-03
+
 ### Fixed
 
 - In a system, the line that differs from the one most lines agree with
@@ -362,7 +364,8 @@ The first working release: the reference parser and printer for the
 
 - **A placeholder package that holds the `barmark` name** while the spec and parser are written.
 
-[Unreleased]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.14.0...HEAD
+[Unreleased]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.14.1...HEAD
+[0.14.1]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.14.0...barmark-v0.14.1
 [0.14.0]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.13.0...barmark-v0.14.0
 [0.13.0]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.12.0...barmark-v0.13.0
 [0.12.0]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.11.0...barmark-v0.12.0
