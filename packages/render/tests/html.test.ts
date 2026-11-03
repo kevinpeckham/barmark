@@ -67,9 +67,9 @@ describe("renderChart: accessibility", () => {
 		}
 		const spoken = texts(d, '[part~="bar"] > .bm-sr');
 		expect(spoken[0]).toBe("bar 1: D");
-		expect(spoken).toContain("bar 9: D");
-		expect(spoken).toContain("bar 22: A seven sus four, hold, A seven, hold");
-		expect(spoken).toContain("bar 23: triplet: D, E, F sharp minor, hold, G over B, hold");
+		expect(spoken).toContain("bar 5: D");
+		expect(spoken).toContain("bar 18: A seven sus four, hold, A seven, hold");
+		expect(spoken).toContain("bar 19: triplet: D, E, F sharp minor, hold, G over B, hold");
 	});
 
 	test("sections are labelled by their heading", () => {
@@ -97,8 +97,8 @@ describe("renderChart: options", () => {
 	test("bar numbers on by default, off on request", () => {
 		expect(texts(shadow(renderChart(EXAMPLE)), '[part~="bar-number"]').slice(0, 3)).toEqual([
 			"1",
+			"5",
 			"9",
-			"13",
 		]);
 		expect(
 			shadow(renderChart(EXAMPLE, { barNumbers: false })).querySelector('[part~="bar-number"]'),

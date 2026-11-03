@@ -6,7 +6,6 @@
  */
 import {
 	type Cell,
-	type ChartEvent,
 	type ChartParse,
 	type Directives,
 	type Line,
@@ -27,8 +26,6 @@ type Context = {
 	source: string[];
 	/** Error messages by line number. */
 	errors: Map<number, string[]>;
-	/** Bars numbered above this come after an open repeat: their number is unknown. */
-	lastKnownBar: number;
 	/** Each section's lines, by its heading's line number. */
 	written: Map<number, Group>;
 };
@@ -41,7 +38,6 @@ export function layoutChart(text: string, options: LayoutOptions = {}): ChartMod
 		parse,
 		source: text.split(/\r?\n/),
 		errors: errorsByLine(parse),
-		lastKnownBar: lastKnownBar(parse.events),
 		written: new Map(groups.flatMap((g) => (g.heading ? [[g.heading.line, g] as const] : []))),
 	};
 	const blocks = groups.map((g) => layoutGroup(g, ctx));
@@ -71,25 +67,6 @@ function errorsByLine(parse: ChartParse): Map<number, string[]> {
 		errors.set(d.line, [...(errors.get(d.line) ?? []), d.message]);
 	}
 	return errors;
-}
-
-/** The count of bars up to the end of the first open repeat (all of them if there is none). */
-function lastKnownBar(events: ChartEvent[]): number {
-	let count = 0;
-	const countBars = (es: ChartEvent[]): void => {
-		for (const e of es) {
-			if (e.kind === "bar") count++;
-			else if (e.kind === "open") countBars(e.events);
-		}
-	};
-	for (const e of events) {
-		if (e.kind === "open") {
-			countBars(e.events);
-			return count;
-		}
-		if (e.kind === "bar") count++;
-	}
-	return Number.POSITIVE_INFINITY;
 }
 
 /** The title line, and the directives before any other content, form the header. */
@@ -289,11 +266,11 @@ function layoutRow(
 		if (model.kind === "slots") prev = model;
 		cells.push(model);
 	}
-	const firstIndex = played[0]?.index;
 	return {
 		kind: "row",
 		line: l.line,
-		barNumber: firstIndex !== undefined && firstIndex <= ctx.lastKnownBar ? firstIndex : null,
+		// Numbered as written, as a band counts (issue #92): repeats, endings, jumps and replays don't move it.
+		barNumber: (played[0] ?? written[0])?.written ?? null,
 		opens: l.opens,
 		closes: l.closes,
 		repeat: l.repeat,

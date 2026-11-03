@@ -37,7 +37,7 @@ export type BlockItem =
 	| {
 			kind: "row";
 			line: number;
-			/** The play-order number of the row's first bar on its first pass. */
+			/** The written number of the row's first bar (`PlayedBar.written`); a replay shows its section's numbers. Null for a row with no bar. */
 			barNumber: number | null;
 			opens: boolean;
 			closes: boolean;
