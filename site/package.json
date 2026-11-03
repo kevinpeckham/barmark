@@ -20,7 +20,7 @@
 		"@barmark/render": "0.10.0",
 		"@vercel/analytics": "2.0.1",
 		"@vercel/speed-insights": "2.0.0",
-		"barmark": "0.13.0"
+		"barmark": "0.14.0"
 	},
 	"devDependencies": {
 		"@barmark/cli": "0.1.6",

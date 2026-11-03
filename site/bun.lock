@@ -8,7 +8,7 @@
         "@barmark/render": "0.10.0",
         "@vercel/analytics": "2.0.1",
         "@vercel/speed-insights": "2.0.0",
-        "barmark": "0.13.0",
+        "barmark": "0.14.0",
       },
       "devDependencies": {
         "@barmark/cli": "0.1.6",
@@ -236,7 +236,7 @@
 
     "balanced-match": ["balanced-match@4.0.4", "", {}, "sha512-BLrgEcRTwX2o6gGxGOCNyMvGSp35YofuYzw9h1IMTRmKqttAZZVU67bdb9Pr2vUHA8+j3i2tJfjO6C6+4myGTA=="],
 
-    "barmark": ["barmark@0.13.0", "", {}, "sha512-y59tWW4vbA7Y0DAL4U9ouH2ygTchvDOkXxZOp/5OfktRoNzK7/KuCC+RnSN3E8bbfmczSQoU1bB73poeXLQ75A=="],
+    "barmark": ["barmark@0.14.0", "", {}, "sha512-n+YTlYLCEMuJZAuWl6/ssw5rAhFuFsW1DLnp1TTcqFYU6KZXMYfigYKHRYPleMOnhN2tQOSdnZV92i5tAJQ62Q=="],
 
     "bindings": ["bindings@1.5.0", "", { "dependencies": { "file-uri-to-path": "1.0.0" } }, "sha512-p2q/t/mhvuOj/UeLlV6566GD/guowlr0hHxClI0W9m7MWYkL1F0hLo+0Aexs9HSPCtR1SXQ0TD3MMKrXZajbiQ=="],
 
@@ -471,6 +471,10 @@
     "yallist": ["yallist@5.0.0", "", {}, "sha512-YgvUTfwqyc7UXVMrB+SImsVYSmTS8X/tSrtdNZMImM+n7+QTriRXyXim0mBrTXNeqzVF0KWGgHPeiyViFFrNDw=="],
 
     "zimmerframe": ["zimmerframe@1.1.5", "", {}, "sha512-msJxIvYDYcoNL+PJsu+7qmpDWsYmAxTY+2TNYXXF0hzBzBk0BMecOqDOG/EckUoKCuKwObfbugIl8QpqHDXeFA=="],
+
+    "@barmark/cli/barmark": ["barmark@0.13.0", "", {}, "sha512-y59tWW4vbA7Y0DAL4U9ouH2ygTchvDOkXxZOp/5OfktRoNzK7/KuCC+RnSN3E8bbfmczSQoU1bB73poeXLQ75A=="],
+
+    "@barmark/render/barmark": ["barmark@0.13.0", "", {}, "sha512-y59tWW4vbA7Y0DAL4U9ouH2ygTchvDOkXxZOp/5OfktRoNzK7/KuCC+RnSN3E8bbfmczSQoU1bB73poeXLQ75A=="],
 
     "@types/node/undici-types": ["undici-types@8.9.0", "", {}, "sha512-KTDyRTYX8sWmKXAikPHHSyc63CRPETMctyjKFupcC6OBLXT3xsN0e9aF7m+mIXutFWpUXuedtowG7iLOzp0kQg=="],
 
