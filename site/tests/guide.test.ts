@@ -20,6 +20,8 @@ describe("guide rows", () => {
 			"§4",
 			"§4.1",
 			"§5",
+			"§5.1",
+			"§5.2",
 			"§6",
 			"§7",
 			"§7.1",
@@ -41,6 +43,13 @@ describe("guide rows", () => {
 			"|: :|",
 			"x ...",
 			"->",
+			"|1  |2",
+			"Segno",
+			"Coda",
+			"To Coda",
+			"Fine",
+			"D.C.",
+			"D.S.",
 			"key:",
 			"time:",
 			"tempo:",
@@ -97,6 +106,11 @@ describe("guide sentences say no more than the grammar", () => {
 	});
 	test("under N.C. others may carry on, not must", () => {
 		expect(meaning("no-chord")).toContain("may");
+	});
+	test("after the jump, a repeat plays once and takes its last ending", () => {
+		expect(meaning("jump")).toContain("plays once");
+		const row = ROWS.find((r) => r.id === "jump");
+		expect(parseChart(row?.example ?? "").diagnostics).toEqual([]);
 	});
 	test("x N says how many times", () => {
 		expect(meaning("repeat-line")).toContain("N times");

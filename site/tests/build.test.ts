@@ -13,8 +13,8 @@ describe("the site builds", () => {
 	test("the packages come from npm at exact versions", () => {
 		const pkg = JSON.parse(readFileSync(join(site, "package.json"), "utf8"));
 		expect(pkg.dependencies).toEqual({
-			barmark: "0.10.0",
-			"@barmark/render": "0.7.3",
+			barmark: "0.11.0",
+			"@barmark/render": "0.8.0",
 			"@vercel/analytics": "2.0.1",
 			"@vercel/speed-insights": "2.0.0",
 		});

@@ -178,7 +178,19 @@ test.describe("the guide", () => {
 		await page.goto("/syntax?q=repeat&cat=repeats");
 		await expect
 			.poll(() => visible(page))
-			.toEqual(["repeat-line", "repeat-signs", "open-repeat", "endings"]);
+			.toEqual([
+				"repeat-line",
+				"repeat-signs",
+				"open-repeat",
+				"endings",
+				"segno",
+				"d-s",
+				"d-c",
+				"fine",
+				"to-coda",
+				"coda",
+				"jump",
+			]);
 		await page.getByRole("searchbox", { name: "Search" }).fill("");
 		await page.getByRole("button", { name: "All" }).click();
 		await expect(page).toHaveURL(/\/syntax$/);
