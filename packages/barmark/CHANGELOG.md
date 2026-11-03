@@ -9,6 +9,8 @@ Releases follow the process in [RELEASING.md](RELEASING.md).
 
 ## [Unreleased]
 
+## [0.13.0] - 2026-11-03
+
 ### Added
 
 - **`part:` names the chart's part** (grammar 7.3, issue #70): `part:
@@ -315,7 +317,8 @@ The first working release: the reference parser and printer for the
 
 - **A placeholder package that holds the `barmark` name** while the spec and parser are written.
 
-[Unreleased]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.12.0...HEAD
+[Unreleased]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.13.0...HEAD
+[0.13.0]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.12.0...barmark-v0.13.0
 [0.12.0]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.11.0...barmark-v0.12.0
 [0.11.0]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.10.0...barmark-v0.11.0
 [0.10.0]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.9.0...barmark-v0.10.0

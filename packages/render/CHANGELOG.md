@@ -6,6 +6,8 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-11-03
+
 ### Added
 
 - **The part** a chart names (`part: Electric Guitar 1`) leads the
@@ -273,7 +275,8 @@ that needs no script or as the `<barmark-chart>` web component. Requires
   zoom without sideways scrolling, the element renders and re-renders, and
   a screen reader hears "bar 9: D". Run them with `bun run test:browser`.
 
-[Unreleased]: https://github.com/kevinpeckham/barmark/compare/render-v0.9.1...HEAD
+[Unreleased]: https://github.com/kevinpeckham/barmark/compare/render-v0.10.0...HEAD
+[0.10.0]: https://github.com/kevinpeckham/barmark/compare/render-v0.9.1...render-v0.10.0
 [0.9.1]: https://github.com/kevinpeckham/barmark/compare/render-v0.9.0...render-v0.9.1
 [0.9.0]: https://github.com/kevinpeckham/barmark/compare/render-v0.8.0...render-v0.9.0
 [0.8.0]: https://github.com/kevinpeckham/barmark/compare/render-v0.7.3...render-v0.8.0
