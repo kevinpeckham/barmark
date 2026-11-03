@@ -3,7 +3,17 @@
  * root, or the bare markup for pages that bring the stylesheet themselves.
  * Every string from the chart is escaped; every bar carries its spoken name.
  */
-import type { ChordRecord, Directives, Key, Repeat, Slot, TempoChange } from "barmark";
+import {
+	type ChordRecord,
+	type Direction,
+	type Directives,
+	type Key,
+	printDirection,
+	printPasses,
+	type Repeat,
+	type Slot,
+	type TempoChange,
+} from "barmark";
 import {
 	type ChordPieces,
 	glyphs,
@@ -144,12 +154,14 @@ function fitWidth(block: SectionBlock): number {
 
 /** Em per bar: padding, plus each slot's text and the gap after it. */
 const cellWidth = (cell: CellModel) =>
-	cell.kind === "fermata"
-		? MIN_BAR
-		: Math.max(
-				MIN_BAR,
-				1.5 + (cell.meter ? 0.8 : 0) + cell.slots.reduce((w, s) => w + slotWidth(s), 0),
-			);
+	cell.kind === "direction"
+		? 1 + 0.55 * printDirection(cell.direction).length
+		: cell.kind === "fermata"
+			? MIN_BAR
+			: Math.max(
+					MIN_BAR,
+					1.5 + (cell.meter ? 0.8 : 0) + cell.slots.reduce((w, s) => w + slotWidth(s), 0),
+				);
 
 /** Roughly: 0.65em a baseline character, 0.4em a superscript one, 0.6em between slots. */
 function slotWidth(slot: Slot): number {
@@ -202,8 +214,10 @@ function rowHtml(row: Row, columns: number, settings: Settings): string {
 		? `<span class="bm-bar-number" part="bar-number" aria-hidden="true">${row.barNumber ?? ""}</span>`
 		: "";
 	let n = row.barNumber;
+	const label = row.ending ? endingLabel(row.ending) : null;
 	const cells = row.cells.map((cell, i) => {
-		const html = cellHtml(cell, n, repeatMarks(row, i), settings.numerals);
+		const ending = i === 0 && label ? ` data-ending="${label.shown}"` : "";
+		const html = cellHtml(cell, n, repeatMarks(row, i) + ending, settings.numerals);
 		if (n !== null && cell.kind === "slots") n++;
 		return html;
 	});
@@ -211,7 +225,19 @@ function rowHtml(row: Row, columns: number, settings: Settings): string {
 		Math.max(0, columns - row.cells.length),
 	);
 	const opens = row.opens || typeof row.repeat === "number" || row.repeat === "open";
-	return `<div class="bm-row">${opens ? `<span class="bm-sr">repeat start</span>` : ""}${number}${cells.join("")}${empty}<span class="bm-repeat">${rowRepeatHtml(row)}</span></div>`;
+	const ending = label ? `<span class="bm-sr">${label.spoken}</span>` : "";
+	return `<div class="bm-row${label ? " bm-ending" : ""}">${opens ? `<span class="bm-sr">repeat start</span>` : ""}${ending}${number}${cells.join("")}${empty}<span class="bm-repeat">${rowRepeatHtml(row)}</span></div>`;
+}
+
+/** An ending's passes as printed, "1.", "1.–3.", "1., 3.", and spoken, "ending for passes 1 to 3". */
+function endingLabel(passes: number[]): { shown: string; spoken: string } {
+	const parts = printPasses(passes)
+		.split(",")
+		.map((part) => part.split("-"));
+	const shown = parts.map((p) => p.map((n) => `${n}.`).join("–")).join(", ");
+	const said = parts.map((p) => p.join(" to "));
+	const list = said.length > 1 ? `${said.slice(0, -1).join(", ")} and ${said.at(-1)}` : said[0];
+	return { shown, spoken: `ending for pass${passes.length > 1 ? "es" : ""} ${list}` };
 }
 
 /** Repeat bar lines: ‖: on a row's first bar, :‖ on its last. */
@@ -237,8 +263,7 @@ function cellHtml(
 	const view: View =
 		numerals && cell.kind === "slots" && cell.key ? { style: numerals, key: cell.key } : null;
 	const spoken = `<span class="bm-sr">${escapeHtml(speakBar(barNumber, cell, view !== null))}</span>`;
-	if (cell.kind === "fermata")
-		return `<div class="bm-bar bm-fermata" part="bar"${marks}>${spoken}<span aria-hidden="true">${FERMATA}</span></div>`;
+	if (cell.kind !== "slots") return betweenBarsHtml(cell, spoken, marks);
 	const meter = cell.meter
 		? `<span class="bm-meter"><span>${cell.meter.n}</span><span>${cell.meter.d}</span></span>`
 		: "";
@@ -246,6 +271,28 @@ function cellHtml(
 	const change = cell.tempoChange ? ` data-tempo-change="${cell.tempoChange}"` : "";
 	return `<div class="bm-bar" part="bar"${cell.cut ? " data-cut" : ""}${change}${marks}>${spoken}<span class="bm-bar-body" aria-hidden="true">${meter}${cell.slots.map((s) => slotHtml(s, view)).join("")}${cut}</span></div>`;
 }
+
+/** A fermata or a direction: a place between bars, drawn as its sign. */
+function betweenBarsHtml(
+	cell: Exclude<CellModel, { kind: "slots" }>,
+	spoken: string,
+	marks: string,
+) {
+	if (cell.kind === "fermata")
+		return `<div class="bm-bar bm-fermata" part="bar"${marks}>${spoken}<span aria-hidden="true">${FERMATA}</span></div>`;
+	return `<div class="bm-bar bm-direction" part="direction" data-direction="${cell.direction.kind}"${marks}>${spoken}<span aria-hidden="true">${directionGlyph(cell.direction)}</span></div>`;
+}
+
+/** Segno and coda as the score's signs; To Coda and the jumps as their words. */
+function directionGlyph(d: Direction): string {
+	if (d.kind === "segno") return SEGNO;
+	if (d.kind === "coda") return CODA;
+	const words = `<span class="bm-direction-words">${escapeHtml(printDirection(d))}</span>`;
+	return d.kind === "to coda" ? `${words} ${CODA}` : words;
+}
+
+const SEGNO = `<svg class="bm-sign" viewBox="0 0 20 28" width="0.9em" height="1.25em"><path d="M14.5 6.5c-1-3-6.5-3.5-7.5-.5s3 4.5 4.5 5.5 5 3.5 3 7-7.5 2-8-1" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><path d="M4 24 16 3" stroke="currentColor" stroke-width="1.6"/><circle cx="4.5" cy="13" r="1.6" fill="currentColor"/><circle cx="15.5" cy="15" r="1.6" fill="currentColor"/></svg>`;
+const CODA = `<svg class="bm-sign" viewBox="0 0 24 24" width="1em" height="1em"><circle cx="12" cy="12" r="6.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 1v22M1 12h22" stroke="currentColor" stroke-width="1.6"/></svg>`;
 
 const FERMATA = `<svg class="bm-fermata-glyph" viewBox="0 0 24 14" width="1.4em" height="0.8em"><path d="M2 13 A10 10 0 0 1 22 13" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="11" r="1.8" fill="currentColor"/></svg>`;
 

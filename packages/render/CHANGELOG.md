@@ -6,6 +6,16 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+Requires `barmark` 0.11.0.
+
+### Added
+
+- Endings: an ending row has a bracket over its bars and a `1.`, `2.`
+  or `1.–3.` label; screen readers hear "ending for pass 1".
+- Directions: Segno and Coda as their signs, To Coda with the coda
+  sign, Fine and the jumps as words. Each is spoken ("dal segno al
+  coda"). Bar numbers skip them, since they are not bars.
+
 ## [0.7.3] - 2026-11-03
 
 Requires `barmark` 0.10.0. No change to the renderer's code: a page that

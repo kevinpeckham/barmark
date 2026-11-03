@@ -128,6 +128,12 @@ const css = `
 .bm-tuplet::after{border-left:none;margin-left:.3em}
 .bm-meter{display:inline-flex;flex-direction:column;align-items:center;align-self:center;font:700 ${em(SIZES.meter)}/.95 ${SANS};color:var(--bm-muted)}
 .bm-fermata-glyph{display:block;color:var(--bm-ink)}
+.bm-row>div.bm-direction{min-width:0;padding-inline:.35em;border-right:none;align-items:flex-start;color:var(--bm-ink)}
+.bm-sign{display:inline-block;vertical-align:middle}
+.bm-direction-words{font:italic ${em(SIZES.repeat)}/1.2 Georgia,serif;white-space:nowrap}
+.bm-bar[data-ending]::after{content:attr(data-ending);position:absolute;left:.45em;top:.2em;font:italic .75em/1 Georgia,serif;color:var(--bm-muted)}
+.bm-ending>.bm-bar{border-top:.06em solid var(--bm-muted)}
+.bm-ending>.bm-bar[data-ending]{box-shadow:inset .06em 0 var(--bm-muted)}
 .bm-bar[data-tempo-change]::before{content:"";position:absolute;inset:.15em 0 auto;border-top:.08em dashed var(--barmark-directive,var(--bm-muted))}
 .bm-bar[data-cut]{outline:.08em dashed var(--bm-muted);outline-offset:-.25em}
 .bm-cut{position:absolute;top:.3em;right:.45em;font:${em(SIZES.cut)}/1 ${SANS};color:var(--bm-muted)}
