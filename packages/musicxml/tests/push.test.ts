@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { all, measures, xmlOf } from "./helpers.js";
+import { expected, play } from "./play.js";
 
 /**
  * A measure as a sequence: `G` for a harmony (its kind text), and a note's
@@ -44,5 +45,19 @@ describe("pushes", () => {
 		const [m] = measures(xmlOf("| C <>G |"));
 		const notes = m?.match(/<note>[\s\S]*?<\/note>/g) ?? [];
 		expect(notes.map((n) => n.includes("<accent/>"))).toEqual([false, true, false]);
+	});
+	test("a push across a repeat sign, an ending or a jump stays on the beat, marked push", () => {
+		// The bar before a repeat ends both passes differently: MusicXML can't write that.
+		for (const text of [
+			"| N.C. |\n|: <D | G :|\n| A |",
+			"|: D | G :|\n| <A |",
+			"|: D |\n|1 G :|\n|2 <A |",
+			"| D | Segno | <G | A | D.S. |",
+		]) {
+			const xml = xmlOf(text);
+			expect(play(xml)).toEqual(expected(text));
+			expect(xml).toContain("<words>push</words>");
+		}
+		expect(xmlOf("| C <G |")).not.toContain("<words>push</words>");
 	});
 });
