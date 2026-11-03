@@ -125,8 +125,13 @@ function moveChord(chord: ChordRecord, move: Move, warn: (token: string) => void
 }
 
 function moveCells(cells: Cell[], move: Move, warn: (token: string) => void): Cell[] {
-	const simple = (s: SimpleSlot): SimpleSlot =>
-		s.kind === "chord" ? { kind: "chord", chord: moveChord(s.chord, move, warn) } : s;
+	const simple = (s: SimpleSlot): SimpleSlot => {
+		if (s.kind !== "chord") return s;
+		const chord = moveChord(s.chord, move, warn);
+		return s.voicing
+			? { ...s, chord, voicing: moveNoteSet(s.voicing, move, warn) }
+			: { ...s, chord };
+	};
 	const slot = (s: Slot): Slot =>
 		s.kind === "group" ? { kind: "group", members: s.members.map(simple) } : simple(s);
 	return cells.map((c) => (c.kind === "slots" ? { ...c, slots: c.slots.map(slot) } : c));

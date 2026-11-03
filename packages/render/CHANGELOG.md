@@ -13,6 +13,13 @@ package uses [semantic versioning](https://semver.org/).
 - **Words on a bar** draw small, above the slot they precede, or at the
   bar's end (`part="words"`), and are spoken in place: "bar 1: “solo” D,
   A".
+- **Accents and hits** draw `>` or `^` above the chord
+  (`data-articulation`), spoken "accented D" and "D short hit".
+- **Pushes** draw `‹` (an eighth) or `«` (a sixteenth) before the slot
+  (`data-push`), spoken "D pushed" and "D pushed a sixteenth".
+- **Omissions** are spoken "C seven no third".
+- **Voicings** draw the chord's name; a screen reader hears the notes:
+  "C major seven voiced E3 G3 B3 C4".
 
 ## [0.8.0] - 2026-11-03
 

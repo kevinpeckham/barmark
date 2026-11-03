@@ -11,8 +11,10 @@ import type {
 	Line,
 	Meter,
 	PlayedBar,
+	Push,
 	Repeat,
 	SectionOccurrence,
+	SimpleSlot,
 	Slot,
 	TempoChange,
 	Words,
@@ -65,6 +67,28 @@ function uneven(slots: number, meter: Meter, line: number): ChartDiagnostic | nu
 		message: `${slots} slots divide ${b} beats unevenly`,
 		token: `${slots}`,
 	};
+}
+
+const PUSH_MARKS = { eighth: "<", sixteenth: "<<" } as const;
+const PUSH_LENGTH = { eighth: 1 / 8, sixteenth: 1 / 16 } as const;
+
+/** Each simple slot of a bar, in order, with how long it lasts in whole notes. */
+function timed(bar: PlayedBar): { slot: SimpleSlot & { push?: Push }; length: number }[] {
+	const each = bar.meter.n / bar.meter.d / bar.slots.length;
+	return bar.slots.flatMap((s) =>
+		s.kind === "group"
+			? s.members.map((m) => ({ slot: m, length: each / s.members.length }))
+			: [{ slot: s, length: each }],
+	);
+}
+
+/** Why a push can't take its time from a slot this long; null when it can. */
+function pushProblem(push: Push, before: number | null): string | null {
+	if (before === null)
+		return "a push takes its time from the slot before it, and nothing plays before this one; write a pickup bar";
+	return PUSH_LENGTH[push] > before + 1e-9
+		? `${push === "eighth" ? "an eighth" : "a sixteenth"} push is longer than the slot before it`
+		: null;
 }
 
 const normalize = (name: string) => name.toLowerCase().replace(/\s+/g, " ").trim();
@@ -293,15 +317,35 @@ export function expand(lines: Line[]): {
 			...(p.words === undefined ? {} : { words: p.words }),
 		};
 	};
+	/** How long the slot played just before is, in whole notes; null after a fermata or at the start. */
+	const before: { length: number | null } = { length: null };
+	const pushReported = new Set<string>();
+	/** Each push takes its time from the slot played just before it (grammar 2.8). */
+	const checkPushes = (bar: PlayedBar) => {
+		for (const { slot, length } of timed(bar)) {
+			const problem = slot.push && pushProblem(slot.push, before.length);
+			const key = `${bar.line}\u0000${problem}`;
+			if (problem && !pushReported.has(key)) {
+				pushReported.add(key);
+				error(bar.line, problem, PUSH_MARKS[slot.push ?? "eighth"]);
+			}
+			before.length = length;
+		}
+	};
 	const emit = (p: Played, line: number, out: ChartEvent[]) => {
 		if (stopped()) return;
 		if (p.kind === "direction") return direct(p.direction);
 		if (seeking()) return;
 		if (++work > MAX_WORK) return stop(line);
-		if (p.kind === "fermata") return void out.push({ kind: "fermata", line });
+		if (p.kind === "fermata") {
+			before.length = null;
+			return void out.push({ kind: "fermata", line });
+		}
 		if (count >= MAX_EXPANDED_BARS) return stop(line);
 		count++;
-		out.push({ kind: "bar", bar: barOf(p, line) });
+		const bar = barOf(p, line);
+		checkPushes(bar);
+		out.push({ kind: "bar", bar });
 	};
 	/** Play `body` `repeat` times into `out`; an open repeat plays one pass inside an open event. */
 	const times = (

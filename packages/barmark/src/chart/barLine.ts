@@ -1,12 +1,16 @@
+import { noteSemitone } from "../chords/intervals.js";
 import { parseNoteSet } from "../chords/noteSet.js";
 import { parseChord } from "../chords/parse.js";
+import type { ChordRecord, ParseResult } from "../chords/types.js";
 import { isDirectionWord, readDirection } from "./direction.js";
 import { parseMeter } from "./directives.js";
 import type {
+	Articulation,
 	Cell,
 	ChartDiagnostic,
 	Line,
 	Meter,
+	Push,
 	Repeat,
 	SimpleSlot,
 	Slot,
@@ -262,6 +266,81 @@ function directionWithWords(
 	return words.length ? { problem: "words go on a bar, not on a direction", token } : d;
 }
 
+const ARTICULATION: Record<string, Articulation> = { ">": "accent", "^": "hit" };
+const PUSH: Record<number, Push> = { 1: "eighth", 2: "sixteenth" };
+
+/** A slot's leading marks (grammar 2.7, 2.8): a push, then an articulation, then the slot itself. */
+function readMarks(
+	token: string,
+): { push?: Push; articulation?: Articulation; rest: string } | Problem {
+	const pushes = /^<*/.exec(token)?.[0].length ?? 0;
+	const push = PUSH[pushes];
+	if (pushes && !push) return { problem: "a push is < (an eighth) or << (a sixteenth)", token };
+	const marked = readArticulation(token.slice(pushes), token);
+	return "problem" in marked ? marked : { ...(push ? { push } : {}), ...marked };
+}
+
+/** A leading `>` or `^`, and the slot after it; a push after it is written in the wrong order. */
+function readArticulation(
+	text: string,
+	token: string,
+): { articulation?: Articulation; rest: string } | Problem {
+	const articulation = ARTICULATION[text[0] ?? ""];
+	if (!articulation) return { rest: text };
+	const rest = text.slice(1);
+	if (!rest.startsWith("<")) return { articulation, rest };
+	const suggestion = rest.replace(/^(<+)/, `$1${text[0]}`);
+	return { problem: "a push and an accent: write the push first", token, suggestion };
+}
+
+const UNPUSHABLE = new Set(["/", "?", "%", "...", "…"]);
+
+/** Why these marks can't go on this slot; null when they can. */
+function marksProblem(
+	marks: { push?: Push; articulation?: Articulation; rest: string },
+	inGroup: boolean,
+	token: string,
+): Problem | null {
+	if (marks.push && inGroup)
+		return { problem: "a push goes on a whole slot, not inside a group", token };
+	if (marks.push && UNPUSHABLE.has(marks.rest))
+		return { problem: "a push goes on a chord, a note set, N.C. or --", token };
+	const plain =
+		UNPUSHABLE.has(marks.rest) || SILENCE.has(marks.rest) || /^n\.?c\.?$/i.test(marks.rest);
+	if (marks.articulation && plain)
+		return { problem: "an accent or a hit goes on a chord or a note set", token };
+	return null;
+}
+
+/** Whether a voicing's note is one of the chord's, by pitch class. */
+const inChord = (note: string, chord: ChordRecord) => {
+	const pc = (n: string) => (noteSemitone(n.replace(/\d|!/g, "")) + 12) % 12;
+	return chord.pitches.some((p) => pc(p) === pc(note));
+};
+
+/** `Cmaj7{E3 G3 B3}`: the chord, and the notes it is voiced with, each one of its own (grammar 4.2). */
+function parseVoiced(
+	token: string,
+	brace: number,
+): { chord: ChordRecord; voicing: ChordRecord; warnings: ParseResult[] } | Problem {
+	const chord = parseChord(token.slice(0, brace));
+	if (!chord.ok)
+		return {
+			problem: chord.error.message,
+			token,
+			...(chord.error.suggestion ? { suggestion: chord.error.suggestion } : {}),
+		};
+	const voicing = parseNoteSet(token.slice(brace));
+	if (!voicing.ok) return { problem: voicing.error.message, token: voicing.error.token };
+	const stray = voicing.value.pitches.find((n) => !inChord(n, chord.value));
+	if (stray)
+		return {
+			problem: `${stray.replace(/\d/g, "")} is not in ${chord.value.canonical}`,
+			token: stray,
+		};
+	return { chord: chord.value, voicing: voicing.value, warnings: [chord, voicing] };
+}
+
 /** A cell that is one thing alone (a mark, a direction, `%` or `...`), or what is wrong with it. */
 const standalone = (bare: string, meter: Meter | null, words: Words[]) =>
 	rehearsalCell(bare, meter, words) ??
@@ -351,6 +430,7 @@ export function parseBarLine(
 	if (parts.at(-1)?.trim() === "") parts.pop();
 	else warn("missing trailing |", parts.at(-1)?.trim() ?? "");
 
+	const report = (p: Problem): null => error(p.problem, p.token, p.suggestion);
 	const simple = (token: string): SimpleSlot | null => {
 		if (token === "/") return { kind: "hold" };
 		if (SILENCE.has(token)) return { kind: "silence" };
@@ -364,24 +444,51 @@ export function parseBarLine(
 		if (misplaced) return error("a repeat is written x N after the final |", token, misplaced);
 		const alone = mustStandAlone(token);
 		if (alone) return error(alone, token);
-		const r = token.startsWith("{") ? parseNoteSet(token) : parseChord(token);
+		return chordSlot(token);
+	};
+	/** A chord, a note set, or a chord with its voicing. */
+	const chordSlot = (token: string): SimpleSlot | null => {
+		const brace = token.indexOf("{");
+		if (brace > 0) {
+			const v = parseVoiced(token, brace);
+			if ("problem" in v) return report(v);
+			for (const r of v.warnings) for (const w of r.ok ? r.warnings : []) warn(w.message, w.token);
+			return { kind: "chord", chord: v.chord, voicing: v.voicing };
+		}
+		const r = brace === 0 ? parseNoteSet(token) : parseChord(token);
 		if (!r.ok) return error(r.error.message, token, r.error.suggestion);
 		for (const w of r.warnings) warn(w.message, w.token);
 		return { kind: "chord", chord: r.value };
+	};
+	/** A slot with its push and articulation, if written. */
+	const markedSlot = (token: string, inGroup: boolean): SimpleSlot | null => {
+		const marks = readMarks(token);
+		if ("problem" in marks) return report(marks);
+		const problem = marksProblem(marks, inGroup, token);
+		if (problem) return report(problem);
+		const base = simple(marks.rest);
+		const { push, articulation } = marks;
+		return (
+			base &&
+			({
+				...base,
+				...(push ? { push } : {}),
+				...(articulation ? { articulation } : {}),
+			} as SimpleSlot)
+		);
 	};
 
 	/** One slot token: a simple slot, or a `_` group of them. */
 	const slotOf = (token: string): Slot | null => {
 		const members = groupMembers(token);
-		if (members.length === 1) return simple(token);
+		if (members.length === 1) return markedSlot(token, false);
 		const out: SimpleSlot[] = [];
 		for (const m of members) {
-			const s = m ? simple(m) : error("an empty member in a group", token);
+			const s = m ? markedSlot(m, true) : error("an empty member in a group", token);
 			if (s) out.push(s);
 		}
 		return { kind: "group", members: out };
 	};
-	const report = (p: Problem): null => error(p.problem, p.token, p.suggestion);
 	const readCell = (raw: string): Cell | null => {
 		const rest = raw.trim();
 		if (!rest) return error("an empty cell; use / to hold or % to repeat", "| |");

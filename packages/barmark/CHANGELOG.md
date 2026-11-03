@@ -9,7 +9,9 @@ Releases follow the process in [RELEASING.md](RELEASING.md).
 
 ## [Unreleased]
 
-Rehearsal marks and words on a bar, issue #70 (grammar 2.5 and 2.6).
+Rehearsal marks and words on a bar, issue #70 (grammar 2.5 and 2.6);
+omissions, voicings, accents, hits and push marks (grammar 2.7, 2.8, 3
+and 4.2).
 
 ### Added
 
@@ -22,7 +24,25 @@ Rehearsal marks and words on a bar, issue #70 (grammar 2.5 and 2.6).
   end after the last. Curly quotes are accepted. They carry no musical
   meaning. Cells and played bars gain `words` (`{ text, at }`), present
   only when written.
-- **Errors with line numbers** for a mark that shares its cell (with
+- **Omissions:** `no3` and `no5` in a chord's parentheses leave out its
+  third or fifth (`C7(no3)`, `C7(b9,no5)`). `(omit3)` and `(omit 3)`
+  are accepted and print as `(no3)`; `C(no3)` prints as `C5`. Harte
+  labels mark them with `*` (`C:7(*3)`).
+- **Voicings:** a chord name followed by a note set gives the chord and
+  its exact notes (`Cmaj7{E3 G3 B3 C4}`). Every note must be in the
+  chord. Chord slots gain `voicing`, and it transposes with the chord.
+- **Accents and hits:** `>D` accents a chord or note set and `^D` makes
+  it a hit, short and accented. Chord slots gain `articulation`
+  (`"accent"` or `"hit"`).
+- **Push marks:** `<D` arrives an eighth early and `<<D` a sixteenth,
+  taking the time from the slot played just before it in play order,
+  so a pushed downbeat works inside repeats, replays and jumps. Chord,
+  `N.C.` and `--` slots gain `push` (`"eighth"` or `"sixteenth"`).
+- **Errors with line numbers** for an omission the chord can't make, a
+  voicing note not in its chord, an accent on anything but a chord or
+  note set, a push with nothing before it or longer than the slot it
+  borrows from, a push on `/`, `%`, `?` or inside a group, and `^<D`
+  (with the fix `<^D`); and for a mark that shares its cell (with
   the fix), a bad label, a mark with no bar after it, two marks on one
   bar, an unclosed quote, empty quotes and words with no bar.
 

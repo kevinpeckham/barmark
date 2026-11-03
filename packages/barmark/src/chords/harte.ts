@@ -8,7 +8,13 @@ import {
 import { printSuffix } from "./print.js";
 import { enumerateSuffixes, intervalSetKey } from "./suffixes.js";
 import type { ChordRecord, Interval } from "./types.js";
-import { byDegree, type ChordParts, chordIntervals, HARTE_SHORTHANDS } from "./vocabulary.js";
+import {
+	byDegree,
+	type ChordParts,
+	chordIntervals,
+	HARTE_SHORTHANDS,
+	isOmission,
+} from "./vocabulary.js";
 
 /**
  * The Harte label for a parsed chord or note set: the largest shorthand
@@ -18,7 +24,8 @@ import { byDegree, type ChordParts, chordIntervals, HARTE_SHORTHANDS } from "./v
  */
 export function toHarte(r: ChordRecord): string {
 	const root = r.root ?? r.bass;
-	const keys = new Set(r.intervals.map(intervalKey));
+	const left = omitted(r);
+	const keys = new Set([...r.intervals, ...left].map(intervalKey));
 	const written = new Set(r.intervals.map(formatInterval));
 	// Most intervals wins; ties go to the shorthand naming more degrees exactly as
 	// written (sus4 over sus2 in a 9sus4, whose 9 only shares the 2's pitch class).
@@ -33,9 +40,20 @@ export function toHarte(r: ChordRecord): string {
 	}
 	const { name: shorthand, used } = best;
 	const added = r.intervals.filter((i) => !used.has(intervalKey(i))).sort(byDegree);
-	const list = added.length ? `(${added.map(formatInterval).join(",")})` : "";
+	// Harte marks a tone its shorthand has and the chord leaves out with `*` (`C:7(*3)`).
+	const out = left.filter((i) => used.has(intervalKey(i))).map((i) => `*${formatInterval(i)}`);
+	const items = [...added.map(formatInterval), ...out];
+	const list = items.length ? `(${items.join(",")})` : "";
 	const bass = r.bass === root ? "" : `/${formatInterval(intervalBetween(root, r.bass))}`;
 	return `${root}:${shorthand}${list}${bass}`;
+}
+
+/** The intervals a chord's `no3`/`no5` leave out, so its label can name them. */
+function omitted(r: ChordRecord): Interval[] {
+	if (!r.parts?.tones.some(isOmission)) return [];
+	const kept = { ...r.parts, tones: r.parts.tones.filter((t) => !isOmission(t)) };
+	const keys = new Set(r.intervals.map(intervalKey));
+	return chordIntervals(kept, "").intervals.filter((i) => !keys.has(intervalKey(i)));
 }
 
 /** What annotators mean by each Harte shorthand, as a barmark suffix (so `13` is barmark's 13). */

@@ -1,8 +1,10 @@
-import { byDegree, type ChordParts, toneInterval } from "./vocabulary.js";
+import { byDegree, type ChordParts, isOmission, toneInterval } from "./vocabulary.js";
 
-/** The tones in canonical order (by degree), as the canonical spelling lists them. */
-const sortTones = (tones: string[]) =>
-	[...tones].sort((a, b) => byDegree(toneInterval(a), toneInterval(b)));
+/** The tones in canonical order: added tones by degree, then what is left out (`(b9,no5)`). */
+const sortTones = (tones: string[]) => [
+	...tones.filter((t) => !isOmission(t)).sort((a, b) => byDegree(toneInterval(a), toneInterval(b))),
+	...tones.filter(isOmission).sort(),
+];
 
 /** The parts as the canonical spelling has them: the same parts, tones sorted. */
 export function canonicalParts(parts: ChordParts): ChordParts {
