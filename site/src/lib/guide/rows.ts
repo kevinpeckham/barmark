@@ -733,6 +733,17 @@ export const ROWS: GuideRow[] = [
 
 	// Directives
 	{
+		id: "part",
+		syntax: "part:",
+		category: "directives",
+		meaning:
+			"Names the part the chart is for, once, before the first bar, on a line of its own; a short label may come first, then =.",
+		terms: ["part", "instrument", "staff", "part name", "guitar part", "piano part", "track name"],
+		example: "part: Gtr = Electric Guitar 1\nkey: G\n| G | D |",
+		ref: "§7.3",
+		expect: { bars: 2 },
+	},
+	{
 		id: "key",
 		syntax: "key:",
 		category: "directives",
