@@ -5,17 +5,21 @@ import type { ChartDiagnostic, ChartEvent, ChartParse, Part, PartBar, PlayedBar 
 
 const RANK = { error: 0, warning: 1 };
 
-/** Sorted by line, errors before warnings, each reported once. */
-function sortDiagnostics(all: ChartDiagnostic[]): ChartDiagnostic[] {
-	const seen = new Set<string>();
-	return all
-		.filter((d) => {
-			const key = `${d.line}\u0000${d.severity}\u0000${d.message}`;
-			if (seen.has(key)) return false;
-			seen.add(key);
-			return true;
-		})
-		.sort((a, b) => a.line - b.line || RANK[a.severity] - RANK[b.severity]);
+/** Sorted by line, errors before warnings. */
+const sortDiagnostics = (all: ChartDiagnostic[]) =>
+	all.sort((a, b) => a.line - b.line || RANK[a.severity] - RANK[b.severity]);
+
+const keyOf = (d: ChartDiagnostic) => `${d.line}\u0000${d.severity}\u0000${d.message}`;
+
+/** What every part reported, a problem the parts share once: each kept as often as one part reports it. */
+function mergeReports(each: ChartDiagnostic[][]): ChartDiagnostic[] {
+	const most = new Map<string, ChartDiagnostic[]>();
+	for (const list of each) {
+		const mine = new Map<string, ChartDiagnostic[]>();
+		for (const d of list) mine.set(keyOf(d), [...(mine.get(keyOf(d)) ?? []), d]);
+		for (const [k, ds] of mine) if (ds.length > (most.get(k)?.length ?? 0)) most.set(k, ds);
+	}
+	return [...most.values()].flat();
 }
 
 const partBar = (b: PlayedBar): PartBar =>
@@ -64,7 +68,7 @@ function zipEvents(each: ChartEvent[][], report: (d: ChartDiagnostic) => void): 
 /** Several parts: each projected and played, then zipped into one timeline (grammar 7.4). */
 function playParts(lines: ReturnType<typeof readDocument>["lines"], parts: Part[]) {
 	const played = parts.map((p) => expand(projectPart(lines, parts, p.label ?? ""), p.label));
-	const diagnostics = played.flatMap((p) => p.diagnostics);
+	const diagnostics = mergeReports(played.map((p) => p.diagnostics));
 	const events = zipEvents(
 		played.map((p) => p.events),
 		(d) => diagnostics.push(d),
