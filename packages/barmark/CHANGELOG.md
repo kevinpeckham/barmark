@@ -9,6 +9,10 @@ Releases follow the process in [RELEASING.md](RELEASING.md).
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-11-03
+
+Written bar numbers on played bars, issue #70. No chart changes meaning.
+
 ### Added
 
 - **Written bar numbers** (issue #70): every played bar has `written`, its
@@ -230,7 +234,8 @@ The first working release: the reference parser and printer for the
 
 - **A placeholder package that holds the `barmark` name** while the spec and parser are written.
 
-[Unreleased]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.9.0...HEAD
+[Unreleased]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.10.0...HEAD
+[0.10.0]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.9.0...barmark-v0.10.0
 [0.9.0]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.8.0...barmark-v0.9.0
 [0.8.0]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.7.0...barmark-v0.8.0
 [0.7.0]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.6.0...barmark-v0.7.0
