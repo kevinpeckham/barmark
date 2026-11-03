@@ -14,7 +14,7 @@ describe("the site builds", () => {
 		const pkg = JSON.parse(readFileSync(join(site, "package.json"), "utf8"));
 		expect(pkg.dependencies).toEqual({
 			barmark: "0.12.0",
-			"@barmark/render": "0.9.0",
+			"@barmark/render": "0.9.1",
 			"@vercel/analytics": "2.0.1",
 			"@vercel/speed-insights": "2.0.0",
 		});
