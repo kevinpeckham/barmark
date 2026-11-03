@@ -14,6 +14,17 @@ package uses [semantic versioning](https://semver.org/).
   got a one-part view by accident, and `el.part` could not return the
   label. `renderChart`'s option stays `part`.
 
+### Fixed
+
+- A system shows and speaks what its rows share once, on its first drawn
+  row: the bar number, "repeat start", the ending's number and ×N. Every
+  row still draws its repeat bar lines. A system whose first part's line
+  has an error numbers the next row.
+- Tacet rows carry `bm-tacet` in a part's own view too, and a tacet bar
+  cut in a `->` replay is marked and spoken as cut.
+- The "no part labelled X" warning is about the whole chart: its line is
+  0, and the diagnostics list shows it without a line number.
+
 ## [0.11.0] - 2026-11-03
 
 Needs `barmark` 0.14.0.

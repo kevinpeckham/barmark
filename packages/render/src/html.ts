@@ -25,7 +25,7 @@ import {
 } from "./chord.js";
 import { escapeHtml } from "./escape.js";
 import { fontFaceCss } from "./font.js";
-import { layoutChart } from "./model.js";
+import { isTacet as isTacetCell, layoutChart } from "./model.js";
 import { speakBar } from "./speech.js";
 import { FIT_STEPS, MIN_BAR, stylesheet } from "./styles.js";
 import type { BlockItem, CellModel, ChartModel, SectionBlock } from "./types.js";
@@ -239,10 +239,12 @@ function systemHtml(
 	settings: Settings,
 ): string {
 	const names = escapeHtml(item.rows.map((p) => p.name).join(", "));
+	// The first drawn row carries what the system shares: its number, ×N, the ending's number.
+	const lead = item.rows.findIndex((p) => p.row.kind === "row");
 	const rows = item.rows.map((p, i) =>
 		p.row.kind === "error"
 			? errorHtml(p.row.source, p.row.messages)
-			: rowHtml(p.row, columns, settings, { label: p.label, name: p.name, first: i === 0 }),
+			: rowHtml(p.row, columns, settings, { label: p.label, name: p.name, first: i === lead }),
 	);
 	return `<div class="bm-system" role="group" aria-label="${names}">${rows.join("")}</div>`;
 }
@@ -257,17 +259,14 @@ function gutterHtml(row: Row, settings: Settings, part?: PartRow): string {
 	return `<span class="bm-bar-number" part="bar-number" aria-hidden="true">${label}${number}</span>`;
 }
 
-const isTacetCell = (c: CellModel) => c.kind === "slots" && c.tacet === true;
-
 /** A row's cells; a tacet row says "tacet" in its first bar. */
 function rowCells(row: Row, numerals: Numerals | null, ending: string): string[] {
 	let n = row.barNumber;
 	const firstTacet = row.cells.findIndex(isTacetCell);
 	return row.cells.map((cell, i) => {
 		const marks = repeatMarks(row, i) + (i === 0 ? ending : "");
-		const spoken = `<span class="bm-sr">bar ${n ?? ""}: tacet</span>`;
 		const html = isTacetCell(cell)
-			? tacetHtml(spoken, marks, i === firstTacet ? "tacet" : "")
+			? tacetHtml(cell, n, marks, i === firstTacet)
 			: cellHtml(cell, n, marks, numerals);
 		if (n !== null && cell.kind === "slots") n++;
 		return html;
@@ -280,25 +279,29 @@ const sr = (text: string) => (text ? `<span class="bm-sr">${text}</span>` : "");
 function rowClasses(row: Row, part: PartRow | undefined): string {
 	const classes = ["bm-row"];
 	if (part) classes.push("bm-part-row");
-	if (part && row.cells.some(isTacetCell)) classes.push("bm-tacet");
+	if (row.cells.some(isTacetCell)) classes.push("bm-tacet");
 	if (row.ending) classes.push("bm-ending");
 	return classes.join(" ");
 }
 
 /** What a screen reader hears before a row's bars: its part, a repeat start, its ending. */
 function rowOpening(row: Row, part: PartRow | undefined, ending: string): string {
-	const opens = row.opens || typeof row.repeat === "number" || row.repeat === "open";
+	const opens =
+		leads(part) && (row.opens || typeof row.repeat === "number" || row.repeat === "open");
 	return sr(part ? escapeHtml(part.name) : "") + sr(opens ? "repeat start" : "") + sr(ending);
 }
 
+/** Whether a row says what its system shares: a row on its own, or a system's first drawn row. */
+const leads = (part: PartRow | undefined) => !part || part.first;
+
 function rowHtml(row: Row, columns: number, settings: Settings, part?: PartRow): string {
-	const label = row.ending ? endingLabel(row.ending) : null;
+	const label = row.ending && leads(part) ? endingLabel(row.ending) : null;
 	const cells = rowCells(row, settings.numerals, label ? ` data-ending="${label.shown}"` : "");
 	const empty = `<span class="bm-empty" aria-hidden="true"></span>`.repeat(
 		Math.max(0, columns - row.cells.length),
 	);
 	const said = rowOpening(row, part, label?.spoken ?? "");
-	return `<div class="${rowClasses(row, part)}">${said}${gutterHtml(row, settings, part)}${cells.join("")}${empty}<span class="bm-repeat">${rowRepeatHtml(row)}</span></div>`;
+	return `<div class="${rowClasses(row, part)}">${said}${gutterHtml(row, settings, part)}${cells.join("")}${empty}<span class="bm-repeat">${leads(part) ? rowRepeatHtml(row) : ""}</span></div>`;
 }
 
 /** An ending's passes as printed, "1.", "1.–3.", "1., 3.", and spoken, "ending for passes 1 to 3". */
@@ -353,8 +356,10 @@ function barBody(cell: Extract<CellModel, { kind: "slots" }>, view: View): [stri
 }
 
 /** A bar where the part rests; the first of a row says so, in its body. */
-function tacetHtml(spoken: string, marks: string, text = ""): string {
-	return `<div class="bm-bar bm-tacet-bar" part="bar"${marks}>${spoken}<span class="bm-bar-body" aria-hidden="true">${text}</span></div>`;
+function tacetHtml(cell: CellModel, n: number | null, marks: string, first: boolean): string {
+	const cut = cell.kind === "slots" && cell.cut;
+	const spoken = `<span class="bm-sr">bar ${n ?? ""}: tacet${cut ? ", cut on this pass" : ""}</span>`;
+	return `<div class="bm-bar bm-tacet-bar" part="bar"${marks}${cut ? " data-cut" : ""}>${spoken}<span class="bm-bar-body" aria-hidden="true">${first ? "tacet" : ""}</span></div>`;
 }
 
 /** A bar's slots, each under any words before it, and the words after the last slot. */
@@ -480,5 +485,7 @@ function notesHtml(record: ChordRecord): string {
 
 function diagnosticsHtml(model: ChartModel): string {
 	if (!model.diagnostics.length) return "";
-	return `<ul class="bm-diagnostics">${model.diagnostics.map((d) => `<li class="bm-${d.severity}">line ${d.line}: ${escapeHtml(d.message)}</li>`).join("")}</ul>`;
+	// Line 0: about the whole chart, not a line of it.
+	const at = (line: number) => (line > 0 ? `line ${line}: ` : "");
+	return `<ul class="bm-diagnostics">${model.diagnostics.map((d) => `<li class="bm-${d.severity}">${at(d.line)}${escapeHtml(d.message)}</li>`).join("")}</ul>`;
 }
