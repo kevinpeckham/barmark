@@ -173,7 +173,15 @@ export type PlayedBar = {
 	words?: Words[];
 	/** Set when the part is tacet in this bar (grammar 7.4): its slots then read `N.C.`. */
 	tacet?: true;
+	/**
+	 * In a chart of several parts, each part's bar, aligned with
+	 * `ChartParse.parts`; null where that part is tacet. The top-level
+	 * `slots` and `words` are the first part's.
+	 */
+	parts?: PartBar[];
 };
+/** One part's share of a played bar (grammar 7.4): the line it is written on, its slots and words. */
+export type PartBar = { line: number; slots: Slot[]; words?: Words[] } | null;
 /** An open repeat shows one pass; the number of passes is unknown. */
 export type ChartEvent =
 	| { kind: "bar"; bar: PlayedBar }
