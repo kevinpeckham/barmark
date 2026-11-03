@@ -163,8 +163,12 @@ function cellWidth(cell: CellModel): number {
 	);
 }
 
-/** Roughly: 0.65em a baseline character, 0.4em a superscript one, 0.6em between slots. */
+/** Roughly: 0.65em a baseline character, 0.4em a superscript one, 0.6em between slots, 0.45em a push mark. */
 function slotWidth(slot: Slot): number {
+	return ("push" in slot && slot.push ? 0.45 : 0) + unmarkedWidth(slot);
+}
+
+function unmarkedWidth(slot: Slot): number {
 	if (slot.kind === "group") return slot.members.reduce((w, m) => w + slotWidth(m), 0.2);
 	if (slot.kind !== "chord") return slot.kind === "nc" ? 1.8 : 1.4;
 	const { chord } = slot;
@@ -325,7 +329,28 @@ const CODA = `<svg class="bm-sign" viewBox="0 0 24 24" width="1em" height="1em">
 
 const FERMATA = `<svg class="bm-fermata-glyph" viewBox="0 0 24 14" width="1.4em" height="0.8em"><path d="M2 13 A10 10 0 0 1 22 13" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="11" r="1.8" fill="currentColor"/></svg>`;
 
+/** `‹` for an eighth push, `«` for a sixteenth. */
+const PUSH_MARK = { eighth: "‹", sixteenth: "«" } as const;
+const ARTICULATION_MARK = { accent: ">", hit: "^" } as const;
+
+const marksOf = (slot: Slot) => ({
+	push: "push" in slot ? (slot.push ?? null) : null,
+	articulation: slot.kind === "chord" ? (slot.articulation ?? null) : null,
+});
+
+/** A slot with its push mark before it and its accent or hit above it. */
 function slotHtml(slot: Slot, view: View): string {
+	const body = unmarkedSlotHtml(slot, view);
+	const { push, articulation } = marksOf(slot);
+	if (!push && !articulation) return body;
+	const data = `${push ? ` data-push="${push}"` : ""}${articulation ? ` data-articulation="${articulation}"` : ""}`;
+	const above = articulation
+		? `<span class="bm-artic">${ARTICULATION_MARK[articulation]}</span>`
+		: "";
+	return `<span class="bm-marked"${data}>${push ? `<span class="bm-push" aria-hidden="true">${PUSH_MARK[push]}</span>` : ""}${above}${body}</span>`;
+}
+
+function unmarkedSlotHtml(slot: Slot, view: View): string {
 	switch (slot.kind) {
 		case "chord":
 			return chordHtml(slot.chord, view);

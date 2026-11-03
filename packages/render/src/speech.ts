@@ -72,7 +72,10 @@ function speakPitch(label: string): string {
 }
 
 /** `b9` → "flat nine"; a natural tone is added: `9` → "add nine". */
+const LEFT_OUT: Record<string, string> = { no3: "no third", no5: "no fifth" };
+
 function speakTone(tone: string): string {
+	if (LEFT_OUT[tone]) return LEFT_OUT[tone];
 	const m = /^(#|b)?(\d+)$/.exec(tone);
 	if (!m) return tone;
 	return `${m[1] ? (m[1] === "#" ? "sharp" : "flat") : "add"} ${number(m[2] ?? "")}`;
@@ -118,10 +121,25 @@ export function speakChord(record: ChordRecord, key?: Key): string {
 	return `${degree ? `${degree}, ` : ""}${speakParts(record.parts)}`;
 }
 
+const PUSHED = { eighth: "pushed", sixteenth: "pushed a sixteenth" } as const;
+
+/** A chord with its voicing and articulation: "accented D", "G short hit", "C major seven voiced E3 G3". */
+function speakChordSlot(slot: Extract<Slot, { kind: "chord" }>, key?: Key): string {
+	const name = speakChord(slot.chord, key);
+	const voiced = slot.voicing ? `${name} voiced ${slot.voicing.pitches.join(" ")}` : name;
+	if (slot.articulation === "accent") return `accented ${voiced}`;
+	return slot.articulation === "hit" ? `${voiced} short hit` : voiced;
+}
+
 export function speakSlot(slot: Slot, key?: Key): string {
+	const said = speakUnpushed(slot, key);
+	return "push" in slot && slot.push ? `${said} ${PUSHED[slot.push]}` : said;
+}
+
+function speakUnpushed(slot: Slot, key?: Key): string {
 	switch (slot.kind) {
 		case "chord":
-			return speakChord(slot.chord, key);
+			return speakChordSlot(slot, key);
 		case "hold":
 			return "hold";
 		case "nc":
