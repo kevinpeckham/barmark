@@ -62,6 +62,10 @@ export const SUS_ALLOWED_WITH: (Extension | null)[] = [null, "7", "9", "13"];
 /** Tones a parenthesis may hold. Tone `7` means the interval b7. */
 export const TONES = ["2", "4", "6", "7", "9", "11", "13", "b5", "#5", "b9", "#9", "#11", "b13"];
 
+/** Tones a parenthesis may leave out (grammar 3): the 3rd or the 5th. */
+export const OMISSIONS = ["no3", "no5"];
+export const isOmission = (tone: string) => tone.startsWith("no");
+
 export const toneInterval = (tone: string): Interval => {
 	const i = parseInterval(tone === "7" ? "b7" : tone);
 	if (!i) throw new Error(`bad tone ${tone}`);

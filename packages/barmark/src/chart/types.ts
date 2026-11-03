@@ -40,12 +40,30 @@ export type Directives = {
 	swingPercent?: number;
 };
 
-/** A chord slot holds a chord symbol or a note set; `chord.kind` tells which. */
+/** `>` accents a chord; `^` makes it a hit, short and accented (grammar 2.7). */
+export type Articulation = "accent" | "hit";
+/**
+ * How early a slot arrives (grammar 2.8): `<` an eighth note, `<<` a
+ * sixteenth, taken from the slot played just before it.
+ */
+export type Push = "eighth" | "sixteenth";
+/**
+ * A chord slot holds a chord symbol or a note set; `chord.kind` tells
+ * which. `voicing` is the exact notes written after a chord's name
+ * (`Cmaj7{E3 G3 B3}`, grammar 4.2). The optional fields are present only
+ * when written.
+ */
 export type SimpleSlot =
-	| { kind: "chord"; chord: ChordRecord }
+	| {
+			kind: "chord";
+			chord: ChordRecord;
+			voicing?: ChordRecord;
+			articulation?: Articulation;
+			push?: Push;
+	  }
 	| { kind: "hold" }
-	| { kind: "nc" }
-	| { kind: "silence" }
+	| { kind: "nc"; push?: Push }
+	| { kind: "silence"; push?: Push }
 	| { kind: "unknown" };
 export type Slot = SimpleSlot | { kind: "group"; members: SimpleSlot[] };
 /**

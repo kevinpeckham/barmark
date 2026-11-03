@@ -18,7 +18,7 @@ import type {
 /** A slot with no attack of its own continues whatever sounds before it. A repeated chord name is a re-attack. */
 function continues(sounding: SimpleSlot | null, s: Slot): boolean {
 	if (s.kind === "hold") return true;
-	if (s.kind === "silence" || s.kind === "nc") return sounding?.kind === s.kind;
+	if (s.kind === "silence" || s.kind === "nc") return !s.push && sounding?.kind === s.kind;
 	return false;
 }
 
@@ -52,8 +52,19 @@ export function reduceSlots(slots: Slot[], beats?: number): Slot[] {
 
 const SYMBOLS = { hold: "/", nc: "N.C.", silence: "--", unknown: "?" } as const;
 
+const PUSHES = { eighth: "<", sixteenth: "<<" } as const;
+const ARTICULATIONS = { accent: ">", hit: "^" } as const;
+
+/** A slot's leading marks: its push, then its articulation (grammar 2.7, 2.8). */
+function printMarks(s: SimpleSlot): string {
+	const push = "push" in s && s.push ? PUSHES[s.push] : "";
+	return push + (s.kind === "chord" && s.articulation ? ARTICULATIONS[s.articulation] : "");
+}
+
 function printSimple(s: SimpleSlot): string {
-	return s.kind === "chord" ? s.chord.canonical : SYMBOLS[s.kind];
+	const body =
+		s.kind === "chord" ? s.chord.canonical + (s.voicing?.canonical ?? "") : SYMBOLS[s.kind];
+	return printMarks(s) + body;
 }
 
 /** A slot in canonical spelling; a group's members are joined with `_`. */

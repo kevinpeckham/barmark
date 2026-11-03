@@ -67,11 +67,19 @@ function timeline(slots: AnySlot[]): string[] {
 			const num = i * n + j;
 			const den = k * n;
 			const g = gcd(num, den) || 1;
-			const name = m.kind === "chord" ? m.chord.canonical : m.kind;
+			const name = slotName(m);
 			out.push(`${num / g}/${den / g}:${name}`);
 		});
 	});
 	return out;
+}
+
+/** A slot as the yardstick names it: its marks, then its chord and voicing, or its kind. */
+function slotName(m: Simple): string {
+	const push = "push" in m && m.push ? `${m.push} ` : "";
+	if (m.kind !== "chord") return push + m.kind;
+	const articulation = m.articulation ? `${m.articulation} ` : "";
+	return push + articulation + m.chord.canonical + (m.voicing?.canonical ?? "");
 }
 
 const shape = (events: ChartEvent[]): unknown[] =>

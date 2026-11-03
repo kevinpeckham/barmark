@@ -242,6 +242,65 @@ Quoted words in a cell sit on the bar, before the slot they precede:
 - Errors: an unclosed quote, empty quotes, and words with no bar to sit
   on (alone in a cell, or with `...`, a mark or a direction).
 
+### 2.7 Accents and hits
+
+A mark before a chord or a note set says how it is played:
+
+| Slot | Meaning |
+|---|---|
+| `>D` | **accented**: D, played with more weight |
+| `^D` | a **hit**: short and accented, the big-band "rooftop"; a choked hit too |
+
+```
+| >D / ^G ^G | ^A -- -- -- |
+```
+
+- A short note without an accent is a shorter slot, as before
+  (`| G_-- |`, 2.3); a mark only adds weight.
+- Group members take marks too: `^D_E_F` is a hit on D.
+- Only a chord or a note set takes one. On `/`, `N.C.`, `--` or `?` it is
+  an **error**.
+
+### 2.8 Pushes
+
+A push brings a slot in early, the way a band anticipates a downbeat:
+
+| Slot | Meaning |
+|---|---|
+| `<G` | G arrives an **eighth note** early |
+| `<<G` | G arrives a **sixteenth note** early |
+
+```
+## Intro
+| N.C. |
+## Verse
+|: <D | <G | <A | <Bm :|
+## Chorus
+| <E | A |
+## Verse
+## Chorus
+```
+
+- Each chord is written in the bar it belongs to. The push takes its time
+  from **the slot played just before it, in play order**: the end of the
+  bar before, the last bar before a `:|` when a repeat goes back, the end
+  of the section before a replay, or the bar a jump leaves from. So the
+  verse above pushes into D from the intro the first time and from Bm the
+  second, and the replayed verse pushes from the chorus.
+- A push mid-bar works the same way: `| C <G |` brings G in an eighth
+  before beat 3.
+- The push is an eighth or a sixteenth in every meter, 6/8 included.
+- A chord, a note set, `N.C.` or `--` can be pushed (`<--` is a pushed
+  stop). A push combines with an accent or a hit, the push first:
+  `<^D` is a pushed hit.
+- Writing the push out (`| C / / /_G | / |`, 2.2) still works and means
+  what it says: G attacks on the "and" of 4 and the next bar holds it.
+- Errors: a push with nothing played before it (the chart's first slot,
+  or the first after `...`; write a pickup bar), a push longer than the
+  slot it takes its time from, a push on `/`, `%` or `?`, a push inside a
+  `_` group, three or more `<`, and a mark written before the push
+  (`^<D`; the message suggests `<^D`).
+
 ## 3. Chord symbols
 
 ```
@@ -253,6 +312,7 @@ extension  = "6" | "6/9" | "7" | "maj7" | "9" | "maj9" | "11" | "13" | "maj13" |
 sus        = "sus2" | "sus4"
 tones      = ( "(" tone ("," tone)* ")" )+  (groups in a row are one list)
 tone       = accidental? ("2" | "4" | "5" | "6" | "7" | "9" | "11" | "13")
+           | "no3" | "no5"
 bass       = "/" root
 ```
 
@@ -274,6 +334,15 @@ natural tone of the same number if the chord has one; otherwise it adds.
 | `Am7(b5)` | A C E♭ G (the ♭5 replaces the 5) |
 | `C13(b9)` | C E G B♭ D♭ A (the ♭9 replaces the 9) |
 | `D/F#` | D major over F♯ |
+
+**Omissions.** `no3` and `no5` in the parentheses leave out the chord's
+third or fifth: `C7(no3)` is C G B♭, `Cmaj9(no5)` is C E B D, and they go
+with other tones, `C7(b9,no5)`. `(omit3)` and `(omit 3)` are accepted and
+print as `(no3)`. A triad with no third is the power chord, so `C(no3)`
+and `Cm(no3)` print as `C5`. Leaving out a tone the chord doesn't have
+(`Csus4(no3)`, `C7alt(no5)`), one its own parentheses alter
+(`C7(b5,no5)`), any other tone (`C7(no7)`) or the same one twice is an
+**error**.
 
 **Alterations without parentheses** (`C7b9`, `Am7b5`) are accepted, but
 only directly after an extension. That keeps the root's accidental
@@ -314,6 +383,23 @@ for a voicing whose register matters.
 | {D3 E3! G3 B3} |         with octaves, the ! follows the octave
 ```
 - `{}` is an **error**, and so is more than one `!` in a set.
+
+### 4.2 Voicings
+
+A chord name followed directly by a note set gives the chord and **exactly
+how it is voiced**:
+
+```
+| Cmaj7{E3 G3 B3 C4} | Dm7{F3 C4 E4} | G13{F2 B2 E3} |
+```
+
+- The name is what the chord is; the braces are the notes played, low to
+  high, by the rules of note sets (octaves optional, every note or none).
+- Every note must be in the chord, the slash bass included. A note that
+  isn't is an **error** ("B♭ is not in Cmaj7"). A voicing may leave tones
+  out, as voicings usually do.
+- The name keeps its own meaning everywhere: its Harte label, its numeral,
+  how it is drawn. Renderers draw the name and may speak or show the notes.
 
 ### 4.1 Octaves
 
@@ -611,6 +697,9 @@ A canonical printer writes:
   as a range (`|1,2,3` prints as `|1-3`, `|1,2` as written)
 - directions in the spelling of 5.2's table (`d.s. al coda` prints as
   `D.S. al Coda`, `𝄋` as `Segno`)
+- omissions after the tones a chord adds (`C7(no5,b9)` prints as
+  `C7(b9,no5)`), a voicing straight after its chord's name, and a slot's
+  marks with the push first (`<^D`)
 - rehearsal marks as written (`@B`), and words in straight quotes, each
   before the slot it precedes (`| “solo”  D |` prints as `| "solo" D |`);
   a cell keeps the slots that words are placed before, so words never
@@ -664,6 +753,10 @@ keeps what cannot reduce:
 | error | a direction that is not alone in its cell, or a near miss of one (suggests the spelling) |
 | error | a rehearsal mark that is not alone in its cell (suggests a cell of its own), `@` without a label of letters and digits, a meter on a mark, two marks with no bar between them, a mark with no bar after it |
 | error | an unclosed quote, empty quotes, words with no bar to sit on |
+| error | `no3` or `no5` that leaves out a tone the chord doesn't have or alters, any other omission, an omission written twice |
+| error | a voicing note that is not in its chord |
+| error | an accent or a hit on anything but a chord or a note set |
+| error | a push with nothing played before it, longer than the slot before it, on `/`, `%` or `?`, inside a group, of three or more `<`, or after its accent (`^<D`) |
 | error | a second `D.C.` or `D.S.`, or a second `Segno`, `Coda`, `To Coda` or `Fine`; `D.S.` with no `Segno` before it; `al Fine` with no `Fine`; `al Coda` without a `To Coda` and a `Coda` after it; a `Segno`, `Coda`, `To Coda` or `Fine` that no jump uses |
 | error | empty section that references no earlier section (the message suggests writing its bars or removing the heading, or names the line where a later section of that name is written) |
 | error | `->` anywhere but the end of a replay heading |
@@ -721,7 +814,7 @@ human to say whether the band was silent, and the structure line.
 | Unknown harmony | `?`, valid, always a warning. Maps to Harte `X`. |
 | Silence and stops | `--` slot symbol: the whole band stops. En/em dash accepted. |
 | `-` as a minor alias | Kept (`C-7` = `Cm7`), because silence is `--`. |
-| Pushes | No dedicated mark in v0.1; written with groups (`/_G`). |
+| Pushes | v0.1 had no mark; pushes were written with groups (`/_G`). Superseded 2026-11-03, see "Push marks". |
 | Root in a note set | `!` after the note: `{D E! G}`. Optional; the first note stays the bass. |
 | Modes | `key:` accepts a mode name (`A mixolydian`). A bare root means major. |
 | Elision | `->` at the end of a replay heading cuts its last bar. Written sections omit the bar. |
@@ -741,21 +834,20 @@ human to say whether the band was silent, and the structure line.
 | Directions | Decided by Kevin (2026-11-03, issue #70): `Segno`, `Coda`, `To Coda`, `Fine` and the jumps `D.C.`/`D.S.` (each alone or `al Fine`/`al Coda`) are cells, marks between bars that take no time (5.2). One jump per chart for now, taken once; after it every repeat plays once, `\|: :\|` taking its last ending. Rejected: direction lines (`jump: D.S. al Coda`), which cannot sit mid-line where scores put a segno; and no syntax with converters rewriting jumps as replays, which would split sections at arbitrary bars. The one exception to written order being play order. |
 | Rehearsal marks | Decided by Kevin (2026-11-03, issue #70): `@` and a label of letters and digits, alone in a cell, marks the bar after it (2.5). Rejected: `[B]`, which reads too much like the one-bar meter `[2/4]` and could be taken as a chord; `@` is distinct from both. |
 | Words on a bar | Decided by Kevin (2026-11-03, issue #70): quoted words in a cell sit before the slot they precede (2.6), with no musical meaning. Rejected: words as a cell of their own between bars, which loses the slot. |
+| Omissions | Decided by Kevin (2026-11-03): `no3` and `no5` as tones in the parentheses, `(omit3)` accepted (3, A.5). A triad with no third prints as the power chord. Harte marks them with `*` (`C:7(*3)`). |
+| Voicings | Decided by Kevin (2026-11-03): a chord name followed by a note set (4.2); every note must be in the chord. Rejected: no new syntax, where a bare note set loses the chord's name. |
+| Accents and hits | Decided by Kevin (2026-11-03): `>` accents a chord or note set, `^` makes it a hit, short and accented (2.7). A short note without an accent stays a shorter slot. |
+| Push marks | Decided by Kevin (2026-11-03): `<` an eighth early, `<<` a sixteenth, written on the chord in its own bar; the push takes its time from the slot played just before it in play order (2.8). This is what written-out pushes (`/_G`) could not do: a pushed downbeat inside a repeat, a replay or after a jump. Rejected: a tie into the next bar (`/_G~ \| G`), which writes every chord twice and still can't serve a replay; and a warning only. |
 | Written bar numbers | Machine output gains `written` on each played bar (A.7), the bar's number as written, so a host can speak a printed score's measure numbers (issue #70: a correction editor for a score read). No change to what any chart means. |
 
 ## Open questions
 
-- Whether pushes need a shorter mark once real charts are written.
-- Articulation (short, choked hits) beyond slot length, and an accent mark
-  on a slot (`>D`), decided together; no longer tied to endings (Kevin,
-  2026-11-03). Until then, dynamics and accents are note lines.
 - More than one jump in a chart (5.2 allows one).
+- Dynamics (`mf`, crescendos): note lines until real charts need them.
 - Not planned as syntax (Kevin, 2026-11-01): a capo (a note line), ChordPro
   inline chords (barmark places chords in bars, not over words), and
   numerals as input. Transposition and a numerals view are tools: a
   library function and a renderer option, both reading `key:`.
-- Exact voicings on named chords (`Cmaj7{E3 G3 B3 C4}`).
-- Omissions (`(no3)`, `(no5)`).
 
 ---
 
@@ -854,6 +946,8 @@ Accepted on input, printed canonically:
 | `7b9`, `m7b5` (alteration after an extension) | `7(b9)`, `m7(b5)` |
 | groups in a row (`(b9)(#11)`, Logic Pro) | one group (`(b9,#11)`) |
 | `(5)` on a bare root (`F#(5)`, `F#(5,7)`) | `5` (`F#5`, `F#5(7)`) |
+| `(omit3)`, `(omit 3)`, `(omit5)`, `(omit 5)` | `(no3)`, `(no5)` |
+| `(no3)` on a triad (`C(no3)`, `Cm(no3)`) | `5` (`C5`) |
 | `♯`, `♭` | `#`, `b` |
 
 ### A.6 Rejected, with a suggestion
@@ -890,7 +984,10 @@ Each slot parses to one record:
 | `ending` | on a bar line in the parse tree: the passes an ending plays on (`[1]`, `[1, 2, 3]`), or empty |
 | `direction` | a cell in the parse tree that is a mark between bars (5.2): `segno`, `coda`, `to coda`, `fine`, or a `jump` with `to` (`start` for `D.C.`, `segno` for `D.S.`) and `al` (`fine`, `coda`, or empty when it plays to the end) |
 | `repeat` | on a bar line, section or repeat bracket in the parse tree: a count, or `open` for `x ...` |
-| `harte` | the Harte label: `C:7(b9)`, `N` for N.C. and silence (`--`), `X` for `?` |
+| `harte` | the Harte label: `C:7(b9)`, `N` for N.C. and silence (`--`), `X` for `?`; a tone the chord leaves out is marked `*` (`C:7(*3)`) |
+| `voicing` | on a chord slot: the note set written after its name (4.2), or absent |
+| `articulation` | on a chord slot: `accent` (`>`) or `hit` (`^`), or absent |
+| `push` | on a chord, `N.C.` or `--` slot: `eighth` (`<`) or `sixteenth` (`<<`), or absent |
 | `source` | the symbol as written |
 
 The bass note counts among the chord's pitches: `C/Bb` contains B♭. For
