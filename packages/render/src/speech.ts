@@ -145,7 +145,14 @@ function speakDirection(d: Direction): string {
 export function speakBar(barNumber: number | null, cell: CellModel, numerals = false): string {
 	if (cell.kind === "fermata") return "fermata: hold until cued";
 	if (cell.kind === "direction") return speakDirection(cell.direction);
+	if (cell.kind === "rehearsal") return `rehearsal ${cell.label}`;
 	const meter = cell.meter ? `, in ${cell.meter.n}/${cell.meter.d}` : "";
 	const cut = cell.cut ? ", cut on this pass" : "";
-	return `bar${barNumber === null ? "" : ` ${barNumber}`}${meter}: ${cell.slots.map((s) => speakSlot(s, numerals ? cell.key : undefined)).join(", ")}${cut}`;
+	const words = (at: number) =>
+		(cell.words ?? []).filter((w) => w.at === at).map((w) => `“${w.text}”`);
+	const slots = cell.slots.map((s, i) =>
+		[...words(i), speakSlot(s, numerals ? cell.key : undefined)].join(" "),
+	);
+	const spoken = [...slots, ...words(cell.slots.length)].join(", ");
+	return `bar${barNumber === null ? "" : ` ${barNumber}`}${meter}: ${spoken}${cut}`;
 }

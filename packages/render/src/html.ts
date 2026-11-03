@@ -153,15 +153,15 @@ function fitWidth(block: SectionBlock): number {
 }
 
 /** Em per bar: padding, plus each slot's text and the gap after it. */
-const cellWidth = (cell: CellModel) =>
-	cell.kind === "direction"
-		? 1 + 0.55 * printDirection(cell.direction).length
-		: cell.kind === "fermata"
-			? MIN_BAR
-			: Math.max(
-					MIN_BAR,
-					1.5 + (cell.meter ? 0.8 : 0) + cell.slots.reduce((w, s) => w + slotWidth(s), 0),
-				);
+function cellWidth(cell: CellModel): number {
+	if (cell.kind === "direction") return 1 + 0.55 * printDirection(cell.direction).length;
+	if (cell.kind === "rehearsal") return 1.4 + 0.6 * cell.label.length;
+	if (cell.kind === "fermata") return MIN_BAR;
+	return Math.max(
+		MIN_BAR,
+		1.5 + (cell.meter ? 0.8 : 0) + cell.slots.reduce((w, s) => w + slotWidth(s), 0),
+	);
+}
 
 /** Roughly: 0.65em a baseline character, 0.4em a superscript one, 0.6em between slots. */
 function slotWidth(slot: Slot): number {
@@ -269,10 +269,37 @@ function cellHtml(
 		: "";
 	const cut = cell.cut ? `<span class="bm-cut">cut</span>` : "";
 	const change = cell.tempoChange ? ` data-tempo-change="${cell.tempoChange}"` : "";
-	return `<div class="bm-bar" part="bar"${cell.cut ? " data-cut" : ""}${change}${marks}>${spoken}<span class="bm-bar-body" aria-hidden="true">${meter}${cell.slots.map((s) => slotHtml(s, view)).join("")}${cut}</span></div>`;
+	const [slots, end] = slotsWithWords(cell, view);
+	return `<div class="bm-bar" part="bar"${cell.cut ? " data-cut" : ""}${change}${marks}>${spoken}<span class="bm-bar-body" aria-hidden="true">${meter}${slots.join("")}${cut}</span>${end}</div>`;
 }
 
-/** A fermata or a direction: a place between bars, drawn as its sign. */
+/** A bar's slots, each under any words before it, and the words after the last slot. */
+function slotsWithWords(
+	cell: Extract<CellModel, { kind: "slots" }>,
+	view: View,
+): [string[], string] {
+	const words = (at: number) =>
+		(cell.words ?? [])
+			.filter((w) => w.at === at)
+			.map((w) => escapeHtml(w.text))
+			.join(" ");
+	const slots = cell.slots.map((s, i) => {
+		const said = words(i);
+		const html = slotHtml(s, view);
+		return said
+			? `<span class="bm-worded"><span class="bm-words" part="words">${said}</span>${html}</span>`
+			: html;
+	});
+	const after = words(cell.slots.length);
+	return [
+		slots,
+		after
+			? `<span class="bm-words bm-words-end" part="words" aria-hidden="true">${after}</span>`
+			: "",
+	];
+}
+
+/** A fermata, a rehearsal mark or a direction: a place between bars, drawn as its sign. */
 function betweenBarsHtml(
 	cell: Exclude<CellModel, { kind: "slots" }>,
 	spoken: string,
@@ -280,6 +307,8 @@ function betweenBarsHtml(
 ) {
 	if (cell.kind === "fermata")
 		return `<div class="bm-bar bm-fermata" part="bar"${marks}>${spoken}<span aria-hidden="true">${FERMATA}</span></div>`;
+	if (cell.kind === "rehearsal")
+		return `<div class="bm-bar bm-mark" part="mark"${marks}>${spoken}<span class="bm-box" aria-hidden="true">${escapeHtml(cell.label)}</span></div>`;
 	return `<div class="bm-bar bm-direction" part="direction" data-direction="${cell.direction.kind}"${marks}>${spoken}<span aria-hidden="true">${directionGlyph(cell.direction)}</span></div>`;
 }
 
