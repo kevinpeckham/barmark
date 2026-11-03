@@ -18,14 +18,14 @@
     },
     "packages/barmark": {
       "name": "barmark",
-      "version": "0.12.0",
+      "version": "0.13.0",
       "devDependencies": {
         "@types/bun": "^1.4.4",
       },
     },
     "packages/cli": {
       "name": "@barmark/cli",
-      "version": "0.1.5",
+      "version": "0.1.6",
       "bin": {
         "barmark": "./dist/cli.js",
       },
@@ -36,7 +36,7 @@
     },
     "packages/render": {
       "name": "@barmark/render",
-      "version": "0.9.1",
+      "version": "0.10.0",
       "dependencies": {
         "barmark": "workspace:^",
       },
