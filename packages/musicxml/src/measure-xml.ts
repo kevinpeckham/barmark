@@ -1,8 +1,8 @@
 /** One measure as MusicXML: attributes when they change, then its notes. */
-import type { Key, SimpleSlot } from "barmark";
+import type { Direction, Key, SimpleSlot } from "barmark";
 import type { MeasureEvents, SoundEvent } from "./events.js";
 import { harmonyXml, noChordXml } from "./harmony.js";
-import type { Measure } from "./measures.js";
+import type { Marks, Measure } from "./measures.js";
 import { noteSetOf, pitchesOf, type Sound, slashed, soundValueXml } from "./notes.js";
 import { barLength, type Frac, noteValues } from "./rhythm.js";
 import { el, text } from "./xml.js";
@@ -116,6 +116,71 @@ function eventXml(e: SoundEvent, divisions: number): string {
 	].join("");
 }
 
+const direction = (types: string, sound?: Record<string, string>) =>
+	el("direction", { placement: "above" }, [
+		el("direction-type", {}, types),
+		sound ? el("sound", sound) : "",
+	]);
+
+const JUMP_WORDS = { start: "D.C.", segno: "D.S." };
+const AL_WORDS = { fine: " al Fine", coda: " al Coda" };
+
+function directionXml(d: Direction): string {
+	if (d.kind === "segno") return direction(el("segno"), { segno: "s1" });
+	if (d.kind === "coda") return direction(el("coda"), { coda: "c1" });
+	if (d.kind === "to coda") return direction(text("words", "To Coda"), { tocoda: "c1" });
+	if (d.kind === "fine") return direction(text("words", "Fine"), { fine: "yes" });
+	const words = JUMP_WORDS[d.to] + (d.al ? AL_WORDS[d.al] : "");
+	return direction(text("words", words), d.to === "start" ? { dacapo: "yes" } : { dalsegno: "s1" });
+}
+
+/** Before the notes: the heading, the rehearsal mark, Segno and Coda. */
+function startXml(marks: Marks): string {
+	return [
+		marks.heading ? direction(text("words", marks.heading, { "font-weight": "bold" })) : "",
+		marks.rehearsal ? direction(text("rehearsal", marks.rehearsal)) : "",
+		...marks.start.map(directionXml),
+	].join("");
+}
+
+/** After the notes: an open repeat's words, To Coda, Fine and the jump. */
+function endXml(marks: Marks): string {
+	return [
+		marks.repeatEnd === "open" ? direction(text("words", "repeat as needed")) : "",
+		...marks.end.map(directionXml),
+	].join("");
+}
+
+const endingXml = (marks: Marks, type: string | null | undefined) =>
+	marks.ending && type ? el("ending", { number: marks.ending.numbers.join(", "), type }) : "";
+
+function leftBarlineXml(marks: Marks): string {
+	const ending = endingXml(marks, marks.ending?.start ? "start" : null);
+	if (!ending && !marks.repeatStart) return "";
+	return el("barline", { location: "left" }, [
+		marks.repeatStart ? text("bar-style", "heavy-light") : "",
+		ending,
+		marks.repeatStart ? el("repeat", { direction: "forward" }) : "",
+	]);
+}
+
+const backwardXml = (end: Marks["repeatEnd"]) =>
+	end === null
+		? ""
+		: el("repeat", { direction: "backward", times: end === "open" ? undefined : end });
+
+function rightBarlineXml(marks: Marks): string {
+	const ending = endingXml(marks, marks.ending?.stop);
+	const repeat = backwardXml(marks.repeatEnd);
+	if (!ending && !repeat && !marks.fermata) return "";
+	return el("barline", { location: "right" }, [
+		repeat ? text("bar-style", "light-heavy") : "",
+		marks.fermata ? el("fermata") : "",
+		ending,
+		repeat,
+	]);
+}
+
 export function measureXml(bar: MeasureEvents, ctx: MeasureContext): string {
 	const m = bar.measure;
 	const body = m.tacet
@@ -125,5 +190,12 @@ export function measureXml(bar: MeasureEvents, ctx: MeasureContext): string {
 				text("voice", 1),
 			])
 		: bar.events.map((e) => eventXml(e, ctx.divisions)).join("") + bar.after.map(wordsXml).join("");
-	return el("measure", { number: ctx.index + 1, text: m.shown }, [attributesXml(m, ctx), body]);
+	return el("measure", { number: ctx.index + 1, text: m.shown }, [
+		attributesXml(m, ctx),
+		leftBarlineXml(m.marks),
+		startXml(m.marks),
+		body,
+		endXml(m.marks),
+		rightBarlineXml(m.marks),
+	]);
 }
