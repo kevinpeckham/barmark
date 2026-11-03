@@ -1,5 +1,6 @@
 /** One measure as MusicXML: attributes when they change, then its notes. */
 import type { Key, SimpleSlot, Slot } from "barmark";
+import { harmonyXml, noChordXml } from "./harmony.js";
 import type { Measure } from "./measures.js";
 import {
 	barLength,
@@ -103,13 +104,22 @@ function slashXml(v: NoteValue, divisions: number, tie: Tie): string {
 	]);
 }
 
+/** The chord symbol a slot sounds, if it names one. */
+function harmonyOf(slot: SimpleSlot): string {
+	if (slot.kind === "nc") return noChordXml();
+	return slot.kind === "chord" && slot.chord.kind === "chord" ? harmonyXml(slot.chord) : "";
+}
+
 /** One slot's sound for `length`: tied values when one can't write it. */
 function soundXml(slot: SimpleSlot, length: Frac, divisions: number): string {
 	const values = noteValues(length);
 	if (slot.kind === "silence") return values.map((v) => restXml(v, divisions)).join("");
-	return values
-		.map((v, i) => slashXml(v, divisions, { stop: i > 0, start: i < values.length - 1 }))
-		.join("");
+	return (
+		harmonyOf(slot) +
+		values
+			.map((v, i) => slashXml(v, divisions, { stop: i > 0, start: i < values.length - 1 }))
+			.join("")
+	);
 }
 
 function slotXml(slot: Slot, length: Frac, divisions: number): string {
