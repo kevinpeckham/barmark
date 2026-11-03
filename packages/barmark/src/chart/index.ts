@@ -11,6 +11,7 @@ export {
 	printChart,
 	printLine,
 	printParsed,
+	printPart,
 	printPasses,
 	printSlot,
 	reduceSlots,
