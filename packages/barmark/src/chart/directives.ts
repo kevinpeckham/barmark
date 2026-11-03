@@ -117,6 +117,10 @@ export function parseDirectiveLine(
 		const m = /^(\w+)\s*:\s*(.*)$/.exec(part);
 		const name = m?.[1]?.toLowerCase() as Name | undefined;
 		const value = m?.[2]?.trim() ?? "";
+		if (name === ("part" as string)) {
+			error("part: goes on a line of its own; the name runs to the end of the line", part);
+			continue;
+		}
 		if (!m || !name || !DIRECTIVE_NAMES.includes(name)) {
 			error("unknown directive (key, time, tempo, feel)", part);
 			continue;

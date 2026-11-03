@@ -42,7 +42,7 @@ export function layoutChart(text: string, options: LayoutOptions = {}): ChartMod
 	};
 	const blocks = groups.map((g) => layoutGroup(g, ctx));
 	if (options.rehearsalLetters) letterBlocks(blocks);
-	return { title: parse.title, header, blocks, diagnostics: parse.diagnostics };
+	return { title: parse.title, part: parse.part, header, blocks, diagnostics: parse.diagnostics };
 }
 
 /** Rehearsal letters mark position: every section occurrence, and leading bars, in play order. */
@@ -75,13 +75,13 @@ function splitHeader(lines: Line[]): { header: Directives; body: Line[] } {
 	let i = 0;
 	for (; i < lines.length; i++) {
 		const l = lines[i];
-		if (l?.kind === "title") continue;
+		if (l?.kind === "title" || l?.kind === "part") continue;
 		if (l?.kind !== "directive") break;
 		// A new feel replaces the old one whole, its amount included.
 		if (l.set.feel) delete header.swingPercent;
 		Object.assign(header, l.set);
 	}
-	return { header, body: lines.slice(i).filter((l) => l.kind !== "title") };
+	return { header, body: lines.slice(i).filter((l) => l.kind !== "title" && l.kind !== "part") };
 }
 
 function groupLines(lines: Line[]): Group[] {

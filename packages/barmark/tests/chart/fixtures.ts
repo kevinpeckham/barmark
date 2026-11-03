@@ -89,6 +89,7 @@ const shape = (events: ChartEvent[]): unknown[] =>
 export function meaning(p: ChartParse) {
 	return {
 		title: p.title,
+		part: p.part,
 		sections: p.sections.map((s) => [
 			s.name.replace(/\s+/g, " "),
 			s.replayOf === null

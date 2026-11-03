@@ -12,6 +12,7 @@ export function parseChart(text: string): ChartParse {
 	);
 	return {
 		title: doc.title,
+		part: doc.part,
 		lines: doc.lines,
 		events: played.events,
 		bars: flattenBars(played.events),

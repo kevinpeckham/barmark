@@ -6,6 +6,11 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- **The part** a chart names (`part: Electric Guitar 1`) leads the
+  header line: "Electric Guitar 1 · G major". The model gains `part`.
+
 ## [0.9.1] - 2026-11-03
 
 ### Fixed

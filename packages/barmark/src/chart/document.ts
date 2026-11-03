@@ -1,14 +1,32 @@
 import { parseChord } from "../chords/parse.js";
 import { misplacedRepeat, parseBarLine, readRepeat, repeatTail } from "./barLine.js";
 import { parseDirectiveLine } from "./directives.js";
-import type { ChartDiagnostic, Line, Repeat } from "./types.js";
+import type { ChartDiagnostic, Line, Part, Repeat } from "./types.js";
 
 const NEAR_DIRECTIVES: Record<string, string> = {
 	meter: "time",
 	signature: "time",
 	bpm: "tempo",
 	groove: "feel",
+	instrument: "part",
+	parts: "part",
 };
+
+const DIRECTIVE_AFTER = /,\s*(key|time|tempo|feel)\s*:/i;
+
+/** A `part:` line's label and name, or why it has none (grammar 7.3). */
+function readPart(text: string): Part | string | null {
+	const m = /^part\s*:(.*)$/i.exec(text);
+	if (!m) return null;
+	const value = (m[1] ?? "").trim().replace(/\s+/g, " ");
+	if (DIRECTIVE_AFTER.test(value))
+		return "part: goes on a line of its own; the name runs to the end of the line";
+	const labelled = /^([^\s=]*)\s*=\s*(.*)$/.exec(value);
+	if (!labelled) return value ? { name: value } : "part: needs a name";
+	const [, label, name] = labelled;
+	if (!label) return "part: needs a label before =";
+	return name ? { label, name } : "part: needs a name after the label";
+}
 
 function readHeading(text: string, line: number, diagnostics: ChartDiagnostic[]): Line {
 	let rest = text.trim();
@@ -96,53 +114,74 @@ function noBarLines(lines: Line[]): ChartDiagnostic | null {
 /** Classify every line of a chart: title, sections, directives, bar lines and text. */
 export function readDocument(text: string): {
 	title: string | null;
+	part: Part | null;
 	lines: Line[];
 	diagnostics: ChartDiagnostic[];
 } {
 	const lines: Line[] = [];
 	const diagnostics: ChartDiagnostic[] = [];
 	let title: string | null = null;
-	const physical = text.replace(/^﻿/, "").split(/\r?\n/);
-	physical.forEach((raw, i) => {
-		const line = i + 1;
-		const t = raw.trim();
-		if (!t || t.startsWith("```")) return;
-		if (t.startsWith("|")) {
-			const r = parseBarLine(t, line);
-			diagnostics.push(...r.diagnostics);
-			lines.push(r.bars ?? { kind: "invalid", line, text: t, written: r.written });
-			return;
-		}
-		if (t.startsWith("# ")) {
-			if (title === null) {
-				title = t.slice(2).trim();
-				lines.push({ kind: "title", line, text: title });
-				return;
-			}
-			diagnostics.push({
+	let part: Part | null = null;
+	/** The line kept as text, with why it isn't what it looks like. */
+	const asText = (
+		t: string,
+		line: number,
+		severity: "error" | "warning",
+		message: string,
+	): Line => {
+		diagnostics.push({ line, severity, message, token: t });
+		return { kind: "text", line, text: t };
+	};
+	const titleLine = (t: string, line: number): Line => {
+		if (title !== null) return asText(t, line, "warning", "a chart has one title; this is text");
+		title = t.slice(2).trim();
+		return { kind: "title", line, text: title };
+	};
+	/** A `part:` line names the chart once, before its first bar (grammar 7.3). */
+	const partLine = (read: Part | string, t: string, line: number): Line => {
+		if (typeof read === "string") return asText(t, line, "error", read);
+		if (lines.some((l) => l.kind === "bars" || l.kind === "invalid"))
+			return asText(t, line, "error", "part: names the whole chart; put it before the first bar");
+		if (part)
+			return asText(
+				t,
 				line,
-				severity: "warning",
-				message: "a chart has one title; this is text",
-				token: t,
-			});
-			lines.push({ kind: "text", line, text: t });
-			return;
-		}
-		if (t === "##" || t.startsWith("## ")) {
-			lines.push(readHeading(t.slice(2), line, diagnostics));
-			return;
-		}
+				"error",
+				"a chart names one part; several parts are not supported yet",
+			);
+		part = read;
+		return { kind: "part", line, ...read };
+	};
+	const otherLine = (t: string, line: number): Line => {
+		const read = readPart(t);
+		if (read) return partLine(read, t, line);
 		const directive = parseDirectiveLine(t, line);
 		if (directive) {
 			diagnostics.push(...directive.diagnostics);
-			lines.push({ kind: "directive", line, set: directive.set });
-			return;
+			return { kind: "directive", line, set: directive.set };
 		}
 		const old = oldFormat(t, line);
 		if (old) diagnostics.push(old);
-		lines.push({ kind: "text", line, text: t });
-	});
+		return { kind: "text", line, text: t };
+	};
+	const classify = (t: string, line: number): Line => {
+		if (t.startsWith("|")) {
+			const r = parseBarLine(t, line);
+			diagnostics.push(...r.diagnostics);
+			return r.bars ?? { kind: "invalid", line, text: t, written: r.written };
+		}
+		if (t.startsWith("# ")) return titleLine(t, line);
+		if (t === "##" || t.startsWith("## ")) return readHeading(t.slice(2), line, diagnostics);
+		return otherLine(t, line);
+	};
+	text
+		.replace(/^\uFEFF/, "")
+		.split(/\r?\n/)
+		.forEach((raw, i) => {
+			const t = raw.trim();
+			if (t && !t.startsWith("```")) lines.push(classify(t, i + 1));
+		});
 	const empty = noBarLines(lines);
 	if (empty) diagnostics.push(empty);
-	return { title, lines, diagnostics };
+	return { title, part, lines, diagnostics };
 }

@@ -1,11 +1,6 @@
 {
   "kind": "health",
   "finding_counts": {
-    "packages/barmark/src/chart/barLine.ts": {
-      "crap_moderate": {
-        "count": 1
-      }
-    },
     "packages/barmark/src/chart/directives.ts": {
       "complexity_high": {
         "count": 1
@@ -13,7 +8,7 @@
     },
     "packages/barmark/src/chart/document.ts": {
       "crap_moderate": {
-        "count": 3
+        "count": 2
       }
     },
     "packages/barmark/src/chart/print.ts": {

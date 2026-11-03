@@ -74,6 +74,7 @@ Each line is classified by its start, after leading whitespace is ignored:
 | `# ` | the **title** (once, optional) | `# Wagon Wheel` |
 | `## ` | a **section** heading | `## Chorus` |
 | `key:` `time:` `tempo:` `feel:` (any case) | a **directive** line | `key: Bm` |
+| `part:` (any case) | the **part** the chart is for (once, before the first bar, 7.3) | `part: Electric Guitar 1` |
 | anything else | **text** (lyrics, notes, prose) | `Watch Kevin for the cutoff` |
 
 - Blank lines mean nothing.
@@ -596,7 +597,7 @@ key: D, time: 4/4, tempo: 145, feel: swing
   ask for it.
 - The four names are a closed set with no aliases. A text line starting
   with a near miss (`meter:`, `bpm:`, `groove:`) gets a warning suggesting
-  the right name.
+  the right name. `part:` (7.3) is a line of its own, not one of these.
 
 ### 7.1 Feel
 
@@ -672,6 +673,32 @@ tempo: rit. to 90
 - **Warnings.** `a tempo` with no change in force; `rit. to` a tempo that
   isn't slower than the steady one, or `accel. to` one that isn't faster.
 
+### 7.3 Part
+
+`part:` names the part a chart is written for: the staff a score was read
+from, or the instrument a chart is for.
+
+```
+# Morning Song
+part: Gtr = Electric Guitar 1
+key: G
+```
+
+- `part: Electric Guitar 1` gives the name. `part: Gtr = Electric Guitar
+  1` also gives a short **label**: no spaces, before the `=`.
+- **A line of its own.** The name runs to the end of the line, so it may
+  hold commas (`part: Guitar, rhythm`). Runs of spaces print as one.
+- **Once, before the first bar.** A part names the whole chart, not the
+  bars after it. A `part:` after a bar line is an **error**, and so is a
+  second one: a chart is one part. (Several parts in one chart are
+  planned; see Open questions.)
+- A converter writes the name where its format names a part: MusicXML's
+  `<part-name>` (the label, if any, as `<part-abbreviation>`) and a MIDI
+  track name. Without `part:` it chooses its own.
+- Errors: no name (`part:`, `part: Gtr =`), no label before `=`, another
+  directive after it on the line (`part: Guitar, key: G`) or before it
+  (`key: G, part: Guitar`). `instrument:` and `parts:` are near misses.
+
 ## 8. The canonical form
 
 A canonical printer writes:
@@ -705,7 +732,7 @@ A canonical printer writes:
   a cell keeps the slots that words are placed before, so words never
   move
 - directives lowercased, comma-separated, in the order key, time, tempo,
-  feel
+  feel; `part:` as `part: Label = Name`, or `part: Name`
 
 Canonicalizing changes spelling only. It never rewrites one chord as a
 different chord with the same notes (`aug7` stays `aug7`; `7(#5)` stays
@@ -761,6 +788,7 @@ keeps what cannot reduce:
 | error | empty section that references no earlier section (the message suggests writing its bars or removing the heading, or names the line where a later section of that name is written) |
 | error | `->` anywhere but the end of a replay heading |
 | error | `/` or `%` with nothing before it |
+| error | `part:` with no name or no label before `=`, after the first bar, a second time, or sharing its line with another directive |
 | error | invalid directive value (`time: 4/3`, `tempo: fast`, `rit. to fast`, `feel: lazy`, `feel: swing 80%`, `feel: swing 58`, `feel: straight 55%`) |
 | error | `[n/d]` not at the start of a cell, or with an invalid meter |
 | error | a note set mixing octave and no octave, or an octave outside 0–8 |
@@ -838,11 +866,19 @@ human to say whether the band was silent, and the structure line.
 | Voicings | Decided by Kevin (2026-11-03): a chord name followed by a note set (4.2); every note must be in the chord. Rejected: no new syntax, where a bare note set loses the chord's name. |
 | Accents and hits | Decided by Kevin (2026-11-03): `>` accents a chord or note set, `^` makes it a hit, short and accented (2.7). A short note without an accent stays a shorter slot. |
 | Push marks | Decided by Kevin (2026-11-03): `<` an eighth early, `<<` a sixteenth, written on the chord in its own bar; the push takes its time from the slot played just before it in play order (2.8). This is what written-out pushes (`/_G`) could not do: a pushed downbeat inside a repeat, a replay or after a jump. Rejected: a tie into the next bar (`/_G~ \| G`), which writes every chord twice and still can't serve a replay; and a warning only. |
+| Part | Decided by Kevin (2026-11-03, issue #70): `part:` names the chart's part, with an optional label (`part: Gtr = Electric Guitar 1`), once, before the first bar, on a line of its own (7.3). MusicXML requires a `<part-name>` on every part, so a converter otherwise invents one. The instrument (MusicXML's `<instrument-sound>`, a MIDI program) is separate and waits for the converters. The `Label = Name` form is chosen so several parts can follow. |
 | Written bar numbers | Machine output gains `written` on each played bar (A.7), the bar's number as written, so a host can speak a printed score's measure numbers (issue #70: a correction editor for a score read). No change to what any chart means. |
 
 ## Open questions
 
 - More than one jump in a chart (5.2 allows one).
+- Several parts in one chart, e.g. guitar and piano (Kevin, 2026-11-03;
+  design to come): one `part: Label = Name` line per part; a bar line
+  starting with a label belongs to that part, and consecutive labelled
+  lines form a system that shares bars, meters, repeats, endings and
+  directions. Decided so far: a part missing from a system is **tacet**
+  there, and an unlabelled bar line in a multi-part chart is **tutti**,
+  played by every part.
 - Dynamics (`mf`, crescendos): note lines until real charts need them.
 - Not planned as syntax (Kevin, 2026-11-01): a capo (a note line), ChordPro
   inline chords (barmark places chords in bars, not over words), and
@@ -988,6 +1024,7 @@ Each slot parses to one record:
 | `voicing` | on a chord slot: the note set written after its name (4.2), or absent |
 | `articulation` | on a chord slot: `accent` (`>`) or `hit` (`^`), or absent |
 | `push` | on a chord, `N.C.` or `--` slot: `eighth` (`<`) or `sixteenth` (`<<`), or absent |
+| `part` | on the parse: the chart's part, its `name` and `label` (absent when none), or empty when no `part:` names one |
 | `source` | the symbol as written |
 
 The bass note counts among the chord's pitches: `C/Bb` contains B♭. For
