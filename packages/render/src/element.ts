@@ -17,7 +17,8 @@ type Attributes = {
 export function optionsFromAttributes(el: Attributes): RenderOptions {
 	const theme = el.getAttribute("theme");
 	const numerals = NUMERALS.find((n) => n === el.getAttribute("numerals"));
-	const part = el.getAttribute("part");
+	// Not `part`: that global attribute names an element for ::part() styling.
+	const part = el.getAttribute("show-part");
 	return {
 		theme: THEMES.find((t) => t === theme) ?? "auto",
 		barNumbers: el.getAttribute("bar-numbers") !== "off",
@@ -72,7 +73,7 @@ function defineElement(): void {
 			"rehearsal-letters",
 			"numerals",
 			"wrap",
-			"part",
+			"show-part",
 		];
 		#observer = new MutationObserver(() => this.#schedule());
 		#renders = 0;
@@ -146,6 +147,15 @@ function defineElement(): void {
 		set numerals(v: string | null) {
 			if (v === null) this.removeAttribute("numerals");
 			else this.setAttribute("numerals", v);
+		}
+
+		/** The label of the part to draw on its own, or null for the whole chart. */
+		get showPart() {
+			return this.getAttribute("show-part");
+		}
+		set showPart(v: string | null) {
+			if (v === null) this.removeAttribute("show-part");
+			else this.setAttribute("show-part", v);
 		}
 
 		/** Every change in one task (an upgrade sets each attribute in turn) renders once. */

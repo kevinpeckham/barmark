@@ -56,7 +56,9 @@ describe("one timeline for every part (grammar 7.4)", () => {
 	});
 	test("parts that disagree on a bar's meter are an error", () => {
 		const q = parseChart(`${TWO}| G |\nGtr | % |\nPno | C |`.replace("| G |", "| [2/4] G |"));
-		expect(q.diagnostics.map((d) => d.message)).toContain("the parts disagree on this bar's meter");
+		expect(q.diagnostics.map((d) => d.message)).toContain(
+			"the parts disagree on this bar's meter (2/4, 4/4)",
+		);
 	});
 });
 

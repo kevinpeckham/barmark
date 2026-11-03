@@ -643,3 +643,27 @@ test.describe("several parts", () => {
 			expect(Math.abs(x - (lefts[0]?.[i] ?? 0))).toBeLessThanOrEqual(1);
 	});
 });
+
+test.describe("show-part", () => {
+	test("changing it redraws the chart as that part, and removing it brings the whole chart back", async ({
+		page,
+	}) => {
+		await page.goto("/element");
+		const systems = page.locator("#inline .bm-system");
+		const meta = page.locator("#inline [part=meta]");
+		await page.evaluate(() => {
+			const el = document.querySelector("#inline") as HTMLElement & { text: string | null };
+			el.text = "part: Gtr = Guitar\npart: Pno = Piano\nGtr | G | C |\nPno | Em | C |";
+		});
+		await expect(systems).toHaveCount(1);
+		await page.evaluate(() => {
+			(document.querySelector("#inline") as HTMLElement & { showPart: string | null }).showPart =
+				"Pno";
+		});
+		await expect(page.locator("#inline")).toHaveAttribute("show-part", "Pno");
+		await expect(systems).toHaveCount(0);
+		await expect(meta).toHaveText("Piano");
+		await page.evaluate(() => document.querySelector("#inline")?.removeAttribute("show-part"));
+		await expect(systems).toHaveCount(1);
+	});
+});

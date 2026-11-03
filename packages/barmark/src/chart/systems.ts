@@ -67,6 +67,24 @@ function numberSystems(lines: Line[]): Line[] {
 }
 
 /**
+ * Each system's reference line: the first whose structure most of the
+ * system's lines share, so one odd line is the error wherever it sits.
+ */
+function referenceLines(lines: Line[]): Map<number, BarsLine> {
+	const bySystem = new Map<number, BarsLine[]>();
+	for (const l of lines)
+		if (l.kind === "bars" && l.system !== undefined)
+			bySystem.set(l.system, [...(bySystem.get(l.system) ?? []), l]);
+	const refs = new Map<number, BarsLine>();
+	for (const [system, members] of bySystem) {
+		const votes = (l: BarsLine) => members.filter((m) => structureOf(m) === structureOf(l)).length;
+		const best = members.reduce((a, b) => (votes(b) > votes(a) ? b : a));
+		refs.set(system, best);
+	}
+	return refs;
+}
+
+/**
  * Group a multi-part chart's labelled bar lines into systems and check that
  * each system's lines share their bars and structure. A line that differs is
  * an error and is marked `dropped`. Never throws.
@@ -74,14 +92,11 @@ function numberSystems(lines: Line[]): Line[] {
 export function groupSystems(lines: Line[]): { lines: Line[]; diagnostics: ChartDiagnostic[] } {
 	const diagnostics: ChartDiagnostic[] = [];
 	const numbered = numberSystems(lines);
-	const first = new Map<number, BarsLine>();
+	const refs = referenceLines(numbered);
 	const out = numbered.map((l) => {
 		if (l.kind !== "bars" || l.system === undefined) return l;
-		const ref = first.get(l.system);
-		if (!ref) {
-			first.set(l.system, l);
-			return l;
-		}
+		const ref = refs.get(l.system);
+		if (!ref || ref === l) return l;
 		const problem = differs(l, ref);
 		if (!problem) return l;
 		diagnostics.push({ line: l.line, severity: "error", message: problem, token: l.part ?? "" });

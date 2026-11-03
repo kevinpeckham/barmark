@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { parseHTML } from "linkedom";
-import { layoutChart, renderChartUnwrapped } from "../src/index.js";
+import { layoutChart, renderChart, renderChartUnwrapped } from "../src/index.js";
 import { MORNING_SONG } from "./morning-song.js";
 
 const doc = (text: string) => parseHTML(`<body>${renderChartUnwrapped(text)}</body>`).document;
@@ -124,5 +124,94 @@ describe("a tutti bar the parts play differently", () => {
 			.filter((i) => i.kind === "row");
 		const cell = rows[rows.length - 1]?.cells[0];
 		expect(cell?.kind === "slots" && cell.slots[0]?.kind).toBe("chord");
+	});
+});
+
+describe("show-part on the element", () => {
+	test("renderChart writes the part as show-part, never the global part attribute", () => {
+		const html = renderChart(MORNING_SONG, { part: "Pno" });
+		expect(html).toContain('<barmark-chart show-part="Pno">');
+		expect(html).not.toMatch(/<barmark-chart[^>]* part=/);
+	});
+});
+
+describe("render minors", () => {
+	const THREE = "part: Gtr = Guitar\npart: Pno = Piano\npart: Bs = Bass\n\n";
+	test("a system whose first part's line errs numbers its first drawn row", () => {
+		const d = doc(`${THREE}Gtr | G | Xq7 |\nPno | Em | C |\nBs | E | C |\n`);
+		const numbers = [...d.querySelectorAll(".bm-part-row .bm-bar-number")].map((n) =>
+			n.textContent?.replace(/^[A-Za-z]+/, ""),
+		);
+		expect(numbers).toEqual(["1", ""]);
+	});
+	test("a system says and shows its repeat, ending and times once, on its first row", () => {
+		const d = doc(
+			"part: Gtr = Guitar\npart: Pno = Piano\n\nGtr |: G | C :| x3\nPno |: Em | C :| x3\n",
+		);
+		const rows = [...d.querySelectorAll(".bm-part-row")];
+		expect(rows.map((r) => r.querySelector(".bm-repeat")?.textContent ?? "")).toEqual([
+			"×3play 3 times",
+			"",
+		]);
+		const said = rows.map((r) =>
+			[...r.querySelectorAll(":scope > .bm-sr")].map((s) => s.textContent).join(" | "),
+		);
+		expect(said).toEqual(["Guitar | repeat start", "Piano"]);
+		// Both staves still draw their repeat bar lines.
+		expect(rows.every((r) => r.querySelector("[data-repeat-start]"))).toBe(true);
+	});
+	test("an ending's number shows once per system", () => {
+		const text =
+			"part: Gtr = Guitar\npart: Pno = Piano\n\nGtr |: G | C |\nPno |: Em | C |\nGtr |1 D :|\nPno |1 D :|\nGtr |2 G |\nPno |2 G |\n";
+		const endings = [...doc(text).querySelectorAll(".bm-ending")].map(
+			(r) => r.querySelector("[data-ending]")?.getAttribute("data-ending") ?? null,
+		);
+		expect(endings).toEqual(["1.", null, "2.", null]);
+	});
+	test("tacet rows carry bm-tacet in a part's own view too", () => {
+		const d = parseHTML(
+			`<body>${renderChartUnwrapped(MORNING_SONG, { part: "Pno" })}</body>`,
+		).document;
+		expect(d.querySelectorAll(".bm-row.bm-tacet")).toHaveLength(1);
+	});
+	test("an undeclared part's warning names no line", () => {
+		const m = layoutChart(MORNING_SONG, { part: "Bass" });
+		expect(m.diagnostics[0]?.line).toBe(0);
+		const html = renderChartUnwrapped(MORNING_SONG, { part: "Bass", diagnostics: true });
+		expect(html).toContain('<li class="bm-warning">no part labelled Bass</li>');
+	});
+	test("a cut tacet row says it is cut", () => {
+		const text = "part: Gtr = Guitar\npart: Pno = Piano\n\n## Verse\nGtr | G | C |\n## Verse ->\n";
+		const html = renderChartUnwrapped(text);
+		expect(html).toContain("bar 2: tacet, cut on this pass");
+	});
+});
+
+describe("several parts over the timeline", () => {
+	test("a replayed section brings back every part's rows, tacets and bar numbers", () => {
+		const text = `${MORNING_SONG}\n## Verse\n`;
+		const verses = [...doc(text).querySelectorAll(".bm-section")].filter(
+			(s) => s.getAttribute("aria-label") === "Verse",
+		);
+		expect(verses).toHaveLength(2);
+		const shape = (s: Element) =>
+			[...s.querySelectorAll(".bm-part-row")].map(
+				(r) =>
+					`${r.querySelector(".bm-bar-number")?.textContent}${r.classList.contains("bm-tacet") ? " tacet" : ""}`,
+			);
+		expect(shape(verses[1] as Element)).toEqual(shape(verses[0] as Element));
+	});
+	test("a repeat that opens in a system closes on a tutti ending without errors", () => {
+		const text =
+			"part: Gtr = Guitar\npart: Pno = Piano\n\nGtr |: G | C |\nPno |: Em | C |\n|1 D :|\n|2 G |\n";
+		const m = layoutChart(text);
+		expect(m.diagnostics).toEqual([]);
+		expect(renderChartUnwrapped(text)).toContain("repeat start");
+	});
+	test("a chart with no parts draws as it did: no systems, no gutter labels", () => {
+		const html = renderChartUnwrapped("key: G\n## A\n|: G | C :| x2\n| D |\n");
+		expect(html).not.toContain("bm-system");
+		expect(html).not.toContain("data-parts");
+		expect(html).not.toContain("bm-part-label");
 	});
 });

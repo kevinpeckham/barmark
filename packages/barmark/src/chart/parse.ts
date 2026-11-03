@@ -25,24 +25,57 @@ function mergeReports(each: ChartDiagnostic[][]): ChartDiagnostic[] {
 const partBar = (b: PlayedBar): PartBar =>
 	b.tacet ? null : { line: b.line, slots: b.slots, ...(b.words && { words: b.words }) };
 
+const meterText = (b: PlayedBar) => `${b.meter.n}/${b.meter.d}`;
+
 /** One bar of every part: shared fields from the first, the meter from the first that plays. */
 function zipBar(bars: PlayedBar[], report: (d: ChartDiagnostic) => void): PlayedBar {
 	const [first, ...rest] = bars as [PlayedBar, ...PlayedBar[]];
 	const playing = bars.filter((b) => !b.tacet);
 	const meter = playing[0]?.meter ?? first.meter;
-	if (playing.some((b) => b.meter.n !== meter.n || b.meter.d !== meter.d))
-		report({
-			line: playing[1]?.line ?? first.line,
-			severity: "error",
-			message: "the parts disagree on this bar's meter",
-			token: "|",
-		});
+	const meters = [...new Set(playing.map(meterText))];
+	// A `%` copies its bar's one-bar meter, so parts can disagree: say so on every line that plays the bar.
+	if (meters.length > 1)
+		for (const line of new Set(playing.map((b) => b.line)))
+			report({
+				line,
+				severity: "error",
+				message: `the parts disagree on this bar's meter (${meters.join(", ")})`,
+				token: "|",
+			});
 	return { ...first, meter, parts: [first, ...rest].map(partBar) };
 }
 
-/** Each part's events, played in lockstep: the shapes match because every line of a system shares its structure. */
-function zipEvents(each: ChartEvent[][], report: (d: ChartDiagnostic) => void): ChartEvent[] {
+const lineOf = (e: ChartEvent) => (e.kind === "bar" ? e.bar.line : e.line);
+
+/** The first event at which some part's timeline differs in shape from the lead's, or -1. */
+function stepAt(each: ChartEvent[][]): number {
 	const [lead = []] = each;
+	const longest = Math.max(...each.map((events) => events.length));
+	for (let i = 0; i < longest; i++)
+		if (each.some((events) => events[i]?.kind !== lead[i]?.kind)) return i;
+	return -1;
+}
+
+/**
+ * Each part's events, played in lockstep: the shapes match because every
+ * line of a system shares its structure. Where they don't, the lead's
+ * shape is kept and the first place they part is an error.
+ */
+export function zipEvents(
+	each: ChartEvent[][],
+	report: (d: ChartDiagnostic) => void,
+): ChartEvent[] {
+	const [lead = []] = each;
+	const apart = stepAt(each);
+	const at = lead[apart] ?? lead[lead.length - 1];
+	if (apart >= 0 && at)
+		report({
+			line: lineOf(at),
+			severity: "error",
+			message:
+				"the parts fall out of step here; check that every line of this system writes the same marks",
+			token: "|",
+		});
 	return lead.map((e, i) => {
 		const peers = each.map((events) => events[i] ?? e);
 		if (e.kind === "bar")

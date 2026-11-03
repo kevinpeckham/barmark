@@ -74,7 +74,8 @@ function parseFor(text: string, part: string | undefined): ChartParse {
 	if (one || !part) return one ?? parseChart(text);
 	const whole = parseChart(text);
 	const missing = {
-		line: 1,
+		// Line 0: the warning is about the chart, not one of its lines.
+		line: 0,
 		severity: "warning" as const,
 		message: `no part labelled ${part}`,
 		token: part,
@@ -313,7 +314,8 @@ const lastOfSystem = (item: SystemItem) => {
 	return first?.kind === "row" ? lastSlots(first.cells) : null;
 };
 
-const isTacet = (c: CellModel) => c.kind === "slots" && c.tacet === true;
+/** A bar where the part rests, in a system or a part's own view (barmark's grammar 7.4). */
+export const isTacet = (c: CellModel) => c.kind === "slots" && c.tacet === true;
 
 /** A row per declared part, in score order: its own line, its error, or tacet bars. */
 function layoutSystem(

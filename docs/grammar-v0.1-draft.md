@@ -757,8 +757,9 @@ the piano is **tacet**: it isn't written, so it rests.
   directions and one-bar meters shape the timeline, so every line of a
   system writes the same ones in the same places, and each part's line
   reads correctly on its own. Every line also writes the same number of
-  bars. A line that differs is an **error**, and its part is tacet for
-  that system until it is fixed. A repeat may open in a system and close
+  bars. A line that differs from the one most of the system's lines agree
+  with (the first, when none has a majority) is an **error**, and its
+  part is tacet for that system until it is fixed. A repeat may open in a system and close
   on a later system or a tutti line.
 - **A part's own.** Chords, note sets, holds, `N.C.`, `--`, `?`, words,
   accents, hits and pushes belong to their part. `%` copies the bar
@@ -870,7 +871,7 @@ keeps what cannot reduce:
 | error | `/` or `%` with nothing before it |
 | error | `part:` with no name or no label before `=`, after the first bar, or sharing its line with another directive |
 | error | a part without a label in a chart of several, two parts with one label, a label starting with `\|`, `#`, `@` or a digit, no space between a label and its `\|` |
-| error | lines of a system with different bar counts or different structure (7.4); `%` or a leading `/` after the part was tacet |
+| error | lines of a system with different bar counts or different structure (7.4); `%` or a leading `/` after the part was tacet; parts playing one bar in different meters (a `%` copying a one-bar meter) |
 | error | invalid directive value (`time: 4/3`, `tempo: fast`, `rit. to fast`, `feel: lazy`, `feel: swing 80%`, `feel: swing 58`, `feel: straight 55%`) |
 | error | `[n/d]` not at the start of a cell, or with an invalid meter |
 | error | a note set mixing octave and no octave, or an octave outside 0–8 |
