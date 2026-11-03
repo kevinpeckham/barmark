@@ -101,6 +101,11 @@ describe("guide sentences say no more than the grammar", () => {
 	test("x N says how many times", () => {
 		expect(meaning("repeat-line")).toContain("N times");
 	});
+	test("a swing amount runs from 50% to 75%, and the example sets one", () => {
+		expect(meaning("feel")).toContain("from 50% to 75%");
+		const row = ROWS.find((r) => r.id === "feel");
+		expect(parseChart(row?.example ?? "").bars[0]?.swingPercent).toBe(58);
+	});
 });
 
 describe("guide query", () => {

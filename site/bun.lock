@@ -5,13 +5,13 @@
     "": {
       "name": "barmark-site",
       "dependencies": {
-        "@barmark/render": "0.7.1",
+        "@barmark/render": "0.7.2",
         "@vercel/analytics": "2.0.1",
         "@vercel/speed-insights": "2.0.0",
-        "barmark": "0.8.0",
+        "barmark": "0.9.0",
       },
       "devDependencies": {
-        "@barmark/cli": "0.1.0",
+        "@barmark/cli": "0.1.1",
         "@fontsource/noto-mono": "5.3.0",
         "@fontsource/noto-sans": "5.3.0",
         "@fontsource/noto-serif": "5.3.0",
@@ -38,9 +38,9 @@
 
     "@antfu/install-pkg": ["@antfu/install-pkg@2.1.0", "", { "dependencies": { "package-manager-detector": "^1.8.0", "tinyexec": "^1.3.1" } }, "sha512-sdg9NxU3zR4Mnawfbc/x6GB5Wf17WYud5qOuEuxXjaKpYpMkISSJEjItGebXJ2bQ4DIcly4NYH23mtkGJjvKUw=="],
 
-    "@barmark/cli": ["@barmark/cli@0.1.0", "", { "dependencies": { "@barmark/render": "0.7.1", "barmark": "0.8.0" }, "bin": { "barmark": "dist/cli.js" } }, "sha512-ARU1c3esWGhSG6KMmHdnrWizQ+4pmwmVsi+eAhetYi1quOS2uPjwRRbfh86y2bCamljD+XvRCvsDW9ns/czqZg=="],
+    "@barmark/cli": ["@barmark/cli@0.1.1", "", { "dependencies": { "@barmark/render": "0.7.2", "barmark": "0.9.0" }, "bin": { "barmark": "dist/cli.js" } }, "sha512-Z+Kr55UJjn7gUDich/625um41j5PEIY+aaUBQXNXhky4cLEo3zoVw6gjkoYxx3lWfGLYNYrh4rm64GTsS8kS5Q=="],
 
-    "@barmark/render": ["@barmark/render@0.7.1", "", { "dependencies": { "barmark": "^0.8.0" } }, "sha512-ffH9DjTIEhLiFheAjUw0e001tOSH+B7tT8Mes8MHHegQ7g5MPtDs9J4L95brZSRUhYeJb4fIU40VQPRmY5GcTQ=="],
+    "@barmark/render": ["@barmark/render@0.7.2", "", { "dependencies": { "barmark": "^0.9.0" } }, "sha512-/f0LXKblb4PqtQFAWeoM3yrqmXwmFQVdg82xNkRx5HpIFXBmzmW44Q+WZbQ1ZXP+CHMMwRoz+QduiKHhGPeQqQ=="],
 
     "@fontsource/noto-mono": ["@fontsource/noto-mono@5.3.0", "", {}, "sha512-QZieY3OyKEImCXg3HRiF6p6/H0GXX94uEb53ayLyQgCTB20LdkvsyJIgigo6lAGmVw3WEs40DdG5KTqpxfwgGg=="],
 
@@ -236,7 +236,7 @@
 
     "balanced-match": ["balanced-match@4.0.4", "", {}, "sha512-BLrgEcRTwX2o6gGxGOCNyMvGSp35YofuYzw9h1IMTRmKqttAZZVU67bdb9Pr2vUHA8+j3i2tJfjO6C6+4myGTA=="],
 
-    "barmark": ["barmark@0.8.0", "", {}, "sha512-hDuPewJZCvE/XPo20P88YiOZ0zmXLA3UKjqMSVp9NEYt49S2NPOMQ6gaahFfMZb9BmRXLjxecgyWZdMFvLkHUQ=="],
+    "barmark": ["barmark@0.9.0", "", {}, "sha512-6hSz+J+EgHrv5taQa0GCfq9LDejbbKZnYlcXclia8RvExp7YzGXjR/bn0kRY0k8DP5r6eCsKXYVqU17m/ETR/Q=="],
 
     "bindings": ["bindings@1.5.0", "", { "dependencies": { "file-uri-to-path": "1.0.0" } }, "sha512-p2q/t/mhvuOj/UeLlV6566GD/guowlr0hHxClI0W9m7MWYkL1F0hLo+0Aexs9HSPCtR1SXQ0TD3MMKrXZajbiQ=="],
 
