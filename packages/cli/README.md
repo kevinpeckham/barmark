@@ -1,6 +1,6 @@
 # @barmark/cli
 
-The `barmark` command: check, format, render and transpose
+The `barmark` command: check, format, part, render and transpose
 [Barmark](https://www.barmark.dev) chord charts (`.chart.md` files) in a
 terminal or in CI. It runs the same `barmark` parser and `@barmark/render`
 renderer as barmark.dev, at exact versions, so a chart means the same
@@ -37,6 +37,7 @@ barmark check --strict --format github songs   # warnings fail too; PR annotatio
 barmark format song.chart.md             # print it in standard form
 barmark format --write songs             # rewrite the files that change
 barmark format --check songs             # list them and fail, for CI
+barmark part Bass song.chart.md          # one part of a chart of several
 barmark render song.chart.md --out song.html   # a standalone page, font included
 barmark transpose song.chart.md --to E   # or --semitones -2
 ```
@@ -44,7 +45,7 @@ barmark transpose song.chart.md --to E   # or --semitones -2
 `check --format json` prints the diagnostics for other tools. `render`
 takes the renderer's options as flags: `--theme auto|light|dark`,
 `--numerals nashville|roman`, `--no-bar-numbers`, `--rehearsal-letters`,
-`--no-wrap`, `--diagnostics`, and `--font-url <url>` to link the font
+`--no-wrap`, `--diagnostics`, `--part <label>` to draw one part, and `--font-url <url>` to link the font
 instead of embedding it. `barmark <command> --help` lists each command's
 flags; `barmark --version` prints the versions of the CLI and both
 libraries.
