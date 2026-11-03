@@ -1,5 +1,8 @@
 /** The score: part list, parts and their measures (MusicXML 4.0 score-partwise). */
 import { type ChartDiagnostic, type ChartParse, extractPart, type Part, parseChart } from "barmark";
+import { measureXml } from "./measure-xml.js";
+import { writtenMeasures } from "./measures.js";
+import { divisionsFor, lengthsOf } from "./rhythm.js";
 import { VERSION } from "./version.js";
 import { el, text } from "./xml.js";
 
@@ -36,17 +39,13 @@ function scorePart(source: PartSource, i: number): string {
 	]);
 }
 
-/** A placeholder measure per played bar: a whole-measure rest. */
 function partXml(source: PartSource, i: number): string {
-	const measures = source.parse.bars.map((bar, n) => {
-		const duration = (bar.meter.n * 32) / bar.meter.d;
-		const attributes = n === 0 ? el("attributes", {}, text("divisions", 8)) : "";
-		return el("measure", { number: n + 1 }, [
-			attributes,
-			el("note", {}, [el("rest", { measure: "yes" }), text("duration", duration)]),
-		]);
-	});
-	return el("part", { id: `P${i + 1}` }, measures);
+	const measures = writtenMeasures(source.parse);
+	const divisions = divisionsFor(measures.flatMap((m) => lengthsOf(m.slots, m.meter)));
+	const xml = measures.map((m, index) =>
+		measureXml(m, { divisions, index, previous: measures[index - 1] ?? null }),
+	);
+	return el("part", { id: `P${i + 1}` }, xml);
 }
 
 /** A chart as MusicXML 4.0, or its diagnostics when it has an error. Never throws. */
