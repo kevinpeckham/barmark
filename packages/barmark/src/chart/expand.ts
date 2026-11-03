@@ -38,6 +38,7 @@ type Played =
 			written: number;
 			rehearsal?: string;
 			words?: Words[];
+			tacet?: true;
 	  }
 	| { kind: "fermata" }
 	| { kind: "direction"; direction: Direction };
@@ -135,7 +136,11 @@ function removeLastBar(events: ChartEvent[]): boolean {
  * Turn the written chart into the bars in play order: sections and their
  * replays, repeats, directive changes, `%` and elision.
  */
-export function expand(lines: Line[]): {
+/** `label` names the part a projected chart is (grammar 7.4), for its messages. */
+export function expand(
+	lines: Line[],
+	label?: string,
+): {
 	events: ChartEvent[];
 	sections: SectionOccurrence[];
 	diagnostics: ChartDiagnostic[];
@@ -159,7 +164,9 @@ export function expand(lines: Line[]): {
 
 	// % copies the bar written before it, one-bar meter included, so a section plays the same wherever it is replayed.
 	const resolved = new Map<BarsLine, Played[]>();
-	let previous: { meter: Meter | null; slots: Slot[] } | null = null;
+	let previous: { meter: Meter | null; slots: Slot[]; tacet?: true } | null = null;
+	const tacetBefore = (line: number, what: string) =>
+		error(line, `${label ?? "this part"} was tacet in the bar before; ${what}`, what.slice(0, 1));
 	let written = 0;
 	/** A rehearsal mark waiting for the bar after it (grammar 2.5). */
 	const pending: { mark: { label: string; line: number } | null } = { mark: null };
@@ -179,21 +186,29 @@ export function expand(lines: Line[]): {
 	};
 	const simile = (c: Extract<WrittenCell, { kind: "simile" }>, line: number): Played => {
 		if (!previous) error(line, "% has no bar before it to repeat", "%");
+		else if (previous.tacet) tacetBefore(line, "% has nothing to copy");
 		const meter = previous?.meter ?? null;
 		const slots: Slot[] = previous?.slots ?? [{ kind: "hold" }];
 		return marked({ kind: "bar", meter, slots, own: false, written: ++written }, c.words);
 	};
-	const ownBar = (c: Extract<WrittenCell, { kind: "slots" }>, line: number): Played => {
+	/** A bar that opens with `/` holds what was sounding before it. */
+	const checkHold = (c: Extract<WrittenCell, { kind: "slots" }>, line: number) => {
 		const first = c.slots[0];
 		const head = first?.kind === "group" ? first.members[0] : first;
-		if (!previous && head?.kind === "hold") error(line, "/ has nothing before it to hold", "/");
-		previous = { meter: c.meter, slots: c.slots };
+		if (head?.kind !== "hold") return;
+		if (!previous) error(line, "/ has nothing before it to hold", "/");
+		else if (previous.tacet) tacetBefore(line, "/ has nothing to hold");
+	};
+	const ownBar = (c: Extract<WrittenCell, { kind: "slots" }>, line: number): Played => {
+		checkHold(c, line);
+		previous = { meter: c.meter, slots: c.slots, ...(c.tacet && { tacet: c.tacet }) };
 		const bar = {
 			kind: "bar",
 			meter: c.meter,
 			slots: c.slots,
 			own: true,
 			written: ++written,
+			...(c.tacet && { tacet: c.tacet }),
 		} as const;
 		return marked(bar, c.words);
 	};
@@ -315,6 +330,7 @@ export function expand(lines: Line[]): {
 			slots: p.slots,
 			...(p.rehearsal === undefined ? {} : { rehearsal: p.rehearsal }),
 			...(p.words === undefined ? {} : { words: p.words }),
+			...(p.tacet && { tacet: p.tacet }),
 		};
 	};
 	/** How long the slot played just before is, in whole notes; null after a fermata or at the start. */

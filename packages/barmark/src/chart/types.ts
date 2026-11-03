@@ -94,7 +94,14 @@ export type Words = { text: string; at: number };
  * rehearsal mark are not bars. `words` is present only when written.
  */
 export type Cell =
-	| { kind: "slots"; meter: Meter | null; slots: Slot[]; words?: Words[] }
+	| {
+			kind: "slots";
+			meter: Meter | null;
+			slots: Slot[];
+			words?: Words[];
+			/** A stand-in bar of `N.C.` for a part that is tacet there (grammar 7.4); only a projected part has one. */
+			tacet?: true;
+	  }
 	| { kind: "simile"; words?: Words[] }
 	| { kind: "fermata" }
 	| { kind: "direction"; direction: Direction }
@@ -164,6 +171,8 @@ export type PlayedBar = {
 	rehearsal?: string;
 	/** Words written on this bar; absent when none. `%` copies chords, not words. */
 	words?: Words[];
+	/** Set when the part is tacet in this bar (grammar 7.4): its slots then read `N.C.`. */
+	tacet?: true;
 };
 /** An open repeat shows one pass; the number of passes is unknown. */
 export type ChartEvent =
