@@ -1,5 +1,6 @@
 /** One measure as MusicXML: attributes when they change, then its notes. */
-import type { Direction, Key, SimpleSlot } from "barmark";
+import type { Key, SimpleSlot } from "barmark";
+import { direction, feelXml, jumpXml, tempoXml, textXml, wordsXml } from "./directions.js";
 import type { MeasureEvents, SoundEvent } from "./events.js";
 import { harmonyXml, noChordXml } from "./harmony.js";
 import type { Marks, Measure } from "./measures.js";
@@ -11,6 +12,7 @@ export type MeasureContext = {
 	divisions: number;
 	index: number;
 	previous: Measure | null;
+	next: Measure | null;
 	clef: "G" | "F";
 };
 
@@ -86,9 +88,6 @@ function harmonyOf(slot: SimpleSlot): string {
 	return slot.kind === "chord" && slot.chord.kind === "chord" ? harmonyXml(slot.chord) : "";
 }
 
-const wordsXml = (words: string) =>
-	el("direction", { placement: "above" }, el("direction-type", {}, text("words", words)));
-
 function soundOf(slot: SimpleSlot): Sound {
 	if (slot.kind === "silence") return { kind: "rest" };
 	const set = noteSetOf(slot);
@@ -116,30 +115,16 @@ function eventXml(e: SoundEvent, divisions: number): string {
 	].join("");
 }
 
-const direction = (types: string, sound?: Record<string, string>) =>
-	el("direction", { placement: "above" }, [
-		el("direction-type", {}, types),
-		sound ? el("sound", sound) : "",
-	]);
-
-const JUMP_WORDS = { start: "D.C.", segno: "D.S." };
-const AL_WORDS = { fine: " al Fine", coda: " al Coda" };
-
-function directionXml(d: Direction): string {
-	if (d.kind === "segno") return direction(el("segno"), { segno: "s1" });
-	if (d.kind === "coda") return direction(el("coda"), { coda: "c1" });
-	if (d.kind === "to coda") return direction(text("words", "To Coda"), { tocoda: "c1" });
-	if (d.kind === "fine") return direction(text("words", "Fine"), { fine: "yes" });
-	const words = JUMP_WORDS[d.to] + (d.al ? AL_WORDS[d.al] : "");
-	return direction(text("words", words), d.to === "start" ? { dacapo: "yes" } : { dalsegno: "s1" });
-}
-
-/** Before the notes: the heading, the rehearsal mark, Segno and Coda. */
-function startXml(marks: Marks): string {
+/** Before the notes: the heading, the rehearsal mark, tempo, feel, Segno, Coda and text lines. */
+function startXml(m: Measure, ctx: MeasureContext): string {
+	const { marks } = m;
 	return [
 		marks.heading ? direction(text("words", marks.heading, { "font-weight": "bold" })) : "",
 		marks.rehearsal ? direction(text("rehearsal", marks.rehearsal)) : "",
-		...marks.start.map(directionXml),
+		tempoXml(m, ctx.previous, ctx.next),
+		feelXml(m, ctx.previous),
+		...marks.start.map(jumpXml),
+		textXml(m.text),
 	].join("");
 }
 
@@ -147,7 +132,7 @@ function startXml(marks: Marks): string {
 function endXml(marks: Marks): string {
 	return [
 		marks.repeatEnd === "open" ? direction(text("words", "repeat as needed")) : "",
-		...marks.end.map(directionXml),
+		...marks.end.map(jumpXml),
 	].join("");
 }
 
@@ -193,7 +178,7 @@ export function measureXml(bar: MeasureEvents, ctx: MeasureContext): string {
 	return el("measure", { number: ctx.index + 1, text: m.shown }, [
 		attributesXml(m, ctx),
 		leftBarlineXml(m.marks),
-		startXml(m.marks),
+		startXml(m, ctx),
 		body,
 		endXml(m.marks),
 		rightBarlineXml(m.marks),

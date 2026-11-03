@@ -49,7 +49,13 @@ function partXml(source: PartSource, i: number): string {
 		bars.flatMap((b) => [barLength(b.measure.meter), ...b.events.map((e) => e.length)]),
 	);
 	const xml = bars.map((bar, index) =>
-		measureXml(bar, { divisions, index, previous: measures[index - 1] ?? null, clef }),
+		measureXml(bar, {
+			divisions,
+			index,
+			previous: measures[index - 1] ?? null,
+			next: measures[index + 1] ?? null,
+			clef,
+		}),
 	);
 	return el("part", { id: `P${i + 1}` }, xml);
 }

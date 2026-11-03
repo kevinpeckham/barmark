@@ -8,6 +8,7 @@ import type {
 	Cell,
 	ChartParse,
 	Direction,
+	Feel,
 	Key,
 	Line,
 	Meter,
@@ -41,6 +42,12 @@ export type Measure = {
 	words: Words[];
 	/** The part rests here (grammar 7.4). */
 	tacet: boolean;
+	tempo: number | null;
+	tempoChange: PlayedBar["tempoChange"];
+	feel: Feel;
+	swingPercent?: number;
+	/** Text lines written before the measure (lyrics, `###` notes, prose). */
+	text: { text: string; note: boolean }[];
 	marks: Marks;
 };
 
@@ -62,8 +69,22 @@ const measureOf = (b: PlayedBar): Measure => ({
 	slots: b.slots,
 	words: b.words ?? [],
 	tacet: b.tacet === true,
+	tempo: b.tempo,
+	tempoChange: b.tempoChange,
+	feel: b.feel,
+	...(b.swingPercent === undefined ? {} : { swingPercent: b.swingPercent }),
+	text: [],
 	marks: blank(),
 });
+
+type Pending = {
+	heading: string | null;
+	rehearsal: string | null;
+	start: Direction[];
+	text: Measure["text"];
+};
+
+const nothing = (): Pending => ({ heading: null, rehearsal: null, start: [], text: [] });
 
 type Walk = {
 	parse: ChartParse;
@@ -71,7 +92,9 @@ type Walk = {
 	written: number;
 	firstPlay: Map<number, PlayedBar>;
 	/** Marks waiting for the next measure. */
-	pending: { heading: string | null; rehearsal: string | null; start: Direction[] };
+	pending: Pending;
+	/** The first measure of the replay being walked, which takes its section's text lines. */
+	replay: number | null;
 	section: { from: number; repeat: Repeat; line: number } | null;
 };
 
@@ -79,7 +102,8 @@ function add(w: Walk, m: Measure): void {
 	m.marks.heading = w.pending.heading;
 	m.marks.rehearsal = w.pending.rehearsal;
 	m.marks.start = w.pending.start;
-	w.pending = { heading: null, rehearsal: null, start: [] };
+	m.text = w.pending.text;
+	w.pending = nothing();
 	w.out.push(m);
 }
 
@@ -95,7 +119,19 @@ function playedOut(w: Walk, o: SectionOccurrence): void {
 function unplayed(w: Walk, cell: Extract<Cell, { kind: "slots" | "simile" }>): Measure {
 	const slots = cell.kind === "slots" ? cell.slots : [];
 	const meter = cell.kind === "slots" && cell.meter ? cell.meter : { n: 4, d: 4 };
-	return { shown: w.written, meter, key: null, slots, words: [], tacet: false, marks: blank() };
+	return {
+		shown: w.written,
+		meter,
+		key: null,
+		slots,
+		words: [],
+		tacet: false,
+		tempo: null,
+		tempoChange: null,
+		feel: "straight",
+		text: [],
+		marks: blank(),
+	};
 }
 
 /** A written bar, with `%` resolved as the parser first played it. */
@@ -181,8 +217,20 @@ function sectionLine(w: Walk, line: Extract<Line, { kind: "section" }>): void {
 	closeSection(w);
 	const o = occurrenceAt(w, line.line);
 	w.pending.heading = line.name;
-	if (o && o.replayOf !== null) playedOut(w, o);
-	else w.section = { from: w.out.length, repeat: line.repeat, line: line.line };
+	w.replay = null;
+	if (o && o.replayOf !== null) {
+		w.replay = w.out.length;
+		playedOut(w, o);
+	} else w.section = { from: w.out.length, repeat: line.repeat, line: line.line };
+}
+
+/** A text line goes below the next bar, or below a replay's first bar when it is the replay's own. */
+function textLine(w: Walk, line: string): void {
+	const note = /^#{3,}\s*/.exec(line);
+	const t = { text: note ? line.slice(note[0].length) : line, note: note !== null };
+	const replay = w.replay === null ? undefined : w.out[w.replay];
+	if (replay) replay.text.push(t);
+	else w.pending.text.push(t);
 }
 
 /** The bars as written, in written order, with the marks that play them in play order. */
@@ -194,16 +242,20 @@ export function writtenMeasures(parse: ChartParse): Measure[] {
 		out: [],
 		written: 0,
 		firstPlay,
-		pending: { heading: null, rehearsal: null, start: [] },
+		pending: nothing(),
+		replay: null,
 		section: null,
 	};
 	parse.lines.forEach((line, i) => {
 		if (line.kind === "section") sectionLine(w, line);
+		if (line.kind === "text") textLine(w, line.text);
 		if (line.kind !== "bars") return;
+		w.replay = null;
 		const from = w.out.length;
 		for (const cell of line.cells) cellIn(w, cell);
 		lineMarks(w, line, from, parse.lines, i + 1);
 	});
 	closeSection(w);
+	w.out[w.out.length - 1]?.text.push(...w.pending.text);
 	return w.out;
 }
