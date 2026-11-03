@@ -6,6 +6,12 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.1.3] - 2026-11-03
+
+Uses `barmark` 0.11.0 and `@barmark/render` 0.8.0, pinned exactly: charts
+may now write endings (`|1`, `|2`) and directions (`Segno`, `D.S. al
+Coda`, …); `check` and `format` read them and `render` draws them.
+
 ## [0.1.2] - 2026-11-03
 
 Uses `barmark` 0.10.0 and `@barmark/render` 0.7.3, pinned exactly. No
@@ -38,7 +44,8 @@ The first release of the `barmark` command. Uses `barmark` 0.8.0 and
 - **The `barmark` command:** `check`, `format`, `render` and `transpose`
   for `.chart.md` files, on npm and as standalone binaries.
 
-[Unreleased]: https://github.com/kevinpeckham/barmark/compare/cli-v0.1.2...HEAD
+[Unreleased]: https://github.com/kevinpeckham/barmark/compare/cli-v0.1.3...HEAD
+[0.1.3]: https://github.com/kevinpeckham/barmark/compare/cli-v0.1.2...cli-v0.1.3
 [0.1.2]: https://github.com/kevinpeckham/barmark/compare/cli-v0.1.1...cli-v0.1.2
 [0.1.1]: https://github.com/kevinpeckham/barmark/compare/cli-v0.1.0...cli-v0.1.1
 [0.1.0]: https://github.com/kevinpeckham/barmark/releases/tag/cli-v0.1.0

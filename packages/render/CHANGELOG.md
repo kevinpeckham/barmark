@@ -6,13 +6,19 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-11-03
+
 Requires `barmark` 0.11.0.
+
+### Changed
+
+- **Depends on `barmark` `^0.11.0`** (was `^0.10.0`).
 
 ### Added
 
-- Endings: an ending row has a bracket over its bars and a `1.`, `2.`
+- **Endings:** an ending row has a bracket over its bars and a `1.`, `2.`
   or `1.–3.` label; screen readers hear "ending for pass 1".
-- Directions: Segno and Coda as their signs, To Coda with the coda
+- **Directions:** Segno and Coda as their signs, To Coda with the coda
   sign, Fine and the jumps as words. Each is spoken ("dal segno al
   coda"). Bar numbers skip them, since they are not bars.
 
@@ -233,7 +239,8 @@ that needs no script or as the `<barmark-chart>` web component. Requires
   zoom without sideways scrolling, the element renders and re-renders, and
   a screen reader hears "bar 9: D". Run them with `bun run test:browser`.
 
-[Unreleased]: https://github.com/kevinpeckham/barmark/compare/render-v0.7.3...HEAD
+[Unreleased]: https://github.com/kevinpeckham/barmark/compare/render-v0.8.0...HEAD
+[0.8.0]: https://github.com/kevinpeckham/barmark/compare/render-v0.7.3...render-v0.8.0
 [0.7.3]: https://github.com/kevinpeckham/barmark/compare/render-v0.7.2...render-v0.7.3
 [0.7.2]: https://github.com/kevinpeckham/barmark/compare/render-v0.7.1...render-v0.7.2
 [0.7.1]: https://github.com/kevinpeckham/barmark/compare/render-v0.7.0...render-v0.7.1
