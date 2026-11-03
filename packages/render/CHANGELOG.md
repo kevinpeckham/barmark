@@ -6,6 +6,8 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.9.1] - 2026-11-03
+
 ### Fixed
 
 - **Bar numbers count the bars as written** (issue #92), each once, as a
@@ -266,7 +268,8 @@ that needs no script or as the `<barmark-chart>` web component. Requires
   zoom without sideways scrolling, the element renders and re-renders, and
   a screen reader hears "bar 9: D". Run them with `bun run test:browser`.
 
-[Unreleased]: https://github.com/kevinpeckham/barmark/compare/render-v0.9.0...HEAD
+[Unreleased]: https://github.com/kevinpeckham/barmark/compare/render-v0.9.1...HEAD
+[0.9.1]: https://github.com/kevinpeckham/barmark/compare/render-v0.9.0...render-v0.9.1
 [0.9.0]: https://github.com/kevinpeckham/barmark/compare/render-v0.8.0...render-v0.9.0
 [0.8.0]: https://github.com/kevinpeckham/barmark/compare/render-v0.7.3...render-v0.8.0
 [0.7.3]: https://github.com/kevinpeckham/barmark/compare/render-v0.7.2...render-v0.7.3
