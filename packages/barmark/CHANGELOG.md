@@ -9,6 +9,8 @@ Releases follow the process in [RELEASING.md](RELEASING.md).
 
 ## [Unreleased]
 
+## [0.12.0] - 2026-11-03
+
 Rehearsal marks and words on a bar, issue #70 (grammar 2.5 and 2.6);
 omissions, voicings, accents, hits and push marks (grammar 2.7, 2.8, 3
 and 4.2).
@@ -302,7 +304,8 @@ The first working release: the reference parser and printer for the
 
 - **A placeholder package that holds the `barmark` name** while the spec and parser are written.
 
-[Unreleased]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.11.0...HEAD
+[Unreleased]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.12.0...HEAD
+[0.12.0]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.11.0...barmark-v0.12.0
 [0.11.0]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.10.0...barmark-v0.11.0
 [0.10.0]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.9.0...barmark-v0.10.0
 [0.9.0]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.8.0...barmark-v0.9.0
