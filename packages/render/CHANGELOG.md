@@ -6,6 +6,19 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- **Several parts** (barmark 0.14.0, grammar 7.4): a system draws as
+  stacked rows, one per declared part in score order, sharing the
+  section's columns, with the part's label in the gutter and one bar
+  number. A part tacet there gets an empty row marked "tacet"; a tutti
+  line stays one row. The header lists the parts. The model gains
+  `parts`, a `system` item (its `rows`, each a row or an error) and
+  `tacet` on a bar.
+- **One part's view**: the `part` option and attribute draw only the
+  part with that label, as a single-part chart, with "tacet" where it
+  rests. An undeclared label draws the whole chart with a warning.
+
 ## [0.10.0] - 2026-11-03
 
 ### Added

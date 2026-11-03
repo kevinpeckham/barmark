@@ -77,6 +77,7 @@ the element loads, with `<style data-barmark-font>` holding
 | `rehearsalLetters` | `rehearsal-letters` (`rehearsalLetters`) | `false` | boxed A, B, C… on each section as played |
 | `numerals` | `numerals` (`numerals`) | none | `"nashville"` (6m⁷) or `"roman"` (vi⁷): each chord as its degree in its bar's key |
 | `wrap` | `wrap="off"` (`wrap`) | `true` | wrap a section's rows when it is wider than the chart's box; off, rows keep their columns and the chart overflows, for its page to scroll |
+| `part` | `part` (`part`) | none | draw only the part with this label, as one player reads it: tutti bars, its own bars, and "tacet" where it rests |
 | `diagnostics` | | `false` | list the chart's errors and warnings below it |
 | `fontUrl` | | none | emit Edwin's `@font-face` rule before the chart |
 | (the `text` argument) | (`text`) | `null` | the chart to draw; wins over `src` and the script child |
@@ -184,6 +185,14 @@ repeat, an ending, a jump or a replay doesn't move them, so a replayed
 section shows the numbers it was written with. A line with an error shows as written, underlined,
 with its message. `layoutChart(text)` returns all of this as data, if
 you want to draw it yourself.
+
+A chart of several parts (barmark's grammar 7.4) draws each system as
+stacked rows, one per part in score order, with the part's label in the
+gutter and one bar number on the top row. A part tacet in a system gets
+an empty row that says "tacet" in its first bar, so every system keeps its
+shape; a tutti line is one row. The header lists the parts' names, and
+each part row is announced by name to a screen reader. On a screen too
+narrow for a section, its rows wrap one by one, as any row does.
 
 ## License
 
