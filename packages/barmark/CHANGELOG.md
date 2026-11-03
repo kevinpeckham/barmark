@@ -9,6 +9,30 @@ Releases follow the process in [RELEASING.md](RELEASING.md).
 
 ## [Unreleased]
 
+Endings and directions, issue #70 (grammar 5.1 and 5.2).
+
+### Added
+
+- First and second endings: an ending is a bar line of its own,
+  `|1 G | G7 :|` then `|2 G | C |`, also `|1-3` and `|1,3`. Endings
+  follow a `|: … :|` repeat, and each pass plays its own ending. Bar
+  lines carry `ending`, the passes it plays on.
+- Directions: `Segno`, `Coda`, `To Coda`, `Fine`, and one jump per
+  chart, `D.C.` or `D.S.`, alone or `al Fine` / `al Coda`. A direction
+  is a cell of its own (`kind: "direction"`), a place between bars, not
+  a bar. Play order follows the jump; after it, every repeat plays
+  once and takes its last ending.
+- Errors with line numbers for endings that don't add up (a pass with
+  no ending or two, a last ending that goes back) and for directions
+  the jump can't use (no Segno before `D.S.`, `al Coda` with no
+  `To Coda`, a mark no jump uses, a second jump).
+- `printPasses` and `printDirection`, the canonical spellings.
+
+### Changed
+
+- `|1` was reserved and is now an ending; a chart that wrote it had an
+  error before, so no valid chart changes meaning.
+
 ## [0.10.0] - 2026-11-03
 
 Written bar numbers on played bars, issue #70. No chart changes meaning.

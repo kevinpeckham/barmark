@@ -1,7 +1,10 @@
+import { type JumpPlan, planJump } from "./direction.js";
 import { beatsOf } from "./directives.js";
+import { type Entry, type Item, pairRepeats } from "./repeats.js";
 import type {
 	ChartDiagnostic,
 	ChartEvent,
+	Direction,
 	Directives,
 	Feel,
 	Key,
@@ -25,11 +28,35 @@ type Section = { heading: SectionLine | null; lines: Line[] };
 /** A cell with `%` already resolved to the slots it copies. */
 type Played =
 	| { kind: "bar"; meter: Meter | null; slots: Slot[]; own: boolean; written: number }
-	| { kind: "fermata" };
-type Entry = { line: Line; repeat: Repeat };
-type Item =
-	| ({ kind: "line" } & Entry)
-	| { kind: "bracket"; line: number; entries: Entry[]; repeat: Repeat };
+	| { kind: "fermata" }
+	| { kind: "direction"; direction: Direction };
+/**
+ * Where play is: the main pass, which stops at the jump; seeking the segno
+ * or the coda, playing nothing; the return after the jump; or done.
+ */
+type Phase = "main" | "jumped" | "seek segno" | "seek coda" | "return" | "done";
+/**
+ * How each mark moves play along. A mark the jump does not use is an error
+ * that drops the jump, so with a jump planned every mark here applies.
+ */
+const NEXT: Partial<Record<Phase, Partial<Record<Direction["kind"], Phase>>>> = {
+	main: { jump: "jumped" },
+	"seek segno": { segno: "return" },
+	"seek coda": { coda: "return" },
+	return: { fine: "done", "to coda": "seek coda" },
+};
+
+/** The warning for a cell whose slots divide its beats unevenly (grammar 2.1). */
+function uneven(slots: number, meter: Meter, line: number): ChartDiagnostic | null {
+	const b = beatsOf(meter);
+	if (b % slots === 0 || slots % b === 0) return null;
+	return {
+		line,
+		severity: "warning",
+		message: `${slots} slots divide ${b} beats unevenly`,
+		token: `${slots}`,
+	};
+}
 
 const normalize = (name: string) => name.toLowerCase().replace(/\s+/g, " ").trim();
 
@@ -81,8 +108,15 @@ export function expand(lines: Line[]): {
 	diagnostics: ChartDiagnostic[];
 } {
 	const diagnostics: ChartDiagnostic[] = [];
-	const error = (line: number, message: string, token: string) =>
+	// The return after a jump plays sections again: it reports only what the first pass did not.
+	const reported = new Set<string>();
+	let again = false;
+	const error = (line: number, message: string, token: string) => {
+		const key = `${line}\u0000${message}`;
+		if (again && reported.has(key)) return;
+		reported.add(key);
 		diagnostics.push({ line, severity: "error", message, token });
+	};
 
 	const sections: Section[] = [{ heading: null, lines: [] }];
 	for (const l of lines) {
@@ -100,6 +134,7 @@ export function expand(lines: Line[]): {
 		const cells: Played[] = [];
 		for (const c of l.cells) {
 			if (c.kind === "fermata") cells.push({ kind: "fermata" });
+			else if (c.kind === "direction") cells.push(c);
 			else if (c.kind === "simile") {
 				if (!previous) error(l.line, "% has no bar before it to repeat", "%");
 				cells.push({
@@ -121,59 +156,26 @@ export function expand(lines: Line[]): {
 		resolved.set(l, cells);
 	}
 
-	// Pair |: and :| within each section.
-	const itemsOf = new Map<Section, Item[]>();
-	for (const s of sections) {
-		const items: Item[] = [];
-		let open: { line: number; entries: Entry[] } | null = null;
-		for (const l of s.lines) {
-			const bars = l.kind === "bars" ? l : null;
-			if (bars?.opens) {
-				if (open) error(bars.line, "|: inside another |:", "|:");
-				else open = { line: bars.line, entries: [] };
-			}
-			if (bars?.closes) {
-				if (!open) {
-					error(bars.line, ":| has no |: before it in this section", ":|");
-					items.push({ kind: "line", line: bars, repeat: null });
-					continue;
-				}
-				open.entries.push({ line: bars, repeat: null });
-				items.push({
-					kind: "bracket",
-					line: open.line,
-					entries: open.entries,
-					repeat: bars.repeat ?? 2,
-				});
-				open = null;
-				continue;
-			}
-			const entry = { line: l, repeat: bars?.repeat ?? null };
-			if (open) open.entries.push(entry);
-			else items.push({ kind: "line", ...entry });
-		}
-		if (open) {
-			error(open.line, "|: is never closed in this section", "|:");
-			items.push(...open.entries.map((e): Item => ({ kind: "line", ...e })));
-		}
-		itemsOf.set(s, items);
-	}
+	// Pair |: and :| within each section, with any endings.
+	const itemsOf = new Map(sections.map((s) => [s, pairRepeats(s.lines, error)]));
+	const plan: JumpPlan | null = planJump(lines, error);
 
-	const state: {
+	const start = (): {
 		key: Key | null;
 		time: Meter;
 		tempo: number | null;
 		change: PlayedBar["tempoChange"];
 		feel: Feel;
 		swingPercent: number | undefined;
-	} = {
+	} => ({
 		key: null,
 		time: { n: 4, d: 4 },
 		tempo: null,
 		change: null,
 		feel: "straight",
 		swingPercent: undefined,
-	};
+	});
+	const state = start();
 	const warned = new Set<number>();
 	const warn = (line: number, message: string, token: string) => {
 		if (warned.has(line)) return;
@@ -222,46 +224,47 @@ export function expand(lines: Line[]): {
 		error(line, `expansion stopped at ${MAX_EXPANDED_BARS} bars`, "x");
 	};
 	let sectionName: string | null = null;
+	let phase: Phase = "main";
+	const stopped = () => capped || phase === "jumped" || phase === "done";
+	const jumped = () => phase === "jumped";
+	const seeking = () => phase === "seek segno" || phase === "seek coda";
+	/** The jump is taken once; after it, `To Coda` and `Fine` take effect. */
+	const direct = (d: Direction) => {
+		if (plan) phase = NEXT[phase]?.[d.kind] ?? phase;
+	};
 
-	const emit = (p: Played, line: number, out: ChartEvent[]) => {
-		if (capped) return;
-		if (++work > MAX_WORK) return stop(line);
-		if (p.kind === "fermata") {
-			out.push({ kind: "fermata", line });
-			return;
-		}
-		if (count >= MAX_EXPANDED_BARS) return stop(line);
-		count++;
+	/** A bar as played now; its slot count is checked the first time a written bar plays. */
+	const barOf = (p: Extract<Played, { kind: "bar" }>, line: number): PlayedBar => {
 		const meter = p.meter ?? state.time;
 		if (p.own && !checked.has(p)) {
 			checked.add(p);
-			const k = p.slots.length;
-			const b = beatsOf(meter);
-			if (b % k !== 0 && k % b !== 0)
-				diagnostics.push({
-					line,
-					severity: "warning",
-					message: `${k} slots divide ${b} beats unevenly`,
-					token: `${k}`,
-				});
+			const warning = uneven(p.slots.length, meter, line);
+			if (warning) diagnostics.push(warning);
 		}
 		const { key, tempo, change: tempoChange, feel, swingPercent } = state;
-		out.push({
-			kind: "bar",
-			bar: {
-				index: 0,
-				written: p.written,
-				line,
-				section: sectionName,
-				meter,
-				key,
-				tempo,
-				tempoChange,
-				feel,
-				...(swingPercent === undefined ? {} : { swingPercent }),
-				slots: p.slots,
-			},
-		});
+		return {
+			index: 0,
+			written: p.written,
+			line,
+			section: sectionName,
+			meter,
+			key,
+			tempo,
+			tempoChange,
+			feel,
+			...(swingPercent === undefined ? {} : { swingPercent }),
+			slots: p.slots,
+		};
+	};
+	const emit = (p: Played, line: number, out: ChartEvent[]) => {
+		if (stopped()) return;
+		if (p.kind === "direction") return direct(p.direction);
+		if (seeking()) return;
+		if (++work > MAX_WORK) return stop(line);
+		if (p.kind === "fermata") return void out.push({ kind: "fermata", line });
+		if (count >= MAX_EXPANDED_BARS) return stop(line);
+		count++;
+		out.push({ kind: "bar", bar: barOf(p, line) });
 	};
 	/** Play `body` `repeat` times into `out`; an open repeat plays one pass inside an open event. */
 	const times = (
@@ -285,13 +288,16 @@ export function expand(lines: Line[]): {
 			out.push({ kind: "open", line, events: inner });
 			return;
 		}
-		for (let i = 0; i < (repeat ?? 1) && !capped; i++) {
+		// After the jump every repeat plays once.
+		const passes = phase === "main" ? (repeat ?? 1) : 1;
+		for (let i = 0; i < passes && !stopped(); i++) {
 			if (++work > MAX_WORK) return stop(line);
 			body(out);
 		}
 	};
 
 	const playLine = ({ line: l, repeat }: Entry, out: ChartEvent[]) => {
+		if (stopped()) return;
 		if (l.kind === "directive") apply(l.set, l.line);
 		if (l.kind !== "bars") return;
 		times(repeat, l.line, out, (into) => {
@@ -301,52 +307,87 @@ export function expand(lines: Line[]): {
 	const playItems = (items: Item[], out: ChartEvent[]) => {
 		for (const it of items) {
 			if (it.kind === "line") playLine(it, out);
+			else if (it.endings.length) playEndings(it, out);
 			else
 				times(it.repeat, it.line, out, (into) => {
 					for (const e of it.entries) playLine(e, into);
 				});
 		}
 	};
+	/** Each pass plays the body, then its ending; after the jump, only the last pass. */
+	const playEndings = (it: Extract<Item, { kind: "bracket" }>, out: ChartEvent[]) => {
+		const highest = typeof it.repeat === "number" ? it.repeat : 1;
+		const first = phase === "main" ? 1 : highest;
+		for (let pass = first; pass <= highest && !stopped(); pass++) {
+			if (++work > MAX_WORK) return stop(it.line);
+			for (const e of it.entries) playLine(e, out);
+			const ending = it.endings.find((x) => x.passes.includes(pass));
+			if (ending) playLine(ending.entry, out);
+		}
+	};
 
 	const events: ChartEvent[] = [];
 	const occurrences: [Omit<SectionOccurrence, "form">, ChartEvent[]][] = [];
 	const definitions = new Map<string, Section>();
-	for (const s of sections) {
-		const h = s.heading;
-		const items = itemsOf.get(s) ?? [];
-		if (!h) {
-			sectionName = null;
-			playItems(items, events);
-			continue;
+	/** Headings already played, so a written section played again by the jump is a replay. */
+	const heard = new Set<number>();
+	const playSections = () => {
+		for (const s of sections) {
+			if (stopped()) return;
+			playSection(s);
 		}
-		sectionName = h.name;
-		const out: ChartEvent[] = [];
-		const isDefinition = isWritten(s);
-		let replayOf: number | null = null;
-		if (isDefinition) {
-			definitions.set(normalize(h.name), s);
-			if (h.elided) error(h.line, "-> is only for a replay; leave the bar out instead", "->");
-			times(h.repeat, h.line, out, (into) => playItems(items, into));
-		} else {
-			// A nameless heading is already an error; it has nothing to replay.
-			if (!h.name) continue;
-			const source = definitions.get(normalize(h.name));
-			if (!source?.heading) {
-				error(h.line, unmatchedReplay(h, sections), h.name);
-				continue;
-			}
-			replayOf = source.heading.line;
-			const body = itemsOf.get(source) ?? [];
-			times(h.repeat, h.line, out, (into) => playItems(body, into));
+	};
+	type Heading = { replayOf: number | null; elided: boolean };
+	/** A written section's bars into `out`. */
+	const playWritten = (s: Section, h: SectionLine, out: ChartEvent[]): Heading => {
+		definitions.set(normalize(h.name), s);
+		if (h.elided) error(h.line, "-> is only for a replay; leave the bar out instead", "->");
+		times(h.repeat, h.line, out, (into) => playItems(itemsOf.get(s) ?? [], into));
+		return { replayOf: null, elided: false };
+	};
+	/** A replay's bars into `out`, then its own lines; null when it replays nothing. */
+	const playReplay = (s: Section, h: SectionLine, out: ChartEvent[]): Heading | null => {
+		// A nameless heading is already an error; it has nothing to replay.
+		if (!h.name) return null;
+		const source = definitions.get(normalize(h.name));
+		if (!source?.heading) {
+			error(h.line, unmatchedReplay(h, sections), h.name);
+			return null;
 		}
-		const elided = !isDefinition && h.elided && removeLastBar(out);
+		times(h.repeat, h.line, out, (into) => playItems(itemsOf.get(source) ?? [], into));
+		const elided = h.elided && removeLastBar(out);
 		// A replay heading stands for its bars: its own lines (directives) come after them.
-		if (!isDefinition) playItems(items, out);
-		events.push(...out);
+		playItems(itemsOf.get(s) ?? [], out);
+		return { replayOf: source.heading.line, elided };
+	};
+	/** A section occurrence; one the jump plays again is a replay of itself. */
+	const record = (h: SectionLine, out: ChartEvent[], replayOf: number | null, elided: boolean) => {
+		// Sections the return passes over while seeking play nothing and are not occurrences.
+		if (phase !== "main" && phase !== "jumped" && !out.length) return;
+		const of = replayOf ?? (heard.has(h.line) ? h.line : null);
+		heard.add(h.line);
 		occurrences.push([
-			{ name: h.name, line: h.line, replayOf, firstBar: null, lastBar: null, elided },
+			{ name: h.name, line: h.line, replayOf: of, firstBar: null, lastBar: null, elided },
 			out,
 		]);
+	};
+	const playSection = (s: Section) => {
+		const h = s.heading;
+		sectionName = h?.name ?? null;
+		if (!h) return playItems(itemsOf.get(s) ?? [], events);
+		const out: ChartEvent[] = [];
+		const played = isWritten(s) ? playWritten(s, h, out) : playReplay(s, h, out);
+		if (!played) return;
+		events.push(...out);
+		record(h, out, played.replayOf, played.elided);
+	};
+	playSections();
+	if (jumped() && plan) {
+		// The return reads the chart again from the top, so the directives in force are the written ones.
+		Object.assign(state, start());
+		again = true;
+		phase = plan.to === "start" ? "return" : "seek segno";
+		playSections();
 	}
 
 	flattenBars(events).forEach((b, i) => {

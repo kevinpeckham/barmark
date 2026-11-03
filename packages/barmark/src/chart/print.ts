@@ -1,3 +1,5 @@
+import { isBar } from "./barLine.js";
+import { printDirection } from "./direction.js";
 import { beatsOf } from "./directives.js";
 import { parseChart } from "./parse.js";
 import type {
@@ -62,8 +64,20 @@ export function printSlot(s: Slot): string {
 export function printCell(c: Cell, beats?: number): string {
 	if (c.kind === "simile") return "%";
 	if (c.kind === "fermata") return "...";
+	if (c.kind === "direction") return printDirection(c.direction);
 	const meter = c.meter ? `[${c.meter.n}/${c.meter.d}] ` : "";
 	return meter + reduceSlots(c.slots, beats).map(printSlot).join(" ");
+}
+
+/** An ending's passes as printed after its `|`: in order, runs of three or more as a range (`1-3`, `1,2`, `1,3-5`). */
+export function printPasses(passes: number[]): string {
+	const runs: number[][] = [];
+	for (const p of passes) {
+		const run = runs.at(-1);
+		if (run && run.at(-1) === p - 1) run.push(p);
+		else runs.push([p]);
+	}
+	return runs.flatMap((r) => (r.length >= 3 ? [`${r[0]}-${r.at(-1)}`] : r.map(String))).join(",");
 }
 
 const printRepeat = (r: Repeat) => (r === null ? "" : r === "open" ? " x ..." : ` x${r}`);
@@ -103,7 +117,7 @@ export function printLine(l: Line, beats: (number | undefined)[] = []): string {
 		case "directive":
 			return printDirectives(l.set);
 		case "bars":
-			return `${l.opens ? "|:" : "|"} ${l.cells.map((c, i) => printCell(c, beats[i])).join(" | ")} ${l.closes ? ":|" : "|"}${printRepeat(l.repeat)}`;
+			return `${l.opens ? "|:" : l.ending ? `|${printPasses(l.ending)}` : "|"} ${l.cells.map((c, i) => printCell(c, beats[i])).join(" | ")} ${l.closes ? ":|" : "|"}${printRepeat(l.repeat)}`;
 		default:
 			return l.text;
 	}
@@ -136,14 +150,14 @@ export function printParsed(
 	for (const b of parsed.bars) {
 		const l = byLine.get(b.line);
 		const meters = firstPlay.get(b.line) ?? [];
-		const cells = l?.kind === "bars" ? l.cells.filter((c) => c.kind !== "fermata").length : 0;
+		const cells = l?.kind === "bars" ? l.cells.filter(isBar).length : 0;
 		if (meters.length < cells) firstPlay.set(b.line, [...meters, beatsOf(b.meter)]);
 	}
 	const beatsFor = (l: Line) => {
 		if (l.kind !== "bars") return [];
 		const meters = firstPlay.get(l.line) ?? [];
 		let next = 0;
-		return l.cells.map((c) => (c.kind === "fermata" ? undefined : meters[next++]));
+		return l.cells.map((c) => (isBar(c) ? meters[next++] : undefined));
 	};
 	const out: string[] = [];
 	let lastWasHeading = false;

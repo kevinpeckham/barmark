@@ -48,18 +48,39 @@ export type SimpleSlot =
 	| { kind: "silence" }
 	| { kind: "unknown" };
 export type Slot = SimpleSlot | { kind: "group"; members: SimpleSlot[] };
-/** `meter` is a one-bar `[n/d]` override. */
+/**
+ * A mark between bars (grammar 5.2). A jump goes back to the chart's first
+ * bar (`D.C.`) or to the segno (`D.S.`), then plays to the end, to `Fine`
+ * (`al Fine`) or to `To Coda` (`al Coda`).
+ */
+export type Direction =
+	| { kind: "segno" }
+	| { kind: "coda" }
+	| { kind: "to coda" }
+	| { kind: "fine" }
+	| { kind: "jump"; to: "start" | "segno"; al: "fine" | "coda" | null };
+/** `meter` is a one-bar `[n/d]` override. `...` and a direction are not bars. */
 export type Cell =
 	| { kind: "slots"; meter: Meter | null; slots: Slot[] }
 	| { kind: "simile" }
-	| { kind: "fermata" };
+	| { kind: "fermata" }
+	| { kind: "direction"; direction: Direction };
 export type Repeat = number | "open" | null;
 
 export type Line =
 	| { kind: "title"; line: number; text: string }
 	| { kind: "section"; line: number; name: string; repeat: Repeat; elided: boolean }
 	| { kind: "directive"; line: number; set: Directives }
-	| { kind: "bars"; line: number; opens: boolean; closes: boolean; cells: Cell[]; repeat: Repeat }
+	| {
+			kind: "bars";
+			line: number;
+			opens: boolean;
+			closes: boolean;
+			cells: Cell[];
+			repeat: Repeat;
+			/** The passes an ending plays on (grammar 5.1), in order; null for any other bar line. */
+			ending: number[] | null;
+	  }
 	| { kind: "text"; line: number; text: string }
 	/**
 	 * A bar line dropped for an error, kept as written so its section still
