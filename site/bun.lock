@@ -5,13 +5,13 @@
     "": {
       "name": "barmark-site",
       "dependencies": {
-        "@barmark/render": "0.9.0",
+        "@barmark/render": "0.9.1",
         "@vercel/analytics": "2.0.1",
         "@vercel/speed-insights": "2.0.0",
         "barmark": "0.12.0",
       },
       "devDependencies": {
-        "@barmark/cli": "0.1.4",
+        "@barmark/cli": "0.1.5",
         "@fontsource/noto-mono": "5.3.0",
         "@fontsource/noto-sans": "5.3.0",
         "@fontsource/noto-serif": "5.3.0",
@@ -38,9 +38,9 @@
 
     "@antfu/install-pkg": ["@antfu/install-pkg@2.1.0", "", { "dependencies": { "package-manager-detector": "^1.8.0", "tinyexec": "^1.3.1" } }, "sha512-sdg9NxU3zR4Mnawfbc/x6GB5Wf17WYud5qOuEuxXjaKpYpMkISSJEjItGebXJ2bQ4DIcly4NYH23mtkGJjvKUw=="],
 
-    "@barmark/cli": ["@barmark/cli@0.1.4", "", { "dependencies": { "@barmark/render": "0.9.0", "barmark": "0.12.0" }, "bin": { "barmark": "dist/cli.js" } }, "sha512-B3OPnNnM42DLAKBwRpu3L+V/w6s4XXSga4KT+uv9+m/F0PM7i9ADpSwTUE6lwCt5WhLJj4EV6d5uWDQvjY1TSQ=="],
+    "@barmark/cli": ["@barmark/cli@0.1.5", "", { "dependencies": { "@barmark/render": "0.9.1", "barmark": "0.12.0" }, "bin": { "barmark": "dist/cli.js" } }, "sha512-gB94W1Xlv6Kj42ho7ZRTY8BVHbt5jTIJV8W4e56EJF33cU3mrw+8Ez6VSRAIqpag7fM8CSzagmCeyjzMLv1C4Q=="],
 
-    "@barmark/render": ["@barmark/render@0.9.0", "", { "dependencies": { "barmark": "^0.12.0" } }, "sha512-OGco6Av6LHWyoChccESlUZVFdpYAUu/AsG2t2pHZzZ+aMKq4b8JQsvSmJF+24ReTTfrZrdhI2iuPDBnkhU1T7Q=="],
+    "@barmark/render": ["@barmark/render@0.9.1", "", { "dependencies": { "barmark": "^0.12.0" } }, "sha512-oPMSKpcQG5ehR6tLUcWipNbCyCJNl1dBK3RYEG20thS5wwuGwcFF7qq2CzUh1ptmpwq+8rMbwJwf4JBJ5lbPug=="],
 
     "@fontsource/noto-mono": ["@fontsource/noto-mono@5.3.0", "", {}, "sha512-QZieY3OyKEImCXg3HRiF6p6/H0GXX94uEb53ayLyQgCTB20LdkvsyJIgigo6lAGmVw3WEs40DdG5KTqpxfwgGg=="],
 
