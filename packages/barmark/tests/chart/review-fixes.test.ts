@@ -35,7 +35,7 @@ describe("a section whose bar lines all fail stays a definition", () => {
 	});
 	test("the dropped line is kept as written", () => {
 		expect(parseChart("| D | Hm |").lines).toEqual([
-			{ kind: "invalid", line: 1, text: "| D | Hm |" },
+			{ kind: "invalid", line: 1, text: "| D | Hm |", written: 2 },
 		]);
 	});
 });

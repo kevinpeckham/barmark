@@ -606,6 +606,7 @@ human to say whether the band was silent, and the structure line.
 | Gradual tempo changes | Decided by Kevin (2026-11-01): `tempo:` also takes `rit.`, `accel.` (each optionally `to` a tempo) and `a tempo`. A change runs from the next bar to the next `tempo:` or the end; its shape is never written; machine output marks every bar inside one (7.2, A.7). |
 | `(addN)` in parentheses | Decided by Kevin (2026-11-02, issue #62): `(add2)`, `(add4)`, `(add9)` and `(add11)` are aliases of `(2)`, `(4)`, `(9)` and `(11)`, alone or in a list (`C(b9,add11)` = `C(b9,11)`), because chord players and DAWs spell `Am(add9)` that way. Only the four tones `addN` already takes: `add13` and `add#11` stay errors, in or out of parentheses. |
 | Custom swing ratios | Decided by Kevin (2026-11-02, issue #66): first not planned, then reopened the same day with the evidence of Stem Shovel's chart export, whose swing is a continuous amount that `swing` alone could only round to 2:1 or nothing. Decided: `swing`, `shuffle` and `swing 16` take an optional amount (`swing 58%`), where the swung note lands, from 50% to 75% inclusive (MPC style); `shuffle` takes one on the same scale; the `%` is required. The bare word is 66.7% and prints as the word, so no chart that read before changes meaning or form (7.1). |
+| Written bar numbers | Machine output gains `written` on each played bar (A.7), the bar's number as written, so a host can speak a printed score's measure numbers (issue #70: a correction editor for a score read). No change to what any chart means. |
 
 ## Open questions
 
@@ -748,6 +749,7 @@ Each slot parses to one record:
 | `tempo` | on a played bar: the steady tempo, or empty when unknown |
 | `tempoChange` | on a played bar inside a rit. or accel.: its `kind` (`rit` or `accel`), `from` (the steady tempo) and `to` (the target, or empty when open); empty outside one |
 | `swingPercent` | on a played bar and a directive: the swing amount in force (50 to 75), or empty for the bare word (66.7) and for `straight` |
+| `written` | on a played bar: its number as written, counting each written bar once in written order (`%` included, `...` not). A repeat or replay plays its bars under the numbers they were written with, and a bar line dropped for an error still counts its bars, so the numbers after it hold |
 | `repeat` | on a bar line, section or repeat bracket in the parse tree: a count, or `open` for `x ...` |
 | `harte` | the Harte label: `C:7(b9)`, `N` for N.C. and silence (`--`), `X` for `?` |
 | `source` | the symbol as written |
