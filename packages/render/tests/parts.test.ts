@@ -97,3 +97,32 @@ describe("one part's view", () => {
 		expect(m.diagnostics.map((x) => x.message)).toContain("no part labelled Bass");
 	});
 });
+
+describe("a tutti bar the parts play differently", () => {
+	const SPLIT =
+		"part: Gtr = Guitar\npart: Pno = Piano\n\nGtr | D | D |\nPno | Em | Em |\n| % | / C |\n";
+	const tutti = () => {
+		const rows = layoutChart(SPLIT)
+			.blocks.flatMap((b) => b.items)
+			.filter((i) => i.kind === "row");
+		return rows[rows.length - 1];
+	};
+	test("draws % as written, not one part's copy", () => {
+		expect(tutti()?.cells[0]).toMatchObject({ kind: "slots", slots: [], simile: true });
+		const html = renderChartUnwrapped(SPLIT);
+		expect(html).toContain('<span class="bm-simile">%</span>');
+		expect(html).toContain("bar 3: each part repeats its bar before");
+	});
+	test("draws a leading / as written", () => {
+		const cell = tutti()?.cells[1];
+		expect(cell?.kind === "slots" && cell.slots.map((s) => s.kind)).toEqual(["hold", "chord"]);
+	});
+	test("a tutti bar every part plays alike draws its chords", () => {
+		const same = "part: Gtr = Guitar\npart: Pno = Piano\n\nGtr | D |\nPno | D |\n| % |\n";
+		const rows = layoutChart(same)
+			.blocks.flatMap((b) => b.items)
+			.filter((i) => i.kind === "row");
+		const cell = rows[rows.length - 1]?.cells[0];
+		expect(cell?.kind === "slots" && cell.slots[0]?.kind).toBe("chord");
+	});
+});

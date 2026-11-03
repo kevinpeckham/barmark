@@ -38,11 +38,20 @@ type Context = {
 	/** Each section's lines, by its heading's line number. */
 	written: Map<number, Group>;
 	/** The played bars by the line they are written on: in a chart of several parts, each part's own. */
-	bars: PlayedBar[];
+	bars: DrawnBar[];
+};
+
+/** A played bar as drawn: `perPart` marks a tutti bar its parts play differently. */
+type DrawnBar = PlayedBar & { perPart?: true };
+
+/** Whether a tutti bar's parts play different slots, as `%` or `/` on a tutti line can. */
+const playedApart = (b: PlayedBar, line: number) => {
+	const own = (b.parts ?? []).filter((p) => p?.line === line).map((p) => JSON.stringify(p?.slots));
+	return new Set(own).size > 1;
 };
 
 /** Each part's bars on its own lines; a tutti bar once (barmark's grammar 7.4). */
-function barsByLine(parse: ChartParse): PlayedBar[] {
+function barsByLine(parse: ChartParse): DrawnBar[] {
 	if (parse.parts.length < 2) return parse.bars;
 	const seen = new Set<string>();
 	return parse.bars.flatMap((b) =>
@@ -51,7 +60,10 @@ function barsByLine(parse: ChartParse): PlayedBar[] {
 			if (!p || seen.has(key)) return [];
 			seen.add(key);
 			const { words: _w, parts: _p, tacet: _t, ...shared } = b;
-			return [{ ...shared, line: p.line, slots: p.slots, ...(p.words && { words: p.words }) }];
+			const apart = playedApart(b, p.line) ? { perPart: true as const } : {};
+			return [
+				{ ...shared, ...apart, line: p.line, slots: p.slots, ...(p.words && { words: p.words }) },
+			];
 		}),
 	);
 }
@@ -440,7 +452,19 @@ function layoutCell(
 ): CellModel {
 	if (cell.kind === "fermata") return { kind: "fermata" };
 	if (cell.kind === "direction" || cell.kind === "rehearsal") return cell;
+	// Parts that play a tutti bar differently each read their own: draw it as written.
+	if ((played as DrawnBar | undefined)?.perPart)
+		return withPlayed(asWritten(cell, previous), played);
 	return withPlayed(layoutBar(cell, played, previous), played);
+}
+
+/** A tutti bar as written: its own slots, holds as holds, or `%` itself. */
+function asWritten(
+	cell: Extract<Cell, { kind: "slots" | "simile" }>,
+	previous: SlotsCell | null,
+): SlotsCell {
+	const bar = layoutBar(cell, undefined, previous);
+	return cell.kind === "simile" ? { ...bar, slots: [], simile: true } : bar;
 }
 
 /** A bar or `%`, with the slots it plays. */

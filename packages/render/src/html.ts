@@ -336,13 +336,20 @@ function cellHtml(
 		numerals && cell.kind === "slots" && cell.key ? { style: numerals, key: cell.key } : null;
 	const spoken = `<span class="bm-sr">${escapeHtml(speakBar(barNumber, cell, view !== null))}</span>`;
 	if (cell.kind !== "slots") return betweenBarsHtml(cell, spoken, marks);
+	const change = cell.tempoChange ? ` data-tempo-change="${cell.tempoChange}"` : "";
+	const [body, end] = barBody(cell, view);
+	return `<div class="bm-bar" part="bar"${cell.cut ? " data-cut" : ""}${change}${marks}>${spoken}<span class="bm-bar-body" aria-hidden="true">${body}</span>${end}</div>`;
+}
+
+/** What a bar shows: its meter, its slots (or `%`), and "cut"; then the words after its last slot. */
+function barBody(cell: Extract<CellModel, { kind: "slots" }>, view: View): [string, string] {
 	const meter = cell.meter
 		? `<span class="bm-meter"><span>${cell.meter.n}</span><span>${cell.meter.d}</span></span>`
 		: "";
 	const cut = cell.cut ? `<span class="bm-cut">cut</span>` : "";
-	const change = cell.tempoChange ? ` data-tempo-change="${cell.tempoChange}"` : "";
-	const [slots, end] = slotsWithWords(cell, view);
-	return `<div class="bm-bar" part="bar"${cell.cut ? " data-cut" : ""}${change}${marks}>${spoken}<span class="bm-bar-body" aria-hidden="true">${meter}${slots.join("")}${cut}</span>${end}</div>`;
+	const [written, end] = slotsWithWords(cell, view);
+	const slots = cell.simile ? `<span class="bm-simile">%</span>` : written.join("");
+	return [`${meter}${slots}${cut}`, end];
 }
 
 /** A bar where the part rests; the first of a row says so, in its body. */

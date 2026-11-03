@@ -86,6 +86,8 @@ export type CellModel =
 			words?: Words[];
 			/** A bar where the part rests, in a system (barmark's grammar 7.4). */
 			tacet?: true;
+			/** `%` on a tutti line whose parts each copy a different bar: drawn as `%`, its slots empty (barmark's grammar 7.4). */
+			simile?: true;
 	  }
 	| { kind: "fermata" }
 	/** A segno, coda or jump between bars (barmark's grammar 5.2). */

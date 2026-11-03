@@ -121,7 +121,7 @@ const css = `
 .bm-chord{white-space:nowrap}
 .bm-chord sup{font-size:${em(SIZES.superscript)};vertical-align:.55em;line-height:0}
 .bm-chord sub{font-size:${em(SIZES.octave)};line-height:0}
-.bm-hold,.bm-unknown,.bm-brace{color:var(--bm-muted)}
+.bm-hold,.bm-unknown,.bm-brace,.bm-simile{color:var(--bm-muted)}
 .bm-nc{font-size:${em(SIZES.noChord)};letter-spacing:.06em}
 .bm-silence{display:inline-block;width:.9em;height:.32em;background:var(--bm-ink);vertical-align:.25em}
 .bm-ring,.bm-notes{font-size:${em(SIZES.noteNames)}}
