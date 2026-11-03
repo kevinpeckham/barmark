@@ -17,7 +17,7 @@ export async function exportCommand(args: string[], io: Io): Promise<number> {
 	const { path, text } = onlyChart(await readCharts(positionals, io, { folders: false }), "export");
 	const result = exportMusicXml(text, {
 		...(values.part === undefined ? {} : { part: values.part }),
-		...(path === STDIN ? {} : { title: basename(path) }),
+		...(path === STDIN ? {} : { title: basename(path).replace(/(\.chart)?\.[^.]*$/, "") }),
 	});
 	// As transpose does: problems to stderr, and no file written from a chart with errors.
 	for (const d of result.diagnostics)

@@ -8,7 +8,12 @@ const ENTITIES: Record<string, string> = {
 	"'": "&apos;",
 };
 
-const escapeXml = (text: string) => text.replace(/[&<>"']/g, (c) => ENTITIES[c] ?? c);
+/** Characters XML 1.0 can't hold at all (control characters, U+FFFE, U+FFFF), left out. */
+// biome-ignore lint/suspicious/noControlCharactersInRegex: these are the characters to remove.
+const UNWRITABLE = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\uFFFE\uFFFF]/g;
+
+const escapeXml = (text: string) =>
+	text.replace(UNWRITABLE, "").replace(/[&<>"']/g, (c) => ENTITIES[c] ?? c);
 
 type Attrs = Record<string, string | number | undefined>;
 

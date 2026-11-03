@@ -19,5 +19,11 @@ package uses [semantic versioning](https://semver.org/).
     written out; barmark's written bar numbers shown.
   - Key, time, tempo, rit. and accel., feel, headings, rehearsal marks,
     words on bars and text lines.
+  - Where MusicXML can't hold a chart as written (a D.S. or D.C. through a
+    repeated section that holds repeats), the chart is written in play
+    order; a push that would cross a repeat or a jump stays on the beat,
+    marked "push".
+  - A chart with no bars is an error, since MusicXML needs a measure;
+    characters XML can't hold are left out.
 
 [Unreleased]: https://github.com/kevinpeckham/barmark/commits/main/packages/musicxml

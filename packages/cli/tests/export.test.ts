@@ -24,10 +24,10 @@ describe("barmark export", () => {
 		expect(await exportCommand(["--musicxml", "s.chart.md"], io)).toBe(0);
 		expect(io.out()).toBe(xml(SONG));
 	});
-	test("a chart with no title is titled with its file name", async () => {
+	test("a chart with no title is titled with its file name, less the extension", async () => {
 		const io = folder({ "untitled.chart.md": "| G |\n" });
 		expect(await exportCommand(["--musicxml", "untitled.chart.md"], io)).toBe(0);
-		expect(io.out()).toContain("<work-title>untitled.chart.md</work-title>");
+		expect(io.out()).toContain("<work-title>untitled</work-title>");
 	});
 	test("--out writes the file", async () => {
 		const io = folder({ "s.chart.md": SONG });

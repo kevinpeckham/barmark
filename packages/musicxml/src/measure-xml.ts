@@ -168,13 +168,15 @@ function rightBarlineXml(marks: Marks): string {
 
 export function measureXml(bar: MeasureEvents, ctx: MeasureContext): string {
 	const m = bar.measure;
-	const body = m.tacet
-		? el("note", {}, [
-				el("rest", { measure: "yes" }),
-				text("duration", whole(barLength(m.meter), ctx.divisions)),
-				text("voice", 1),
-			])
-		: bar.events.map((e) => eventXml(e, ctx.divisions)).join("") + bar.after.map(wordsXml).join("");
+	const body =
+		m.tacet && bar.events.length === 0
+			? el("note", {}, [
+					el("rest", { measure: "yes" }),
+					text("duration", whole(barLength(m.meter), ctx.divisions)),
+					text("voice", 1),
+				])
+			: bar.events.map((e) => eventXml(e, ctx.divisions)).join("") +
+				bar.after.map(wordsXml).join("");
 	return el("measure", { number: ctx.index + 1, text: m.shown }, [
 		attributesXml(m, ctx),
 		leftBarlineXml(m.marks),

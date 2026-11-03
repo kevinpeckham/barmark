@@ -62,6 +62,14 @@ function partXml(source: PartSource, i: number): string {
 	return el("part", { id: `P${i + 1}` }, xml);
 }
 
+/** MusicXML needs at least one measure in every part. */
+const NO_BARS: ChartDiagnostic = {
+	line: 0,
+	severity: "error",
+	message: "the chart has no bars to export",
+	token: "",
+};
+
 const noPart = (label: string): ChartDiagnostic => ({
 	line: 0,
 	severity: "error",
@@ -74,6 +82,7 @@ export function exportMusicXml(chart: string, options: MusicXmlOptions = {}): Mu
 	const parse = parseChart(chart);
 	if (parse.diagnostics.some((d) => d.severity === "error"))
 		return { ok: false, diagnostics: parse.diagnostics };
+	if (parse.bars.length === 0) return { ok: false, diagnostics: [NO_BARS, ...parse.diagnostics] };
 	const wanted = options.part?.toLowerCase();
 	const sources = partsOf(parse, chart).filter(
 		(s) => !wanted || s.part?.label?.toLowerCase() === wanted,

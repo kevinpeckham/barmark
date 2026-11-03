@@ -6,6 +6,7 @@
  */
 import type {
 	Cell,
+	ChartEvent,
 	ChartParse,
 	Direction,
 	Feel,
@@ -36,6 +37,8 @@ export type Marks = {
 export type Measure = {
 	/** barmark's written number, shown as the measure's number. */
 	shown: number;
+	/** The played bar (`PlayedBar.index`) this measure was made from; null for a bar no pass plays. */
+	played: number | null;
 	meter: Meter;
 	key: Key | null;
 	slots: Slot[];
@@ -62,8 +65,23 @@ const blank = (): Marks => ({
 	fermata: false,
 });
 
-const measureOf = (b: PlayedBar): Measure => ({
+/** The played bars a fermata cell follows. */
+function fermataBars(
+	events: ChartEvent[],
+	out = new Set<number>(),
+	last = { bar: 0 },
+): Set<number> {
+	for (const e of events) {
+		if (e.kind === "bar") last.bar = e.bar.index;
+		else if (e.kind === "fermata") out.add(last.bar);
+		else fermataBars(e.events, out, last);
+	}
+	return out;
+}
+
+const measureOf = (b: PlayedBar, fermatas: Set<number>): Measure => ({
 	shown: b.written,
+	played: b.index,
 	meter: b.meter,
 	key: b.key,
 	slots: b.slots,
@@ -74,7 +92,7 @@ const measureOf = (b: PlayedBar): Measure => ({
 	feel: b.feel,
 	...(b.swingPercent === undefined ? {} : { swingPercent: b.swingPercent }),
 	text: [],
-	marks: blank(),
+	marks: { ...blank(), rehearsal: b.rehearsal ?? null, fermata: fermatas.has(b.index) },
 });
 
 type Pending = {
@@ -91,6 +109,11 @@ type Walk = {
 	out: Measure[];
 	written: number;
 	firstPlay: Map<number, PlayedBar>;
+	fermatas: Set<number>;
+	/** Each played bar's text lines, so a bar written out again keeps them. */
+	texts: Map<number, Measure["text"]>;
+	/** Some section's passes were written out. */
+	flattened: boolean;
 	/** Marks waiting for the next measure. */
 	pending: Pending;
 	/** The first measure of the replay being walked, which takes its section's text lines. */
@@ -100,9 +123,11 @@ type Walk = {
 
 function add(w: Walk, m: Measure): void {
 	m.marks.heading = w.pending.heading;
-	m.marks.rehearsal = w.pending.rehearsal;
+	m.marks.rehearsal = w.pending.rehearsal ?? m.marks.rehearsal;
 	m.marks.start = w.pending.start;
-	m.text = w.pending.text;
+	const own = m.played === null ? undefined : w.texts.get(m.played);
+	m.text = own ? [...own, ...w.pending.text] : w.pending.text;
+	if (m.played !== null && !own) w.texts.set(m.played, m.text);
 	w.pending = nothing();
 	w.out.push(m);
 }
@@ -112,7 +137,7 @@ const occurrenceAt = (w: Walk, line: number) => w.parse.sections.find((o) => o.l
 /** An occurrence's bars as played, one measure each. */
 function playedOut(w: Walk, o: SectionOccurrence): void {
 	if (o.firstBar === null || o.lastBar === null) return;
-	for (const b of w.parse.bars.slice(o.firstBar - 1, o.lastBar)) add(w, measureOf(b));
+	for (const b of w.parse.bars.slice(o.firstBar - 1, o.lastBar)) add(w, measureOf(b, w.fermatas));
 }
 
 /** A bar no pass plays, as written. */
@@ -121,6 +146,7 @@ function unplayed(w: Walk, cell: Extract<Cell, { kind: "slots" | "simile" }>): M
 	const meter = cell.kind === "slots" && cell.meter ? cell.meter : { n: 4, d: 4 };
 	return {
 		shown: w.written,
+		played: null,
 		meter,
 		key: null,
 		slots,
@@ -138,7 +164,7 @@ function unplayed(w: Walk, cell: Extract<Cell, { kind: "slots" | "simile" }>): M
 function writtenBar(w: Walk, cell: Extract<Cell, { kind: "slots" | "simile" }>): Measure {
 	w.written++;
 	const played = w.firstPlay.get(w.written);
-	return played ? measureOf(played) : unplayed(w, cell);
+	return played ? measureOf(played, w.fermatas) : unplayed(w, cell);
 }
 
 function cellIn(w: Walk, cell: Cell): void {
@@ -206,6 +232,7 @@ function closeSection(w: Walk): void {
 		const heading = inside[0]?.marks.heading ?? null;
 		w.out.length = s.from;
 		w.pending.heading = heading;
+		w.flattened = true;
 		playedOut(w, o);
 		return;
 	}
@@ -242,6 +269,9 @@ export function writtenMeasures(parse: ChartParse): Measure[] {
 		out: [],
 		written: 0,
 		firstPlay,
+		fermatas: fermataBars(parse.events),
+		texts: new Map(),
+		flattened: false,
 		pending: nothing(),
 		replay: null,
 		section: null,
@@ -257,5 +287,29 @@ export function writtenMeasures(parse: ChartParse): Measure[] {
 	});
 	closeSection(w);
 	w.out[w.out.length - 1]?.text.push(...w.pending.text);
-	return w.out;
+	return w.flattened && hasJump(parse) ? inPlayOrder(w) : w.out;
+}
+
+const hasJump = (parse: ChartParse) =>
+	parse.lines.some(
+		(l) =>
+			l.kind === "bars" &&
+			l.cells.some((c) => c.kind === "direction" && c.direction.kind === "jump"),
+	);
+
+/**
+ * The whole chart in play order, with no repeats or jumps: what a chart
+ * needs when a jump passes through passes written out, since a written bar
+ * can't play once after the jump and twice before it. Headings, rehearsal
+ * marks, fermatas and text lines stay.
+ */
+function inPlayOrder(w: Walk): Measure[] {
+	const headings = new Map<number, string>();
+	for (const o of w.parse.sections) if (o.firstBar !== null) headings.set(o.firstBar, o.name);
+	return w.parse.bars.map((b) => {
+		const m = measureOf(b, w.fermatas);
+		m.marks.heading = headings.get(b.index) ?? null;
+		m.text = w.texts.get(b.index) ?? [];
+		return m;
+	});
 }
