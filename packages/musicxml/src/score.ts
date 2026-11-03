@@ -1,0 +1,67 @@
+/** The score: part list, parts and their measures (MusicXML 4.0 score-partwise). */
+import { type ChartDiagnostic, type ChartParse, extractPart, type Part, parseChart } from "barmark";
+import { VERSION } from "./version.js";
+import { el, text } from "./xml.js";
+
+export type MusicXmlOptions = {
+	/** Only the part with this label, as `extractPart` gives it. */
+	part?: string;
+};
+
+export type MusicXmlResult =
+	| { ok: true; xml: string; diagnostics: ChartDiagnostic[] }
+	| { ok: false; diagnostics: ChartDiagnostic[] };
+
+const DOCTYPE =
+	'<!DOCTYPE score-partwise PUBLIC "-//Recordare//DTD MusicXML 4.0 Partwise//EN" "http://www.musicxml.org/dtds/partwise.dtd">';
+
+/** One exported part: what it is called, and the chart as that part plays it. */
+type PartSource = { part: Part | null; parse: ChartParse };
+
+/** Each part as a single-part parse: several parts through extractPart, one chart as it is. */
+function partsOf(parse: ChartParse, text: string): PartSource[] {
+	if (parse.parts.length < 2) return [{ part: parse.parts[0] ?? null, parse }];
+	return parse.parts.map((part) => ({
+		part,
+		parse: extractPart(text, part.label ?? "") ?? parse,
+	}));
+}
+
+function scorePart(source: PartSource, i: number): string {
+	const name = source.part?.name ?? "Chart";
+	const label = source.part?.label;
+	return el("score-part", { id: `P${i + 1}` }, [
+		text("part-name", name),
+		label ? text("part-abbreviation", label) : "",
+	]);
+}
+
+/** A placeholder measure per played bar: a whole-measure rest. */
+function partXml(source: PartSource, i: number): string {
+	const measures = source.parse.bars.map((bar, n) => {
+		const duration = (bar.meter.n * 32) / bar.meter.d;
+		const attributes = n === 0 ? el("attributes", {}, text("divisions", 8)) : "";
+		return el("measure", { number: n + 1 }, [
+			attributes,
+			el("note", {}, [el("rest", { measure: "yes" }), text("duration", duration)]),
+		]);
+	});
+	return el("part", { id: `P${i + 1}` }, measures);
+}
+
+/** A chart as MusicXML 4.0, or its diagnostics when it has an error. Never throws. */
+export function exportMusicXml(chart: string, options: MusicXmlOptions = {}): MusicXmlResult {
+	const parse = parseChart(chart);
+	if (parse.diagnostics.some((d) => d.severity === "error"))
+		return { ok: false, diagnostics: parse.diagnostics };
+	const sources = partsOf(parse, chart).filter(
+		(s) => !options.part || s.part?.label?.toLowerCase() === options.part.toLowerCase(),
+	);
+	const head = [
+		parse.title ? el("work", {}, text("work-title", parse.title)) : "",
+		el("identification", {}, el("encoding", {}, text("software", `@barmark/musicxml ${VERSION}`))),
+		el("part-list", {}, sources.map(scorePart)),
+	];
+	const xml = `<?xml version="1.0" encoding="UTF-8"?>\n${DOCTYPE}\n${el("score-partwise", { version: "4.0" }, [...head, ...sources.map(partXml)])}\n`;
+	return { ok: true, xml, diagnostics: parse.diagnostics };
+}

@@ -17,6 +17,12 @@ export const PACKAGES = {
 		tagPrefix: "render-v",
 		smoke: "scripts/smoke-render.mjs",
 	},
+	musicxml: {
+		dir: join(root, "packages/musicxml"),
+		name: "@barmark/musicxml",
+		tagPrefix: "musicxml-v",
+		smoke: "scripts/smoke-musicxml.mjs",
+	},
 	cli: {
 		dir: join(root, "packages/cli"),
 		name: "@barmark/cli",

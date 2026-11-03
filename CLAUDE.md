@@ -79,6 +79,9 @@ Fallow, CI, Swamp), the grammar, `examples/`, the scripts and FINDINGS.md.
     `element.ts` is the web component; `fonts/` holds Edwin, unmodified
   - `tests/`: `bun test` (linkedom for markup); `browser/`: Playwright
     suite (`bun run test:browser`) with its own page server
+- `packages/musicxml/`: `@barmark/musicxml`, MusicXML 4.0 export
+  (`exportMusicXml`); its tests validate against the vendored XSD with
+  `xmllint` (`libxml2-utils`), which `bun test` therefore needs
 - `packages/cli/`: `@barmark/cli`, the `barmark` command (`check`,
   `format`, `render`, `transpose`), a thin layer over the two libraries,
   pinned to them exactly
@@ -97,7 +100,7 @@ Fallow, CI, Swamp), the grammar, `examples/`, the scripts and FINDINGS.md.
   `bun test` skips it (`bunfig.toml`), Fallow ignores it
 - `docs/superpowers/`: designs (`specs/`) and implementation plans (`plans/`)
 - `scripts/verify-package.ts`, `scripts/verify-release.ts`: release checks
-  shared by CI and Swamp; both take the package (`barmark`, `render` or `cli`)
+  shared by CI and Swamp; both take the package (`barmark`, `render`, `musicxml` or `cli`)
 
 ## Commands
 

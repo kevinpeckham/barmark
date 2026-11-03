@@ -34,6 +34,10 @@ const CONTENTS: Record<PackageKey, { required: string[]; allowed: RegExp }> = {
 		],
 		allowed: /^(dist\/.+\.(js|d\.ts)|fonts\/(Edwin-Roman\.otf|OFL\.txt|README\.md))$/,
 	},
+	musicxml: {
+		required: ["dist/index.js", "dist/index.d.ts"],
+		allowed: /^dist\/.+\.(js|d\.ts)$/,
+	},
 	cli: {
 		required: ["dist/cli.js", "dist/main.js"],
 		allowed: /^dist\/.+\.(js|d\.ts)$/,

@@ -15,7 +15,8 @@
 		"lib": ["ESNext", "DOM"],
 		"paths": {
 			"barmark": ["./packages/barmark/src/index.ts"],
-			"@barmark/render": ["./packages/render/src/index.ts"]
+			"@barmark/render": ["./packages/render/src/index.ts"],
+			"@barmark/musicxml": ["./packages/musicxml/src/index.ts"]
 		}
 	},
 	"include": ["packages/*/src", "packages/*/tests", "packages/*/browser", "scripts"]
