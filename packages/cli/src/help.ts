@@ -54,7 +54,7 @@ A standalone HTML page of the chart, with the Edwin font embedded.
 	part: `Usage: barmark part <label> <file> [options]
 
 One part of a chart of several, as a chart of its own: its own bars, the
-bars every part plays, and N.C. where it rests.
+bars every part plays, and N.C. where it rests. Problems go to stderr.
 
   --out <file>             Write to a file instead of stdout
 `,

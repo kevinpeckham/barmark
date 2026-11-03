@@ -10,7 +10,9 @@ package uses [semantic versioning](https://semver.org/).
 
 - **`barmark part <label> <file>`** prints one part of a chart of several
   (barmark's grammar 7.4) as a chart of its own: its own bars, the tutti
-  bars, and N.C. where it rests. An undeclared label exits 1.
+  bars, and N.C. where it rests. The part's problems go to stderr, as
+  `transpose`'s do; an error, or an undeclared label, exits 1, and
+  `--out` is not written from a chart with errors.
 - **`render --part <label>`** draws only that part.
 
 ## [0.1.6] - 2026-11-03
