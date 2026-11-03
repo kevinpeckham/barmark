@@ -6,6 +6,10 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-11-03
+
+Needs `barmark` 0.14.0.
+
 ### Added
 
 - **Several parts** (barmark 0.14.0, grammar 7.4): a system draws as
@@ -290,7 +294,8 @@ that needs no script or as the `<barmark-chart>` web component. Requires
   zoom without sideways scrolling, the element renders and re-renders, and
   a screen reader hears "bar 9: D". Run them with `bun run test:browser`.
 
-[Unreleased]: https://github.com/kevinpeckham/barmark/compare/render-v0.10.0...HEAD
+[Unreleased]: https://github.com/kevinpeckham/barmark/compare/render-v0.11.0...HEAD
+[0.11.0]: https://github.com/kevinpeckham/barmark/compare/render-v0.10.0...render-v0.11.0
 [0.10.0]: https://github.com/kevinpeckham/barmark/compare/render-v0.9.1...render-v0.10.0
 [0.9.1]: https://github.com/kevinpeckham/barmark/compare/render-v0.9.0...render-v0.9.1
 [0.9.0]: https://github.com/kevinpeckham/barmark/compare/render-v0.8.0...render-v0.9.0
