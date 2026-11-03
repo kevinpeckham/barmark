@@ -784,7 +784,15 @@ export const ROWS: GuideRow[] = [
 		category: "directives",
 		meaning:
 			"Two or more part: lines make a chart of several parts, in score order; each needs a label.",
-		terms: ["several parts", "multiple parts", "score", "ensemble", "band", "score order", "instruments"],
+		terms: [
+			"several parts",
+			"multiple parts",
+			"score",
+			"ensemble",
+			"band",
+			"score order",
+			"instruments",
+		],
 		example: "part: Gtr = Guitar\npart: Pno = Piano\nGtr | G | C |\nPno | Em | C |",
 		ref: "§7.4",
 		expect: { bars: 2 },

@@ -40,7 +40,7 @@ describe("/try, prerendered", () => {
 	});
 	test("offers the example chips", () => {
 		const chips = [...doc.querySelectorAll("[data-example]")].map((b) => b.textContent?.trim());
-		expect(chips).toEqual(["Cø", "C7b9/E", "{C E G}", "C:maj7", "| D | % | x2"]);
+		expect(chips).toEqual(["Cø", "C7b9/E", "{C E G}", "C:maj7", "| D | % | x2", "Gtr + Pno"]);
 	});
 });
 
