@@ -9,6 +9,37 @@ Releases follow the process in [RELEASING.md](RELEASING.md).
 
 ## [Unreleased]
 
+### Added
+
+- **Several parts in one chart** (grammar 7.4): one `part: Label = Name`
+  line per part, bar lines labelled with their part (`Gtr | G | C |`),
+  and **systems**: consecutive labelled lines that share bars, one per
+  part. A part missing from a system is tacet; an unlabelled line is
+  tutti. Every line of a system writes the same bars and structure
+  (repeats, endings, marks, directions, fermatas, one-bar meters), and
+  the reader checks it. `%` and a leading `/` resolve per part, in
+  written order; after the part was tacet they are errors.
+- The parse gains `parts` (score order); in a multi-part chart each
+  played bar gains `parts` (`{ line, slots, words? }` per part, null
+  where tacet), and `tacet: true` where the first part rests (its slots
+  then read `N.C.`). Lines gain `part` and `system`.
+- `extractPart(text, label)`, `printPart(text, label)` and
+  `projectPart(lines, parts, label)`: one part as a single-part chart.
+- `printChart` prints a system in score order with its labels padded and
+  its pipes lined up.
+- A bar line after a word that is not a declared part (`Bass | E | A |`)
+  is text with a warning, in any chart; one whose first word is a chord
+  (`G | C | D |`) warns that a bar line starts with `|` and suggests
+  `| G | C | D |`.
+
+### Changed
+
+- A second `part:` line is no longer an error. `ChartParse.part` is the
+  one part of a single-part chart (null for several) and is deprecated
+  in favour of `parts`.
+- Several parts share the expansion budget: each part expands at most
+  `MAX_EXPANDED_BARS / parts` bars.
+
 ## [0.13.0] - 2026-11-03
 
 ### Added

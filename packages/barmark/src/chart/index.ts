@@ -4,12 +4,14 @@ export { printDirection } from "./direction.js";
 export { beatsOf, DIRECTIVE_NAMES, parseDirectiveLine, parseMeter } from "./directives.js";
 export { readDocument } from "./document.js";
 export { expand, flattenBars, MAX_EXPANDED_BARS } from "./expand.js";
-export { parseChart } from "./parse.js";
+export { extractPart, parseChart } from "./parse.js";
+export { projectPart } from "./parts.js";
 export {
 	printCell,
 	printChart,
 	printLine,
 	printParsed,
+	printPart,
 	printPasses,
 	printSlot,
 	reduceSlots,

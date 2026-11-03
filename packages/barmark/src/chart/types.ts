@@ -94,7 +94,14 @@ export type Words = { text: string; at: number };
  * rehearsal mark are not bars. `words` is present only when written.
  */
 export type Cell =
-	| { kind: "slots"; meter: Meter | null; slots: Slot[]; words?: Words[] }
+	| {
+			kind: "slots";
+			meter: Meter | null;
+			slots: Slot[];
+			words?: Words[];
+			/** A stand-in bar of `N.C.` for a part that is tacet there (grammar 7.4); only a projected part has one. */
+			tacet?: true;
+	  }
 	| { kind: "simile"; words?: Words[] }
 	| { kind: "fermata" }
 	| { kind: "direction"; direction: Direction }
@@ -116,13 +123,26 @@ export type Line =
 			repeat: Repeat;
 			/** The passes an ending plays on (grammar 5.1), in order; null for any other bar line. */
 			ending: number[] | null;
+			/** The declared label of the part whose line this is (grammar 7.4); absent on a tutti line and in a single-part chart. */
+			part?: string;
+			/** Which system a labelled line is in, from 0 in chart order. */
+			system?: number;
+			/** Set when the line's bars or structure differ from its system's (an error): its part is tacet there. */
+			dropped?: true;
 	  }
 	| { kind: "text"; line: number; text: string }
 	/**
 	 * A bar line dropped for an error, kept as written so its section still
 	 * counts as written out; `written` is how many bars its pipes write.
 	 */
-	| { kind: "invalid"; line: number; text: string; written: number };
+	| {
+			kind: "invalid";
+			line: number;
+			text: string;
+			written: number;
+			part?: string;
+			system?: number;
+	  };
 
 export type PlayedBar = {
 	/** 1-based measure number in play order; fermatas are not counted. */
@@ -151,7 +171,17 @@ export type PlayedBar = {
 	rehearsal?: string;
 	/** Words written on this bar; absent when none. `%` copies chords, not words. */
 	words?: Words[];
+	/** Set when the part is tacet in this bar (grammar 7.4): its slots then read `N.C.`. */
+	tacet?: true;
+	/**
+	 * In a chart of several parts, each part's bar, aligned with
+	 * `ChartParse.parts`; null where that part is tacet. The top-level
+	 * `slots` and `words` are the first part's.
+	 */
+	parts?: PartBar[];
 };
+/** One part's share of a played bar (grammar 7.4): the line it is written on, its slots and words. */
+export type PartBar = { line: number; slots: Slot[]; words?: Words[] } | null;
 /** An open repeat shows one pass; the number of passes is unknown. */
 export type ChartEvent =
 	| { kind: "bar"; bar: PlayedBar }
@@ -174,8 +204,14 @@ export type SectionOccurrence = {
 
 export type ChartParse = {
 	title: string | null;
-	/** What `part:` names (grammar 7.3); null when the chart names none. */
+	/**
+	 * The one part a single-part chart names (grammar 7.3); null when it names
+	 * none or several.
+	 * @deprecated use `parts`.
+	 */
 	part: Part | null;
+	/** Every part the chart declares, in score order (grammar 7.4); empty when none. */
+	parts: Part[];
 	lines: Line[];
 	events: ChartEvent[];
 	/** `events` flattened, with an open repeat's pass included once. */

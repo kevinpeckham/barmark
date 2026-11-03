@@ -22,8 +22,6 @@ import type {
 
 /** Nested repeats multiply; expansion stops here rather than run away. */
 export const MAX_EXPANDED_BARS = 10_000;
-/** Repeats of bodies that play no bars (fermatas only) are bounded too. */
-const MAX_WORK = MAX_EXPANDED_BARS * 10;
 
 type BarsLine = Extract<Line, { kind: "bars" }>;
 type SectionLine = Extract<Line, { kind: "section" }>;
@@ -38,6 +36,7 @@ type Played =
 			written: number;
 			rehearsal?: string;
 			words?: Words[];
+			tacet?: true;
 	  }
 	| { kind: "fermata" }
 	| { kind: "direction"; direction: Direction };
@@ -135,12 +134,23 @@ function removeLastBar(events: ChartEvent[]): boolean {
  * Turn the written chart into the bars in play order: sections and their
  * replays, repeats, directive changes, `%` and elision.
  */
-export function expand(lines: Line[]): {
+/**
+ * `label` names the part a projected chart is (grammar 7.4), for its
+ * messages; `share` is how many parts split the expansion budget.
+ */
+export function expand(
+	lines: Line[],
+	label?: string,
+	share = 1,
+): {
 	events: ChartEvent[];
 	sections: SectionOccurrence[];
 	diagnostics: ChartDiagnostic[];
 } {
 	const diagnostics: ChartDiagnostic[] = [];
+	const maxBars = Math.max(1, Math.floor(MAX_EXPANDED_BARS / share));
+	// Repeats of bodies that play no bars (fermatas only) are bounded too.
+	const maxWork = maxBars * 10;
 	// The return after a jump plays sections again: it reports only what the first pass did not.
 	const reported = new Set<string>();
 	let again = false;
@@ -159,7 +169,9 @@ export function expand(lines: Line[]): {
 
 	// % copies the bar written before it, one-bar meter included, so a section plays the same wherever it is replayed.
 	const resolved = new Map<BarsLine, Played[]>();
-	let previous: { meter: Meter | null; slots: Slot[] } | null = null;
+	let previous: { meter: Meter | null; slots: Slot[]; tacet?: true } | null = null;
+	const tacetBefore = (line: number, what: string) =>
+		error(line, `${label ?? "this part"} was tacet in the bar before; ${what}`, what.slice(0, 1));
 	let written = 0;
 	/** A rehearsal mark waiting for the bar after it (grammar 2.5). */
 	const pending: { mark: { label: string; line: number } | null } = { mark: null };
@@ -179,21 +191,29 @@ export function expand(lines: Line[]): {
 	};
 	const simile = (c: Extract<WrittenCell, { kind: "simile" }>, line: number): Played => {
 		if (!previous) error(line, "% has no bar before it to repeat", "%");
+		else if (previous.tacet) tacetBefore(line, "% has nothing to copy");
 		const meter = previous?.meter ?? null;
 		const slots: Slot[] = previous?.slots ?? [{ kind: "hold" }];
 		return marked({ kind: "bar", meter, slots, own: false, written: ++written }, c.words);
 	};
-	const ownBar = (c: Extract<WrittenCell, { kind: "slots" }>, line: number): Played => {
+	/** A bar that opens with `/` holds what was sounding before it. */
+	const checkHold = (c: Extract<WrittenCell, { kind: "slots" }>, line: number) => {
 		const first = c.slots[0];
 		const head = first?.kind === "group" ? first.members[0] : first;
-		if (!previous && head?.kind === "hold") error(line, "/ has nothing before it to hold", "/");
-		previous = { meter: c.meter, slots: c.slots };
+		if (head?.kind !== "hold") return;
+		if (!previous) error(line, "/ has nothing before it to hold", "/");
+		else if (previous.tacet) tacetBefore(line, "/ has nothing to hold");
+	};
+	const ownBar = (c: Extract<WrittenCell, { kind: "slots" }>, line: number): Played => {
+		checkHold(c, line);
+		previous = { meter: c.meter, slots: c.slots, ...(c.tacet && { tacet: c.tacet }) };
 		const bar = {
 			kind: "bar",
 			meter: c.meter,
 			slots: c.slots,
 			own: true,
 			written: ++written,
+			...(c.tacet && { tacet: c.tacet }),
 		} as const;
 		return marked(bar, c.words);
 	};
@@ -280,7 +300,7 @@ export function expand(lines: Line[]): {
 	const checked = new Set<Played>();
 	const stop = (line: number) => {
 		capped = true;
-		error(line, `expansion stopped at ${MAX_EXPANDED_BARS} bars`, "x");
+		error(line, `expansion stopped at ${maxBars} bars`, "x");
 	};
 	let sectionName: string | null = null;
 	let phase: Phase = "main";
@@ -315,6 +335,7 @@ export function expand(lines: Line[]): {
 			slots: p.slots,
 			...(p.rehearsal === undefined ? {} : { rehearsal: p.rehearsal }),
 			...(p.words === undefined ? {} : { words: p.words }),
+			...(p.tacet && { tacet: p.tacet }),
 		};
 	};
 	/** How long the slot played just before is, in whole notes; null after a fermata or at the start. */
@@ -336,12 +357,12 @@ export function expand(lines: Line[]): {
 		if (stopped()) return;
 		if (p.kind === "direction") return direct(p.direction);
 		if (seeking()) return;
-		if (++work > MAX_WORK) return stop(line);
+		if (++work > maxWork) return stop(line);
 		if (p.kind === "fermata") {
 			before.length = null;
 			return void out.push({ kind: "fermata", line });
 		}
-		if (count >= MAX_EXPANDED_BARS) return stop(line);
+		if (count >= maxBars) return stop(line);
 		count++;
 		const bar = barOf(p, line);
 		checkPushes(bar);
@@ -372,7 +393,7 @@ export function expand(lines: Line[]): {
 		// After the jump every repeat plays once.
 		const passes = phase === "main" ? (repeat ?? 1) : 1;
 		for (let i = 0; i < passes && !stopped(); i++) {
-			if (++work > MAX_WORK) return stop(line);
+			if (++work > maxWork) return stop(line);
 			body(out);
 		}
 	};
@@ -400,7 +421,7 @@ export function expand(lines: Line[]): {
 		const highest = typeof it.repeat === "number" ? it.repeat : 1;
 		const first = phase === "main" ? 1 : highest;
 		for (let pass = first; pass <= highest && !stopped(); pass++) {
-			if (++work > MAX_WORK) return stop(it.line);
+			if (++work > maxWork) return stop(it.line);
 			for (const e of it.entries) playLine(e, out);
 			const ending = it.endings.find((x) => x.passes.includes(pass));
 			if (ending) playLine(ending.entry, out);

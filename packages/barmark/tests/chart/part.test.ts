@@ -36,11 +36,6 @@ describe("part: names the chart's part (grammar 7.3)", () => {
 			"error: part: names the whole chart; put it before the first bar",
 		]);
 	});
-	test("one part per chart, for now", () => {
-		expect(messages("part: Gtr = Guitar\npart: Pno = Piano\n| G |")).toEqual([
-			"error: a chart names one part; several parts are not supported yet",
-		]);
-	});
 	test("a name is required", () => {
 		expect(messages("part:\n| G |")).toEqual(["error: part: needs a name"]);
 		expect(messages("part: Gtr =\n| G |")).toEqual(["error: part: needs a name after the label"]);

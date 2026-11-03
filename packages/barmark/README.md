@@ -37,17 +37,20 @@ declarations included and no runtime dependencies.
 ```ts
 import {
 	degreeOf,
+	extractPart,
 	harteToBarmark,
 	parseChart,
 	parseChord,
 	printChart,
 	printParsed,
+	printPart,
+	projectPart,
 	transposeChart,
 } from "barmark";
 
 const chart = parseChart(text);
 chart.title; // "Example Song"
-chart.part; // { name: "Electric Guitar 1", label: "Gtr" } from part: Gtr = Electric Guitar 1, or null
+chart.parts; // [{ label: "Gtr", name: "Electric Guitar 1" }] from part: Gtr = Electric Guitar 1, in score order
 chart.bars; // every bar in play order: its number as written, slots, section, key, meter, tempo, feel (and swingPercent)
 chart.sections; // each section as played, with its first and last bar
 chart.diagnostics; // errors and warnings, each with a line number
@@ -66,6 +69,35 @@ if (chord.ok) chord.value.harte; // "B:hdim7"
 
 harteToBarmark("A:sus4(b7,9)"); // "A9sus4"
 ```
+
+### Several parts
+
+```
+part: Gtr = Electric Guitar 1
+part: Pno = Piano
+
+Gtr | G   | C | G  | D |
+Pno | G/B | C | Em | D |
+| C | G | D | G |
+```
+
+A chart with several `part:` lines writes **systems** (grammar 7.4):
+labelled lines that share bars, one per part. A part missing from a
+system is tacet there; an unlabelled line is tutti, played by every part.
+
+```ts
+const chart = parseChart(text);
+chart.bars[0].parts; // [{ line, slots, words? }, …] per part, in score order; null where tacet
+chart.bars[0].slots; // the first part's slots (N.C., with tacet: true, where it is tacet)
+
+extractPart(text, "Pno"); // one part as a single-part ChartParse, or null
+printPart(text, "Pno"); // the same as text: tacet bars written N.C.
+projectPart(chart.lines, chart.parts, "Pno"); // one part's lines
+```
+
+`printChart` sorts a system into score order and lines up its pipes.
+`chart.part` still gives the one part of a single-part chart, and is
+deprecated in favour of `parts`.
 
 - **`parseChart`** never throws. A line with an error is left out of the
   play order and reported, and the rest of the chart still reads.

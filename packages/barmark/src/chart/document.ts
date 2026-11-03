@@ -1,6 +1,7 @@
 import { parseChord } from "../chords/parse.js";
 import { misplacedRepeat, parseBarLine, readRepeat, repeatTail } from "./barLine.js";
 import { parseDirectiveLine } from "./directives.js";
+import { groupSystems } from "./systems.js";
 import type { ChartDiagnostic, Line, Part, Repeat } from "./types.js";
 
 const NEAR_DIRECTIVES: Record<string, string> = {
@@ -25,7 +26,48 @@ function readPart(text: string): Part | string | null {
 	if (!labelled) return value ? { name: value } : "part: needs a name";
 	const [, label, name] = labelled;
 	if (!label) return "part: needs a label before =";
+	if (/^[|#@0-9]/.test(label)) return "a part label can't start with |, #, @ or a digit";
 	return name ? { label, name } : "part: needs a name after the label";
+}
+
+/**
+ * Several parts each need a label, and no two may share one in any case
+ * (grammar 7.4). A part that breaks either rule is text, with the error.
+ */
+function checkParts(lines: Line[], diagnostics: ChartDiagnostic[]): Part[] {
+	const declared = lines.filter((l): l is Extract<Line, { kind: "part" }> => l.kind === "part");
+	if (declared.length < 2) return declared.map(partOf);
+	const seen = new Map<string, string>();
+	const parts: Part[] = [];
+	for (const l of declared) {
+		const problem = partProblem(l, seen);
+		if (!problem) {
+			parts.push(partOf(l));
+			continue;
+		}
+		const text = l.label ? `part: ${l.label} = ${l.name}` : `part: ${l.name}`;
+		diagnostics.push({ line: l.line, severity: "error", token: text, ...problem });
+		lines[lines.indexOf(l)] = { kind: "text", line: l.line, text };
+	}
+	return parts;
+}
+
+const partOf = (l: Part): Part => (l.label ? { label: l.label, name: l.name } : { name: l.name });
+
+function partProblem(
+	l: Part,
+	seen: Map<string, string>,
+): { message: string; suggestion?: string } | null {
+	if (!l.label)
+		return {
+			message: "a chart with several parts labels each one",
+			suggestion: `part: Label = ${l.name}`,
+		};
+	const key = l.label.toLowerCase();
+	const first = seen.get(key);
+	if (first) return { message: `two parts share the label ${first}` };
+	seen.set(key, l.label);
+	return null;
 }
 
 function readHeading(text: string, line: number, diagnostics: ChartDiagnostic[]): Line {
@@ -65,6 +107,41 @@ function readHeading(text: string, line: number, diagnostics: ChartDiagnostic[])
 	return { kind: "section", line, name: rest, repeat, elided };
 }
 
+/** A label and the bar line after it: `Gtr | G |` (grammar 7.4). */
+const LABELLED = /^([^\s|]+)(\s*)(\|.*)$/;
+
+const readsCleanly = (barLine: string) => {
+	const read = parseBarLine(barLine, 0);
+	return Boolean(read.bars) && read.diagnostics.length === 0;
+};
+
+/** `G | C | D |`: a bar line with its leading pipe left off. */
+function missingPipe(text: string, line: number): ChartDiagnostic | null {
+	const fixed = `| ${text}`;
+	if (!readsCleanly(fixed)) return null;
+	return {
+		line,
+		severity: "warning",
+		message: "a bar line starts with |",
+		token: text,
+		suggestion: fixed,
+	};
+}
+
+/** A warning when a word before a clean bar line is not a declared part (grammar 7.4). */
+function undeclaredLabel(text: string, line: number): ChartDiagnostic | null {
+	const m = LABELLED.exec(text);
+	if (!m?.[1] || !m[3]) return null;
+	if (parseChord(m[1]).ok) return missingPipe(text, line);
+	if (!readsCleanly(m[3])) return null;
+	return {
+		line,
+		severity: "warning",
+		message: `${m[1]} is not a part of this chart; declare it with part: ${m[1]} = …`,
+		token: m[1],
+	};
+}
+
 /** A warning when a text line looks like an older chart format. */
 function oldFormat(text: string, line: number): ChartDiagnostic | null {
 	const warn = (message: string, suggestion: string): ChartDiagnostic => ({
@@ -80,6 +157,8 @@ function oldFormat(text: string, line: number): ChartDiagnostic | null {
 	const near = /^(\w+)\s*:\s*(.*)$/.exec(text);
 	const name = near?.[1] ? NEAR_DIRECTIVES[near[1].toLowerCase()] : undefined;
 	if (near && name) return warn(`not a directive; did you mean ${name}:?`, `${name}: ${near[2]}`);
+	const undeclared = undeclaredLabel(text, line);
+	if (undeclared) return undeclared;
 	const unescaped = escapedBarLine(text);
 	if (unescaped) return warn("escaped pipes; a bar line uses a plain |", unescaped);
 	const words = text.split(/\s+/);
@@ -115,13 +194,13 @@ function noBarLines(lines: Line[]): ChartDiagnostic | null {
 export function readDocument(text: string): {
 	title: string | null;
 	part: Part | null;
+	parts: Part[];
 	lines: Line[];
 	diagnostics: ChartDiagnostic[];
 } {
 	const lines: Line[] = [];
 	const diagnostics: ChartDiagnostic[] = [];
 	let title: string | null = null;
-	let part: Part | null = null;
 	/** The line kept as text, with why it isn't what it looks like. */
 	const asText = (
 		t: string,
@@ -142,14 +221,6 @@ export function readDocument(text: string): {
 		if (typeof read === "string") return asText(t, line, "error", read);
 		if (lines.some((l) => l.kind === "bars" || l.kind === "invalid"))
 			return asText(t, line, "error", "part: names the whole chart; put it before the first bar");
-		if (part)
-			return asText(
-				t,
-				line,
-				"error",
-				"a chart names one part; several parts are not supported yet",
-			);
-		part = read;
 		return { kind: "part", line, ...read };
 	};
 	const otherLine = (t: string, line: number): Line => {
@@ -164,12 +235,43 @@ export function readDocument(text: string): {
 		if (old) diagnostics.push(old);
 		return { kind: "text", line, text: t };
 	};
-	const classify = (t: string, line: number): Line => {
-		if (t.startsWith("|")) {
-			const r = parseBarLine(t, line);
-			diagnostics.push(...r.diagnostics);
-			return r.bars ?? { kind: "invalid", line, text: t, written: r.written };
+	const barLine = (t: string, line: number): Line => {
+		const r = parseBarLine(t, line);
+		diagnostics.push(...r.diagnostics);
+		return r.bars ?? { kind: "invalid", line, text: t, written: r.written };
+	};
+	/** A declared part's bar line; labelled only when the chart has several parts. */
+	const labelledLine = (t: string, line: number): Line | null => {
+		const m = LABELLED.exec(t);
+		const declared = lines.filter((l) => l.kind === "part");
+		const found = declared.find((p) => p.label?.toLowerCase() === m?.[1]?.toLowerCase());
+		if (!m || !found?.label) return null;
+		const [, word = "", space, rest = ""] = m;
+		if (!space) {
+			diagnostics.push({
+				line,
+				severity: "error",
+				message: "a space goes between the label and |",
+				token: t,
+				suggestion: `${word} ${rest}`,
+			});
+			const written = parseBarLine(rest, line).written;
+			return {
+				kind: "invalid",
+				line,
+				text: t,
+				written,
+				...(declared.length > 1 && { part: found.label }),
+			};
 		}
+		const read = barLine(rest, line);
+		if (declared.length < 2 || (read.kind !== "bars" && read.kind !== "invalid")) return read;
+		return { ...read, part: found.label };
+	};
+	const classify = (t: string, line: number): Line => {
+		if (t.startsWith("|")) return barLine(t, line);
+		const labelled = labelledLine(t, line);
+		if (labelled) return labelled;
 		if (t.startsWith("# ")) return titleLine(t, line);
 		if (t === "##" || t.startsWith("## ")) return readHeading(t.slice(2), line, diagnostics);
 		return otherLine(t, line);
@@ -183,5 +285,14 @@ export function readDocument(text: string): {
 		});
 	const empty = noBarLines(lines);
 	if (empty) diagnostics.push(empty);
-	return { title, part, lines, diagnostics };
+	const parts = checkParts(lines, diagnostics);
+	const grouped = parts.length > 1 ? groupSystems(lines) : { lines, diagnostics: [] };
+	diagnostics.push(...grouped.diagnostics);
+	return {
+		title,
+		part: parts.length === 1 ? (parts[0] ?? null) : null,
+		parts,
+		lines: grouped.lines,
+		diagnostics,
+	};
 }

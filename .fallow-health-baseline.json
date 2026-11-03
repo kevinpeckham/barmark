@@ -11,11 +11,6 @@
         "count": 2
       }
     },
-    "packages/barmark/src/chart/print.ts": {
-      "complexity_high": {
-        "count": 1
-      }
-    },
     "packages/barmark/src/chords/harte.ts": {
       "complexity_moderate": {
         "count": 1
