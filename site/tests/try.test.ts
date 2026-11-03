@@ -109,8 +109,16 @@ describe("reading what's typed", () => {
 		expect(MAX_LINK).toBe(2_000);
 	});
 	test("every example chip reads without an error", () => {
-		expect(EXAMPLES).toEqual(["Cø", "C7b9/E", "{C E G}", "C:maj7", "| D | % | x2"]);
-		for (const x of EXAMPLES) {
+		expect(EXAMPLES.map((x) => x.label)).toEqual([
+			"Cø",
+			"C7b9/E",
+			"{C E G}",
+			"C:maj7",
+			"| D | % | x2",
+			"Gtr + Pno",
+		]);
+		expect(EXAMPLES.find((x) => x.label === "Gtr + Pno")?.text).toContain("Pno | ");
+		for (const { text: x } of EXAMPLES) {
 			const r = read(x);
 			expect(r.kind).not.toBe("error");
 			if (r.kind === "chart") expect(r.diagnostics).toEqual([]);

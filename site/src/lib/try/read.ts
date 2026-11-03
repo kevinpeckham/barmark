@@ -13,8 +13,14 @@ import {
 import { type GuideQuery, matches } from "../guide/query.ts";
 import { ROWS } from "../guide/rows.ts";
 
-/** The chips under the box, in order. */
-export const EXAMPLES: readonly string[] = ["Cø", "C7b9/E", "{C E G}", "C:maj7", "| D | % | x2"];
+/** The chips under the box, in order: what each says, and what it puts in the box. */
+export const EXAMPLES: readonly { label: string; text: string }[] = [
+	...["Cø", "C7b9/E", "{C E G}", "C:maj7", "| D | % | x2"].map((text) => ({ label: text, text })),
+	{
+		label: "Gtr + Pno",
+		text: "part: Gtr = Guitar\npart: Pno = Piano\n\n| G | C |\nGtr | G | C | D | G |\nPno | G/B | C | D | G |\nGtr | Em | C | D | G |\n| C | G |",
+	},
+];
 
 /** Past this the page stops reading, as the home page stops previewing (ChartRender's limit). */
 export const MAX_LENGTH = 50_000;
@@ -127,7 +133,7 @@ export const MAX_LINK = 2_000;
 
 /** The page link's query for the text: "" for the opening example, null when too long to share. */
 export function linkQuery(text: string): string | null {
-	if (text === EXAMPLES[0]) return "";
+	if (text === EXAMPLES[0]?.text) return "";
 	if (text.length > MAX_LINK) return null;
 	const search = new URLSearchParams({ q: text }).toString();
 	return search.length > MAX_LINK ? null : search;

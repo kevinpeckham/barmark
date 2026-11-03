@@ -7,7 +7,7 @@ import { LINKS } from "#lib/site.js";
 import { EXAMPLES, guideQuery, linkQuery, read } from "#lib/try/read.js";
 import { keepQuery } from "#lib/url.js";
 
-const first = EXAMPLES[0] ?? "";
+const first = EXAMPLES[0]?.text ?? "";
 
 // The prerendered page reads the first example; a shared link's query is read once the page runs.
 // Until then the page stays hidden (SHARED_LINK), so the link never shows the example first.
@@ -106,8 +106,10 @@ const chip =
 				{/if}
 			</div>
 			<div role="group" aria-label="Examples" class="flex flex-wrap gap-2">
-				{#each EXAMPLES as example (example)}
-					<button type="button" data-example class={chip} onclick={() => (text = example)}>{example}</button>
+				{#each EXAMPLES as example (example.label)}
+					<button type="button" data-example class={chip} onclick={() => (text = example.text)}
+						>{example.label}</button
+					>
 				{/each}
 			</div>
 		</div>
