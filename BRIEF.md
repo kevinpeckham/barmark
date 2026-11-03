@@ -157,6 +157,50 @@ parse then print should round-trip).
    lyric is free text between rows). A grammar change, so Kevin decides
    its shape.
 
+## Site roadmap: agent readiness (AEO)
+
+Added 2026-11-03 at Kevin's request: make barmark.dev as ready for
+agents as slx-web and lj-website, in the order the
+[AEO Playbook](https://www.lightningjar.com/research/aeo-bench/playbook)
+gives its evidence. barmark.dev has none of this yet: no sitemap, no
+llms.txt, no robots.txt, no JSON-LD. Each item is its own pull request
+and needs Kevin's go-ahead to start.
+
+1. **Link everything that matters** (playbook 01, measured as the most
+   actionable step). Every page and every guide row reachable by plain
+   links, not only from a sitemap or llms.txt; check the guide's
+   filtered views and the FAQ anchors.
+2. **Markdown for agents** (playbook 02): same-URL content negotiation
+   on `Accept: text/markdown` plus `.md` fallbacks, as slx-web does
+   with Vercel Routing Middleware (slx-web #129, #135). The grammar is
+   already markdown; the guide and FAQ come from data. HTML to markdown
+   goes through `@kevinpeckham/barkdown`, as on slx-web.
+3. **Discovery files** (playbook 03: publish them, expect little):
+   `sitemap.xml`, `robots.txt`, `llms.txt` (a curated slice, playbook
+   08) and `llms-full.txt`; JSON-LD structured data (`SoftwareSourceCode`
+   for the packages, `FAQPage`, `TechArticle` for the grammar), as slx-web
+   #128 did. Not a playbook recommendation, but cheap and expected by
+   search engines.
+4. **Tools for agents** (playbook 07: mount capabilities, don't just
+   advertise them):
+   - a read-only MCP server at `/mcp`, like slx-web's (#140), whose
+     tools are the library itself: `check`, `format`, `transpose`,
+     `render`, `read_chord`, `harte`, and `guide_search`;
+   - WebMCP in-page tools on the editor and guide, for agents that drive
+     a browser (slx-web #143);
+   - Agent Skills (`SKILL.md`) for writing barmark charts (slx-web #141).
+5. **A site chat agent**, like Ask Eljay (lj-website) and Ask Collin
+   (slx-web): answers about the notation, writes and fixes charts with
+   the parser as its tool, and links the guide rows it used. Built on the
+   playbook's prefetch design (06): a curated index in the cached part
+   of the system prompt. Not a playbook recommendation in itself.
+
+Open decisions (Kevin's): whether barmark.dev takes on server functions
+(items 2, 4 and 5 need them; today it is fully prerendered), where the
+chat agent's model calls and rate limits run (the lj-website pattern
+uses Vercel AI Gateway and Upstash), and whether the MCP server lives
+on barmark.dev or ships as a package beside `@barmark/cli`.
+
 ## What the bench contributes (standing offer, already promised)
 
 The conformance corpus (the stem-bench round-trip fixtures — three
