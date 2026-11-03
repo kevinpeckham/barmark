@@ -116,13 +116,15 @@ export type Line =
 			repeat: Repeat;
 			/** The passes an ending plays on (grammar 5.1), in order; null for any other bar line. */
 			ending: number[] | null;
+			/** The declared label of the part whose line this is (grammar 7.4); absent on a tutti line and in a single-part chart. */
+			part?: string;
 	  }
 	| { kind: "text"; line: number; text: string }
 	/**
 	 * A bar line dropped for an error, kept as written so its section still
 	 * counts as written out; `written` is how many bars its pipes write.
 	 */
-	| { kind: "invalid"; line: number; text: string; written: number };
+	| { kind: "invalid"; line: number; text: string; written: number; part?: string };
 
 export type PlayedBar = {
 	/** 1-based measure number in play order; fermatas are not counted. */

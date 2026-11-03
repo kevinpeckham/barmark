@@ -106,6 +106,23 @@ function readHeading(text: string, line: number, diagnostics: ChartDiagnostic[])
 	return { kind: "section", line, name: rest, repeat, elided };
 }
 
+/** A label and the bar line after it: `Gtr | G |` (grammar 7.4). */
+const LABELLED = /^([^\s|]+)(\s*)(\|.*)$/;
+
+/** A warning when a word before a clean bar line is not a declared part (grammar 7.4). */
+function undeclaredLabel(text: string, line: number): ChartDiagnostic | null {
+	const m = LABELLED.exec(text);
+	if (!m?.[1] || !m[3]) return null;
+	const read = parseBarLine(m[3], 0);
+	if (!read.bars || read.diagnostics.length > 0) return null;
+	return {
+		line,
+		severity: "warning",
+		message: `${m[1]} is not a part of this chart; declare it with part: ${m[1]} = …`,
+		token: m[1],
+	};
+}
+
 /** A warning when a text line looks like an older chart format. */
 function oldFormat(text: string, line: number): ChartDiagnostic | null {
 	const warn = (message: string, suggestion: string): ChartDiagnostic => ({
@@ -121,6 +138,8 @@ function oldFormat(text: string, line: number): ChartDiagnostic | null {
 	const near = /^(\w+)\s*:\s*(.*)$/.exec(text);
 	const name = near?.[1] ? NEAR_DIRECTIVES[near[1].toLowerCase()] : undefined;
 	if (near && name) return warn(`not a directive; did you mean ${name}:?`, `${name}: ${near[2]}`);
+	const undeclared = undeclaredLabel(text, line);
+	if (undeclared) return undeclared;
 	const unescaped = escapedBarLine(text);
 	if (unescaped) return warn("escaped pipes; a bar line uses a plain |", unescaped);
 	const words = text.split(/\s+/);
@@ -197,12 +216,43 @@ export function readDocument(text: string): {
 		if (old) diagnostics.push(old);
 		return { kind: "text", line, text: t };
 	};
-	const classify = (t: string, line: number): Line => {
-		if (t.startsWith("|")) {
-			const r = parseBarLine(t, line);
-			diagnostics.push(...r.diagnostics);
-			return r.bars ?? { kind: "invalid", line, text: t, written: r.written };
+	const barLine = (t: string, line: number): Line => {
+		const r = parseBarLine(t, line);
+		diagnostics.push(...r.diagnostics);
+		return r.bars ?? { kind: "invalid", line, text: t, written: r.written };
+	};
+	/** A declared part's bar line; labelled only when the chart has several parts. */
+	const labelledLine = (t: string, line: number): Line | null => {
+		const m = LABELLED.exec(t);
+		const declared = lines.filter((l) => l.kind === "part");
+		const found = declared.find((p) => p.label?.toLowerCase() === m?.[1]?.toLowerCase());
+		if (!m || !found?.label) return null;
+		const [, word = "", space, rest = ""] = m;
+		if (!space) {
+			diagnostics.push({
+				line,
+				severity: "error",
+				message: "a space goes between the label and |",
+				token: t,
+				suggestion: `${word} ${rest}`,
+			});
+			const written = parseBarLine(rest, line).written;
+			return {
+				kind: "invalid",
+				line,
+				text: t,
+				written,
+				...(declared.length > 1 && { part: found.label }),
+			};
 		}
+		const read = barLine(rest, line);
+		if (declared.length < 2 || (read.kind !== "bars" && read.kind !== "invalid")) return read;
+		return { ...read, part: found.label };
+	};
+	const classify = (t: string, line: number): Line => {
+		if (t.startsWith("|")) return barLine(t, line);
+		const labelled = labelledLine(t, line);
+		if (labelled) return labelled;
 		if (t.startsWith("# ")) return titleLine(t, line);
 		if (t === "##" || t.startsWith("## ")) return readHeading(t.slice(2), line, diagnostics);
 		return otherLine(t, line);
