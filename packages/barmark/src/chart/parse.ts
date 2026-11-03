@@ -67,7 +67,9 @@ function zipEvents(each: ChartEvent[][], report: (d: ChartDiagnostic) => void): 
 
 /** Several parts: each projected and played, then zipped into one timeline (grammar 7.4). */
 function playParts(lines: ReturnType<typeof readDocument>["lines"], parts: Part[]) {
-	const played = parts.map((p) => expand(projectPart(lines, parts, p.label ?? ""), p.label));
+	const played = parts.map((p) =>
+		expand(projectPart(lines, parts, p.label ?? ""), p.label, parts.length),
+	);
 	const diagnostics = mergeReports(played.map((p) => p.diagnostics));
 	const events = zipEvents(
 		played.map((p) => p.events),

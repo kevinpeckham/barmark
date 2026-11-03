@@ -73,3 +73,12 @@ describe("extractPart", () => {
 		expect(extractPart(MORNING_SONG, "Bass")).toBeNull();
 	});
 });
+
+describe("the expansion cap covers every part", () => {
+	test("several parts share one budget of bars", () => {
+		const head = ["A", "B", "C", "D"].map((l) => `part: ${l} = ${l}`).join("\n");
+		const q = parseChart(`${head}\n| D | x 9000`);
+		expect(q.bars.length).toBeLessThanOrEqual(2500);
+		expect(q.diagnostics.map((d) => d.message)).toContain("expansion stopped at 2500 bars");
+	});
+});
