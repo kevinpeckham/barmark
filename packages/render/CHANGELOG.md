@@ -6,6 +6,14 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- **Breaking:** the element's one-part attribute is now `show-part`
+  (property `showPart`), not `part`. HTML keeps `part` on every element
+  for `::part()` styling, so a page styling `<barmark-chart part="…">`
+  got a one-part view by accident, and `el.part` could not return the
+  label. `renderChart`'s option stays `part`.
+
 ## [0.11.0] - 2026-11-03
 
 Needs `barmark` 0.14.0.

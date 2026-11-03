@@ -22,9 +22,12 @@ describe("attributes → render options", () => {
 			),
 		).toEqual({ theme: "dark", barNumbers: false, rehearsalLetters: true, wrap: false });
 	});
-	test("part names the part to draw", () => {
-		expect(optionsFromAttributes(el({ part: "Pno" })).part).toBe("Pno");
+	test("show-part names the part to draw", () => {
+		expect(optionsFromAttributes(el({ "show-part": "Pno" })).part).toBe("Pno");
 		expect(optionsFromAttributes(el({})).part).toBeUndefined();
+	});
+	test("the global part attribute (for ::part styling) draws the whole chart", () => {
+		expect(optionsFromAttributes(el({ part: "chart" })).part).toBeUndefined();
 	});
 	test("an unknown theme is auto", () => {
 		expect(optionsFromAttributes(el({ theme: "sepia" })).theme).toBe("auto");

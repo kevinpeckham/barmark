@@ -70,7 +70,7 @@ function elementAttributes(options: RenderOptions): string {
 		options.rehearsalLetters ? " rehearsal-letters" : "",
 		numeralsOf(options) ? ` numerals="${numeralsOf(options)}"` : "",
 		options.wrap === false ? ' wrap="off"' : "",
-		options.part ? ` part="${escapeHtml(options.part)}"` : "",
+		options.part ? ` show-part="${escapeHtml(options.part)}"` : "",
 	].join("");
 }
 

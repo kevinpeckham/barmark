@@ -48,7 +48,9 @@ The element renders from its `text` property, its `src` URL, or a child
 whenever one changes; it fetches a `src` once, and renders once however
 many properties and attributes change together. A chart rendered on the
 server by `renderChart` keeps its music until it has a source of its own,
-and still follows `theme` and `bar-numbers`.
+and still follows `theme`, `bar-numbers` and `wrap`; a change to
+`numerals`, `rehearsal-letters` or `show-part` needs the chart's text, so
+it waits for a source.
 
 For a live editor, set `text`:
 
@@ -77,7 +79,7 @@ the element loads, with `<style data-barmark-font>` holding
 | `rehearsalLetters` | `rehearsal-letters` (`rehearsalLetters`) | `false` | boxed A, B, C… on each section as played |
 | `numerals` | `numerals` (`numerals`) | none | `"nashville"` (6m⁷) or `"roman"` (vi⁷): each chord as its degree in its bar's key |
 | `wrap` | `wrap="off"` (`wrap`) | `true` | wrap a section's rows when it is wider than the chart's box; off, rows keep their columns and the chart overflows, for its page to scroll |
-| `part` | `part` (`part`) | none | draw only the part with this label, as one player reads it: tutti bars, its own bars, and "tacet" where it rests |
+| `part` | `show-part` (`showPart`) | none | draw only the part with this label, as one player reads it: tutti bars, its own bars, and "tacet" where it rests. The attribute isn't `part`, which HTML keeps for `::part()` styling |
 | `diagnostics` | | `false` | list the chart's errors and warnings below it |
 | `fontUrl` | | none | emit Edwin's `@font-face` rule before the chart |
 | (the `text` argument) | (`text`) | `null` | the chart to draw; wins over `src` and the script child |

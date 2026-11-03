@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { parseHTML } from "linkedom";
-import { layoutChart, renderChartUnwrapped } from "../src/index.js";
+import { layoutChart, renderChart, renderChartUnwrapped } from "../src/index.js";
 import { MORNING_SONG } from "./morning-song.js";
 
 const doc = (text: string) => parseHTML(`<body>${renderChartUnwrapped(text)}</body>`).document;
@@ -124,5 +124,13 @@ describe("a tutti bar the parts play differently", () => {
 			.filter((i) => i.kind === "row");
 		const cell = rows[rows.length - 1]?.cells[0];
 		expect(cell?.kind === "slots" && cell.slots[0]?.kind).toBe("chord");
+	});
+});
+
+describe("show-part on the element", () => {
+	test("renderChart writes the part as show-part, never the global part attribute", () => {
+		const html = renderChart(MORNING_SONG, { part: "Pno" });
+		expect(html).toContain('<barmark-chart show-part="Pno">');
+		expect(html).not.toMatch(/<barmark-chart[^>]* part=/);
 	});
 });
