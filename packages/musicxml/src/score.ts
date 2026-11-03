@@ -2,6 +2,7 @@
 import { type ChartDiagnostic, type ChartParse, extractPart, type Part, parseChart } from "barmark";
 import { measureXml } from "./measure-xml.js";
 import { writtenMeasures } from "./measures.js";
+import { clefFor } from "./notes.js";
 import { divisionsFor, lengthsOf } from "./rhythm.js";
 import { VERSION } from "./version.js";
 import { el, text } from "./xml.js";
@@ -41,9 +42,10 @@ function scorePart(source: PartSource, i: number): string {
 
 function partXml(source: PartSource, i: number): string {
 	const measures = writtenMeasures(source.parse);
+	const clef = clefFor(measures);
 	const divisions = divisionsFor(measures.flatMap((m) => lengthsOf(m.slots, m.meter)));
 	const xml = measures.map((m, index) =>
-		measureXml(m, { divisions, index, previous: measures[index - 1] ?? null }),
+		measureXml(m, { divisions, index, previous: measures[index - 1] ?? null, clef }),
 	);
 	return el("part", { id: `P${i + 1}` }, xml);
 }

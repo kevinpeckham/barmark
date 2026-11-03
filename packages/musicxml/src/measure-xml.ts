@@ -2,17 +2,16 @@
 import type { Key, SimpleSlot, Slot } from "barmark";
 import { harmonyXml, noChordXml } from "./harmony.js";
 import type { Measure } from "./measures.js";
-import {
-	barLength,
-	type Frac,
-	memberLength,
-	type NoteValue,
-	noteValues,
-	slotLengths,
-} from "./rhythm.js";
+import { noteSetOf, pitchesOf, type Sound, slashed, soundValueXml } from "./notes.js";
+import { barLength, type Frac, memberLength, noteValues, slotLengths } from "./rhythm.js";
 import { el, text } from "./xml.js";
 
-export type MeasureContext = { divisions: number; index: number; previous: Measure | null };
+export type MeasureContext = {
+	divisions: number;
+	index: number;
+	previous: Measure | null;
+	clef: "G" | "F";
+};
 
 const LETTER_FIFTHS: Record<string, number> = { F: -1, C: 0, G: 1, D: 2, A: 3, E: 4, B: 5 };
 /** How far each mode's key signature sits from its tonic's major one, in fifths. */
@@ -51,58 +50,34 @@ function timeXml(m: Measure, prev: Measure | null): string {
 	return el("time", {}, [text("beats", m.meter.n), text("beat-type", m.meter.d)]);
 }
 
+const CLEF_LINE = { G: 2, F: 4 };
+
+/** Slash style on from the first slashed measure, off for a measure of notes, and on again after. */
+function slashStyleXml(m: Measure, prev: Measure | null): string {
+	const on = slashed(m);
+	if (prev ? on === slashed(prev) : !on) return "";
+	return el(
+		"measure-style",
+		{},
+		el("slash", on ? { type: "start", "use-stems": "no" } : { type: "stop" }),
+	);
+}
+
 function attributesXml(m: Measure, ctx: MeasureContext): string {
 	const prev = ctx.previous;
 	const head = prev
-		? [keyXml(m, prev), timeXml(m, prev)]
+		? [keyXml(m, prev), timeXml(m, prev), slashStyleXml(m, prev)]
 		: [
 				text("divisions", ctx.divisions),
 				keyXml(m, null),
 				timeXml(m, null),
-				el("clef", {}, [text("sign", "G"), text("line", 2)]),
-				el("measure-style", {}, el("slash", { type: "start", "use-stems": "no" })),
+				el("clef", {}, [text("sign", ctx.clef), text("line", CLEF_LINE[ctx.clef])]),
+				slashStyleXml(m, null),
 			];
 	return head.some(Boolean) ? el("attributes", {}, head) : "";
 }
 
 const whole = (f: Frac, divisions: number) => (f.n * divisions) / f.d;
-
-type Tie = { start: boolean; stop: boolean };
-
-const tieEnds = (name: string, tie: Tie) => [
-	tie.stop ? el(name, { type: "stop" }) : "",
-	tie.start ? el(name, { type: "start" }) : "",
-];
-
-/** A value's type, dot and tuplet, after its duration and voice. */
-const valueXml = (v: NoteValue) => [
-	text("voice", 1),
-	text("type", v.type),
-	v.dot ? el("dot") : "",
-	v.tuplet
-		? el("time-modification", {}, [
-				text("actual-notes", v.tuplet.actual),
-				text("normal-notes", v.tuplet.normal),
-			])
-		: "",
-];
-
-const restXml = (v: NoteValue, divisions: number) =>
-	el("note", {}, [el("rest"), text("duration", whole(v.length, divisions)), ...valueXml(v)]);
-
-/** A slash note on B4, tied to its neighbours when one value can't write the slot. */
-function slashXml(v: NoteValue, divisions: number, tie: Tie): string {
-	const tied = tieEnds("tied", tie);
-	return el("note", {}, [
-		el("pitch", {}, [text("step", "B"), text("octave", 4)]),
-		text("duration", whole(v.length, divisions)),
-		...tieEnds("tie", tie),
-		...valueXml(v),
-		text("stem", "none"),
-		text("notehead", "slash"),
-		tied.some(Boolean) ? el("notations", {}, tied) : "",
-	]);
-}
 
 /** The chord symbol a slot sounds, if it names one. */
 function harmonyOf(slot: SimpleSlot): string {
@@ -110,23 +85,50 @@ function harmonyOf(slot: SimpleSlot): string {
 	return slot.kind === "chord" && slot.chord.kind === "chord" ? harmonyXml(slot.chord) : "";
 }
 
+const wordsXml = (words: string) =>
+	el("direction", { placement: "above" }, el("direction-type", {}, text("words", words)));
+
+function soundOf(slot: SimpleSlot): Sound {
+	if (slot.kind === "silence") return { kind: "rest" };
+	const set = noteSetOf(slot);
+	return set ? { kind: "notes", pitches: pitchesOf(set) } : { kind: "slash" };
+}
+
 /** One slot's sound for `length`: tied values when one can't write it. */
-function soundXml(slot: SimpleSlot, length: Frac, divisions: number): string {
+function simpleXml(slot: SimpleSlot, length: Frac, divisions: number): string {
 	const values = noteValues(length);
-	if (slot.kind === "silence") return values.map((v) => restXml(v, divisions)).join("");
-	return (
-		harmonyOf(slot) +
-		values
-			.map((v, i) => slashXml(v, divisions, { stop: i > 0, start: i < values.length - 1 }))
-			.join("")
+	const sound = soundOf(slot);
+	const articulation = slot.kind === "chord" ? slot.articulation : undefined;
+	const notes = values.map((v, i) =>
+		soundValueXml(
+			sound,
+			v,
+			whole(v.length, divisions),
+			{ stop: i > 0, start: i < values.length - 1 },
+			i === 0 ? articulation : undefined,
+		),
 	);
+	return (slot.kind === "unknown" ? wordsXml("?") : "") + harmonyOf(slot) + notes.join("");
 }
 
 function slotXml(slot: Slot, length: Frac, divisions: number): string {
-	if (slot.kind !== "group") return soundXml(slot, length, divisions);
+	if (slot.kind !== "group") return simpleXml(slot, length, divisions);
 	return slot.members
-		.map((m) => soundXml(m, memberLength(length, slot.members.length), divisions))
+		.map((m) => simpleXml(m, memberLength(length, slot.members.length), divisions))
 		.join("");
+}
+
+/** The slots, each after the words written before it; words at the end come last. */
+function slotsXml(m: Measure, divisions: number): string {
+	const before = (at: number) =>
+		m.words
+			.filter((w) => w.at === at)
+			.map((w) => wordsXml(w.text))
+			.join("");
+	const slots = slotLengths(m.slots, m.meter).map(
+		(len, i) => before(i) + slotXml(m.slots[i] as Slot, len, divisions),
+	);
+	return slots.join("") + before(m.slots.length);
 }
 
 export function measureXml(m: Measure, ctx: MeasureContext): string {
@@ -136,8 +138,6 @@ export function measureXml(m: Measure, ctx: MeasureContext): string {
 				text("duration", whole(barLength(m.meter), ctx.divisions)),
 				text("voice", 1),
 			])
-		: slotLengths(m.slots, m.meter)
-				.map((len, i) => slotXml(m.slots[i] as Slot, len, ctx.divisions))
-				.join("");
+		: slotsXml(m, ctx.divisions);
 	return el("measure", { number: ctx.index + 1, text: m.shown }, [attributesXml(m, ctx), body]);
 }
