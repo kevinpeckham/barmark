@@ -195,8 +195,8 @@ test.describe("accessibility", () => {
 		await page.goto("/chart");
 		const snapshot = await page.locator("barmark-chart").ariaSnapshot();
 		expect(snapshot).toContain("Verse");
-		expect(snapshot).toContain("bar 9: D");
-		expect(snapshot).toContain("bar 22: A seven sus four, hold, A seven, hold");
+		expect(snapshot).toContain("bar 5: D");
+		expect(snapshot).toContain("bar 18: A seven sus four, hold, A seven, hold");
 		expect(snapshot).not.toContain("sup");
 	});
 

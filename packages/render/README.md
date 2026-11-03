@@ -178,8 +178,10 @@ At the default size chords are 16px and no label is under 12px.
 
 Chords appear in their canonical form whatever the author typed (`Cø`
 shows as Cm⁷(♭5)). `%` is drawn as the bar it copies; a replayed section
-is drawn in full with its own bar numbers, and its own lyrics replace the
-written section's. A line with an error shows as written, underlined,
+is drawn in full, and its own lyrics replace the written section's. Bar
+numbers count the bars as written, each once, as a band counts them: a
+repeat, an ending, a jump or a replay doesn't move them, so a replayed
+section shows the numbers it was written with. A line with an error shows as written, underlined,
 with its message. `layoutChart(text)` returns all of this as data, if
 you want to draw it yourself.
 

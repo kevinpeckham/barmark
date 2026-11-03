@@ -36,8 +36,8 @@ describe("the model", () => {
 				: "",
 		).toBe("C");
 	});
-	test("rows number their bars on the first pass, before the jump", () => {
-		expect(rowsOf(CODA).map((r) => r.barNumber)).toEqual([1, 5, 12]);
+	test("rows number their bars as written, the coda after the jump too", () => {
+		expect(rowsOf(CODA).map((r) => r.barNumber)).toEqual([1, 5, 9]);
 	});
 });
 

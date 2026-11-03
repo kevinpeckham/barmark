@@ -36,9 +36,9 @@ describe("layoutChart: written sections", () => {
 		]);
 	});
 
-	test("written rows carry their first-pass bar numbers; numbering stops after an open repeat", () => {
+	test("written rows carry their written bar numbers, after an open repeat too", () => {
 		const written = writtenRows(m).map((r) => r.barNumber);
-		expect(written).toEqual([1, 9, 13, 17, 21, 41, null]);
+		expect(written).toEqual([1, 5, 9, 13, 17, 21, 25]);
 	});
 
 	test("% is drawn as the bar it copies", () => {
@@ -123,9 +123,9 @@ describe("layoutChart: degenerate charts never throw", () => {
 		expect(m.blocks[0]?.items.map((i) => i.kind)).toEqual(["text", "text"]);
 	});
 
-	test("the vamp's numbering stops after it, even in a later replay", () => {
+	test("bars after a vamp keep their written numbers", () => {
 		const m = layoutChart("## Vamp x ...\n| D | A |\n## Next\n| G |");
-		expect(rows(m).map((r) => r.barNumber)).toEqual([1, null]);
+		expect(rows(m).map((r) => r.barNumber)).toEqual([1, 3]);
 	});
 
 	test("Peaceful Dreams lays out with 152 numbered bars' worth of rows", () => {

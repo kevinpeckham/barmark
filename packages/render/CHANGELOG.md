@@ -6,6 +6,16 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+
+- **Bar numbers count the bars as written** (issue #92), each once, as a
+  band counts them and as `PlayedBar.written` gives them. Before, the
+  margin counted played bars, so a second ending or anything after a
+  repeat or a jump numbered past the printed score. A replayed section
+  now shows the numbers it was written with; the coda after a
+  `D.S. al Coda`, and bars after an open repeat, are numbered instead
+  of left blank. Screen readers hear the same numbers.
+
 ## [0.9.0] - 2026-11-03
 
 ### Added

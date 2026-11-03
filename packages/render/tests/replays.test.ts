@@ -15,15 +15,15 @@ const strip = (items: BlockItem[]) =>
 describe("replays", () => {
 	const m = layoutChart(EXAMPLE);
 
-	test("a replay draws its written section in full, with its own bar numbers", () => {
+	test("a replay draws its written section in full, with the numbers it was written with", () => {
 		const [verse, , replay] = [m.blocks[1], m.blocks[2], m.blocks[3]];
 		expect(strip(replay?.items ?? [])).toEqual(strip(verse?.items ?? []));
-		expect(rowsOf(replay).map((r) => r.barNumber)).toEqual([25, 29]);
+		expect(rowsOf(replay).map((r) => r.barNumber)).toEqual([5, 9]);
 		expect(replay?.columns).toBe(4);
 	});
 
-	test("every row of the chart has its play-order number", () => {
-		expect(rows(m).map((r) => r.barNumber)).toEqual([1, 9, 13, 17, 21, 25, 29, 33, 37, 41, null]);
+	test("every row of the chart has its written number", () => {
+		expect(rows(m).map((r) => r.barNumber)).toEqual([1, 5, 9, 13, 17, 5, 9, 13, 17, 21, 25]);
 	});
 
 	test("a replay's own directive lines follow its rows", () => {
@@ -88,12 +88,12 @@ describe("elision", () => {
 		expect(cuts(m.blocks[0])).toEqual([]);
 		expect(cuts(m.blocks[1])).toEqual([[1, 1]]);
 		const occ = m.blocks[1];
-		expect(rowsOf(occ).map((r) => r.barNumber)).toEqual([5, 7]);
+		expect(rowsOf(occ).map((r) => r.barNumber)).toEqual([1, 3]);
 	});
 
-	test("the cut bar is the parser's: the next section starts where it would have been", () => {
+	test("the next section numbers on from the bars as written", () => {
 		const m = layoutChart("## C\n| G | D |\n| A | E |\n## C ->\n## O\n| G |");
-		expect(rowsOf(m.blocks[2])[0]?.barNumber).toBe(8);
+		expect(rowsOf(m.blocks[2])[0]?.barNumber).toBe(5);
 	});
 
 	test("a last row marked x2 is drawn once, its last bar marked cut", () => {
