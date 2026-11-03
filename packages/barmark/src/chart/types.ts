@@ -174,8 +174,14 @@ export type SectionOccurrence = {
 
 export type ChartParse = {
 	title: string | null;
-	/** What `part:` names (grammar 7.3); null when the chart names none. */
+	/**
+	 * The one part a single-part chart names (grammar 7.3); null when it names
+	 * none or several.
+	 * @deprecated use `parts`.
+	 */
 	part: Part | null;
+	/** Every part the chart declares, in score order (grammar 7.4); empty when none. */
+	parts: Part[];
 	lines: Line[];
 	events: ChartEvent[];
 	/** `events` flattened, with an open repeat's pass included once. */

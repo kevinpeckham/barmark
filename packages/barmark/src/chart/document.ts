@@ -25,7 +25,48 @@ function readPart(text: string): Part | string | null {
 	if (!labelled) return value ? { name: value } : "part: needs a name";
 	const [, label, name] = labelled;
 	if (!label) return "part: needs a label before =";
+	if (/^[|#@0-9]/.test(label)) return "a part label can't start with |, #, @ or a digit";
 	return name ? { label, name } : "part: needs a name after the label";
+}
+
+/**
+ * Several parts each need a label, and no two may share one in any case
+ * (grammar 7.4). A part that breaks either rule is text, with the error.
+ */
+function checkParts(lines: Line[], diagnostics: ChartDiagnostic[]): Part[] {
+	const declared = lines.filter((l): l is Extract<Line, { kind: "part" }> => l.kind === "part");
+	if (declared.length < 2) return declared.map(partOf);
+	const seen = new Map<string, string>();
+	const parts: Part[] = [];
+	for (const l of declared) {
+		const problem = partProblem(l, seen);
+		if (!problem) {
+			parts.push(partOf(l));
+			continue;
+		}
+		const text = l.label ? `part: ${l.label} = ${l.name}` : `part: ${l.name}`;
+		diagnostics.push({ line: l.line, severity: "error", token: text, ...problem });
+		lines[lines.indexOf(l)] = { kind: "text", line: l.line, text };
+	}
+	return parts;
+}
+
+const partOf = (l: Part): Part => (l.label ? { label: l.label, name: l.name } : { name: l.name });
+
+function partProblem(
+	l: Part,
+	seen: Map<string, string>,
+): { message: string; suggestion?: string } | null {
+	if (!l.label)
+		return {
+			message: "a chart with several parts labels each one",
+			suggestion: `part: Label = ${l.name}`,
+		};
+	const key = l.label.toLowerCase();
+	const first = seen.get(key);
+	if (first) return { message: `two parts share the label ${first}` };
+	seen.set(key, l.label);
+	return null;
 }
 
 function readHeading(text: string, line: number, diagnostics: ChartDiagnostic[]): Line {
@@ -115,13 +156,13 @@ function noBarLines(lines: Line[]): ChartDiagnostic | null {
 export function readDocument(text: string): {
 	title: string | null;
 	part: Part | null;
+	parts: Part[];
 	lines: Line[];
 	diagnostics: ChartDiagnostic[];
 } {
 	const lines: Line[] = [];
 	const diagnostics: ChartDiagnostic[] = [];
 	let title: string | null = null;
-	let part: Part | null = null;
 	/** The line kept as text, with why it isn't what it looks like. */
 	const asText = (
 		t: string,
@@ -142,14 +183,6 @@ export function readDocument(text: string): {
 		if (typeof read === "string") return asText(t, line, "error", read);
 		if (lines.some((l) => l.kind === "bars" || l.kind === "invalid"))
 			return asText(t, line, "error", "part: names the whole chart; put it before the first bar");
-		if (part)
-			return asText(
-				t,
-				line,
-				"error",
-				"a chart names one part; several parts are not supported yet",
-			);
-		part = read;
 		return { kind: "part", line, ...read };
 	};
 	const otherLine = (t: string, line: number): Line => {
@@ -183,5 +216,6 @@ export function readDocument(text: string): {
 		});
 	const empty = noBarLines(lines);
 	if (empty) diagnostics.push(empty);
-	return { title, part, lines, diagnostics };
+	const parts = checkParts(lines, diagnostics);
+	return { title, part: parts.length === 1 ? (parts[0] ?? null) : null, parts, lines, diagnostics };
 }

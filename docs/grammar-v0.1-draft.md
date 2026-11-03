@@ -74,7 +74,8 @@ Each line is classified by its start, after leading whitespace is ignored:
 | `# ` | the **title** (once, optional) | `# Wagon Wheel` |
 | `## ` | a **section** heading | `## Chorus` |
 | `key:` `time:` `tempo:` `feel:` (any case) | a **directive** line | `key: Bm` |
-| `part:` (any case) | the **part** the chart is for (once, before the first bar, 7.3) | `part: Electric Guitar 1` |
+| `part:` (any case) | a **part** the chart is for (before the first bar, 7.3, 7.4) | `part: Electric Guitar 1` |
+| a part's label, then `\|` | that part's **bar line**, in a chart with several parts (7.4) | `Gtr \| G \| C \|` |
 | anything else | **text** (lyrics, notes, prose) | `Watch Kevin for the cutoff` |
 
 - Blank lines mean nothing.
@@ -688,16 +689,90 @@ key: G
   1` also gives a short **label**: no spaces, before the `=`.
 - **A line of its own.** The name runs to the end of the line, so it may
   hold commas (`part: Guitar, rhythm`). Runs of spaces print as one.
-- **Once, before the first bar.** A part names the whole chart, not the
-  bars after it. A `part:` after a bar line is an **error**, and so is a
-  second one: a chart is one part. (Several parts in one chart are
-  planned; see Open questions.)
+- **Before the first bar.** A part names the whole chart, not the bars
+  after it. A `part:` after a bar line is an **error**. A second `part:`
+  makes a chart of several parts (7.4).
 - A converter writes the name where its format names a part: MusicXML's
   `<part-name>` (the label, if any, as `<part-abbreviation>`) and a MIDI
   track name. Without `part:` it chooses its own.
 - Errors: no name (`part:`, `part: Gtr =`), no label before `=`, another
   directive after it on the line (`part: Guitar, key: G`) or before it
   (`key: G, part: Guitar`). `instrument:` and `parts:` are near misses.
+
+### 7.4 Several parts
+
+A chart may carry several players, a guitar and a piano say, written as
+**systems**: a row per part, sharing bars as a score's system does.
+
+```
+# Morning Song
+part: Gtr = Electric Guitar 1
+part: Pno = Piano
+key: G
+
+## Intro
+| G | C | G | D |
+
+## Verse
+Gtr | G   | C | G  | D |
+Pno | G/B | C | Em | D |
+Gtr | G   | C | D  | G |
+
+## Chorus
+|: C | G | D | G :|
+```
+
+The intro and the chorus are **tutti**: an unlabelled bar line, which
+every part plays. The verse's first system has both parts; in its second,
+the piano is **tacet**: it isn't written, so it rests.
+
+- **Declaring parts.** Two or more `part:` lines make a multi-part chart,
+  in **score order** (the order of systems' rows and of machine output).
+  Each needs a label: `part: Electric Guitar 1` beside another part is an
+  **error** suggesting `part: Label = Electric Guitar 1`. Two parts may
+  not share a label in any case; they may share a name (`Gtr1`, `Gtr2`,
+  both Guitar). A label can't start with `|`, `#`, `@` or a digit, so a
+  labelled line never reads as anything else.
+- **Labelled bar lines.** A declared label, a space, then a bar line
+  (`|`, `|:` or an ending `|1`) is that part's bar line. Labels match in
+  any case and print as declared. `Gtr| G |` is an **error** suggesting
+  the space. In a single-part chart a labelled line is the same as an
+  unlabelled one. A line that reads as a bar line after a word that is not
+  a declared label (`Bass | E | A |`) is text, with a **warning**; lyrics
+  with a pipe that don't read as a bar line stay quiet.
+- **Systems.** Consecutive labelled bar lines (blank lines ignored) in
+  which no label repeats are one system. A label written again starts the
+  next system; any other line (text, a heading, a directive, an
+  unlabelled bar line) ends one. Lines within a system may come in any
+  order; the canonical form sorts them into score order.
+- **Tutti and tacet.** An unlabelled bar line in a multi-part chart is a
+  system of its own that every part plays. A part not written in a system
+  is tacet for its bars.
+- **One timeline.** Bar numbers, keys, meters, tempi, feels, sections,
+  replays, repeats, endings and the jump belong to the chart, so every
+  part's bar 9 is the same bar. Directives stay on their own lines,
+  between systems. A replay brings back every part, tacets included.
+- **Structure is written on every line.** Repeat marks (`|:`, `:|`,
+  `x N`, `x ...`), the ending, fermatas (`...`), rehearsal marks,
+  directions and one-bar meters shape the timeline, so every line of a
+  system writes the same ones in the same places, and each part's line
+  reads correctly on its own. Every line also writes the same number of
+  bars. A line that differs is an **error**, and its part is tacet for
+  that system until it is fixed. A repeat may open in a system and close
+  on a later system or a tutti line.
+- **A part's own.** Chords, note sets, holds, `N.C.`, `--`, `?`, words,
+  accents, hits and pushes belong to their part. `%` copies the bar
+  written before it for the same part, and a leading `/` holds what that
+  part played, both in written order as in 2.3; on a tutti line each part
+  resolves its own (`| % |` after a system where the guitar played D and
+  the piano Em repeats each). After a bar where the part was tacet, both
+  are **errors**. A push borrows from the part's slot before it, in play
+  order, tacet or not.
+- **A labelled line with an error** stays in its system, with its own
+  error only; its part is tacet there.
+- **One part at a time.** A part extracted from the chart is an ordinary
+  single-part chart: the tutti bars, its own bars, and each tacet stretch
+  as bars of `N.C.` (not `--`: the rest of the band still plays).
 
 ## 8. The canonical form
 
@@ -733,6 +808,11 @@ A canonical printer writes:
   move
 - directives lowercased, comma-separated, in the order key, time, tempo,
   feel; `part:` as `part: Label = Name`, or `part: Name`
+- a system's lines in score order, labels as declared and padded to the
+  widest label, and cells padded so the system's pipes line up; tutti
+  lines have no label column; a single-part chart's labelled lines print
+  unlabelled. A system holding a line with an error is neither sorted nor
+  padded
 
 Canonicalizing changes spelling only. It never rewrites one chord as a
 different chord with the same notes (`aug7` stays `aug7`; `7(#5)` stays
@@ -788,7 +868,9 @@ keeps what cannot reduce:
 | error | empty section that references no earlier section (the message suggests writing its bars or removing the heading, or names the line where a later section of that name is written) |
 | error | `->` anywhere but the end of a replay heading |
 | error | `/` or `%` with nothing before it |
-| error | `part:` with no name or no label before `=`, after the first bar, a second time, or sharing its line with another directive |
+| error | `part:` with no name or no label before `=`, after the first bar, or sharing its line with another directive |
+| error | a part without a label in a chart of several, two parts with one label, a label starting with `\|`, `#`, `@` or a digit, no space between a label and its `\|` |
+| error | lines of a system with different bar counts or different structure (7.4); `%` or a leading `/` after the part was tacet |
 | error | invalid directive value (`time: 4/3`, `tempo: fast`, `rit. to fast`, `feel: lazy`, `feel: swing 80%`, `feel: swing 58`, `feel: straight 55%`) |
 | error | `[n/d]` not at the start of a cell, or with an invalid meter |
 | error | a note set mixing octave and no octave, or an octave outside 0–8 |
@@ -801,6 +883,7 @@ keeps what cannot reduce:
 | warning | note set with octaves out of ascending order; repeated note without octaves |
 | warning | a natural tone in parentheses that the chord already has (`C7(7)`) |
 | warning | a text line that looks like an old-style label (`Chorus:`, `[Chorus]`), an old bare chord line, a bar line written with escaped pipes (`D \\| A \\|`), or a misnamed directive (`meter:`, `bpm:`), with a suggested fix |
+| warning | a bar line after a word that is not a declared part label (`Bass \| E \|`) |
 | warning | a chart with text but no bar line at all (reported once, at the first text line), so a chart in another format never reads as empty |
 
 Every message gives the line number and quotes the offending token.
@@ -867,18 +950,12 @@ human to say whether the band was silent, and the structure line.
 | Accents and hits | Decided by Kevin (2026-11-03): `>` accents a chord or note set, `^` makes it a hit, short and accented (2.7). A short note without an accent stays a shorter slot. |
 | Push marks | Decided by Kevin (2026-11-03): `<` an eighth early, `<<` a sixteenth, written on the chord in its own bar; the push takes its time from the slot played just before it in play order (2.8). This is what written-out pushes (`/_G`) could not do: a pushed downbeat inside a repeat, a replay or after a jump. Rejected: a tie into the next bar (`/_G~ \| G`), which writes every chord twice and still can't serve a replay; and a warning only. |
 | Part | Decided by Kevin (2026-11-03, issue #70): `part:` names the chart's part, with an optional label (`part: Gtr = Electric Guitar 1`), once, before the first bar, on a line of its own (7.3). MusicXML requires a `<part-name>` on every part, so a converter otherwise invents one. The instrument (MusicXML's `<instrument-sound>`, a MIDI program) is separate and waits for the converters. The `Label = Name` form is chosen so several parts can follow. |
+| Several parts | Decided by Kevin (2026-11-03): one `part: Label = Name` line per part; a bar line starting with a label belongs to that part, and consecutive labelled lines form a system sharing the timeline (7.4). A part missing from a system is tacet; an unlabelled line is tutti. A system's structure (repeats, endings, marks, directions, fermatas, one-bar meters) is written on every line and checked, so each part's line reads alone. A renderer draws a tutti line as one row and a tacet part as an empty row; an extracted part writes tacet as `N.C.`. Rejected: structure written once, which makes a part's line wrong read alone. |
 | Written bar numbers | Machine output gains `written` on each played bar (A.7), the bar's number as written, so a host can speak a printed score's measure numbers (issue #70: a correction editor for a score read). No change to what any chart means. |
 
 ## Open questions
 
 - More than one jump in a chart (5.2 allows one).
-- Several parts in one chart, e.g. guitar and piano (Kevin, 2026-11-03;
-  design to come): one `part: Label = Name` line per part; a bar line
-  starting with a label belongs to that part, and consecutive labelled
-  lines form a system that shares bars, meters, repeats, endings and
-  directions. Decided so far: a part missing from a system is **tacet**
-  there, and an unlabelled bar line in a multi-part chart is **tutti**,
-  played by every part.
 - Dynamics (`mf`, crescendos): note lines until real charts need them.
 - Not planned as syntax (Kevin, 2026-11-01): a capo (a note line), ChordPro
   inline chords (barmark places chords in bars, not over words), and
@@ -1024,7 +1101,9 @@ Each slot parses to one record:
 | `voicing` | on a chord slot: the note set written after its name (4.2), or absent |
 | `articulation` | on a chord slot: `accent` (`>`) or `hit` (`^`), or absent |
 | `push` | on a chord, `N.C.` or `--` slot: `eighth` (`<`) or `sixteenth` (`<<`), or absent |
-| `part` | on the parse: the chart's part, its `name` and `label` (absent when none), or empty when no `part:` names one |
+| `part` | on the parse: the chart's one part, its `name` and `label` (absent when none), or empty when it names none or several (deprecated: use `parts`) |
+| `parts` | on the parse: every declared part in score order; on a played bar of a multi-part chart, one entry per part (its `line`, `slots` and `words`), or empty where that part is tacet |
+| `tacet` | on a played bar of a multi-part chart: true when the first part is tacet there (its slots then read `N.C.`) |
 | `source` | the symbol as written |
 
 The bass note counts among the chord's pitches: `C/Bb` contains B♭. For
