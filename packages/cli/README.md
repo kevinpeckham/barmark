@@ -1,10 +1,10 @@
 # @barmark/cli
 
-The `barmark` command: check, format, part, render and transpose
+The `barmark` command: check, format, part, render, transpose and export
 [Barmark](https://www.barmark.dev) chord charts (`.chart.md` files) in a
 terminal or in CI. It runs the same `barmark` parser and `@barmark/render`
-renderer as barmark.dev, at exact versions, so a chart means the same
-thing everywhere.
+renderer as barmark.dev, and `@barmark/musicxml` for MusicXML, at exact
+versions, so a chart means the same thing everywhere.
 
 ## Install
 
@@ -33,6 +33,7 @@ dot-folders and symlinks. `-` reads from stdin.
 
 ```sh
 barmark check songs                      # errors and warnings, file:line
+barmark export --musicxml song.chart.md --out song.musicxml   # for MuseScore, Dorico…
 barmark check --strict --format github songs   # warnings fail too; PR annotations
 barmark format song.chart.md             # print it in standard form
 barmark format --write songs             # rewrite the files that change
@@ -47,8 +48,12 @@ takes the renderer's options as flags: `--theme auto|light|dark`,
 `--numerals nashville|roman`, `--no-bar-numbers`, `--rehearsal-letters`,
 `--no-wrap`, `--diagnostics`, `--part <label>` to draw one part, and `--font-url <url>` to link the font
 instead of embedding it. `barmark <command> --help` lists each command's
-flags; `barmark --version` prints the versions of the CLI and both
+flags; `barmark --version` prints the versions of the CLI and its
 libraries.
+
+`export --musicxml` writes MusicXML 4.0 that notation programs open and
+play in the chart's order; `--part <label>` exports one part. A chart
+with errors is not exported. A chart with no title takes its file name.
 
 ## Exit codes
 

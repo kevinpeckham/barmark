@@ -68,6 +68,20 @@ Any loop driven by user-supplied counts needs a budget on iterations.
 `Object.hasOwn` guards it (`intendedShape` in `src/chords/harte.ts`).
 Random fuzzing never produces those words, so test them by name.
 
+### A written bar sounds the same on every pass, so MusicXML can't hold some charts as written (2026-11-03, musicxml)
+
+The MusicXML export's play-order test (a small MusicXML player,
+`packages/musicxml/tests/play.ts`, checked against `parseChart().bars`)
+found two shapes that look fine and play wrong. A push at the start or
+end of a repeat puts its early note in a bar that every pass plays, so it
+sounds on the wrong pass. And a repeated section holding repeats of its
+own (written out, since MusicXML repeats don't nest) replays all its
+passes after a D.S., where barmark plays each repeat once. The fixes are
+in `src/events.ts` (such a push stays on the beat, marked "push") and
+`src/measures.ts` (`inPlayOrder`: such a chart is written in play order).
+When converting to a format that keeps written order, test the played
+order, not just the written marks.
+
 ## Design
 
 ### Dropping a broken line can change what its neighbours mean (2026-10-31, chart parser)
@@ -459,3 +473,12 @@ errors", and Fallow warned it skipped a hidden directory. The worktree
 carries its own `biome.json`, which Biome reads as a second root
 configuration, and `.worktrees/` is not gitignored. Keep worktrees
 outside the repository (the session scratchpad, or a sibling folder).
+
+### xmllint reads a document's doctype from the network unless told not to (2026-11-03, musicxml)
+
+MusicXML files carry a doctype naming the partwise DTD on musicxml.org,
+and xmllint fetches it, so schema validation in tests was slow and failed
+offline. `--nonet` stops the fetch; validation is against the vendored
+XSD only (`packages/musicxml/tests/schema.ts`). The XSD's own imports of
+`xml.xsd` and `xlink.xsd` were remote too, and point at local copies
+(`tests/schema/README.md`).

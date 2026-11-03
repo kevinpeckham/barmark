@@ -6,6 +6,15 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- `barmark export --musicxml <file>`: the chart as MusicXML 4.0, through
+  `@barmark/musicxml` (pinned exactly, like the other libraries), with
+  `--out` and `--part <label>`. A chart with errors is not exported; a
+  chart with no title takes its file name, less
+  the extension.
+- `--version` names `@barmark/musicxml` too.
+
 ## [0.1.8] - 2026-11-03
 
 Uses `barmark` 0.14.1 and `@barmark/render` 0.12.0, pinned exactly: fixes

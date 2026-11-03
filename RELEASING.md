@@ -1,12 +1,13 @@
 # Releasing
 
-This repository publishes three npm packages from one Bun workspace, each
+This repository publishes four npm packages from one Bun workspace, each
 versioned and released on its own:
 
 | Package | Directory | Release tag |
 |---|---|---|
 | `barmark` | `packages/barmark` | `barmark-vX.Y.Z` |
 | `@barmark/render` | `packages/render` | `render-vX.Y.Z` |
+| `@barmark/musicxml` | `packages/musicxml` | `musicxml-vX.Y.Z` |
 | `@barmark/cli` | `packages/cli` | `cli-vX.Y.Z` |
 
 (`barmark` 0.0.x and 0.1.0 were tagged `vX.Y.Z`, before the workspace.)
@@ -179,12 +180,13 @@ manual step before its first release (the same for `@barmark/cli`):
    environment `npm`. Then set publishing access to require two-factor
    authentication and disallow tokens.
 3. **Rulesets** (repository settings → Rules): add the new tag pattern
-   (`cli-v*` for the CLI) to "release tags", and the new package job's
-   checks (`package (20, cli)`, `package (22, cli)`, `package (24, cli)`)
-   to the "main" ruleset's required checks.
+   (`cli-v*` for the CLI, `musicxml-v*` for `@barmark/musicxml`) to
+   "release tags", and the new package job's checks (`package (20, cli)`,
+   `package (22, cli)`, `package (24, cli)`; likewise `package (N,
+   musicxml)`) to the "main" ruleset's required checks.
 4. **The `npm` environment** (repository settings → Environments →
    npm → Deployment branches and tags): add a tag rule for the same
-   pattern (`cli-v*`). Without it the publish job is rejected at once,
+   pattern (`cli-v*`, `musicxml-v*`). Without it the publish job is rejected at once,
    before any approval is asked for ("Tag … is not allowed to deploy to
    npm due to environment protection rules"), and nothing reaches npm;
    after adding it, rerun the failed jobs (`gh run rerun <id> --failed`).

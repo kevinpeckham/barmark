@@ -51,8 +51,9 @@ jobs:
           case "${GITHUB_REF_NAME}" in
             barmark-v*) key=barmark; smoke=scripts/smoke.mjs ;;
             render-v*) key=render; smoke=scripts/smoke-render.mjs ;;
+            musicxml-v*) key=musicxml; smoke=scripts/smoke-musicxml.mjs ;;
             cli-v*) key=cli; smoke=scripts/smoke-cli.mjs ;;
-            *) echo "::error::${GITHUB_REF_NAME} is not a release tag (barmark-vX.Y.Z, render-vX.Y.Z or cli-vX.Y.Z)"; exit 1 ;;
+            *) echo "::error::${GITHUB_REF_NAME} is not a release tag (barmark-vX.Y.Z, render-vX.Y.Z, musicxml-vX.Y.Z or cli-vX.Y.Z)"; exit 1 ;;
           esac
           dir="packages/${key}"
           name=$(node -p "require('./${dir}/package.json').name")
@@ -80,7 +81,7 @@ jobs:
       - name: The CLI's libraries are their released code
         if: steps.package.outputs.key == 'cli'
         run: |
-          for dep in barmark render; do
+          for dep in barmark render musicxml; do
             version=$(node -p "require('./packages/${dep}/package.json').version")
             paths="packages/${dep}/src"
             [ "$dep" = render ] && paths="$paths packages/render/fonts"
@@ -89,6 +90,8 @@ jobs:
             fi
           done
       - run: bun run check
+      # The MusicXML tests validate against the schema with xmllint.
+      - run: sudo apt-get install -y -q libxml2-utils
       - run: bun test
       - run: bun run fallow
       - run: bunx playwright install --with-deps chromium

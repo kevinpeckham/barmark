@@ -4,6 +4,7 @@ export const HELP = `Usage: barmark <command> [options]
 
 Commands:
   check <paths…>       Report each chart's errors and warnings
+  export <file>        Write a chart as MusicXML (--musicxml)
   format <paths…>      Print or rewrite charts in standard form
   part <label> <file>  Print one part of a chart of several
   render <file>        Write a chart as a standalone HTML page
@@ -28,6 +29,16 @@ inside them; - reads stdin.
                            text: path:line: severity: message (default)
                            github: annotations on a pull request
                            json: an array of { file, diagnostics }
+`,
+	export: `Usage: barmark export --musicxml <file> [options]
+
+The chart as MusicXML 4.0, for MuseScore, Dorico, Sibelius or Finale: one
+part per declared part, playing in the chart's order. A chart with errors
+is not exported; problems go to stderr.
+
+  --musicxml               Export MusicXML (the one format for now)
+  --out <file>             Write to a file instead of stdout
+  --part <label>           Export only this part
 `,
 	format: `Usage: barmark format <paths…> [options]
 
