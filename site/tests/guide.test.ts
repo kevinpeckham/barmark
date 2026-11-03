@@ -31,6 +31,7 @@ describe("guide rows", () => {
 			"§7",
 			"§7.1",
 			"§7.2",
+			"§7.3",
 		])
 			expect(refs).toContain(ref);
 	});
@@ -167,6 +168,7 @@ describe("guide query", () => {
 			["power chord", "power-chord"],
 			["slash chord", "slash-chord"],
 			["push", "push"],
+			["instrument", "part"],
 			["anticipation", "push"],
 			["stab", "hit"],
 			["staccato", "hit"],
