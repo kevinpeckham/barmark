@@ -118,13 +118,24 @@ export type Line =
 			ending: number[] | null;
 			/** The declared label of the part whose line this is (grammar 7.4); absent on a tutti line and in a single-part chart. */
 			part?: string;
+			/** Which system a labelled line is in, from 0 in chart order. */
+			system?: number;
+			/** Set when the line's bars or structure differ from its system's (an error): its part is tacet there. */
+			dropped?: true;
 	  }
 	| { kind: "text"; line: number; text: string }
 	/**
 	 * A bar line dropped for an error, kept as written so its section still
 	 * counts as written out; `written` is how many bars its pipes write.
 	 */
-	| { kind: "invalid"; line: number; text: string; written: number; part?: string };
+	| {
+			kind: "invalid";
+			line: number;
+			text: string;
+			written: number;
+			part?: string;
+			system?: number;
+	  };
 
 export type PlayedBar = {
 	/** 1-based measure number in play order; fermatas are not counted. */

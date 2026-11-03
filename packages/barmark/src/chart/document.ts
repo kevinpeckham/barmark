@@ -1,6 +1,7 @@
 import { parseChord } from "../chords/parse.js";
 import { misplacedRepeat, parseBarLine, readRepeat, repeatTail } from "./barLine.js";
 import { parseDirectiveLine } from "./directives.js";
+import { groupSystems } from "./systems.js";
 import type { ChartDiagnostic, Line, Part, Repeat } from "./types.js";
 
 const NEAR_DIRECTIVES: Record<string, string> = {
@@ -267,5 +268,13 @@ export function readDocument(text: string): {
 	const empty = noBarLines(lines);
 	if (empty) diagnostics.push(empty);
 	const parts = checkParts(lines, diagnostics);
-	return { title, part: parts.length === 1 ? (parts[0] ?? null) : null, parts, lines, diagnostics };
+	const grouped = parts.length > 1 ? groupSystems(lines) : { lines, diagnostics: [] };
+	diagnostics.push(...grouped.diagnostics);
+	return {
+		title,
+		part: parts.length === 1 ? (parts[0] ?? null) : null,
+		parts,
+		lines: grouped.lines,
+		diagnostics,
+	};
 }
