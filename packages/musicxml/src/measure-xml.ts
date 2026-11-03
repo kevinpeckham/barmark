@@ -1,9 +1,10 @@
 /** One measure as MusicXML: attributes when they change, then its notes. */
-import type { Key, SimpleSlot, Slot } from "barmark";
+import type { Key, SimpleSlot } from "barmark";
+import type { MeasureEvents, SoundEvent } from "./events.js";
 import { harmonyXml, noChordXml } from "./harmony.js";
 import type { Measure } from "./measures.js";
 import { noteSetOf, pitchesOf, type Sound, slashed, soundValueXml } from "./notes.js";
-import { barLength, type Frac, memberLength, noteValues, slotLengths } from "./rhythm.js";
+import { barLength, type Frac, noteValues } from "./rhythm.js";
 import { el, text } from "./xml.js";
 
 export type MeasureContext = {
@@ -94,50 +95,35 @@ function soundOf(slot: SimpleSlot): Sound {
 	return set ? { kind: "notes", pitches: pitchesOf(set) } : { kind: "slash" };
 }
 
-/** One slot's sound for `length`: tied values when one can't write it. */
-function simpleXml(slot: SimpleSlot, length: Frac, divisions: number): string {
-	const values = noteValues(length);
-	const sound = soundOf(slot);
-	const articulation = slot.kind === "chord" ? slot.articulation : undefined;
+/** One event: its words, its harmony, then its values, tied when one value can't write it. */
+function eventXml(e: SoundEvent, divisions: number): string {
+	const values = noteValues(e.length);
+	const sound = soundOf(e.slot);
 	const notes = values.map((v, i) =>
 		soundValueXml(
 			sound,
 			v,
 			whole(v.length, divisions),
-			{ stop: i > 0, start: i < values.length - 1 },
-			i === 0 ? articulation : undefined,
+			{ stop: i > 0 || e.tie.stop, start: i < values.length - 1 || e.tie.start },
+			i === 0 ? e.articulation : undefined,
 		),
 	);
-	return (slot.kind === "unknown" ? wordsXml("?") : "") + harmonyOf(slot) + notes.join("");
+	return [
+		...e.words.map(wordsXml),
+		e.slot.kind === "unknown" ? wordsXml("?") : "",
+		e.harmony ? harmonyOf(e.slot) : "",
+		...notes,
+	].join("");
 }
 
-function slotXml(slot: Slot, length: Frac, divisions: number): string {
-	if (slot.kind !== "group") return simpleXml(slot, length, divisions);
-	return slot.members
-		.map((m) => simpleXml(m, memberLength(length, slot.members.length), divisions))
-		.join("");
-}
-
-/** The slots, each after the words written before it; words at the end come last. */
-function slotsXml(m: Measure, divisions: number): string {
-	const before = (at: number) =>
-		m.words
-			.filter((w) => w.at === at)
-			.map((w) => wordsXml(w.text))
-			.join("");
-	const slots = slotLengths(m.slots, m.meter).map(
-		(len, i) => before(i) + slotXml(m.slots[i] as Slot, len, divisions),
-	);
-	return slots.join("") + before(m.slots.length);
-}
-
-export function measureXml(m: Measure, ctx: MeasureContext): string {
+export function measureXml(bar: MeasureEvents, ctx: MeasureContext): string {
+	const m = bar.measure;
 	const body = m.tacet
 		? el("note", {}, [
 				el("rest", { measure: "yes" }),
 				text("duration", whole(barLength(m.meter), ctx.divisions)),
 				text("voice", 1),
 			])
-		: slotsXml(m, ctx.divisions);
+		: bar.events.map((e) => eventXml(e, ctx.divisions)).join("") + bar.after.map(wordsXml).join("");
 	return el("measure", { number: ctx.index + 1, text: m.shown }, [attributesXml(m, ctx), body]);
 }

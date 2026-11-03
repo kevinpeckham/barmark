@@ -59,11 +59,11 @@ const tieEnds = (name: string, tie: Tie) => [
 	tie.start ? el(name, { type: "start" }) : "",
 ];
 
-/** A value's type, dot and tuplet, after its duration and voice. */
+/** A value's type, dots and tuplet, after its duration and voice. */
 const valueXml = (v: NoteValue) => [
 	text("voice", 1),
 	text("type", v.type),
-	v.dot ? el("dot") : "",
+	...Array.from({ length: v.dots }, () => el("dot")),
 	v.tuplet
 		? el("time-modification", {}, [
 				text("actual-notes", v.tuplet.actual),

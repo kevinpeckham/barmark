@@ -7,12 +7,12 @@ export type Frac = { n: number; d: number };
 const gcd = (a: number, b: number): number => (b === 0 ? a : gcd(b, a % b));
 const lcm = (a: number, b: number) => (a / gcd(a, b)) * b;
 
-function frac(n: number, d = 1): Frac {
+export function frac(n: number, d = 1): Frac {
 	const g = gcd(Math.abs(n), Math.abs(d)) || 1;
 	return { n: n / g, d: d / g };
 }
 const times = (a: Frac, b: Frac) => frac(a.n * b.n, a.d * b.d);
-const minus = (a: Frac, b: Frac) => frac(a.n * b.d - b.n * a.d, a.d * b.d);
+export const minus = (a: Frac, b: Frac) => frac(a.n * b.d - b.n * a.d, a.d * b.d);
 const atMost = (a: Frac, b: Frac) => a.n * b.d <= b.n * a.d;
 
 /** A bar's length in quarter notes. */
@@ -25,22 +25,14 @@ export const slotLengths = (slots: Slot[], meter: Meter): Frac[] =>
 /** Each member of a group shares its slot equally (grammar 2.2). */
 export const memberLength = (slot: Frac, members: number) => times(slot, frac(1, members));
 
-/** Every length a measure writes, so divisions can make them all whole. */
-export function lengthsOf(slots: Slot[], meter: Meter): Frac[] {
-	return slotLengths(slots, meter).flatMap((len, i) => {
-		const s = slots[i];
-		return s?.kind === "group" ? s.members.map(() => memberLength(len, s.members.length)) : [len];
-	});
-}
-
 /** Divisions per quarter note that make every length whole. */
 export const divisionsFor = (lengths: Frac[]) => lengths.reduce((d, f) => lcm(d, f.d), 1);
 
-/** A written note value: its type, a dot, and the tuplet it sits in. */
+/** A written note value: its type, its dots, and the tuplet it sits in. */
 export type NoteValue = {
 	length: Frac;
 	type: string;
-	dot: boolean;
+	dots: 0 | 1 | 2;
 	tuplet: { actual: number; normal: number } | null;
 };
 
@@ -57,10 +49,11 @@ const TYPES: [number, string][] = [
 	[1 / 32, "128th"],
 ];
 
-/** The plain values (a type, or a dotted type) from longest to shortest, in quarters. */
+/** The plain values (a type, dotted once or twice or not) from longest to shortest, in quarters. */
 const PLAIN = TYPES.flatMap(([q, type]) => [
-	{ q: frac(q * 4 * 3, 2 * 4), type, dot: true },
-	{ q: frac(q * 32, 32), type, dot: false },
+	{ q: frac(q * 32 * 7, 32 * 4), type, dots: 2 as const },
+	{ q: frac(q * 32 * 3, 32 * 2), type, dots: 1 as const },
+	{ q: frac(q * 32, 32), type, dots: 0 as const },
 ]).filter((v) => Number.isInteger(v.q.n) && Number.isInteger(v.q.d));
 
 const oddPart = (n: number) => {
@@ -76,7 +69,7 @@ function plainValues(length: Frac, tuplet: NoteValue["tuplet"], scale: Frac): No
 	while (left.n > 0) {
 		const v = PLAIN.find((p) => atMost(p.q, left)) ?? PLAIN[PLAIN.length - 1];
 		if (!v) break;
-		out.push({ length: times(v.q, scale), type: v.type, dot: v.dot, tuplet });
+		out.push({ length: times(v.q, scale), type: v.type, dots: v.dots, tuplet });
 		left = minus(left, v.q);
 	}
 	return out;

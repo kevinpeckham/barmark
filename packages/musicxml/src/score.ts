@@ -1,9 +1,10 @@
 /** The score: part list, parts and their measures (MusicXML 4.0 score-partwise). */
 import { type ChartDiagnostic, type ChartParse, extractPart, type Part, parseChart } from "barmark";
+import { applyPushes, eventsOf } from "./events.js";
 import { measureXml } from "./measure-xml.js";
 import { writtenMeasures } from "./measures.js";
 import { clefFor } from "./notes.js";
-import { divisionsFor, lengthsOf } from "./rhythm.js";
+import { barLength, divisionsFor } from "./rhythm.js";
 import { VERSION } from "./version.js";
 import { el, text } from "./xml.js";
 
@@ -42,10 +43,13 @@ function scorePart(source: PartSource, i: number): string {
 
 function partXml(source: PartSource, i: number): string {
 	const measures = writtenMeasures(source.parse);
+	const bars = applyPushes(measures.map(eventsOf));
 	const clef = clefFor(measures);
-	const divisions = divisionsFor(measures.flatMap((m) => lengthsOf(m.slots, m.meter)));
-	const xml = measures.map((m, index) =>
-		measureXml(m, { divisions, index, previous: measures[index - 1] ?? null, clef }),
+	const divisions = divisionsFor(
+		bars.flatMap((b) => [barLength(b.measure.meter), ...b.events.map((e) => e.length)]),
+	);
+	const xml = bars.map((bar, index) =>
+		measureXml(bar, { divisions, index, previous: measures[index - 1] ?? null, clef }),
 	);
 	return el("part", { id: `P${i + 1}` }, xml);
 }
