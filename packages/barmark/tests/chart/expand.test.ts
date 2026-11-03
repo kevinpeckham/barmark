@@ -154,3 +154,34 @@ describe("the expansion cap", () => {
 		expect(r.diagnostics.filter((d) => d.severity === "error")).toHaveLength(1);
 	});
 });
+
+describe("written bar numbers (issue #70)", () => {
+	const written = (text: string) => play(text).bars.map((b) => b.written);
+	test("each bar as written is numbered once, in written order", () => {
+		expect(written("| C | F |\n| G | C |")).toEqual([1, 2, 3, 4]);
+	});
+	test("a repeat plays its bars again under the same numbers", () => {
+		expect(written("|: C | F :|\n| G |")).toEqual([1, 2, 1, 2, 3]);
+		expect(written("| C | F | x3")).toEqual([1, 2, 1, 2, 1, 2]);
+	});
+	test("a replay plays the numbers of the section it replays", () => {
+		expect(written("## V\n| D | A |\n## C\n| G |\n## V")).toEqual([1, 2, 3, 1, 2]);
+	});
+	test("an elided replay drops its last bar's number with it", () => {
+		expect(written("## V\n| D | A | E |\n## C\n| G |\n## V ->")).toEqual([1, 2, 3, 4, 1, 2]);
+	});
+	test("% is a written bar; a fermata is not", () => {
+		expect(written("| C | % | ... | G |")).toEqual([1, 2, 3]);
+	});
+	test("an open repeat's pass carries the numbers once", () => {
+		expect(written("| C | x ...\n| G |")).toEqual([1, 2]);
+	});
+	test("a section repeated by its heading repeats the numbers", () => {
+		expect(written("## V x2\n| D | A |\n## C\n| G |")).toEqual([1, 2, 1, 2, 3]);
+	});
+	test("a bar line dropped for an error still counts its bars, so later numbers hold", () => {
+		expect(written("| C |\n| D | Hm7 | ... |\n| E |")).toEqual([1, 4]);
+		expect(written("| C |\n|1 D | F |\n| E |")).toEqual([1, 4]);
+		expect(written("| C |\n| D :| F |\n| E |")).toEqual([1, 4]);
+	});
+});

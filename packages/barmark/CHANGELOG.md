@@ -9,6 +9,15 @@ Releases follow the process in [RELEASING.md](RELEASING.md).
 
 ## [Unreleased]
 
+### Added
+
+- **Written bar numbers** (issue #70): every played bar has `written`, its
+  number as written, counting each written bar once in written order (`%`
+  included, `...` not). A repeat or replay plays its bars under the numbers
+  they were written with, so a host can speak a printed score's measure
+  numbers. A bar line dropped for an error has `written` too, the bars its
+  pipes write, so the numbers after it hold (grammar A.7).
+
 ## [0.9.0] - 2026-11-02
 
 An optional swing amount for `feel:` (`swing 58%`), issue #66. Charts

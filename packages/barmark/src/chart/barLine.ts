@@ -99,14 +99,23 @@ function tokens(text: string): string[] {
 	return out;
 }
 
+/** The bars a bar line writes, read from its pipes alone (fermatas not counted), so a line dropped for an error still counts. */
+const barsWritten = (body: string) =>
+	body
+		.split("|")
+		.slice(1)
+		.map((p) => p.trim())
+		.filter((p) => p !== "" && !FERMATA.has(p)).length;
+
 /**
  * One bar line: cells between pipes, each cell's slots, the `|:` and `:|`
- * marks and an `x N` tail. Any error drops the whole line (`bars` is null).
+ * marks and an `x N` tail. Any error drops the whole line (`bars` is null);
+ * `written` still says how many bars it writes.
  */
 export function parseBarLine(
 	text: string,
 	line: number,
-): { bars: BarsLine | null; diagnostics: ChartDiagnostic[] } {
+): { bars: BarsLine | null; written: number; diagnostics: ChartDiagnostic[] } {
 	const diagnostics: ChartDiagnostic[] = [];
 	let listed = 0;
 	const add = (d: ChartDiagnostic) => {
@@ -139,11 +148,12 @@ export function parseBarLine(
 	if (opens) body = `|${body.slice(2)}`;
 	const closes = body.endsWith(":|");
 	if (closes) body = `${body.slice(0, -2)}|`;
+	const written = barsWritten(body);
 	if (/\|\d/.test(body)) error("endings are not supported in v0.1", /\|\d+/.exec(body)?.[0] ?? "|");
 	if (body.includes(":|") || body.includes("|:"))
 		error("|: must open a bar line and :| must close one", body.includes(":|") ? ":|" : "|:");
 	// A misplaced mark makes the cells unreadable: report it once, not again as chords.
-	if (diagnostics.some((d) => d.severity === "error")) return { bars: null, diagnostics };
+	if (diagnostics.some((d) => d.severity === "error")) return { bars: null, written, diagnostics };
 
 	const parts = body.split("|").slice(1);
 	if (parts.at(-1)?.trim() === "") parts.pop();
@@ -228,6 +238,7 @@ export function parseBarLine(
 	const failed = diagnostics.some((d) => d.severity === "error");
 	return {
 		bars: failed ? null : { kind: "bars", line, opens, closes, cells, repeat },
+		written,
 		diagnostics,
 	};
 }

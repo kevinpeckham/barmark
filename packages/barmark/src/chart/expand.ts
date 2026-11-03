@@ -24,7 +24,7 @@ type SectionLine = Extract<Line, { kind: "section" }>;
 type Section = { heading: SectionLine | null; lines: Line[] };
 /** A cell with `%` already resolved to the slots it copies. */
 type Played =
-	| { kind: "bar"; meter: Meter | null; slots: Slot[]; written: boolean }
+	| { kind: "bar"; meter: Meter | null; slots: Slot[]; own: boolean; written: number }
 	| { kind: "fermata" };
 type Entry = { line: Line; repeat: Repeat };
 type Item =
@@ -93,7 +93,9 @@ export function expand(lines: Line[]): {
 	// % copies the bar written before it, one-bar meter included, so a section plays the same wherever it is replayed.
 	const resolved = new Map<BarsLine, Played[]>();
 	let previous: { meter: Meter | null; slots: Slot[] } | null = null;
+	let written = 0;
 	for (const l of sections.flatMap((s) => s.lines)) {
+		if (l.kind === "invalid") written += l.written;
 		if (l.kind !== "bars") continue;
 		const cells: Played[] = [];
 		for (const c of l.cells) {
@@ -104,14 +106,15 @@ export function expand(lines: Line[]): {
 					kind: "bar",
 					meter: previous?.meter ?? null,
 					slots: previous?.slots ?? [{ kind: "hold" }],
-					written: false,
+					own: false,
+					written: ++written,
 				});
 			} else {
 				const first = c.slots[0];
 				const head = first?.kind === "group" ? first.members[0] : first;
 				if (!previous && head?.kind === "hold")
 					error(l.line, "/ has nothing before it to hold", "/");
-				cells.push({ kind: "bar", meter: c.meter, slots: c.slots, written: true });
+				cells.push({ kind: "bar", meter: c.meter, slots: c.slots, own: true, written: ++written });
 				previous = { meter: c.meter, slots: c.slots };
 			}
 		}
@@ -230,7 +233,7 @@ export function expand(lines: Line[]): {
 		if (count >= MAX_EXPANDED_BARS) return stop(line);
 		count++;
 		const meter = p.meter ?? state.time;
-		if (p.written && !checked.has(p)) {
+		if (p.own && !checked.has(p)) {
 			checked.add(p);
 			const k = p.slots.length;
 			const b = beatsOf(meter);
@@ -247,6 +250,7 @@ export function expand(lines: Line[]): {
 			kind: "bar",
 			bar: {
 				index: 0,
+				written: p.written,
 				line,
 				section: sectionName,
 				meter,

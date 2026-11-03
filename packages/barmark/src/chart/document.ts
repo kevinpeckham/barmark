@@ -110,7 +110,7 @@ export function readDocument(text: string): {
 		if (t.startsWith("|")) {
 			const r = parseBarLine(t, line);
 			diagnostics.push(...r.diagnostics);
-			lines.push(r.bars ?? { kind: "invalid", line, text: t });
+			lines.push(r.bars ?? { kind: "invalid", line, text: t, written: r.written });
 			return;
 		}
 		if (t.startsWith("# ")) {

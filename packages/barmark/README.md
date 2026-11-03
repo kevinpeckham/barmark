@@ -47,7 +47,7 @@ import {
 
 const chart = parseChart(text);
 chart.title; // "Example Song"
-chart.bars; // every bar in play order: slots, section, key, meter, tempo, feel (and swingPercent)
+chart.bars; // every bar in play order: its number as written, slots, section, key, meter, tempo, feel (and swingPercent)
 chart.sections; // each section as played, with its first and last bar
 chart.diagnostics; // errors and warnings, each with a line number
 

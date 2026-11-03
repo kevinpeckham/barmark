@@ -61,12 +61,21 @@ export type Line =
 	| { kind: "directive"; line: number; set: Directives }
 	| { kind: "bars"; line: number; opens: boolean; closes: boolean; cells: Cell[]; repeat: Repeat }
 	| { kind: "text"; line: number; text: string }
-	/** A bar line dropped for an error, kept as written so its section still counts as written out. */
-	| { kind: "invalid"; line: number; text: string };
+	/**
+	 * A bar line dropped for an error, kept as written so its section still
+	 * counts as written out; `written` is how many bars its pipes write.
+	 */
+	| { kind: "invalid"; line: number; text: string; written: number };
 
 export type PlayedBar = {
 	/** 1-based measure number in play order; fermatas are not counted. */
 	index: number;
+	/**
+	 * 1-based number of the bar as written, counting each written bar once
+	 * (`%` included, fermatas not) in written order: a repeat or replay plays
+	 * its bars under the numbers they were written with.
+	 */
+	written: number;
 	line: number;
 	/** Heading text of the section occurrence, as written. */
 	section: string | null;
