@@ -10,13 +10,16 @@ import type {
 	Words,
 } from "barmark";
 
-export type LayoutOptions = { rehearsalLetters?: boolean };
+/** `part`: draw only the part with this label (barmark's grammar 7.4), as a single-part chart. */
+export type LayoutOptions = { rehearsalLetters?: boolean; part?: string };
 
 /** What to draw, with every musical decision already made. */
 export type ChartModel = {
 	title: string | null;
-	/** What `part:` names; null when the chart names none. */
+	/** What `part:` names in a single-part chart; null when the chart names none or several. */
 	part: Part | null;
+	/** Every declared part, in score order (barmark's grammar 7.4). */
+	parts: Part[];
 	/** Directives before the first heading, bar line or text line. */
 	header: Directives;
 	blocks: SectionBlock[];
@@ -36,6 +39,8 @@ export type SectionBlock = {
 	items: BlockItem[];
 };
 
+export type RowItem = Extract<BlockItem, { kind: "row" }>;
+
 export type BlockItem =
 	| {
 			kind: "row";
@@ -49,10 +54,23 @@ export type BlockItem =
 			ending: number[] | null;
 			cells: CellModel[];
 	  }
+	/**
+	 * A system (barmark's grammar 7.4): a row per declared part, in score
+	 * order, sharing bars. A part tacet there has a row of `tacet` bars; a
+	 * part whose line has an error has an error item.
+	 */
+	| {
+			kind: "system";
+			line: number;
+			barNumber: number | null;
+			rows: Array<{ label: string; name: string; row: RowItem | ErrorItem }>;
+	  }
 	/** `note` marks a `###` line, whose text is given without the marks. */
 	| { kind: "text"; text: string; note: boolean }
 	| { kind: "directive"; set: Directives }
-	| { kind: "error"; line: number; source: string; messages: string[] };
+	| ErrorItem;
+
+export type ErrorItem = { kind: "error"; line: number; source: string; messages: string[] };
 
 export type CellModel =
 	| {
@@ -66,6 +84,10 @@ export type CellModel =
 			key?: Key;
 			/** Words written on the bar (barmark's grammar 2.6), each before slot `at`. */
 			words?: Words[];
+			/** A bar where the part rests, in a system (barmark's grammar 7.4). */
+			tacet?: true;
+			/** `%` on a tutti line whose parts each copy a different bar: drawn as `%`, its slots empty (barmark's grammar 7.4). */
+			simile?: true;
 	  }
 	| { kind: "fermata" }
 	/** A segno, coda or jump between bars (barmark's grammar 5.2). */

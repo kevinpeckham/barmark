@@ -450,3 +450,12 @@ hydration doesn't replay it. More guide rows made hydration slower on
 the CI runner, which opened the window. Delaying the site's scripts by
 3 s reproduces it. The guide's interaction tests now repeat the action
 until the URL follows (`untilUrl` in `site/browser/site.pw.ts`).
+
+### A git worktree inside the repo breaks `bun run check` and Fallow (2026-11-03)
+
+With a worktree checked out at `.worktrees/site`, the root `bun run
+check` failed with "Biome exited because the configuration resulted in
+errors", and Fallow warned it skipped a hidden directory. The worktree
+carries its own `biome.json`, which Biome reads as a second root
+configuration, and `.worktrees/` is not gitignored. Keep worktrees
+outside the repository (the session scratchpad, or a sibling folder).

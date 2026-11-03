@@ -1,7 +1,7 @@
 /** barmark render: a chart as a standalone HTML page, with Edwin embedded unless linked. */
 import { basename } from "node:path";
 import { type RenderOptions, renderChart } from "@barmark/render";
-import { parseChart } from "barmark";
+import { extractPart, parseChart } from "barmark";
 import { oneOf, parseFlags } from "./args.js";
 import { readCharts } from "./inputs.js";
 import type { Io } from "./io.js";
@@ -38,6 +38,7 @@ export async function render(args: string[], io: Io): Promise<number> {
 		"no-wrap": { type: "boolean", default: false },
 		diagnostics: { type: "boolean", default: false },
 		"font-url": { type: "string" },
+		part: { type: "string" },
 	});
 	const options: RenderOptions = {
 		fontUrl:
@@ -53,6 +54,13 @@ export async function render(args: string[], io: Io): Promise<number> {
 	if (values.diagnostics) options.diagnostics = true;
 
 	const { path, text } = onlyChart(await readCharts(positionals, io, { folders: false }), "render");
+	if (values.part !== undefined) {
+		if (!extractPart(text, values.part)) {
+			io.stderr(`${path}: no part labelled ${values.part}\n`);
+			return 1;
+		}
+		options.part = values.part;
+	}
 	const title = parseChart(text).title ?? basename(path).replace(/\.chart\.md$|\.md$/, "");
 	writeOutput(htmlDocument(title, renderChart(text, options)), values.out, io);
 	return 0;

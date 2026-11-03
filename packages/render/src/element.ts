@@ -17,12 +17,14 @@ type Attributes = {
 export function optionsFromAttributes(el: Attributes): RenderOptions {
 	const theme = el.getAttribute("theme");
 	const numerals = NUMERALS.find((n) => n === el.getAttribute("numerals"));
+	const part = el.getAttribute("part");
 	return {
 		theme: THEMES.find((t) => t === theme) ?? "auto",
 		barNumbers: el.getAttribute("bar-numbers") !== "off",
 		rehearsalLetters: el.hasAttribute("rehearsal-letters"),
 		wrap: el.getAttribute("wrap") !== "off",
 		...(numerals ? { numerals } : {}),
+		...(part ? { part } : {}),
 	};
 }
 
@@ -70,6 +72,7 @@ function defineElement(): void {
 			"rehearsal-letters",
 			"numerals",
 			"wrap",
+			"part",
 		];
 		#observer = new MutationObserver(() => this.#schedule());
 		#renders = 0;

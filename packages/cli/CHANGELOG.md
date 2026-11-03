@@ -6,6 +6,15 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- **`barmark part <label> <file>`** prints one part of a chart of several
+  (barmark's grammar 7.4) as a chart of its own: its own bars, the tutti
+  bars, and N.C. where it rests. The part's problems go to stderr, as
+  `transpose`'s do; an error, or an undeclared label, exits 1, and
+  `--out` is not written from a chart with errors.
+- **`render --part <label>`** draws only that part.
+
 ## [0.1.6] - 2026-11-03
 
 Uses `barmark` 0.13.0 and `@barmark/render` 0.10.0, pinned exactly:

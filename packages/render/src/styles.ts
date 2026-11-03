@@ -97,7 +97,14 @@ const css = `
 .bm-grid{display:grid;grid-template-columns:${em(GUTTER)} repeat(var(--bm-cols),auto) auto;width:max-content;max-width:100%}
 .bm-chart[data-bar-numbers="off"] .bm-grid{grid-template-columns:repeat(var(--bm-cols),auto) auto}
 .bm-chart[data-wrap="off"] .bm-grid{max-width:none}
-.bm-row{display:contents}
+.bm-row,.bm-system{display:contents}
+.bm-chart[data-parts] .bm-grid{grid-template-columns:calc(${em(GUTTER + 0.9)} + var(--bm-label-chars) * .62em) repeat(var(--bm-cols),auto) auto}
+.bm-chart[data-parts] .bm-bar-number{width:auto;justify-content:flex-end;gap:.35em;padding-right:.45em}
+.bm-part-row>.bm-bar-number{border-right:.15em solid var(--bm-rule)}
+.bm-part-label{margin-right:auto}
+.bm-part-label{font-family:${LABEL};font-weight:600;color:var(--bm-ink)}
+.bm-tacet-bar .bm-bar-body{font-family:${LABEL};font-style:italic;color:var(--bm-muted)}
+:is(.bm-row,.bm-system,.bm-error)+.bm-system>.bm-row:first-child>*,.bm-system+.bm-row>*{margin-top:${em(ROW_GAP * 2)}}
 .bm-row+.bm-row>*{margin-top:${em(ROW_GAP)}}
 .bm-row+.bm-row>.bm-bar-number{margin-top:${at(SIZES.barNumber, ROW_GAP)}}
 .bm-bar-number{display:flex;flex:none;align-items:baseline;width:${at(SIZES.barNumber, GUTTER)};padding-top:${at(SIZES.barNumber, 0.65)};font:${em(SIZES.barNumber)}/1 ${SANS};color:var(--bm-muted)}
@@ -114,7 +121,7 @@ const css = `
 .bm-chord{white-space:nowrap}
 .bm-chord sup{font-size:${em(SIZES.superscript)};vertical-align:.55em;line-height:0}
 .bm-chord sub{font-size:${em(SIZES.octave)};line-height:0}
-.bm-hold,.bm-unknown,.bm-brace{color:var(--bm-muted)}
+.bm-hold,.bm-unknown,.bm-brace,.bm-simile{color:var(--bm-muted)}
 .bm-nc{font-size:${em(SIZES.noChord)};letter-spacing:.06em}
 .bm-silence{display:inline-block;width:.9em;height:.32em;background:var(--bm-ink);vertical-align:.25em}
 .bm-ring,.bm-notes{font-size:${em(SIZES.noteNames)}}

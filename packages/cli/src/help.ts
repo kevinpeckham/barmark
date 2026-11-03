@@ -5,6 +5,7 @@ export const HELP = `Usage: barmark <command> [options]
 Commands:
   check <paths…>       Report each chart's errors and warnings
   format <paths…>      Print or rewrite charts in standard form
+  part <label> <file>  Print one part of a chart of several
   render <file>        Write a chart as a standalone HTML page
   transpose <file>     Print a chart in another key
 
@@ -46,8 +47,16 @@ A standalone HTML page of the chart, with the Edwin font embedded.
   --no-bar-numbers         Hide bar numbers
   --rehearsal-letters      Letter each section A, B, C…
   --no-wrap                Keep each row on one line
+  --part <label>           Draw only this part
   --diagnostics            List the chart's problems below it
   --font-url <url>         Link the font instead of embedding it
+`,
+	part: `Usage: barmark part <label> <file> [options]
+
+One part of a chart of several, as a chart of its own: its own bars, the
+bars every part plays, and N.C. where it rests. Problems go to stderr.
+
+  --out <file>             Write to a file instead of stdout
 `,
 	transpose: `Usage: barmark transpose <file> (--to <key> | --semitones <n>) [options]
 
