@@ -26,6 +26,12 @@ export type Feel = "straight" | "swing" | "shuffle" | "swing 16";
 /** A gradual change of tempo (rit., accel.) to an optional target, or the return from one (a tempo). */
 export type TempoChange = { kind: "rit" | "accel"; to: number | null } | { kind: "a tempo" };
 /** `tempo:` gives either `tempo` (a steady tempo) or `tempoChange`, never both. */
+/**
+ * The part a chart is written for (grammar 7.3): `part: Electric Guitar 1`,
+ * or with a short label, `part: Gtr = Electric Guitar 1`.
+ */
+export type Part = { name: string; label?: string };
+
 export type Directives = {
 	key?: Key;
 	time?: Meter;
@@ -100,6 +106,7 @@ export type Line =
 	| { kind: "title"; line: number; text: string }
 	| { kind: "section"; line: number; name: string; repeat: Repeat; elided: boolean }
 	| { kind: "directive"; line: number; set: Directives }
+	| ({ kind: "part"; line: number } & Part)
 	| {
 			kind: "bars";
 			line: number;
@@ -167,6 +174,8 @@ export type SectionOccurrence = {
 
 export type ChartParse = {
 	title: string | null;
+	/** What `part:` names (grammar 7.3); null when the chart names none. */
+	part: Part | null;
 	lines: Line[];
 	events: ChartEvent[];
 	/** `events` flattened, with an open repeat's pass included once. */

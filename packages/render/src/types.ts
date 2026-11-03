@@ -4,6 +4,7 @@ import type {
 	Directives,
 	Key,
 	Meter,
+	Part,
 	Repeat,
 	Slot,
 	Words,
@@ -14,6 +15,8 @@ export type LayoutOptions = { rehearsalLetters?: boolean };
 /** What to draw, with every musical decision already made. */
 export type ChartModel = {
 	title: string | null;
+	/** What `part:` names; null when the chart names none. */
+	part: Part | null;
 	/** Directives before the first heading, bar line or text line. */
 	header: Directives;
 	blocks: SectionBlock[];

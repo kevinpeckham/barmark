@@ -102,7 +102,9 @@ function headerHtml(model: ChartModel): string {
 	const title = model.title
 		? `<h2 class="bm-title" part="title">${escapeHtml(model.title)}</h2>`
 		: "";
-	const meta = metaText(model.header);
+	const meta = [model.part ? escapeHtml(model.part.name) : "", metaText(model.header)]
+		.filter(Boolean)
+		.join(" · ");
 	if (!title && !meta) return "";
 	return `<header class="bm-header">${title}${meta ? `<p class="bm-meta" part="meta">${meta}</p>` : ""}</header>`;
 }

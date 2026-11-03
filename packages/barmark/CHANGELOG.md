@@ -9,6 +9,17 @@ Releases follow the process in [RELEASING.md](RELEASING.md).
 
 ## [Unreleased]
 
+### Added
+
+- **`part:` names the chart's part** (grammar 7.3, issue #70): `part:
+  Electric Guitar 1`, or with a short label, `part: Gtr = Electric
+  Guitar 1`. It goes on a line of its own, once, before the first bar,
+  and the name may hold commas. The parse gains `part` (`{ name, label?
+  }`, or null) and a `part` line kind; the canonical form is `part:
+  Label = Name`. Errors for a missing name or label, a `part:` after the
+  first bar or a second one, and one sharing its line with a directive;
+  `instrument:` and `parts:` are near misses.
+
 ## [0.12.0] - 2026-11-03
 
 Rehearsal marks and words on a bar, issue #70 (grammar 2.5 and 2.6);

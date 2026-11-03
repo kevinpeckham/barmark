@@ -149,6 +149,8 @@ export function printLine(l: Line, beats: (number | undefined)[] = []): string {
 			return `## ${l.name.replace(/\s+/g, " ")}${printRepeat(l.repeat)}${l.elided ? " ->" : ""}`;
 		case "directive":
 			return printDirectives(l.set);
+		case "part":
+			return `part: ${l.label ? `${l.label} = ` : ""}${l.name}`;
 		case "bars":
 			return `${l.opens ? "|:" : l.ending ? `|${printPasses(l.ending)}` : "|"} ${l.cells.map((c, i) => printCell(c, beats[i])).join(" | ")} ${l.closes ? ":|" : "|"}${printRepeat(l.repeat)}`;
 		default:
