@@ -92,7 +92,8 @@ line is always an error. It can never turn the line into lyrics.
 ## 2. Bars
 
 A bar line is a series of **cells** between pipes. Each cell is one bar,
-except `...` (2.3) and a direction (5.2), which mark a place between bars.
+except `...` (2.3), a rehearsal mark (2.5) and a direction (5.2), which
+mark a place between bars.
 
 ```
 | D | A | Bm | G |
@@ -197,6 +198,49 @@ A `%` after a bracketed bar repeats that bar exactly, meter included:
 The brackets keep a time signature apart from the `6/9` chord. The value
 must be valid for `time:`. A bracket anywhere but the start of a cell is
 an **error**.
+
+### 2.5 Rehearsal marks
+
+`@` and a label, alone in a cell, is a **rehearsal mark** on the bar after
+it: the boxed letter or number of a printed score.
+
+```
+## Verse
+| D | A | Bm | G |
+| @B | D | A | G | D |
+```
+
+- A label is letters and digits: `@A`, `@B2`, `@17`. The `@` keeps a mark
+  from reading as a chord.
+- A mark is not a bar and takes no time. It marks the next bar written
+  after it, on the same line or the next, and goes wherever that bar goes:
+  a repeat or a replay plays the mark with its bar.
+- A section heading names a section (section 6); a mark names a place,
+  often mid-section. A chart may use either or both.
+- Errors: a mark that shares its cell (the message suggests a cell of its
+  own), `@` with no label or with other characters, a one-bar meter on a
+  mark, two marks with no bar between them, and a mark with no bar after
+  it.
+
+### 2.6 Words on a bar
+
+Quoted words in a cell sit on the bar, before the slot they precede:
+
+```
+| "solo" D | A | D "rit." G | A "fill" |
+```
+
+- `"solo"` is on the first bar's D, `"rit."` on the G, and `"fill"`, after
+  the last slot, at the end of its bar.
+- Words carry **no musical meaning**: `"rit."` slows nothing, and only
+  `tempo: rit.` (7.2) does. They are for what a player reads at that
+  spot (a cue, a feel, a part).
+- Curly quotes are accepted, because many editors and phone keyboards
+  substitute them. Words may hold spaces, but not `|` or a quote.
+- Words on `%` are on the whole bar; `%` copies the chords of the bar
+  before it, not its words.
+- Errors: an unclosed quote, empty quotes, and words with no bar to sit
+  on (alone in a cell, or with `...`, a mark or a direction).
 
 ## 3. Chord symbols
 
@@ -567,6 +611,10 @@ A canonical printer writes:
   as a range (`|1,2,3` prints as `|1-3`, `|1,2` as written)
 - directions in the spelling of 5.2's table (`d.s. al coda` prints as
   `D.S. al Coda`, `𝄋` as `Segno`)
+- rehearsal marks as written (`@B`), and words in straight quotes, each
+  before the slot it precedes (`| “solo”  D |` prints as `| "solo" D |`);
+  a cell keeps the slots that words are placed before, so words never
+  move
 - directives lowercased, comma-separated, in the order key, time, tempo,
   feel
 
@@ -614,6 +662,8 @@ keeps what cannot reduce:
 | error | unpaired `\|:` or `:\|` |
 | error | an ending mark not at the start of a bar line, an ending that does not follow a `\|: … :\|` repeat, endings that miss or repeat a pass, a last ending that closes with `:\|` or an earlier one that does not, `x N` on an ending |
 | error | a direction that is not alone in its cell, or a near miss of one (suggests the spelling) |
+| error | a rehearsal mark that is not alone in its cell (suggests a cell of its own), `@` without a label of letters and digits, a meter on a mark, two marks with no bar between them, a mark with no bar after it |
+| error | an unclosed quote, empty quotes, words with no bar to sit on |
 | error | a second `D.C.` or `D.S.`, or a second `Segno`, `Coda`, `To Coda` or `Fine`; `D.S.` with no `Segno` before it; `al Fine` with no `Fine`; `al Coda` without a `To Coda` and a `Coda` after it; a `Segno`, `Coda`, `To Coda` or `Fine` that no jump uses |
 | error | empty section that references no earlier section (the message suggests writing its bars or removing the heading, or names the line where a later section of that name is written) |
 | error | `->` anywhere but the end of a replay heading |
@@ -689,6 +739,8 @@ human to say whether the band was silent, and the structure line.
 | Custom swing ratios | Decided by Kevin (2026-11-02, issue #66): first not planned, then reopened the same day with the evidence of Stem Shovel's chart export, whose swing is a continuous amount that `swing` alone could only round to 2:1 or nothing. Decided: `swing`, `shuffle` and `swing 16` take an optional amount (`swing 58%`), where the swung note lands, from 50% to 75% inclusive (MPC style); `shuffle` takes one on the same scale; the `%` is required. The bare word is 66.7% and prints as the word, so no chart that read before changes meaning or form (7.1). |
 | Endings | Decided by Kevin (2026-11-03, issue #70): an ending is a bar line that starts with its passes (`\|1`, `\|2`, `\|1-3`, `\|1,3`), following a `\|: … :\|` repeat; the highest pass gives the count (5.1). The ending is its line, as `x N` repeats its line. Rejected: inline marks as ABC writes them (`… \|1 G :\|2 C \|`), because nothing marks where the last ending ends; and no syntax, because a score's correction editor loses the printed bars and a renderer the brackets. An ending marks a line, not a bar or a slot, so accents are no longer decided with endings. |
 | Directions | Decided by Kevin (2026-11-03, issue #70): `Segno`, `Coda`, `To Coda`, `Fine` and the jumps `D.C.`/`D.S.` (each alone or `al Fine`/`al Coda`) are cells, marks between bars that take no time (5.2). One jump per chart for now, taken once; after it every repeat plays once, `\|: :\|` taking its last ending. Rejected: direction lines (`jump: D.S. al Coda`), which cannot sit mid-line where scores put a segno; and no syntax with converters rewriting jumps as replays, which would split sections at arbitrary bars. The one exception to written order being play order. |
+| Rehearsal marks | Decided by Kevin (2026-11-03, issue #70): `@` and a label of letters and digits, alone in a cell, marks the bar after it (2.5). Rejected: `[B]`, which reads too much like the one-bar meter `[2/4]` and could be taken as a chord; `@` is distinct from both. |
+| Words on a bar | Decided by Kevin (2026-11-03, issue #70): quoted words in a cell sit before the slot they precede (2.6), with no musical meaning. Rejected: words as a cell of their own between bars, which loses the slot. |
 | Written bar numbers | Machine output gains `written` on each played bar (A.7), the bar's number as written, so a host can speak a printed score's measure numbers (issue #70: a correction editor for a score read). No change to what any chart means. |
 
 ## Open questions
@@ -833,6 +885,8 @@ Each slot parses to one record:
 | `tempoChange` | on a played bar inside a rit. or accel.: its `kind` (`rit` or `accel`), `from` (the steady tempo) and `to` (the target, or empty when open); empty outside one |
 | `swingPercent` | on a played bar and a directive: the swing amount in force (50 to 75), or empty for the bare word (66.7) and for `straight` |
 | `written` | on a played bar: its number as written, counting each written bar once in written order (`%` included, `...` not). A repeat or replay plays its bars under the numbers they were written with, and a bar line dropped for an error still counts its bars, so the numbers after it hold |
+| `rehearsal` | a cell in the parse tree that is a mark (2.5), with its `label`; on a played bar, the label of the mark just before it, or absent |
+| `words` | on a cell and a played bar: each `text` with `at`, the slot it sits before (the slot count for after the last), or absent when none |
 | `ending` | on a bar line in the parse tree: the passes an ending plays on (`[1]`, `[1, 2, 3]`), or empty |
 | `direction` | a cell in the parse tree that is a mark between bars (5.2): `segno`, `coda`, `to coda`, `fine`, or a `jump` with `to` (`start` for `D.C.`, `segno` for `D.S.`) and `al` (`fine`, `coda`, or empty when it plays to the end) |
 | `repeat` | on a bar line, section or repeat bracket in the parse tree: a count, or `open` for `x ...` |

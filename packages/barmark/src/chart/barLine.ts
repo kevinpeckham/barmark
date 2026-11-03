@@ -2,14 +2,25 @@ import { parseNoteSet } from "../chords/noteSet.js";
 import { parseChord } from "../chords/parse.js";
 import { isDirectionWord, readDirection } from "./direction.js";
 import { parseMeter } from "./directives.js";
-import type { Cell, ChartDiagnostic, Line, Meter, Repeat, SimpleSlot, Slot } from "./types.js";
+import type {
+	Cell,
+	ChartDiagnostic,
+	Line,
+	Meter,
+	Repeat,
+	SimpleSlot,
+	Slot,
+	Words,
+} from "./types.js";
 
 type BarsLine = Extract<Line, { kind: "bars" }>;
 
 const FERMATA = new Set(["...", "…"]);
 
-/** Whether a cell is a bar: `...` and a direction mark a place between bars. */
-export const isBar = (c: Cell) => c.kind !== "fermata" && c.kind !== "direction";
+/** Whether a cell is a bar: `...`, a direction and a rehearsal mark mark a place between bars. */
+export const isBar = (c: Cell) => c.kind === "slots" || c.kind === "simile";
+const QUOTES = new Set(['"', "“", "”", "„"]);
+const LABEL = /^@[A-Za-z0-9]+$/;
 const SILENCE = new Set(["--", "–", "—"]);
 
 /** The `x N` or `x ...` count after a bar line or heading, checked against the spec's limits. */
@@ -168,7 +179,120 @@ const barsWritten = (body: string) =>
 		.split("|")
 		.slice(1)
 		.map((p) => p.trim())
-		.filter((p) => p !== "" && !FERMATA.has(p)).length;
+		.filter((p) => p !== "" && !FERMATA.has(p) && !LABEL.test(p) && !isDirectionCell(p)).length;
+const isDirectionCell = (p: string) => {
+	const d = readDirection(p);
+	return !!d && "direction" in d;
+};
+
+type Problem = { problem: string; token: string; suggestion?: string };
+
+/**
+ * Quoted words out of a cell (grammar 2.6): the cell with each one blanked,
+ * and where each goes, before the slot it precedes.
+ */
+function readWords(cell: string): { bare: string; words: Words[] } | Problem {
+	const words: Words[] = [];
+	let bare = "";
+	let open: number | null = null;
+	for (const [i, ch] of [...cell].entries()) {
+		if (!QUOTES.has(ch)) {
+			if (open === null) bare += ch;
+			continue;
+		}
+		if (open === null) {
+			open = i;
+			continue;
+		}
+		const text = [...cell]
+			.slice(open + 1, i)
+			.join("")
+			.trim();
+		if (!text) return { problem: "empty words between quotes", token: '""' };
+		words.push({ text, at: tokens(bare).length });
+		bare += " ";
+		open = null;
+	}
+	if (open !== null)
+		return { problem: "words need a closing quote", token: [...cell].slice(open).join("") };
+	return { bare, words };
+}
+
+/** A leading `[n/d]` and the rest of the cell; `bad` is a bracket that is no time signature. */
+function readMeter(cell: string): { meter: Meter | null; after: string; bad: string | null } {
+	const bracket = /^\[([^\]]*)\]/.exec(cell);
+	if (!bracket) return { meter: null, after: cell, bad: null };
+	const meter = parseMeter(bracket[1] ?? "");
+	return { meter, after: cell.slice(bracket[0].length).trim(), bad: meter ? null : bracket[0] };
+}
+
+const emptyCell = (words: Words[]) =>
+	words.length ? "words go on a bar; this cell has no slot" : "a cell needs at least one slot";
+
+/** `%` or `...` alone in a cell, or what is wrong with it; null when the cell is neither. */
+function symbolCell(
+	bare: string,
+	meter: Meter | null,
+	words: Words[],
+): { cell: Cell } | Problem | null {
+	const only = tokens(bare);
+	const t = only[0] ?? "";
+	if (only.length !== 1 || (t !== "%" && !FERMATA.has(t))) return null;
+	if (meter) return { problem: "a one-bar meter cannot go on % or ...", token: t };
+	if (t !== "%")
+		return words.length
+			? { problem: "words go on a bar, not on ...", token: t }
+			: { cell: { kind: "fermata" } };
+	// Words on `%` go on the whole bar.
+	const onBar = words.map((w) => ({ ...w, at: 0 }));
+	return { cell: words.length ? { kind: "simile", words: onBar } : { kind: "simile" } };
+}
+
+/** A direction alone in a cell, or what is wrong with it; null when the cell isn't one. */
+function directionWithWords(
+	bare: string,
+	meter: Meter | null,
+	words: Words[],
+): { cell: Cell } | Problem | null {
+	const token = bare.trim();
+	const d = directionCell(token, meter);
+	if (!d) return null;
+	if (!("cell" in d))
+		return { problem: d.problem, token, ...(d.suggestion ? { suggestion: d.suggestion } : {}) };
+	return words.length ? { problem: "words go on a bar, not on a direction", token } : d;
+}
+
+/** A cell that is one thing alone (a mark, a direction, `%` or `...`), or what is wrong with it. */
+const standalone = (bare: string, meter: Meter | null, words: Words[]) =>
+	rehearsalCell(bare, meter, words) ??
+	directionWithWords(bare, meter, words) ??
+	symbolCell(bare, meter, words);
+
+/** A `@B` cell, or what is wrong with one; null when the cell has no mark. */
+function rehearsalCell(
+	bare: string,
+	meter: Meter | null,
+	words: Words[],
+): { cell: Cell } | Problem | null {
+	const list = tokens(bare);
+	const at = list.findIndex((t) => t.startsWith("@"));
+	const mark = list[at];
+	if (mark === undefined) return null;
+	if (!LABEL.test(mark))
+		return {
+			problem: "a rehearsal mark is @ and a label of letters and digits, like @B or @17",
+			token: mark,
+		};
+	if (words.length) return { problem: "words go on a bar, not on a rehearsal mark", token: mark };
+	if (meter) return { problem: "a one-bar meter cannot go on a rehearsal mark", token: mark };
+	if (list.length === 1) return { cell: { kind: "rehearsal", label: mark.slice(1) } };
+	const others = list.filter((_, i) => i !== at).join(" ");
+	return {
+		problem: "a rehearsal mark is a cell of its own",
+		token: mark,
+		suggestion: `| ${mark} | ${others} |`,
+	};
+}
 
 /**
  * One bar line: cells between pipes, each cell's slots, the `|:` and `:|`
@@ -246,66 +370,45 @@ export function parseBarLine(
 		return { kind: "chord", chord: r.value };
 	};
 
+	/** One slot token: a simple slot, or a `_` group of them. */
+	const slotOf = (token: string): Slot | null => {
+		const members = groupMembers(token);
+		if (members.length === 1) return simple(token);
+		const out: SimpleSlot[] = [];
+		for (const m of members) {
+			const s = m ? simple(m) : error("an empty member in a group", token);
+			if (s) out.push(s);
+		}
+		return { kind: "group", members: out };
+	};
+	const report = (p: Problem): null => error(p.problem, p.token, p.suggestion);
+	const readCell = (raw: string): Cell | null => {
+		const rest = raw.trim();
+		if (!rest) return error("an empty cell; use / to hold or % to repeat", "| |");
+		const { meter, after, bad } = readMeter(rest);
+		if (bad) error("not a time signature", bad);
+		const read = readWords(after);
+		if ("problem" in read) return report(read);
+		const { bare, words } = read;
+		if (bare.includes("[")) return error("a [n/d] meter must start its cell", rest);
+		const alone = standalone(bare, meter, words);
+		if (alone) return "cell" in alone ? alone.cell : report(alone);
+		return slotsCell(bare, meter, words, raw.trim());
+	};
+	const slotsCell = (
+		bare: string,
+		meter: Meter | null,
+		words: Words[],
+		raw: string,
+	): Cell | null => {
+		const slots = tokens(bare).map(slotOf);
+		if (!slots.length) return error(emptyCell(words), raw);
+		const kept = slots.filter((x): x is Slot => x !== null);
+		return { kind: "slots", meter, slots: kept, ...(words.length ? { words } : {}) };
+	};
+
 	if (parts.length === 0) error("a bar line needs at least one cell", text.trim());
-	const cells: Cell[] = [];
-	for (const raw of parts) {
-		let rest = raw.trim();
-		if (!rest) {
-			error("an empty cell; use / to hold or % to repeat", "| |");
-			continue;
-		}
-		let meter: Meter | null = null;
-		const bracket = /^\[([^\]]*)\]/.exec(rest);
-		if (bracket) {
-			meter = parseMeter(bracket[1] ?? "");
-			if (!meter) error("not a time signature", bracket[0]);
-			rest = rest.slice(bracket[0].length).trim();
-		}
-		if (rest.includes("[")) {
-			error("a [n/d] meter must start its cell", rest);
-			continue;
-		}
-		const direction = directionCell(rest, meter);
-		if (direction && "cell" in direction) cells.push(direction.cell);
-		else if (direction) error(direction.problem, rest, direction.suggestion);
-		if (direction) continue;
-		const list = tokens(rest);
-		if (list.length === 0) {
-			error("a cell needs at least one slot", raw.trim());
-			continue;
-		}
-		if (list.length === 1 && meter && (list[0] === "%" || FERMATA.has(list[0] ?? ""))) {
-			error("a one-bar meter cannot go on % or ...", rest);
-			continue;
-		}
-		if (list.length === 1 && !meter && list[0] === "%") {
-			cells.push({ kind: "simile" });
-			continue;
-		}
-		if (list.length === 1 && !meter && FERMATA.has(list[0] ?? "")) {
-			cells.push({ kind: "fermata" });
-			continue;
-		}
-		const slots: Slot[] = [];
-		for (const token of list) {
-			const parts = groupMembers(token);
-			if (parts.length === 1) {
-				const s = simple(token);
-				if (s) slots.push(s);
-				continue;
-			}
-			const members: SimpleSlot[] = [];
-			for (const m of parts) {
-				if (!m) error("an empty member in a group", token);
-				else {
-					const s = simple(m);
-					if (s) members.push(s);
-				}
-			}
-			slots.push({ kind: "group", members });
-		}
-		cells.push({ kind: "slots", meter, slots });
-	}
+	const cells = parts.map(readCell).filter((c): c is Cell => c !== null);
 
 	const failed = diagnostics.some((d) => d.severity === "error");
 	return {
