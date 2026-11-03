@@ -92,10 +92,9 @@ describe("repeats and marks", () => {
 		expect(warnings("| D | x9")).toHaveLength(1);
 	});
 	test("a close mark mid-line is an error", () => expect(errors("| D :| A |")).toHaveLength(1));
-	test("endings are reserved", () => {
-		const e = errors("|1 D | A |");
-		expect(e).toHaveLength(1);
-		expect(e[0]?.message).toContain("endings are not supported in v0.1");
+	test("an ending, once reserved, now reads (grammar 5.1)", () => {
+		expect(errors("|1 D | A |")).toEqual([]);
+		expect(read("|1 D | A |").bars?.ending).toEqual([1]);
 	});
 });
 

@@ -285,7 +285,7 @@ function layoutRow(
 	let prev = previous;
 	for (const cell of l.cells) {
 		const model = layoutCell(cell, played[bar] ?? written[bar], prev);
-		if (cell.kind !== "fermata") bar++;
+		if (cell.kind !== "fermata" && cell.kind !== "direction") bar++;
 		if (model.kind === "slots") prev = model;
 		cells.push(model);
 	}
@@ -297,6 +297,7 @@ function layoutRow(
 		opens: l.opens,
 		closes: l.closes,
 		repeat: l.repeat,
+		ending: l.ending,
 		cells,
 	};
 }
@@ -308,6 +309,7 @@ function layoutCell(
 	previous: SlotsCell | null,
 ): CellModel {
 	if (cell.kind === "fermata") return { kind: "fermata" };
+	if (cell.kind === "direction") return cell;
 	const from = cell.kind === "slots" ? cell : previous;
 	return withPlayed(
 		{

@@ -2,7 +2,14 @@
  * Spoken names: how a screen reader reads a chart as music. Built from the
  * parsed structure, never from the symbol's text.
  */
-import { type ChordParts, type ChordRecord, degreeOf, type Key, type Slot } from "barmark";
+import {
+	type ChordParts,
+	type ChordRecord,
+	type Direction,
+	degreeOf,
+	type Key,
+	type Slot,
+} from "barmark";
 import type { CellModel } from "./types.js";
 
 const NUMBERS: Record<string, string> = {
@@ -128,9 +135,16 @@ export function speakSlot(slot: Slot, key?: Key): string {
 	}
 }
 
+/** "segno", "to coda", "dal segno al coda", "da capo al fine". */
+function speakDirection(d: Direction): string {
+	if (d.kind !== "jump") return d.kind;
+	return `${d.to === "start" ? "da capo" : "dal segno"}${d.al ? ` al ${d.al}` : ""}`;
+}
+
 /** "bar 9: G, hold, D, hold"; a fermata is held until cued. With `numerals`, each chord's degree comes first. */
 export function speakBar(barNumber: number | null, cell: CellModel, numerals = false): string {
 	if (cell.kind === "fermata") return "fermata: hold until cued";
+	if (cell.kind === "direction") return speakDirection(cell.direction);
 	const meter = cell.meter ? `, in ${cell.meter.n}/${cell.meter.d}` : "";
 	const cut = cell.cut ? ", cut on this pass" : "";
 	return `bar${barNumber === null ? "" : ` ${barNumber}`}${meter}: ${cell.slots.map((s) => speakSlot(s, numerals ? cell.key : undefined)).join(", ")}${cut}`;

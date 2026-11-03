@@ -1,4 +1,4 @@
-import type { ChartDiagnostic, Directives, Key, Meter, Repeat, Slot } from "barmark";
+import type { ChartDiagnostic, Direction, Directives, Key, Meter, Repeat, Slot } from "barmark";
 
 export type LayoutOptions = { rehearsalLetters?: boolean };
 
@@ -33,6 +33,8 @@ export type BlockItem =
 			opens: boolean;
 			closes: boolean;
 			repeat: Repeat;
+			/** The passes an ending plays on; null for any other row. */
+			ending: number[] | null;
 			cells: CellModel[];
 	  }
 	/** `note` marks a `###` line, whose text is given without the marks. */
@@ -51,4 +53,6 @@ export type CellModel =
 			/** The key the bar is played in, when the chart names one. */
 			key?: Key;
 	  }
-	| { kind: "fermata" };
+	| { kind: "fermata" }
+	/** A segno, coda or jump between bars (barmark's grammar 5.2). */
+	| { kind: "direction"; direction: Direction };

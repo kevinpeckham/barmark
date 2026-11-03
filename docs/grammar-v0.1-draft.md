@@ -91,7 +91,8 @@ line is always an error. It can never turn the line into lyrics.
 
 ## 2. Bars
 
-A bar line is a series of **cells** between pipes. Each cell is one bar.
+A bar line is a series of **cells** between pipes. Each cell is one bar,
+except `...` (2.3) and a direction (5.2), which mark a place between bars.
 
 ```
 | D | A | Bm | G |
@@ -317,9 +318,83 @@ number is an extension (`C7`, `C13`), so it can't also be an octave.
   tools may warn above 8.
 - `|:` must open a bar line and `:|` must close one. They pair within one
   section. An unpaired mark is an **error**, and nothing is half-repeated.
-- **Endings (1st/2nd voltas) are reserved for v0.2.** In v0.1, `|1`, `|2`
-  and similar marks are an **error** ("endings not yet supported"), so
-  adding endings later changes the meaning of no existing chart.
+- First and second endings are bar lines of their own (5.1).
+
+### 5.1 Endings
+
+The bars a repeat plays on particular passes (first and second endings,
+voltas):
+
+```
+## Verse
+|: C | F | G | C |
+|1 G | G7 :|
+|2 G | C |
+```
+
+This plays `C F G C G G7`, then `C F G C G C`.
+
+- A bar line that starts with pass numbers is an **ending**: `|1`, `|2`, a
+  range `|1-3`, or a list `|1,3`. The ending is that one bar line. A long
+  ending is a long line.
+- Endings follow the bars of a `|: … :|` repeat, one after another; only
+  text lines may come between them. Every ending but the last closes with
+  `:|`, which goes back to `|:`. The last does not: it plays and moves on.
+- The repeat plays as many passes as its highest ending number. Each pass
+  plays the bars from `|:` to the first ending, then that pass's ending:
+  `|1-3 … :|` then `|4 …` plays four passes. Every pass from 1 to the
+  highest has exactly one ending, the highest is at least 2, and its
+  ending comes last. The endings give the count, so `x N` on an ending is
+  an **error**.
+- An ending mark anywhere but the start of a bar line is an **error**
+  (`| C |1 D |`), and so is an ending that does not follow a repeat.
+- A replay of the section plays its endings too. Machine output numbers
+  the bars of every ending as written (A.7), as a printed score does: above,
+  bars 1–4, then 5–6, then 7–8.
+
+### 5.2 Directions
+
+Lead sheets jump with words: *D.S. al Coda*, *D.C. al Fine*. barmark writes
+them where the score does, each alone in a cell between two bars:
+
+```
+## Verse
+| Segno | C | F | G | To Coda | C |
+| Am | F | G | C | D.S. al Coda |
+## Coda
+| Coda | F | G | C | ... |
+```
+
+This plays the verse, goes back to the segno, plays `C F G`, goes on at
+the coda at `To Coda`, and plays to the end.
+
+| Cell | Meaning |
+|---|---|
+| `Segno` (`𝄋` accepted) | where `D.S.` goes back to |
+| `Coda` (`𝄌` accepted) | where `al Coda` goes on |
+| `To Coda` | after the jump: go on at `Coda` |
+| `Fine` | after the jump: the end |
+| `D.C.`, `D.C. al Fine`, `D.C. al Coda` | the jump: back to the chart's first bar, then play to the end, to `Fine`, or to `To Coda` |
+| `D.S.`, `D.S. al Fine`, `D.S. al Coda` | the same, back to `Segno` |
+
+- A direction is a mark between bars. It takes no time and is not counted
+  as a bar, like `...`. It must be alone in its cell.
+- The words match in any case, with spaces collapsed; the canonical
+  spelling is the table's. A near miss (`D.S al Coda`) is an **error**
+  that suggests the spelling.
+- The jump is taken the first time it is reached, and only once. Until
+  then, `To Coda` and `Fine` do nothing.
+- **After the jump, every repeat plays once**: `|: :|` takes its last
+  ending, and `x N` on a bar line or a heading plays one pass, as lead
+  sheets mean. A chart that wants the repeats again writes them out.
+- After the jump, bars keep their written numbers (A.7), and each section
+  the return passes through is another occurrence of it.
+- A chart has at most one jump (`D.C.` or `D.S.`), and at most one each of
+  `Segno`, `Coda`, `To Coda` and `Fine`. `D.S.` needs a `Segno` before it,
+  `al Fine` a `Fine`, and `al Coda` a `To Coda` and a `Coda` after it. A
+  `Segno`, `Coda`, `To Coda` or `Fine` that no jump uses is an **error**.
+- This is the one exception to "the written order is the play order"
+  (section 6), and it stays visible: the jump is written where it happens.
 
 ## 6. Sections
 
@@ -352,8 +427,8 @@ number is an extension (`C7`, `C13`), so it can't also be an octave.
   under the same name: replays use the most recent section with that name.
   `→` is accepted for `->`.
 - Bars before the first heading belong to an unnamed section.
-- The written order is the play order. A replay heading stands for the bars
-  it replays, so a directive written under it takes effect after the replay,
+- The written order is the play order, except for the one jump a
+  direction makes (5.2). A replay heading stands for the bars it replays, so a directive written under it takes effect after the replay,
   at the next section's first bar. To change the replay itself (the last
   chorus up a step), write the directive before its heading.
 
@@ -488,6 +563,10 @@ A canonical printer writes:
 - text lines, and any line with an error, exactly as written (trailing
   whitespace trimmed), so a re-read reports the same errors
 - code-fence lines as written
+- endings as `|1`, `|1-3`, `|1,3`: passes in order, runs of three or more
+  as a range (`|1,2,3` prints as `|1-3`, `|1,2` as written)
+- directions in the spelling of 5.2's table (`d.s. al coda` prints as
+  `D.S. al Coda`, `𝄋` as `Segno`)
 - directives lowercased, comma-separated, in the order key, time, tempo,
   feel
 
@@ -533,7 +612,9 @@ keeps what cannot reduce:
 | error | a lone `-` in a slot (suggests `--` for silence) |
 | error | `%` or `...` sharing a cell with other slots or inside a group |
 | error | unpaired `\|:` or `:\|` |
-| error | ending marks (`\|1`, `\|2`): reserved for v0.2 |
+| error | an ending mark not at the start of a bar line, an ending that does not follow a `\|: … :\|` repeat, endings that miss or repeat a pass, a last ending that closes with `:\|` or an earlier one that does not, `x N` on an ending |
+| error | a direction that is not alone in its cell, or a near miss of one (suggests the spelling) |
+| error | a second `D.C.` or `D.S.`, or a second `Segno`, `Coda`, `To Coda` or `Fine`; `D.S.` with no `Segno` before it; `al Fine` with no `Fine`; `al Coda` without a `To Coda` and a `Coda` after it; a `Segno`, `Coda`, `To Coda` or `Fine` that no jump uses |
 | error | empty section that references no earlier section (the message suggests writing its bars or removing the heading, or names the line where a later section of that name is written) |
 | error | `->` anywhere but the end of a replay heading |
 | error | `/` or `%` with nothing before it |
@@ -606,15 +687,17 @@ human to say whether the band was silent, and the structure line.
 | Gradual tempo changes | Decided by Kevin (2026-11-01): `tempo:` also takes `rit.`, `accel.` (each optionally `to` a tempo) and `a tempo`. A change runs from the next bar to the next `tempo:` or the end; its shape is never written; machine output marks every bar inside one (7.2, A.7). |
 | `(addN)` in parentheses | Decided by Kevin (2026-11-02, issue #62): `(add2)`, `(add4)`, `(add9)` and `(add11)` are aliases of `(2)`, `(4)`, `(9)` and `(11)`, alone or in a list (`C(b9,add11)` = `C(b9,11)`), because chord players and DAWs spell `Am(add9)` that way. Only the four tones `addN` already takes: `add13` and `add#11` stay errors, in or out of parentheses. |
 | Custom swing ratios | Decided by Kevin (2026-11-02, issue #66): first not planned, then reopened the same day with the evidence of Stem Shovel's chart export, whose swing is a continuous amount that `swing` alone could only round to 2:1 or nothing. Decided: `swing`, `shuffle` and `swing 16` take an optional amount (`swing 58%`), where the swung note lands, from 50% to 75% inclusive (MPC style); `shuffle` takes one on the same scale; the `%` is required. The bare word is 66.7% and prints as the word, so no chart that read before changes meaning or form (7.1). |
+| Endings | Decided by Kevin (2026-11-03, issue #70): an ending is a bar line that starts with its passes (`\|1`, `\|2`, `\|1-3`, `\|1,3`), following a `\|: … :\|` repeat; the highest pass gives the count (5.1). The ending is its line, as `x N` repeats its line. Rejected: inline marks as ABC writes them (`… \|1 G :\|2 C \|`), because nothing marks where the last ending ends; and no syntax, because a score's correction editor loses the printed bars and a renderer the brackets. An ending marks a line, not a bar or a slot, so accents are no longer decided with endings. |
+| Directions | Decided by Kevin (2026-11-03, issue #70): `Segno`, `Coda`, `To Coda`, `Fine` and the jumps `D.C.`/`D.S.` (each alone or `al Fine`/`al Coda`) are cells, marks between bars that take no time (5.2). One jump per chart for now, taken once; after it every repeat plays once, `\|: :\|` taking its last ending. Rejected: direction lines (`jump: D.S. al Coda`), which cannot sit mid-line where scores put a segno; and no syntax with converters rewriting jumps as replays, which would split sections at arbitrary bars. The one exception to written order being play order. |
 | Written bar numbers | Machine output gains `written` on each played bar (A.7), the bar's number as written, so a host can speak a printed score's measure numbers (issue #70: a correction editor for a score read). No change to what any chart means. |
 
 ## Open questions
 
-- The ending syntax for v0.2. To be decided together with accents (Kevin,
-  2026-11-01), since both mark one bar or one slot.
 - Whether pushes need a shorter mark once real charts are written.
 - Articulation (short, choked hits) beyond slot length, and an accent mark
-  on a slot (`>D`). Until then, dynamics and accents are note lines.
+  on a slot (`>D`), decided together; no longer tied to endings (Kevin,
+  2026-11-03). Until then, dynamics and accents are note lines.
+- More than one jump in a chart (5.2 allows one).
 - Not planned as syntax (Kevin, 2026-11-01): a capo (a note line), ChordPro
   inline chords (barmark places chords in bars, not over words), and
   numerals as input. Transposition and a numerals view are tools: a
@@ -750,6 +833,8 @@ Each slot parses to one record:
 | `tempoChange` | on a played bar inside a rit. or accel.: its `kind` (`rit` or `accel`), `from` (the steady tempo) and `to` (the target, or empty when open); empty outside one |
 | `swingPercent` | on a played bar and a directive: the swing amount in force (50 to 75), or empty for the bare word (66.7) and for `straight` |
 | `written` | on a played bar: its number as written, counting each written bar once in written order (`%` included, `...` not). A repeat or replay plays its bars under the numbers they were written with, and a bar line dropped for an error still counts its bars, so the numbers after it hold |
+| `ending` | on a bar line in the parse tree: the passes an ending plays on (`[1]`, `[1, 2, 3]`), or empty |
+| `direction` | a cell in the parse tree that is a mark between bars (5.2): `segno`, `coda`, `to coda`, `fine`, or a `jump` with `to` (`start` for `D.C.`, `segno` for `D.S.`) and `al` (`fine`, `coda`, or empty when it plays to the end) |
 | `repeat` | on a bar line, section or repeat bracket in the parse tree: a count, or `open` for `x ...` |
 | `harte` | the Harte label: `C:7(b9)`, `N` for N.C. and silence (`--`), `X` for `?` |
 | `source` | the symbol as written |
