@@ -31,7 +31,7 @@ describe("the compiled binary, with no node_modules beside it", () => {
 			((await Bun.file(join(PACKAGE, "..", p, "package.json")).json()) as { version: string })
 				.version;
 		expect(barmark("--version").out).toBe(
-			`@barmark/cli ${own.version} (barmark ${await lib("barmark")}, @barmark/render ${await lib("render")})\n`,
+			`@barmark/cli ${own.version} (barmark ${await lib("barmark")}, @barmark/render ${await lib("render")}, @barmark/musicxml ${await lib("musicxml")})\n`,
 		);
 	});
 	test("check reads a chart", () => {

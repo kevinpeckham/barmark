@@ -17,7 +17,7 @@ export function fakeIo(
 		readStdin: async () => stdin,
 		cwd: process.cwd(),
 		font: () => new Uint8Array([1, 2, 3, 4]),
-		versions: { cli: "0.1.0", barmark: "9.9.9", render: "8.8.8" },
+		versions: { cli: "0.1.0", barmark: "9.9.9", render: "8.8.8", musicxml: "7.7.7" },
 		...rest,
 		out: () => out,
 		err: () => err,

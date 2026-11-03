@@ -8,7 +8,7 @@ package uses [semantic versioning](https://semver.org/).
 
 ### Added
 
-- `exportMusicXml(text, { part? })`: a barmark chart as MusicXML 4.0
+- `exportMusicXml(text, { part?, title? })`: a barmark chart as MusicXML 4.0
   (`score-partwise`) that validates against the MusicXML 4.0 schema and
   plays in the chart's play order.
   - One part per declared part, each exported as `extractPart` gives it.

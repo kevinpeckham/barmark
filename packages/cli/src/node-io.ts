@@ -13,7 +13,12 @@ function versions(): Versions {
 	const own = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")) as {
 		version: string;
 	};
-	return { cli: own.version, barmark: versionAt("barmark"), render: versionAt("@barmark/render") };
+	return {
+		cli: own.version,
+		barmark: versionAt("barmark"),
+		render: versionAt("@barmark/render"),
+		musicxml: versionAt("@barmark/musicxml"),
+	};
 }
 
 async function readStdin(): Promise<string> {

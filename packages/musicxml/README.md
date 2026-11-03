@@ -16,7 +16,8 @@ if (result.ok) save("chart.musicxml", result.xml);
 else console.error(result.diagnostics);
 ```
 
-`exportMusicXml` never throws. A chart with an error returns
+Options: `part`, the label of one part to export alone, and `title`, a
+title for a chart that has none. `exportMusicXml` never throws. A chart with an error returns
 `{ ok: false, diagnostics }` and no XML; otherwise `{ ok: true, xml,
 diagnostics }`, where the diagnostics are warnings. The
 [`barmark` command](https://www.npmjs.com/package/@barmark/cli) does the

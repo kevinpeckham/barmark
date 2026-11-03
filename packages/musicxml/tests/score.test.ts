@@ -49,4 +49,25 @@ describe("the score", () => {
 		for (const text of ["| G |", "# Morning & Night\npart: Gtr = Guitar\n| G |", MORNING_SONG])
 			expect(validate(xmlOf(text))).toEqual([]);
 	});
+	test("a chart with no title has none, unless one is given", () => {
+		expect(xmlOf("| G |")).not.toContain("<work>");
+		const r = exportMusicXml("| G |", { title: "song.chart.md" });
+		expect(r.ok && r.xml).toContain("<work-title>song.chart.md</work-title>");
+		const titled = exportMusicXml("# Real\n| G |", { title: "song.chart.md" });
+		expect(titled.ok && titled.xml).toContain("<work-title>Real</work-title>");
+	});
+	test("one part, by its label in any case", () => {
+		const r = exportMusicXml(MORNING_SONG, { part: "pno" });
+		if (!r.ok) throw new Error("not ok");
+		expect(r.xml.match(/<score-part /g)).toHaveLength(1);
+		expect(r.xml).toContain("<part-name>Piano</part-name>");
+		expect(validate(r.xml)).toEqual([]);
+	});
+	test("an undeclared part exports nothing, and says so", () => {
+		const r = exportMusicXml(MORNING_SONG, { part: "Bass" });
+		expect(r.ok).toBe(false);
+		expect(r.diagnostics).toEqual([
+			{ line: 0, severity: "error", message: "no part labelled Bass", token: "Bass" },
+		]);
+	});
 });

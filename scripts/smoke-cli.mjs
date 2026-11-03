@@ -1,6 +1,6 @@
 /**
- * Run the barmark command as Node sees it: --version names all three
- * packages, check reads a real chart cleanly, and render embeds the font.
+ * Run the barmark command as Node sees it: --version names the CLI and
+ * its libraries, check reads a real chart cleanly, and render embeds the font.
  * Plain Node, so it runs against the local build (scripts/verify-package.ts)
  * and against the copy installed from npm (.github/workflows/release.yml,
  * confirm).
@@ -30,7 +30,7 @@ const render = barmark("render", chart).stdout.includes("data:font/otf;base64,")
 const result = { version, check, render };
 console.log(JSON.stringify(result));
 const ok =
-	/^@barmark\/cli \d+\.\d+\.\d+ \(barmark \d+\.\d+\.\d+, @barmark\/render \d+\.\d+\.\d+\)$/.test(
+	/^@barmark\/cli \d+\.\d+\.\d+ \(barmark \d+\.\d+\.\d+, @barmark\/render \d+\.\d+\.\d+, @barmark\/musicxml \d+\.\d+\.\d+\)$/.test(
 		version,
 	) &&
 	check === 0 &&

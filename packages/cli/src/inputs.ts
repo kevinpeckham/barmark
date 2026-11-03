@@ -5,7 +5,7 @@ import { type Io, UsageError } from "./io.js";
 
 export type Chart = { path: string; text: string };
 
-const STDIN = "<stdin>";
+export const STDIN = "<stdin>";
 
 /**
  * Every `*.chart.md` under a folder, sorted, skipping node_modules and dot-folders.

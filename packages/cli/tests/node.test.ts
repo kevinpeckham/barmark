@@ -30,11 +30,11 @@ describe("the built bin under Node", () => {
 		expect(barmark("format", "--write", ".").code).toBe(0);
 		expect(barmark("format", "--check", ".")).toEqual({ code: 0, out: "", err: "" });
 	});
-	test("--version names the three packages", () => {
+	test("--version names the CLI and its libraries", () => {
 		const version = (name: string) =>
 			JSON.parse(readFileSync(join(PACKAGE, "..", name, "package.json"), "utf8")).version;
 		expect(barmark("--version").out).toBe(
-			`@barmark/cli ${version("cli")} (barmark ${version("barmark")}, @barmark/render ${version("render")})\n`,
+			`@barmark/cli ${version("cli")} (barmark ${version("barmark")}, @barmark/render ${version("render")}, @barmark/musicxml ${version("musicxml")})\n`,
 		);
 	});
 	test("render embeds Edwin", () => {

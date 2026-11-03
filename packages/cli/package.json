@@ -1,7 +1,7 @@
 {
 	"name": "@barmark/cli",
 	"version": "0.1.8",
-	"description": "The barmark command: check, format, render and transpose barmark chord charts (.chart.md) from the terminal and in CI.",
+	"description": "The barmark command: check, format, render, transpose and export barmark chord charts (.chart.md) from the terminal and in CI.",
 	"type": "module",
 	"bin": {
 		"barmark": "./dist/cli.js"
@@ -38,7 +38,8 @@
 	},
 	"dependencies": {
 		"barmark": "workspace:*",
-		"@barmark/render": "workspace:*"
+		"@barmark/render": "workspace:*",
+		"@barmark/musicxml": "workspace:*"
 	},
 	"scripts": {
 		"build": "rm -rf dist && tsc -p tsconfig.build.json",

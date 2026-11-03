@@ -1,5 +1,6 @@
 /** The barmark command: dispatch to a subcommand, and turn every failure into one line and an exit code. */
 import { check } from "./check.js";
+import { exportCommand } from "./export.js";
 import { format } from "./format.js";
 import { COMMAND_HELP, HELP } from "./help.js";
 import { type Io, UsageError } from "./io.js";
@@ -10,13 +11,22 @@ import { transpose } from "./transpose.js";
 export type Command = (args: string[], io: Io) => Promise<number>;
 
 /** Each subcommand by name. */
-export const COMMANDS: Record<string, Command> = { check, format, part, render, transpose };
+export const COMMANDS: Record<string, Command> = {
+	check,
+	export: exportCommand,
+	format,
+	part,
+	render,
+	transpose,
+};
 
 export async function main(argv: string[], io: Io): Promise<number> {
 	const [name, ...args] = argv;
 	if (name === "--version" || name === "-v") {
-		const { cli, barmark, render } = io.versions;
-		io.stdout(`@barmark/cli ${cli} (barmark ${barmark}, @barmark/render ${render})\n`);
+		const { cli, barmark, render, musicxml } = io.versions;
+		io.stdout(
+			`@barmark/cli ${cli} (barmark ${barmark}, @barmark/render ${render}, @barmark/musicxml ${musicxml})\n`,
+		);
 		return 0;
 	}
 	if (name === "--help" || name === "-h") {

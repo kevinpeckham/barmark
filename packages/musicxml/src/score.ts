@@ -11,6 +11,8 @@ import { el, text } from "./xml.js";
 export type MusicXmlOptions = {
 	/** Only the part with this label, as `extractPart` gives it. */
 	part?: string;
+	/** The title for a chart that has none (the CLI gives the file name). */
+	title?: string;
 };
 
 export type MusicXmlResult =
@@ -60,16 +62,27 @@ function partXml(source: PartSource, i: number): string {
 	return el("part", { id: `P${i + 1}` }, xml);
 }
 
+const noPart = (label: string): ChartDiagnostic => ({
+	line: 0,
+	severity: "error",
+	message: `no part labelled ${label}`,
+	token: label,
+});
+
 /** A chart as MusicXML 4.0, or its diagnostics when it has an error. Never throws. */
 export function exportMusicXml(chart: string, options: MusicXmlOptions = {}): MusicXmlResult {
 	const parse = parseChart(chart);
 	if (parse.diagnostics.some((d) => d.severity === "error"))
 		return { ok: false, diagnostics: parse.diagnostics };
+	const wanted = options.part?.toLowerCase();
 	const sources = partsOf(parse, chart).filter(
-		(s) => !options.part || s.part?.label?.toLowerCase() === options.part.toLowerCase(),
+		(s) => !wanted || s.part?.label?.toLowerCase() === wanted,
 	);
+	if (options.part && sources.length === 0)
+		return { ok: false, diagnostics: [noPart(options.part), ...parse.diagnostics] };
+	const title = parse.title ?? options.title;
 	const head = [
-		parse.title ? el("work", {}, text("work-title", parse.title)) : "",
+		title ? el("work", {}, text("work-title", title)) : "",
 		el("identification", {}, el("encoding", {}, text("software", `@barmark/musicxml ${VERSION}`))),
 		el("part-list", {}, sources.map(scorePart)),
 	];

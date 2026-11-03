@@ -3,10 +3,12 @@ import { COMMANDS, main } from "../src/main.js";
 import { fakeIo } from "./io.js";
 
 describe("main", () => {
-	test("--version prints all three versions", async () => {
+	test("--version prints the CLI's and its libraries' versions", async () => {
 		const io = fakeIo();
 		expect(await main(["--version"], io)).toBe(0);
-		expect(io.out()).toBe("@barmark/cli 0.1.0 (barmark 9.9.9, @barmark/render 8.8.8)\n");
+		expect(io.out()).toBe(
+			"@barmark/cli 0.1.0 (barmark 9.9.9, @barmark/render 8.8.8, @barmark/musicxml 7.7.7)\n",
+		);
 	});
 	test("no command prints help to stderr and exits 2", async () => {
 		const io = fakeIo();
