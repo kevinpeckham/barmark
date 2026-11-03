@@ -633,7 +633,7 @@ test.describe("several parts", () => {
 		await page.setViewportSize({ width: 1200, height: 800 });
 		await page.goto("/chart?chart=parts");
 		const lefts = await inChart(page, (root) =>
-			[...root.querySelectorAll(".bm-system")[0].querySelectorAll(".bm-part-row")].map((row) =>
+			[...root.querySelectorAll(".bm-system .bm-part-row:nth-child(-n+2)")].map((row) =>
 				[...row.querySelectorAll(".bm-bar")].map((b) => Math.round(b.getBoundingClientRect().left)),
 			),
 		);
