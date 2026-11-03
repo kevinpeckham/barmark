@@ -72,3 +72,28 @@ describe("several parts (grammar 7.4)", () => {
 		expect([...rows].map((r) => r.className)).toEqual(["bm-row bm-part-row", "bm-error"]);
 	});
 });
+
+describe("one part's view", () => {
+	const pno = () =>
+		parseHTML(`<body>${renderChartUnwrapped(MORNING_SONG, { part: "pno" })}</body>`).document;
+	test("draws one part as a single-part chart", () => {
+		const d = pno();
+		expect(d.querySelector(".bm-system")).toBeNull();
+		expect(d.querySelector("[part=meta]")?.textContent).toBe("Piano · G major");
+	});
+	test("its tacet bars say so", () => {
+		const verse = [...pno().querySelectorAll(".bm-section")].find(
+			(s) => s.getAttribute("aria-label") === "Verse",
+		);
+		const rows = verse?.querySelectorAll(".bm-row") ?? [];
+		expect(rows).toHaveLength(2);
+		expect(rows[0]?.textContent).toContain("G/B");
+		expect(rows[1]?.querySelectorAll(".bm-tacet-bar")).toHaveLength(4);
+		expect(rows[1]?.querySelector(".bm-bar-body")?.textContent).toBe("tacet");
+	});
+	test("an undeclared label draws the whole chart, and says so", () => {
+		const m = layoutChart(MORNING_SONG, { part: "Bass" });
+		expect(m.parts).toHaveLength(2);
+		expect(m.diagnostics.map((x) => x.message)).toContain("no part labelled Bass");
+	});
+});

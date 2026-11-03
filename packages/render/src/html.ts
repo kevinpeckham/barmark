@@ -45,6 +45,8 @@ export type RenderOptions = {
 	 * With `false` rows keep their columns, and the page scrolls the chart instead.
 	 */
 	wrap?: boolean;
+	/** Draw only the part with this label (barmark's grammar 7.4): one player's view. */
+	part?: string;
 };
 
 type Row = Extract<BlockItem, { kind: "row" }>;
@@ -68,6 +70,7 @@ function elementAttributes(options: RenderOptions): string {
 		options.rehearsalLetters ? " rehearsal-letters" : "",
 		numeralsOf(options) ? ` numerals="${numeralsOf(options)}"` : "",
 		options.wrap === false ? ' wrap="off"' : "",
+		options.part ? ` part="${escapeHtml(options.part)}"` : "",
 	].join("");
 }
 
@@ -93,7 +96,10 @@ export function renderChartUnwrapped(text: string, options: RenderOptions = {}):
 }
 
 function chartHtml(text: string, options: RenderOptions): string {
-	const model = layoutChart(text, { rehearsalLetters: options.rehearsalLetters ?? false });
+	const model = layoutChart(text, {
+		rehearsalLetters: options.rehearsalLetters ?? false,
+		...(options.part && { part: options.part }),
+	});
 	const barNumbers = options.barNumbers ?? true;
 	const parts = model.parts.length > 1;
 	const settings: Settings = {

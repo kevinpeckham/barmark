@@ -10,7 +10,8 @@ import type {
 	Words,
 } from "barmark";
 
-export type LayoutOptions = { rehearsalLetters?: boolean };
+/** `part`: draw only the part with this label (barmark's grammar 7.4), as a single-part chart. */
+export type LayoutOptions = { rehearsalLetters?: boolean; part?: string };
 
 /** What to draw, with every musical decision already made. */
 export type ChartModel = {

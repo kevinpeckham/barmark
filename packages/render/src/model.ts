@@ -8,6 +8,7 @@ import {
 	type Cell,
 	type ChartParse,
 	type Directives,
+	extractPart,
 	type Line,
 	type PlayedBar,
 	parseChart,
@@ -55,8 +56,22 @@ function barsByLine(parse: ChartParse): PlayedBar[] {
 	);
 }
 
+/** The whole chart, or one part of it; an undeclared part draws the whole chart, with a warning. */
+function parseFor(text: string, part: string | undefined): ChartParse {
+	const one = part ? extractPart(text, part) : null;
+	if (one || !part) return one ?? parseChart(text);
+	const whole = parseChart(text);
+	const missing = {
+		line: 1,
+		severity: "warning" as const,
+		message: `no part labelled ${part}`,
+		token: part,
+	};
+	return { ...whole, diagnostics: [missing, ...whole.diagnostics] };
+}
+
 export function layoutChart(text: string, options: LayoutOptions = {}): ChartModel {
-	const parse = parseChart(text);
+	const parse = parseFor(text, options.part);
 	const { header, body } = splitHeader(parse.lines);
 	const groups = groupLines(body);
 	const ctx: Context = {
@@ -444,9 +459,11 @@ function layoutBar(
 	};
 }
 
-/** The words written on a bar, as a field to spread; nothing when it has none. */
-const wordsOf = (cell: Extract<Cell, { kind: "slots" | "simile" }>) =>
-	cell.words ? { words: cell.words } : {};
+/** The words written on a bar, and whether the part rests there, as fields to spread. */
+const wordsOf = (cell: Extract<Cell, { kind: "slots" | "simile" }>) => ({
+	...(cell.words && { words: cell.words }),
+	...(cell.kind === "slots" && cell.tacet && { tacet: cell.tacet }),
+});
 
 /** What the parser says about the bar as played: inside a rit. or accel., and its key. */
 function withPlayed(cell: SlotsCell, played: PlayedBar | undefined): SlotsCell {

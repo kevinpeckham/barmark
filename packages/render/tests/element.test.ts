@@ -22,6 +22,10 @@ describe("attributes → render options", () => {
 			),
 		).toEqual({ theme: "dark", barNumbers: false, rehearsalLetters: true, wrap: false });
 	});
+	test("part names the part to draw", () => {
+		expect(optionsFromAttributes(el({ part: "Pno" })).part).toBe("Pno");
+		expect(optionsFromAttributes(el({})).part).toBeUndefined();
+	});
 	test("an unknown theme is auto", () => {
 		expect(optionsFromAttributes(el({ theme: "sepia" })).theme).toBe("auto");
 	});
