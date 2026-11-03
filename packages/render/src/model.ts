@@ -13,7 +13,15 @@ import {
 	parseChart,
 	type SectionOccurrence,
 } from "barmark";
-import type { BlockItem, CellModel, ChartModel, LayoutOptions, SectionBlock } from "./types.js";
+import type {
+	BlockItem,
+	CellModel,
+	ChartModel,
+	ErrorItem,
+	LayoutOptions,
+	RowItem,
+	SectionBlock,
+} from "./types.js";
 
 type SectionLine = Extract<Line, { kind: "section" }>;
 type BarsLine = Extract<Line, { kind: "bars" }>;
@@ -28,7 +36,24 @@ type Context = {
 	errors: Map<number, string[]>;
 	/** Each section's lines, by its heading's line number. */
 	written: Map<number, Group>;
+	/** The played bars by the line they are written on: in a chart of several parts, each part's own. */
+	bars: PlayedBar[];
 };
+
+/** Each part's bars on its own lines; a tutti bar once (barmark's grammar 7.4). */
+function barsByLine(parse: ChartParse): PlayedBar[] {
+	if (parse.parts.length < 2) return parse.bars;
+	const seen = new Set<string>();
+	return parse.bars.flatMap((b) =>
+		(b.parts ?? []).flatMap((p) => {
+			const key = `${b.index}:${p?.line}`;
+			if (!p || seen.has(key)) return [];
+			seen.add(key);
+			const { words: _w, parts: _p, tacet: _t, ...shared } = b;
+			return [{ ...shared, line: p.line, slots: p.slots, ...(p.words && { words: p.words }) }];
+		}),
+	);
+}
 
 export function layoutChart(text: string, options: LayoutOptions = {}): ChartModel {
 	const parse = parseChart(text);
@@ -39,17 +64,25 @@ export function layoutChart(text: string, options: LayoutOptions = {}): ChartMod
 		source: text.split(/\r?\n/),
 		errors: errorsByLine(parse),
 		written: new Map(groups.flatMap((g) => (g.heading ? [[g.heading.line, g] as const] : []))),
+		bars: barsByLine(parse),
 	};
 	const blocks = groups.map((g) => layoutGroup(g, ctx));
 	if (options.rehearsalLetters) letterBlocks(blocks);
-	return { title: parse.title, part: parse.part, header, blocks, diagnostics: parse.diagnostics };
+	return {
+		title: parse.title,
+		part: parse.part,
+		parts: parse.parts,
+		header,
+		blocks,
+		diagnostics: parse.diagnostics,
+	};
 }
 
 /** Rehearsal letters mark position: every section occurrence, and leading bars, in play order. */
 function letterBlocks(blocks: SectionBlock[]): void {
 	let n = 0;
 	for (const b of blocks) {
-		if (b.form === null && !b.items.some((i) => i.kind === "row")) continue;
+		if (b.form === null && !b.items.some((i) => i.kind === "row" || i.kind === "system")) continue;
 		b.rehearsal = letters(n++);
 	}
 }
@@ -145,24 +178,47 @@ function substituteText(items: BlockItem[], own: BlockItem[]): BlockItem[] {
 	});
 	// Extra lines continue after the last row and any text already following it.
 	const after = Math.max(
-		out.findLastIndex((i) => i.kind === "row"),
+		out.findLastIndex((i) => i.kind === "row" || i.kind === "system"),
 		out.findLastIndex((i) => i.kind === "text"),
 	);
 	out.splice(after + 1, 0, ...queue);
 	return out;
 }
 
-/** The parser cuts the last bar it would play; a fermata is not a bar. */
-function markCut(items: BlockItem[]): BlockItem[] {
-	const r = items.findLastIndex((i) => i.kind === "row" && lastSlots(i.cells) !== null);
-	const row = items[r];
-	if (row?.kind !== "row") return items;
+/** The row's last bar, marked cut. */
+function cutRow(row: RowItem): RowItem {
 	const c = row.cells.findLastIndex((cell) => cell.kind === "slots");
 	const cells = row.cells.map((cell, i) =>
 		i === c && cell.kind === "slots" ? { ...cell, cut: true } : cell,
 	);
-	return items.map((item, i) => (i === r ? { ...row, cells } : item));
+	return { ...row, cells };
 }
+
+const hasBars = (i: BlockItem) =>
+	(i.kind === "row" && lastSlots(i.cells) !== null) || i.kind === "system";
+
+/** The parser cuts the last bar it would play; a fermata is not a bar. A system's every part loses it. */
+function markCut(items: BlockItem[]): BlockItem[] {
+	const r = items.findLastIndex(hasBars);
+	const item = items[r];
+	if (!item || (item.kind !== "row" && item.kind !== "system")) return items;
+	const cut: BlockItem =
+		item.kind === "row"
+			? cutRow(item)
+			: {
+					...item,
+					rows: item.rows.map((p) => (p.row.kind === "row" ? { ...p, row: cutRow(p.row) } : p)),
+				};
+	return items.map((it, i) => (i === r ? cut : it));
+}
+
+/** How many cells an item's widest row has. */
+const widthOf = (i: BlockItem) =>
+	i.kind === "row"
+		? i.cells.length
+		: i.kind === "system"
+			? Math.max(0, ...i.rows.map((p) => (p.row.kind === "row" ? p.row.cells.length : 0)))
+			: 0;
 
 function blockOf(
 	h: SectionLine | null,
@@ -174,7 +230,7 @@ function blockOf(
 		repeat: h?.repeat ?? null,
 		form: occurrence?.form ?? null,
 		rehearsal: null,
-		columns: Math.max(0, ...items.map((i) => (i.kind === "row" ? i.cells.length : 0))),
+		columns: Math.max(0, ...items.map(widthOf)),
 		items,
 	};
 }
@@ -186,7 +242,16 @@ function layoutLines(
 ): BlockItem[] {
 	const items: BlockItem[] = [];
 	let previous: SlotsCell | null = null;
-	for (const l of lines) {
+	for (const [i, l] of lines.entries()) {
+		const system = systemOf(l);
+		if (system !== null) {
+			// A system is laid out once, at its first line.
+			if (systemOf(lines[i - 1]) === system) continue;
+			const item = layoutSystem(systemLines(lines, i), occurrence, previous, ctx);
+			previous = lastOfSystem(item) ?? previous;
+			items.push(item);
+			continue;
+		}
 		if (ctx.errors.has(l.line)) {
 			items.push(errorItem(l.line, ctx));
 			continue;
@@ -199,6 +264,79 @@ function layoutLines(
 	return items;
 }
 
+type SystemLine = Extract<Line, { kind: "bars" | "invalid" }>;
+const systemOf = (l: Line | undefined) =>
+	(l?.kind === "bars" || l?.kind === "invalid") && l.system !== undefined ? l.system : null;
+
+/** The lines of the system that starts at `i`. */
+function systemLines(lines: Line[], i: number): SystemLine[] {
+	const system = systemOf(lines[i]);
+	const out: SystemLine[] = [];
+	for (const l of lines.slice(i)) {
+		if (systemOf(l) !== system) break;
+		out.push(l as SystemLine);
+	}
+	return out;
+}
+
+type SystemItem = Extract<BlockItem, { kind: "system" }>;
+
+const lastOfSystem = (item: SystemItem) => {
+	const first = item.rows.find((p) => p.row.kind === "row" && !p.row.cells.some(isTacet))?.row;
+	return first?.kind === "row" ? lastSlots(first.cells) : null;
+};
+
+const isTacet = (c: CellModel) => c.kind === "slots" && c.tacet === true;
+
+/** A row per declared part, in score order: its own line, its error, or tacet bars. */
+function layoutSystem(
+	lines: SystemLine[],
+	occurrence: SectionOccurrence | undefined,
+	previous: SlotsCell | null,
+	ctx: Context,
+): SystemItem {
+	const ref = lines.find((l): l is BarsLine => l.kind === "bars" && !ctx.errors.has(l.line));
+	const reference = ref
+		? layoutRow(ref, playedOn(ref.line, occurrence, ctx.bars), previous, ctx)
+		: null;
+	const rows = ctx.parse.parts.map((p) => {
+		const own = lines.find((l) => l.part === p.label);
+		const row: RowItem | ErrorItem =
+			own && ctx.errors.has(own.line)
+				? errorItem(own.line, ctx)
+				: own?.kind === "bars"
+					? layoutRow(own, playedOn(own.line, occurrence, ctx.bars), previous, ctx)
+					: tacetRow(reference, lines[0]?.line ?? 0);
+		return { label: p.label ?? "", name: p.name, row };
+	});
+	return {
+		kind: "system",
+		line: lines[0]?.line ?? 0,
+		barNumber: reference?.barNumber ?? null,
+		rows,
+	};
+}
+
+const NO_ROW: RowItem = {
+	kind: "row",
+	line: 0,
+	barNumber: null,
+	opens: false,
+	closes: false,
+	repeat: null,
+	ending: null,
+	cells: [],
+};
+
+/** The system's bars, with nothing played in them (barmark's grammar 7.4). */
+function tacetRow(reference: RowItem | null, line: number): RowItem {
+	const base = reference ?? NO_ROW;
+	const cells: CellModel[] = base.cells.map((c) =>
+		c.kind === "slots" ? { kind: "slots", meter: c.meter, slots: [], cut: false, tacet: true } : c,
+	);
+	return { ...base, line, cells };
+}
+
 function layoutLine(
 	l: Line,
 	occurrence: SectionOccurrence | undefined,
@@ -207,7 +345,7 @@ function layoutLine(
 ): BlockItem | null {
 	switch (l.kind) {
 		case "bars":
-			return layoutRow(l, playedOn(l.line, occurrence, ctx.parse.bars), previous, ctx);
+			return layoutRow(l, playedOn(l.line, occurrence, ctx.bars), previous, ctx);
 		case "text":
 			return textItem(l.text);
 		case "directive":
@@ -226,7 +364,7 @@ function textItem(text: string): BlockItem {
 		: { kind: "text", text, note: false };
 }
 
-function errorItem(line: number, ctx: Context): BlockItem {
+function errorItem(line: number, ctx: Context): ErrorItem {
 	return {
 		kind: "error",
 		line,
@@ -254,10 +392,10 @@ function layoutRow(
 	played: PlayedBar[],
 	previous: SlotsCell | null,
 	ctx: Context,
-): BlockItem {
+): RowItem {
 	const cells: CellModel[] = [];
 	// A cut bar is not played: what it would play is what the line's bar played when written.
-	const written = ctx.parse.bars.filter((b) => b.line === l.line);
+	const written = ctx.bars.filter((b) => b.line === l.line);
 	let bar = 0;
 	let prev = previous;
 	for (const cell of l.cells) {

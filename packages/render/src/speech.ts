@@ -164,6 +164,7 @@ export function speakBar(barNumber: number | null, cell: CellModel, numerals = f
 	if (cell.kind === "fermata") return "fermata: hold until cued";
 	if (cell.kind === "direction") return speakDirection(cell.direction);
 	if (cell.kind === "rehearsal") return `rehearsal ${cell.label}`;
+	if (cell.tacet) return `bar${barNumber === null ? "" : ` ${barNumber}`}: tacet`;
 	const meter = cell.meter ? `, in ${cell.meter.n}/${cell.meter.d}` : "";
 	const cut = cell.cut ? ", cut on this pass" : "";
 	const words = (at: number) =>

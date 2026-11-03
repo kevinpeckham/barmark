@@ -627,3 +627,19 @@ test.describe("the element's text property", () => {
 		expect(errors).toEqual([]);
 	});
 });
+
+test.describe("several parts", () => {
+	test("a system's rows share bar positions", async ({ page }) => {
+		await page.setViewportSize({ width: 1200, height: 800 });
+		await page.goto("/chart?chart=parts");
+		const lefts = await inChart(page, (root) =>
+			[...root.querySelectorAll(".bm-system")[0].querySelectorAll(".bm-part-row")].map((row) =>
+				[...row.querySelectorAll(".bm-bar")].map((b) => Math.round(b.getBoundingClientRect().left)),
+			),
+		);
+		expect(lefts).toHaveLength(2);
+		expect(lefts[0]?.length).toBe(4);
+		for (const [i, x] of (lefts[1] ?? []).entries())
+			expect(Math.abs(x - (lefts[0]?.[i] ?? 0))).toBeLessThanOrEqual(1);
+	});
+});

@@ -8,6 +8,7 @@
 import { join } from "node:path";
 import { fontFaceCss, type RenderOptions, renderChart } from "../src/index.js";
 import { EXAMPLE } from "../tests/fixtures.js";
+import { MORNING_SONG } from "../tests/morning-song.js";
 
 const root = join(import.meta.dir, "../../..");
 const CHARTS: Record<string, string> = {
@@ -17,6 +18,7 @@ const CHARTS: Record<string, string> = {
 	layout:
 		"# Layout\nkey: G, time: 4/4\n\n## Verse\n| G | D7sus4 | {E1} | {C3 G3 E4} |\nWalking down the line\n### Watch for the cutoff\n| N.C. | C D_E_F | [2/4] G | G |\ntime: 3/4, tempo: 120\n| Am | D | ? | x2\n## Verse ->",
 	rit: "tempo: 145\n## Outro\n| D5 | % |\ntempo: rit. to 90\n| D5 | % |",
+	parts: MORNING_SONG,
 	long: "# Long\n## A\n| A | B | C | D | E | F | G | A | B | C | D | E |\n| A / B / | C / D / | E / F / | G / A / | B / C / | D / E / |",
 };
 const HOSTILE = `*{margin:2em!important;padding:0!important;font-family:"Comic Sans MS",cursive!important;line-height:3!important}

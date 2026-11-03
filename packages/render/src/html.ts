@@ -48,7 +48,10 @@ export type RenderOptions = {
 };
 
 type Row = Extract<BlockItem, { kind: "row" }>;
-type Settings = { barNumbers: boolean; numerals: Numerals | null };
+/** `gutter`: rows keep the left column, for bar numbers or part labels. */
+type Settings = { barNumbers: boolean; gutter: boolean; numerals: Numerals | null };
+/** A system's row: the part it draws, and whether it is the system's first. */
+type PartRow = { label: string; name: string; first: boolean };
 /** A chord drawn as a numeral: the style, and the key of its bar. */
 type View = { style: Numerals; key: Key } | null;
 
@@ -91,20 +94,26 @@ export function renderChartUnwrapped(text: string, options: RenderOptions = {}):
 
 function chartHtml(text: string, options: RenderOptions): string {
 	const model = layoutChart(text, { rehearsalLetters: options.rehearsalLetters ?? false });
+	const barNumbers = options.barNumbers ?? true;
+	const parts = model.parts.length > 1;
 	const settings: Settings = {
-		barNumbers: options.barNumbers ?? true,
+		barNumbers,
+		gutter: barNumbers || parts,
 		numerals: numeralsOf(options),
 	};
-	return `<div class="bm-chart" data-theme="${themeOf(options)}"${settings.barNumbers ? "" : ' data-bar-numbers="off"'}${options.wrap === false ? ' data-wrap="off"' : ""}>${headerHtml(model)}${model.blocks.map((b) => blockHtml(b, settings)).join("")}${options.diagnostics ? diagnosticsHtml(model) : ""}</div>`;
+	// Every section's left column is as wide as the longest part label, so tutti rows line up with systems.
+	const widest = Math.max(0, ...model.parts.map((p) => p.label?.length ?? 0));
+	const gutter = parts ? ` data-parts style="--bm-label-chars:${widest}"` : "";
+	return `<div class="bm-chart" data-theme="${themeOf(options)}"${gutter}${settings.barNumbers ? "" : ' data-bar-numbers="off"'}${options.wrap === false ? ' data-wrap="off"' : ""}>${headerHtml(model)}${model.blocks.map((b) => blockHtml(b, settings)).join("")}${options.diagnostics ? diagnosticsHtml(model) : ""}</div>`;
 }
 
 function headerHtml(model: ChartModel): string {
 	const title = model.title
 		? `<h2 class="bm-title" part="title">${escapeHtml(model.title)}</h2>`
 		: "";
-	const meta = [model.part ? escapeHtml(model.part.name) : "", metaText(model.header)]
-		.filter(Boolean)
-		.join(" · ");
+	const names =
+		model.parts.length > 1 ? model.parts.map((p) => p.name).join(", ") : model.part?.name;
+	const meta = [names ? escapeHtml(names) : "", metaText(model.header)].filter(Boolean).join(" · ");
 	if (!title && !meta) return "";
 	return `<header class="bm-header">${title}${meta ? `<p class="bm-meta" part="meta">${meta}</p>` : ""}</header>`;
 }
@@ -200,6 +209,8 @@ function itemHtml(item: BlockItem, columns: number, settings: Settings): string 
 	switch (item.kind) {
 		case "row":
 			return rowHtml(item, columns, settings);
+		case "system":
+			return systemHtml(item, columns, settings);
 		case "text":
 			return `<p class="bm-text${item.note ? " bm-note" : ""}" part="text">${escapeHtml(item.text)}</p>`;
 		case "directive":
@@ -215,24 +226,73 @@ function errorHtml(source: string, messages: string[]): string {
 	return `<div class="bm-error" title="${message}"><code>${escapeHtml(source)}</code><span class="bm-sr">Error: ${message}</span></div>`;
 }
 
-function rowHtml(row: Row, columns: number, settings: Settings): string {
-	const number = settings.barNumbers
-		? `<span class="bm-bar-number" part="bar-number" aria-hidden="true">${row.barNumber ?? ""}</span>`
+/** A system: its parts' rows stacked, sharing the section's columns (barmark's grammar 7.4). */
+function systemHtml(
+	item: Extract<BlockItem, { kind: "system" }>,
+	columns: number,
+	settings: Settings,
+): string {
+	const names = escapeHtml(item.rows.map((p) => p.name).join(", "));
+	const rows = item.rows.map((p, i) =>
+		p.row.kind === "error"
+			? errorHtml(p.row.source, p.row.messages)
+			: rowHtml(p.row, columns, settings, { label: p.label, name: p.name, first: i === 0 }),
+	);
+	return `<div class="bm-system" role="group" aria-label="${names}">${rows.join("")}</div>`;
+}
+
+/** The left column: the bar number, and in a system the part's label. */
+function gutterHtml(row: Row, settings: Settings, part?: PartRow): string {
+	if (!settings.gutter) return "";
+	const number = settings.barNumbers && (!part || part.first) ? (row.barNumber ?? "") : "";
+	const label = part
+		? `<span class="bm-part-label" part="part-label">${escapeHtml(part.label)}</span>`
 		: "";
+	return `<span class="bm-bar-number" part="bar-number" aria-hidden="true">${label}${number}</span>`;
+}
+
+const isTacetCell = (c: CellModel) => c.kind === "slots" && c.tacet === true;
+
+/** A row's cells; a tacet row says "tacet" in its first bar. */
+function rowCells(row: Row, numerals: Numerals | null, ending: string): string[] {
 	let n = row.barNumber;
-	const label = row.ending ? endingLabel(row.ending) : null;
-	const cells = row.cells.map((cell, i) => {
-		const ending = i === 0 && label ? ` data-ending="${label.shown}"` : "";
-		const html = cellHtml(cell, n, repeatMarks(row, i) + ending, settings.numerals);
+	const firstTacet = row.cells.findIndex(isTacetCell);
+	return row.cells.map((cell, i) => {
+		const marks = repeatMarks(row, i) + (i === 0 ? ending : "");
+		const spoken = `<span class="bm-sr">bar ${n ?? ""}: tacet</span>`;
+		const html = isTacetCell(cell)
+			? tacetHtml(spoken, marks, i === firstTacet ? "tacet" : "")
+			: cellHtml(cell, n, marks, numerals);
 		if (n !== null && cell.kind === "slots") n++;
 		return html;
 	});
+}
+
+const sr = (text: string) => (text ? `<span class="bm-sr">${text}</span>` : "");
+
+/** The row's class list. */
+function rowClasses(row: Row, part: PartRow | undefined): string {
+	const classes = ["bm-row"];
+	if (part) classes.push("bm-part-row");
+	if (part && row.cells.some(isTacetCell)) classes.push("bm-tacet");
+	if (row.ending) classes.push("bm-ending");
+	return classes.join(" ");
+}
+
+/** What a screen reader hears before a row's bars: its part, a repeat start, its ending. */
+function rowOpening(row: Row, part: PartRow | undefined, ending: string): string {
+	const opens = row.opens || typeof row.repeat === "number" || row.repeat === "open";
+	return sr(part ? escapeHtml(part.name) : "") + sr(opens ? "repeat start" : "") + sr(ending);
+}
+
+function rowHtml(row: Row, columns: number, settings: Settings, part?: PartRow): string {
+	const label = row.ending ? endingLabel(row.ending) : null;
+	const cells = rowCells(row, settings.numerals, label ? ` data-ending="${label.shown}"` : "");
 	const empty = `<span class="bm-empty" aria-hidden="true"></span>`.repeat(
 		Math.max(0, columns - row.cells.length),
 	);
-	const opens = row.opens || typeof row.repeat === "number" || row.repeat === "open";
-	const ending = label ? `<span class="bm-sr">${label.spoken}</span>` : "";
-	return `<div class="bm-row${label ? " bm-ending" : ""}">${opens ? `<span class="bm-sr">repeat start</span>` : ""}${ending}${number}${cells.join("")}${empty}<span class="bm-repeat">${rowRepeatHtml(row)}</span></div>`;
+	const said = rowOpening(row, part, label?.spoken ?? "");
+	return `<div class="${rowClasses(row, part)}">${said}${gutterHtml(row, settings, part)}${cells.join("")}${empty}<span class="bm-repeat">${rowRepeatHtml(row)}</span></div>`;
 }
 
 /** An ending's passes as printed, "1.", "1.–3.", "1., 3.", and spoken, "ending for passes 1 to 3". */
@@ -277,6 +337,11 @@ function cellHtml(
 	const change = cell.tempoChange ? ` data-tempo-change="${cell.tempoChange}"` : "";
 	const [slots, end] = slotsWithWords(cell, view);
 	return `<div class="bm-bar" part="bar"${cell.cut ? " data-cut" : ""}${change}${marks}>${spoken}<span class="bm-bar-body" aria-hidden="true">${meter}${slots.join("")}${cut}</span>${end}</div>`;
+}
+
+/** A bar where the part rests; the first of a row says so, in its body. */
+function tacetHtml(spoken: string, marks: string, text = ""): string {
+	return `<div class="bm-bar bm-tacet-bar" part="bar"${marks}>${spoken}<span class="bm-bar-body" aria-hidden="true">${text}</span></div>`;
 }
 
 /** A bar's slots, each under any words before it, and the words after the last slot. */
