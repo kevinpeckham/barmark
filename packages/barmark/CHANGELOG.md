@@ -9,6 +9,18 @@ Releases follow the process in [RELEASING.md](RELEASING.md).
 
 ## [Unreleased]
 
+### Fixed
+
+- In a system, the line that differs from the one most lines agree with
+  is the error, wherever it sits; before, an odd first line made every
+  other line of its system the error (grammar 7.4).
+- Parts that play one bar in different meters (a `%` copying a one-bar
+  meter) are reported on every line that plays it, naming the meters.
+- `printPart` leaves out a `part:` line set aside for sharing a label,
+  which would otherwise declare a part again in the extract.
+- If parts ever fell out of step, the first place they part is now an
+  error instead of a silent fallback.
+
 ## [0.14.0] - 2026-11-03
 
 ### Added
