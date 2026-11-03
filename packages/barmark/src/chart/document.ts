@@ -110,12 +110,30 @@ function readHeading(text: string, line: number, diagnostics: ChartDiagnostic[])
 /** A label and the bar line after it: `Gtr | G |` (grammar 7.4). */
 const LABELLED = /^([^\s|]+)(\s*)(\|.*)$/;
 
+const readsCleanly = (barLine: string) => {
+	const read = parseBarLine(barLine, 0);
+	return Boolean(read.bars) && read.diagnostics.length === 0;
+};
+
+/** `G | C | D |`: a bar line with its leading pipe left off. */
+function missingPipe(text: string, line: number): ChartDiagnostic | null {
+	const fixed = `| ${text}`;
+	if (!readsCleanly(fixed)) return null;
+	return {
+		line,
+		severity: "warning",
+		message: "a bar line starts with |",
+		token: text,
+		suggestion: fixed,
+	};
+}
+
 /** A warning when a word before a clean bar line is not a declared part (grammar 7.4). */
 function undeclaredLabel(text: string, line: number): ChartDiagnostic | null {
 	const m = LABELLED.exec(text);
 	if (!m?.[1] || !m[3]) return null;
-	const read = parseBarLine(m[3], 0);
-	if (!read.bars || read.diagnostics.length > 0) return null;
+	if (parseChord(m[1]).ok) return missingPipe(text, line);
+	if (!readsCleanly(m[3])) return null;
 	return {
 		line,
 		severity: "warning",

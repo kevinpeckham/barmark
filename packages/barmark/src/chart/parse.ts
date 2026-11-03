@@ -106,6 +106,10 @@ export function extractPart(text: string, label: string): ChartParse | null {
 	const lines = doc.parts.length > 1 ? projectPart(doc.lines, doc.parts, label) : doc.lines;
 	const played = expand(lines, part.label);
 	const kept = new Set(lines.map((l) => l.line));
+	// A stand-in may sit on another part's line; that part's problems are not this one's.
+	for (const l of doc.lines)
+		if ((l.kind === "bars" || l.kind === "invalid") && l.part && l.part !== part.label)
+			kept.delete(l.line);
 	return {
 		title: doc.title,
 		part,

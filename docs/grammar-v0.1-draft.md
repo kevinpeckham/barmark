@@ -883,7 +883,7 @@ keeps what cannot reduce:
 | warning | note set with octaves out of ascending order; repeated note without octaves |
 | warning | a natural tone in parentheses that the chord already has (`C7(7)`) |
 | warning | a text line that looks like an old-style label (`Chorus:`, `[Chorus]`), an old bare chord line, a bar line written with escaped pipes (`D \\| A \\|`), or a misnamed directive (`meter:`, `bpm:`), with a suggested fix |
-| warning | a bar line after a word that is not a declared part label (`Bass \| E \|`) |
+| warning | a bar line after a word that is not a declared part label (`Bass \| E \|`), or after a chord, its leading `\|` left off (`G \| C \|`, suggesting `\| G \| C \|`) |
 | warning | a chart with text but no bar line at all (reported once, at the first text line), so a chart in another format never reads as empty |
 
 Every message gives the line number and quotes the offending token.

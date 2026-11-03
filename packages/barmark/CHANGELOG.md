@@ -28,7 +28,9 @@ Releases follow the process in [RELEASING.md](RELEASING.md).
 - `printChart` prints a system in score order with its labels padded and
   its pipes lined up.
 - A bar line after a word that is not a declared part (`Bass | E | A |`)
-  is text with a warning, in any chart.
+  is text with a warning, in any chart; one whose first word is a chord
+  (`G | C | D |`) warns that a bar line starts with `|` and suggests
+  `| G | C | D |`.
 
 ### Changed
 

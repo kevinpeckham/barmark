@@ -25,12 +25,20 @@ function unread(first: Labelled | undefined): Line {
 	};
 }
 
-/** The system's structure with every bar a tacet bar, at the system's first line. */
-function standIn(system: Labelled[]): Line {
-	const ref = system.find((l): l is BarsLine => l.kind === "bars" && !l.dropped);
-	if (!ref) return unread(system[0]);
+/** The line a system's structure is read from: its first line that reads and agrees. */
+const referenceOf = (system: Labelled[]) =>
+	system.find((l): l is BarsLine => l.kind === "bars" && !l.dropped);
+
+/**
+ * The system's structure with every bar a tacet bar, numbered `at`: the
+ * part's own line when it has one that errs, so its error stays its own,
+ * or else the reference line, which has none.
+ */
+function standIn(system: Labelled[], at: Labelled): Line {
+	const ref = referenceOf(system);
+	if (!ref) return unread(at);
 	const { part: _p, system: _s, dropped: _d, ...rest } = ref;
-	return { ...rest, line: system[0]?.line ?? ref.line, cells: ref.cells.map(standInCell) };
+	return { ...rest, line: at.line, cells: ref.cells.map(standInCell) };
 }
 
 /** A part's own line, as a single-part chart writes it. */
@@ -59,11 +67,15 @@ function systemsOf(lines: Line[]): Map<number, Labelled[]> {
 /** What one line becomes in the part's chart: itself, its unlabelled self, a stand-in, or nothing. */
 function projectLine(l: Line, key: string, systems: Map<number, Labelled[]>): Line | null {
 	if (l.kind === "part") return l.label?.toLowerCase() === key ? l : null;
-	if (!inSystem(l)) return l;
-	const system = systems.get(l.system) ?? [];
-	const own = system.find((m) => plays(m, key));
-	if (own === l) return unlabelled(l);
-	return !own && system[0] === l ? standIn(system) : null;
+	return inSystem(l) ? projectSystemLine(l, key, systems.get(l.system) ?? []) : l;
+}
+
+/** A system's line in one part's chart: the part's own line, a stand-in where it rests, or nothing. */
+function projectSystemLine(l: Labelled, key: string, system: Labelled[]): Line | null {
+	const own = system.find((m) => m.part?.toLowerCase() === key);
+	if (own === l && plays(l, key)) return unlabelled(l);
+	const at = own ?? referenceOf(system) ?? system[0];
+	return at === l ? standIn(system, l) : null;
 }
 
 /**
