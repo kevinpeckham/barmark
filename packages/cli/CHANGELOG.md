@@ -6,14 +6,20 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-11-04
+
 ### Added
 
-- `barmark export --musicxml <file>`: the chart as MusicXML 4.0, through
-  `@barmark/musicxml` (pinned exactly, like the other libraries), with
-  `--out` and `--part <label>`. A chart with errors is not exported; a
-  chart with no title takes its file name, less
-  the extension.
-- `--version` names `@barmark/musicxml` too.
+- **`barmark export --musicxml <file>`:** the chart as MusicXML 4.0,
+  through `@barmark/musicxml`, with `--out` and `--part <label>`. A chart
+  with errors is not exported; a chart with no title takes its file name,
+  less the extension.
+- **`--version`** names `@barmark/musicxml` too.
+
+### Changed
+
+- **Uses** barmark 0.14.1, @barmark/render 0.12.0 and @barmark/musicxml
+  0.1.0.
 
 ## [0.1.8] - 2026-11-03
 
@@ -94,7 +100,8 @@ The first release of the `barmark` command. Uses `barmark` 0.8.0 and
 - **The `barmark` command:** `check`, `format`, `render` and `transpose`
   for `.chart.md` files, on npm and as standalone binaries.
 
-[Unreleased]: https://github.com/kevinpeckham/barmark/compare/cli-v0.1.8...HEAD
+[Unreleased]: https://github.com/kevinpeckham/barmark/compare/cli-v0.2.0...HEAD
+[0.2.0]: https://github.com/kevinpeckham/barmark/compare/cli-v0.1.8...cli-v0.2.0
 [0.1.8]: https://github.com/kevinpeckham/barmark/compare/cli-v0.1.7...cli-v0.1.8
 [0.1.7]: https://github.com/kevinpeckham/barmark/compare/cli-v0.1.6...cli-v0.1.7
 [0.1.6]: https://github.com/kevinpeckham/barmark/compare/cli-v0.1.5...cli-v0.1.6
