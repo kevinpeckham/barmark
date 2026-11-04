@@ -6,6 +6,14 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-11-04
+
+### Changed
+
+- **Uses** barmark 0.14.1, @barmark/render 0.12.0 and @barmark/musicxml
+  0.1.1: `export --musicxml` writes slashes one per beat, and prints a
+  repeat count above 2 as "×N", so both read correctly in Dorico.
+
 ## [0.2.0] - 2026-11-04
 
 ### Added
@@ -100,7 +108,8 @@ The first release of the `barmark` command. Uses `barmark` 0.8.0 and
 - **The `barmark` command:** `check`, `format`, `render` and `transpose`
   for `.chart.md` files, on npm and as standalone binaries.
 
-[Unreleased]: https://github.com/kevinpeckham/barmark/compare/cli-v0.2.0...HEAD
+[Unreleased]: https://github.com/kevinpeckham/barmark/compare/cli-v0.2.1...HEAD
+[0.2.1]: https://github.com/kevinpeckham/barmark/compare/cli-v0.2.0...cli-v0.2.1
 [0.2.0]: https://github.com/kevinpeckham/barmark/compare/cli-v0.1.8...cli-v0.2.0
 [0.1.8]: https://github.com/kevinpeckham/barmark/compare/cli-v0.1.7...cli-v0.1.8
 [0.1.7]: https://github.com/kevinpeckham/barmark/compare/cli-v0.1.6...cli-v0.1.7
