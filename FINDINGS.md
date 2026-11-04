@@ -507,3 +507,13 @@ writes one slash note per beat (`beatPieces` in
 `packages/musicxml/src/rhythm.ts`), which looks right with or without
 slash style; the measure-style stays for programs that use it.
 
+### Dorico neither reads nor writes a repeat's play count in MusicXML (2026-11-04, musicxml)
+
+Peaceful Dreams' outro `x5` imported into Dorico as a plain repeat: the
+end barline's play count stayed at 2 and nothing printed it, though the
+export wrote `<repeat direction="backward" times="5"/>`. Setting the play
+count to 5 in Dorico 6.2 and exporting wrote a bare `<repeat
+direction="backward"/>`, so the count has no MusicXML route into Dorico
+at all. The export now also prints a count above 2 as words, "×N"
+(`repeatWords` in `packages/musicxml/src/measure-xml.ts`).
+

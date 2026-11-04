@@ -15,6 +15,9 @@ package uses [semantic versioning](https://semver.org/).
   correctly whether or not a program keeps slash style on. Pushes still
   tie across the bar line, and a slot off the beat grid (a third of a
   4/4 bar) keeps its own value.
+- **A repeat played 3 or more times also prints "×N"** above its closing
+  bar line, as barmark.dev shows it. Dorico ignores `times` on import
+  (and doesn't write it on export), so the count was lost there.
 
 ## [0.1.0] - 2026-11-04
 
