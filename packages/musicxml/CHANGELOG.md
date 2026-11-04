@@ -6,6 +6,12 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+
+- **Slash style stops in a bar with a rest:** a part's tacet bars and a
+  bar such as `| G -- -- -- |`. Dorico drew beat slashes over the rest
+  and hid it, so a tacet piano read as playing.
+
 ## [0.1.1] - 2026-11-04
 
 ### Fixed
