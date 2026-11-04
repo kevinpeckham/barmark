@@ -56,7 +56,7 @@ export function nearCredit(text: string, line: number): ChartDiagnostic | null {
 		severity: "warning",
 		message: `not a credit; did you mean ${role}:?`,
 		token: text,
-		suggestion: `${role}: ${m[2]}`,
+		...(m[2] && { suggestion: `${role}: ${m[2]}` }),
 	};
 }
 

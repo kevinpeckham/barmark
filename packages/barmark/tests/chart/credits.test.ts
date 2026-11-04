@@ -116,3 +116,20 @@ describe("printing credits", () => {
 		expect(out).toContain("| C |");
 	});
 });
+
+describe("credits and the music", () => {
+	test("a credit between endings plays as a text line does", () => {
+		const chart = (between: string) => `|: G | C |\n|1 D | D :|\n${between}\n|2 E | E |`;
+		const p = parseChart(chart("copyright: x"));
+		expect(p.diagnostics).toEqual([]);
+		expect(p.bars.map((b) => b.written)).toEqual(
+			parseChart(chart("a note")).bars.map((b) => b.written),
+		);
+		expect(p.bars).toHaveLength(8);
+	});
+	test("a bare ©: warns with no suggestion that would be an error", () => {
+		const [d] = parseChart("©:\n| G |").diagnostics;
+		expect(d?.message).toBe("not a credit; did you mean copyright:?");
+		expect(d?.suggestion).toBeUndefined();
+	});
+});

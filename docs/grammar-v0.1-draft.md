@@ -471,7 +471,7 @@ This plays `C F G C G G7`, then `C F G C G C`.
   range `|1-3`, or a list `|1,3`. The ending is that one bar line. A long
   ending is a long line.
 - Endings follow the bars of a `|: … :|` repeat, one after another; only
-  text lines may come between them. Every ending but the last closes with
+  text and credit lines may come between them. Every ending but the last closes with
   `:|`, which goes back to `|:`. The last does not: it plays and moves on.
 - The repeat plays as many passes as its highest ending number. Each pass
   plays the bars from `|:` to the first ending, then that pass's ending:

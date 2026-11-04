@@ -122,7 +122,8 @@ export function pairRepeats(lines: Line[], error: Report): Item[] {
 	};
 	for (const l of lines) {
 		if (l.kind === "bars" && l.ending) takeEnding(st, l, error);
-		else if (st.endings && l.kind === "text") st.endings.between.push({ line: l, repeat: null });
+		else if (st.endings && (l.kind === "text" || l.kind === "credit"))
+			st.endings.between.push({ line: l, repeat: null });
 		else {
 			finish();
 			takeLine(st, l, error);

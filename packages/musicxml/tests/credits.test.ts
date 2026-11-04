@@ -27,3 +27,9 @@ describe("credits", () => {
 		expect(identification(xml)).toStartWith('<creator type="composer">A</creator>');
 	});
 });
+
+test("a credit between endings keeps their passes", () => {
+	const chart = (between: string) => `|: G |\n|1 D :|\n${between}\n|2 E |`;
+	const repeats = (xml: string) => xml.match(/times="\d+"|<ending [^>]*>|<repeat [^>]*>/g);
+	expect(repeats(xmlOf(chart("composer: A")))).toEqual(repeats(xmlOf(chart("a note"))));
+});
