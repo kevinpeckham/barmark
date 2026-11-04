@@ -6,6 +6,16 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+
+- **Slashes are written one per beat** (dotted quarters in 6/8, 9/8 and
+  12/8), not one note per slot. Dorico ends a slash region after the
+  last measure that holds a direction or attributes, and showed every
+  later bar as a whole-note slash (a hollow diamond). Beat slashes read
+  correctly whether or not a program keeps slash style on. Pushes still
+  tie across the bar line, and a slot off the beat grid (a third of a
+  4/4 bar) keeps its own value.
+
 ## [0.1.0] - 2026-11-04
 
 ### Added

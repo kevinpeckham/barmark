@@ -4,7 +4,7 @@ import { applyPushes, eventsOf } from "./events.js";
 import { measureXml } from "./measure-xml.js";
 import { writtenMeasures } from "./measures.js";
 import { clefFor } from "./notes.js";
-import { barLength, divisionsFor } from "./rhythm.js";
+import { barLength, beatLength, divisionsFor } from "./rhythm.js";
 import { VERSION } from "./version.js";
 import { el, text } from "./xml.js";
 
@@ -48,7 +48,11 @@ function partXml(source: PartSource, i: number): string {
 	const bars = applyPushes(measures.map(eventsOf));
 	const clef = clefFor(measures);
 	const divisions = divisionsFor(
-		bars.flatMap((b) => [barLength(b.measure.meter), ...b.events.map((e) => e.length)]),
+		bars.flatMap((b) => [
+			barLength(b.measure.meter),
+			beatLength(b.measure.meter),
+			...b.events.map((e) => e.length),
+		]),
 	);
 	const xml = bars.map((bar, index) =>
 		measureXml(bar, {
