@@ -1,7 +1,4 @@
 # Peaceful Dreams
-composer: Kevin Peckham
-lyricist: Kevin Peckham
-copyright: © Kevin Peckham, all rights reserved.
 
 key: D, time: 4/4, tempo: 145
 

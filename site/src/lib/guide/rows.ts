@@ -798,6 +798,27 @@ export const ROWS: GuideRow[] = [
 		expect: { bars: 2 },
 	},
 	{
+		id: "credits",
+		syntax: "composer: Kevin Peckham",
+		category: "directives",
+		meaning:
+			"Credit lines name the composer, lyricist, arranger and copyright; each is a line of its own, anywhere in the chart, and may be repeated.",
+		terms: [
+			"credits",
+			"composer",
+			"lyricist",
+			"arranger",
+			"copyright",
+			"songwriter",
+			"words and music",
+			"author",
+		],
+		example:
+			"# Peaceful Dreams\ncomposer: Kevin Peckham\nlyricist: Kevin Peckham\n| D | A |\ncopyright: © Kevin Peckham",
+		ref: "§7.5",
+		expect: { bars: 2 },
+	},
+	{
 		id: "key",
 		syntax: "key:",
 		category: "directives",
