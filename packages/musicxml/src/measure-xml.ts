@@ -148,12 +148,15 @@ function startXml(m: Measure, ctx: MeasureContext): string {
 	].join("");
 }
 
-/** After the notes: an open repeat's words, To Coda, Fine and the jump. */
+/** A repeat's words: an open one's, or a count above 2, which Dorico won't read from `times`. */
+function repeatWords(end: Marks["repeatEnd"]): string {
+	if (end === "open") return direction(text("words", "repeat as needed"));
+	return typeof end === "number" && end > 2 ? direction(text("words", `×${end}`)) : "";
+}
+
+/** After the notes: a repeat's words, To Coda, Fine and the jump. */
 function endXml(marks: Marks): string {
-	return [
-		marks.repeatEnd === "open" ? direction(text("words", "repeat as needed")) : "",
-		...marks.end.map(jumpXml),
-	].join("");
+	return [repeatWords(marks.repeatEnd), ...marks.end.map(jumpXml)].join("");
 }
 
 const endingXml = (marks: Marks, type: string | null | undefined) =>

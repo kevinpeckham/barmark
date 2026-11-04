@@ -26,6 +26,14 @@ describe("play order", () => {
 		expect(measures(xml)[1]).toMatch(/<repeat direction="backward"\/>/);
 		expect(xml).toContain("<words>repeat as needed</words>");
 	});
+	test("a count above 2 is also printed as ×N, since Dorico ignores times on import", () => {
+		const [, second] = measures(plays("|: G | C :| x5\n| D |"));
+		expect(second).toContain("<words>×5</words>");
+		const [, , last] = measures(plays("## Chorus x3\n| G | C | D |\n## Out\n| G |"));
+		expect(last).toContain("<words>×3</words>");
+		expect(xmlOf("|: G | C :| x2\n| D |")).not.toContain("×");
+		expect(xmlOf("|: G | C :|\n| D |")).not.toContain("×");
+	});
 	test("endings", () => {
 		const xml = plays("|: G | C |\n|1 D :|\n|2 G |");
 		const ms = measures(xml);
