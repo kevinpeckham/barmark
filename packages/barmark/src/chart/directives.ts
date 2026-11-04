@@ -1,6 +1,9 @@
 import type { ChartDiagnostic, Directives, Feel, Key, Meter, Mode, TempoChange } from "./types.js";
 
 export const DIRECTIVE_NAMES = ["key", "time", "tempo", "feel"] as const;
+
+/** A directive written after a comma, in a line that runs to its end (`part:`, credits). */
+export const DIRECTIVE_AFTER = /,\s*(key|time|tempo|feel)\s*:/i;
 type Name = (typeof DIRECTIVE_NAMES)[number];
 
 const MODES: Mode[] = [
