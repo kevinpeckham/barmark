@@ -1,8 +1,8 @@
 # Pedal, voices, dotted figures and clefs — design
 
-Status: proposal for Kevin's decision (2026-11-04). A grammar change, so
-every rule here is a recommendation until Kevin decides; the questions
-are gathered at the end. It builds on the part lines and instruments
+Status: approved (Kevin, 2026-11-04: "proceed with grammar enhancements
+as proposed in 140"). A grammar change; the decisions are gathered at the
+end. It builds on the part lines and instruments
 design (#131, approved), whose `part:` line, lines and staves it uses,
 and the two are planned and built together.
 
@@ -144,16 +144,11 @@ With #131: a grammar minor for `barmark`, minors for `@barmark/render`
 and `@barmark/musicxml`, the CLI, the guide (2.2, 2.9, 7.3, 7.6) and
 songs.
 
-## Questions for Kevin (with recommendations)
+## Decisions (Kevin, 2026-11-04)
 
-1. **Pedal marks `+X` and `*X`** on the slot (recommended: they read
-   like the printed "Ped." and "✱", and mark changes where they happen),
-   or a pedal line of its own (`Pno.Ped | + + | * |`), or a directive
-   (`pedal: chords`, change with every chord).
-2. **Two rhythms on one staff through #131's lines** (recommended), with
-   no new syntax.
-3. **A dot in a two-member group** (`C._D`) for dotted figures
-   (recommended), or no shorthand (keep `C_/_/_D`).
-4. **`clef:` on the `part:` line**, fixed for the part (recommended), or
-   a converter option only (`barmark export --clef Bs=bass`), leaving
-   the grammar alone.
+Kevin took every recommendation:
+
+1. **Pedal marks `+X` and `*X`** on the slot.
+2. **Two rhythms on one staff through #131's lines**, with no new syntax.
+3. **A dot in a two-member group** (`C._D`, `C_D.`) for dotted figures.
+4. **`clef:` on the `part:` line**, fixed for the part.
