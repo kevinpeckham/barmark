@@ -1,5 +1,5 @@
 /** One measure as MusicXML: attributes when they change, then its notes. */
-import type { Key, Meter } from "barmark";
+import type { Key, Meter, WrittenInterval } from "barmark";
 import { type Beam, beamsOf } from "./beams.js";
 import type { Clef } from "./clefs.js";
 import { direction, feelXml, jumpXml, tempoXml, textXml, wordsXml } from "./directions.js";
@@ -19,6 +19,7 @@ import {
 	plus,
 } from "./rhythm.js";
 import { splitStaves } from "./staves.js";
+import { transposeXml, writtenKey } from "./written.js";
 import { el, text } from "./xml.js";
 
 export type MeasureContext = {
@@ -28,8 +29,8 @@ export type MeasureContext = {
 	next: Measure | null;
 	/** This bar's clef, and the bar before's (null for the first). */
 	clef: { now: Clef; before: Clef | null };
-	/** Octaves the part is written above where it sounds (a bass's 1). */
-	octave: number;
+	/** How far the part is written above where it sounds (a bass's octave; barmark's grammar 7.3). */
+	written: WrittenInterval;
 	/** Whether this bar shows its rhythm (`rhythmic`): its slashes stemmed, in the meter's values. */
 	rhythmic: boolean;
 	/** Whether this bar shows slashes, and the bar before it (null for the first). */
@@ -64,9 +65,12 @@ function fifthsOf(key: Key): number {
 const sameKey = (a: Key | null, b: Key | null) => a?.tonic === b?.tonic && a?.mode === b?.mode;
 
 /** The key, when it is the first or a change. */
-function keyXml(m: Measure, prev: Measure | null): string {
+function keyXml(m: Measure, prev: Measure | null, written: WrittenInterval): string {
 	if (!m.key || (prev && sameKey(m.key, prev.key))) return "";
-	return el("key", {}, [text("fifths", fifthsOf(m.key)), text("mode", m.key.mode)]);
+	return el("key", {}, [
+		text("fifths", writtenKey(fifthsOf(m.key), written)),
+		text("mode", m.key.mode),
+	]);
 }
 
 /** The time signature, when it is the first or a change. */
@@ -75,7 +79,7 @@ function timeXml(m: Measure, prev: Measure | null): string {
 	return el("time", {}, [text("beats", m.meter.n), text("beat-type", m.meter.d)]);
 }
 
-const CLEF_LINE = { G: 2, F: 4 };
+const CLEF_LINE = { G: 2, F: 4, C: 3 };
 
 /** Slash style on from the first slashed measure, off for a measure of notes, and on again after. */
 function slashStyleXml({ now: on, before }: MeasureContext["slashed"], staves: 1 | 2): string {
@@ -90,23 +94,13 @@ function slashStyleXml({ now: on, before }: MeasureContext["slashed"], staves: 1
 /** The clef, on the first measure and wherever it changes. */
 function clefXml({ now, before }: MeasureContext["clef"], staff?: number): string {
 	if (now === before) return "";
-	const sign = now === "F" ? "F" : "G";
+	const sign = now === "G8vb" ? "G" : now;
 	return el("clef", staff ? { number: staff } : {}, [
 		text("sign", sign),
 		text("line", CLEF_LINE[sign]),
 		now === "G8vb" ? text("clef-octave-change", -1) : "",
 	]);
 }
-
-/** What a part written above its sound adds back, on its first measure. */
-const transposeXml = (octave: number) =>
-	octave === 0
-		? ""
-		: el("transpose", {}, [
-				text("diatonic", 0),
-				text("chromatic", 0),
-				text("octave-change", -octave),
-			]);
 
 /** A keyboard's two staves and their clefs on its first measure; one staff's clef where it changes. */
 function clefsXml(ctx: MeasureContext): string {
@@ -120,13 +114,13 @@ function attributesXml(m: Measure, ctx: MeasureContext): string {
 	const prev = ctx.previous;
 	const slash = slashStyleXml(ctx.slashed, ctx.staves);
 	const head = prev
-		? [keyXml(m, prev), timeXml(m, prev), clefsXml(ctx), slash]
+		? [keyXml(m, prev, ctx.written), timeXml(m, prev), clefsXml(ctx), slash]
 		: [
 				text("divisions", ctx.divisions),
-				keyXml(m, null),
+				keyXml(m, null, ctx.written),
 				timeXml(m, null),
 				clefsXml(ctx),
-				transposeXml(ctx.octave),
+				transposeXml(ctx.written),
 				slash,
 			];
 	return head.some(Boolean) ? el("attributes", {}, head) : "";
@@ -165,7 +159,7 @@ type BarStyle = {
 	divisions: number;
 	stem: Stem;
 	clef: Clef;
-	octave: number;
+	written: WrittenInterval;
 	voice: number;
 	staff: number | null;
 };
@@ -183,7 +177,7 @@ function eventXml(w: EventValues, style: BarStyle, beams: () => Beam[]): string 
 			...(i === 0 && e.articulation ? { articulation: e.articulation } : {}),
 			stem: style.stem,
 			clef: style.clef,
-			octave: style.octave,
+			written: style.written,
 			voice: style.voice,
 			staff: style.staff,
 			beams: beams(),
@@ -192,7 +186,7 @@ function eventXml(w: EventValues, style: BarStyle, beams: () => Beam[]): string 
 	return [
 		...e.words.map(wordsXml),
 		e.slot.kind === "unknown" ? wordsXml("?") : "",
-		e.harmony ? slotHarmonyXml(e.slot) : "",
+		e.harmony ? slotHarmonyXml(e.slot, style.written) : "",
 		...notes,
 	].join("");
 }
@@ -219,7 +213,7 @@ function voiceXml(events: SoundEvent[], meter: Meter, ctx: MeasureContext, staff
 	);
 	let k = 0;
 	const next = () => beams[k++] ?? [];
-	const style = { divisions: ctx.divisions, stem, octave: ctx.octave, ...staff };
+	const style = { divisions: ctx.divisions, stem, written: ctx.written, ...staff };
 	return written.map((w) => eventXml(w, style, next)).join("");
 }
 

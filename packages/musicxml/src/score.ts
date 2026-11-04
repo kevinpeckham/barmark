@@ -65,7 +65,7 @@ function scorePart(source: PartSource, i: number): string {
 
 /** A matched instrument's playback sound: its name and General MIDI program. */
 function soundXml(instrument: Instrument | null, id: string): string {
-	if (!instrument) return "";
+	if (!instrument?.program) return "";
 	return [
 		el("score-instrument", { id }, text("instrument-name", instrument.sound)),
 		el("midi-instrument", { id }, text("midi-program", instrument.program)),
@@ -105,7 +105,7 @@ function partXml(source: PartSource, i: number): string {
 			slashed: around(slashedBars, index, true),
 			clef: around(clefs, index, "G"),
 			rhythmic: rhythmicBars[index] ?? false,
-			octave: instrument?.octaveUp ? 1 : 0,
+			written: instrument?.written ?? { diatonic: 0, chromatic: 0 },
 			staves: instrument?.staves ?? 1,
 		}),
 	);

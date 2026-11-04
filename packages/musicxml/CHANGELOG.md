@@ -6,6 +6,18 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- **Instruments from the part line** (barmark's grammar 7.3): a part's
+  `instrument:` chooses its clef, staves and playback sound over the
+  guess from its name. A transposing instrument is written at its pitch:
+  a trumpet in Bb a major second up, an alto sax a major sixth, a tenor
+  sax a ninth, with the key signature, the notes and the chord symbols'
+  roots and basses all written, and a `<transpose>` taking them back. The
+  bass's octave transposition is unchanged.
+- **`clef:`** fixes a part's clef for the whole part, one staff, with no
+  clef changes; `alto` writes a C clef on the third line.
+
 ## [0.3.0] - 2026-11-04
 
 ### Added

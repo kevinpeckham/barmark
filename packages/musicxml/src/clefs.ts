@@ -7,8 +7,8 @@
 import type { MeasureEvents } from "./events.js";
 import { belowMiddleC, type Pitch, soundOf } from "./notes.js";
 
-/** Treble, bass, or treble an octave down (a guitar's). */
-export type Clef = "G" | "F" | "G8vb";
+/** Treble, bass, treble an octave down (a guitar's), or alto (barmark's grammar 7.3). */
+export type Clef = "G" | "F" | "G8vb" | "C";
 type ByBars = "G" | "F";
 
 const STEPS = "CDEFGAB";

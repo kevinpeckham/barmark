@@ -1,7 +1,10 @@
 /** Chord symbols as MusicXML <harmony>: a kind, plus degrees that spell the exact chord. */
-import type { ChordRecord, Interval, SimpleSlot } from "barmark";
+import type { ChordRecord, Interval, SimpleSlot, WrittenInterval } from "barmark";
 import { KINDS } from "./kinds.js";
+import { writtenName } from "./written.js";
 import { el, text } from "./xml.js";
+
+const CONCERT: WrittenInterval = { diatonic: 0, chromatic: 0 };
 
 export type Degree = { value: number; alter: number; type: "add" | "alter" | "subtract" };
 
@@ -62,8 +65,8 @@ function spell(name: string): { step: string; alter: number } {
 	return { step: name[0] ?? "C", alter };
 }
 
-function pitchXml(prefix: "root" | "bass", name: string): string {
-	const { step, alter } = spell(name);
+function pitchXml(prefix: "root" | "bass", name: string, by: WrittenInterval): string {
+	const { step, alter } = spell(writtenName(name, by));
 	return el(prefix, {}, [
 		text(`${prefix}-step`, step),
 		alter ? text(`${prefix}-alter`, alter) : "",
@@ -85,14 +88,14 @@ const degreeXml = (d: Degree) =>
 		text("degree-type", d.type),
 	]);
 
-/** A chord symbol's <harmony>. */
-export function harmonyXml(record: ChordRecord): string {
+/** A chord symbol's <harmony>, its root and bass written `by` above concert pitch. */
+export function harmonyXml(record: ChordRecord, by: WrittenInterval = CONCERT): string {
 	const { kind, degrees } = kindOf(record.intervals);
 	const bass = record.parts?.bass;
 	return el("harmony", {}, [
-		pitchXml("root", record.root ?? "C"),
+		pitchXml("root", record.root ?? "C", by),
 		text("kind", kind, { text: qualityText(record) }),
-		bass ? pitchXml("bass", bass) : "",
+		bass ? pitchXml("bass", bass, by) : "",
 		...degrees.map(degreeXml),
 	]);
 }
@@ -105,7 +108,7 @@ export const noChordXml = () =>
 	]);
 
 /** The chord symbol a slot names, if it names one: a chord, or N.C. */
-export function slotHarmonyXml(slot: SimpleSlot): string {
+export function slotHarmonyXml(slot: SimpleSlot, by: WrittenInterval = CONCERT): string {
 	if (slot.kind === "nc") return noChordXml();
-	return slot.kind === "chord" && slot.chord.kind === "chord" ? harmonyXml(slot.chord) : "";
+	return slot.kind === "chord" && slot.chord.kind === "chord" ? harmonyXml(slot.chord, by) : "";
 }
