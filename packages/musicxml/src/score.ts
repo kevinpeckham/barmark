@@ -7,10 +7,10 @@ import {
 	type Part,
 	parseChart,
 } from "barmark";
-import { applyPushes, eventsOf } from "./events.js";
+import { applyHolds, applyPushes, eventsOf } from "./events.js";
 import { measureXml } from "./measure-xml.js";
 import { writtenMeasures } from "./measures.js";
-import { clefFor } from "./notes.js";
+import { clefFor, slashed } from "./notes.js";
 import { barLength, beatLength, divisionsFor } from "./rhythm.js";
 import { VERSION } from "./version.js";
 import { el, text } from "./xml.js";
@@ -62,7 +62,8 @@ function scorePart(source: PartSource, i: number): string {
 
 function partXml(source: PartSource, i: number): string {
 	const measures = writtenMeasures(source.parse);
-	const bars = applyPushes(measures.map(eventsOf));
+	const bars = applyHolds(applyPushes(measures.map(eventsOf)));
+	const slashedBars = bars.map(slashed);
 	const clef = clefFor(measures);
 	const divisions = divisionsFor(
 		bars.flatMap((b) => [
@@ -77,6 +78,10 @@ function partXml(source: PartSource, i: number): string {
 			index,
 			previous: measures[index - 1] ?? null,
 			next: measures[index + 1] ?? null,
+			slashed: {
+				now: slashedBars[index] ?? true,
+				before: index > 0 ? (slashedBars[index - 1] ?? true) : null,
+			},
 			clef,
 		}),
 	);

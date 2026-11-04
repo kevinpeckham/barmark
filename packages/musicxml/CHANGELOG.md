@@ -15,6 +15,16 @@ package uses [semantic versioning](https://semver.org/).
   Dorico ignores it on import, and a program that sets credits from
   `<creator>` would print them twice.
 
+### Fixed
+
+- **`/` holds what was sounding** (grammar 2.3), not always a slash. After
+  a note set or voicing it lengthens those notes in the same bar
+  (`| {G2} / / {G2} |` is a dotted half and a quarter) and
+  ties them over a bar line, so a pedal note `| {D2} | / | / |` sounds
+  through; after `--` it stays a rest. Only a chord's hold is a slash.
+  Before, a held note set exported as chordless slashes and played
+  nothing.
+
 ## [0.1.2] - 2026-11-04
 
 ### Fixed

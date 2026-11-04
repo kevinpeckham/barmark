@@ -13,15 +13,14 @@ describe("slot rhythm", () => {
 			expect(n).toContain("<step>B</step><octave>4</octave>");
 		}
 	});
-	test("a hold is a slash note; a silence is a rest", () => {
+	test("a chord's hold is a slash note; a silence and its hold are one rest", () => {
 		const ns = notes(measures(xmlOf("| C / -- / |"))[0] ?? "");
 		expect(ns.map((n) => (n.includes("<rest") ? "rest" : "slash"))).toEqual([
 			"slash",
 			"slash",
 			"rest",
-			"slash",
 		]);
-		expect(ns.every((n) => n.includes("<type>quarter</type>"))).toBe(true);
+		expect(ns.map((n) => /<type>(\w+)/.exec(n)?.[1])).toEqual(["quarter", "quarter", "half"]);
 	});
 	test("a group whose share isn't a power of two is a tuplet", () => {
 		const ns = notes(measures(xmlOf("| C D_E_F |"))[0] ?? "");

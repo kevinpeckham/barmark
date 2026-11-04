@@ -1,5 +1,6 @@
 /** Notes as MusicXML <note>s: slash notes, rests, and the real notes of note sets and voicings. */
 import type { Articulation, ChordRecord, Slot } from "barmark";
+import type { MeasureEvents, SoundEvent } from "./events.js";
 import type { Measure } from "./measures.js";
 import type { NoteValue } from "./rhythm.js";
 import { el, text } from "./xml.js";
@@ -39,12 +40,20 @@ export function noteSetOf(slot: Slot): ChordRecord | null {
 
 const allSlots = (m: Measure) => m.slots.flatMap((s) => (s.kind === "group" ? s.members : [s]));
 
+/** What an event sounds: a rest, a slash, or real notes; a hold sounds what it holds. */
+export function soundOf(e: SoundEvent): Sound {
+	const slot = e.held ?? e.slot;
+	if (slot.kind === "silence") return { kind: "rest" };
+	const set = noteSetOf(slot);
+	return set ? { kind: "notes", pitches: pitchesOf(set) } : { kind: "slash" };
+}
+
 /**
- * A measure shows slashes unless it writes real notes or a rest: a program
+ * A bar shows slashes unless it writes real notes or a rest: a program
  * draws slash style over a rest and hides it (Dorico does).
  */
-export const slashed = (m: Measure) =>
-	!m.tacet && !allSlots(m).some((s) => noteSetOf(s) || s.kind === "silence");
+export const slashed = (bar: MeasureEvents) =>
+	!bar.measure.tacet && bar.events.every((e) => soundOf(e).kind === "slash");
 
 /** A bass clef when most of a part's written notes sit below middle C. */
 export function clefFor(measures: Measure[]): "G" | "F" {

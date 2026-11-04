@@ -6,7 +6,8 @@
  */
 import type { Articulation, Push, SimpleSlot, Slot } from "barmark";
 import type { Measure } from "./measures.js";
-import { barLength, type Frac, frac, memberLength, minus, slotLengths } from "./rhythm.js";
+import { noteSetOf } from "./notes.js";
+import { barLength, type Frac, frac, memberLength, minus, plus, slotLengths } from "./rhythm.js";
 
 export type SoundEvent = {
 	slot: SimpleSlot;
@@ -17,6 +18,8 @@ export type SoundEvent = {
 	harmony: boolean;
 	articulation?: Articulation;
 	tie: { start: boolean; stop: boolean };
+	/** What a hold sounds (grammar 2.3): the note set or silence it continues; absent when it holds a chord. */
+	held?: SimpleSlot;
 };
 
 export type MeasureEvents = { measure: Measure; events: SoundEvent[]; after: string[] };
@@ -141,4 +144,55 @@ function pushAt(out: MeasureEvents[], giver: Place, at: Place): Pushed {
 	const pushed = crossing ? null : push(out, { bar: giver.bar, index }, at, PUSH[by]);
 	if (!pushed) events[at.index] = marked(events[at.index] as SoundEvent);
 	return pushed;
+}
+
+/** The slot an event sounds: a hold sounds what it holds. */
+const sounding = (e: SoundEvent): SimpleSlot => e.held ?? e.slot;
+
+/** What a hold continues, if not a chord: a note set (tied on) or silence. */
+function heldBy(before: SoundEvent): SimpleSlot | undefined {
+	const slot = sounding(before);
+	if (slot.kind === "silence") return slot;
+	const set = noteSetOf(slot);
+	return set ? { kind: "chord", chord: set } : undefined;
+}
+
+/**
+ * A hold after `before` sounds what it continues. In the same bar it
+ * lengthens `before` (unless words are written before it) and is dropped;
+ * across a bar line a note set ties over.
+ */
+function hold(before: SoundEvent, e: SoundEvent, sameBar: boolean): "merged" | null {
+	const held = e.slot.kind === "hold" ? heldBy(before) : undefined;
+	if (!held) return null;
+	if (sameBar && e.words.length === 0) {
+		before.length = plus(before.length, e.length);
+		return "merged";
+	}
+	e.held = held;
+	if (held.kind === "chord") {
+		before.tie = { ...before.tie, start: true };
+		e.tie = { ...e.tie, stop: true };
+	}
+	return null;
+}
+
+/**
+ * Each hold sounds whatever was sounding before it (grammar 2.3), in
+ * written order across bar lines: a note set's notes sound on, a silence
+ * stays a rest, and a chord's hold stays a slash. A tacet bar ends it.
+ */
+export function applyHolds(bars: MeasureEvents[]): MeasureEvents[] {
+	let before: SoundEvent | null = null;
+	for (const bar of bars) {
+		if (bar.events.length === 0) before = null;
+		const kept: SoundEvent[] = [];
+		for (const e of bar.events) {
+			if (before && hold(before, e, kept.includes(before)) === "merged") continue;
+			kept.push(e);
+			before = e;
+		}
+		bar.events = kept;
+	}
+	return bars;
 }
