@@ -9,6 +9,17 @@ not here.
 
 ## Testing
 
+### A site bump updates the site's own version test (2026-11-04, release chain)
+
+Symptom: the credits release chain stopped after `@barmark/cli` 0.3.0
+with the site bump applied but never committed; the script's exit code
+was 0. Cause: `site/tests/build.test.ts` pins the exact `barmark` and
+`@barmark/render` versions the site installs, the bump didn't change it,
+and `set -e` killed the script inside a pipeline whose last command
+(`grep`) succeeded. Fix: a site bump edits that test with
+`package.json`; a chain script runs with `set -o pipefail` or prints a
+last line to look for.
+
 ### A round-trip yardstick must not use the function it is checking (2026-10-31, printer)
 
 The printer's round-trip test compared bars before and after printing as
