@@ -4,7 +4,7 @@ import { direction, feelXml, jumpXml, tempoXml, textXml, wordsXml } from "./dire
 import type { MeasureEvents, SoundEvent } from "./events.js";
 import { harmonyXml, noChordXml } from "./harmony.js";
 import type { Marks, Measure } from "./measures.js";
-import { noteSetOf, pitchesOf, type Sound, slashed, soundValueXml } from "./notes.js";
+import { type Sound, soundOf, soundValueXml } from "./notes.js";
 import { barLength, beatLength, beatPieces, type Frac, noteValues, plus } from "./rhythm.js";
 import { el, text } from "./xml.js";
 
@@ -14,6 +14,8 @@ export type MeasureContext = {
 	previous: Measure | null;
 	next: Measure | null;
 	clef: "G" | "F";
+	/** Whether this bar shows slashes, and the bar before it (null for the first). */
+	slashed: { now: boolean; before: boolean | null };
 };
 
 const LETTER_FIFTHS: Record<string, number> = { F: -1, C: 0, G: 1, D: 2, A: 3, E: 4, B: 5 };
@@ -56,9 +58,8 @@ function timeXml(m: Measure, prev: Measure | null): string {
 const CLEF_LINE = { G: 2, F: 4 };
 
 /** Slash style on from the first slashed measure, off for a measure of notes, and on again after. */
-function slashStyleXml(m: Measure, prev: Measure | null): string {
-	const on = slashed(m);
-	if (prev ? on === slashed(prev) : !on) return "";
+function slashStyleXml({ now: on, before }: MeasureContext["slashed"]): string {
+	if (before === null ? !on : on === before) return "";
 	return el(
 		"measure-style",
 		{},
@@ -69,13 +70,13 @@ function slashStyleXml(m: Measure, prev: Measure | null): string {
 function attributesXml(m: Measure, ctx: MeasureContext): string {
 	const prev = ctx.previous;
 	const head = prev
-		? [keyXml(m, prev), timeXml(m, prev), slashStyleXml(m, prev)]
+		? [keyXml(m, prev), timeXml(m, prev), slashStyleXml(ctx.slashed)]
 		: [
 				text("divisions", ctx.divisions),
 				keyXml(m, null),
 				timeXml(m, null),
 				el("clef", {}, [text("sign", ctx.clef), text("line", CLEF_LINE[ctx.clef])]),
-				slashStyleXml(m, null),
+				slashStyleXml(ctx.slashed),
 			];
 	return head.some(Boolean) ? el("attributes", {}, head) : "";
 }
@@ -86,12 +87,6 @@ const whole = (f: Frac, divisions: number) => (f.n * divisions) / f.d;
 function harmonyOf(slot: SimpleSlot): string {
 	if (slot.kind === "nc") return noChordXml();
 	return slot.kind === "chord" && slot.chord.kind === "chord" ? harmonyXml(slot.chord) : "";
-}
-
-function soundOf(slot: SimpleSlot): Sound {
-	if (slot.kind === "silence") return { kind: "rest" };
-	const set = noteSetOf(slot);
-	return set ? { kind: "notes", pitches: pitchesOf(set) } : { kind: "slash" };
 }
 
 /** How an event is written: slashes one per beat, anything else as its own length. */
@@ -110,7 +105,7 @@ function valuesOf(e: SoundEvent, sound: Sound, start: Frac, beat: Frac) {
 
 /** One event, `start` into its bar: its words, its harmony, then its values. */
 function eventXml(e: SoundEvent, start: Frac, beat: Frac, divisions: number): string {
-	const sound = soundOf(e.slot);
+	const sound = soundOf(e);
 	const notes = valuesOf(e, sound, start, beat).map(({ v, tie }, i) =>
 		soundValueXml(sound, v, whole(v.length, divisions), tie, i === 0 ? e.articulation : undefined),
 	);
