@@ -92,8 +92,8 @@ Fallow, CI, Swamp), the grammar, `examples/`, the scripts and FINDINGS.md.
     embedded)
   - `tests/`: commands in-process, plus the built bin under Node and a
     compiled binary
-- `examples/`: real charts (Peaceful Dreams must parse cleanly and print
-  unchanged)
+- `examples/`: real charts, each parsing cleanly and printing unchanged
+  (Peaceful Dreams; Morning Song, the several-parts example the tests read)
 - `site/`: barmark.dev (SvelteKit, UnoCSS, prerendered). **Not a workspace
   member**: it installs `barmark` and `@barmark/render` from npm at exact
   versions, so it runs what readers install. Its own `bun.lock`,
