@@ -6,6 +6,8 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-11-04
+
 ### Fixed
 
 - **Slashes are written one per beat** (dotted quarters in 6/8, 9/8 and
@@ -43,5 +45,6 @@ package uses [semantic versioning](https://semver.org/).
 - **Errors:** a chart with errors, or with no bars, returns its
   diagnostics and no XML; characters XML can't hold are left out.
 
-[Unreleased]: https://github.com/kevinpeckham/barmark/compare/musicxml-v0.1.0...HEAD
+[Unreleased]: https://github.com/kevinpeckham/barmark/compare/musicxml-v0.1.1...HEAD
+[0.1.1]: https://github.com/kevinpeckham/barmark/compare/musicxml-v0.1.0...musicxml-v0.1.1
 [0.1.0]: https://github.com/kevinpeckham/barmark/releases/tag/musicxml-v0.1.0
