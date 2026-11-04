@@ -533,3 +533,22 @@ in MusicXML marks a chord local, so a chart whose parts play different
 chords loses the later parts' chords in Dorico; they are fixed by hand
 there.
 
+### A grammar section needs its barmark.dev guide row in the same pull request (2026-11-04, site)
+
+The credits pull request (#130) failed CI's `site` job twice over: the
+guide's coverage test (`site/tests/coverage.test.ts`) reads the grammar
+from the repository, so a new section (7.5) needs a guide row at once;
+and the home page's demo must equal `examples/peaceful-dreams.chart.md`,
+which had gained credit lines. The site installs the published packages,
+so before the release a credits row renders its credits as text, and the
+demo would too. The guide row went into the grammar's pull request; the
+example's credits wait for the site bump that installs the new barmark,
+which changes the example and `site/src/lib/demo.chart.md` together.
+
+### The release check refuses an untracked `.playwright-mcp/` (2026-11-04, process)
+
+`verify:release` needs a clean `main`, and the Playwright MCP's
+screenshots and logs land in `.playwright-mcp/` at the repository root,
+untracked: the CLI 0.2.2 gate failed on them after a preview check. They
+are now listed in `.git/info/exclude` on the bench VM (`git status`
+doesn't count excluded files); they are never committed.
