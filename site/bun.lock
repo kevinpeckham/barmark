@@ -11,7 +11,7 @@
         "barmark": "0.14.1",
       },
       "devDependencies": {
-        "@barmark/cli": "0.1.8",
+        "@barmark/cli": "0.2.0",
         "@fontsource/noto-mono": "5.3.0",
         "@fontsource/noto-sans": "5.3.0",
         "@fontsource/noto-serif": "5.3.0",
@@ -38,7 +38,9 @@
 
     "@antfu/install-pkg": ["@antfu/install-pkg@2.1.0", "", { "dependencies": { "package-manager-detector": "^1.8.0", "tinyexec": "^1.3.1" } }, "sha512-sdg9NxU3zR4Mnawfbc/x6GB5Wf17WYud5qOuEuxXjaKpYpMkISSJEjItGebXJ2bQ4DIcly4NYH23mtkGJjvKUw=="],
 
-    "@barmark/cli": ["@barmark/cli@0.1.8", "", { "dependencies": { "@barmark/render": "0.12.0", "barmark": "0.14.1" }, "bin": { "barmark": "dist/cli.js" } }, "sha512-amCVxgRDT+mx6+8gtKnzvhkUF3lv58DdXlK4AetUfU39O4TcW+sS5OSl26N2Yr+VQi1Sj5Uqu8tz/CdWnlTAeQ=="],
+    "@barmark/cli": ["@barmark/cli@0.2.0", "", { "dependencies": { "@barmark/musicxml": "0.1.0", "@barmark/render": "0.12.0", "barmark": "0.14.1" }, "bin": { "barmark": "dist/cli.js" } }, "sha512-PnMtBI0HRUziiqOFbMf6cF3COdE3PqeVCzPuQUkuparan7KwH8Ph5Ocwfoo5YxsgX95cuG80EYgQEGX7WbyheA=="],
+
+    "@barmark/musicxml": ["@barmark/musicxml@0.1.0", "", { "dependencies": { "barmark": "^0.14.1" } }, "sha512-dSnhjm4efxXbf0kg56g0YDO/1MwKAiJQjhqKRcTGCVuuCB4u03HimIG2PduQv5bewOshYDdc6kwfd5x1Kq0K3w=="],
 
     "@barmark/render": ["@barmark/render@0.12.0", "", { "dependencies": { "barmark": "^0.14.1" } }, "sha512-opyLMaOrVrNT+qk2lUZ+Okzx3qpOJdlIIdH9jfBfnrM0Qkdqcr/rTPjl7BwIXhJAcSp6YzKhWobRbBPJgz+2/Q=="],
 

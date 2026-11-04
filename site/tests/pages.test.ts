@@ -55,7 +55,7 @@ describe("the commands Get Started shows", () => {
 			expect([line, result.exitCode, result.stderr.toString()]).toEqual([line, 0, ""]);
 		}
 	});
-	test("check reads the sample chart cleanly, and transpose and render do what they say", () => {
+	test("check reads the sample chart cleanly, and transpose, render and export do what they say", () => {
 		const dir = folder();
 		const line = (command: string) =>
 			USE_CLI.split("\n").find((l) => l.includes(` ${command} `)) ?? "";
@@ -63,6 +63,8 @@ describe("the commands Get Started shows", () => {
 		expect(run(line("transpose"), dir).stdout.toString()).toContain("|: E | B | C#m | A :|");
 		run(line("render"), dir);
 		expect(existsSync(join(dir, "example-song.html"))).toBe(true);
+		run(line("export"), dir);
+		expect(readFileSync(join(dir, "example-song.musicxml"), "utf8")).toContain("<score-partwise");
 	});
 	test("the CI example pins the version the site installs", () => {
 		expect(version).toMatch(/^\d+\.\d+\.\d+$/);

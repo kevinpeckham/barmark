@@ -60,7 +60,8 @@ editor.addEventListener("input", () => {
 export const USE_CLI = `npx @barmark/cli check songs          # every .chart.md in songs/, problems by line
 npx @barmark/cli format --write songs # rewrite them in standard form
 npx @barmark/cli transpose example-song.chart.md --to E
-npx @barmark/cli render example-song.chart.md --out example-song.html`;
+npx @barmark/cli render example-song.chart.md --out example-song.html
+npx @barmark/cli export --musicxml example-song.chart.md --out example-song.musicxml`;
 
 export const CLI_CI = `- uses: actions/setup-node@v4
   with:

@@ -112,7 +112,8 @@ const code = "font-mono text-accent";
 		<p class="max-w-prose opacity-80">
 			<code class={code}>@barmark/cli</code> is the <code class={code}>barmark</code> command. It
 			checks a folder of charts and names each problem by file and line, rewrites charts in their
-			standard form, transposes them, and renders one as a page that opens in any browser. It runs
+			standard form, transposes them, renders one as a page that opens in any browser, and exports one
+			as MusicXML for MuseScore, Dorico or Sibelius. It runs
 			with <code class={code}>npx</code> on Node 20.6 or later, with nothing to install; without Node,
 			download a standalone binary from its
 			<a href={LINKS.cliReleases} class={link}>GitHub releases</a>.
