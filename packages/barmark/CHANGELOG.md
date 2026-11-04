@@ -11,6 +11,11 @@ Releases follow the process in [RELEASING.md](RELEASING.md).
 
 ### Added
 
+- **Sustain pedal marks** (grammar 2.9): `+G` presses or changes the
+  pedal, `*G` lifts it; `--`, a tacet bar and the chart's end lift it too.
+  A chord slot gains `pedal`, and `pedalStates` gives whether the pedal is
+  down at the end of each slot, in play order. A `*` with the pedal
+  already up is a warning.
 - **Dotted figures** (grammar 2.2): a dot after one member of a
   two-member group, `C._D` (a dotted eighth and a sixteenth in a beat)
   or `C_D.`. Group members gain `dotted`, and `memberShares` gives each

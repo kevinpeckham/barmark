@@ -55,11 +55,13 @@ const SYMBOLS = { hold: "/", nc: "N.C.", silence: "--", unknown: "?" } as const;
 
 const PUSHES = { eighth: "<", sixteenth: "<<" } as const;
 const ARTICULATIONS = { accent: ">", hit: "^" } as const;
+const PEDALS = { press: "+", release: "*" } as const;
 
 /** A slot's leading marks: its push, then its articulation (grammar 2.7, 2.8). */
 function printMarks(s: SimpleSlot): string {
 	const push = "push" in s && s.push ? PUSHES[s.push] : "";
-	return push + (s.kind === "chord" && s.articulation ? ARTICULATIONS[s.articulation] : "");
+	const pedal = s.kind === "chord" && s.pedal ? PEDALS[s.pedal] : "";
+	return pedal + push + (s.kind === "chord" && s.articulation ? ARTICULATIONS[s.articulation] : "");
 }
 
 function printSimple(s: SimpleSlot): string {

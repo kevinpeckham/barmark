@@ -320,6 +320,31 @@ A push brings a slot in early, the way a band anticipates a downbeat:
   `_` group, three or more `<`, and a mark written before the push
   (`^<D`; the message suggests `<^D`).
 
+### 2.9 Sustain pedal
+
+A mark before a chord or a note set works the sustain pedal, as a
+pianist's part prints "Ped." and "✱":
+
+| Slot | Meaning |
+|---|---|
+| `+G` | **pedal**: press the pedal at G, or change it (lift and press again) if it is down |
+| `*G` | **release**: lift the pedal at G, which then plays without it |
+
+```
+| +G{B3 D4 G4} / +C{C4 E4 G4} / | +D{D4 F#4 A4} / / / | *G{B3 D4 G4} |
+```
+
+- The pedal stays down across bar lines, in play order, until a `*`, a
+  `--`, a bar where the part is tacet, or the end of the chart, each of
+  which lifts it.
+- The mark comes first, before a push or an accent: `+<G`, `+>G`.
+  Group members take it too: `G_+C`.
+- In a part with several lines (7.6) the pedal belongs to the part and is
+  written on its first line.
+- Errors: a pedal mark on `/`, `N.C.`, `--` or `?`, and a mark written
+  after a push or an accent (`>+G`; the message suggests `+>G`). A `*`
+  with the pedal already up is a **warning**.
+
 ## 3. Chord symbols
 
 ```
@@ -1054,6 +1079,7 @@ human to say whether the band was silent, and the structure line.
 | Push marks | Decided by Kevin (2026-11-03): `<` an eighth early, `<<` a sixteenth, written on the chord in its own bar; the push takes its time from the slot played just before it in play order (2.8). This is what written-out pushes (`/_G`) could not do: a pushed downbeat inside a repeat, a replay or after a jump. Rejected: a tie into the next bar (`/_G~ \| G`), which writes every chord twice and still can't serve a replay; and a warning only. |
 | Part | Decided by Kevin (2026-11-03, issue #70): `part:` names the chart's part, with an optional label (`part: Gtr = Electric Guitar 1`), once, before the first bar, on a line of its own (7.3). MusicXML requires a `<part-name>` on every part, so a converter otherwise invents one. The instrument (MusicXML's `<instrument-sound>`, a MIDI program) is separate and waits for the converters. The `Label = Name` form is chosen so several parts can follow. |
 | Several parts | Decided by Kevin (2026-11-03): one `part: Label = Name` line per part; a bar line starting with a label belongs to that part, and consecutive labelled lines form a system sharing the timeline (7.4). A part missing from a system is tacet; an unlabelled line is tutti. A system's structure (repeats, endings, marks, directions, fermatas, one-bar meters) is written on every line and checked, so each part's line reads alone. A renderer draws a tutti line as one row and a tacet part as an empty row; an extracted part writes tacet as `N.C.`. Rejected: structure written once, which makes a part's line wrong read alone. |
+| Sustain pedal | Decided by Kevin (2026-11-04): `+` before a chord or a note set presses or changes the pedal and `*` lifts it (2.9), marked where it happens as a printed part marks it; `--`, a tacet bar and the end lift it too. Rejected: a pedal line of its own (`Pno.Ped`), and a directive that changes the pedal with every chord, which can't say a held pedal. |
 | Dotted figures | Decided by Kevin (2026-11-04): a dot after one member of a two-member group, `C._D` (3:1) or `C_D.` (1:3) (2.2), so a dotted figure needs no beat split into four. Rejected: no shorthand, and swing written as figures (`feel:` states it). |
 | Instruments and clefs | Decided by Kevin (2026-11-04): `instrument:` and `clef:` after the name on the `part:` line (7.3), the instrument from a closed list of 16 that tells converters the clef, written transposition, staves and playback sound; an unknown name is an error with near suggestions. Charts stay at concert pitch. Rejected: free-form instrument names (a converter could not know what to write), an `instrument:` line of its own, and an octave hint (note sets carry their octaves). |
 | Credits | Decided by Kevin (2026-11-04): `composer:`, `lyricist:`, `arranger:` and `copyright:`, each a line of its own, allowed anywhere and repeatable, one entry per line (7.5). Before, credits were text, so a renderer or converter could not use them. Rejected: composition year, work number, opus, flow number and other information, which nothing reads (Dorico imports no Project Info from MusicXML but the title) and MusicXML has no standard place for; text still holds notes. |
@@ -1207,6 +1233,7 @@ Each slot parses to one record:
 | `voicing` | on a chord slot: the note set written after its name (4.2), or absent |
 | `articulation` | on a chord slot: `accent` (`>`) or `hit` (`^`), or absent |
 | `push` | on a chord, `N.C.` or `--` slot: `eighth` (`<`) or `sixteenth` (`<<`), or absent |
+| `pedal` | on a chord slot: `press` (`+`) or `release` (`*`), or absent; `pedalStates` gives whether the pedal is down at the end of each slot, in play order |
 | `dotted` | on a group member: `true` when dotted (2.2), or absent; `memberShares` gives each member's share of the slot |
 | `part` | on the parse: the chart's one part, its `name`, `label`, `instrument` and `clef` (each absent when not written), or empty when it names none or several (deprecated: use `parts`) |
 | `credits` | on the parse: `composer`, `lyricist`, `arranger` and `copyright`, each a list of the credit lines' values in written order, empty when none is written |

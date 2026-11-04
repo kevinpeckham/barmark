@@ -95,6 +95,26 @@ order, not just the written marks.
 
 ## Design
 
+### A new grammar section breaks the site before its parser is on npm (2026-11-04, sustain pedal)
+
+Symptom: grammar 2.9 (pedal marks) failed the site's required check: its
+coverage test wants a guide row for every grammar section, and a row's
+example is parsed by the barmark the site installs from npm, which can't
+read `+G` until the release. Cause: the grammar lives at the repo root
+and changes with the parser; the site runs the published one. Fix: the
+coverage test's `PENDING` lists a section with the release that brings
+it, and fails once the site installs that release without its row
+(`site/tests/coverage.test.ts`).
+
+### The sounding fixture named grammar examples by position (2026-11-04, sustain pedal)
+
+Symptom: adding grammar 2.9's example failed "grammar block 8/13/14
+sounds as it did" though nothing sounded different. Cause: grammar blocks
+were named by their index, so a new block renamed every later one. Fix:
+blocks are named by a hash of their text (`packages/musicxml/tests/charts.ts`);
+the regenerated fixture's twelve old entries were checked identical under
+their new names.
+
 ### Dorico doesn't reliably hide a `print-object="no"` rest (2026-11-04, musicxml two staves)
 
 Symptom: Morning Song's piano, exported with a hidden whole-bar rest on

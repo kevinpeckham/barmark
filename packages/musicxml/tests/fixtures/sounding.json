@@ -922,7 +922,7 @@
 			]
 		}
 	},
-	"grammar block 1": {
+	"grammar block 04704a0d": {
 		"P1": {
 			"notes": [
 				{
@@ -1167,7 +1167,7 @@
 			]
 		}
 	},
-	"grammar block 2": {
+	"grammar block 1d88efaf": {
 		"P1": {
 			"notes": [],
 			"harmonies": [
@@ -1190,7 +1190,7 @@
 			]
 		}
 	},
-	"grammar block 3": {
+	"grammar block 12438e62": {
 		"P1": {
 			"notes": [],
 			"harmonies": [
@@ -1213,7 +1213,7 @@
 			]
 		}
 	},
-	"grammar block 4": {
+	"grammar block 0db1e303": {
 		"P1": {
 			"notes": [],
 			"harmonies": [
@@ -1252,7 +1252,7 @@
 			]
 		}
 	},
-	"grammar block 5": {
+	"grammar block e856b211": {
 		"P1": {
 			"notes": [],
 			"harmonies": [
@@ -1279,7 +1279,7 @@
 			]
 		}
 	},
-	"grammar block 6": {
+	"grammar block f9887621": {
 		"P1": {
 			"notes": [],
 			"harmonies": [
@@ -1302,7 +1302,7 @@
 			]
 		}
 	},
-	"grammar block 7": {
+	"grammar block 28ca574b": {
 		"P1": {
 			"notes": [],
 			"harmonies": [
@@ -1377,7 +1377,91 @@
 			]
 		}
 	},
-	"grammar block 12": {
+	"grammar block 7eaa8715": {
+		"P1": {
+			"notes": [
+				{
+					"pitch": 59,
+					"at": "0/1",
+					"length": "2/1"
+				},
+				{
+					"pitch": 62,
+					"at": "0/1",
+					"length": "2/1"
+				},
+				{
+					"pitch": 67,
+					"at": "0/1",
+					"length": "2/1"
+				},
+				{
+					"pitch": 60,
+					"at": "2/1",
+					"length": "2/1"
+				},
+				{
+					"pitch": 64,
+					"at": "2/1",
+					"length": "2/1"
+				},
+				{
+					"pitch": 67,
+					"at": "2/1",
+					"length": "2/1"
+				},
+				{
+					"pitch": 62,
+					"at": "4/1",
+					"length": "4/1"
+				},
+				{
+					"pitch": 66,
+					"at": "4/1",
+					"length": "4/1"
+				},
+				{
+					"pitch": 69,
+					"at": "4/1",
+					"length": "4/1"
+				},
+				{
+					"pitch": 59,
+					"at": "8/1",
+					"length": "4/1"
+				},
+				{
+					"pitch": 62,
+					"at": "8/1",
+					"length": "4/1"
+				},
+				{
+					"pitch": 67,
+					"at": "8/1",
+					"length": "4/1"
+				}
+			],
+			"harmonies": [
+				{
+					"text": "G",
+					"at": "0/1"
+				},
+				{
+					"text": "C",
+					"at": "2/1"
+				},
+				{
+					"text": "D",
+					"at": "4/1"
+				},
+				{
+					"text": "G",
+					"at": "8/1"
+				}
+			]
+		}
+	},
+	"grammar block c1e248e5": {
 		"P1": {
 			"notes": [],
 			"harmonies": [
@@ -1416,7 +1500,7 @@
 			]
 		}
 	},
-	"grammar block 13": {
+	"grammar block 868db3f1": {
 		"P1": {
 			"notes": [],
 			"harmonies": [

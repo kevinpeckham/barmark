@@ -16,6 +16,7 @@ export {
 } from "./instruments.js";
 export { extractPart, parseChart } from "./parse.js";
 export { projectPart } from "./parts.js";
+export { pedalStates } from "./pedal.js";
 export {
 	printCell,
 	printChart,

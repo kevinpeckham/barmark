@@ -55,6 +55,8 @@ export type Articulation = "accent" | "hit";
  * sixteenth, taken from the slot played just before it.
  */
 export type Push = "eighth" | "sixteenth";
+/** `+` presses the sustain pedal, or changes it when it is down; `*` lifts it (grammar 2.9). */
+export type Pedal = "press" | "release";
 /**
  * A chord slot holds a chord symbol or a note set; `chord.kind` tells
  * which. `voicing` is the exact notes written after a chord's name
@@ -66,6 +68,7 @@ export type SimpleSlot = (
 			kind: "chord";
 			chord: ChordRecord;
 			voicing?: ChordRecord;
+			pedal?: Pedal;
 			articulation?: Articulation;
 			push?: Push;
 	  }

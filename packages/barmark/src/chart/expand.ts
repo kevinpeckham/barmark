@@ -1,5 +1,6 @@
 import { type JumpPlan, planJump } from "./direction.js";
 import { beatsOf } from "./directives.js";
+import { pedalWarnings } from "./pedal.js";
 import { type Entry, type Item, pairRepeats } from "./repeats.js";
 import { memberShares } from "./shares.js";
 import type {
@@ -511,5 +512,6 @@ export function expand(
 			form: forms.get(written) ?? 0,
 		};
 	});
+	diagnostics.push(...pedalWarnings(flattenBars(events)));
 	return { events, sections: sectionsOut, diagnostics };
 }

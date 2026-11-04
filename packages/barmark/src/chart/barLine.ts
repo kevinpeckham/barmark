@@ -10,6 +10,7 @@ import type {
 	ChartDiagnostic,
 	Line,
 	Meter,
+	Pedal,
 	Push,
 	Repeat,
 	SimpleSlot,
@@ -275,14 +276,34 @@ function directionWithWords(
 const ARTICULATION: Record<string, Articulation> = { ">": "accent", "^": "hit" };
 const PUSH: Record<number, Push> = { 1: "eighth", 2: "sixteenth" };
 
-/** A slot's leading marks (grammar 2.7, 2.8): a push, then an articulation, then the slot itself. */
-function readMarks(
+const PEDAL: Record<string, Pedal> = { "+": "press", "*": "release" };
+
+type Marks = { pedal?: Pedal; push?: Push; articulation?: Articulation; rest: string };
+
+/** A slot's leading marks (grammar 2.7–2.9): a pedal mark, a push, an articulation, then the slot. */
+function readMarks(token: string): Marks | Problem {
+	const late = /^([<>^]+)([+*])(.*)$/.exec(token);
+	if (late)
+		return {
+			problem: "a pedal mark comes before a push or an accent",
+			token,
+			suggestion: `${late[2]}${late[1]}${late[3]}`,
+		};
+	const pedal = PEDAL[token[0] ?? ""];
+	const marked = readPushAndAccent(pedal ? token.slice(1) : token, token);
+	return "problem" in marked || !pedal ? marked : { pedal, ...marked };
+}
+
+/** A push, then an articulation, then the slot itself (grammar 2.7, 2.8). */
+function readPushAndAccent(
 	token: string,
+	written: string,
 ): { push?: Push; articulation?: Articulation; rest: string } | Problem {
 	const pushes = /^<*/.exec(token)?.[0].length ?? 0;
 	const push = PUSH[pushes];
-	if (pushes && !push) return { problem: "a push is < (an eighth) or << (a sixteenth)", token };
-	const marked = readArticulation(token.slice(pushes), token);
+	if (pushes && !push)
+		return { problem: "a push is < (an eighth) or << (a sixteenth)", token: written };
+	const marked = readArticulation(token.slice(pushes), written);
 	return "problem" in marked ? marked : { ...(push ? { push } : {}), ...marked };
 }
 
@@ -302,20 +323,27 @@ function readArticulation(
 const UNPUSHABLE = new Set(["/", "?", "%", "...", "…"]);
 
 /** Why these marks can't go on this slot; null when they can. */
-function marksProblem(
-	marks: { push?: Push; articulation?: Articulation; rest: string },
-	inGroup: boolean,
-	token: string,
-): Problem | null {
-	if (marks.push && inGroup)
-		return { problem: "a push goes on a whole slot, not inside a group", token };
-	if (marks.push && UNPUSHABLE.has(marks.rest))
-		return { problem: "a push goes on a chord, a note set, N.C. or --", token };
-	const plain =
-		UNPUSHABLE.has(marks.rest) || SILENCE.has(marks.rest) || /^n\.?c\.?$/i.test(marks.rest);
-	if (marks.articulation && plain)
-		return { problem: "an accent or a hit goes on a chord or a note set", token };
-	return null;
+/** Whether a slot is one of `/`, `?`, `--` or `N.C.`, which take no accent or pedal. */
+const isPlain = (rest: string) =>
+	UNPUSHABLE.has(rest) || SILENCE.has(rest) || /^n\.?c\.?$/i.test(rest);
+
+/** Each rule on marks: when it is broken, and what the error says. */
+const MARK_RULES: [(m: Marks, inGroup: boolean) => boolean, string][] = [
+	[(m, inGroup) => Boolean(m.push) && inGroup, "a push goes on a whole slot, not inside a group"],
+	[
+		(m) => Boolean(m.push) && UNPUSHABLE.has(m.rest),
+		"a push goes on a chord, a note set, N.C. or --",
+	],
+	[
+		(m) => Boolean(m.articulation) && isPlain(m.rest),
+		"an accent or a hit goes on a chord or a note set",
+	],
+	[(m) => Boolean(m.pedal) && isPlain(m.rest), "a pedal mark goes on a chord or a note set"],
+];
+
+function marksProblem(marks: Marks, inGroup: boolean, token: string): Problem | null {
+	const broken = MARK_RULES.find(([breaks]) => breaks(marks, inGroup));
+	return broken ? { problem: broken[1], token } : null;
 }
 
 /** Whether a voicing's note is one of the chord's, by pitch class. */
@@ -473,11 +501,12 @@ export function parseBarLine(
 		const problem = marksProblem(marks, inGroup, token);
 		if (problem) return report(problem);
 		const base = simple(marks.rest);
-		const { push, articulation } = marks;
+		const { pedal, push, articulation } = marks;
 		return (
 			base &&
 			({
 				...base,
+				...(pedal ? { pedal } : {}),
 				...(push ? { push } : {}),
 				...(articulation ? { articulation } : {}),
 			} as SimpleSlot)
