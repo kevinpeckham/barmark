@@ -183,7 +183,7 @@ function cellIn(w: Walk, cell: Cell): void {
 function passes(lines: Line[], i: number): number {
 	let max = 0;
 	for (const l of lines.slice(i)) {
-		if (l.kind === "text") continue;
+		if (l.kind === "text" || l.kind === "credit") continue;
 		if (l.kind !== "bars" || !l.ending) break;
 		max = Math.max(max, ...l.ending);
 	}

@@ -23,6 +23,7 @@ import {
 	typesetChord,
 	typesetNumeral,
 } from "./chord.js";
+import { creditsText } from "./credits.js";
 import { escapeHtml } from "./escape.js";
 import { fontFaceCss } from "./font.js";
 import { isTacet as isTacetCell, layoutChart } from "./model.js";
@@ -110,7 +111,7 @@ function chartHtml(text: string, options: RenderOptions): string {
 	// Every section's left column is as wide as the longest part label, so tutti rows line up with systems.
 	const widest = Math.max(0, ...model.parts.map((p) => p.label?.length ?? 0));
 	const gutter = parts ? ` data-parts style="--bm-label-chars:${widest}"` : "";
-	return `<div class="bm-chart" data-theme="${themeOf(options)}"${gutter}${settings.barNumbers ? "" : ' data-bar-numbers="off"'}${options.wrap === false ? ' data-wrap="off"' : ""}>${headerHtml(model)}${model.blocks.map((b) => blockHtml(b, settings)).join("")}${options.diagnostics ? diagnosticsHtml(model) : ""}</div>`;
+	return `<div class="bm-chart" data-theme="${themeOf(options)}"${gutter}${settings.barNumbers ? "" : ' data-bar-numbers="off"'}${options.wrap === false ? ' data-wrap="off"' : ""}>${headerHtml(model)}${model.blocks.map((b) => blockHtml(b, settings)).join("")}${copyrightHtml(model)}${options.diagnostics ? diagnosticsHtml(model) : ""}</div>`;
 }
 
 function headerHtml(model: ChartModel): string {
@@ -120,8 +121,18 @@ function headerHtml(model: ChartModel): string {
 	const names =
 		model.parts.length > 1 ? model.parts.map((p) => p.name).join(", ") : model.part?.name;
 	const meta = [names ? escapeHtml(names) : "", metaText(model.header)].filter(Boolean).join(" · ");
-	if (!title && !meta) return "";
-	return `<header class="bm-header">${title}${meta ? `<p class="bm-meta" part="meta">${meta}</p>` : ""}</header>`;
+	const credits = creditsText(model.credits)
+		.map((c) => `<p class="bm-credits" part="credits">${escapeHtml(c)}</p>`)
+		.join("");
+	if (!title && !credits && !meta) return "";
+	return `<header class="bm-header">${title}${credits}${meta ? `<p class="bm-meta" part="meta">${meta}</p>` : ""}</header>`;
+}
+
+/** The copyright lines, small, at the chart's foot. */
+function copyrightHtml(model: ChartModel): string {
+	const lines = model.credits.copyright;
+	if (lines.length === 0) return "";
+	return `<footer class="bm-copyright" part="copyright">${lines.map((c) => `<p>${escapeHtml(c)}</p>`).join("")}</footer>`;
 }
 
 /** "rit. to ♩ = 90", "accel.", "a tempo". */

@@ -9,6 +9,18 @@ Releases follow the process in [RELEASING.md](RELEASING.md).
 
 ## [Unreleased]
 
+### Added
+
+- **Credit lines** (grammar 7.5): `composer:`, `lyricist:`, `arranger:`
+  and `copyright:`, each a line of its own, allowed anywhere in a chart
+  and repeatable. `ChartParse.credits` lists each role's entries in
+  written order; a `Line` of kind `"credit"` keeps the line, and the
+  printer writes it where it was written. An empty credit is an error;
+  `author:`, `music:`, `words:`, `arr:`, `rights:` and the other near
+  misses warn with the right name. `CREDIT_ROLES` is exported.
+- A text line starting with one of the four names and a colon is now a
+  credit, not text.
+
 ## [0.14.1] - 2026-11-03
 
 ### Fixed

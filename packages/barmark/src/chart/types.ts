@@ -109,6 +109,11 @@ export type Cell =
 	| { kind: "rehearsal"; label: string };
 export type Repeat = number | "open" | null;
 
+/** Who a credit line names (grammar 7.5). */
+export type CreditRole = "composer" | "lyricist" | "arranger" | "copyright";
+/** A chart's credits, each role's entries in written order (grammar 7.5). */
+export type Credits = Record<CreditRole, string[]>;
+
 export type Line =
 	| { kind: "title"; line: number; text: string }
 	| { kind: "section"; line: number; name: string; repeat: Repeat; elided: boolean }
@@ -131,6 +136,8 @@ export type Line =
 			dropped?: true;
 	  }
 	| { kind: "text"; line: number; text: string }
+	/** `composer: …` and the other credit lines (grammar 7.5). */
+	| { kind: "credit"; line: number; role: CreditRole; text: string }
 	/**
 	 * A bar line dropped for an error, kept as written so its section still
 	 * counts as written out; `written` is how many bars its pipes write.
@@ -212,6 +219,8 @@ export type ChartParse = {
 	part: Part | null;
 	/** Every part the chart declares, in score order (grammar 7.4); empty when none. */
 	parts: Part[];
+	/** The credit lines (grammar 7.5); each list empty when none is written. */
+	credits: Credits;
 	lines: Line[];
 	events: ChartEvent[];
 	/** `events` flattened, with an open repeat's pass included once. */

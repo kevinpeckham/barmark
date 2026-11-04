@@ -1,4 +1,5 @@
 export { parseBarLine } from "./barLine.js";
+export { CREDIT_ROLES } from "./credits.js";
 export { degreeOf } from "./degree.js";
 export { printDirection } from "./direction.js";
 export { beatsOf, DIRECTIVE_NAMES, parseDirectiveLine, parseMeter } from "./directives.js";

@@ -1,8 +1,9 @@
 import { parseChord } from "../chords/parse.js";
 import { misplacedRepeat, parseBarLine, readRepeat, repeatTail } from "./barLine.js";
-import { parseDirectiveLine } from "./directives.js";
+import { creditsOf, nearCredit, readCredit } from "./credits.js";
+import { DIRECTIVE_AFTER, parseDirectiveLine } from "./directives.js";
 import { groupSystems } from "./systems.js";
-import type { ChartDiagnostic, Line, Part, Repeat } from "./types.js";
+import type { ChartDiagnostic, Credits, Line, Part, Repeat } from "./types.js";
 
 const NEAR_DIRECTIVES: Record<string, string> = {
 	meter: "time",
@@ -12,8 +13,6 @@ const NEAR_DIRECTIVES: Record<string, string> = {
 	instrument: "part",
 	parts: "part",
 };
-
-const DIRECTIVE_AFTER = /,\s*(key|time|tempo|feel)\s*:/i;
 
 /** A `part:` line's label and name, or why it has none (grammar 7.3). */
 function readPart(text: string): Part | string | null {
@@ -154,6 +153,8 @@ function oldFormat(text: string, line: number): ChartDiagnostic | null {
 	const label = /^\[([^\]]+)\]$/.exec(text) ?? /^([A-Za-z][\w ]*):$/.exec(text);
 	if (label?.[1])
 		return warn("a section label; barmark headings start with ##", `## ${label[1].trim()}`);
+	const credit = nearCredit(text, line);
+	if (credit) return credit;
 	const near = /^(\w+)\s*:\s*(.*)$/.exec(text);
 	const name = near?.[1] ? NEAR_DIRECTIVES[near[1].toLowerCase()] : undefined;
 	if (near && name) return warn(`not a directive; did you mean ${name}:?`, `${name}: ${near[2]}`);
@@ -195,6 +196,7 @@ export function readDocument(text: string): {
 	title: string | null;
 	part: Part | null;
 	parts: Part[];
+	credits: Credits;
 	lines: Line[];
 	diagnostics: ChartDiagnostic[];
 } {
@@ -224,6 +226,8 @@ export function readDocument(text: string): {
 		return { kind: "part", line, ...read };
 	};
 	const otherLine = (t: string, line: number): Line => {
+		const credit = readCredit(t, line, diagnostics);
+		if (credit) return credit;
 		const read = readPart(t);
 		if (read) return partLine(read, t, line);
 		const directive = parseDirectiveLine(t, line);
@@ -292,6 +296,7 @@ export function readDocument(text: string): {
 		title,
 		part: parts.length === 1 ? (parts[0] ?? null) : null,
 		parts,
+		credits: creditsOf(lines),
 		lines: grouped.lines,
 		diagnostics,
 	};

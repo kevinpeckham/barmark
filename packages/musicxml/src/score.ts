@@ -1,5 +1,12 @@
 /** The score: part list, parts and their measures (MusicXML 4.0 score-partwise). */
-import { type ChartDiagnostic, type ChartParse, extractPart, type Part, parseChart } from "barmark";
+import {
+	type ChartDiagnostic,
+	type ChartParse,
+	type Credits,
+	extractPart,
+	type Part,
+	parseChart,
+} from "barmark";
 import { applyPushes, eventsOf } from "./events.js";
 import { measureXml } from "./measure-xml.js";
 import { writtenMeasures } from "./measures.js";
@@ -21,6 +28,16 @@ export type MusicXmlResult =
 
 const DOCTYPE =
 	'<!DOCTYPE score-partwise PUBLIC "-//Recordare//DTD MusicXML 4.0 Partwise//EN" "http://www.musicxml.org/dtds/partwise.dtd">';
+
+/** The credits (barmark's grammar 7.5) and the encoding, in the schema's order. */
+function identificationXml(credits: Credits): string {
+	const creators = (["composer", "lyricist", "arranger"] as const).flatMap((role) =>
+		credits[role].map((name) => text("creator", name, { type: role })),
+	);
+	const rights = credits.copyright.map((line) => text("rights", line));
+	const encoding = el("encoding", {}, text("software", `@barmark/musicxml ${VERSION}`));
+	return el("identification", {}, [...creators, ...rights, encoding]);
+}
 
 /** One exported part: what it is called, and the chart as that part plays it. */
 type PartSource = { part: Part | null; parse: ChartParse };
@@ -96,7 +113,7 @@ export function exportMusicXml(chart: string, options: MusicXmlOptions = {}): Mu
 	const title = parse.title ?? options.title;
 	const head = [
 		title ? el("work", {}, text("work-title", title)) : "",
-		el("identification", {}, el("encoding", {}, text("software", `@barmark/musicxml ${VERSION}`))),
+		identificationXml(parse.credits),
 		el("part-list", {}, sources.map(scorePart)),
 	];
 	const xml = `<?xml version="1.0" encoding="UTF-8"?>\n${DOCTYPE}\n${el("score-partwise", { version: "4.0" }, [...head, ...sources.map(partXml)])}\n`;

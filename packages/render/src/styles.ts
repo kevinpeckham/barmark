@@ -87,6 +87,9 @@ const css = `
 .bm-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
 .bm-header{margin-bottom:.8em}
 .bm-title{font-size:${em(SIZES.title)};font-weight:normal;margin:0 0 .15em}
+.bm-credits{font-family:${LABEL};font-size:${em(SIZES.meta)};margin:0 0 .15em}
+.bm-copyright{font-family:${LABEL};font-size:${em(SIZES.meta)};color:var(--bm-muted);margin-top:1.5em}
+.bm-copyright p{margin:0}
 .bm-meta{font-family:${LABEL};font-size:${em(SIZES.meta)};color:var(--bm-muted);margin:0}
 .bm-directive{grid-column:1/-1;display:flex;align-items:baseline;gap:.4em;margin:.9em 0 .3em ${at(SIZES.directive, GUTTER)};font-family:${LABEL};font-size:${em(SIZES.directive)};color:var(--barmark-directive,var(--bm-muted))}
 .bm-directive::after{content:"";flex:1;align-self:center;margin-left:.4em;border-top:.06em solid var(--bm-rule);opacity:.6}

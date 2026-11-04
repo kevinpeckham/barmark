@@ -6,6 +6,15 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- **Credits** (barmark's grammar 7.5): each `composer:`, `lyricist:` and
+  `arranger:` line is a `<creator>` of that type, in that order, and each
+  `copyright:` line a `<rights>`, as Dorico's own export writes them. An
+  exported part carries the chart's credits. No `<credit>` page text:
+  Dorico ignores it on import, and a program that sets credits from
+  `<creator>` would print them twice.
+
 ## [0.1.2] - 2026-11-04
 
 ### Fixed

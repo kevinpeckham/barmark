@@ -1,0 +1,135 @@
+/** Credit lines (grammar 7.5): composer, lyricist, arranger and copyright. */
+import { describe, expect, test } from "bun:test";
+import { extractPart, parseChart, printChart, printPart, transposeChart } from "../../src/index.js";
+
+const none = { composer: [], lyricist: [], arranger: [], copyright: [] };
+
+describe("credit lines", () => {
+	test("a composer line is a credit", () => {
+		const p = parseChart("# T\ncomposer: Kevin Peckham\n| G |");
+		expect(p.credits).toEqual({ ...none, composer: ["Kevin Peckham"] });
+		expect(p.diagnostics).toEqual([]);
+		expect(p.lines[1]).toEqual({
+			kind: "credit",
+			line: 2,
+			role: "composer",
+			text: "Kevin Peckham",
+		});
+	});
+	test("any case, and repeated lines are entries in written order", () => {
+		expect(parseChart("COMPOSER: A\ncomposer: B\n| G |").credits.composer).toEqual(["A", "B"]);
+	});
+	test("each role", () => {
+		const p = parseChart("lyricist: L\narranger: Ar\ncopyright: C\n| G |");
+		expect(p.credits).toEqual({ ...none, lyricist: ["L"], arranger: ["Ar"], copyright: ["C"] });
+	});
+	test("a credit after the bars is allowed and takes no time", () => {
+		const p = parseChart("| G |\ncopyright: © 2026 K\ncopyright: All rights reserved.");
+		expect(p.credits.copyright).toEqual(["© 2026 K", "All rights reserved."]);
+		expect(p.diagnostics).toEqual([]);
+		expect(p.bars).toHaveLength(1);
+	});
+	test("the value runs to the end of the line, space runs collapsed", () => {
+		expect(parseChart("composer:   Lennon,   McCartney  \n| G |").credits.composer).toEqual([
+			"Lennon, McCartney",
+		]);
+	});
+	test("an empty credit is an error and stays text", () => {
+		const p = parseChart("composer:\n| G |");
+		expect(p.credits).toEqual(none);
+		expect(p.lines[0]?.kind).toBe("text");
+		expect(p.diagnostics).toMatchObject([
+			{ line: 1, severity: "error", message: "composer: needs a value" },
+		]);
+	});
+	test("a directive after the value is part of the credit, with a warning", () => {
+		const p = parseChart("composer: A, key: G\n| G |");
+		expect(p.credits.composer).toEqual(["A, key: G"]);
+		expect(p.diagnostics).toMatchObject([
+			{
+				line: 1,
+				severity: "warning",
+				message: "a credit runs to the end of the line; put key: on its own line",
+			},
+		]);
+	});
+	test.each([
+		["author", "composer"],
+		["writer", "composer"],
+		["music", "composer"],
+		["Words", "lyricist"],
+		["lyrics", "lyricist"],
+		["arr", "arranger"],
+		["arranged", "arranger"],
+		["rights", "copyright"],
+		["©", "copyright"],
+	])("%s: is a near miss for %s:", (word, role) => {
+		const p = parseChart(`${word}: X\n| G |`);
+		expect(p.credits).toEqual(none);
+		expect(p.diagnostics).toMatchObject([
+			{
+				line: 1,
+				severity: "warning",
+				message: `not a credit; did you mean ${role}:?`,
+				suggestion: `${role}: X`,
+			},
+		]);
+	});
+	test("prose about the credits stays text, quietly", () => {
+		const p = parseChart("Words and music by Kevin\n| G |");
+		expect(p.lines[0]?.kind).toBe("text");
+		expect(p.diagnostics).toEqual([]);
+	});
+	test("a credit between a system's lines ends the system as text does", () => {
+		const p = parseChart("part: G = Gtr\npart: P = Pno\nG | C |\ncomposer: A\nP | D |");
+		expect(p.diagnostics.filter((d) => d.severity === "error")).toEqual([]);
+		expect(p.credits.composer).toEqual(["A"]);
+		const systems = p.lines.flatMap((l) => (l.kind === "bars" ? [l.system] : []));
+		expect(new Set(systems).size).toBe(2);
+	});
+	test("a chart without credits has empty lists", () => {
+		expect(parseChart("| G |").credits).toEqual(none);
+	});
+});
+
+describe("printing credits", () => {
+	test("canonical form: the name lowercased, the value's spaces collapsed", () => {
+		expect(printChart("Composer:  Kevin   Peckham\n| G |")).toStartWith(
+			"composer: Kevin Peckham\n",
+		);
+	});
+	test("a credit prints where it was written", () => {
+		const chart = "# T\n\n| G |\n\ncopyright: © K\n";
+		expect(printChart(chart)).toBe(chart);
+		expect(printChart(printChart(chart))).toBe(printChart(chart));
+	});
+	test("a part keeps every credit", () => {
+		const chart = "composer: A\npart: G = Gtr\npart: P = Pno\n\nG | C |\nP | D |\n\ncopyright: C\n";
+		const pno = printPart(chart, "P") ?? "";
+		expect(pno).toContain("composer: A");
+		expect(pno).toContain("copyright: C");
+		expect(extractPart(chart, "P")?.credits).toMatchObject({ composer: ["A"], copyright: ["C"] });
+	});
+	test("transposing leaves a credit alone", () => {
+		const out = transposeChart("composer: Bb Music\n| Bb |", { semitones: 2 }).text;
+		expect(out).toContain("composer: Bb Music");
+		expect(out).toContain("| C |");
+	});
+});
+
+describe("credits and the music", () => {
+	test("a credit between endings plays as a text line does", () => {
+		const chart = (between: string) => `|: G | C |\n|1 D | D :|\n${between}\n|2 E | E |`;
+		const p = parseChart(chart("copyright: x"));
+		expect(p.diagnostics).toEqual([]);
+		expect(p.bars.map((b) => b.written)).toEqual(
+			parseChart(chart("a note")).bars.map((b) => b.written),
+		);
+		expect(p.bars).toHaveLength(8);
+	});
+	test("a bare ©: warns with no suggestion that would be an error", () => {
+		const [d] = parseChart("©:\n| G |").diagnostics;
+		expect(d?.message).toBe("not a credit; did you mean copyright:?");
+		expect(d?.suggestion).toBeUndefined();
+	});
+});

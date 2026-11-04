@@ -100,6 +100,7 @@ export function layoutChart(text: string, options: LayoutOptions = {}): ChartMod
 		title: parse.title,
 		part: parse.part,
 		parts: parse.parts,
+		credits: parse.credits,
 		header,
 		blocks,
 		diagnostics: parse.diagnostics,
@@ -130,19 +131,22 @@ function errorsByLine(parse: ChartParse): Map<number, string[]> {
 	return errors;
 }
 
+/** Lines that name the chart rather than play it: never part of the body. */
+const NAMING = new Set<Line["kind"]>(["title", "part", "credit"]);
+
 /** The title line, and the directives before any other content, form the header. */
 function splitHeader(lines: Line[]): { header: Directives; body: Line[] } {
 	const header: Directives = {};
 	let i = 0;
 	for (; i < lines.length; i++) {
 		const l = lines[i];
-		if (l?.kind === "title" || l?.kind === "part") continue;
-		if (l?.kind !== "directive") break;
+		if (!l || NAMING.has(l.kind)) continue;
+		if (l.kind !== "directive") break;
 		// A new feel replaces the old one whole, its amount included.
 		if (l.set.feel) delete header.swingPercent;
 		Object.assign(header, l.set);
 	}
-	return { header, body: lines.slice(i).filter((l) => l.kind !== "title" && l.kind !== "part") };
+	return { header, body: lines.slice(i).filter((l) => !NAMING.has(l.kind)) };
 }
 
 function groupLines(lines: Line[]): Group[] {

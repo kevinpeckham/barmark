@@ -6,6 +6,17 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+Needs `barmark` 0.15.0.
+
+### Added
+
+- **A chart's credits** (barmark's grammar 7.5), as a score sets them:
+  "Words and music by …" when the same people wrote both, otherwise
+  "Music by …" and "Words by …", then "Arranged by …", under the title
+  (`part="credits"`); several names read "A, B and C". The copyright
+  lines sit small at the chart's foot (`<footer part="copyright">`).
+  `ChartModel.credits` carries them and `creditsText` is exported.
+
 ## [0.12.0] - 2026-11-03
 
 Needs `barmark` 0.14.1.
