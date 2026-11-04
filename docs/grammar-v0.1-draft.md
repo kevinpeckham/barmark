@@ -75,6 +75,7 @@ Each line is classified by its start, after leading whitespace is ignored:
 | `## ` | a **section** heading | `## Chorus` |
 | `key:` `time:` `tempo:` `feel:` (any case) | a **directive** line | `key: Bm` |
 | `part:` (any case) | a **part** the chart is for (before the first bar, 7.3, 7.4) | `part: Electric Guitar 1` |
+| `composer:` `lyricist:` `arranger:` `copyright:` (any case) | a **credit** line (7.5) | `composer: Kevin Peckham` |
 | a part's label, then `\|` | that part's **bar line**, in a chart with several parts (7.4) | `Gtr \| G \| C \|` |
 | anything else | **text** (lyrics, notes, prose) | `Watch Kevin for the cutoff` |
 
@@ -598,7 +599,8 @@ key: D, time: 4/4, tempo: 145, feel: swing
   ask for it.
 - The four names are a closed set with no aliases. A text line starting
   with a near miss (`meter:`, `bpm:`, `groove:`) gets a warning suggesting
-  the right name. `part:` (7.3) is a line of its own, not one of these.
+  the right name. `part:` (7.3) and the credits (7.5) are lines of their
+  own, not one of these.
 
 ### 7.1 Feel
 
@@ -775,6 +777,42 @@ the piano is **tacet**: it isn't written, so it rests.
   single-part chart: the tutti bars, its own bars, and each tacet stretch
   as bars of `N.C.` (not `--`: the rest of the band still plays).
 
+### 7.5 Credits
+
+Four lines name who wrote, set and owns a chart:
+
+```
+# Peaceful Dreams
+composer: Kevin Peckham
+lyricist: Kevin Peckham
+arranger: Jane Doe
+copyright: © 2026 Kevin Peckham
+copyright: All rights reserved.
+```
+
+- **Names.** `composer:`, `lyricist:`, `arranger:` and `copyright:`, in
+  any case. A closed set with no aliases.
+- **A line of its own,** like `part:`. The value runs to the end of the
+  line, so it may hold commas (`composer: Lennon, McCartney`); runs of
+  spaces print as one. A directive later on the line is part of the
+  value: `composer: A, key: G` credits "A, key: G", with a warning.
+- **Anywhere.** A credit names the whole chart wherever it is written:
+  before the bars, between sections or at the foot. It takes no time and
+  changes no bar, directive, part or number. Between a system's lines it
+  ends the system, as text does.
+- **Repeatable.** Each line is one entry, in written order: two
+  `composer:` lines are two composers, and two `copyright:` lines a
+  copyright notice of two lines.
+- **Text.** A credit is not parsed: names are not split and no © is
+  added.
+- A converter writes the credits where its format keeps them: MusicXML's
+  `<creator type="composer">` (and `lyricist`, `arranger`) and `<rights>`.
+- Errors: no value (`composer:`); the line stays text. Warnings: a text
+  line starting with a near miss and a colon, with the right name
+  suggested: `author:`, `writer:` and `music:` (composer), `words:` and
+  `lyrics:` (lyricist), `arr:` and `arranged:` (arranger), `rights:` and
+  `©:` (copyright).
+
 ## 8. The canonical form
 
 A canonical printer writes:
@@ -808,7 +846,9 @@ A canonical printer writes:
   a cell keeps the slots that words are placed before, so words never
   move
 - directives lowercased, comma-separated, in the order key, time, tempo,
-  feel; `part:` as `part: Label = Name`, or `part: Name`
+  feel; `part:` as `part: Label = Name`, or `part: Name`; a credit as
+  its name lowercased, one space after the colon, and its value with
+  runs of spaces collapsed, where it was written
 - a system's lines in score order, labels as declared and padded to the
   widest label, and cells padded so the system's pipes line up; tutti
   lines have no label column; a single-part chart's labelled lines print
@@ -870,6 +910,7 @@ keeps what cannot reduce:
 | error | `->` anywhere but the end of a replay heading |
 | error | `/` or `%` with nothing before it |
 | error | `part:` with no name or no label before `=`, after the first bar, or sharing its line with another directive |
+| error | a credit with no value (`composer:`) |
 | error | a part without a label in a chart of several, two parts with one label, a label starting with `\|`, `#`, `@` or a digit, no space between a label and its `\|` |
 | error | lines of a system with different bar counts or different structure (7.4); `%` or a leading `/` after the part was tacet; parts playing one bar in different meters (a `%` copying a one-bar meter) |
 | error | invalid directive value (`time: 4/3`, `tempo: fast`, `rit. to fast`, `feel: lazy`, `feel: swing 80%`, `feel: swing 58`, `feel: straight 55%`) |
@@ -883,7 +924,8 @@ keeps what cannot reduce:
 | warning | `x N` with N > 8 |
 | warning | note set with octaves out of ascending order; repeated note without octaves |
 | warning | a natural tone in parentheses that the chord already has (`C7(7)`) |
-| warning | a text line that looks like an old-style label (`Chorus:`, `[Chorus]`), an old bare chord line, a bar line written with escaped pipes (`D \\| A \\|`), or a misnamed directive (`meter:`, `bpm:`), with a suggested fix |
+| warning | a text line that looks like an old-style label (`Chorus:`, `[Chorus]`), an old bare chord line, a bar line written with escaped pipes (`D \\| A \\|`), a misnamed directive (`meter:`, `bpm:`) or a misnamed credit (`author:`, `words:`), with a suggested fix |
+| warning | a credit with a directive after its value on the line (`composer: A, key: G`) |
 | warning | a bar line after a word that is not a declared part label (`Bass \| E \|`), or after a chord, its leading `\|` left off (`G \| C \|`, suggesting `\| G \| C \|`) |
 | warning | a chart with text but no bar line at all (reported once, at the first text line), so a chart in another format never reads as empty |
 
@@ -952,6 +994,7 @@ human to say whether the band was silent, and the structure line.
 | Push marks | Decided by Kevin (2026-11-03): `<` an eighth early, `<<` a sixteenth, written on the chord in its own bar; the push takes its time from the slot played just before it in play order (2.8). This is what written-out pushes (`/_G`) could not do: a pushed downbeat inside a repeat, a replay or after a jump. Rejected: a tie into the next bar (`/_G~ \| G`), which writes every chord twice and still can't serve a replay; and a warning only. |
 | Part | Decided by Kevin (2026-11-03, issue #70): `part:` names the chart's part, with an optional label (`part: Gtr = Electric Guitar 1`), once, before the first bar, on a line of its own (7.3). MusicXML requires a `<part-name>` on every part, so a converter otherwise invents one. The instrument (MusicXML's `<instrument-sound>`, a MIDI program) is separate and waits for the converters. The `Label = Name` form is chosen so several parts can follow. |
 | Several parts | Decided by Kevin (2026-11-03): one `part: Label = Name` line per part; a bar line starting with a label belongs to that part, and consecutive labelled lines form a system sharing the timeline (7.4). A part missing from a system is tacet; an unlabelled line is tutti. A system's structure (repeats, endings, marks, directions, fermatas, one-bar meters) is written on every line and checked, so each part's line reads alone. A renderer draws a tutti line as one row and a tacet part as an empty row; an extracted part writes tacet as `N.C.`. Rejected: structure written once, which makes a part's line wrong read alone. |
+| Credits | Decided by Kevin (2026-11-04): `composer:`, `lyricist:`, `arranger:` and `copyright:`, each a line of its own, allowed anywhere and repeatable, one entry per line (7.5). Before, credits were text, so a renderer or converter could not use them. Rejected: composition year, work number, opus, flow number and other information, which nothing reads (Dorico imports no Project Info from MusicXML but the title) and MusicXML has no standard place for; text still holds notes. |
 | Written bar numbers | Machine output gains `written` on each played bar (A.7), the bar's number as written, so a host can speak a printed score's measure numbers (issue #70: a correction editor for a score read). No change to what any chart means. |
 
 ## Open questions
@@ -1103,6 +1146,7 @@ Each slot parses to one record:
 | `articulation` | on a chord slot: `accent` (`>`) or `hit` (`^`), or absent |
 | `push` | on a chord, `N.C.` or `--` slot: `eighth` (`<`) or `sixteenth` (`<<`), or absent |
 | `part` | on the parse: the chart's one part, its `name` and `label` (absent when none), or empty when it names none or several (deprecated: use `parts`) |
+| `credits` | on the parse: `composer`, `lyricist`, `arranger` and `copyright`, each a list of the credit lines' values in written order, empty when none is written |
 | `parts` | on the parse: every declared part in score order; on a played bar of a multi-part chart, one entry per part (its `line`, `slots` and `words`), or empty where that part is tacet |
 | `tacet` | on a played bar of a multi-part chart: true when the first part is tacet there (its slots then read `N.C.`) |
 | `source` | the symbol as written |

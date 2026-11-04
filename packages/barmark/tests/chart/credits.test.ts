@@ -1,6 +1,6 @@
 /** Credit lines (grammar 7.5): composer, lyricist, arranger and copyright. */
 import { describe, expect, test } from "bun:test";
-import { parseChart } from "../../src/index.js";
+import { extractPart, parseChart, printChart, printPart, transposeChart } from "../../src/index.js";
 
 const none = { composer: [], lyricist: [], arranger: [], copyright: [] };
 
@@ -89,5 +89,30 @@ describe("credit lines", () => {
 	});
 	test("a chart without credits has empty lists", () => {
 		expect(parseChart("| G |").credits).toEqual(none);
+	});
+});
+
+describe("printing credits", () => {
+	test("canonical form: the name lowercased, the value's spaces collapsed", () => {
+		expect(printChart("Composer:  Kevin   Peckham\n| G |")).toStartWith(
+			"composer: Kevin Peckham\n",
+		);
+	});
+	test("a credit prints where it was written", () => {
+		const chart = "# T\n\n| G |\n\ncopyright: © K\n";
+		expect(printChart(chart)).toBe(chart);
+		expect(printChart(printChart(chart))).toBe(printChart(chart));
+	});
+	test("a part keeps every credit", () => {
+		const chart = "composer: A\npart: G = Gtr\npart: P = Pno\n\nG | C |\nP | D |\n\ncopyright: C\n";
+		const pno = printPart(chart, "P") ?? "";
+		expect(pno).toContain("composer: A");
+		expect(pno).toContain("copyright: C");
+		expect(extractPart(chart, "P")?.credits).toMatchObject({ composer: ["A"], copyright: ["C"] });
+	});
+	test("transposing leaves a credit alone", () => {
+		const out = transposeChart("composer: Bb Music\n| Bb |", { semitones: 2 }).text;
+		expect(out).toContain("composer: Bb Music");
+		expect(out).toContain("| C |");
 	});
 });

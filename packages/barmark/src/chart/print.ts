@@ -169,6 +169,8 @@ export function printLine(l: Line, beats: (number | undefined)[] = []): string {
 			return printDirectives(l.set);
 		case "part":
 			return `part: ${l.label ? `${l.label} = ` : ""}${l.name}`;
+		case "credit":
+			return `${l.role}: ${l.text}`;
 		case "bars":
 			return joinPieces(barPieces(l, beats));
 		default:
