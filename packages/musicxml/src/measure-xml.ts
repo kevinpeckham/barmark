@@ -226,9 +226,12 @@ function voiceXml(events: SoundEvent[], meter: Meter, ctx: MeasureContext, staff
 const UPPER: Staff = { voice: 1, staff: 1, clef: "G" };
 const LOWER: Staff = { voice: 5, staff: 2, clef: "F" };
 
-/** A whole-bar rest: a tacet bar's, or (hidden) a keyboard's lower staff with nothing to play. */
-function measureRestXml(duration: number, staff: Staff, shown = true): string {
-	return el("note", shown ? {} : { "print-object": "no" }, [
+/**
+ * A whole-bar rest: a tacet bar's, or a keyboard's lower staff with nothing
+ * to play. Shown: Dorico honours a hidden rest in some bars and not others.
+ */
+function measureRestXml(duration: number, staff: Staff): string {
+	return el("note", {}, [
 		el("rest", { measure: "yes" }),
 		text("duration", duration),
 		text("voice", staff.voice),
@@ -250,7 +253,7 @@ function stavesXml(bar: MeasureEvents, ctx: MeasureContext): string {
 		voiceXml(upper, meter, ctx, UPPER),
 		...bar.after.map(wordsXml),
 		backupXml(length),
-		plays ? voiceXml(lower, meter, ctx, LOWER) : measureRestXml(length, LOWER, false),
+		plays ? voiceXml(lower, meter, ctx, LOWER) : measureRestXml(length, LOWER),
 	].join("");
 }
 

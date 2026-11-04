@@ -42,12 +42,12 @@ describe("two staves", () => {
 		]);
 		expect(staff(m, 2)).toEqual(["C3:16th", "E3:16th", "G3:16th", "r:16th", "r:quarter", "r:half"]);
 	});
-	test("a slash bar: slashes and chord symbols above, a hidden rest below", () => {
+	test("a slash bar: slashes and chord symbols above, a whole-bar rest below", () => {
 		const [m = ""] = measures(piano("| C |"));
 		expect(staff(m, 1)).toEqual(["B4:quarter", "B4:quarter", "B4:quarter", "B4:quarter"]);
 		const lower = allNotes(m).filter((n) => n.includes("<staff>2</staff>"));
 		expect(lower).toHaveLength(1);
-		expect(lower[0]).toStartWith('<note print-object="no"><rest measure="yes"/>');
+		expect(lower[0]).toStartWith('<note><rest measure="yes"/>');
 		expect(m).toContain('<measure-style number="1"><slash type="start"');
 		expect(m.indexOf("<harmony>")).toBeLessThan(m.indexOf("<backup>"));
 	});

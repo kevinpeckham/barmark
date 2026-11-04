@@ -26,8 +26,8 @@ package uses [semantic versioning](https://semver.org/).
   are as before.
 - **Keyboards on two staves:** treble and bass, notes split at middle C
   (a note set across it splits, an arpeggio moves between staves),
-  slashes and chord symbols on the upper staff, a hidden rest on the
-  lower where it has nothing to play; voice 1 and voice 5, joined by
+  slashes and chord symbols on the upper staff, a whole-bar rest on
+  the lower where it has nothing to play; voice 1 and voice 5, joined by
   `<backup>`.
 
 ### Changed
