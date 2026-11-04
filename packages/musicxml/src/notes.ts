@@ -1,5 +1,6 @@
 /** Notes as MusicXML <note>s: slash notes, rests, and the real notes of note sets and voicings. */
 import type { Articulation, ChordRecord, Slot } from "barmark";
+import type { Beam } from "./beams.js";
 import type { MeasureEvents, SoundEvent } from "./events.js";
 import type { Measure } from "./measures.js";
 import { beatLength, type Frac, type NoteValue, onBeat, plus } from "./rhythm.js";
@@ -116,7 +117,17 @@ type Pitched = {
 	articulation?: Articulation;
 };
 
-function pitchedXml(n: Pitched, v: NoteValue, duration: number, tie: Tie): string {
+/** How one written value is drawn, beyond its type: its duration, ties, accent, stem and beams. */
+export type ValueStyle = {
+	duration: number;
+	tie: Tie;
+	articulation?: Articulation;
+	stem: Stem;
+	beams: Beam[];
+};
+
+function pitchedXml(n: Pitched, v: NoteValue, style: ValueStyle): string {
+	const { duration, tie } = style;
 	const notations = [
 		...tieEnds("tied", tie),
 		n.articulation ? el("articulations", {}, ARTICULATIONS[n.articulation]) : "",
@@ -133,6 +144,7 @@ function pitchedXml(n: Pitched, v: NoteValue, duration: number, tie: Tie): strin
 		...valueXml(v),
 		n.slash ? text("stem", n.slash) : "",
 		n.slash ? text("notehead", "slash") : "",
+		...(n.chord ? [] : style.beams.map((b, i) => text("beam", b, { number: i + 1 }))),
 		notations.some(Boolean) ? el("notations", {}, notations) : "",
 	]);
 }
@@ -140,30 +152,19 @@ function pitchedXml(n: Pitched, v: NoteValue, duration: number, tie: Tie): strin
 const SLASH: Pitch = { step: "B", alter: 0, octave: 4 };
 
 /** One written value of a sound: a rest, a slash note, or a chord of notes. */
-export function soundValueXml(
-	sound: Sound,
-	v: NoteValue,
-	duration: number,
-	tie: Tie,
-	articulation?: Articulation,
-	stem: Stem = "none",
-): string {
+export function soundValueXml(sound: Sound, v: NoteValue, style: ValueStyle): string {
 	if (sound.kind === "rest")
-		return el("note", {}, [el("rest"), text("duration", duration), ...valueXml(v)]);
+		return el("note", {}, [el("rest"), text("duration", style.duration), ...valueXml(v)]);
 	const pitches = sound.kind === "slash" ? [SLASH] : sound.pitches;
+	const slash = sound.kind === "slash" ? style.stem : null;
 	return pitches
-		.map((pitch, i) =>
-			pitchedXml(
-				{
-					chord: i > 0,
-					pitch,
-					slash: sound.kind === "slash" ? stem : null,
-					...(i === 0 && articulation ? { articulation } : {}),
-				},
+		.map((pitch, i) => {
+			const articulation = i === 0 ? style.articulation : undefined;
+			return pitchedXml(
+				{ chord: i > 0, pitch, slash, ...(articulation ? { articulation } : {}) },
 				v,
-				duration,
-				tie,
-			),
-		)
+				style,
+			);
+		})
 		.join("");
 }

@@ -1,16 +1,19 @@
 /** One measure as MusicXML: attributes when they change, then its notes. */
 import type { Key, Meter, SimpleSlot } from "barmark";
+import { type Beam, beamsOf } from "./beams.js";
 import { direction, feelXml, jumpXml, tempoXml, textXml, wordsXml } from "./directions.js";
 import type { MeasureEvents, SoundEvent } from "./events.js";
 import { harmonyXml, noChordXml } from "./harmony.js";
 import type { Marks, Measure } from "./measures.js";
-import { type Sound, soundOf, soundValueXml } from "./notes.js";
+import { type Sound, type Stem, soundOf, soundValueXml, type Tie } from "./notes.js";
 import {
 	barLength,
 	beatLength,
 	beatPieces,
 	type Frac,
+	frac,
 	meterValues,
+	type NoteValue,
 	noteValues,
 	plus,
 } from "./rhythm.js";
@@ -99,40 +102,46 @@ function harmonyOf(slot: SimpleSlot): string {
 	return slot.kind === "chord" && slot.chord.kind === "chord" ? harmonyXml(slot.chord) : "";
 }
 
+/** A written value: its type, where it starts in its bar, and its ties. */
+type Written = { v: NoteValue; start: Frac; tie: Tie };
+
 /** How an event is written: slash style one slash per beat; anything else in values that show the meter. */
 function valuesOf(e: SoundEvent, sound: Sound, start: Frac, meter: Meter, rhythmic: boolean) {
 	const beats = sound.kind === "slash" && !rhythmic;
 	const pieces = beats ? beatPieces(start, e.length, beatLength(meter)) : [e.length];
 	const written = (piece: Frac) =>
 		beats ? noteValues(piece) : meterValues(start, piece, meter, sound.kind === "rest");
+	let at = start;
 	return pieces.flatMap((piece, p) =>
-		written(piece).map((v, i, values) => ({
-			v,
-			tie: {
-				stop: i > 0 || (p === 0 && e.tie.stop),
-				start: i < values.length - 1 || (p === pieces.length - 1 && e.tie.start),
-			},
-		})),
+		written(piece).map((v, i, values): Written => {
+			const value = {
+				v,
+				start: at,
+				tie: {
+					stop: i > 0 || (p === 0 && e.tie.stop),
+					start: i < values.length - 1 || (p === pieces.length - 1 && e.tie.start),
+				},
+			};
+			at = plus(at, v.length);
+			return value;
+		}),
 	);
 }
 
-/** Where an event sits and how its bar is written. */
-type Place = { start: Frac; meter: Meter; divisions: number; rhythmic: boolean };
+/** An event with what it sounds and how it is written. */
+type EventValues = { e: SoundEvent; sound: Sound; values: Written[] };
 
-/** One event: its words, its harmony, then its values. */
-function eventXml(e: SoundEvent, place: Place): string {
-	const sound = soundOf(e);
-	const stem = place.rhythmic ? "up" : "none";
-	const values = valuesOf(e, sound, place.start, place.meter, place.rhythmic);
-	const notes = values.map(({ v, tie }, i) =>
-		soundValueXml(
-			sound,
-			v,
-			whole(v.length, place.divisions),
+/** One event: its words, its harmony, then its values, each with its beams. */
+function eventXml(w: EventValues, stem: Stem, divisions: number, beams: () => Beam[]): string {
+	const { e, sound } = w;
+	const notes = w.values.map(({ v, tie }, i) =>
+		soundValueXml(sound, v, {
+			duration: whole(v.length, divisions),
 			tie,
-			i === 0 ? e.articulation : undefined,
+			...(i === 0 && e.articulation ? { articulation: e.articulation } : {}),
 			stem,
-		),
+			beams: beams(),
+		}),
 	);
 	return [
 		...e.words.map(wordsXml),
@@ -142,18 +151,27 @@ function eventXml(e: SoundEvent, place: Place): string {
 	].join("");
 }
 
-/** A measure's events, each at its place in the bar. */
+/** A measure's events, each at its place in the bar, beamed across the bar. */
 function eventsXml(bar: MeasureEvents, ctx: MeasureContext): string {
-	let at: Frac = { n: 0, d: 1 };
 	const { meter } = bar.measure;
-	return bar.events
-		.map((e) => {
-			const place = { start: at, meter, divisions: ctx.divisions, rhythmic: ctx.rhythmic };
-			const xml = eventXml(e, place);
-			at = plus(at, e.length);
-			return xml;
-		})
-		.join("");
+	const stem: Stem = ctx.rhythmic ? "up" : "none";
+	let at = frac(0);
+	const written = bar.events.map((e): EventValues => {
+		const sound = soundOf(e);
+		const values = valuesOf(e, sound, at, meter, ctx.rhythmic);
+		at = plus(at, e.length);
+		return { e, sound, values };
+	});
+	const unbeamed = (s: Sound) => s.kind === "rest" || (s.kind === "slash" && stem === "none");
+	const beams = beamsOf(
+		written.flatMap((w) =>
+			w.values.map((x) => ({ start: x.start, v: x.v, rest: unbeamed(w.sound) })),
+		),
+		meter,
+	);
+	let k = 0;
+	const next = () => beams[k++] ?? [];
+	return written.map((w) => eventXml(w, stem, ctx.divisions, next)).join("");
 }
 
 /** Before the notes: the heading, the rehearsal mark, tempo, feel, Segno, Coda and text lines. */

@@ -120,7 +120,7 @@ const inBeats = (f: Frac, beat: Frac) => frac(f.n * beat.d, f.d * beat.n);
 /** Whether `f` falls on the beat grid. */
 export const onBeat = (f: Frac, beat: Frac) => inBeats(f, beat).d === 1;
 /** 4/4 and 2/2 show their middle: no value hides it. */
-const halved = (m: Meter) => (m.n === 4 && m.d === 4) || (m.n === 2 && m.d === 2);
+export const halved = (m: Meter) => (m.n === 4 && m.d === 4) || (m.n === 2 && m.d === 2);
 
 /** 4/4 and 2/2 cut at the middle, unless a note starts the bar and fills whole beats (a rest: the whole bar). */
 function middleCut(start: Frac, length: Frac, meter: Meter, rest: boolean): Frac | null {
