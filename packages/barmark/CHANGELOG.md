@@ -9,6 +9,16 @@ Releases follow the process in [RELEASING.md](RELEASING.md).
 
 ## [Unreleased]
 
+### Added
+
+- **`instrument:` and `clef:` on the `part:` line** (grammar 7.3):
+  `part: Tpt = Trumpet, instrument: trumpet in Bb`, `part: Ld = Lead,
+  clef: bass`. The instrument comes from a list of 16 (`INSTRUMENTS`,
+  `instrumentInfo`), each with its clef, written transposition, staves
+  and General MIDI program, for converters. `Part` gains `instrument` and
+  `clef`, present when written. An unknown instrument is an error naming
+  the near ones; `clef:` on a keyboard is an error.
+
 ## [0.15.0] - 2026-11-04
 
 A grammar change: credit lines (7.5). Charts that read before read the

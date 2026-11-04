@@ -691,6 +691,45 @@ key: G
   1` also gives a short **label**: no spaces, before the `=`.
 - **A line of its own.** The name runs to the end of the line, so it may
   hold commas (`part: Guitar, rhythm`). Runs of spaces print as one.
+- **Instrument and clef.** After the name, after a comma, a part may name
+  its `instrument:` and its `clef:`, in either order; the canonical form
+  writes the instrument first:
+
+  ```
+  part: Tpt = Trumpet, instrument: trumpet in Bb
+  part: Ld = Lead, clef: bass
+  ```
+
+  `instrument:` takes a name from the list below, in any case, and tells
+  a converter how to notate the part: its clef, how far above sounding
+  pitch it is written, its staves and its playback sound. A chart is
+  always written at sounding pitch (concert pitch); the instrument changes
+  only how a converter writes the part. Without `instrument:` a converter
+  may guess from the part's name.
+
+  | Instrument | Clef | Written | Staves | GM program |
+  |---|---|---|---|---|
+  | `piano` | treble + bass | sounding | 2 | 1 |
+  | `electric piano` | treble + bass | sounding | 2 | 5 |
+  | `organ` | treble + bass | sounding | 2 | 17 |
+  | `synth` | treble + bass | sounding | 2 | 81 |
+  | `acoustic guitar` | treble 8vb | sounding (the clef carries the octave) | 1 | 26 |
+  | `electric guitar` | treble 8vb | sounding (the clef carries the octave) | 1 | 28 |
+  | `electric bass` | bass | octave up | 1 | 34 |
+  | `double bass` | bass | octave up | 1 | 33 |
+  | `trumpet in Bb` | treble | major 2nd up | 1 | 57 |
+  | `alto sax` | treble | major 6th up | 1 | 66 |
+  | `tenor sax` | treble | major 9th up | 1 | 67 |
+  | `trombone` | bass | sounding | 1 | 58 |
+  | `flute` | treble | sounding | 1 | 74 |
+  | `violin` | treble | sounding | 1 | 41 |
+  | `cello` | bass | sounding | 1 | 43 |
+  | `voice` | treble | sounding | 1 | 53 |
+
+  `clef:` is `treble`, `bass`, `treble 8vb` or `alto`, in any case. It
+  fixes a one-staff part's clef for the whole part, over the instrument's
+  and over any a converter would choose by bars. It sets no octave: note
+  sets carry their octaves (4.1).
 - **Before the first bar.** A part names the whole chart, not the bars
   after it. A `part:` after a bar line is an **error**. A second `part:`
   makes a chart of several parts (7.4).
@@ -699,7 +738,12 @@ key: G
   track name. Without `part:` it chooses its own.
 - Errors: no name (`part:`, `part: Gtr =`), no label before `=`, another
   directive after it on the line (`part: Guitar, key: G`) or before it
-  (`key: G, part: Guitar`). `instrument:` and `parts:` are near misses.
+  (`key: G, part: Guitar`), an instrument not on the list (the message
+  names the near ones: `instrument: bass` suggests `electric bass` and
+  `double bass`), a clef not on the list, `clef:` on a two-staff
+  instrument (a keyboard's staves are treble and bass), and an attribute
+  named twice. An `instrument:` line of its own, with no `part:`, is a
+  near miss (a warning), as is `parts:`.
 
 ### 7.4 Several parts
 
@@ -994,6 +1038,7 @@ human to say whether the band was silent, and the structure line.
 | Push marks | Decided by Kevin (2026-11-03): `<` an eighth early, `<<` a sixteenth, written on the chord in its own bar; the push takes its time from the slot played just before it in play order (2.8). This is what written-out pushes (`/_G`) could not do: a pushed downbeat inside a repeat, a replay or after a jump. Rejected: a tie into the next bar (`/_G~ \| G`), which writes every chord twice and still can't serve a replay; and a warning only. |
 | Part | Decided by Kevin (2026-11-03, issue #70): `part:` names the chart's part, with an optional label (`part: Gtr = Electric Guitar 1`), once, before the first bar, on a line of its own (7.3). MusicXML requires a `<part-name>` on every part, so a converter otherwise invents one. The instrument (MusicXML's `<instrument-sound>`, a MIDI program) is separate and waits for the converters. The `Label = Name` form is chosen so several parts can follow. |
 | Several parts | Decided by Kevin (2026-11-03): one `part: Label = Name` line per part; a bar line starting with a label belongs to that part, and consecutive labelled lines form a system sharing the timeline (7.4). A part missing from a system is tacet; an unlabelled line is tutti. A system's structure (repeats, endings, marks, directions, fermatas, one-bar meters) is written on every line and checked, so each part's line reads alone. A renderer draws a tutti line as one row and a tacet part as an empty row; an extracted part writes tacet as `N.C.`. Rejected: structure written once, which makes a part's line wrong read alone. |
+| Instruments and clefs | Decided by Kevin (2026-11-04): `instrument:` and `clef:` after the name on the `part:` line (7.3), the instrument from a closed list of 16 that tells converters the clef, written transposition, staves and playback sound; an unknown name is an error with near suggestions. Charts stay at concert pitch. Rejected: free-form instrument names (a converter could not know what to write), an `instrument:` line of its own, and an octave hint (note sets carry their octaves). |
 | Credits | Decided by Kevin (2026-11-04): `composer:`, `lyricist:`, `arranger:` and `copyright:`, each a line of its own, allowed anywhere and repeatable, one entry per line (7.5). Before, credits were text, so a renderer or converter could not use them. Rejected: composition year, work number, opus, flow number and other information, which nothing reads (Dorico imports no Project Info from MusicXML but the title) and MusicXML has no standard place for; text still holds notes. |
 | Written bar numbers | Machine output gains `written` on each played bar (A.7), the bar's number as written, so a host can speak a printed score's measure numbers (issue #70: a correction editor for a score read). No change to what any chart means. |
 
@@ -1145,7 +1190,7 @@ Each slot parses to one record:
 | `voicing` | on a chord slot: the note set written after its name (4.2), or absent |
 | `articulation` | on a chord slot: `accent` (`>`) or `hit` (`^`), or absent |
 | `push` | on a chord, `N.C.` or `--` slot: `eighth` (`<`) or `sixteenth` (`<<`), or absent |
-| `part` | on the parse: the chart's one part, its `name` and `label` (absent when none), or empty when it names none or several (deprecated: use `parts`) |
+| `part` | on the parse: the chart's one part, its `name`, `label`, `instrument` and `clef` (each absent when not written), or empty when it names none or several (deprecated: use `parts`) |
 | `credits` | on the parse: `composer`, `lyricist`, `arranger` and `copyright`, each a list of the credit lines' values in written order, empty when none is written |
 | `parts` | on the parse: every declared part in score order; on a played bar of a multi-part chart, one entry per part (its `line`, `slots` and `words`), or empty where that part is tacet |
 | `tacet` | on a played bar of a multi-part chart: true when the first part is tacet there (its slots then read `N.C.`) |

@@ -168,7 +168,7 @@ export function printLine(l: Line, beats: (number | undefined)[] = []): string {
 		case "directive":
 			return printDirectives(l.set);
 		case "part":
-			return `part: ${l.label ? `${l.label} = ` : ""}${l.name}`;
+			return `part: ${l.label ? `${l.label} = ` : ""}${l.name}${l.instrument ? `, instrument: ${l.instrument}` : ""}${l.clef ? `, clef: ${l.clef}` : ""}`;
 		case "credit":
 			return `${l.role}: ${l.text}`;
 		case "bars":

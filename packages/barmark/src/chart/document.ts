@@ -1,7 +1,8 @@
 import { parseChord } from "../chords/parse.js";
 import { misplacedRepeat, parseBarLine, readRepeat, repeatTail } from "./barLine.js";
 import { creditsOf, nearCredit, readCredit } from "./credits.js";
-import { DIRECTIVE_AFTER, parseDirectiveLine } from "./directives.js";
+import { parseDirectiveLine } from "./directives.js";
+import { readPart } from "./partLine.js";
 import { groupSystems } from "./systems.js";
 import type { ChartDiagnostic, Credits, Line, Part, Repeat } from "./types.js";
 
@@ -13,21 +14,6 @@ const NEAR_DIRECTIVES: Record<string, string> = {
 	instrument: "part",
 	parts: "part",
 };
-
-/** A `part:` line's label and name, or why it has none (grammar 7.3). */
-function readPart(text: string): Part | string | null {
-	const m = /^part\s*:(.*)$/i.exec(text);
-	if (!m) return null;
-	const value = (m[1] ?? "").trim().replace(/\s+/g, " ");
-	if (DIRECTIVE_AFTER.test(value))
-		return "part: goes on a line of its own; the name runs to the end of the line";
-	const labelled = /^([^\s=]*)\s*=\s*(.*)$/.exec(value);
-	if (!labelled) return value ? { name: value } : "part: needs a name";
-	const [, label, name] = labelled;
-	if (!label) return "part: needs a label before =";
-	if (/^[|#@0-9]/.test(label)) return "a part label can't start with |, #, @ or a digit";
-	return name ? { label, name } : "part: needs a name after the label";
-}
 
 /**
  * Several parts each need a label, and no two may share one in any case
@@ -51,7 +37,12 @@ function checkParts(lines: Line[], diagnostics: ChartDiagnostic[]): Part[] {
 	return parts;
 }
 
-const partOf = (l: Part): Part => (l.label ? { label: l.label, name: l.name } : { name: l.name });
+const partOf = (l: Part): Part => ({
+	...(l.label && { label: l.label }),
+	name: l.name,
+	...(l.instrument && { instrument: l.instrument }),
+	...(l.clef && { clef: l.clef }),
+});
 
 function partProblem(
 	l: Part,

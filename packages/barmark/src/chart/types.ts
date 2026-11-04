@@ -1,4 +1,5 @@
 import type { ChordRecord } from "../chords/types.js";
+import type { ClefName, InstrumentName } from "./instruments.js";
 
 export type Severity = "error" | "warning";
 export type ChartDiagnostic = {
@@ -28,9 +29,10 @@ export type TempoChange = { kind: "rit" | "accel"; to: number | null } | { kind:
 /** `tempo:` gives either `tempo` (a steady tempo) or `tempoChange`, never both. */
 /**
  * The part a chart is written for (grammar 7.3): `part: Electric Guitar 1`,
- * or with a short label, `part: Gtr = Electric Guitar 1`.
+ * or with a short label, `part: Gtr = Electric Guitar 1`; `instrument:`
+ * and `clef:` may follow, and are present only when written.
  */
-export type Part = { name: string; label?: string };
+export type Part = { name: string; label?: string; instrument?: InstrumentName; clef?: ClefName };
 
 export type Directives = {
 	key?: Key;
