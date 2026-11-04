@@ -17,6 +17,12 @@ Releases follow the process in [RELEASING.md](RELEASING.md).
   a chord on another line, is an error. Bar lines gain `lineName`,
   declared parts gain `lines`, and the canonical form sorts a system's
   lines into score order. `streamKey` and `MAX_LINES` are exported.
+  Each line plays on its own: a played bar's part entry gains `lines`
+  (`LineBar`: name, line, slots, words), one per line playing there, and
+  the part's `slots` are its first playing line's. A bare line and a tutti
+  line play as the part's first line; a line not written rests. A
+  single-part chart's bars, and an extracted part's, carry `lines`
+  themselves, and `printPart` keeps the `Pno.RH |` labels.
 - **Sustain pedal marks** (grammar 2.9): `+G` presses or changes the
   pedal, `*G` lifts it; `--`, a tacet bar and the chart's end lift it too.
   A chord slot gains `pedal`, and `pedalStates` gives whether the pedal is

@@ -198,9 +198,18 @@ export type PlayedBar = {
 	 * `slots` and `words` are the first part's.
 	 */
 	parts?: PartBar[];
+	/** A single part's lines (grammar 7.6), as on `PartBar`: in a single-part chart or an extracted part that writes lines. */
+	lines?: LineBar[];
 };
-/** One part's share of a played bar (grammar 7.4): the line it is written on, its slots and words. */
-export type PartBar = { line: number; slots: Slot[]; words?: Words[] } | null;
+/** One part's line's share of a played bar (grammar 7.6): its name, the line it is written on, its slots and words. */
+export type LineBar = { name: string; line: number; slots: Slot[]; words?: Words[] };
+/**
+ * One part's share of a played bar (grammar 7.4): the line it is written
+ * on, its slots and words. A part that writes lines (7.6) has `lines`, one
+ * per line playing there in score order, and its first playing line's
+ * `line`, `slots` and `words`.
+ */
+export type PartBar = { line: number; slots: Slot[]; words?: Words[]; lines?: LineBar[] } | null;
 /** An open repeat shows one pass; the number of passes is unknown. */
 export type ChartEvent =
 	| { kind: "bar"; bar: PlayedBar }

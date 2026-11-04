@@ -47,20 +47,13 @@ function nameLines(
 	return { lines: out, names };
 }
 
-/** Why a part's later line in a system can't stand, or null. */
-function laterLineProblem(own: Labelled[], l: Labelled): string | null {
-	if (own.some((o) => o.lineName === undefined))
-		return "a system writes a part as one bare line or as its lines, not both";
-	return l.kind === "bars" ? notesOnlyProblem(l) : null;
-}
-
-/** A system's lines of each part, after the first: notes only, and all lines or one bare line. */
+/** A system's lines of each part, after the first, hold notes only. */
 function checkSystem(system: Labelled[], report: (l: Labelled, message: string) => void) {
 	const byPart = new Map<string, Labelled[]>();
 	for (const l of system) byPart.set(l.part ?? "", [...(byPart.get(l.part ?? "") ?? []), l]);
 	for (const own of byPart.values())
 		for (const l of own.slice(1)) {
-			const problem = laterLineProblem(own, l);
+			const problem = l.kind === "bars" ? notesOnlyProblem(l) : null;
 			if (problem) report(l, problem);
 		}
 }

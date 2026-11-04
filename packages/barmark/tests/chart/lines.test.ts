@@ -87,9 +87,11 @@ describe("part lines (grammar 7.6)", () => {
 		expect(e.map((d) => d.line)).toEqual([6]);
 		expect(e[0]?.message).toContain("four lines");
 	});
-	test("a bare line and lines of the same part in one system err", () => {
-		const text = "part: Pno = Piano\npart: Bs = Bass\nPno | G |\nPno.LH | {G2} |\nBs | {G1} |\n";
-		expect(errors(text)).toHaveLength(1);
+	test("a bare line and lines of the same part start a new system", () => {
+		const text =
+			"part: Pno = Piano\npart: Bs = Bass\nPno.RH | {G4} |\nPno.LH | {G2} |\nPno | G |\nBs | {G1} |\n";
+		expect(barLines(text).map((l) => l.system)).toEqual([0, 0, 1, 1]);
+		expect(errors(text)).toEqual([]);
 	});
 	test("structure across lines", () => {
 		const text = "part: Pno = Piano\nPno.RH |: {G4} :|\nPno.LH | {G2} |\n";
