@@ -106,7 +106,7 @@ Both were approved by Kevin on 2026-11-04 with every recommendation taken.
 5. **The pedal across a repeat, a D.S. and a tacet bar,** in play order:
    it carries into the repeat and lifts at the tacet bar, so no Ped.
    runs past a rest of the part. (Task 3, `pedal state in play order`;
-   Task 10, `pedal lifts at a tacet bar`.)
+   Task 9, `pedal lifts at a tacet bar`.)
 
 ---
 
@@ -447,13 +447,7 @@ Both were approved by Kevin on 2026-11-04 with every recommendation taken.
   all pass. Add the CHANGELOG entry.
 - [ ] **Step 5: Commit** `feat(musicxml): part lines as staves and voices`.
 
-### Task 9 (folded into Task 7)
-
-Key changes for transposing parts are covered by Task 7's
-`trumpet follows key changes`. The number is kept so that Review Focus
-references stay stable.
-
-### Task 10: MusicXML pedal and dotted values
+### Task 9: MusicXML pedal and dotted values
 
 **Files:**
 - Modify: `events.ts` (`memberLength` uses `memberShares`),
@@ -484,7 +478,7 @@ references stay stable.
   Add the CHANGELOG entry.
 - [ ] **Step 5: Commit** `feat(musicxml): pedal marks and dotted figures`.
 
-### Task 11: Examples, CLI check and the branch
+### Task 10: Examples, CLI check and the branch
 
 **Files:**
 - Modify: `examples/morning-song.chart.md` only if a test demands it
@@ -505,7 +499,7 @@ references stay stable.
 - [ ] **Step 4:** Do the final whole-branch review (executing-plans),
   then open the PR and merge it when green.
 
-### Task 12: Release
+### Task 11: Release
 
 Follow RELEASING.md for each package in turn:
 1. `barmark` 0.16.0 (the grammar minor).
