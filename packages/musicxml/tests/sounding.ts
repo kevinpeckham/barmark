@@ -37,7 +37,8 @@ type State = {
 	at: number;
 	end: number;
 	onset: number;
-	notes: { pitch: number; at: number; end: number }[];
+	/** `open` while a tie from the note is still to be stopped. */
+	notes: { pitch: number; at: number; end: number; open: boolean }[];
 	harmonies: { text: string; at: number }[];
 };
 
@@ -52,7 +53,7 @@ function move(el: string, s: State): void {
 	s.end = Math.max(s.end, s.at);
 }
 
-/** A note sounds from its onset: a chord member shares the note before's, a tie stop lengthens it. */
+/** A note sounds from its onset: a chord member shares the note before's; a tie stop lengthens a note whose tie started. */
 function note(el: string, s: State): void {
 	const duration = num(el, "duration");
 	if (!el.includes("<chord/>")) {
@@ -61,11 +62,12 @@ function note(el: string, s: State): void {
 	}
 	const pitch = pitchOf(el, s.transpose);
 	if (pitch === null) return;
+	const open = el.includes('<tie type="start"/>');
 	const tied = el.includes('<tie type="stop"/>')
-		? s.notes.findLast((n) => n.pitch === pitch && n.end === s.onset)
+		? s.notes.findLast((n) => n.open && n.pitch === pitch && n.end === s.onset)
 		: undefined;
-	if (tied) tied.end = s.onset + duration;
-	else s.notes.push({ pitch, at: s.onset, end: s.onset + duration });
+	if (tied) Object.assign(tied, { end: s.onset + duration, open });
+	else s.notes.push({ pitch, at: s.onset, end: s.onset + duration, open });
 }
 
 const ELEMENTS =

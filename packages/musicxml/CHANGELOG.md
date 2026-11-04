@@ -36,13 +36,17 @@ package uses [semantic versioning](https://semver.org/).
   the middle of the bar unless it starts the bar and fills whole beats;
   a value off the beat in other meters, and a rest off the beat in any,
   is cut at the next beat. `| {C4} {D4} / {E4} |` writes D4 as two tied
-  quarters.
+  quarters. In 6/8, 9/8 and 12/8 a value shows its whole beats (a dotted
+  quarter tied to an eighth), and 12/8 shows its middle. A hold after a
+  triplet's note ties on rather than stretching the triplet past its
+  beat, and a chord's hold that opens a bar showing its rhythm ties from
+  the bar before.
 - **Clefs by bars:** a part is bass when most of its bars sit below
   middle C (a bar of slashes counts as treble), not when most of its
   notes do, so one long pedal note no longer makes a chart of slashes
   bass. A run of two bars or more on the other side, or one bar needing
-  more than three ledger lines, changes clef for the run. A slash sits on
-  its staff's middle line.
+  more than three ledger lines, changes clef for the run; a bar of rests
+  inside a run keeps its clef. A slash sits on its staff's middle line.
 
 What every export sounds is unchanged: a test freezes each example's
 and each grammar example's sounding notes and chord symbols.

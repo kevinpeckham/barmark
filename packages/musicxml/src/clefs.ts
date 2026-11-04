@@ -2,7 +2,7 @@
  * Clefs by bars (the notation design, section 3): a part is bass when most
  * of its bars sit below middle C, and a run of bars on the other side
  * changes clef for the run: two bars or more, or one that would need more
- * than three ledger lines.
+ * than three ledger lines. A bar of rests inside a run keeps its clef.
  */
 import type { MeasureEvents } from "./events.js";
 import { belowMiddleC, type Pitch, soundOf } from "./notes.js";
@@ -39,16 +39,23 @@ export function clefPlan(bars: MeasureEvents[]): Clef[] {
 	const part: ByBars = count("F") > count("G") ? "F" : "G";
 	const other: ByBars = part === "G" ? "F" : "G";
 	const clefs = bars.map((): Clef => part);
+	// A run counts the bars that write notes; a bar of rests inside it takes its clef.
 	const change = (run: number[]) => {
-		const far = run.some((i) => votes[i]?.notes.some((p) => ledgers(p, part) > 3));
-		if (run.length >= 2 || far) for (const i of run) clefs[i] = other;
+		const notes = run.filter((i) => (votes[i]?.notes.length ?? 0) > 0);
+		const far = notes.some((i) => votes[i]?.notes.some((p) => ledgers(p, part) > 3));
+		if (notes.length >= 2 || far) for (const i of run) clefs[i] = other;
 	};
 	let run: number[] = [];
+	let rests: number[] = [];
 	votes.forEach((v, i) => {
-		if (v.notes.length > 0 && v.clef === other) run.push(i);
-		else {
+		if (v.clef === null && run.length > 0) rests.push(i);
+		else if (v.notes.length > 0 && v.clef === other) {
+			run.push(...rests, i);
+			rests = [];
+		} else {
 			change(run);
 			run = [];
+			rests = [];
 		}
 	});
 	change(run);

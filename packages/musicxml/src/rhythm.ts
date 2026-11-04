@@ -114,21 +114,39 @@ export function beatPieces(start: Frac, length: Frac, beat: Frac): Frac[] {
 	return pieces;
 }
 
-const dyadic = (f: Frac) => oddPart(f.d) === 1;
+/** Whether a length is plain: no tuplet in it. */
+export const dyadic = (f: Frac) => oddPart(f.d) === 1;
 const same = (a: Frac, b: Frac) => a.n === b.n && a.d === b.d;
 const inBeats = (f: Frac, beat: Frac) => frac(f.n * beat.d, f.d * beat.n);
 /** Whether `f` falls on the beat grid. */
 export const onBeat = (f: Frac, beat: Frac) => inBeats(f, beat).d === 1;
-/** 4/4 and 2/2 show their middle: no value hides it. */
-export const halved = (m: Meter) => (m.n === 4 && m.d === 4) || (m.n === 2 && m.d === 2);
+/** 4/4, 2/2 and 12/8 show their middle: no value hides it. */
+export const halved = (m: Meter) =>
+	(m.n === 4 && m.d === 4) || (m.n === 2 && m.d === 2) || (m.n === 12 && m.d === 8);
 
-/** 4/4 and 2/2 cut at the middle, unless a note starts the bar and fills whole beats (a rest: the whole bar). */
+/** A compound meter beats in dotted values (6/8, 9/8, 12/8). */
+const compound = (m: Meter) => beatLength(m).n === 3;
+
+/**
+ * A halved meter cuts at the middle, unless a note starts the bar and fills
+ * whole beats in a simple meter (a rest, or any note in 12/8: the whole bar).
+ */
 function middleCut(start: Frac, length: Frac, meter: Meter, rest: boolean): Frac | null {
 	const middle = times(barLength(meter), frac(1, 2));
 	if (!before(start, middle) || !before(middle, plus(start, length))) return null;
 	if (start.n !== 0) return middle;
-	const kept = rest ? same(length, barLength(meter)) : onBeat(length, beatLength(meter));
+	const whole = rest || compound(meter);
+	const kept = whole ? same(length, barLength(meter)) : onBeat(length, beatLength(meter));
 	return kept ? null : middle;
+}
+
+/** In a compound meter a note from a beat shows its whole beats, then the rest: a dotted quarter tied to an eighth. */
+function wholeBeatsCut(start: Frac, length: Frac, meter: Meter): Frac | null {
+	const beat = beatLength(meter);
+	if (!compound(meter) || !onBeat(start, beat)) return null;
+	const beats = inBeats(length, beat);
+	const whole = Math.floor(beats.n / beats.d);
+	return whole >= 1 && beats.d !== 1 ? plus(start, times(frac(whole), beat)) : null;
 }
 
 /** Elsewhere a value off the beat is cut at the next beat. */
@@ -145,7 +163,8 @@ function meterCut(start: Frac, length: Frac, meter: Meter, rest: boolean): Frac 
 	if (!dyadic(start) || !dyadic(length)) return null;
 	const offBeat = rest ? beatCut(start, length, meter) : null;
 	if (offBeat) return offBeat;
-	return halved(meter) ? middleCut(start, length, meter, rest) : beatCut(start, length, meter);
+	const cut = halved(meter) ? middleCut(start, length, meter, rest) : beatCut(start, length, meter);
+	return cut ?? wholeBeatsCut(start, length, meter);
 }
 
 /** How a sound `start` into its bar is written in its meter: tied values, cut where the meter shows. */

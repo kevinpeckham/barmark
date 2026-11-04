@@ -84,7 +84,7 @@ function partXml(source: PartSource, i: number): string {
 	const measures = writtenMeasures(source.parse);
 	const held = applyHolds(applyPushes(measures.map(eventsOf)));
 	const rhythmicBars = held.map(rhythmic);
-	const bars = held.map((b, i) => (rhythmicBars[i] ? joinHolds(b) : b));
+	const bars = joinHolds(held, rhythmicBars);
 	const slashedBars = bars.map(slashed);
 	const instrument = instrumentOf(source.part);
 	const fixed = instrument?.clef;
