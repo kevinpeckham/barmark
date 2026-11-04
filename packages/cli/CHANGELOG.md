@@ -6,6 +6,17 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-11-04
+
+### Changed
+
+- **Uses** @barmark/musicxml 0.3.0: `export --musicxml` writes rhythm
+  slashes in bars off the beat, note values that show the meter, beams,
+  clefs chosen by bars with clef changes, instruments from the part's
+  name (a bass written an octave up, a guitar in treble 8vb, a keyboard
+  on two staves) and a playback sound for each. What it sounds is
+  unchanged.
+
 ## [0.3.0] - 2026-11-04
 
 ### Changed
@@ -129,7 +140,8 @@ The first release of the `barmark` command. Uses `barmark` 0.8.0 and
 - **The `barmark` command:** `check`, `format`, `render` and `transpose`
   for `.chart.md` files, on npm and as standalone binaries.
 
-[Unreleased]: https://github.com/kevinpeckham/barmark/compare/cli-v0.3.0...HEAD
+[Unreleased]: https://github.com/kevinpeckham/barmark/compare/cli-v0.4.0...HEAD
+[0.4.0]: https://github.com/kevinpeckham/barmark/compare/cli-v0.3.0...cli-v0.4.0
 [0.3.0]: https://github.com/kevinpeckham/barmark/compare/cli-v0.2.2...cli-v0.3.0
 [0.2.2]: https://github.com/kevinpeckham/barmark/compare/cli-v0.2.1...cli-v0.2.2
 [0.2.1]: https://github.com/kevinpeckham/barmark/compare/cli-v0.2.0...cli-v0.2.1
