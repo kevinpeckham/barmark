@@ -1,10 +1,9 @@
 # Part lines and instruments — design
 
-Status: proposal for Kevin's decision (2026-11-04). A grammar change, so
-every rule here is a recommendation until Kevin decides; the open
-questions are gathered at the end. It follows the MusicXML notation
-design (#129), whose instrument table and two-staff keyboards it builds
-on.
+Status: approved (Kevin, 2026-11-04: "go with your recommendations on
+#131"). A grammar change; the decisions are gathered at the end. It
+follows the MusicXML notation design (#129, built in #138), whose
+instrument table and two-staff keyboards it builds on.
 
 ## Intent
 
@@ -104,8 +103,8 @@ part: Tpt = Trumpet, instrument: trumpet in Bb
 | `electric piano` | treble + bass | sounding | 2 | 5 |
 | `organ` | treble + bass | sounding | 2 | 17 |
 | `synth` | treble + bass | sounding | 2 | 81 |
-| `acoustic guitar` | treble 8vb | octave up | 1 | 26 |
-| `electric guitar` | treble 8vb | octave up | 1 | 28 |
+| `acoustic guitar` | treble 8vb | sounding (the clef carries the octave) | 1 | 26 |
+| `electric guitar` | treble 8vb | sounding (the clef carries the octave) | 1 | 28 |
 | `electric bass` | bass | octave up | 1 | 34 |
 | `double bass` | bass | octave up | 1 | 33 |
 | `trumpet in Bb` | treble | major 2nd up | 1 | 57 |
@@ -167,17 +166,19 @@ A grammar change: `barmark` minor, then `@barmark/render` and
 `@barmark/musicxml` minors, the CLI, barmark.dev's guide (7.3, 7.6) and
 the songs bump.
 
-## Questions for Kevin (with recommendations)
+## Decisions (Kevin, 2026-11-04)
 
-1. **Line syntax: `Pno.RH |`** (recommended: no declaration, reads like a
-   score's staff label) or declared lines on the part
-   (`part: Pno = Piano, lines: RH LH`).
-2. **Harmony on the first line only** (recommended), or chord symbols
-   allowed on any line (a converter would then have to pick one).
-3. **Up to four lines per part** (recommended), or two.
-4. **`instrument:` on the `part:` line** (recommended) or a line of its
-   own (`instrument: Tpt = trumpet in Bb`).
-5. **The instrument list above** as the first set (recommended), with
-   drums left for their own design.
-6. **Unknown instrument is an error** (recommended), or a warning that
-   falls back to the name table.
+Kevin took every recommendation:
+
+1. **Line syntax `Pno.RH |`**, with no declaration.
+2. **Harmony on the first line only**; a chord name, `N.C.` or `?` on
+   another line is an error.
+3. **Up to four lines per part.**
+4. **`instrument:` on the `part:` line.**
+5. **The instrument list above** as the first set; drums get their own
+   design.
+6. **An unknown instrument is an error**, with near suggestions.
+
+A guitar is written at sounding pitch under its treble 8vb clef, which
+carries the octave: the table follows the notation work (#138), whose
+Dorico import confirmed it.
