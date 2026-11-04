@@ -7,6 +7,7 @@ import type { MeasureEvents, SoundEvent } from "./events.js";
 import { slotHarmonyXml } from "./harmony.js";
 import type { Marks, Measure } from "./measures.js";
 import { type Sound, type Stem, soundOf, soundValueXml, type Tie } from "./notes.js";
+import { pedalXml } from "./pedal.js";
 import {
 	barLength,
 	beatLength,
@@ -165,6 +166,8 @@ type BarStyle = {
 	voice: number;
 	staff: number | null;
 	noteStem?: "up" | "down";
+	/** The staff a pedal mark goes under: a keyboard's lower; null on one staff. */
+	pedalStaff: number | null;
 };
 
 /** An event with what it sounds and how it is written. */
@@ -189,6 +192,7 @@ function eventXml(w: EventValues, style: BarStyle, beams: () => Beam[]): string 
 	);
 	return [
 		...e.words.map(wordsXml),
+		...(e.pedal ?? []).map((p) => pedalXml(p, style.pedalStaff)),
 		e.slot.kind === "unknown" ? wordsXml("?") : "",
 		e.harmony ? slotHarmonyXml(e.slot, style.written) : "",
 		...notes,
@@ -217,7 +221,8 @@ function voiceXml(events: SoundEvent[], meter: Meter, ctx: MeasureContext, staff
 	);
 	let k = 0;
 	const next = () => beams[k++] ?? [];
-	const style = { divisions: ctx.divisions, stem, written: ctx.written, ...staff };
+	const pedalStaff = ctx.staves === 2 ? 2 : null;
+	const style = { divisions: ctx.divisions, stem, written: ctx.written, pedalStaff, ...staff };
 	return written.map((w) => eventXml(w, style, next)).join("");
 }
 
@@ -382,7 +387,9 @@ export function measureXml(bar: MeasureEvents, ctx: MeasureContext): string {
 		attributesXml(m, ctx),
 		leftBarlineXml(m.marks),
 		startXml(m, ctx),
+		bar.lift === "start" ? pedalXml("stop", ctx.staves === 2 ? 2 : null) : "",
 		body,
+		bar.lift === "end" ? pedalXml("stop", ctx.staves === 2 ? 2 : null) : "",
 		endXml(m.marks),
 		rightBarlineXml(m.marks),
 	]);

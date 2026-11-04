@@ -7,6 +7,7 @@
 import type { Articulation, Push, SimpleSlot, Slot } from "barmark";
 import type { Measure } from "./measures.js";
 import { noteSetOf, type Pitch, soundOf } from "./notes.js";
+import type { PedalMark } from "./pedal.js";
 import {
 	barLength,
 	dyadic,
@@ -16,6 +17,7 @@ import {
 	minus,
 	plus,
 	slotLengths,
+	times,
 } from "./rhythm.js";
 
 export type SoundEvent = {
@@ -31,9 +33,17 @@ export type SoundEvent = {
 	held?: SimpleSlot;
 	/** A keyboard staff's share of the notes (`splitStaves`); none for a rest. */
 	notes?: Pitch[];
+	/** The sustain pedal's marks before it (`applyPedals`). */
+	pedal?: PedalMark[];
 };
 
-export type MeasureEvents = { measure: Measure; events: SoundEvent[]; after: string[] };
+export type MeasureEvents = {
+	measure: Measure;
+	events: SoundEvent[];
+	after: string[];
+	/** The pedal lifts at the bar's start (the part falls tacet) or its end (the chart's last bar). */
+	lift?: "start" | "end";
+};
 
 const PUSH: Record<Push, Frac> = { eighth: frac(1, 2), sixteenth: frac(1, 4) };
 
@@ -51,6 +61,13 @@ function simple(slot: SimpleSlot, length: Frac, words: string[]): SoundEvent {
 	};
 }
 
+/** A group's members' lengths: a dotted figure's three to one, or equal shares (barmark's grammar 2.2). */
+function memberLengths(slot: Frac, members: SimpleSlot[]): Frac[] {
+	const dotted = members.findIndex((m) => m.dotted);
+	if (dotted < 0) return members.map(() => memberLength(slot, members.length));
+	return members.map((_, j) => times(slot, frac(j === dotted ? 3 : 1, 4)));
+}
+
 /** A measure's events in order; a tacet measure has none. */
 export function eventsOf(m: Measure): MeasureEvents {
 	const wordsAt = (at: number) => m.words.filter((w) => w.at === at).map((w) => w.text);
@@ -58,8 +75,8 @@ export function eventsOf(m: Measure): MeasureEvents {
 	const events = lengths.flatMap((len, i) => {
 		const slot = m.slots[i] as Slot;
 		if (slot.kind !== "group") return [simple(slot, len, wordsAt(i))];
-		const each = memberLength(len, slot.members.length);
-		return slot.members.map((s, j) => simple(s, each, j === 0 ? wordsAt(i) : []));
+		const each = memberLengths(len, slot.members);
+		return slot.members.map((s, j) => simple(s, each[j] ?? len, j === 0 ? wordsAt(i) : []));
 	});
 	return { measure: m, events, after: m.tacet ? [] : wordsAt(m.slots.length) };
 }

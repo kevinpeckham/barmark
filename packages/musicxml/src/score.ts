@@ -13,6 +13,7 @@ import { type Instrument, instrumentOf } from "./instruments.js";
 import { measureXml } from "./measure-xml.js";
 import { writtenMeasures } from "./measures.js";
 import { rhythmic, slashed } from "./notes.js";
+import { applyPedals } from "./pedal.js";
 import { barLength, beatLength, divisionsFor } from "./rhythm.js";
 import { VERSION } from "./version.js";
 import { el, text } from "./xml.js";
@@ -93,7 +94,7 @@ function streamOf(parse: ChartParse) {
 	const measures = writtenMeasures(parse);
 	const held = applyHolds(applyPushes(measures.map(eventsOf)));
 	const rhythmicBars = held.map(rhythmic);
-	return { measures, rhythmicBars, bars: joinHolds(held, rhythmicBars) };
+	return { measures, rhythmicBars, bars: applyPedals(joinHolds(held, rhythmicBars)) };
 }
 
 function partXml(source: PartSource, i: number): string {

@@ -21,6 +21,13 @@ package uses [semantic versioning](https://semver.org/).
   staves, stems down. A one-staff part writes its lines as voices 1–4.
   A staff's line that rests a bar gets a whole-bar rest. A keyboard part
   with no lines is split at middle C as before.
+- **Pedal marks** (barmark's grammar 2.9): a press writes a pedal start
+  with `damper-pedal="yes"` playback, a release a stop, and a press with
+  the pedal down a stop then a start; the pedal lifts where the part falls
+  tacet and at the chart's end. The marks go under the lower staff of a
+  keyboard.
+- **Dotted figures** (grammar 2.2): `C._D` writes a dotted eighth and a
+  sixteenth, beamed, with no tuplet; `C_D.` the reverse.
 - **`clef:`** fixes a part's clef for the whole part, one staff, with no
   clef changes; `alto` writes a C clef on the third line.
 
