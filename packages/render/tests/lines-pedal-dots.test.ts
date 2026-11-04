@@ -45,6 +45,16 @@ describe("part lines (barmark's grammar 7.6)", () => {
 	test("render --part Pno shows both lines", () => {
 		expect(rowLabels(MORNING, "Pno")).toEqual([["Pno.RH", "Pno.LH"]]);
 	});
+	test("a screen reader hears which line a row is", () => {
+		const system = doc(MORNING).querySelector(".bm-system");
+		expect(system?.getAttribute("aria-label")).toContain("Piano RH, Piano LH, Bass");
+		const rows = [...(system?.querySelectorAll(".bm-part-row") ?? [])];
+		expect(rows.map((r) => r.querySelector(".bm-sr")?.textContent)).toEqual([
+			"Piano RH",
+			"Piano LH",
+			"Bass",
+		]);
+	});
 	test("one part's lines get the label column too", () => {
 		const style = (text: string, part?: string) =>
 			doc(text, part).querySelector(".bm-chart[data-parts]")?.getAttribute("style") ?? "";

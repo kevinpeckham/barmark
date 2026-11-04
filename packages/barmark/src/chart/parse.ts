@@ -241,7 +241,7 @@ function extractOf(
 	}
 	if (part.lines?.length)
 		return {
-			lines: projectPartLines(doc.lines, doc.parts, label),
+			lines: projectPartLines(doc.lines, label),
 			played: playStreams(doc.lines, doc.parts, [part]),
 		};
 	const lines = doc.parts.length > 1 ? projectPart(doc.lines, doc.parts, label) : doc.lines;

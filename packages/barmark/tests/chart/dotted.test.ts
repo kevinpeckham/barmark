@@ -43,6 +43,20 @@ describe("dotted figures (grammar 2.2)", () => {
 			expect(e[0]?.message).toContain("/");
 		}
 	});
+	test("a misplaced ... or direction keeps its own message, not the dot's", () => {
+		const messages = (text: string) => errors(text).map((d) => d.message);
+		expect(messages("| C ... |")).toEqual(["... must be alone in a cell"]);
+		expect(messages("| C_... |")).toEqual(["... must be alone in a cell"]);
+		expect(messages("| C / D.S. |")).toEqual([
+			"D.S. is part of a direction, which must be alone in its cell",
+		]);
+		expect(messages("| C_D.S. |")).toEqual([
+			"D.S. is part of a direction, which must be alone in its cell",
+		]);
+		expect(messages("| D.C. C |")).toEqual([
+			"D.C. is part of a direction, which must be alone in its cell",
+		]);
+	});
 	test("print and transpose keep the dot", () => {
 		expect(printChart("| C._D / / |")).toContain("| C._D / / |");
 		expect(printChart("| {C4}_{D4}. |")).toContain("{C4}_{D4}.");
