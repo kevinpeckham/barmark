@@ -1,11 +1,11 @@
 import type {
 	ChartDiagnostic,
 	Credits,
+	DeclaredPart,
 	Direction,
 	Directives,
 	Key,
 	Meter,
-	Part,
 	Repeat,
 	Slot,
 	Words,
@@ -18,9 +18,9 @@ export type LayoutOptions = { rehearsalLetters?: boolean; part?: string };
 export type ChartModel = {
 	title: string | null;
 	/** What `part:` names in a single-part chart; null when the chart names none or several. */
-	part: Part | null;
-	/** Every declared part, in score order (barmark's grammar 7.4). */
-	parts: Part[];
+	part: DeclaredPart | null;
+	/** Every declared part, in score order (barmark's grammar 7.4), with its lines (7.6). */
+	parts: DeclaredPart[];
 	/** The chart's credit lines (barmark's grammar 7.5). */
 	credits: Credits;
 	/** Directives before the first heading, bar line or text line. */

@@ -6,6 +6,20 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- **Part lines** (barmark's grammar 7.6): a system draws a row per line a
+  part writes, labelled `Pno.RH`, `Pno.LH`, in score order; a part with no
+  line there keeps its tacet row, and `part: "Pno"` draws both hands. The
+  label column is as wide as the widest line label. `parts` in the model
+  are barmark's `DeclaredPart`, with `lines`.
+- **Pedal marks** (grammar 2.9): "Ped." under a press and "✱" under a
+  release, the slot marked `data-pedal`; a bar with one makes room below.
+  Spoken as "pedal G" and "pedal up C".
+- **Dotted figures** (grammar 2.2): a dotted group draws no tuplet number
+  and puts a dot after its dotted member (`data-dotted` on the group);
+  spoken "C dotted, D".
+
 ## [0.13.0] - 2026-11-04
 
 Needs `barmark` 0.15.0.

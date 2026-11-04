@@ -11,6 +11,7 @@ import {
 	printDirection,
 	printPasses,
 	type Repeat,
+	type SimpleSlot,
 	type Slot,
 	type TempoChange,
 } from "barmark";
@@ -109,10 +110,16 @@ function chartHtml(text: string, options: RenderOptions): string {
 		numerals: numeralsOf(options),
 	};
 	// Every section's left column is as wide as the longest part label, so tutti rows line up with systems.
-	const widest = Math.max(0, ...model.parts.map((p) => p.label?.length ?? 0));
+	const widest = Math.max(0, ...model.parts.flatMap(rowLabelsOf).map((l) => l.length));
 	const gutter = parts ? ` data-parts style="--bm-label-chars:${widest}"` : "";
 	return `<div class="bm-chart" data-theme="${themeOf(options)}"${gutter}${settings.barNumbers ? "" : ' data-bar-numbers="off"'}${options.wrap === false ? ' data-wrap="off"' : ""}>${headerHtml(model)}${model.blocks.map((b) => blockHtml(b, settings)).join("")}${copyrightHtml(model)}${options.diagnostics ? diagnosticsHtml(model) : ""}</div>`;
 }
+
+/** A part's row labels: its own, and one per line it writes (barmark's grammar 7.6). */
+const rowLabelsOf = (p: ChartModel["parts"][number]) => [
+	p.label ?? "",
+	...(p.lines ?? []).map((n) => `${p.label ?? ""}.${n}`),
+];
 
 function headerHtml(model: ChartModel): string {
 	const title = model.title
@@ -428,22 +435,49 @@ const FERMATA = `<svg class="bm-fermata-glyph" viewBox="0 0 24 14" width="1.4em"
 /** `‹` for an eighth push, `«` for a sixteenth. */
 const PUSH_MARK = { eighth: "‹", sixteenth: "«" } as const;
 const ARTICULATION_MARK = { accent: ">", hit: "^" } as const;
+/** The piano score's marks: Ped. under a press, ✱ under a release (barmark's grammar 2.9). */
+const PEDAL_MARK = { press: "Ped.", release: "✱" } as const;
 
 const marksOf = (slot: Slot) => ({
 	push: "push" in slot ? (slot.push ?? null) : null,
 	articulation: slot.kind === "chord" ? (slot.articulation ?? null) : null,
+	pedal: slot.kind === "chord" ? (slot.pedal ?? null) : null,
 });
 
-/** A slot with its push mark before it and its accent or hit above it. */
+const dataOf = (marks: ReturnType<typeof marksOf>) =>
+	Object.entries(marks)
+		.map(([k, v]) => (v ? ` data-${k}="${v}"` : ""))
+		.join("");
+
+/** A slot with its push mark before it, its accent or hit above it and its pedal mark below. */
 function slotHtml(slot: Slot, view: View): string {
 	const body = unmarkedSlotHtml(slot, view);
-	const { push, articulation } = marksOf(slot);
-	if (!push && !articulation) return body;
-	const data = `${push ? ` data-push="${push}"` : ""}${articulation ? ` data-articulation="${articulation}"` : ""}`;
+	const marks = marksOf(slot);
+	const { push, articulation, pedal } = marks;
+	if (!push && !articulation && !pedal) return body;
+	const before = push ? `<span class="bm-push" aria-hidden="true">${PUSH_MARK[push]}</span>` : "";
 	const above = articulation
 		? `<span class="bm-artic">${ARTICULATION_MARK[articulation]}</span>`
 		: "";
-	return `<span class="bm-marked"${data}>${push ? `<span class="bm-push" aria-hidden="true">${PUSH_MARK[push]}</span>` : ""}${above}${body}</span>`;
+	const below = pedal
+		? `<span class="bm-pedal" aria-hidden="true">${PEDAL_MARK[pedal]}</span>`
+		: "";
+	return `<span class="bm-marked"${dataOf(marks)}>${before}${above}${body}${below}</span>`;
+}
+
+/** A group: a tuplet number over equal members, or a dotted figure with its dot (barmark's grammar 2.2). */
+function groupHtml(members: SimpleSlot[], view: View): string {
+	const dotted = members.some((m) => m.dotted);
+	const inner = members
+		.map((m) =>
+			m.dotted
+				? `<span class="bm-dotted">${slotHtml(m, view)}<span class="bm-dot" aria-hidden="true">.</span></span>`
+				: slotHtml(m, view),
+		)
+		.join("");
+	if (dotted)
+		return `<span class="bm-group" data-count="${members.length}" data-dotted>${inner}</span>`;
+	return `<span class="bm-group" data-count="${members.length}"><span class="bm-tuplet">${members.length}</span>${inner}</span>`;
 }
 
 function unmarkedSlotHtml(slot: Slot, view: View): string {
@@ -459,7 +493,7 @@ function unmarkedSlotHtml(slot: Slot, view: View): string {
 		case "unknown":
 			return `<span class="bm-unknown">?</span>`;
 		case "group":
-			return `<span class="bm-group" data-count="${slot.members.length}"><span class="bm-tuplet">${slot.members.length}</span>${slot.members.map((m) => slotHtml(m, view)).join("")}</span>`;
+			return groupHtml(slot.members, view);
 	}
 }
 

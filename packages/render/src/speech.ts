@@ -8,6 +8,7 @@ import {
 	type Direction,
 	degreeOf,
 	type Key,
+	type SimpleSlot,
 	type Slot,
 } from "barmark";
 import type { CellModel } from "./types.js";
@@ -131,9 +132,20 @@ function speakChordSlot(slot: Extract<Slot, { kind: "chord" }>, key?: Key): stri
 	return slot.articulation === "hit" ? `${voiced} short hit` : voiced;
 }
 
+const PEDALLED = { press: "pedal", release: "pedal up" } as const;
+
 export function speakSlot(slot: Slot, key?: Key): string {
-	const said = speakUnpushed(slot, key);
-	return "push" in slot && slot.push ? `${said} ${PUSHED[slot.push]}` : said;
+	const unpushed = speakUnpushed(slot, key);
+	const said = "push" in slot && slot.push ? `${unpushed} ${PUSHED[slot.push]}` : unpushed;
+	const dotted = "dotted" in slot && slot.dotted ? `${said} dotted` : said;
+	return slot.kind === "chord" && slot.pedal ? `${PEDALLED[slot.pedal]} ${dotted}` : dotted;
+}
+
+/** "triplet: C, D, E"; a dotted figure is its members: "C dotted, D". */
+function speakGroup(members: SimpleSlot[], key?: Key): string {
+	const said = members.map((m) => speakSlot(m, key)).join(", ");
+	if (members.some((m) => m.dotted)) return said;
+	return `${GROUPS[members.length] ?? `group of ${members.length}`}: ${said}`;
 }
 
 function speakUnpushed(slot: Slot, key?: Key): string {
@@ -149,7 +161,7 @@ function speakUnpushed(slot: Slot, key?: Key): string {
 		case "unknown":
 			return "unknown chord";
 		case "group":
-			return `${GROUPS[slot.members.length] ?? `group of ${slot.members.length}`}: ${slot.members.map((m) => speakSlot(m, key)).join(", ")}`;
+			return speakGroup(slot.members, key);
 	}
 }
 
