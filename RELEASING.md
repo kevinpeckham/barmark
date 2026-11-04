@@ -174,7 +174,8 @@ manual step before its first release (the same for `@barmark/cli`):
 1. **Kevin, on his own machine,** publishes a placeholder 0.0.0 under the
    name (a `package.json` with the name, version `0.0.0` and a one-line
    README saying the first release is coming), with `npm publish --access
-   public`.
+   public`. Run `npm whoami` first: logged out, npm answers the
+   publish with a misleading 404 (FINDINGS.md).
 2. **On npmjs.com,** the package's settings → Trusted Publisher: GitHub
    Actions, repository `kevinpeckham/barmark`, workflow `release.yml`,
    environment `npm`. Then set publishing access to require two-factor

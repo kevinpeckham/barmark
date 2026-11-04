@@ -482,3 +482,12 @@ offline. `--nonet` stops the fetch; validation is against the vendored
 XSD only (`packages/musicxml/tests/schema.ts`). The XSD's own imports of
 `xml.xsd` and `xlink.xsd` were remote too, and point at local copies
 (`tests/schema/README.md`).
+
+### npm answers a logged-out scoped publish with 404, not 401 (2026-11-04, release)
+
+The placeholder publish of `@barmark/musicxml` 0.0.0 failed with "404 Not
+Found - PUT https://registry.npmjs.org/@barmark%2fmusicxml", which reads
+as "the scope doesn't exist". The scope was fine (`npm view
+@barmark/render maintainers` named Kevin); the terminal wasn't logged in
+to npm. `npm login` fixed it. RELEASING.md's first-release step now says
+to run `npm whoami` first.
