@@ -45,6 +45,14 @@ describe("part lines (barmark's grammar 7.6)", () => {
 	test("render --part Pno shows both lines", () => {
 		expect(rowLabels(MORNING, "Pno")).toEqual([["Pno.RH", "Pno.LH"]]);
 	});
+	test("one part's lines get the label column too", () => {
+		const style = (text: string, part?: string) =>
+			doc(text, part).querySelector(".bm-chart[data-parts]")?.getAttribute("style") ?? "";
+		expect(style("part: Pno = Piano\nPno.RH | {G4} |\nPno.LH | {G2} |\n")).toContain(
+			"--bm-label-chars:6",
+		);
+		expect(style(MORNING, "Pno")).toContain("--bm-label-chars:6");
+	});
 	test("a single-part chart with lines", () => {
 		expect(rowLabels("part: Pno = Piano\nPno.RH | {G4} |\nPno.LH | {G2} |\n")).toEqual([
 			["Pno.RH", "Pno.LH"],

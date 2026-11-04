@@ -25,8 +25,11 @@ describe("pedal marks", () => {
 	});
 	test("on a keyboard, under the lower staff", () => {
 		const xml = xmlOf("part: Pno = Piano, instrument: piano\n| +G{B3 D4 G4} / / / | *C |\n");
-		expect(sequence(measures(xml)[0] ?? "")[0]).toBe("start@2");
-		expect(sequence(measures(xml)[1] ?? "")[0]).toBe("stop@2");
+		// Once, though the voicing reaches both staves.
+		expect(sequence(measures(xml)[0] ?? "").filter((x) => x?.startsWith("st"))).toEqual([
+			"start@2",
+		]);
+		expect(sequence(measures(xml)[1] ?? "").filter((x) => x?.startsWith("st"))).toEqual(["stop@2"]);
 	});
 	test("pedal change: a stop then a start at the same place", () => {
 		const s = sequence(measures(xmlOf("| +{G3} / +{C4} / | *{D4} |\n"))[0] ?? "");
@@ -38,6 +41,16 @@ describe("pedal marks", () => {
 		);
 		// "Piano" is a keyboard: two staves, the stop under the lower.
 		expect(sequence(measures(xml)[2] ?? "")).toEqual(["stop@2", "rest", "rest"]);
+	});
+	test("the pedal stays down through a bar only the LH plays", () => {
+		const xml = xmlOf(
+			"part: Pno = Piano, instrument: piano\n## A\nPno.RH | +C{C4 E4 G4} |\nPno.LH | {C3} |\n## B\nPno.LH | {F2} |\n## C\nPno.RH | *G{G4} |\nPno.LH | {G2} |\n",
+		);
+		expect(measures(xml).map((m) => sequence(m).filter((x) => x?.startsWith("st")))).toEqual([
+			["start@2"],
+			[],
+			["stop@2"],
+		]);
 	});
 	test("pedal lifts at the end", () => {
 		const s = sequence(measures(xmlOf("| +{G3} / / / | {C4} |\n"))[1] ?? "");

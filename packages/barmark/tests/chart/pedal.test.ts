@@ -47,6 +47,16 @@ describe("sustain pedal marks (grammar 2.9)", () => {
 	test("a group's members: the pedal is down from the group's first press", () => {
 		expect(pedalStates(parseChart("| G_+C D |").bars)).toEqual([[true, true]]);
 	});
+	test("the pedal belongs to the part: a bar only its LH plays keeps it down", () => {
+		const text =
+			"part: Pno = Piano, instrument: piano\n## A\nPno.RH | +C{C4 E4 G4} |\nPno.LH | {C3} |\n## B\nPno.LH | {F2} |\n## C\nPno.RH | *G{G4} |\nPno.LH | {G2} |\n";
+		expect(pedalStates(parseChart(text).bars)).toEqual([[true], [true], [false]]);
+		expect(of(text, "warning")).toEqual([]);
+		// Where every line rests, it lifts, and a release then warns.
+		const tacet =
+			"part: Pno = Piano\npart: Bs = Bass\n## A\nPno.RH | +C |\nBs | {C2} |\n## B\nBs | {F1} |\n## C\nPno.RH | *G |\nBs | {G1} |\n";
+		expect(of(tacet, "warning").map((d) => d.line)).toEqual([9]);
+	});
 	test("print round-trips", () => {
 		const text = "| +G *C +>G +<{C3 G3} |\n";
 		expect(printChart(text)).toContain("| +G *C +>G +<{C3 G3} |");

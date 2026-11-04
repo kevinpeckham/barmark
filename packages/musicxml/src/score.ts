@@ -10,12 +10,13 @@ import {
 import { clefPlan } from "./clefs.js";
 import { applyHolds, applyPushes, eventsOf, joinHolds } from "./events.js";
 import { type Instrument, instrumentOf } from "./instruments.js";
-import { measureXml } from "./measure-xml.js";
+import { fifthsOf, measureXml } from "./measure-xml.js";
 import { writtenMeasures } from "./measures.js";
 import { rhythmic, slashed } from "./notes.js";
 import { applyPedals } from "./pedal.js";
 import { barLength, beatLength, divisionsFor } from "./rhythm.js";
 import { VERSION } from "./version.js";
+import { fitWritten } from "./written.js";
 import { el, text } from "./xml.js";
 
 export type MusicXmlOptions = {
@@ -94,7 +95,7 @@ function streamOf(parse: ChartParse) {
 	const measures = writtenMeasures(parse);
 	const held = applyHolds(applyPushes(measures.map(eventsOf)));
 	const rhythmicBars = held.map(rhythmic);
-	return { measures, rhythmicBars, bars: applyPedals(joinHolds(held, rhythmicBars)) };
+	return { measures, rhythmicBars, bars: joinHolds(held, rhythmicBars) };
 }
 
 function partXml(source: PartSource, i: number): string {
@@ -102,9 +103,12 @@ function partXml(source: PartSource, i: number): string {
 	const first = streamOf(lead);
 	const streams = [first, ...others.map(streamOf)];
 	const lined = (source.part?.lines?.length ?? 0) > 0;
-	const { measures, rhythmicBars, bars } = first;
+	const { measures, rhythmicBars } = first;
+	const bars = applyPedals(first.bars, (i) => streams.every((s) => s.bars[i]?.measure.tacet));
 	const slashedBars = bars.map(slashed);
 	const instrument = instrumentOf(source.part);
+	const keys = measures.flatMap((m) => (m.key ? [fifthsOf(m.key)] : []));
+	const written = fitWritten(instrument?.written ?? { diatonic: 0, chromatic: 0 }, keys);
 	const fixed = instrument?.clef;
 	const clefs = fixed ? bars.map(() => fixed) : clefPlan(bars);
 	const divisions = divisionsFor(
@@ -125,9 +129,11 @@ function partXml(source: PartSource, i: number): string {
 			slashed: around(slashedBars, index, true),
 			clef: around(clefs, index, "G"),
 			rhythmic: rhythmicBars[index] ?? false,
-			written: instrument?.written ?? { diatonic: 0, chromatic: 0 },
+			written,
 			staves: instrument?.staves ?? 1,
-			...(lined ? { lines: streams.map((s) => s.bars[index]?.events ?? []) } : {}),
+			...(lined
+				? { lines: [bar.events, ...streams.slice(1).map((s) => s.bars[index]?.events ?? [])] }
+				: {}),
 		}),
 	);
 	return el("part", { id: `P${i + 1}` }, xml);

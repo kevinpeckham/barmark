@@ -21,6 +21,8 @@ const CHARTS: Record<string, string> = {
 	parts: MORNING_SONG,
 	piano:
 		"# Piano\npart: Pno = Piano\npart: Bs = Bass\n## A\nPno.RH | +G{B3 D4 G4} / C._D / | *C{C4 E4 G4} |\nPno.LH | {G2} / / / | {C3} |\nBs | {G1} | {C2} |\n| G | C |",
+	pianoAlone:
+		"# Piano Alone\npart: Pno = Piano\nPno.RH | +G{B3 D4 G4} / C._D / | *C |\nPno.LH | {G2} / / / | {C3} |",
 	long: "# Long\n## A\n| A | B | C | D | E | F | G | A | B | C | D | E |\n| A / B / | C / D / | E / F / | G / A / | B / C / | D / E / |",
 };
 const HOSTILE = `*{margin:2em!important;padding:0!important;font-family:"Comic Sans MS",cursive!important;line-height:3!important}

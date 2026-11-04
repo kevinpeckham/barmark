@@ -103,7 +103,7 @@ function chartHtml(text: string, options: RenderOptions): string {
 		...(options.part && { part: options.part }),
 	});
 	const barNumbers = options.barNumbers ?? true;
-	const parts = model.parts.length > 1;
+	const parts = labelled(model);
 	const settings: Settings = {
 		barNumbers,
 		gutter: barNumbers || parts,
@@ -114,6 +114,10 @@ function chartHtml(text: string, options: RenderOptions): string {
 	const gutter = parts ? ` data-parts style="--bm-label-chars:${widest}"` : "";
 	return `<div class="bm-chart" data-theme="${themeOf(options)}"${gutter}${settings.barNumbers ? "" : ' data-bar-numbers="off"'}${options.wrap === false ? ' data-wrap="off"' : ""}>${headerHtml(model)}${model.blocks.map((b) => blockHtml(b, settings)).join("")}${copyrightHtml(model)}${options.diagnostics ? diagnosticsHtml(model) : ""}</div>`;
 }
+
+/** Whether systems have labelled rows: several parts, or one part writing lines (barmark's grammar 7.6). */
+const labelled = (model: ChartModel) =>
+	model.parts.length > 1 || model.parts.some((p) => (p.lines?.length ?? 0) > 0);
 
 /** A part's row labels: its own, and one per line it writes (barmark's grammar 7.6). */
 const rowLabelsOf = (p: ChartModel["parts"][number]) => [

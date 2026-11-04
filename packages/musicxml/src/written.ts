@@ -32,6 +32,21 @@ export function writtenName(name: string, by: WrittenInterval): string {
 export const writtenKey = (fifths: number, by: WrittenInterval) =>
 	fifths + 7 * by.chromatic - 12 * by.diatonic;
 
+/**
+ * The spelling of `by` a part's keys read best in: as given while every
+ * written key has seven sharps or flats at most, or else the enharmonic
+ * interval a step up or down (an alto sax's diminished seventh in B major,
+ * written A♭ not G♯) when that keeps them all within seven.
+ */
+export function fitWritten(by: WrittenInterval, fifths: number[]): WrittenInterval {
+	const fits = (w: WrittenInterval) => fifths.every((f) => Math.abs(writtenKey(f, w)) <= 7);
+	if (fits(by)) return by;
+	const other = [1, -1]
+		.map((step) => ({ diatonic: by.diatonic + step, chromatic: by.chromatic }))
+		.find(fits);
+	return other ?? by;
+}
+
 /** The `<transpose>` that takes the written part back to sounding pitch; none at concert pitch. */
 export function transposeXml(by: WrittenInterval): string {
 	if (by.diatonic === 0 && by.chromatic === 0) return "";

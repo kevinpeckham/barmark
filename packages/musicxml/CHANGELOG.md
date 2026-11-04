@@ -13,7 +13,9 @@ package uses [semantic versioning](https://semver.org/).
   guess from its name. A transposing instrument is written at its pitch:
   a trumpet in Bb a major second up, an alto sax a major sixth, a tenor
   sax a ninth, with the key signature, the notes and the chord symbols'
-  roots and basses all written, and a `<transpose>` taking them back. The
+  roots and basses all written, and a `<transpose>` taking them back. A
+  key that would be written past seven sharps or flats is spelled
+  enharmonically: an alto sax in B major writes A♭, not G♯. The
   bass's octave transposition is unchanged.
 - **Part lines** (barmark's grammar 7.6): a keyboard's first line goes
   on the upper staff and its second on the lower, as written, with no

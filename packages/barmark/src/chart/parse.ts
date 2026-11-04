@@ -1,6 +1,7 @@
 import { readDocument } from "./document.js";
 import { expand, flattenBars } from "./expand.js";
 import { projectPart, projectPartLines } from "./parts.js";
+import { pedalWarnings } from "./pedal.js";
 import type {
 	ChartDiagnostic,
 	ChartEvent,
@@ -161,6 +162,21 @@ function foldEvents(events: ChartEvent[], streams: Stream[], shown: DeclaredPart
 	});
 }
 
+/** A part's own bars from a folded bar: tacet where none of its lines plays. */
+function partView(b: PlayedBar, i: number, shown: number): PlayedBar {
+	if (shown === 1) return b;
+	const own = b.parts?.[i];
+	return own ? { ...b, line: own.line, slots: own.slots } : { ...b, slots: [], tacet: true };
+}
+
+/** The pedal warnings of each part that writes lines, walked on the part, not one line (grammar 2.9, 7.6). */
+function linedPedalWarnings(events: ChartEvent[], shown: DeclaredPart[]): ChartDiagnostic[] {
+	const bars = flattenBars(events);
+	return shown.flatMap((p, i) =>
+		p.lines?.length ? pedalWarnings(bars.map((b) => partView(b, i, shown.length))) : [],
+	);
+}
+
 /**
  * Parts and their lines: each stream projected and played, zipped into one
  * timeline, then folded into the parts shown (grammar 7.4, 7.6).
@@ -172,6 +188,7 @@ function playStreams(lines: Line[], parts: DeclaredPart[], shown: DeclaredPart[]
 			projectPart(lines, parts, s.label, s.name),
 			s.name === null ? s.label : `${s.label}.${s.name}`,
 			streams.length,
+			s.name === null,
 		),
 	);
 	const diagnostics = mergeReports(played.map((p) => p.diagnostics));
@@ -180,6 +197,7 @@ function playStreams(lines: Line[], parts: DeclaredPart[], shown: DeclaredPart[]
 		(d) => diagnostics.push(d),
 	);
 	const events = foldEvents(zipped, streams, shown);
+	diagnostics.push(...linedPedalWarnings(events, shown));
 	return { events, sections: played[0]?.sections ?? [], diagnostics };
 }
 

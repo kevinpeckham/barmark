@@ -216,6 +216,18 @@ test.describe("piano marks", () => {
 			[...root.querySelectorAll(".bm-part-label")].map((l) => l.textContent),
 		);
 		expect(labels).toEqual(["Pno.RH", "Pno.LH", "Bs"]);
+		for (const path of ["/chart?chart=piano", "/chart?chart=pianoAlone"]) {
+			await page.goto(path);
+			const clear = await inChart(page, (root) =>
+				[...root.querySelectorAll(".bm-part-label")].map((l) => {
+					const row = l.closest(".bm-part-row") as Element;
+					const bar = row.querySelector(".bm-bar-body") as Element;
+					return l.getBoundingClientRect().right <= bar.getBoundingClientRect().left;
+				}),
+			);
+			expect(clear.length).toBeGreaterThan(0);
+			expect(clear.every(Boolean)).toBe(true);
+		}
 		await expect(page.locator(".bm-group[data-dotted] .bm-dot")).toBeVisible();
 	});
 });

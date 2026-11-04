@@ -16,11 +16,18 @@ function marksAt(e: SoundEvent, down: boolean): PedalMark[] {
 	return down ? ["stop", "start"] : ["start"];
 }
 
-/** Each event's pedal marks, and a bar's lift at its start (tacet) or end (the chart's last). */
-export function applyPedals(bars: MeasureEvents[]): MeasureEvents[] {
+/**
+ * Each event's pedal marks, and a bar's lift at its start (tacet) or end
+ * (the chart's last). `tacet` says the part rests a bar: every one of its
+ * lines, not just the first (barmark's grammar 7.6).
+ */
+export function applyPedals(
+	bars: MeasureEvents[],
+	tacet: (i: number) => boolean = (i) => bars[i]?.measure.tacet ?? false,
+): MeasureEvents[] {
 	let down = false;
-	const out = bars.map((bar): MeasureEvents => {
-		if (bar.measure.tacet && down) {
+	const out = bars.map((bar, i): MeasureEvents => {
+		if (tacet(i) && down) {
 			down = false;
 			return { ...bar, lift: "start" };
 		}

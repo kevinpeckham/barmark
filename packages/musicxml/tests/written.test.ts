@@ -86,6 +86,20 @@ describe("instruments from the part line", () => {
 			"<transpose><diatonic>-1</diatonic><chromatic>-2</chromatic><octave-change>-1</octave-change></transpose>",
 		);
 	});
+	test("a written key past seven sharps is spelled enharmonically", () => {
+		const alto = xmlOf("part: Sx = Alto, instrument: alto sax\nkey: B\n| B{B3 D#4 F#4} |\n");
+		expect(all(alto, "fifths")).toEqual(["-4"]);
+		expect(notes(measures(alto)[0] ?? "").map(pitchOf)).toEqual(["Ab4", "C5", "Eb5"]);
+		expect(all(alto, "root-step")).toEqual(["A"]);
+		expect(alto).toContain(
+			"<transpose><diatonic>-6</diatonic><chromatic>-9</chromatic></transpose>",
+		);
+		const tenor = xmlOf("part: Ts = Tenor, instrument: tenor sax\nkey: F#\n| {F#3} |\n");
+		expect(all(tenor, "fifths")).toEqual(["-4"]);
+		expect(notes(measures(tenor)[0] ?? "").map(pitchOf)).toEqual(["Ab4"]);
+		// A key the default spelling writes within seven keeps it.
+		expect(all(xmlOf(`${TRUMPET}| {C5} |\n`), "fifths")).toEqual(["2"]);
+	});
 	test("the bass keeps its octave transposition", () => {
 		const xml = xmlOf("part: Bs = Bass, instrument: electric bass\n| {E1} |\n");
 		expect(notes(measures(xml)[0] ?? "").map(pitchOf)).toEqual(["E2"]);

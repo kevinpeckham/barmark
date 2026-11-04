@@ -56,7 +56,7 @@ const MODE_FIFTHS: Record<Key["mode"], number> = {
 	locrian: -5,
 };
 
-function fifthsOf(key: Key): number {
+export function fifthsOf(key: Key): number {
 	const letter = LETTER_FIFTHS[key.tonic[0] ?? "C"] ?? 0;
 	const alter = [...key.tonic.slice(1)].reduce(
 		(a, c) => a + (c === "#" ? 1 : c === "b" ? -1 : 0),

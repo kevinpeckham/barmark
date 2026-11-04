@@ -147,6 +147,8 @@ export function expand(
 	lines: Line[],
 	label?: string,
 	share = 1,
+	/** False for one line of a part (grammar 7.6): the pedal is the part's, warned of once its lines are folded. */
+	pedal = true,
 ): {
 	events: ChartEvent[];
 	sections: SectionOccurrence[];
@@ -512,6 +514,6 @@ export function expand(
 			form: forms.get(written) ?? 0,
 		};
 	});
-	diagnostics.push(...pedalWarnings(flattenBars(events)));
+	if (pedal) diagnostics.push(...pedalWarnings(flattenBars(events)));
 	return { events, sections: sectionsOut, diagnostics };
 }
