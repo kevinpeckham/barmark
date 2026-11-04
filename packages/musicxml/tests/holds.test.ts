@@ -55,7 +55,7 @@ describe("holds", () => {
 	});
 	test("a hold after a silence is a rest", () => {
 		const [m = ""] = measures(xmlOf("| G -- / / |"));
-		expect(read(m)).toEqual(["/:quarter", "r:half."]);
+		expect(read(m)).toEqual(["/:quarter", "r:quarter", "r:half"]);
 	});
 	test("a hold after a chord stays a slash", () => {
 		const ms = measures(xmlOf("| {C4} G / / | / |"));

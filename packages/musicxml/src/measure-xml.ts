@@ -1,11 +1,19 @@
 /** One measure as MusicXML: attributes when they change, then its notes. */
-import type { Key, SimpleSlot } from "barmark";
+import type { Key, Meter, SimpleSlot } from "barmark";
 import { direction, feelXml, jumpXml, tempoXml, textXml, wordsXml } from "./directions.js";
 import type { MeasureEvents, SoundEvent } from "./events.js";
 import { harmonyXml, noChordXml } from "./harmony.js";
 import type { Marks, Measure } from "./measures.js";
 import { type Sound, soundOf, soundValueXml } from "./notes.js";
-import { barLength, beatLength, beatPieces, type Frac, noteValues, plus } from "./rhythm.js";
+import {
+	barLength,
+	beatLength,
+	beatPieces,
+	type Frac,
+	meterValues,
+	noteValues,
+	plus,
+} from "./rhythm.js";
 import { el, text } from "./xml.js";
 
 export type MeasureContext = {
@@ -89,11 +97,16 @@ function harmonyOf(slot: SimpleSlot): string {
 	return slot.kind === "chord" && slot.chord.kind === "chord" ? harmonyXml(slot.chord) : "";
 }
 
-/** How an event is written: slashes one per beat, anything else as its own length. */
-function valuesOf(e: SoundEvent, sound: Sound, start: Frac, beat: Frac) {
-	const pieces = sound.kind === "slash" ? beatPieces(start, e.length, beat) : [e.length];
+/** How an event is written: slashes one per beat, notes and rests in values that show the meter. */
+function valuesOf(e: SoundEvent, sound: Sound, start: Frac, meter: Meter) {
+	const pieces =
+		sound.kind === "slash" ? beatPieces(start, e.length, beatLength(meter)) : [e.length];
+	const written = (piece: Frac) =>
+		sound.kind === "slash"
+			? noteValues(piece)
+			: meterValues(start, piece, meter, sound.kind === "rest");
 	return pieces.flatMap((piece, p) =>
-		noteValues(piece).map((v, i, values) => ({
+		written(piece).map((v, i, values) => ({
 			v,
 			tie: {
 				stop: i > 0 || (p === 0 && e.tie.stop),
@@ -104,9 +117,9 @@ function valuesOf(e: SoundEvent, sound: Sound, start: Frac, beat: Frac) {
 }
 
 /** One event, `start` into its bar: its words, its harmony, then its values. */
-function eventXml(e: SoundEvent, start: Frac, beat: Frac, divisions: number): string {
+function eventXml(e: SoundEvent, start: Frac, meter: Meter, divisions: number): string {
 	const sound = soundOf(e);
-	const notes = valuesOf(e, sound, start, beat).map(({ v, tie }, i) =>
+	const notes = valuesOf(e, sound, start, meter).map(({ v, tie }, i) =>
 		soundValueXml(sound, v, whole(v.length, divisions), tie, i === 0 ? e.articulation : undefined),
 	);
 	return [
@@ -119,11 +132,10 @@ function eventXml(e: SoundEvent, start: Frac, beat: Frac, divisions: number): st
 
 /** A measure's events, each at its place in the bar. */
 function eventsXml(bar: MeasureEvents, divisions: number): string {
-	const beat = beatLength(bar.measure.meter);
 	let at: Frac = { n: 0, d: 1 };
 	return bar.events
 		.map((e) => {
-			const xml = eventXml(e, at, beat, divisions);
+			const xml = eventXml(e, at, bar.measure.meter, divisions);
 			at = plus(at, e.length);
 			return xml;
 		})

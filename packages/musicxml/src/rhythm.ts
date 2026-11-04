@@ -113,3 +113,42 @@ export function beatPieces(start: Frac, length: Frac, beat: Frac): Frac[] {
 	}
 	return pieces;
 }
+
+const dyadic = (f: Frac) => oddPart(f.d) === 1;
+const same = (a: Frac, b: Frac) => a.n === b.n && a.d === b.d;
+const inBeats = (f: Frac, beat: Frac) => frac(f.n * beat.d, f.d * beat.n);
+const onBeat = (f: Frac, beat: Frac) => inBeats(f, beat).d === 1;
+/** 4/4 and 2/2 show their middle: no value hides it. */
+const halved = (m: Meter) => (m.n === 4 && m.d === 4) || (m.n === 2 && m.d === 2);
+
+/** 4/4 and 2/2 cut at the middle, unless a note starts the bar and fills whole beats (a rest: the whole bar). */
+function middleCut(start: Frac, length: Frac, meter: Meter, rest: boolean): Frac | null {
+	const middle = times(barLength(meter), frac(1, 2));
+	if (!before(start, middle) || !before(middle, plus(start, length))) return null;
+	if (start.n !== 0) return middle;
+	const kept = rest ? same(length, barLength(meter)) : onBeat(length, beatLength(meter));
+	return kept ? null : middle;
+}
+
+/** Elsewhere a value off the beat is cut at the next beat. */
+function beatCut(start: Frac, length: Frac, meter: Meter): Frac | null {
+	const beat = beatLength(meter);
+	if (onBeat(start, beat)) return null;
+	const at = inBeats(start, beat);
+	const next = times(frac(Math.ceil(at.n / at.d)), beat);
+	return before(next, plus(start, length)) ? next : null;
+}
+
+/** Where a sound is cut so its values show the meter; a tuplet's value never is. */
+function meterCut(start: Frac, length: Frac, meter: Meter, rest: boolean): Frac | null {
+	if (!dyadic(start) || !dyadic(length)) return null;
+	return halved(meter) ? middleCut(start, length, meter, rest) : beatCut(start, length, meter);
+}
+
+/** How a sound `start` into its bar is written in its meter: tied values, cut where the meter shows. */
+export function meterValues(start: Frac, length: Frac, meter: Meter, rest = false): NoteValue[] {
+	const cut = meterCut(start, length, meter, rest);
+	if (!cut) return noteValues(length);
+	const first = minus(cut, start);
+	return [...noteValues(first), ...noteValues(minus(length, first))];
+}
