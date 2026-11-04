@@ -93,8 +93,15 @@ const MAX_LINE_DIAGNOSTICS = 20;
 const DOT_PLACE =
 	"a dot goes on one member of a two-member group (C._D or C_D.); write other rhythms with / holds";
 
-/** A member ending in a dot that is not one of `N.C.`'s spellings. */
-const isDotted = (m: string) => m.endsWith(".") && !/^[<>^]*n\.?c\.?$/i.test(m);
+/**
+ * Tokens that end in a dot without being dotted: `N.C.`'s spellings, a
+ * run of dots (`...`), and the directions `D.S.` and `D.C.`, which keep
+ * their own messages when misplaced.
+ */
+const UNDOTTED = /^[<>^+*]*n\.?c\.?$|^\.+$|^d\.[sc]\.$/i;
+
+/** A member ending in a dot that is not one of the undotted tokens. */
+const isDotted = (m: string) => m.endsWith(".") && !UNDOTTED.test(m);
 
 function groupMembers(token: string): string[] {
 	const out = [""];

@@ -11,7 +11,8 @@ package uses [semantic versioning](https://semver.org/).
 - **Part lines** (barmark's grammar 7.6): a system draws a row per line a
   part writes, labelled `Pno.RH`, `Pno.LH`, in score order; a part with no
   line there keeps its tacet row, and `part: "Pno"` draws both hands. The
-  label column is as wide as the widest line label. `parts` in the model
+  label column is as wide as the widest line label. A screen reader
+  hears each row as its part and line: "Piano RH". `parts` in the model
   are barmark's `DeclaredPart`, with `lines`.
 - **Pedal marks** (grammar 2.9): "Ped." under a press and "✱" under a
   release, the slot marked `data-pedal`; a bar with one makes room below.

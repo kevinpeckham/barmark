@@ -27,6 +27,8 @@ Releases follow the process in [RELEASING.md](RELEASING.md).
   themselves, and `printPart` keeps the `Pno.RH |` labels.
   `extractPart(text, label, lineName)` gives one line alone, as a
   converter writes it: resting (tacet) where the line isn't written.
+- A misplaced `...`, `D.S.` or `D.C.` keeps its own message ("must be
+  alone in a cell") rather than the dotted figure's.
 - **Sustain pedal marks** (grammar 2.9): `+G` presses or changes the
   pedal, `*G` lifts it; `--`, a tacet bar and the chart's end lift it too.
   A chord slot gains `pedal`, and `pedalStates` gives whether the pedal is

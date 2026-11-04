@@ -335,6 +335,10 @@ function ownLines(lines: SystemLine[], p: DeclaredPart): SystemLine[] {
 	return lines.filter((l) => l.part === p.label).sort((a, b) => order(a) - order(b));
 }
 
+/** A row's spoken name: the part's, and its line's (barmark's grammar 7.6): "Piano RH". */
+const spokenOf = (p: DeclaredPart, l: SystemLine) =>
+	l.lineName === undefined ? p.name : `${p.name} ${l.lineName}`;
+
 /** A system row's label: the part's, and its line's name (`Pno.RH`). */
 const labelOf = (l: SystemLine) =>
 	`${l.part ?? ""}${l.lineName === undefined ? "" : `.${l.lineName}`}`;
@@ -360,7 +364,7 @@ function layoutSystem(
 			return [
 				{ label: p.label ?? "", name: p.name, row: tacetRow(reference, lines[0]?.line ?? 0) },
 			];
-		return own.map((l) => ({ label: labelOf(l), name: p.name, row: ownRow(l) }));
+		return own.map((l) => ({ label: labelOf(l), name: spokenOf(p, l), row: ownRow(l) }));
 	});
 	return {
 		kind: "system",

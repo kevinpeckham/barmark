@@ -125,7 +125,7 @@ export function projectPart(
 }
 
 /** One part's lines kept as written, labels and all, with a stand-in for each system it doesn't play: what an extract prints (grammar 7.6). */
-export function projectPartLines(lines: Line[], parts: DeclaredPart[], label: string): Line[] {
+export function projectPartLines(lines: Line[], label: string): Line[] {
 	const key = label.toLowerCase();
 	const systems = systemsOf(lines);
 	return lines
