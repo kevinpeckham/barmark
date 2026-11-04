@@ -29,5 +29,16 @@ const threeParts: [string, string] = [
 	readFileSync(new URL("fixtures/three-parts.chart.md", import.meta.url), "utf8"),
 ];
 
+/** A piano writing its hands as lines, with pedal and a dotted figure, over a bass (barmark's grammar 7.6). */
+const pianoLines: [string, string] = [
+	"piano-lines.chart.md",
+	readFileSync(new URL("fixtures/piano-lines.chart.md", import.meta.url), "utf8"),
+];
+
 /** Each chart's name and text. */
-export const corpus = (): [string, string][] => [...examples, threeParts, ...grammarCharts()];
+export const corpus = (): [string, string][] => [
+	...examples,
+	threeParts,
+	pianoLines,
+	...grammarCharts(),
+];
