@@ -27,14 +27,24 @@ chart.musicxml`.
 ## What it writes
 
 A `score-partwise` file, one part per `part:` (a chart with none is one
-part, "Chart"), everything at concert pitch:
+part, "Chart"), at concert pitch except where an instrument transposes:
 
 - **Chords** are `<harmony>` symbols over slash notes, with barmark's own
   spelling shown and `<degree>`s that make the exact chord. barmark never
   invents a melody.
 - **Note sets and voicings** (`{C E G}`, `Cmaj7{E3 G3 B3}`) are real
   notes; a part whose notes sit low gets a bass clef.
-- **Rhythm:** slots, groups (as tuplets), holds, silences (rests), `N.C.`,
+- **Instruments:** a part's `instrument:` gives its clef, staves and
+  playback sound; a transposing one (trumpet in B♭, alto and tenor sax)
+  is written at its pitch with a `<transpose>`. `clef:` fixes a clef,
+  alto included. Without either, the instrument is guessed from the
+  part's name.
+- **Part lines** (`Pno.RH`, `Pno.LH`): a keyboard's hands on its two
+  staves, a third and fourth line as second voices; a one-staff part's
+  lines as voices.
+- **Pedal:** `+` and `*` are pedal marks with playback, under a
+  keyboard's lower staff.
+- **Rhythm:** slots, groups (as tuplets, or a dotted figure), holds, silences (rests), `N.C.`,
   accents, hits and pushes (an early, tied note, as played).
 - **Order:** repeats, `x N`, endings, `Segno`, `Coda`, `To Coda`, `Fine`,
   `D.C.` and `D.S.` are MusicXML repeats and jumps, so playback follows

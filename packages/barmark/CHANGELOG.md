@@ -9,6 +9,13 @@ Releases follow the process in [RELEASING.md](RELEASING.md).
 
 ## [Unreleased]
 
+## [0.16.0] - 2026-11-04
+
+A grammar change: part lines (7.6), sustain pedal marks (2.9), dotted
+figures (2.2), and `instrument:` and `clef:` on the `part:` line (7.3).
+Charts that read before read the same. Implements the
+[grammar v0.1 draft](https://github.com/kevinpeckham/barmark/blob/main/docs/grammar-v0.1-draft.md).
+
 ### Added
 
 - **Part lines** (grammar 7.6): up to four lines per part, labelled
@@ -27,8 +34,6 @@ Releases follow the process in [RELEASING.md](RELEASING.md).
   themselves, and `printPart` keeps the `Pno.RH |` labels.
   `extractPart(text, label, lineName)` gives one line alone, as a
   converter writes it: resting (tacet) where the line isn't written.
-- A misplaced `...`, `D.S.` or `D.C.` keeps its own message ("must be
-  alone in a cell") rather than the dotted figure's.
 - **Sustain pedal marks** (grammar 2.9): `+G` presses or changes the
   pedal, `*G` lifts it; `--`, a tacet bar and the chart's end lift it too.
   A chord slot gains `pedal`, and `pedalStates` gives whether the pedal is
@@ -37,7 +42,8 @@ Releases follow the process in [RELEASING.md](RELEASING.md).
 - **Dotted figures** (grammar 2.2): a dot after one member of a
   two-member group, `C._D` (a dotted eighth and a sixteenth in a beat)
   or `C_D.`. Group members gain `dotted`, and `memberShares` gives each
-  member's share of its slot. `N.C._G` keeps its meaning.
+  member's share of its slot. `N.C._G` keeps its meaning, and a misplaced
+  `...`, `D.S.` or `D.C.` keeps its own message.
 - **`instrument:` and `clef:` on the `part:` line** (grammar 7.3):
   `part: Tpt = Trumpet, instrument: trumpet in Bb`, `part: Ld = Lead,
   clef: bass`. The instrument comes from a list of 16 (`INSTRUMENTS`,
@@ -420,7 +426,8 @@ The first working release: the reference parser and printer for the
 
 - **A placeholder package that holds the `barmark` name** while the spec and parser are written.
 
-[Unreleased]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.15.0...HEAD
+[Unreleased]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.16.0...HEAD
+[0.16.0]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.15.0...barmark-v0.16.0
 [0.15.0]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.14.1...barmark-v0.15.0
 [0.14.1]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.14.0...barmark-v0.14.1
 [0.14.0]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.13.0...barmark-v0.14.0

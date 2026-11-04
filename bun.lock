@@ -18,7 +18,7 @@
     },
     "packages/barmark": {
       "name": "barmark",
-      "version": "0.15.0",
+      "version": "0.16.0",
       "devDependencies": {
         "@types/bun": "^1.4.4",
       },
@@ -37,14 +37,14 @@
     },
     "packages/musicxml": {
       "name": "@barmark/musicxml",
-      "version": "0.3.0",
+      "version": "0.4.0",
       "dependencies": {
         "barmark": "workspace:^",
       },
     },
     "packages/render": {
       "name": "@barmark/render",
-      "version": "0.13.0",
+      "version": "0.14.0",
       "dependencies": {
         "barmark": "workspace:^",
       },

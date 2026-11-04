@@ -96,6 +96,29 @@ printPart(text, "Pno"); // the same as text: tacet bars written N.C.
 projectPart(chart.lines, chart.parts, "Pno"); // one part's lines
 ```
 
+A part can also write up to four **lines** that play together, a
+pianist's two hands (grammar 7.6), and name its instrument and clef
+(7.3):
+
+```
+part: Pno = Piano, instrument: piano
+part: Bs = Bass, instrument: electric bass
+
+Pno.RH | +G{B3 D4 G4} | *C{C4 E4 G4} |
+Pno.LH | {G2}._{D3} / | {C3}         |
+Bs     | {G1}         | {C2}         |
+```
+
+The first line in a system carries the chord symbols, the others note
+sets only. `+` presses the sustain pedal and `*` lifts it (2.9);
+`{G2}._{D3}` is a dotted eighth and a sixteenth (2.2).
+
+```ts
+chart.bars[0].parts[0].lines; // [{ name: "RH", line, slots }, { name: "LH", … }]
+extractPart(text, "Pno", "LH"); // one line alone, resting where it isn't written
+pedalStates(chart.bars); // whether the pedal is down after each slot
+```
+
 `printChart` sorts a system into score order and lines up its pipes.
 `chart.part` still gives the one part of a single-part chart, and is
 deprecated in favour of `parts`.
