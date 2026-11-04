@@ -61,7 +61,7 @@ export type Push = "eighth" | "sixteenth";
  * (`Cmaj7{E3 G3 B3}`, grammar 4.2). The optional fields are present only
  * when written.
  */
-export type SimpleSlot =
+export type SimpleSlot = (
 	| {
 			kind: "chord";
 			chord: ChordRecord;
@@ -72,7 +72,11 @@ export type SimpleSlot =
 	| { kind: "hold" }
 	| { kind: "nc"; push?: Push }
 	| { kind: "silence"; push?: Push }
-	| { kind: "unknown" };
+	| { kind: "unknown" }
+) & {
+	/** A dotted member of a two-member group (grammar 2.2): three quarters of its slot. */
+	dotted?: true;
+};
 export type Slot = SimpleSlot | { kind: "group"; members: SimpleSlot[] };
 /**
  * A mark between bars (grammar 5.2). A jump goes back to the chart's first

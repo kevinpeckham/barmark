@@ -1,6 +1,7 @@
 import { type JumpPlan, planJump } from "./direction.js";
 import { beatsOf } from "./directives.js";
 import { type Entry, type Item, pairRepeats } from "./repeats.js";
+import { memberShares } from "./shares.js";
 import type {
 	ChartDiagnostic,
 	ChartEvent,
@@ -76,7 +77,10 @@ function timed(bar: PlayedBar): { slot: SimpleSlot & { push?: Push }; length: nu
 	const each = bar.meter.n / bar.meter.d / bar.slots.length;
 	return bar.slots.flatMap((s) =>
 		s.kind === "group"
-			? s.members.map((m) => ({ slot: m, length: each / s.members.length }))
+			? memberShares(s.members).map((share, i) => ({
+					slot: s.members[i] as SimpleSlot,
+					length: each * share,
+				}))
 			: [{ slot: s, length: each }],
 	);
 }

@@ -65,7 +65,7 @@ function printMarks(s: SimpleSlot): string {
 function printSimple(s: SimpleSlot): string {
 	const body =
 		s.kind === "chord" ? s.chord.canonical + (s.voicing?.canonical ?? "") : SYMBOLS[s.kind];
-	return printMarks(s) + body;
+	return printMarks(s) + body + (s.dotted ? "." : "");
 }
 
 /** A slot in canonical spelling; a group's members are joined with `_`. */

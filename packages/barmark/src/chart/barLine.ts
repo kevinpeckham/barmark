@@ -89,6 +89,12 @@ export function misplacedRepeat(token: string): string | null {
 const MAX_LINE_DIAGNOSTICS = 20;
 
 /** Split a group on `_`, leaving any `_` inside braces to the note set. */
+const DOT_PLACE =
+	"a dot goes on one member of a two-member group (C._D or C_D.); write other rhythms with / holds";
+
+/** A member ending in a dot that is not one of `N.C.`'s spellings. */
+const isDotted = (m: string) => m.endsWith(".") && !/^[<>^]*n\.?c\.?$/i.test(m);
+
 function groupMembers(token: string): string[] {
 	const out = [""];
 	let depth = 0;
@@ -478,13 +484,22 @@ export function parseBarLine(
 		);
 	};
 
+	/** A group member, dotted when it ends in a dot that is not part of `N.C.` (grammar 2.2). */
+	const memberOf = (m: string): SimpleSlot | null => {
+		if (!isDotted(m)) return markedSlot(m, true);
+		const s = markedSlot(m.slice(0, -1), true);
+		return s && { ...s, dotted: true };
+	};
 	/** One slot token: a simple slot, or a `_` group of them. */
 	const slotOf = (token: string): Slot | null => {
 		const members = groupMembers(token);
-		if (members.length === 1) return markedSlot(token, false);
+		if (members.length === 1)
+			return isDotted(token) ? error(DOT_PLACE, token) : markedSlot(token, false);
+		const dots = members.filter(isDotted).length;
+		if (dots && (members.length > 2 || dots > 1)) return error(DOT_PLACE, token);
 		const out: SimpleSlot[] = [];
 		for (const m of members) {
-			const s = m ? markedSlot(m, true) : error("an empty member in a group", token);
+			const s = m ? memberOf(m) : error("an empty member in a group", token);
 			if (s) out.push(s);
 		}
 		return { kind: "group", members: out };

@@ -11,6 +11,10 @@ Releases follow the process in [RELEASING.md](RELEASING.md).
 
 ### Added
 
+- **Dotted figures** (grammar 2.2): a dot after one member of a
+  two-member group, `C._D` (a dotted eighth and a sixteenth in a beat)
+  or `C_D.`. Group members gain `dotted`, and `memberShares` gives each
+  member's share of its slot. `N.C._G` keeps its meaning.
 - **`instrument:` and `clef:` on the `part:` line** (grammar 7.3):
   `part: Tpt = Trumpet, instrument: trumpet in Bb`, `part: Ld = Lead,
   clef: bass`. The instrument comes from a list of 16 (`INSTRUMENTS`,

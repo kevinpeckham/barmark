@@ -26,5 +26,6 @@ export {
 	printSlot,
 	reduceSlots,
 } from "./print.js";
+export { memberShares } from "./shares.js";
 export { type TransposeBy, transposeChart } from "./transpose.js";
 export type * from "./types.js";
