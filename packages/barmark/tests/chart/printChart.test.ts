@@ -1,6 +1,8 @@
 import { describe, expect, test } from "bun:test";
+import { readdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 import { parseChart, printChart, printParsed } from "../../src/index.js";
-import { AT_A_GLANCE, meaning, PEACEFUL_DREAMS } from "./fixtures.js";
+import { AT_A_GLANCE, meaning, PEACEFUL_DREAMS, ROOT } from "./fixtures.js";
 
 /** Printing keeps the meaning: same everything, and warnings may only disappear. */
 function expectSameMeaning(text: string) {
@@ -16,6 +18,15 @@ const stable = (text: string) => expect(printChart(printChart(text))).toBe(print
 describe("conformance", () => {
 	test("Peaceful Dreams is already canonical", () =>
 		expect(printChart(PEACEFUL_DREAMS)).toBe(PEACEFUL_DREAMS));
+	test("every chart in examples/ parses cleanly and is already canonical", () => {
+		const names = readdirSync(join(ROOT, "examples")).filter((f) => f.endsWith(".chart.md"));
+		expect(names).toContain("morning-song.chart.md");
+		for (const name of names) {
+			const text = readFileSync(join(ROOT, "examples", name), "utf8");
+			expect([name, parseChart(text).diagnostics]).toEqual([name, []]);
+			expect([name, printChart(text)]).toEqual([name, text]);
+		}
+	});
 	test("At a glance is stable and keeps its meaning", () => {
 		stable(AT_A_GLANCE);
 		expectSameMeaning(AT_A_GLANCE);
