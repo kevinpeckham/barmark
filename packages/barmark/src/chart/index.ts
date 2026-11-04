@@ -14,6 +14,7 @@ export {
 	instrumentInfo,
 	type WrittenInterval,
 } from "./instruments.js";
+export { MAX_LINES } from "./lines.js";
 export { extractPart, parseChart } from "./parse.js";
 export { projectPart } from "./parts.js";
 export { pedalStates } from "./pedal.js";
@@ -28,5 +29,6 @@ export {
 	reduceSlots,
 } from "./print.js";
 export { memberShares } from "./shares.js";
+export { streamKey } from "./systems.js";
 export { type TransposeBy, transposeChart } from "./transpose.js";
 export type * from "./types.js";

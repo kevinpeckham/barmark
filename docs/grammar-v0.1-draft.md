@@ -898,6 +898,56 @@ copyright: All rights reserved.
   `lyrics:` (lyricist), `arr:` and `arranged:` (arranger), `rights:` and
   `©:` (copyright).
 
+### 7.6 Part lines
+
+A part may write up to four **lines** of music that play at the same
+time: a pianist's two hands, or a guitarist's melody over a bass.
+
+```
+# Morning Song
+part: Pno = Piano, instrument: piano
+part: Bs = Bass, instrument: electric bass
+
+## Verse
+Pno.RH | G{B3 D4 G4} | C{C4 E4 G4} | D{D4 F#4 A4}   | G{B3 D4 G4} |
+Pno.LH | {G2}        | {C3}        | {D3} / {F#2} / | {G2}        |
+Bs     | {G1}        | {C2}        | {D2}           | {G1}        |
+```
+
+- **A line label** is a declared part's label, a dot, and a name of
+  letters and digits (`Pno.RH`, `Pno.LH`, `Gtr.2`). The names are the
+  author's; nothing declares them. They match in any case and print as
+  first written. A declared label that holds a dot (`part: Gtr.1 = …`)
+  is matched whole first.
+- **In a system.** Line labels join systems as part labels do (7.4): a
+  system is a run of labelled lines in which no label repeats, so
+  `Pno.RH` and `Pno.LH` in one system play together. A part may write its
+  lines in some systems and a bare `Pno |` line in others, but not both in
+  one system. A bare line, and a tutti line, play as the part's first
+  line; its other lines rest there.
+- **The first line carries the harmony.** The part's first line in a
+  system, in written order, may hold anything a bar holds. Its other lines
+  hold **notes only**: note sets, `/`, `--`, `%`, words, accents, hits and
+  pushes. A chord symbol, a voicing, `N.C.` or `?` on another line is an
+  **error** suggesting a note set, or a voicing on the first line; so is a
+  pedal mark (2.9), which belongs to the part.
+- **Each line its own.** `/` holds what that line played and `%` copies
+  that line's bar before, in written order (2.3). After a system where
+  the line wasn't written, both are errors.
+- **A line not written** in a system where its part plays rests there; a
+  part with no line in a system is tacet, as in 7.4.
+- **Structure** is written on every line, as 7.4 asks of a system's lines.
+- **Score order** within a part is the order its lines first appear; the
+  canonical form sorts a system's lines into it, a bare line first.
+- **At most four lines per part**; a fifth is an **error**.
+- A single-part chart may use lines too, with its `part:` line: lines
+  need a label to hang on.
+- A converter puts a two-staff instrument's first line on the upper staff
+  and its second on the lower, a third and fourth as second voices on
+  those staves; a one-staff instrument writes its lines as voices on its
+  staff. Two rhythms on one staff, a held note under a moving line, are a
+  third line: `Pno.RH2 | {D4} / / / |`.
+
 ## 8. The canonical form
 
 A canonical printer writes:
@@ -1079,6 +1129,7 @@ human to say whether the band was silent, and the structure line.
 | Push marks | Decided by Kevin (2026-11-03): `<` an eighth early, `<<` a sixteenth, written on the chord in its own bar; the push takes its time from the slot played just before it in play order (2.8). This is what written-out pushes (`/_G`) could not do: a pushed downbeat inside a repeat, a replay or after a jump. Rejected: a tie into the next bar (`/_G~ \| G`), which writes every chord twice and still can't serve a replay; and a warning only. |
 | Part | Decided by Kevin (2026-11-03, issue #70): `part:` names the chart's part, with an optional label (`part: Gtr = Electric Guitar 1`), once, before the first bar, on a line of its own (7.3). MusicXML requires a `<part-name>` on every part, so a converter otherwise invents one. The instrument (MusicXML's `<instrument-sound>`, a MIDI program) is separate and waits for the converters. The `Label = Name` form is chosen so several parts can follow. |
 | Several parts | Decided by Kevin (2026-11-03): one `part: Label = Name` line per part; a bar line starting with a label belongs to that part, and consecutive labelled lines form a system sharing the timeline (7.4). A part missing from a system is tacet; an unlabelled line is tutti. A system's structure (repeats, endings, marks, directions, fermatas, one-bar meters) is written on every line and checked, so each part's line reads alone. A renderer draws a tutti line as one row and a tacet part as an empty row; an extracted part writes tacet as `N.C.`. Rejected: structure written once, which makes a part's line wrong read alone. |
+| Part lines | Decided by Kevin (2026-11-04): up to four lines per part, labelled `Pno.RH` with nothing declared (7.6), joining systems as parts do; the first line carries the harmony and the others notes only, so a converter never has to choose between chord symbols. Rejected: lines declared on the `part:` line, chord symbols on any line, and two parts for two hands (a score program shows them as two instruments). |
 | Sustain pedal | Decided by Kevin (2026-11-04): `+` before a chord or a note set presses or changes the pedal and `*` lifts it (2.9), marked where it happens as a printed part marks it; `--`, a tacet bar and the end lift it too. Rejected: a pedal line of its own (`Pno.Ped`), and a directive that changes the pedal with every chord, which can't say a held pedal. |
 | Dotted figures | Decided by Kevin (2026-11-04): a dot after one member of a two-member group, `C._D` (3:1) or `C_D.` (1:3) (2.2), so a dotted figure needs no beat split into four. Rejected: no shorthand, and swing written as figures (`feel:` states it). |
 | Instruments and clefs | Decided by Kevin (2026-11-04): `instrument:` and `clef:` after the name on the `part:` line (7.3), the instrument from a closed list of 16 that tells converters the clef, written transposition, staves and playback sound; an unknown name is an error with near suggestions. Charts stay at concert pitch. Rejected: free-form instrument names (a converter could not know what to write), an `instrument:` line of its own, and an octave hint (note sets carry their octaves). |
@@ -1235,6 +1286,8 @@ Each slot parses to one record:
 | `push` | on a chord, `N.C.` or `--` slot: `eighth` (`<`) or `sixteenth` (`<<`), or absent |
 | `pedal` | on a chord slot: `press` (`+`) or `release` (`*`), or absent; `pedalStates` gives whether the pedal is down at the end of each slot, in play order |
 | `dotted` | on a group member: `true` when dotted (2.2), or absent; `memberShares` gives each member's share of the slot |
+| `lineName` | on a labelled bar line: the part's line it is (`RH`), as first written; absent on a bare line |
+| `lines` | on a declared part: its line names in score order, present when it writes lines; on a played bar's part entry (and an extracted part's bar), one entry per line playing there (`name`, `line`, `slots`, `words`), the part's `slots` being its first playing line's |
 | `part` | on the parse: the chart's one part, its `name`, `label`, `instrument` and `clef` (each absent when not written), or empty when it names none or several (deprecated: use `parts`) |
 | `credits` | on the parse: `composer`, `lyricist`, `arranger` and `copyright`, each a list of the credit lines' values in written order, empty when none is written |
 | `parts` | on the parse: every declared part in score order; on a played bar of a multi-part chart, one entry per part (its `line`, `slots` and `words`), or empty where that part is tacet |

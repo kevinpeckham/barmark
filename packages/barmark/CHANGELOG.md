@@ -11,6 +11,12 @@ Releases follow the process in [RELEASING.md](RELEASING.md).
 
 ### Added
 
+- **Part lines** (grammar 7.6): up to four lines per part, labelled
+  `Pno.RH |` and `Pno.LH |`, in systems as parts are. The first line in a
+  system carries the harmony and the others notes only; a fifth line, or
+  a chord on another line, is an error. Bar lines gain `lineName`,
+  declared parts gain `lines`, and the canonical form sorts a system's
+  lines into score order. `streamKey` and `MAX_LINES` are exported.
 - **Sustain pedal marks** (grammar 2.9): `+G` presses or changes the
   pedal, `*G` lifts it; `--`, a tacet bar and the chart's end lift it too.
   A chord slot gains `pedal`, and `pedalStates` gives whether the pedal is

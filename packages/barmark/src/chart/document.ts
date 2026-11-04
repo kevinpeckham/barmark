@@ -2,9 +2,10 @@ import { parseChord } from "../chords/parse.js";
 import { misplacedRepeat, parseBarLine, readRepeat, repeatTail } from "./barLine.js";
 import { creditsOf, nearCredit, readCredit } from "./credits.js";
 import { parseDirectiveLine } from "./directives.js";
+import { checkLines } from "./lines.js";
 import { readPart } from "./partLine.js";
 import { groupSystems } from "./systems.js";
-import type { ChartDiagnostic, Credits, Line, Part, Repeat } from "./types.js";
+import type { ChartDiagnostic, Credits, DeclaredPart, Line, Part, Repeat } from "./types.js";
 
 const NEAR_DIRECTIVES: Record<string, string> = {
 	meter: "time",
@@ -97,6 +98,26 @@ function readHeading(text: string, line: number, diagnostics: ChartDiagnostic[])
 	return { kind: "section", line, name: rest, repeat, elided };
 }
 
+/** A declared label written before a bar line, exactly, or a part's label, a dot and a line's name (grammar 7.6). */
+function findLabel(word: string, declared: Part[]): Owner | null {
+	const match = (w: string) =>
+		declared.find((p) => p.label?.toLowerCase() === w.toLowerCase())?.label;
+	const exact = match(word);
+	if (exact) return { part: exact };
+	const dot = word.lastIndexOf(".");
+	const label = dot > 0 ? match(word.slice(0, dot)) : undefined;
+	return label ? { part: label, lineName: word.slice(dot + 1) } : null;
+}
+
+type Owner = { part: string; lineName?: string };
+
+/** The word before a bar line, whether a space follows it, and the bar line. */
+function splitLabel(t: string): { word: string; space: boolean; rest: string } | null {
+	const m = LABELLED.exec(t);
+	return m ? { word: m[1] ?? "", space: Boolean(m[2]), rest: m[3] ?? "" } : null;
+}
+const LINE_NAME = /^[A-Za-z0-9]+$/;
+
 /** A label and the bar line after it: `Gtr | G |` (grammar 7.4). */
 const LABELLED = /^([^\s|]+)(\s*)(\|.*)$/;
 
@@ -182,11 +203,32 @@ function noBarLines(lines: Line[]): ChartDiagnostic | null {
 	};
 }
 
+/** A part's bare line in a single-part chart with no lines is unlabelled, as before (grammar 7.4). */
+function unlabelled(l: Line): Line {
+	if (l.kind !== "bars" && l.kind !== "invalid") return l;
+	const { part: _p, ...rest } = l;
+	return rest;
+}
+
+/** Systems and part lines, when the chart has several parts or a part writes lines (grammar 7.4, 7.6). */
+function groupParts(
+	lines: Line[],
+	parts: Part[],
+): { lines: Line[]; parts: DeclaredPart[]; diagnostics: ChartDiagnostic[] } {
+	const lined = lines.some(
+		(l) => (l.kind === "bars" || l.kind === "invalid") && l.lineName !== undefined,
+	);
+	if (parts.length < 2 && !lined) return { lines: lines.map(unlabelled), parts, diagnostics: [] };
+	const systems = groupSystems(lines);
+	const checked = checkLines(systems.lines, parts);
+	return { ...checked, diagnostics: [...systems.diagnostics, ...checked.diagnostics] };
+}
+
 /** Classify every line of a chart: title, sections, directives, bar lines and text. */
 export function readDocument(text: string): {
 	title: string | null;
-	part: Part | null;
-	parts: Part[];
+	part: DeclaredPart | null;
+	parts: DeclaredPart[];
 	credits: Credits;
 	lines: Line[];
 	diagnostics: ChartDiagnostic[];
@@ -235,33 +277,30 @@ export function readDocument(text: string): {
 		diagnostics.push(...r.diagnostics);
 		return r.bars ?? { kind: "invalid", line, text: t, written: r.written };
 	};
-	/** A declared part's bar line; labelled only when the chart has several parts. */
+	const declaredParts = () =>
+		lines.filter((l): l is Extract<Line, { kind: "part" }> => l.kind === "part");
+	/** A labelled line that can't be read: no space before its pipe, or a bad line name. */
+	const badLabel = (t: string, line: number, word: string, rest: string, owner: Owner): Line => {
+		const space = t.length > word.length + rest.length;
+		diagnostics.push({
+			line,
+			severity: "error",
+			message: space ? "a line name is letters and digits" : "a space goes between the label and |",
+			token: t,
+			...(!space && { suggestion: `${word} ${rest}` }),
+		});
+		return { kind: "invalid", line, text: t, written: parseBarLine(rest, line).written, ...owner };
+	};
+	/** A declared part's bar line, or one of its lines (`Pno.RH`, grammar 7.6). */
 	const labelledLine = (t: string, line: number): Line | null => {
-		const m = LABELLED.exec(t);
-		const declared = lines.filter((l) => l.kind === "part");
-		const found = declared.find((p) => p.label?.toLowerCase() === m?.[1]?.toLowerCase());
-		if (!m || !found?.label) return null;
-		const [, word = "", space, rest = ""] = m;
-		if (!space) {
-			diagnostics.push({
-				line,
-				severity: "error",
-				message: "a space goes between the label and |",
-				token: t,
-				suggestion: `${word} ${rest}`,
-			});
-			const written = parseBarLine(rest, line).written;
-			return {
-				kind: "invalid",
-				line,
-				text: t,
-				written,
-				...(declared.length > 1 && { part: found.label }),
-			};
-		}
+		const split = splitLabel(t);
+		const owner = split && findLabel(split.word, declaredParts());
+		if (!split || !owner) return null;
+		const { word, space, rest } = split;
+		if (!space || !LINE_NAME.test(owner.lineName ?? "X"))
+			return badLabel(t, line, word, rest, owner);
 		const read = barLine(rest, line);
-		if (declared.length < 2 || (read.kind !== "bars" && read.kind !== "invalid")) return read;
-		return { ...read, part: found.label };
+		return read.kind === "bars" || read.kind === "invalid" ? { ...read, ...owner } : read;
 	};
 	const classify = (t: string, line: number): Line => {
 		if (t.startsWith("|")) return barLine(t, line);
@@ -280,9 +319,10 @@ export function readDocument(text: string): {
 		});
 	const empty = noBarLines(lines);
 	if (empty) diagnostics.push(empty);
-	const parts = checkParts(lines, diagnostics);
-	const grouped = parts.length > 1 ? groupSystems(lines) : { lines, diagnostics: [] };
+	const read = checkParts(lines, diagnostics);
+	const grouped = groupParts(lines, read);
 	diagnostics.push(...grouped.diagnostics);
+	const { parts } = grouped;
 	return {
 		title,
 		part: parts.length === 1 ? (parts[0] ?? null) : null,

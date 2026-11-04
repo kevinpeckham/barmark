@@ -47,6 +47,10 @@ function differs(l: BarsLine, ref: BarsLine): string | null {
 const isLabelled = (l: Line): l is Labelled =>
 	(l.kind === "bars" || l.kind === "invalid") && l.part !== undefined;
 
+/** The key a part's line is grouped and played by: its label, and its line's name if any (grammar 7.6). */
+export const streamKey = (part: string, lineName?: string): string =>
+	(lineName === undefined ? part : `${part}.${lineName}`).toLowerCase();
+
 /** Number each run of labelled lines with no label twice (grammar 7.4). */
 function numberSystems(lines: Line[]): Line[] {
 	let system = -1;
@@ -56,7 +60,7 @@ function numberSystems(lines: Line[]): Line[] {
 			seen = null;
 			return l;
 		}
-		const label = l.part ?? "";
+		const label = streamKey(l.part ?? "", l.lineName);
 		if (!seen || seen.has(label)) {
 			system++;
 			seen = new Set();

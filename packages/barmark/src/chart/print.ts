@@ -6,6 +6,7 @@ import { extractPart, parseChart } from "./parse.js";
 import type {
 	Cell,
 	ChartParse,
+	DeclaredPart,
 	Directives,
 	Key,
 	Line,
@@ -191,6 +192,21 @@ export function printChart(text: string): string {
 
 type Beats = (l: Line) => (number | undefined)[];
 
+/** A labelled line's label as printed: the part's, and its line's name (`Pno.RH`, grammar 7.6). */
+const labelOf = (l: BarsLine) =>
+	`${l.part ?? ""}${l.lineName === undefined ? "" : `.${l.lineName}`}`;
+const labelsOf = (p: DeclaredPart) => [
+	p.label ?? "",
+	...(p.lines ?? []).map((n) => `${p.label}.${n}`),
+];
+
+/** Score order: by part, then by the part's line, a bare line first. */
+function scoreOf(l: BarsLine, parsed: ChartParse): number {
+	const at = parsed.parts.findIndex((p) => p.label === l.part);
+	const line = l.lineName === undefined ? -1 : (parsed.parts[at]?.lines ?? []).indexOf(l.lineName);
+	return at * 10 + line + 1;
+}
+
 /** A system's lines in score order, labels padded and pipes lined up (section 8, grammar 7.4). */
 function alignSystem(
 	system: BarsLine[],
@@ -198,11 +214,10 @@ function alignSystem(
 	beatsFor: Beats,
 	edit: (l: Line) => Line,
 ): string[] {
-	const score = (l: BarsLine) => parsed.parts.findIndex((p) => p.label === l.part);
-	const width = Math.max(...parsed.parts.map((p) => p.label?.length ?? 0));
+	const width = Math.max(...parsed.parts.flatMap(labelsOf).map((label) => label.length));
 	const pieces = [...system]
-		.sort((a, b) => score(a) - score(b))
-		.map((l) => ({ label: l.part ?? "", ...barPieces(edit(l) as BarsLine, beatsFor(l)) }));
+		.sort((a, b) => scoreOf(a, parsed) - scoreOf(b, parsed))
+		.map((l) => ({ label: labelOf(l), ...barPieces(edit(l) as BarsLine, beatsFor(l)) }));
 	const columns = pieces[0]?.cells.map((_, i) =>
 		Math.max(...pieces.map((p) => p.cells[i]?.length ?? 0)),
 	);
@@ -233,7 +248,7 @@ function systemTexts(
 		const printed =
 			valid.length === lines.length
 				? alignSystem(valid, parsed, beatsFor, edit)
-				: valid.map((l) => `${l.part} ${printLine(edit(l), beatsFor(l))}`);
+				: valid.map((l) => `${labelOf(l)} ${printLine(edit(l), beatsFor(l))}`);
 		for (const [i, l] of valid.entries()) texts.set(l.line, printed[i] ?? "");
 	}
 	return texts;

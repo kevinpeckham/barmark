@@ -15,7 +15,7 @@ const sections = [...grammar.matchAll(/^#{2,3} (\d+(?:\.\d+)?)[. ]/gm)]
  * npm can't read yet, with the release that brings them. Their guide rows
  * come with the site's bump to that release.
  */
-const PENDING: Record<string, string> = { "2.9": "0.16.0" };
+const PENDING: Record<string, string> = { "2.9": "0.16.0", "7.6": "0.16.0" };
 const installed: string = JSON.parse(
 	readFileSync(join(import.meta.dir, "../node_modules/barmark/package.json"), "utf8"),
 ).version;

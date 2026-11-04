@@ -139,6 +139,8 @@ export type Line =
 			ending: number[] | null;
 			/** The declared label of the part whose line this is (grammar 7.4); absent on a tutti line and in a single-part chart. */
 			part?: string;
+			/** The part's line this is (`RH` in `Pno.RH`, grammar 7.6), as first spelled; absent on a part's bare line. */
+			lineName?: string;
 			/** Which system a labelled line is in, from 0 in chart order. */
 			system?: number;
 			/** Set when the line's bars or structure differ from its system's (an error): its part is tacet there. */
@@ -157,6 +159,7 @@ export type Line =
 			text: string;
 			written: number;
 			part?: string;
+			lineName?: string;
 			system?: number;
 	  };
 
@@ -218,6 +221,9 @@ export type SectionOccurrence = {
 	form: number;
 };
 
+/** A declared part as the parse reports it: `lines` names its lines in score order (grammar 7.6), present only when it writes some. */
+export type DeclaredPart = Part & { lines?: string[] };
+
 export type ChartParse = {
 	title: string | null;
 	/**
@@ -225,9 +231,9 @@ export type ChartParse = {
 	 * none or several.
 	 * @deprecated use `parts`.
 	 */
-	part: Part | null;
+	part: DeclaredPart | null;
 	/** Every part the chart declares, in score order (grammar 7.4); empty when none. */
-	parts: Part[];
+	parts: DeclaredPart[];
 	/** The credit lines (grammar 7.5); each list empty when none is written. */
 	credits: Credits;
 	lines: Line[];
