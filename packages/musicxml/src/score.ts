@@ -106,6 +106,7 @@ function partXml(source: PartSource, i: number): string {
 			clef: around(clefs, index, "G"),
 			rhythmic: rhythmicBars[index] ?? false,
 			octave: instrument?.octaveUp ? 1 : 0,
+			staves: instrument?.staves ?? 1,
 		}),
 	);
 	return el("part", { id: `P${i + 1}` }, xml);

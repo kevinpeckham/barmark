@@ -41,6 +41,7 @@ export function noteSetOf(slot: Slot): ChordRecord | null {
 
 /** What an event sounds: a rest, a slash, or real notes; a hold sounds what it holds. */
 export function soundOf(e: SoundEvent): Sound {
+	if (e.notes) return e.notes.length > 0 ? { kind: "notes", pitches: e.notes } : { kind: "rest" };
 	const slot = e.held ?? e.slot;
 	if (slot.kind === "silence") return { kind: "rest" };
 	const set = noteSetOf(slot);
@@ -79,8 +80,8 @@ const tieEnds = (name: string, tie: Tie) => [
 ];
 
 /** A value's type, dots and tuplet, after its duration and voice. */
-const valueXml = (v: NoteValue) => [
-	text("voice", 1),
+const valueXml = (v: NoteValue, voice: number) => [
+	text("voice", voice),
 	text("type", v.type),
 	...Array.from({ length: v.dots }, () => el("dot")),
 	v.tuplet
@@ -117,7 +118,12 @@ export type ValueStyle = {
 	clef: Clef;
 	/** Octaves a note is written above where it sounds. */
 	octave: number;
+	/** The voice, and the staff of a part on two (null on one). */
+	voice: number;
+	staff: number | null;
 };
+
+const staffXml = (staff: number | null) => (staff === null ? "" : text("staff", staff));
 
 function pitchedXml(n: Pitched, v: NoteValue, style: ValueStyle): string {
 	const { duration, tie } = style;
@@ -134,9 +140,10 @@ function pitchedXml(n: Pitched, v: NoteValue, style: ValueStyle): string {
 		]),
 		text("duration", duration),
 		...tieEnds("tie", tie),
-		...valueXml(v),
+		...valueXml(v, style.voice),
 		n.slash ? text("stem", n.slash) : "",
 		n.slash ? text("notehead", "slash") : "",
+		staffXml(style.staff),
 		...(n.chord ? [] : style.beams.map((b, i) => text("beam", b, { number: i + 1 }))),
 		notations.some(Boolean) ? el("notations", {}, notations) : "",
 	]);
@@ -152,7 +159,12 @@ const SLASH: Record<Clef, Pitch> = {
 /** One written value of a sound: a rest, a slash note, or a chord of notes. */
 export function soundValueXml(sound: Sound, v: NoteValue, style: ValueStyle): string {
 	if (sound.kind === "rest")
-		return el("note", {}, [el("rest"), text("duration", style.duration), ...valueXml(v)]);
+		return el("note", {}, [
+			el("rest"),
+			text("duration", style.duration),
+			...valueXml(v, style.voice),
+			staffXml(style.staff),
+		]);
 	const pitches =
 		sound.kind === "slash"
 			? [SLASH[style.clef]]

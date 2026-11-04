@@ -58,7 +58,9 @@ describe("attributes", () => {
 		expect(measures(xml, "P1")[0]).toContain(
 			"<clef><sign>G</sign><line>2</line><clef-octave-change>-1</clef-octave-change></clef>",
 		);
-		expect(measures(xml, "P2")[0]).toContain("<clef><sign>G</sign><line>2</line></clef>");
+		expect(measures(xml, "P2")[0]).toContain(
+			'<clef number="1"><sign>G</sign><line>2</line></clef>',
+		);
 	});
 	test("slash notation is switched on", () => {
 		expect(measures(xmlOf("| C |"))[0]).toContain(
@@ -68,7 +70,8 @@ describe("attributes", () => {
 	test("a tacet bar is a measure rest", () => {
 		const piano = measures(xmlOf(MORNING_SONG), "P2");
 		for (const m of piano.slice(8, 12)) expect(m).toContain('<rest measure="yes"/>');
-		expect(piano[4]).not.toContain("<rest");
+		// Its upper staff: a bar of slashes, over a hidden rest on the lower.
+		expect(piano[4]?.split("<backup>")[0]).not.toContain("<rest");
 	});
 	test("measure numbers run in sequence and show barmark's written numbers", () => {
 		const ms = measures(xmlOf(MORNING_SONG));

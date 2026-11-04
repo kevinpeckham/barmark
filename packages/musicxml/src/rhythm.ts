@@ -140,9 +140,11 @@ function beatCut(start: Frac, length: Frac, meter: Meter): Frac | null {
 	return before(next, plus(start, length)) ? next : null;
 }
 
-/** Where a sound is cut so its values show the meter; a tuplet's value never is. */
+/** Where a sound is cut so its values show the meter (a rest off the beat at the next beat, in any meter); a tuplet's value never is. */
 function meterCut(start: Frac, length: Frac, meter: Meter, rest: boolean): Frac | null {
 	if (!dyadic(start) || !dyadic(length)) return null;
+	const offBeat = rest ? beatCut(start, length, meter) : null;
+	if (offBeat) return offBeat;
 	return halved(meter) ? middleCut(start, length, meter, rest) : beatCut(start, length, meter);
 }
 
@@ -151,5 +153,5 @@ export function meterValues(start: Frac, length: Frac, meter: Meter, rest = fals
 	const cut = meterCut(start, length, meter, rest);
 	if (!cut) return noteValues(length);
 	const first = minus(cut, start);
-	return [...noteValues(first), ...noteValues(minus(length, first))];
+	return [...noteValues(first), ...meterValues(cut, minus(length, first), meter, rest)];
 }

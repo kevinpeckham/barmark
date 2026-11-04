@@ -6,7 +6,7 @@
  */
 import type { Articulation, Push, SimpleSlot, Slot } from "barmark";
 import type { Measure } from "./measures.js";
-import { noteSetOf } from "./notes.js";
+import { noteSetOf, type Pitch } from "./notes.js";
 import { barLength, type Frac, frac, memberLength, minus, plus, slotLengths } from "./rhythm.js";
 
 export type SoundEvent = {
@@ -20,6 +20,8 @@ export type SoundEvent = {
 	tie: { start: boolean; stop: boolean };
 	/** What a hold sounds (grammar 2.3): the note set or silence it continues; absent when it holds a chord. */
 	held?: SimpleSlot;
+	/** A keyboard staff's share of the notes (`splitStaves`); none for a rest. */
+	notes?: Pitch[];
 };
 
 export type MeasureEvents = { measure: Measure; events: SoundEvent[]; after: string[] };

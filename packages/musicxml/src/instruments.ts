@@ -11,7 +11,7 @@ export type Instrument = {
 	/** The playback instrument's name, and its General MIDI program (1–128). */
 	sound: string;
 	program: number;
-	/** The instrument's clef; null for one chosen by bars. */
+	/** The instrument's clef (a keyboard's upper staff's); null for one chosen by bars. */
 	clef: Clef | null;
 	/** Written an octave above where it sounds, with a `<transpose>`. */
 	octaveUp: boolean;
@@ -39,7 +39,7 @@ const KEYBOARD: Instrument = {
 	kind: "keyboard",
 	sound: "Piano",
 	program: 1,
-	clef: null,
+	clef: "G",
 	octaveUp: false,
 	staves: 2,
 };

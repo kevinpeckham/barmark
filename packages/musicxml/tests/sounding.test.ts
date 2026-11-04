@@ -37,13 +37,13 @@ describe("sounding", () => {
 		);
 		expect(sounding(xml).notes).toEqual([{ pitch: 40, at: "0/1", length: "4/1" }]);
 	});
-	test("backup returns the clock, for a second voice", () => {
+	test("backup returns the clock, for a second voice; notes come in the order they sound", () => {
 		const xml = measure(
 			`<attributes><divisions>1</divisions></attributes>${note("C", 5, 4)}<backup><duration>4</duration></backup>${note("C", 3, 2)}${note("G", 3, 2)}`,
 		);
 		expect(sounding(xml).notes).toEqual([
-			{ pitch: 72, at: "0/1", length: "4/1" },
 			{ pitch: 48, at: "0/1", length: "2/1" },
+			{ pitch: 72, at: "0/1", length: "4/1" },
 			{ pitch: 55, at: "2/1", length: "2/1" },
 		]);
 	});

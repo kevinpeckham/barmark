@@ -1,7 +1,7 @@
 /**
  * What a part of an export sounds, for the tests: each real note with its
  * sounding pitch, onset and length (ties merged, every staff and voice
- * read), and each harmony with its onset. Slashes and rests sound nothing.
+ * read, in the order they sound), and each harmony with its onset. Slashes and rests sound nothing.
  * Notation can change freely; this must not.
  */
 import { harmonyText } from "./play.js";
@@ -95,8 +95,10 @@ export function sounding(xml: string, part = "P1"): Sounded {
 		for (const [el = ""] of measure.matchAll(ELEMENTS)) element(el, s);
 	}
 	const q = (n: number) => quarters(n, s.divisions);
+	// In the order they sound, whichever staff or voice is written first.
+	const notes = [...s.notes].sort((a, b) => a.at - b.at || a.pitch - b.pitch);
 	return {
-		notes: s.notes.map((n) => ({ pitch: n.pitch, at: q(n.at), length: q(n.end - n.at) })),
+		notes: notes.map((n) => ({ pitch: n.pitch, at: q(n.at), length: q(n.end - n.at) })),
 		harmonies: s.harmonies.map((h) => ({ text: h.text, at: q(h.at) })),
 	};
 }

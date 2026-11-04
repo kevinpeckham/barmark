@@ -22,6 +22,10 @@ describe("meterValues", () => {
 		expect(shown(frac(1), frac(2))).toEqual(["quarter", "quarter"]);
 		expect(shown(frac(0), frac(7, 2))).toEqual(["half", "quarter."]);
 	});
+	test("a rest off the beat is cut at the next beat, in 4/4 too", () => {
+		expect(shown(frac(3, 4), frac(13, 4), meter(4, 4), true)).toEqual(["16th", "quarter", "half"]);
+		expect(shown(frac(1, 2), frac(1), meter(4, 4), true)).toEqual(["eighth", "eighth"]);
+	});
 	test("4/4: a rest never crosses the middle", () => {
 		expect(shown(frac(1), frac(3), meter(4, 4), true)).toEqual(["quarter", "half"]);
 		expect(shown(frac(0), frac(3), meter(4, 4), true)).toEqual(["half", "quarter"]);

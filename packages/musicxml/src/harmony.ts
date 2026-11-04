@@ -1,5 +1,5 @@
 /** Chord symbols as MusicXML <harmony>: a kind, plus degrees that spell the exact chord. */
-import type { ChordRecord, Interval } from "barmark";
+import type { ChordRecord, Interval, SimpleSlot } from "barmark";
 import { KINDS } from "./kinds.js";
 import { el, text } from "./xml.js";
 
@@ -103,3 +103,9 @@ export const noChordXml = () =>
 		el("root", {}, text("root-step", "C", { text: "" })),
 		text("kind", "none", { text: "N.C." }),
 	]);
+
+/** The chord symbol a slot names, if it names one: a chord, or N.C. */
+export function slotHarmonyXml(slot: SimpleSlot): string {
+	if (slot.kind === "nc") return noChordXml();
+	return slot.kind === "chord" && slot.chord.kind === "chord" ? harmonyXml(slot.chord) : "";
+}
