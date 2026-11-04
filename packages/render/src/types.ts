@@ -1,5 +1,6 @@
 import type {
 	ChartDiagnostic,
+	Credits,
 	Direction,
 	Directives,
 	Key,
@@ -20,6 +21,8 @@ export type ChartModel = {
 	part: Part | null;
 	/** Every declared part, in score order (barmark's grammar 7.4). */
 	parts: Part[];
+	/** The chart's credit lines (barmark's grammar 7.5). */
+	credits: Credits;
 	/** Directives before the first heading, bar line or text line. */
 	header: Directives;
 	blocks: SectionBlock[];

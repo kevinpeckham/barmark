@@ -100,6 +100,7 @@ export function layoutChart(text: string, options: LayoutOptions = {}): ChartMod
 		title: parse.title,
 		part: parse.part,
 		parts: parse.parts,
+		credits: parse.credits,
 		header,
 		blocks,
 		diagnostics: parse.diagnostics,
@@ -136,13 +137,14 @@ function splitHeader(lines: Line[]): { header: Directives; body: Line[] } {
 	let i = 0;
 	for (; i < lines.length; i++) {
 		const l = lines[i];
-		if (l?.kind === "title" || l?.kind === "part") continue;
+		if (l?.kind === "title" || l?.kind === "part" || l?.kind === "credit") continue;
 		if (l?.kind !== "directive") break;
 		// A new feel replaces the old one whole, its amount included.
 		if (l.set.feel) delete header.swingPercent;
 		Object.assign(header, l.set);
 	}
-	return { header, body: lines.slice(i).filter((l) => l.kind !== "title" && l.kind !== "part") };
+	const body = lines.slice(i).filter((l) => !["title", "part", "credit"].includes(l.kind));
+	return { header, body };
 }
 
 function groupLines(lines: Line[]): Group[] {
