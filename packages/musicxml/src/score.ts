@@ -7,10 +7,10 @@ import {
 	type Part,
 	parseChart,
 } from "barmark";
-import { applyHolds, applyPushes, eventsOf } from "./events.js";
+import { applyHolds, applyPushes, eventsOf, joinHolds } from "./events.js";
 import { measureXml } from "./measure-xml.js";
 import { writtenMeasures } from "./measures.js";
-import { clefFor, slashed } from "./notes.js";
+import { clefFor, rhythmic, slashed } from "./notes.js";
 import { barLength, beatLength, divisionsFor } from "./rhythm.js";
 import { VERSION } from "./version.js";
 import { el, text } from "./xml.js";
@@ -62,7 +62,9 @@ function scorePart(source: PartSource, i: number): string {
 
 function partXml(source: PartSource, i: number): string {
 	const measures = writtenMeasures(source.parse);
-	const bars = applyHolds(applyPushes(measures.map(eventsOf)));
+	const held = applyHolds(applyPushes(measures.map(eventsOf)));
+	const rhythmicBars = held.map(rhythmic);
+	const bars = held.map((b, i) => (rhythmicBars[i] ? joinHolds(b) : b));
 	const slashedBars = bars.map(slashed);
 	const clef = clefFor(measures);
 	const divisions = divisionsFor(
@@ -83,6 +85,7 @@ function partXml(source: PartSource, i: number): string {
 				before: index > 0 ? (slashedBars[index - 1] ?? true) : null,
 			},
 			clef,
+			rhythmic: rhythmicBars[index] ?? false,
 		}),
 	);
 	return el("part", { id: `P${i + 1}` }, xml);

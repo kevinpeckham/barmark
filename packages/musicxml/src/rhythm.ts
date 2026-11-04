@@ -117,7 +117,8 @@ export function beatPieces(start: Frac, length: Frac, beat: Frac): Frac[] {
 const dyadic = (f: Frac) => oddPart(f.d) === 1;
 const same = (a: Frac, b: Frac) => a.n === b.n && a.d === b.d;
 const inBeats = (f: Frac, beat: Frac) => frac(f.n * beat.d, f.d * beat.n);
-const onBeat = (f: Frac, beat: Frac) => inBeats(f, beat).d === 1;
+/** Whether `f` falls on the beat grid. */
+export const onBeat = (f: Frac, beat: Frac) => inBeats(f, beat).d === 1;
 /** 4/4 and 2/2 show their middle: no value hides it. */
 const halved = (m: Meter) => (m.n === 4 && m.d === 4) || (m.n === 2 && m.d === 2);
 

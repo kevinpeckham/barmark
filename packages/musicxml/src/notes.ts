@@ -2,7 +2,7 @@
 import type { Articulation, ChordRecord, Slot } from "barmark";
 import type { MeasureEvents, SoundEvent } from "./events.js";
 import type { Measure } from "./measures.js";
-import type { NoteValue } from "./rhythm.js";
+import { beatLength, type Frac, type NoteValue, onBeat, plus } from "./rhythm.js";
 import { el, text } from "./xml.js";
 
 export type Pitch = { step: string; alter: number; octave: number };
@@ -49,11 +49,27 @@ export function soundOf(e: SoundEvent): Sound {
 }
 
 /**
- * A bar shows slashes unless it writes real notes or a rest: a program
- * draws slash style over a rest and hides it (Dorico does).
+ * A bar shows its rhythm when something sounds anew off the beat (a push's
+ * early note, a group's member, a triplet): a hold continues, so it doesn't
+ * count.
+ */
+export function rhythmic(bar: MeasureEvents): boolean {
+	const beat = beatLength(bar.measure.meter);
+	let at: Frac = { n: 0, d: 1 };
+	return bar.events.some((e) => {
+		const off = e.slot.kind !== "hold" && !onBeat(at, beat);
+		at = plus(at, e.length);
+		return off;
+	});
+}
+
+/**
+ * A bar shows slashes in slash style unless it writes real notes or a rest
+ * (a program draws slash style over a rest and hides it: Dorico does), or
+ * shows its rhythm.
  */
 export const slashed = (bar: MeasureEvents) =>
-	!bar.measure.tacet && bar.events.every((e) => soundOf(e).kind === "slash");
+	!bar.measure.tacet && bar.events.every((e) => soundOf(e).kind === "slash") && !rhythmic(bar);
 
 /** A bass clef when most of a part's written notes sit below middle C. */
 export function clefFor(measures: Measure[]): "G" | "F" {
@@ -90,7 +106,15 @@ const ARTICULATIONS: Record<Articulation, string> = {
 	hit: el("accent") + el("staccato"),
 };
 
-type Pitched = { chord: boolean; pitch: Pitch; slash: boolean; articulation?: Articulation };
+/** How a slash's stem is written: none in slash style, up when it shows a rhythm. */
+export type Stem = "none" | "up";
+
+type Pitched = {
+	chord: boolean;
+	pitch: Pitch;
+	slash: Stem | null;
+	articulation?: Articulation;
+};
 
 function pitchedXml(n: Pitched, v: NoteValue, duration: number, tie: Tie): string {
 	const notations = [
@@ -107,7 +131,7 @@ function pitchedXml(n: Pitched, v: NoteValue, duration: number, tie: Tie): strin
 		text("duration", duration),
 		...tieEnds("tie", tie),
 		...valueXml(v),
-		n.slash ? text("stem", "none") : "",
+		n.slash ? text("stem", n.slash) : "",
 		n.slash ? text("notehead", "slash") : "",
 		notations.some(Boolean) ? el("notations", {}, notations) : "",
 	]);
@@ -122,6 +146,7 @@ export function soundValueXml(
 	duration: number,
 	tie: Tie,
 	articulation?: Articulation,
+	stem: Stem = "none",
 ): string {
 	if (sound.kind === "rest")
 		return el("note", {}, [el("rest"), text("duration", duration), ...valueXml(v)]);
@@ -132,7 +157,7 @@ export function soundValueXml(
 				{
 					chord: i > 0,
 					pitch,
-					slash: sound.kind === "slash",
+					slash: sound.kind === "slash" ? stem : null,
 					...(i === 0 && articulation ? { articulation } : {}),
 				},
 				v,

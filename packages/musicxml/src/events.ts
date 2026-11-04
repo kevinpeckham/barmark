@@ -178,6 +178,22 @@ function hold(before: SoundEvent, e: SoundEvent, sameBar: boolean): "merged" | n
 }
 
 /**
+ * In a bar that shows its rhythm, a chord's holds lengthen the sound before
+ * them, as a note set's do: the bar is written as it sounds. A hold that
+ * starts the bar, or has words before it, stays a slash of its own.
+ */
+export function joinHolds(bar: MeasureEvents): MeasureEvents {
+	const events: SoundEvent[] = [];
+	for (const e of bar.events) {
+		const before = events[events.length - 1];
+		if (before && e.slot.kind === "hold" && !e.held && e.words.length === 0)
+			before.length = plus(before.length, e.length);
+		else events.push(e);
+	}
+	return { ...bar, events };
+}
+
+/**
  * Each hold sounds whatever was sounding before it (grammar 2.3), in
  * written order across bar lines: a note set's notes sound on, a silence
  * stays a rest, and a chord's hold stays a slash. A tacet bar ends it.

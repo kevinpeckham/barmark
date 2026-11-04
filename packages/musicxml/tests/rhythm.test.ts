@@ -24,8 +24,8 @@ describe("slot rhythm", () => {
 	});
 	test("a group whose share isn't a power of two is a tuplet", () => {
 		const ns = notes(measures(xmlOf("| C D_E_F |"))[0] ?? "");
-		expect(ns).toHaveLength(5);
-		const triplet = ns.slice(2);
+		expect(ns).toHaveLength(4);
+		const triplet = ns.slice(1);
 		for (const n of triplet) {
 			expect(n).toContain(
 				"<time-modification><actual-notes>3</actual-notes><normal-notes>2</normal-notes></time-modification>",
