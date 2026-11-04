@@ -6,6 +6,8 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-11-04
+
 ### Added
 
 - **Credits** (barmark's grammar 7.5): each `composer:`, `lyricist:` and
@@ -72,7 +74,8 @@ package uses [semantic versioning](https://semver.org/).
 - **Errors:** a chart with errors, or with no bars, returns its
   diagnostics and no XML; characters XML can't hold are left out.
 
-[Unreleased]: https://github.com/kevinpeckham/barmark/compare/musicxml-v0.1.2...HEAD
+[Unreleased]: https://github.com/kevinpeckham/barmark/compare/musicxml-v0.2.0...HEAD
+[0.2.0]: https://github.com/kevinpeckham/barmark/compare/musicxml-v0.1.2...musicxml-v0.2.0
 [0.1.2]: https://github.com/kevinpeckham/barmark/compare/musicxml-v0.1.1...musicxml-v0.1.2
 [0.1.1]: https://github.com/kevinpeckham/barmark/compare/musicxml-v0.1.0...musicxml-v0.1.1
 [0.1.0]: https://github.com/kevinpeckham/barmark/releases/tag/musicxml-v0.1.0

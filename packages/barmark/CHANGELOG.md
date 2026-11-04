@@ -9,6 +9,13 @@ Releases follow the process in [RELEASING.md](RELEASING.md).
 
 ## [Unreleased]
 
+## [0.15.0] - 2026-11-04
+
+A grammar change: credit lines (7.5). Charts that read before read the
+same, unless a text line starts with a credit's name and a colon.
+Implements the
+[grammar v0.1 draft](https://github.com/kevinpeckham/barmark/blob/main/docs/grammar-v0.1-draft.md).
+
 ### Added
 
 - **Credit lines** (grammar 7.5): `composer:`, `lyricist:`, `arranger:`
@@ -376,7 +383,8 @@ The first working release: the reference parser and printer for the
 
 - **A placeholder package that holds the `barmark` name** while the spec and parser are written.
 
-[Unreleased]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.14.1...HEAD
+[Unreleased]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.15.0...HEAD
+[0.15.0]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.14.1...barmark-v0.15.0
 [0.14.1]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.14.0...barmark-v0.14.1
 [0.14.0]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.13.0...barmark-v0.14.0
 [0.13.0]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.12.0...barmark-v0.13.0
