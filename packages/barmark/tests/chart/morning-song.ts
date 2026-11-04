@@ -1,17 +1,8 @@
-/** The spec's example of several parts (grammar 7.4). */
-export const MORNING_SONG = `# Morning Song
-part: Gtr = Electric Guitar 1
-part: Pno = Piano
-key: G
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 
-## Intro
-| G | C | G | D |
-
-## Verse
-Gtr | G   | C | G  | D |
-Pno | G/B | C | Em | D |
-Gtr | G   | C | D  | G |
-
-## Chorus
-|: C | G | D | G :|
-`;
+/** The spec's example of several parts (grammar 7.4), from examples/. */
+export const MORNING_SONG = readFileSync(
+	join(import.meta.dir, "../../../../examples/morning-song.chart.md"),
+	"utf8",
+);
