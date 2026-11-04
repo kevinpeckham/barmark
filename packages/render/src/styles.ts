@@ -148,6 +148,10 @@ const css = `
 .bm-push{font:700 .8em/1 system-ui,sans-serif;color:var(--bm-muted);margin-right:.08em}
 .bm-artic{position:absolute;left:50%;top:-.95em;transform:translateX(-50%);font:700 .7em/1 system-ui,sans-serif;color:var(--bm-ink)}
 .bm-marked[data-push]>.bm-artic{left:calc(50% + .25em)}
+.bm-pedal{position:absolute;left:0;bottom:-1.05em;font:italic 600 .62em/1 Georgia,serif;color:var(--bm-muted);white-space:nowrap}
+.bm-dotted{display:inline-flex;align-items:baseline}
+.bm-dot{font-weight:700;margin-left:.05em}
+.bm-bar:has(.bm-pedal){padding-bottom:1.05em}
 .bm-words{position:absolute;left:0;top:-1.05em;font:italic .62em/1 Georgia,serif;color:var(--bm-muted);white-space:nowrap}
 .bm-bar>.bm-words-end{left:auto;right:.5em;top:.15em}
 .bm-bar[data-ending]::after{content:attr(data-ending);position:absolute;left:.45em;top:.2em;font:italic .75em/1 Georgia,serif;color:var(--bm-muted)}

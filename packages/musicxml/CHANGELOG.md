@@ -6,6 +6,33 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- **Instruments from the part line** (barmark's grammar 7.3): a part's
+  `instrument:` chooses its clef, staves and playback sound over the
+  guess from its name. A transposing instrument is written at its pitch:
+  a trumpet in Bb a major second up, an alto sax a major sixth, a tenor
+  sax a ninth, with the key signature, the notes and the chord symbols'
+  roots and basses all written, and a `<transpose>` taking them back. A
+  key that would be written past seven sharps or flats is spelled
+  enharmonically: an alto sax in B major writes A♭, not G♯. The
+  bass's octave transposition is unchanged.
+- **Part lines** (barmark's grammar 7.6): a keyboard's first line goes
+  on the upper staff and its second on the lower, as written, with no
+  split at middle C; a third and fourth line are second voices on those
+  staves, stems down. A one-staff part writes its lines as voices 1–4.
+  A staff's line that rests a bar gets a whole-bar rest. A keyboard part
+  with no lines is split at middle C as before.
+- **Pedal marks** (barmark's grammar 2.9): a press writes a pedal start
+  with `damper-pedal="yes"` playback, a release a stop, and a press with
+  the pedal down a stop then a start; the pedal lifts where the part falls
+  tacet and at the chart's end. The marks go under the lower staff of a
+  keyboard.
+- **Dotted figures** (grammar 2.2): `C._D` writes a dotted eighth and a
+  sixteenth, beamed, with no tuplet; `C_D.` the reverse.
+- **`clef:`** fixes a part's clef for the whole part, one staff, with no
+  clef changes; `alto` writes a C clef on the third line.
+
 ## [0.3.0] - 2026-11-04
 
 ### Added

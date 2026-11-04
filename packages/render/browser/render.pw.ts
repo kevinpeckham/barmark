@@ -190,6 +190,48 @@ test.describe("the element", () => {
 	});
 });
 
+test.describe("piano marks", () => {
+	test("pedal marks sit under their slot, inside their row", async ({ page }) => {
+		await page.goto("/chart?chart=piano");
+		await page.evaluate(() => document.fonts.ready);
+		const marks = await inChart(page, (root) =>
+			[...root.querySelectorAll(".bm-pedal")].map((p) => {
+				const box = p.getBoundingClientRect();
+				const slot = (p.parentElement as Element).getBoundingClientRect();
+				const bar = (p.closest(".bm-bar") as Element).getBoundingClientRect();
+				return {
+					below: box.top >= slot.top + slot.height / 2,
+					inside: box.bottom <= bar.bottom + 1,
+				};
+			}),
+		);
+		expect(marks).toEqual([
+			{ below: true, inside: true },
+			{ below: true, inside: true },
+		]);
+	});
+	test("a part's lines stack as rows, with a dot after the dotted member", async ({ page }) => {
+		await page.goto("/chart?chart=piano");
+		const labels = await inChart(page, (root) =>
+			[...root.querySelectorAll(".bm-part-label")].map((l) => l.textContent),
+		);
+		expect(labels).toEqual(["Pno.RH", "Pno.LH", "Bs"]);
+		for (const path of ["/chart?chart=piano", "/chart?chart=pianoAlone"]) {
+			await page.goto(path);
+			const clear = await inChart(page, (root) =>
+				[...root.querySelectorAll(".bm-part-label")].map((l) => {
+					const row = l.closest(".bm-part-row") as Element;
+					const bar = row.querySelector(".bm-bar-body") as Element;
+					return l.getBoundingClientRect().right <= bar.getBoundingClientRect().left;
+				}),
+			);
+			expect(clear.length).toBeGreaterThan(0);
+			expect(clear.every(Boolean)).toBe(true);
+		}
+		await expect(page.locator(".bm-group[data-dotted] .bm-dot")).toBeVisible();
+	});
+});
+
 test.describe("accessibility", () => {
 	test("a screen reader hears sections and bars as music", async ({ page }) => {
 		await page.goto("/chart");

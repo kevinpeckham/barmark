@@ -47,6 +47,23 @@ function differs(l: BarsLine, ref: BarsLine): string | null {
 const isLabelled = (l: Line): l is Labelled =>
 	(l.kind === "bars" || l.kind === "invalid") && l.part !== undefined;
 
+/** The key a part's line is grouped and played by: its label, and its line's name if any (grammar 7.6). */
+export const streamKey = (part: string, lineName?: string): string =>
+	(lineName === undefined ? part : `${part}.${lineName}`).toLowerCase();
+
+/**
+ * What a line takes in its system, and what it can't share it with: its
+ * own stream, and its part written bare or as lines, which can't share a
+ * system (grammar 7.6).
+ */
+function claimsOf(l: Labelled): { takes: string[]; clashes: string[] } {
+	const part = (l.part ?? "").toLowerCase();
+	if (l.lineName === undefined)
+		return { takes: [part, `${part}#bare`], clashes: [part, `${part}#lines`] };
+	const own = streamKey(part, l.lineName);
+	return { takes: [own, `${part}#lines`], clashes: [own, `${part}#bare`] };
+}
+
 /** Number each run of labelled lines with no label twice (grammar 7.4). */
 function numberSystems(lines: Line[]): Line[] {
 	let system = -1;
@@ -56,12 +73,12 @@ function numberSystems(lines: Line[]): Line[] {
 			seen = null;
 			return l;
 		}
-		const label = l.part ?? "";
-		if (!seen || seen.has(label)) {
+		const { takes, clashes } = claimsOf(l);
+		if (!seen || clashes.some((c) => seen?.has(c))) {
 			system++;
 			seen = new Set();
 		}
-		seen.add(label);
+		for (const c of takes) seen.add(c);
 		return { ...l, system };
 	});
 }

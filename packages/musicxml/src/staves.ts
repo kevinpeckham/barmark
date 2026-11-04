@@ -27,7 +27,10 @@ function split(e: SoundEvent): [SoundEvent, SoundEvent] {
 	if (sound.kind !== "notes") return [e, silence(e)];
 	const low = sound.pitches.filter(belowMiddleC);
 	const high = sound.pitches.filter((p) => !belowMiddleC(p));
-	const lower = low.length > 0 ? { ...e, words: [], harmony: false, notes: low } : silence(e);
+	// The lower staff's share writes no marks: words, harmony and the pedal stay with the upper.
+	const { pedal: _p, ...unmarked } = e;
+	const lower =
+		low.length > 0 ? { ...unmarked, words: [], harmony: false, notes: low } : silence(e);
 	return [{ ...e, notes: high }, lower];
 }
 

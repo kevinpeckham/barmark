@@ -9,6 +9,41 @@ Releases follow the process in [RELEASING.md](RELEASING.md).
 
 ## [Unreleased]
 
+### Added
+
+- **Part lines** (grammar 7.6): up to four lines per part, labelled
+  `Pno.RH |` and `Pno.LH |`, in systems as parts are. The first line in a
+  system carries the harmony and the others notes only; a fifth line, or
+  a chord on another line, is an error. Bar lines gain `lineName`,
+  declared parts gain `lines`, and the canonical form sorts a system's
+  lines into score order: the order of the part's first system writing
+  two or more of its lines, so an intro for the left hand alone keeps the
+  right hand first. `streamKey` and `MAX_LINES` are exported.
+  Each line plays on its own: a played bar's part entry gains `lines`
+  (`LineBar`: name, line, slots, words), one per line playing there, and
+  the part's `slots` are its first playing line's. A bare line and a tutti
+  line play as the part's first line; a line not written rests. A
+  single-part chart's bars, and an extracted part's, carry `lines`
+  themselves, and `printPart` keeps the `Pno.RH |` labels.
+  `extractPart(text, label, lineName)` gives one line alone, as a
+  converter writes it: resting (tacet) where the line isn't written.
+- **Sustain pedal marks** (grammar 2.9): `+G` presses or changes the
+  pedal, `*G` lifts it; `--`, a tacet bar and the chart's end lift it too.
+  A chord slot gains `pedal`, and `pedalStates` gives whether the pedal is
+  down at the end of each slot, in play order. A `*` with the pedal
+  already up is a warning.
+- **Dotted figures** (grammar 2.2): a dot after one member of a
+  two-member group, `C._D` (a dotted eighth and a sixteenth in a beat)
+  or `C_D.`. Group members gain `dotted`, and `memberShares` gives each
+  member's share of its slot. `N.C._G` keeps its meaning.
+- **`instrument:` and `clef:` on the `part:` line** (grammar 7.3):
+  `part: Tpt = Trumpet, instrument: trumpet in Bb`, `part: Ld = Lead,
+  clef: bass`. The instrument comes from a list of 16 (`INSTRUMENTS`,
+  `instrumentInfo`), each with its clef, written transposition, staves
+  and General MIDI program, for converters. `Part` gains `instrument` and
+  `clef`, present when written. An unknown instrument is an error naming
+  the near ones; `clef:` on a keyboard is an error.
+
 ## [0.15.0] - 2026-11-04
 
 A grammar change: credit lines (7.5). Charts that read before read the

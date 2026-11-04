@@ -1,7 +1,17 @@
 import { readDocument } from "./document.js";
 import { expand, flattenBars } from "./expand.js";
-import { projectPart } from "./parts.js";
-import type { ChartDiagnostic, ChartEvent, ChartParse, Part, PartBar, PlayedBar } from "./types.js";
+import { projectPart, projectPartLines } from "./parts.js";
+import { pedalWarnings } from "./pedal.js";
+import type {
+	ChartDiagnostic,
+	ChartEvent,
+	ChartParse,
+	DeclaredPart,
+	Line,
+	LineBar,
+	PartBar,
+	PlayedBar,
+} from "./types.js";
 
 const RANK = { error: 0, warning: 1 };
 
@@ -98,23 +108,108 @@ export function zipEvents(
 	});
 }
 
-/** Several parts: each projected and played, then zipped into one timeline (grammar 7.4). */
-function playParts(lines: ReturnType<typeof readDocument>["lines"], parts: Part[]) {
-	const played = parts.map((p) =>
-		expand(projectPart(lines, parts, p.label ?? ""), p.label, parts.length),
+/** One played stream: a part, or one of its lines (grammar 7.6); `part` indexes the parts shown. */
+type Stream = { part: number; label: string; name: string | null };
+
+const streamsOf = (shown: DeclaredPart[]): Stream[] =>
+	shown.flatMap((p, part): Stream[] =>
+		p.lines?.length
+			? p.lines.map((name) => ({ part, label: p.label ?? "", name }))
+			: [{ part, label: p.label ?? "", name: null }],
+	);
+
+/** A part's share of a bar from its streams' shares: its first playing line leads (grammar 7.6). */
+function partOf(p: DeclaredPart, own: [Stream, PartBar][]): PartBar {
+	const playing = own.filter((e): e is [Stream, NonNullable<PartBar>] => e[1] !== null);
+	const lead = playing[0]?.[1];
+	if (!lead) return null;
+	if (!p.lines?.length) return lead;
+	const lines = playing.map(
+		([s, b]): LineBar => ({
+			name: s.name ?? "",
+			line: b.line,
+			slots: b.slots,
+			...(b.words && { words: b.words }),
+		}),
+	);
+	return { ...lead, lines };
+}
+
+/** A zipped bar of streams as a bar of parts; with one part shown, its lines sit on the bar itself. */
+function foldBar(bar: PlayedBar, streams: Stream[], shown: DeclaredPart[]): PlayedBar {
+	const each = bar.parts ?? [];
+	const parts = shown.map((p, i) =>
+		partOf(
+			p,
+			streams.flatMap((s, j): [Stream, PartBar][] => (s.part === i ? [[s, each[j] ?? null]] : [])),
+		),
+	);
+	const { parts: _p, words: _w, tacet: _t, ...shared } = bar;
+	const lead = parts[0];
+	const top: PlayedBar = lead
+		? { ...shared, line: lead.line, slots: lead.slots, ...(lead.words && { words: lead.words }) }
+		: bar;
+	if (shown.length > 1) return { ...top, parts };
+	const { parts: _q, ...alone } = top;
+	return lead?.lines ? { ...alone, lines: lead.lines } : alone;
+}
+
+function foldEvents(events: ChartEvent[], streams: Stream[], shown: DeclaredPart[]): ChartEvent[] {
+	return events.map((e) => {
+		if (e.kind === "bar") return { kind: "bar", bar: foldBar(e.bar, streams, shown) };
+		if (e.kind === "open") return { ...e, events: foldEvents(e.events, streams, shown) };
+		return e;
+	});
+}
+
+/** A part's own bars from a folded bar: tacet where none of its lines plays. */
+function partView(b: PlayedBar, i: number, shown: number): PlayedBar {
+	if (shown === 1) return b;
+	const own = b.parts?.[i];
+	return own ? { ...b, line: own.line, slots: own.slots } : { ...b, slots: [], tacet: true };
+}
+
+/** The pedal warnings of each part that writes lines, walked on the part, not one line (grammar 2.9, 7.6). */
+function linedPedalWarnings(events: ChartEvent[], shown: DeclaredPart[]): ChartDiagnostic[] {
+	const bars = flattenBars(events);
+	return shown.flatMap((p, i) =>
+		p.lines?.length ? pedalWarnings(bars.map((b) => partView(b, i, shown.length))) : [],
+	);
+}
+
+/**
+ * Parts and their lines: each stream projected and played, zipped into one
+ * timeline, then folded into the parts shown (grammar 7.4, 7.6).
+ */
+function playStreams(lines: Line[], parts: DeclaredPart[], shown: DeclaredPart[]) {
+	const streams = streamsOf(shown);
+	const played = streams.map((s) =>
+		expand(
+			projectPart(lines, parts, s.label, s.name),
+			s.name === null ? s.label : `${s.label}.${s.name}`,
+			streams.length,
+			s.name === null,
+		),
 	);
 	const diagnostics = mergeReports(played.map((p) => p.diagnostics));
-	const events = zipEvents(
+	const zipped = zipEvents(
 		played.map((p) => p.events),
 		(d) => diagnostics.push(d),
 	);
+	const events = foldEvents(zipped, streams, shown);
+	diagnostics.push(...linedPedalWarnings(events, shown));
 	return { events, sections: played[0]?.sections ?? [], diagnostics };
 }
+
+const lined = (parts: DeclaredPart[]) => parts.some((p) => p.lines?.length);
 
 /** Read a whole barmark chart: the document as written and the bars in play order. Never throws. */
 export function parseChart(text: string): ChartParse {
 	const doc = readDocument(text);
-	const played = doc.parts.length > 1 ? playParts(doc.lines, doc.parts) : expand(doc.lines);
+	const played =
+		doc.parts.length > 1 || lined(doc.parts)
+			? playStreams(doc.lines, doc.parts, doc.parts)
+			: expand(doc.lines);
 	return {
 		title: doc.title,
 		part: doc.part,
@@ -128,17 +223,45 @@ export function parseChart(text: string): ChartParse {
 	};
 }
 
+type Doc = ReturnType<typeof readDocument>;
+type Played = Pick<ReturnType<typeof expand>, "events" | "sections" | "diagnostics">;
+
+/** What an extract holds and plays: one of the part's lines, the part with its lines, or the part. */
+function extractOf(
+	doc: Doc,
+	part: DeclaredPart,
+	lineName?: string,
+): { lines: Line[]; played: Played } | null {
+	const label = part.label ?? "";
+	if (lineName !== undefined) {
+		const name = part.lines?.find((n) => n.toLowerCase() === lineName.toLowerCase());
+		if (!name) return null;
+		const lines = projectPart(doc.lines, doc.parts, label, name);
+		return { lines, played: expand(lines, `${label}.${name}`) };
+	}
+	if (part.lines?.length)
+		return {
+			lines: projectPartLines(doc.lines, doc.parts, label),
+			played: playStreams(doc.lines, doc.parts, [part]),
+		};
+	const lines = doc.parts.length > 1 ? projectPart(doc.lines, doc.parts, label) : doc.lines;
+	return { lines, played: expand(lines, part.label) };
+}
+
 /**
  * One part of a chart as a single-part chart (grammar 7.4): the tutti bars,
- * its own bars, and `N.C.` marked `tacet` where it rests. Null when the
- * chart declares no part with that label. Never throws.
+ * its own bars, and `N.C.` marked `tacet` where it rests. With `lineName`,
+ * one of the part's lines alone (grammar 7.6), as a converter writes each
+ * line: the part's first line also plays its bare and tutti lines, and a
+ * line rests where it isn't written. Null when the chart declares no part
+ * with that label, or the part no line of that name. Never throws.
  */
-export function extractPart(text: string, label: string): ChartParse | null {
+export function extractPart(text: string, label: string, lineName?: string): ChartParse | null {
 	const doc = readDocument(text);
 	const part = doc.parts.find((p) => p.label?.toLowerCase() === label.toLowerCase());
-	if (!part) return null;
-	const lines = doc.parts.length > 1 ? projectPart(doc.lines, doc.parts, label) : doc.lines;
-	const played = expand(lines, part.label);
+	const extract = part ? extractOf(doc, part, lineName) : null;
+	if (!part || !extract) return null;
+	const { lines, played } = extract;
 	const kept = new Set(lines.map((l) => l.line));
 	// A stand-in may sit on another part's line; that part's problems are not this one's.
 	for (const l of doc.lines)

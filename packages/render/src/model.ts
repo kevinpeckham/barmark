@@ -7,9 +7,12 @@
 import {
 	type Cell,
 	type ChartParse,
+	type DeclaredPart,
 	type Directives,
 	extractPart,
 	type Line,
+	type LineBar,
+	type PartBar,
 	type PlayedBar,
 	parseChart,
 	type SectionOccurrence,
@@ -50,16 +53,20 @@ const playedApart = (b: PlayedBar, line: number) => {
 	return new Set(own).size > 1;
 };
 
-/** Each part's bars on its own lines; a tutti bar once (barmark's grammar 7.4). */
+/** What each line written plays in a bar: each part's share, or each of its lines' (barmark's grammar 7.4, 7.6). */
+const sharesOf = (b: PlayedBar): (PartBar | LineBar)[] =>
+	b.lines ?? (b.parts ?? []).flatMap((p): (PartBar | LineBar)[] => p?.lines ?? [p]);
+
+/** Each part's bars on its own lines, and each line's; a tutti bar once (barmark's grammar 7.4, 7.6). */
 function barsByLine(parse: ChartParse): DrawnBar[] {
-	if (parse.parts.length < 2) return parse.bars;
+	if (parse.parts.length < 2 && !parse.parts.some((p) => p.lines)) return parse.bars;
 	const seen = new Set<string>();
 	return parse.bars.flatMap((b) =>
-		(b.parts ?? []).flatMap((p) => {
+		sharesOf(b).flatMap((p) => {
 			const key = `${b.index}:${p?.line}`;
 			if (!p || seen.has(key)) return [];
 			seen.add(key);
-			const { words: _w, parts: _p, tacet: _t, ...shared } = b;
+			const { words: _w, parts: _p, tacet: _t, lines: _l, ...shared } = b;
 			const apart = playedApart(b, p.line) ? { perPart: true as const } : {};
 			return [
 				{ ...shared, ...apart, line: p.line, slots: p.slots, ...(p.words && { words: p.words }) },
@@ -321,7 +328,18 @@ const lastOfSystem = (item: SystemItem) => {
 /** A bar where the part rests, in a system or a part's own view (barmark's grammar 7.4). */
 export const isTacet = (c: CellModel) => c.kind === "slots" && c.tacet === true;
 
-/** A row per declared part, in score order: its own line, its error, or tacet bars. */
+/** A part's lines in a system, in score order: its bare line, then its lines (barmark's grammar 7.6). */
+function ownLines(lines: SystemLine[], p: DeclaredPart): SystemLine[] {
+	const order = (l: SystemLine) =>
+		l.lineName === undefined ? -1 : (p.lines ?? []).indexOf(l.lineName);
+	return lines.filter((l) => l.part === p.label).sort((a, b) => order(a) - order(b));
+}
+
+/** A system row's label: the part's, and its line's name (`Pno.RH`). */
+const labelOf = (l: SystemLine) =>
+	`${l.part ?? ""}${l.lineName === undefined ? "" : `.${l.lineName}`}`;
+
+/** A row per declared part, or per line it writes, in score order: its own line, its error, or tacet bars. */
 function layoutSystem(
 	lines: SystemLine[],
 	occurrence: SectionOccurrence | undefined,
@@ -332,15 +350,17 @@ function layoutSystem(
 	const reference = ref
 		? layoutRow(ref, playedOn(ref.line, occurrence, ctx.bars), previous, ctx)
 		: null;
-	const rows = ctx.parse.parts.map((p) => {
-		const own = lines.find((l) => l.part === p.label);
-		const row: RowItem | ErrorItem =
-			own && ctx.errors.has(own.line)
-				? errorItem(own.line, ctx)
-				: own?.kind === "bars"
-					? layoutRow(own, playedOn(own.line, occurrence, ctx.bars), previous, ctx)
-					: tacetRow(reference, lines[0]?.line ?? 0);
-		return { label: p.label ?? "", name: p.name, row };
+	const ownRow = (own: SystemLine): RowItem | ErrorItem =>
+		ctx.errors.has(own.line) || own.kind !== "bars"
+			? errorItem(own.line, ctx)
+			: layoutRow(own, playedOn(own.line, occurrence, ctx.bars), previous, ctx);
+	const rows = ctx.parse.parts.flatMap((p) => {
+		const own = ownLines(lines, p);
+		if (!own.length)
+			return [
+				{ label: p.label ?? "", name: p.name, row: tacetRow(reference, lines[0]?.line ?? 0) },
+			];
+		return own.map((l) => ({ label: labelOf(l), name: p.name, row: ownRow(l) }));
 	});
 	return {
 		kind: "system",

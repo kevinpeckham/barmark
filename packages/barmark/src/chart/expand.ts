@@ -1,6 +1,8 @@
 import { type JumpPlan, planJump } from "./direction.js";
 import { beatsOf } from "./directives.js";
+import { pedalWarnings } from "./pedal.js";
 import { type Entry, type Item, pairRepeats } from "./repeats.js";
+import { memberShares } from "./shares.js";
 import type {
 	ChartDiagnostic,
 	ChartEvent,
@@ -76,7 +78,10 @@ function timed(bar: PlayedBar): { slot: SimpleSlot & { push?: Push }; length: nu
 	const each = bar.meter.n / bar.meter.d / bar.slots.length;
 	return bar.slots.flatMap((s) =>
 		s.kind === "group"
-			? s.members.map((m) => ({ slot: m, length: each / s.members.length }))
+			? memberShares(s.members).map((share, i) => ({
+					slot: s.members[i] as SimpleSlot,
+					length: each * share,
+				}))
 			: [{ slot: s, length: each }],
 	);
 }
@@ -142,6 +147,8 @@ export function expand(
 	lines: Line[],
 	label?: string,
 	share = 1,
+	/** False for one line of a part (grammar 7.6): the pedal is the part's, warned of once its lines are folded. */
+	pedal = true,
 ): {
 	events: ChartEvent[];
 	sections: SectionOccurrence[];
@@ -507,5 +514,6 @@ export function expand(
 			form: forms.get(written) ?? 0,
 		};
 	});
+	if (pedal) diagnostics.push(...pedalWarnings(flattenBars(events)));
 	return { events, sections: sectionsOut, diagnostics };
 }

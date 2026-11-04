@@ -11,7 +11,7 @@ export function frac(n: number, d = 1): Frac {
 	const g = gcd(Math.abs(n), Math.abs(d)) || 1;
 	return { n: n / g, d: d / g };
 }
-const times = (a: Frac, b: Frac) => frac(a.n * b.n, a.d * b.d);
+export const times = (a: Frac, b: Frac) => frac(a.n * b.n, a.d * b.d);
 export const plus = (a: Frac, b: Frac) => frac(a.n * b.d + b.n * a.d, a.d * b.d);
 export const minus = (a: Frac, b: Frac) => frac(a.n * b.d - b.n * a.d, a.d * b.d);
 const atMost = (a: Frac, b: Frac) => a.n * b.d <= b.n * a.d;

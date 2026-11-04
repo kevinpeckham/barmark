@@ -1,4 +1,5 @@
 import type { ChordRecord } from "../chords/types.js";
+import type { ClefName, InstrumentName } from "./instruments.js";
 
 export type Severity = "error" | "warning";
 export type ChartDiagnostic = {
@@ -28,9 +29,10 @@ export type TempoChange = { kind: "rit" | "accel"; to: number | null } | { kind:
 /** `tempo:` gives either `tempo` (a steady tempo) or `tempoChange`, never both. */
 /**
  * The part a chart is written for (grammar 7.3): `part: Electric Guitar 1`,
- * or with a short label, `part: Gtr = Electric Guitar 1`.
+ * or with a short label, `part: Gtr = Electric Guitar 1`; `instrument:`
+ * and `clef:` may follow, and are present only when written.
  */
-export type Part = { name: string; label?: string };
+export type Part = { name: string; label?: string; instrument?: InstrumentName; clef?: ClefName };
 
 export type Directives = {
 	key?: Key;
@@ -53,24 +55,31 @@ export type Articulation = "accent" | "hit";
  * sixteenth, taken from the slot played just before it.
  */
 export type Push = "eighth" | "sixteenth";
+/** `+` presses the sustain pedal, or changes it when it is down; `*` lifts it (grammar 2.9). */
+export type Pedal = "press" | "release";
 /**
  * A chord slot holds a chord symbol or a note set; `chord.kind` tells
  * which. `voicing` is the exact notes written after a chord's name
  * (`Cmaj7{E3 G3 B3}`, grammar 4.2). The optional fields are present only
  * when written.
  */
-export type SimpleSlot =
+export type SimpleSlot = (
 	| {
 			kind: "chord";
 			chord: ChordRecord;
 			voicing?: ChordRecord;
+			pedal?: Pedal;
 			articulation?: Articulation;
 			push?: Push;
 	  }
 	| { kind: "hold" }
 	| { kind: "nc"; push?: Push }
 	| { kind: "silence"; push?: Push }
-	| { kind: "unknown" };
+	| { kind: "unknown" }
+) & {
+	/** A dotted member of a two-member group (grammar 2.2): three quarters of its slot. */
+	dotted?: true;
+};
 export type Slot = SimpleSlot | { kind: "group"; members: SimpleSlot[] };
 /**
  * A mark between bars (grammar 5.2). A jump goes back to the chart's first
@@ -130,6 +139,8 @@ export type Line =
 			ending: number[] | null;
 			/** The declared label of the part whose line this is (grammar 7.4); absent on a tutti line and in a single-part chart. */
 			part?: string;
+			/** The part's line this is (`RH` in `Pno.RH`, grammar 7.6), as first spelled; absent on a part's bare line. */
+			lineName?: string;
 			/** Which system a labelled line is in, from 0 in chart order. */
 			system?: number;
 			/** Set when the line's bars or structure differ from its system's (an error): its part is tacet there. */
@@ -148,6 +159,7 @@ export type Line =
 			text: string;
 			written: number;
 			part?: string;
+			lineName?: string;
 			system?: number;
 	  };
 
@@ -186,9 +198,18 @@ export type PlayedBar = {
 	 * `slots` and `words` are the first part's.
 	 */
 	parts?: PartBar[];
+	/** A single part's lines (grammar 7.6), as on `PartBar`: in a single-part chart or an extracted part that writes lines. */
+	lines?: LineBar[];
 };
-/** One part's share of a played bar (grammar 7.4): the line it is written on, its slots and words. */
-export type PartBar = { line: number; slots: Slot[]; words?: Words[] } | null;
+/** One part's line's share of a played bar (grammar 7.6): its name, the line it is written on, its slots and words. */
+export type LineBar = { name: string; line: number; slots: Slot[]; words?: Words[] };
+/**
+ * One part's share of a played bar (grammar 7.4): the line it is written
+ * on, its slots and words. A part that writes lines (7.6) has `lines`, one
+ * per line playing there in score order, and its first playing line's
+ * `line`, `slots` and `words`.
+ */
+export type PartBar = { line: number; slots: Slot[]; words?: Words[]; lines?: LineBar[] } | null;
 /** An open repeat shows one pass; the number of passes is unknown. */
 export type ChartEvent =
 	| { kind: "bar"; bar: PlayedBar }
@@ -209,6 +230,9 @@ export type SectionOccurrence = {
 	form: number;
 };
 
+/** A declared part as the parse reports it: `lines` names its lines in score order (grammar 7.6), present only when it writes some. */
+export type DeclaredPart = Part & { lines?: string[] };
+
 export type ChartParse = {
 	title: string | null;
 	/**
@@ -216,9 +240,9 @@ export type ChartParse = {
 	 * none or several.
 	 * @deprecated use `parts`.
 	 */
-	part: Part | null;
+	part: DeclaredPart | null;
 	/** Every part the chart declares, in score order (grammar 7.4); empty when none. */
-	parts: Part[];
+	parts: DeclaredPart[];
 	/** The credit lines (grammar 7.5); each list empty when none is written. */
 	credits: Credits;
 	lines: Line[];

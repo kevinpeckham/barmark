@@ -95,6 +95,26 @@ order, not just the written marks.
 
 ## Design
 
+### A new grammar section breaks the site before its parser is on npm (2026-11-04, sustain pedal)
+
+Symptom: grammar 2.9 (pedal marks) failed the site's required check: its
+coverage test wants a guide row for every grammar section, and a row's
+example is parsed by the barmark the site installs from npm, which can't
+read `+G` until the release. Cause: the grammar lives at the repo root
+and changes with the parser; the site runs the published one. Fix: the
+coverage test's `PENDING` lists a section with the release that brings
+it, and fails once the site installs that release without its row
+(`site/tests/coverage.test.ts`).
+
+### The sounding fixture named grammar examples by position (2026-11-04, sustain pedal)
+
+Symptom: adding grammar 2.9's example failed "grammar block 8/13/14
+sounds as it did" though nothing sounded different. Cause: grammar blocks
+were named by their index, so a new block renamed every later one. Fix:
+blocks are named by a hash of their text (`packages/musicxml/tests/charts.ts`);
+the regenerated fixture's twelve old entries were checked identical under
+their new names.
+
 ### Dorico doesn't reliably hide a `print-object="no"` rest (2026-11-04, musicxml two staves)
 
 Symptom: Morning Song's piano, exported with a hidden whole-bar rest on
@@ -121,6 +141,20 @@ whether its absence is itself meaningful.
 because no top-level code ran first. `parseChart` moved to its own module
 (`src/chart/parse.ts`). Import from the defining module, never from the
 package index, inside the package.
+
+### Two rules naming "the first line" must name the same one (2026-11-04, grammar 7.6)
+
+The final review of part lines found that `format` could break a valid
+piano chart. Score order was the order lines first appear, but the line
+allowed chord symbols was the first *written* in each system. A piano
+intro for the left hand alone made `Pno.LH` first in score order, so the
+canonical form sorted LH above RH in the verse, and the RH's chords then
+failed the notes-only rule; MusicXML put the LH on the treble staff.
+Each rule's tests passed on its own. Kevin's fix: score order comes from
+the part's first system writing two or more lines, and the harmony line
+is the first in score order (`lines.ts`, `scoreOrder`). The lesson:
+when two rules each define "first", test a chart that tells them apart,
+and round-trip it through `format`.
 
 ## Tooling
 

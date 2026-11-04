@@ -1,9 +1,10 @@
 /** Notes as MusicXML <note>s: slash notes, rests, and the real notes of note sets and voicings. */
-import type { Articulation, ChordRecord, Slot } from "barmark";
+import type { Articulation, ChordRecord, Slot, WrittenInterval } from "barmark";
 import type { Beam } from "./beams.js";
 import type { Clef } from "./clefs.js";
 import type { MeasureEvents, SoundEvent } from "./events.js";
 import { beatLength, type Frac, type NoteValue, onBeat, plus } from "./rhythm.js";
+import { writtenPitch } from "./written.js";
 import { el, text } from "./xml.js";
 
 export type Pitch = { step: string; alter: number; octave: number };
@@ -116,14 +117,19 @@ export type ValueStyle = {
 	beams: Beam[];
 	/** The clef in force: a slash sits on its staff's middle line. */
 	clef: Clef;
-	/** Octaves a note is written above where it sounds. */
-	octave: number;
+	/** How far a note is written above where it sounds (barmark's grammar 7.3). */
+	written: WrittenInterval;
 	/** The voice, and the staff of a part on two (null on one). */
 	voice: number;
 	staff: number | null;
+	/** A note's stem on a staff two lines share (barmark's grammar 7.6): the first line's up, the others' down. */
+	noteStem?: "up" | "down";
 };
 
 const staffXml = (staff: number | null) => (staff === null ? "" : text("staff", staff));
+
+/** A slash's stem, or a note's on a staff two lines share. */
+const stemXml = (stem: string | null | undefined) => (stem ? text("stem", stem) : "");
 
 function pitchedXml(n: Pitched, v: NoteValue, style: ValueStyle): string {
 	const { duration, tie } = style;
@@ -141,7 +147,7 @@ function pitchedXml(n: Pitched, v: NoteValue, style: ValueStyle): string {
 		text("duration", duration),
 		...tieEnds("tie", tie),
 		...valueXml(v, style.voice),
-		n.slash ? text("stem", n.slash) : "",
+		stemXml(n.slash ?? style.noteStem),
 		n.slash ? text("notehead", "slash") : "",
 		staffXml(style.staff),
 		...(n.chord ? [] : style.beams.map((b, i) => text("beam", b, { number: i + 1 }))),
@@ -154,6 +160,7 @@ const SLASH: Record<Clef, Pitch> = {
 	G: { step: "B", alter: 0, octave: 4 },
 	F: { step: "D", alter: 0, octave: 3 },
 	G8vb: { step: "B", alter: 0, octave: 3 },
+	C: { step: "C", alter: 0, octave: 4 },
 };
 
 /** One written value of a sound: a rest, a slash note, or a chord of notes. */
@@ -168,7 +175,7 @@ export function soundValueXml(sound: Sound, v: NoteValue, style: ValueStyle): st
 	const pitches =
 		sound.kind === "slash"
 			? [SLASH[style.clef]]
-			: sound.pitches.map((p) => ({ ...p, octave: p.octave + style.octave }));
+			: sound.pitches.map((p) => writtenPitch(p, style.written));
 	const slash = sound.kind === "slash" ? style.stem : null;
 	return pitches
 		.map((pitch, i) => {
