@@ -92,9 +92,9 @@ sixteenths, and so on). Slashes in rhythmic bars beam the same way.
 In order:
 
 1. The **instrument's clef** when the part names one (section 4).
-2. Otherwise **by bars**: the part's clef is bass when most of the bars
-   that write notes sit below middle C, else treble. A part of only
-   slashes is treble. (Today it's by notes, so one long pedal note
+2. Otherwise **by bars**: the part's clef is bass when most of its bars
+   sit below middle C, else treble. A slash bar counts as treble, so a
+   part of only slashes is treble. (Today it's by notes, so one long pedal note
    decides a whole chart.)
 3. **Clef changes:** a run of consecutive bars that write notes and sit
    on the other side of middle C from the part's clef gets that clef for
@@ -103,8 +103,9 @@ In order:
    bars or more, or a single bar whose notes would need more than three
    ledger lines, so one stray note doesn't flip the clef.
 
-A bar "sits below middle C" when most of its notes do. Slash bars don't
-vote.
+A bar "sits below middle C" when most of its notes do. Slash bars vote
+treble (amended with the plan, 2026-11-04: if they didn't vote, Example
+Song's four pedal bars would make its whole part bass).
 
 ## 4. Instruments from the part's name
 
