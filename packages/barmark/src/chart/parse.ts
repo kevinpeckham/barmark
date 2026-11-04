@@ -205,23 +205,45 @@ export function parseChart(text: string): ChartParse {
 	};
 }
 
+type Doc = ReturnType<typeof readDocument>;
+type Played = Pick<ReturnType<typeof expand>, "events" | "sections" | "diagnostics">;
+
+/** What an extract holds and plays: one of the part's lines, the part with its lines, or the part. */
+function extractOf(
+	doc: Doc,
+	part: DeclaredPart,
+	lineName?: string,
+): { lines: Line[]; played: Played } | null {
+	const label = part.label ?? "";
+	if (lineName !== undefined) {
+		const name = part.lines?.find((n) => n.toLowerCase() === lineName.toLowerCase());
+		if (!name) return null;
+		const lines = projectPart(doc.lines, doc.parts, label, name);
+		return { lines, played: expand(lines, `${label}.${name}`) };
+	}
+	if (part.lines?.length)
+		return {
+			lines: projectPartLines(doc.lines, doc.parts, label),
+			played: playStreams(doc.lines, doc.parts, [part]),
+		};
+	const lines = doc.parts.length > 1 ? projectPart(doc.lines, doc.parts, label) : doc.lines;
+	return { lines, played: expand(lines, part.label) };
+}
+
 /**
  * One part of a chart as a single-part chart (grammar 7.4): the tutti bars,
- * its own bars, and `N.C.` marked `tacet` where it rests. Null when the
- * chart declares no part with that label. Never throws.
+ * its own bars, and `N.C.` marked `tacet` where it rests. With `lineName`,
+ * one of the part's lines alone (grammar 7.6), as a converter writes each
+ * line: the part's first line also plays its bare and tutti lines, and a
+ * line rests where it isn't written. Null when the chart declares no part
+ * with that label, or the part no line of that name. Never throws.
  */
-export function extractPart(text: string, label: string): ChartParse | null {
+export function extractPart(text: string, label: string, lineName?: string): ChartParse | null {
 	const doc = readDocument(text);
 	const part = doc.parts.find((p) => p.label?.toLowerCase() === label.toLowerCase());
-	if (!part) return null;
-	const lines = part.lines?.length
-		? projectPartLines(doc.lines, doc.parts, label)
-		: doc.parts.length > 1
-			? projectPart(doc.lines, doc.parts, label)
-			: doc.lines;
-	const played = part.lines?.length
-		? playStreams(doc.lines, doc.parts, [part])
-		: expand(lines, part.label);
+	const extract = part ? extractOf(doc, part, lineName) : null;
+	if (!part || !extract) return null;
+	const { lines, played } = extract;
 	const kept = new Set(lines.map((l) => l.line));
 	// A stand-in may sit on another part's line; that part's problems are not this one's.
 	for (const l of doc.lines)

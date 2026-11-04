@@ -23,6 +23,8 @@ Releases follow the process in [RELEASING.md](RELEASING.md).
   line play as the part's first line; a line not written rests. A
   single-part chart's bars, and an extracted part's, carry `lines`
   themselves, and `printPart` keeps the `Pno.RH |` labels.
+  `extractPart(text, label, lineName)` gives one line alone, as a
+  converter writes it: resting (tacet) where the line isn't written.
 - **Sustain pedal marks** (grammar 2.9): `+G` presses or changes the
   pedal, `*G` lifts it; `--`, a tacet bar and the chart's end lift it too.
   A chord slot gains `pedal`, and `pedalStates` gives whether the pedal is

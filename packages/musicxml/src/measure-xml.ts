@@ -37,6 +37,8 @@ export type MeasureContext = {
 	slashed: { now: boolean; before: boolean | null };
 	/** Two for a keyboard: treble and bass, the slashes on the upper. */
 	staves: 1 | 2;
+	/** Each of a part's lines' events in this bar, its first line's first (barmark's grammar 7.6); absent when it writes none. */
+	lines?: SoundEvent[][];
 };
 
 const LETTER_FIFTHS: Record<string, number> = { F: -1, C: 0, G: 1, D: 2, A: 3, E: 4, B: 5 };
@@ -162,6 +164,7 @@ type BarStyle = {
 	written: WrittenInterval;
 	voice: number;
 	staff: number | null;
+	noteStem?: "up" | "down";
 };
 
 /** An event with what it sounds and how it is written. */
@@ -180,6 +183,7 @@ function eventXml(w: EventValues, style: BarStyle, beams: () => Beam[]): string 
 			written: style.written,
 			voice: style.voice,
 			staff: style.staff,
+			...(style.noteStem ? { noteStem: style.noteStem } : {}),
 			beams: beams(),
 		}),
 	);
@@ -191,8 +195,8 @@ function eventXml(w: EventValues, style: BarStyle, beams: () => Beam[]): string 
 	].join("");
 }
 
-/** Where a voice is written: its voice, its staff (null on a part of one), and that staff's clef. */
-type Staff = { voice: number; staff: number | null; clef: Clef };
+/** Where a voice is written: its voice, its staff (null on a part of one), that staff's clef, and its notes' stems on a shared staff. */
+type Staff = { voice: number; staff: number | null; clef: Clef; noteStem?: "up" | "down" };
 
 /** A staff's events, each at its place in the bar, beamed across the bar. */
 function voiceXml(events: SoundEvent[], meter: Meter, ctx: MeasureContext, staff: Staff): string {
@@ -249,6 +253,59 @@ function stavesXml(bar: MeasureEvents, ctx: MeasureContext): string {
 		backupXml(length),
 		plays ? voiceXml(lower, meter, ctx, LOWER) : measureRestXml(length, LOWER),
 	].join("");
+}
+
+/**
+ * Where each of a part's lines is written (barmark's grammar 7.6): on two
+ * staves the first line on the upper, the second on the lower, a third and
+ * fourth as second voices on those staves; on one staff voices 1 to 4.
+ */
+export function voicesFor(staves: 1 | 2, lines: number): { voice: number; staff: number }[] {
+	const places =
+		staves === 2
+			? [
+					{ voice: 1, staff: 1 },
+					{ voice: 5, staff: 2 },
+					{ voice: 2, staff: 1 },
+					{ voice: 6, staff: 2 },
+				]
+			: [1, 2, 3, 4].map((voice) => ({ voice, staff: 1 }));
+	return places.slice(0, lines);
+}
+
+/** Each line's place, clef and stems: a staff two lines share stems its first line up and the others down. */
+function lineStaves(ctx: MeasureContext, lines: number): Staff[] {
+	const places = voicesFor(ctx.staves, lines);
+	const shared = (staff: number) => places.filter((p) => p.staff === staff).length > 1;
+	return places.map((p, i) => ({
+		voice: p.voice,
+		staff: ctx.staves === 2 ? p.staff : null,
+		clef: ctx.staves === 2 ? (p.staff === 1 ? "G" : "F") : ctx.clef.now,
+		...(shared(p.staff) ? { noteStem: i < ctx.staves ? ("up" as const) : ("down" as const) } : {}),
+	}));
+}
+
+const resting = (events: SoundEvent[]) => events.every((e) => soundOf(e).kind === "rest");
+
+/**
+ * A bar of a part's lines: each line in its voice, back to the bar's start
+ * between them. A staff's first line rests the bar where it has nothing to
+ * play; a second voice resting writes nothing.
+ */
+function linesXml(bar: MeasureEvents, lines: SoundEvent[][], ctx: MeasureContext): string {
+	const { meter } = bar.measure;
+	const length = whole(barLength(meter), ctx.divisions);
+	const staves = lineStaves(ctx, lines.length);
+	const written = lines.flatMap((events, i) => {
+		const staff = staves[i];
+		if (!staff) return [];
+		if (!resting(events)) return [voiceXml(events, meter, ctx, staff)];
+		return i < ctx.staves ? [measureRestXml(length, staff)] : [];
+	});
+	const [first, ...rest] = written;
+	return [first ?? "", ...bar.after.map(wordsXml), ...rest.map((x) => backupXml(length) + x)].join(
+		"",
+	);
 }
 
 /** A bar on one staff: its events and the words after them, or a tacet bar's rest. */
@@ -316,7 +373,11 @@ function rightBarlineXml(marks: Marks): string {
 
 export function measureXml(bar: MeasureEvents, ctx: MeasureContext): string {
 	const m = bar.measure;
-	const body = ctx.staves === 2 ? stavesXml(bar, ctx) : staffXml(bar, ctx);
+	const body = ctx.lines
+		? linesXml(bar, ctx.lines, ctx)
+		: ctx.staves === 2
+			? stavesXml(bar, ctx)
+			: staffXml(bar, ctx);
 	return el("measure", { number: ctx.index + 1, text: m.shown }, [
 		attributesXml(m, ctx),
 		leftBarlineXml(m.marks),

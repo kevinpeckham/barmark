@@ -122,9 +122,14 @@ export type ValueStyle = {
 	/** The voice, and the staff of a part on two (null on one). */
 	voice: number;
 	staff: number | null;
+	/** A note's stem on a staff two lines share (barmark's grammar 7.6): the first line's up, the others' down. */
+	noteStem?: "up" | "down";
 };
 
 const staffXml = (staff: number | null) => (staff === null ? "" : text("staff", staff));
+
+/** A slash's stem, or a note's on a staff two lines share. */
+const stemXml = (stem: string | null | undefined) => (stem ? text("stem", stem) : "");
 
 function pitchedXml(n: Pitched, v: NoteValue, style: ValueStyle): string {
 	const { duration, tie } = style;
@@ -142,7 +147,7 @@ function pitchedXml(n: Pitched, v: NoteValue, style: ValueStyle): string {
 		text("duration", duration),
 		...tieEnds("tie", tie),
 		...valueXml(v, style.voice),
-		n.slash ? text("stem", n.slash) : "",
+		stemXml(n.slash ?? style.noteStem),
 		n.slash ? text("notehead", "slash") : "",
 		staffXml(style.staff),
 		...(n.chord ? [] : style.beams.map((b, i) => text("beam", b, { number: i + 1 }))),

@@ -1,0 +1,92 @@
+/** Part lines as staves and voices (barmark's grammar 7.6). */
+import { describe, expect, test } from "bun:test";
+import { voicesFor } from "../src/measure-xml.js";
+import { measures, notes, xmlOf } from "./helpers.js";
+
+const MORNING = `# Morning Song
+part: Pno = Piano, instrument: piano
+part: Bs = Bass, instrument: electric bass
+
+## Verse
+Pno.RH | G{B3 D4 G4} | C{C4 E4 G4} | D{D4 F#4 A4} | G{B3 D4 G4} |
+Pno.LH | {G2}        | {C3}        | {D3} / {F#2} / | {G2}       |
+Bs     | {G1}        | {C2}        | {D2}         | {G1}         |
+`;
+
+const tag = (n: string, name: string) => new RegExp(`<${name}>([^<]*)</${name}>`).exec(n)?.[1];
+/** Each note's pitch (or "rest"), voice, staff and stem. */
+const placed = (measure: string) =>
+	notes(measure).map((n) => [
+		n.includes("<rest") ? "rest" : `${tag(n, "step")}${tag(n, "octave")}`,
+		Number(tag(n, "voice")),
+		Number(tag(n, "staff") ?? 0),
+		tag(n, "stem") ?? null,
+	]);
+
+describe("voicesFor", () => {
+	test("two staves: RH, LH, then a second voice on each", () => {
+		expect(voicesFor(2, 4)).toEqual([
+			{ voice: 1, staff: 1 },
+			{ voice: 5, staff: 2 },
+			{ voice: 2, staff: 1 },
+			{ voice: 6, staff: 2 },
+		]);
+		expect(voicesFor(1, 2)).toEqual([
+			{ voice: 1, staff: 1 },
+			{ voice: 2, staff: 1 },
+		]);
+	});
+});
+
+describe("part lines in MusicXML", () => {
+	test("piano lines: RH on the upper staff, LH on the lower, no middle-C split", () => {
+		const xml = xmlOf(MORNING);
+		const [first, , third] = measures(xml, "P1");
+		expect(placed(first ?? "")).toEqual([
+			["B3", 1, 1, null],
+			["D4", 1, 1, null],
+			["G4", 1, 1, null],
+			["G2", 5, 2, null],
+		]);
+		expect(placed(third ?? "").filter(([, v]) => v === 5)).toEqual([
+			["D3", 5, 2, null],
+			["F2", 5, 2, null],
+		]);
+		expect(measures(xml)).toHaveLength(4);
+		expect(measures(xml, "P2")).toHaveLength(4);
+	});
+	test("a resting line: the lower staff rests", () => {
+		const xml = xmlOf(`${MORNING}\nPno.RH | Em{E4 G4 B4} |\nBs | {E1} |\n`);
+		const last = measures(xml, "P1")[4] ?? "";
+		expect(placed(last).filter(([, , s]) => s === 2)).toEqual([["rest", 5, 2, null]]);
+		expect(last).toContain('<rest measure="yes"/>');
+	});
+	test("third line: voice 2, stems down, on the upper staff", () => {
+		const xml = xmlOf(
+			"part: Pno = Piano, instrument: piano\nPno.RH | {G4} / / / |\nPno.LH | {G2} / / / |\nPno.RH2 | {D4} {E4} {F4} {G4} |\n",
+		);
+		const m = placed(measures(xml)[0] ?? "");
+		expect(m.filter(([, v]) => v === 1).map((n) => n[3])).toEqual(["up"]);
+		expect(m.filter(([, v]) => v === 2)).toEqual([
+			["D4", 2, 1, "down"],
+			["E4", 2, 1, "down"],
+			["F4", 2, 1, "down"],
+			["G4", 2, 1, "down"],
+		]);
+	});
+	test("guitar two lines: one staff, voices 1 and 2", () => {
+		const xml = xmlOf(
+			"part: Gtr = Guitar, instrument: electric guitar\nGtr.1 | {E4} {G4} |\nGtr.2 | {E3} |\n",
+		);
+		expect(xml).not.toContain("<staves>");
+		expect(placed(measures(xml)[0] ?? "")).toEqual([
+			["E4", 1, 0, "up"],
+			["G4", 1, 0, "up"],
+			["E3", 2, 0, "down"],
+		]);
+	});
+	test("export --part keeps the lines", () => {
+		const xml = xmlOf(MORNING, "Pno");
+		expect(placed(measures(xml)[0] ?? "").map(([, v]) => v)).toEqual([1, 1, 1, 5]);
+	});
+});

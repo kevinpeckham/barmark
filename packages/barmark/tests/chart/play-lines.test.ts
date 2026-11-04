@@ -89,6 +89,22 @@ describe("playing part lines (grammar 7.6)", () => {
 		expect(bass?.bars[2]?.slots.map(printSlot)).toEqual(["{D2}"]);
 		expect(bass?.diagnostics).toEqual([]);
 	});
+	test("extractPart with a line name: that line alone, resting where it isn't written", () => {
+		const lh = extractPart(`${MORNING}\nPno.RH | Em |\nBs | {E1} |\n`, "Pno", "lh");
+		expect(lh?.bars.map((b) => b.slots.map(printSlot).join(" "))).toEqual([
+			"{G2}",
+			"{C3}",
+			"{D3} / {F#2} /",
+			"{G2}",
+			"N.C.",
+		]);
+		expect(lh?.bars[4]?.tacet).toBe(true);
+		expect(lh?.bars[0]?.lines).toBeUndefined();
+		expect(lh?.diagnostics).toEqual([]);
+		const rh = extractPart(`${MORNING}\n| Em |\n`, "Pno", "RH");
+		expect(rh?.bars[4]?.slots.map(printSlot)).toEqual(["Em"]);
+		expect(extractPart(MORNING, "Pno", "XX")).toBeNull();
+	});
 	test("a single-part chart with lines", () => {
 		const p = parseChart("part: Pno = Piano\nPno.RH | G{B3 D4 G4} |\nPno.LH | {G2} |\n");
 		expect(p.bars[0]?.lines?.map(show)).toEqual([

@@ -3,8 +3,8 @@ import {
 	type ChartDiagnostic,
 	type ChartParse,
 	type Credits,
+	type DeclaredPart,
 	extractPart,
-	type Part,
 	parseChart,
 } from "barmark";
 import { clefPlan } from "./clefs.js";
@@ -41,16 +41,24 @@ function identificationXml(credits: Credits): string {
 	return el("identification", {}, [...creators, ...rights, encoding]);
 }
 
-/** One exported part: what it is called, and the chart as that part plays it. */
-type PartSource = { part: Part | null; parse: ChartParse };
+/**
+ * One exported part: what it is called, and the chart as that part plays
+ * it, one parse per line when it writes lines (barmark's grammar 7.6).
+ */
+type PartSource = { part: DeclaredPart | null; parses: [ChartParse, ...ChartParse[]] };
 
-/** Each part as a single-part parse: several parts through extractPart, one chart as it is. */
+/** A part's lines, each extracted alone; empty when it writes none. */
+const linesOf = (part: DeclaredPart | null, text: string): ChartParse[] =>
+	(part?.lines ?? []).flatMap((name) => extractPart(text, part?.label ?? "", name) ?? []);
+
+/** Each part as single-part parses: several parts through extractPart, one chart as it is. */
 function partsOf(parse: ChartParse, text: string): PartSource[] {
-	if (parse.parts.length < 2) return [{ part: parse.parts[0] ?? null, parse }];
-	return parse.parts.map((part) => ({
-		part,
-		parse: extractPart(text, part.label ?? "") ?? parse,
-	}));
+	const whole = (part: DeclaredPart | null, own: ChartParse): PartSource => {
+		const [first, ...rest] = linesOf(part, text);
+		return { part, parses: first ? [first, ...rest] : [own] };
+	};
+	if (parse.parts.length < 2) return [whole(parse.parts[0] ?? null, parse)];
+	return parse.parts.map((part) => whole(part, extractPart(text, part.label ?? "") ?? parse));
 }
 
 function scorePart(source: PartSource, i: number): string {
@@ -80,21 +88,32 @@ function around<T>(list: T[], index: number, fallback: T): { now: T; before: T |
 	};
 }
 
-function partXml(source: PartSource, i: number): string {
-	const measures = writtenMeasures(source.parse);
+/** A parse's measures and their events, holds and pushes applied. */
+function streamOf(parse: ChartParse) {
+	const measures = writtenMeasures(parse);
 	const held = applyHolds(applyPushes(measures.map(eventsOf)));
 	const rhythmicBars = held.map(rhythmic);
-	const bars = joinHolds(held, rhythmicBars);
+	return { measures, rhythmicBars, bars: joinHolds(held, rhythmicBars) };
+}
+
+function partXml(source: PartSource, i: number): string {
+	const [lead, ...others] = source.parses;
+	const first = streamOf(lead);
+	const streams = [first, ...others.map(streamOf)];
+	const lined = (source.part?.lines?.length ?? 0) > 0;
+	const { measures, rhythmicBars, bars } = first;
 	const slashedBars = bars.map(slashed);
 	const instrument = instrumentOf(source.part);
 	const fixed = instrument?.clef;
 	const clefs = fixed ? bars.map(() => fixed) : clefPlan(bars);
 	const divisions = divisionsFor(
-		bars.flatMap((b) => [
-			barLength(b.measure.meter),
-			beatLength(b.measure.meter),
-			...b.events.map((e) => e.length),
-		]),
+		streams.flatMap((s) =>
+			s.bars.flatMap((b) => [
+				barLength(b.measure.meter),
+				beatLength(b.measure.meter),
+				...b.events.map((e) => e.length),
+			]),
+		),
 	);
 	const xml = bars.map((bar, index) =>
 		measureXml(bar, {
@@ -107,6 +126,7 @@ function partXml(source: PartSource, i: number): string {
 			rhythmic: rhythmicBars[index] ?? false,
 			written: instrument?.written ?? { diatonic: 0, chromatic: 0 },
 			staves: instrument?.staves ?? 1,
+			...(lined ? { lines: streams.map((s) => s.bars[index]?.events ?? []) } : {}),
 		}),
 	);
 	return el("part", { id: `P${i + 1}` }, xml);

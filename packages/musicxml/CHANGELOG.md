@@ -15,6 +15,12 @@ package uses [semantic versioning](https://semver.org/).
   sax a ninth, with the key signature, the notes and the chord symbols'
   roots and basses all written, and a `<transpose>` taking them back. The
   bass's octave transposition is unchanged.
+- **Part lines** (barmark's grammar 7.6): a keyboard's first line goes
+  on the upper staff and its second on the lower, as written, with no
+  split at middle C; a third and fourth line are second voices on those
+  staves, stems down. A one-staff part writes its lines as voices 1–4.
+  A staff's line that rests a bar gets a whole-bar rest. A keyboard part
+  with no lines is split at middle C as before.
 - **`clef:`** fixes a part's clef for the whole part, one staff, with no
   clef changes; `alto` writes a C clef on the third line.
 
