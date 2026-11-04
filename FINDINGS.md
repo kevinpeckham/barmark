@@ -95,6 +95,15 @@ order, not just the written marks.
 
 ## Design
 
+### Dorico doesn't reliably hide a `print-object="no"` rest (2026-11-04, musicxml two staves)
+
+Symptom: Morning Song's piano, exported with a hidden whole-bar rest on
+the lower staff of every slash bar, showed the rest in bars 1–9 and an
+empty staff in bars 13–16, with identical XML in both. Cause: Dorico's
+import decides for itself; we couldn't find a rule. Fix: the rest is
+shown (`measureRestXml` in `packages/musicxml/src/measure-xml.ts`), as a
+piano chart would engrave it; spec section 5 amended.
+
 ### Dropping a broken line can change what its neighbours mean (2026-10-31, chart parser)
 
 A bar line with an error was simply left out of the document, so a

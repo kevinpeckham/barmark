@@ -66,12 +66,6 @@ describe("notes", () => {
 		expect(m).toMatch(/<harmony>[\s\S]*major-seventh[\s\S]*<\/harmony><note>/);
 		expect(notes(m ?? "").map(pitchText)).toEqual(["E3", "G3", "B3"]);
 	});
-	test("a part of low note sets gets a bass clef", () => {
-		expect(xmlOf("| {E2 B2} | {A2 E3} |")).toContain("<clef><sign>F</sign><line>4</line></clef>");
-		expect(xmlOf("| {E2 B2} | {C E G} | {C E G} |")).toContain(
-			"<clef><sign>G</sign><line>2</line></clef>",
-		);
-	});
 	test("an accent, and a hit as accent plus staccato", () => {
 		const [accent, , hit] = notes(measures(xmlOf("| >C ^G |"))[0] ?? "");
 		expect(accent).toContain("<articulations><accent/></articulations>");

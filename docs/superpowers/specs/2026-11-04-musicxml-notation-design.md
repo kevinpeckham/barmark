@@ -140,8 +140,10 @@ A keyboard part has `<staves>2</staves>`, treble above and bass below.
   left hand G2 D3 B3 and the right hand G4; a run of single notes
   (an arpeggio) moves between staves note by note.
 - **Slashes** on the upper staff, with a whole-bar rest on the lower
-  (not shown when the bar has no lower notes: the lower staff of a slash
-  bar is empty, `print-object="no"` on its rest).
+  when the bar has no lower notes. The rest is shown (amended
+  2026-11-04, Kevin's decision: Dorico honoured a hidden rest,
+  `print-object="no"`, in some bars of Morning Song and not in others
+  with identical XML; a shown rest is ordinary piano-chart engraving).
 - **Chord symbols** above the upper staff.
 - Each staff is its own voice in the measure (voice 1 upper, voice 5
   lower, as Dorico and MuseScore write), joined with `<backup>`.

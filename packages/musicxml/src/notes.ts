@@ -1,8 +1,9 @@
 /** Notes as MusicXML <note>s: slash notes, rests, and the real notes of note sets and voicings. */
 import type { Articulation, ChordRecord, Slot } from "barmark";
+import type { Beam } from "./beams.js";
+import type { Clef } from "./clefs.js";
 import type { MeasureEvents, SoundEvent } from "./events.js";
-import type { Measure } from "./measures.js";
-import type { NoteValue } from "./rhythm.js";
+import { beatLength, type Frac, type NoteValue, onBeat, plus } from "./rhythm.js";
 import { el, text } from "./xml.js";
 
 export type Pitch = { step: string; alter: number; octave: number };
@@ -38,10 +39,9 @@ export function noteSetOf(slot: Slot): ChordRecord | null {
 	return slot.chord.kind === "notes" ? slot.chord : null;
 }
 
-const allSlots = (m: Measure) => m.slots.flatMap((s) => (s.kind === "group" ? s.members : [s]));
-
 /** What an event sounds: a rest, a slash, or real notes; a hold sounds what it holds. */
 export function soundOf(e: SoundEvent): Sound {
+	if (e.notes) return e.notes.length > 0 ? { kind: "notes", pitches: e.notes } : { kind: "rest" };
 	const slot = e.held ?? e.slot;
 	if (slot.kind === "silence") return { kind: "rest" };
 	const set = noteSetOf(slot);
@@ -49,23 +49,30 @@ export function soundOf(e: SoundEvent): Sound {
 }
 
 /**
- * A bar shows slashes unless it writes real notes or a rest: a program
- * draws slash style over a rest and hides it (Dorico does).
+ * A bar shows its rhythm when something sounds anew off the beat (a push's
+ * early note, a group's member, a triplet): a hold continues, so it doesn't
+ * count.
+ */
+export function rhythmic(bar: MeasureEvents): boolean {
+	const beat = beatLength(bar.measure.meter);
+	let at: Frac = { n: 0, d: 1 };
+	return bar.events.some((e) => {
+		const off = e.slot.kind !== "hold" && !onBeat(at, beat);
+		at = plus(at, e.length);
+		return off;
+	});
+}
+
+/**
+ * A bar shows slashes in slash style unless it writes real notes or a rest
+ * (a program draws slash style over a rest and hides it: Dorico does), or
+ * shows its rhythm.
  */
 export const slashed = (bar: MeasureEvents) =>
-	!bar.measure.tacet && bar.events.every((e) => soundOf(e).kind === "slash");
+	!bar.measure.tacet && bar.events.every((e) => soundOf(e).kind === "slash") && !rhythmic(bar);
 
-/** A bass clef when most of a part's written notes sit below middle C. */
-export function clefFor(measures: Measure[]): "G" | "F" {
-	const pitches = measures.flatMap((m) =>
-		allSlots(m).flatMap((s) => {
-			const set = noteSetOf(s);
-			return set ? pitchesOf(set) : [];
-		}),
-	);
-	const low = pitches.filter((p) => height(p) < MIDDLE_C).length;
-	return pitches.length > 0 && low > pitches.length / 2 ? "F" : "G";
-}
+/** Whether a note sounds below middle C. */
+export const belowMiddleC = (p: Pitch) => height(p) < MIDDLE_C;
 
 const tieEnds = (name: string, tie: Tie) => [
 	tie.stop ? el(name, { type: "stop" }) : "",
@@ -73,8 +80,8 @@ const tieEnds = (name: string, tie: Tie) => [
 ];
 
 /** A value's type, dots and tuplet, after its duration and voice. */
-const valueXml = (v: NoteValue) => [
-	text("voice", 1),
+const valueXml = (v: NoteValue, voice: number) => [
+	text("voice", voice),
 	text("type", v.type),
 	...Array.from({ length: v.dots }, () => el("dot")),
 	v.tuplet
@@ -90,9 +97,36 @@ const ARTICULATIONS: Record<Articulation, string> = {
 	hit: el("accent") + el("staccato"),
 };
 
-type Pitched = { chord: boolean; pitch: Pitch; slash: boolean; articulation?: Articulation };
+/** How a slash's stem is written: none in slash style, up when it shows a rhythm. */
+export type Stem = "none" | "up";
 
-function pitchedXml(n: Pitched, v: NoteValue, duration: number, tie: Tie): string {
+type Pitched = {
+	chord: boolean;
+	pitch: Pitch;
+	slash: Stem | null;
+	articulation?: Articulation;
+};
+
+/** How one written value is drawn, beyond its type: its duration, ties, accent, stem and beams. */
+export type ValueStyle = {
+	duration: number;
+	tie: Tie;
+	articulation?: Articulation;
+	stem: Stem;
+	beams: Beam[];
+	/** The clef in force: a slash sits on its staff's middle line. */
+	clef: Clef;
+	/** Octaves a note is written above where it sounds. */
+	octave: number;
+	/** The voice, and the staff of a part on two (null on one). */
+	voice: number;
+	staff: number | null;
+};
+
+const staffXml = (staff: number | null) => (staff === null ? "" : text("staff", staff));
+
+function pitchedXml(n: Pitched, v: NoteValue, style: ValueStyle): string {
+	const { duration, tie } = style;
 	const notations = [
 		...tieEnds("tied", tie),
 		n.articulation ? el("articulations", {}, ARTICULATIONS[n.articulation]) : "",
@@ -106,39 +140,44 @@ function pitchedXml(n: Pitched, v: NoteValue, duration: number, tie: Tie): strin
 		]),
 		text("duration", duration),
 		...tieEnds("tie", tie),
-		...valueXml(v),
-		n.slash ? text("stem", "none") : "",
+		...valueXml(v, style.voice),
+		n.slash ? text("stem", n.slash) : "",
 		n.slash ? text("notehead", "slash") : "",
+		staffXml(style.staff),
+		...(n.chord ? [] : style.beams.map((b, i) => text("beam", b, { number: i + 1 }))),
 		notations.some(Boolean) ? el("notations", {}, notations) : "",
 	]);
 }
 
-const SLASH: Pitch = { step: "B", alter: 0, octave: 4 };
+/** Each staff's middle line, where a slash sits. */
+const SLASH: Record<Clef, Pitch> = {
+	G: { step: "B", alter: 0, octave: 4 },
+	F: { step: "D", alter: 0, octave: 3 },
+	G8vb: { step: "B", alter: 0, octave: 3 },
+};
 
 /** One written value of a sound: a rest, a slash note, or a chord of notes. */
-export function soundValueXml(
-	sound: Sound,
-	v: NoteValue,
-	duration: number,
-	tie: Tie,
-	articulation?: Articulation,
-): string {
+export function soundValueXml(sound: Sound, v: NoteValue, style: ValueStyle): string {
 	if (sound.kind === "rest")
-		return el("note", {}, [el("rest"), text("duration", duration), ...valueXml(v)]);
-	const pitches = sound.kind === "slash" ? [SLASH] : sound.pitches;
+		return el("note", {}, [
+			el("rest"),
+			text("duration", style.duration),
+			...valueXml(v, style.voice),
+			staffXml(style.staff),
+		]);
+	const pitches =
+		sound.kind === "slash"
+			? [SLASH[style.clef]]
+			: sound.pitches.map((p) => ({ ...p, octave: p.octave + style.octave }));
+	const slash = sound.kind === "slash" ? style.stem : null;
 	return pitches
-		.map((pitch, i) =>
-			pitchedXml(
-				{
-					chord: i > 0,
-					pitch,
-					slash: sound.kind === "slash",
-					...(i === 0 && articulation ? { articulation } : {}),
-				},
+		.map((pitch, i) => {
+			const articulation = i === 0 ? style.articulation : undefined;
+			return pitchedXml(
+				{ chord: i > 0, pitch, slash, ...(articulation ? { articulation } : {}) },
 				v,
-				duration,
-				tie,
-			),
-		)
+				style,
+			);
+		})
 		.join("");
 }

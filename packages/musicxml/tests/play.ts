@@ -24,7 +24,7 @@ const noteName = (step: string, alter: number) =>
 const match = (re: RegExp, body: string) => re.exec(body) ?? [];
 
 /** A harmony as barmark spells it: root, the kind's text, and a slash bass. */
-function harmonyText(body: string): string {
+export function harmonyText(body: string): string {
 	const [, kindText = "", kind] = match(/<kind text="([^"]*)">([^<]*)<\/kind>/, body);
 	if (kind === "none") return kindText;
 	const [, step = "", alter = "0"] = match(

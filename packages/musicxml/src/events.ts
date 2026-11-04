@@ -6,8 +6,17 @@
  */
 import type { Articulation, Push, SimpleSlot, Slot } from "barmark";
 import type { Measure } from "./measures.js";
-import { noteSetOf } from "./notes.js";
-import { barLength, type Frac, frac, memberLength, minus, plus, slotLengths } from "./rhythm.js";
+import { noteSetOf, type Pitch, soundOf } from "./notes.js";
+import {
+	barLength,
+	dyadic,
+	type Frac,
+	frac,
+	memberLength,
+	minus,
+	plus,
+	slotLengths,
+} from "./rhythm.js";
 
 export type SoundEvent = {
 	slot: SimpleSlot;
@@ -20,6 +29,8 @@ export type SoundEvent = {
 	tie: { start: boolean; stop: boolean };
 	/** What a hold sounds (grammar 2.3): the note set or silence it continues; absent when it holds a chord. */
 	held?: SimpleSlot;
+	/** A keyboard staff's share of the notes (`splitStaves`); none for a rest. */
+	notes?: Pitch[];
 };
 
 export type MeasureEvents = { measure: Measure; events: SoundEvent[]; after: string[] };
@@ -165,16 +176,65 @@ function heldBy(before: SoundEvent): SimpleSlot | undefined {
 function hold(before: SoundEvent, e: SoundEvent, sameBar: boolean): "merged" | null {
 	const held = e.slot.kind === "hold" ? heldBy(before) : undefined;
 	if (!held) return null;
-	if (sameBar && e.words.length === 0) {
+	if (sameBar && e.words.length === 0 && joins(before, e)) {
 		before.length = plus(before.length, e.length);
 		return "merged";
 	}
 	e.held = held;
-	if (held.kind === "chord") {
-		before.tie = { ...before.tie, start: true };
-		e.tie = { ...e.tie, stop: true };
-	}
+	if (held.kind === "chord") tie(before, e);
 	return null;
+}
+
+/**
+ * Whether a hold can lengthen the sound before it into one value: not a
+ * plain hold after a tuplet's value, which would carry the tuplet past its
+ * beat. It ties on instead.
+ */
+const joins = (before: SoundEvent, e: SoundEvent) => dyadic(before.length) || !dyadic(e.length);
+
+function tie(before: SoundEvent, e: SoundEvent): void {
+	before.tie = { ...before.tie, start: true };
+	e.tie = { ...e.tie, stop: true };
+}
+
+/** A chord's hold that opens a bar ties from the slash ending the bar before, if play goes straight on. */
+function tieOver(previous: MeasureEvents | undefined, bar: MeasureEvents, e: SoundEvent): void {
+	const last = previous?.events[previous.events.length - 1];
+	if (!previous || !last || crosses(previous.measure, bar.measure)) return;
+	if (soundOf(last).kind === "slash") tie(last, e);
+}
+
+/**
+ * In a bar that shows its rhythm, a chord's holds lengthen the sound
+ * before them, as a note set's do: the bar is written as it sounds. A hold
+ * that opens the bar ties from the bar before; one after a tuplet's value
+ * ties on; one with words before it stays a slash of its own.
+ */
+export function joinHolds(bars: MeasureEvents[], rhythmic: boolean[]): MeasureEvents[] {
+	const out: MeasureEvents[] = [];
+	for (const [i, bar] of bars.entries()) out.push(rhythmic[i] ? joinBar(bar, out[i - 1]) : bar);
+	return out;
+}
+
+/** A plain chord's hold: one a rhythmic bar joins or ties (words before it keep it a slash of its own). */
+const plainHold = (e: SoundEvent) => e.slot.kind === "hold" && !e.held && e.words.length === 0;
+
+/** One rhythmic bar's holds, joined or tied; `previous` is the bar before as written. */
+function joinBar(bar: MeasureEvents, previous: MeasureEvents | undefined): MeasureEvents {
+	const events: SoundEvent[] = [];
+	for (const e of bar.events) {
+		const before = events[events.length - 1];
+		if (!plainHold(e)) events.push(e);
+		else if (!before) {
+			tieOver(previous, bar, e);
+			events.push(e);
+		} else if (joins(before, e)) before.length = plus(before.length, e.length);
+		else {
+			tie(before, e);
+			events.push(e);
+		}
+	}
+	return { ...bar, events };
 }
 
 /**

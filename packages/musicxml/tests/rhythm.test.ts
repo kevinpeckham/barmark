@@ -24,8 +24,8 @@ describe("slot rhythm", () => {
 	});
 	test("a group whose share isn't a power of two is a tuplet", () => {
 		const ns = notes(measures(xmlOf("| C D_E_F |"))[0] ?? "");
-		expect(ns).toHaveLength(5);
-		const triplet = ns.slice(2);
+		expect(ns).toHaveLength(4);
+		const triplet = ns.slice(1);
 		for (const n of triplet) {
 			expect(n).toContain(
 				"<time-modification><actual-notes>3</actual-notes><normal-notes>2</normal-notes></time-modification>",
@@ -54,8 +54,13 @@ describe("attributes", () => {
 			"<time><beats>6</beats><beat-type>8</beat-type></time>",
 		);
 		const xml = xmlOf(MORNING_SONG);
-		for (const p of ["P1", "P2"])
-			expect(measures(xml, p)[0]).toContain("<clef><sign>G</sign><line>2</line></clef>");
+		// Its guitar's clef is the instrument's: treble 8vb.
+		expect(measures(xml, "P1")[0]).toContain(
+			"<clef><sign>G</sign><line>2</line><clef-octave-change>-1</clef-octave-change></clef>",
+		);
+		expect(measures(xml, "P2")[0]).toContain(
+			'<clef number="1"><sign>G</sign><line>2</line></clef>',
+		);
 	});
 	test("slash notation is switched on", () => {
 		expect(measures(xmlOf("| C |"))[0]).toContain(
@@ -65,7 +70,8 @@ describe("attributes", () => {
 	test("a tacet bar is a measure rest", () => {
 		const piano = measures(xmlOf(MORNING_SONG), "P2");
 		for (const m of piano.slice(8, 12)) expect(m).toContain('<rest measure="yes"/>');
-		expect(piano[4]).not.toContain("<rest");
+		// Its upper staff: a bar of slashes, over a hidden rest on the lower.
+		expect(piano[4]?.split("<backup>")[0]).not.toContain("<rest");
 	});
 	test("measure numbers run in sequence and show barmark's written numbers", () => {
 		const ms = measures(xmlOf(MORNING_SONG));

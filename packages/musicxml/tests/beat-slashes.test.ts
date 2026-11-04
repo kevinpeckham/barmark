@@ -54,11 +54,11 @@ describe("beat slashes", () => {
 		const [m = ""] = measures(xmlOf("time: 4/16\n\n| C |"));
 		expect(types(m)).toEqual(["16th", "16th", "16th", "16th"]);
 	});
-	test("a push is cut at the beats it crosses, and still ties over the bar line", () => {
+	test("a push shows its rhythm in the bar it leaves, and still ties over the bar line", () => {
 		const [one = "", two = ""] = measures(xmlOf("| C | <D |"));
-		expect(types(one)).toEqual(["quarter", "quarter", "quarter", "eighth", "eighth"]);
-		expect(tied(one)).toEqual(["", "", "", "", "start"]);
-		expect(harmonyBefore(one)).toEqual([true, false, false, false, true]);
+		expect(types(one)).toEqual(["half", "quarter", "eighth"]);
+		expect(tied(one)).toEqual(["start", "stop", "start"]);
+		expect(harmonyBefore(one)).toEqual([true, false, true]);
 		expect(types(two)).toEqual(["quarter", "quarter", "quarter", "quarter"]);
 		expect(tied(two)).toEqual(["stop", "", "", ""]);
 	});

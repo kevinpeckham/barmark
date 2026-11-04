@@ -6,6 +6,51 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- **Rhythm slashes:** a bar where something sounds anew off the beat (a
+  push's early note, a group's member, a triplet) shows its rhythm:
+  stemmed slash noteheads, with a chord's `/` holds joined to it, outside
+  slash style. `| D / / /_G |` is a half tied to a dotted quarter, then
+  an eighth. Bars on the beat keep stemless slashes in slash style.
+- **Beams:** eighths and shorter beam within a beat, sixteenths on a
+  second level (a lone one hooks); in 4/4 a half bar of plain eighths
+  beams as one. Rests, longer values and stemless slashes break a beam.
+- **Instruments from the part's name**, on whole words in any case: a
+  bass (`Bass`, `Bass Guitar`, `Electric Bass`, … but not `Bassoon` or
+  `Bass Voice`) is written an octave up in bass clef with a
+  `<transpose>`; a guitar has the treble 8vb clef; a keyboard (`Piano`,
+  `Keys`, `Organ`, `Rhodes`, `Synth`, …) is on two staves. Each gets a
+  `<score-instrument>` and a General MIDI program (Electric Bass 34,
+  Electric Guitar 28, Piano 1), so a program picks a sound. Other parts
+  are as before.
+- **Keyboards on two staves:** treble and bass, notes split at middle C
+  (a note set across it splits, an arpeggio moves between staves),
+  slashes and chord symbols on the upper staff, a whole-bar rest on
+  the lower where it has nothing to play; voice 1 and voice 5, joined by
+  `<backup>`.
+
+### Changed
+
+- **Note values follow the meter:** in 4/4 and 2/2 a value never hides
+  the middle of the bar unless it starts the bar and fills whole beats;
+  a value off the beat in other meters, and a rest off the beat in any,
+  is cut at the next beat. `| {C4} {D4} / {E4} |` writes D4 as two tied
+  quarters. In 6/8, 9/8 and 12/8 a value shows its whole beats (a dotted
+  quarter tied to an eighth), and 12/8 shows its middle. A hold after a
+  triplet's note ties on rather than stretching the triplet past its
+  beat, and a chord's hold that opens a bar showing its rhythm ties from
+  the bar before.
+- **Clefs by bars:** a part is bass when most of its bars sit below
+  middle C (a bar of slashes counts as treble), not when most of its
+  notes do, so one long pedal note no longer makes a chart of slashes
+  bass. A run of two bars or more on the other side, or one bar needing
+  more than three ledger lines, changes clef for the run; a bar of rests
+  inside a run keeps its clef. A slash sits on its staff's middle line.
+
+What every export sounds is unchanged: a test freezes each example's
+and each grammar example's sounding notes and chord symbols.
+
 ## [0.2.0] - 2026-11-04
 
 ### Added

@@ -49,7 +49,8 @@ describe("pushes the giver can't simply shorten", () => {
 	test("after a tacet bar, the push comes early out of the rest (grammar 7.4)", () => {
 		const text = "part: Gtr = Guitar\npart: Pno = Piano\n| C | D |\nGtr | E |\n| <F |";
 		const xml = xmlOf(text, "Pno");
-		const ms = measures(xml);
+		// The piano's upper staff: its lower staff rests, hidden, below.
+		const ms = measures(xml).map((m) => m.split("<backup>")[0] ?? "");
 		expect(ms[2]).not.toContain('<rest measure="yes"/>');
 		expect(ms[2]).toMatch(/<rest\/>[\s\S]*<harmony>[\s\S]*<tie type="start"\/>/);
 		expect(ms[3]).toContain('<tie type="stop"/>');
