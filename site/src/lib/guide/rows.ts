@@ -90,7 +90,8 @@ export const ROWS: GuideRow[] = [
 		example: "| C D_E_F |",
 		ref: "§2.2",
 		expect: { bars: 1 },
-	},	{
+	},
+	{
 		id: "dotted",
 		syntax: "C._D",
 		category: "bars",
@@ -259,7 +260,8 @@ export const ROWS: GuideRow[] = [
 		example: "| N.C. |\n|: <D | <G | <A | <Bm :|",
 		ref: "§2.8",
 		expect: { bars: 9 },
-	},	{
+	},
+	{
 		id: "pedal",
 		syntax: "+G  *C",
 		category: "bars",
@@ -818,14 +820,25 @@ export const ROWS: GuideRow[] = [
 		example: "part: Gtr = Guitar\npart: Pno = Piano\nGtr | G | C |\nPno | Em | C |",
 		ref: "§7.4",
 		expect: { bars: 2 },
-	},	{
+	},
+	{
 		id: "instrument",
 		syntax: "instrument:  clef:",
 		category: "directives",
 		meaning:
 			"On a part: line, instrument: names the instrument (its clef, staves, transposition and sound for export), and clef: fixes the clef.",
-		terms: ["instrument", "clef", "transposing", "trumpet in Bb", "alto sax", "bass clef", "alto clef", "viola"],
-		example: "part: Tpt = Trumpet, instrument: trumpet in Bb\npart: Va = Viola, clef: alto\nTpt | D | G |\nVa | D | G |",
+		terms: [
+			"instrument",
+			"clef",
+			"transposing",
+			"trumpet in Bb",
+			"alto sax",
+			"bass clef",
+			"alto clef",
+			"viola",
+		],
+		example:
+			"part: Tpt = Trumpet, instrument: trumpet in Bb\npart: Va = Viola, clef: alto\nTpt | D | G |\nVa | D | G |",
 		ref: "§7.3",
 		expect: { bars: 2 },
 	},
@@ -835,7 +848,16 @@ export const ROWS: GuideRow[] = [
 		category: "directives",
 		meaning:
 			"A part can write up to four lines that play together, as a pianist's hands; the first in a system carries the chords, the others note sets only.",
-		terms: ["part lines", "hands", "right hand", "left hand", "two staves", "voices", "grand staff", "divisi"],
+		terms: [
+			"part lines",
+			"hands",
+			"right hand",
+			"left hand",
+			"two staves",
+			"voices",
+			"grand staff",
+			"divisi",
+		],
 		example: "part: Pno = Piano\nPno.RH | G{B3 D4 G4} | C{C4 E4 G4} |\nPno.LH | {G2} | {C3} |",
 		ref: "§7.6",
 		expect: { bars: 2 },
