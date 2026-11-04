@@ -39,8 +39,12 @@ export function noteSetOf(slot: Slot): ChordRecord | null {
 
 const allSlots = (m: Measure) => m.slots.flatMap((s) => (s.kind === "group" ? s.members : [s]));
 
-/** A measure shows slashes unless it writes real notes. */
-export const slashed = (m: Measure) => m.tacet || !allSlots(m).some((s) => noteSetOf(s));
+/**
+ * A measure shows slashes unless it writes real notes or a rest: a program
+ * draws slash style over a rest and hides it (Dorico does).
+ */
+export const slashed = (m: Measure) =>
+	!m.tacet && !allSlots(m).some((s) => noteSetOf(s) || s.kind === "silence");
 
 /** A bass clef when most of a part's written notes sit below middle C. */
 export function clefFor(measures: Measure[]): "G" | "F" {

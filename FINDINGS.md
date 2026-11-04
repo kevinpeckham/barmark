@@ -517,3 +517,19 @@ direction="backward"/>`, so the count has no MusicXML route into Dorico
 at all. The export now also prints a count above 2 as words, "×N"
 (`repeatWords` in `packages/musicxml/src/measure-xml.ts`).
 
+### Dorico hides rests under slash style, and imports chord symbols as global (2026-11-04, musicxml)
+
+Morning Song imported into Dorico showed the piano playing slashes
+through its tacet bars, with the guitar's chords on both staves. Two
+causes. Ours: the export kept slash style on through a tacet bar's
+`<rest measure="yes"/>`, and Dorico draws slashes over a rest and hides
+it. Slash style now stops in any bar with a rest (`slashed` in
+`packages/musicxml/src/notes.ts`), as the MusicXML spec's own slash
+example does. Dorico's: it imports every `<harmony>` as a global chord
+symbol, shown on every staff that shows chord symbols, with the first
+part's chord kept where parts differ, though Dorico has local
+(per-staff) chord symbols and each MusicXML part writes its own. Nothing
+in MusicXML marks a chord local, so a chart whose parts play different
+chords loses the later parts' chords in Dorico; they are fixed by hand
+there.
+

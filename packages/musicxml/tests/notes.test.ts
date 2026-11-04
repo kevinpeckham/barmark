@@ -43,6 +43,24 @@ describe("notes", () => {
 		expect(ms[1]).toContain('<slash type="stop"/>');
 		expect(ms[2]).toContain('<slash type="start" use-stems="no"/>');
 	});
+	test("slash style stops in a bar with a rest, so the rest shows", () => {
+		const ms = measures(xmlOf("| C | G -- -- -- | D |"));
+		expect(ms[1]).toContain('<slash type="stop"/>');
+		expect(ms[2]).toContain('<slash type="start" use-stems="no"/>');
+	});
+	test("slash style stops in a part's tacet bars", () => {
+		const chart =
+			"part: Gtr = Guitar\npart: Pno = Piano\n\nGtr | G | C |\nPno | G | C |\nGtr | D | G |\n| C |";
+		const [gtr9, pno9, pno13] = [
+			measures(xmlOf(chart), "P1")[2],
+			measures(xmlOf(chart), "P2")[2],
+			measures(xmlOf(chart), "P2")[4],
+		];
+		expect(pno9).toContain('<rest measure="yes"/>');
+		expect(pno9).toContain('<slash type="stop"/>');
+		expect(pno13).toContain('<slash type="start" use-stems="no"/>');
+		expect(gtr9).not.toContain("<slash ");
+	});
 	test("a voicing is the harmony over its notes", () => {
 		const [m] = measures(xmlOf("| Cmaj7{E3 G3 B3} |"));
 		expect(m).toMatch(/<harmony>[\s\S]*major-seventh[\s\S]*<\/harmony><note>/);
