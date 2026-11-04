@@ -142,6 +142,20 @@ because no top-level code ran first. `parseChart` moved to its own module
 (`src/chart/parse.ts`). Import from the defining module, never from the
 package index, inside the package.
 
+### Two rules naming "the first line" must name the same one (2026-11-04, grammar 7.6)
+
+The final review of part lines found that `format` could break a valid
+piano chart. Score order was the order lines first appear, but the line
+allowed chord symbols was the first *written* in each system. A piano
+intro for the left hand alone made `Pno.LH` first in score order, so the
+canonical form sorted LH above RH in the verse, and the RH's chords then
+failed the notes-only rule; MusicXML put the LH on the treble staff.
+Each rule's tests passed on its own. Kevin's fix: score order comes from
+the part's first system writing two or more lines, and the harmony line
+is the first in score order (`lines.ts`, `scoreOrder`). The lesson:
+when two rules each define "first", test a chart that tells them apart,
+and round-trip it through `format`.
+
 ## Tooling
 
 ### TypeScript 7's `tsc` won't run on Node 20.6, though the CLI it builds does (2026-11-02, @barmark/cli)

@@ -926,7 +926,7 @@ Bs     | {G1}        | {C2}        | {D2}           | {G1}        |
   one system. A bare line, and a tutti line, play as the part's first
   line; its other lines rest there.
 - **The first line carries the harmony.** The part's first line in a
-  system, in written order, may hold anything a bar holds. Its other lines
+  system, in score order (below), may hold anything a bar holds. Its other lines
   hold **notes only**: note sets, `/`, `--`, `%`, words, accents, hits and
   pushes. A chord symbol, a voicing, `N.C.` or `?` on another line is an
   **error** suggesting a note set, or a voicing on the first line; so is a
@@ -937,8 +937,12 @@ Bs     | {G1}        | {C2}        | {D2}           | {G1}        |
 - **A line not written** in a system where its part plays rests there; a
   part with no line in a system is tacet, as in 7.4.
 - **Structure** is written on every line, as 7.4 asks of a system's lines.
-- **Score order** within a part is the order its lines first appear; the
-  canonical form sorts a system's lines into it, a bare line first.
+- **Score order** within a part is the order of its lines in the first
+  system that writes two or more of them, then any others in the order
+  they first appear. So an intro the left hand plays alone (`Pno.LH`)
+  leaves the right hand first, as the next full system writes it. The
+  canonical form sorts a system's lines into score order, a bare line
+  first, and a converter puts the first line on the upper staff.
 - **At most four lines per part**; a fifth is an **error**.
 - A single-part chart may use lines too, with its `part:` line: lines
   need a label to hang on.
@@ -1129,6 +1133,7 @@ human to say whether the band was silent, and the structure line.
 | Push marks | Decided by Kevin (2026-11-03): `<` an eighth early, `<<` a sixteenth, written on the chord in its own bar; the push takes its time from the slot played just before it in play order (2.8). This is what written-out pushes (`/_G`) could not do: a pushed downbeat inside a repeat, a replay or after a jump. Rejected: a tie into the next bar (`/_G~ \| G`), which writes every chord twice and still can't serve a replay; and a warning only. |
 | Part | Decided by Kevin (2026-11-03, issue #70): `part:` names the chart's part, with an optional label (`part: Gtr = Electric Guitar 1`), once, before the first bar, on a line of its own (7.3). MusicXML requires a `<part-name>` on every part, so a converter otherwise invents one. The instrument (MusicXML's `<instrument-sound>`, a MIDI program) is separate and waits for the converters. The `Label = Name` form is chosen so several parts can follow. |
 | Several parts | Decided by Kevin (2026-11-03): one `part: Label = Name` line per part; a bar line starting with a label belongs to that part, and consecutive labelled lines form a system sharing the timeline (7.4). A part missing from a system is tacet; an unlabelled line is tutti. A system's structure (repeats, endings, marks, directions, fermatas, one-bar meters) is written on every line and checked, so each part's line reads alone. A renderer draws a tutti line as one row and a tacet part as an empty row; an extracted part writes tacet as `N.C.`. Rejected: structure written once, which makes a part's line wrong read alone. |
+| Part line order | Decided by Kevin (2026-11-04): score order comes from the first system writing two or more of a part's lines, and the harmony line in each system is the first in score order, not in written order. Found in review: with first-appearance order, an LH-only intro made the LH the first line, so `format` sorted LH above RH, turning the RH's chords into errors, and MusicXML swapped the hands. Rejected: declaring the order on the `part:` line (an attribute to learn for a rare case) and keeping first appearance (the author would have to write the RH first). |
 | Part lines | Decided by Kevin (2026-11-04): up to four lines per part, labelled `Pno.RH` with nothing declared (7.6), joining systems as parts do; the first line carries the harmony and the others notes only, so a converter never has to choose between chord symbols. Rejected: lines declared on the `part:` line, chord symbols on any line, and two parts for two hands (a score program shows them as two instruments). |
 | Sustain pedal | Decided by Kevin (2026-11-04): `+` before a chord or a note set presses or changes the pedal and `*` lifts it (2.9), marked where it happens as a printed part marks it; `--`, a tacet bar and the end lift it too. Rejected: a pedal line of its own (`Pno.Ped`), and a directive that changes the pedal with every chord, which can't say a held pedal. |
 | Dotted figures | Decided by Kevin (2026-11-04): a dot after one member of a two-member group, `C._D` (3:1) or `C_D.` (1:3) (2.2), so a dotted figure needs no beat split into four. Rejected: no shorthand, and swing written as figures (`feel:` states it). |

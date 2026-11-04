@@ -113,6 +113,35 @@ Pno.RH | {A4} |
 		expect(printed).toContain("Pno.RH | {A4} |\nPno.LH | {A2} |\nBs     | {A1} |");
 		expect(printChart(printed)).toBe(printed);
 	});
+	test("score order comes from the first system writing two or more lines", () => {
+		const text = `part: Pno = Piano, instrument: piano
+## Intro
+Pno.LH | {C3} | {G2} |
+## Verse
+Pno.RH | C{C4 E4 G4} | G{G4 B4 D5} |
+Pno.LH | {C3} | {G2} |
+`;
+		const p = parseChart(text);
+		expect(p.diagnostics).toEqual([]);
+		expect(p.parts[0]?.lines).toEqual(["RH", "LH"]);
+		const printed = printChart(text);
+		expect(printed).toContain("Pno.RH | C{C4 E4 G4} | G{G4 B4 D5} |\nPno.LH | {C3}");
+		const again = parseChart(printed);
+		expect(again.diagnostics).toEqual([]);
+		expect(again.bars.map((b) => b.lines?.map((l) => l.name))).toEqual(
+			p.bars.map((b) => b.lines?.map((l) => l.name)),
+		);
+	});
+	test("the harmony line is the first in score order, whatever order the system writes", () => {
+		const text =
+			"part: Pno = Piano\nPno.RH | G{G4} |\nPno.LH | {G2} |\n## B\nPno.LH | {C3} |\nPno.RH | C{C4} |\n";
+		expect(errors(text)).toEqual([]);
+		expect(
+			errors(
+				"part: Pno = Piano\nPno.RH | G{G4} |\nPno.LH | {G2} |\n## B\nPno.LH | C |\nPno.RH | {C4} |\n",
+			),
+		).toHaveLength(1);
+	});
 	test("streamKey", () => {
 		expect(streamKey("Pno")).toBe("pno");
 		expect(streamKey("Pno", "RH")).toBe("pno.rh");

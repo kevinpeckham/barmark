@@ -85,6 +85,22 @@ describe("part lines in MusicXML", () => {
 			["E3", 2, 0, "down"],
 		]);
 	});
+	test("an LH-only intro keeps the RH on the upper staff", () => {
+		const xml = xmlOf(
+			"part: Pno = Piano, instrument: piano\n## Intro\nPno.LH | {C3} |\n## Verse\nPno.RH | C{C4 E4 G4} |\nPno.LH | {C3} |\n",
+		);
+		const [intro, verse] = measures(xml);
+		expect(placed(intro ?? "")).toEqual([
+			["rest", 1, 1, null],
+			["C3", 5, 2, null],
+		]);
+		expect(placed(verse ?? "").map(([p, v]) => [p, v])).toEqual([
+			["C4", 1],
+			["E4", 1],
+			["G4", 1],
+			["C3", 5],
+		]);
+	});
 	test("export --part keeps the lines", () => {
 		const xml = xmlOf(MORNING, "Pno");
 		expect(placed(measures(xml)[0] ?? "").map(([, v]) => v)).toEqual([1, 1, 1, 5]);

@@ -16,7 +16,9 @@ Releases follow the process in [RELEASING.md](RELEASING.md).
   system carries the harmony and the others notes only; a fifth line, or
   a chord on another line, is an error. Bar lines gain `lineName`,
   declared parts gain `lines`, and the canonical form sorts a system's
-  lines into score order. `streamKey` and `MAX_LINES` are exported.
+  lines into score order: the order of the part's first system writing
+  two or more of its lines, so an intro for the left hand alone keeps the
+  right hand first. `streamKey` and `MAX_LINES` are exported.
   Each line plays on its own: a played bar's part entry gains `lines`
   (`LineBar`: name, line, slots, words), one per line playing there, and
   the part's `slots` are its first playing line's. A bare line and a tutti
