@@ -7,10 +7,11 @@ import {
 	type Part,
 	parseChart,
 } from "barmark";
+import { clefPlan } from "./clefs.js";
 import { applyHolds, applyPushes, eventsOf, joinHolds } from "./events.js";
 import { measureXml } from "./measure-xml.js";
 import { writtenMeasures } from "./measures.js";
-import { clefFor, rhythmic, slashed } from "./notes.js";
+import { rhythmic, slashed } from "./notes.js";
 import { barLength, beatLength, divisionsFor } from "./rhythm.js";
 import { VERSION } from "./version.js";
 import { el, text } from "./xml.js";
@@ -60,13 +61,21 @@ function scorePart(source: PartSource, i: number): string {
 	]);
 }
 
+/** A list's value at `index`, and the one before it (null for the first). */
+function around<T>(list: T[], index: number, fallback: T): { now: T; before: T | null } {
+	return {
+		now: list[index] ?? fallback,
+		before: index > 0 ? (list[index - 1] ?? fallback) : null,
+	};
+}
+
 function partXml(source: PartSource, i: number): string {
 	const measures = writtenMeasures(source.parse);
 	const held = applyHolds(applyPushes(measures.map(eventsOf)));
 	const rhythmicBars = held.map(rhythmic);
 	const bars = held.map((b, i) => (rhythmicBars[i] ? joinHolds(b) : b));
 	const slashedBars = bars.map(slashed);
-	const clef = clefFor(measures);
+	const clefs = clefPlan(bars);
 	const divisions = divisionsFor(
 		bars.flatMap((b) => [
 			barLength(b.measure.meter),
@@ -80,11 +89,8 @@ function partXml(source: PartSource, i: number): string {
 			index,
 			previous: measures[index - 1] ?? null,
 			next: measures[index + 1] ?? null,
-			slashed: {
-				now: slashedBars[index] ?? true,
-				before: index > 0 ? (slashedBars[index - 1] ?? true) : null,
-			},
-			clef,
+			slashed: around(slashedBars, index, true),
+			clef: around(clefs, index, "G"),
 			rhythmic: rhythmicBars[index] ?? false,
 		}),
 	);

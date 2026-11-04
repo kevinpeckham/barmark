@@ -1,8 +1,8 @@
 /** Notes as MusicXML <note>s: slash notes, rests, and the real notes of note sets and voicings. */
 import type { Articulation, ChordRecord, Slot } from "barmark";
 import type { Beam } from "./beams.js";
+import type { Clef } from "./clefs.js";
 import type { MeasureEvents, SoundEvent } from "./events.js";
-import type { Measure } from "./measures.js";
 import { beatLength, type Frac, type NoteValue, onBeat, plus } from "./rhythm.js";
 import { el, text } from "./xml.js";
 
@@ -39,8 +39,6 @@ export function noteSetOf(slot: Slot): ChordRecord | null {
 	return slot.chord.kind === "notes" ? slot.chord : null;
 }
 
-const allSlots = (m: Measure) => m.slots.flatMap((s) => (s.kind === "group" ? s.members : [s]));
-
 /** What an event sounds: a rest, a slash, or real notes; a hold sounds what it holds. */
 export function soundOf(e: SoundEvent): Sound {
 	const slot = e.held ?? e.slot;
@@ -72,17 +70,8 @@ export function rhythmic(bar: MeasureEvents): boolean {
 export const slashed = (bar: MeasureEvents) =>
 	!bar.measure.tacet && bar.events.every((e) => soundOf(e).kind === "slash") && !rhythmic(bar);
 
-/** A bass clef when most of a part's written notes sit below middle C. */
-export function clefFor(measures: Measure[]): "G" | "F" {
-	const pitches = measures.flatMap((m) =>
-		allSlots(m).flatMap((s) => {
-			const set = noteSetOf(s);
-			return set ? pitchesOf(set) : [];
-		}),
-	);
-	const low = pitches.filter((p) => height(p) < MIDDLE_C).length;
-	return pitches.length > 0 && low > pitches.length / 2 ? "F" : "G";
-}
+/** Whether a note sounds below middle C. */
+export const belowMiddleC = (p: Pitch) => height(p) < MIDDLE_C;
 
 const tieEnds = (name: string, tie: Tie) => [
 	tie.stop ? el(name, { type: "stop" }) : "",
@@ -124,6 +113,8 @@ export type ValueStyle = {
 	articulation?: Articulation;
 	stem: Stem;
 	beams: Beam[];
+	/** The clef in force: a slash sits on its staff's middle line. */
+	clef: Clef;
 };
 
 function pitchedXml(n: Pitched, v: NoteValue, style: ValueStyle): string {
@@ -149,13 +140,17 @@ function pitchedXml(n: Pitched, v: NoteValue, style: ValueStyle): string {
 	]);
 }
 
-const SLASH: Pitch = { step: "B", alter: 0, octave: 4 };
+/** Each staff's middle line, where a slash sits. */
+const SLASH: Record<Clef, Pitch> = {
+	G: { step: "B", alter: 0, octave: 4 },
+	F: { step: "D", alter: 0, octave: 3 },
+};
 
 /** One written value of a sound: a rest, a slash note, or a chord of notes. */
 export function soundValueXml(sound: Sound, v: NoteValue, style: ValueStyle): string {
 	if (sound.kind === "rest")
 		return el("note", {}, [el("rest"), text("duration", style.duration), ...valueXml(v)]);
-	const pitches = sound.kind === "slash" ? [SLASH] : sound.pitches;
+	const pitches = sound.kind === "slash" ? [SLASH[style.clef]] : sound.pitches;
 	const slash = sound.kind === "slash" ? style.stem : null;
 	return pitches
 		.map((pitch, i) => {

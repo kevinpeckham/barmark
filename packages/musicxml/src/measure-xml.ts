@@ -1,6 +1,7 @@
 /** One measure as MusicXML: attributes when they change, then its notes. */
 import type { Key, Meter, SimpleSlot } from "barmark";
 import { type Beam, beamsOf } from "./beams.js";
+import type { Clef } from "./clefs.js";
 import { direction, feelXml, jumpXml, tempoXml, textXml, wordsXml } from "./directions.js";
 import type { MeasureEvents, SoundEvent } from "./events.js";
 import { harmonyXml, noChordXml } from "./harmony.js";
@@ -24,7 +25,8 @@ export type MeasureContext = {
 	index: number;
 	previous: Measure | null;
 	next: Measure | null;
-	clef: "G" | "F";
+	/** This bar's clef, and the bar before's (null for the first). */
+	clef: { now: Clef; before: Clef | null };
 	/** Whether this bar shows its rhythm (`rhythmic`): its slashes stemmed, in the meter's values. */
 	rhythmic: boolean;
 	/** Whether this bar shows slashes, and the bar before it (null for the first). */
@@ -80,15 +82,21 @@ function slashStyleXml({ now: on, before }: MeasureContext["slashed"]): string {
 	);
 }
 
+/** The clef, on the first measure and wherever it changes. */
+function clefXml({ now, before }: MeasureContext["clef"]): string {
+	if (now === before) return "";
+	return el("clef", {}, [text("sign", now), text("line", CLEF_LINE[now])]);
+}
+
 function attributesXml(m: Measure, ctx: MeasureContext): string {
 	const prev = ctx.previous;
 	const head = prev
-		? [keyXml(m, prev), timeXml(m, prev), slashStyleXml(ctx.slashed)]
+		? [keyXml(m, prev), timeXml(m, prev), clefXml(ctx.clef), slashStyleXml(ctx.slashed)]
 		: [
 				text("divisions", ctx.divisions),
 				keyXml(m, null),
 				timeXml(m, null),
-				el("clef", {}, [text("sign", ctx.clef), text("line", CLEF_LINE[ctx.clef])]),
+				clefXml(ctx.clef),
 				slashStyleXml(ctx.slashed),
 			];
 	return head.some(Boolean) ? el("attributes", {}, head) : "";
@@ -128,18 +136,22 @@ function valuesOf(e: SoundEvent, sound: Sound, start: Frac, meter: Meter, rhythm
 	);
 }
 
+/** How a bar's values are drawn: their divisions, slash stems and clef. */
+type BarStyle = { divisions: number; stem: Stem; clef: Clef };
+
 /** An event with what it sounds and how it is written. */
 type EventValues = { e: SoundEvent; sound: Sound; values: Written[] };
 
 /** One event: its words, its harmony, then its values, each with its beams. */
-function eventXml(w: EventValues, stem: Stem, divisions: number, beams: () => Beam[]): string {
+function eventXml(w: EventValues, style: BarStyle, beams: () => Beam[]): string {
 	const { e, sound } = w;
 	const notes = w.values.map(({ v, tie }, i) =>
 		soundValueXml(sound, v, {
-			duration: whole(v.length, divisions),
+			duration: whole(v.length, style.divisions),
 			tie,
 			...(i === 0 && e.articulation ? { articulation: e.articulation } : {}),
-			stem,
+			stem: style.stem,
+			clef: style.clef,
 			beams: beams(),
 		}),
 	);
@@ -171,7 +183,8 @@ function eventsXml(bar: MeasureEvents, ctx: MeasureContext): string {
 	);
 	let k = 0;
 	const next = () => beams[k++] ?? [];
-	return written.map((w) => eventXml(w, stem, ctx.divisions, next)).join("");
+	const style = { divisions: ctx.divisions, stem, clef: ctx.clef.now };
+	return written.map((w) => eventXml(w, style, next)).join("");
 }
 
 /** Before the notes: the heading, the rehearsal mark, tempo, feel, Segno, Coda and text lines. */
