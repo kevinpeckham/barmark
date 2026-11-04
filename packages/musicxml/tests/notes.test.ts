@@ -55,7 +55,7 @@ describe("notes", () => {
 		);
 	});
 	test("an accent, and a hit as accent plus staccato", () => {
-		const [accent, hit] = notes(measures(xmlOf("| >C ^G |"))[0] ?? "");
+		const [accent, , hit] = notes(measures(xmlOf("| >C ^G |"))[0] ?? "");
 		expect(accent).toContain("<articulations><accent/></articulations>");
 		expect(hit).toContain("<articulations><accent/><staccato/></articulations>");
 	});

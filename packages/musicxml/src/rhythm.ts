@@ -1,5 +1,5 @@
 /** Durations as fractions of a quarter note, and how MusicXML writes them. */
-import type { Meter, Slot } from "barmark";
+import { beatsOf, type Meter, type Slot } from "barmark";
 
 /** A positive fraction, always in lowest terms. */
 export type Frac = { n: number; d: number };
@@ -12,11 +12,16 @@ export function frac(n: number, d = 1): Frac {
 	return { n: n / g, d: d / g };
 }
 const times = (a: Frac, b: Frac) => frac(a.n * b.n, a.d * b.d);
+export const plus = (a: Frac, b: Frac) => frac(a.n * b.d + b.n * a.d, a.d * b.d);
 export const minus = (a: Frac, b: Frac) => frac(a.n * b.d - b.n * a.d, a.d * b.d);
 const atMost = (a: Frac, b: Frac) => a.n * b.d <= b.n * a.d;
+const before = (a: Frac, b: Frac) => !atMost(b, a);
 
 /** A bar's length in quarter notes. */
 export const barLength = (meter: Meter) => frac(4 * meter.n, meter.d);
+
+/** One beat's length: compound meters (6/8, 9/8, 12/8) beat in dotted quarters. */
+export const beatLength = (meter: Meter) => times(barLength(meter), frac(1, beatsOf(meter)));
 
 /** Each slot's length: the bar shared equally (grammar 2.1). */
 export const slotLengths = (slots: Slot[], meter: Meter): Frac[] =>
@@ -87,4 +92,24 @@ export function noteValues(length: Frac): NoteValue[] {
 	while (normal * 2 < actual) normal *= 2;
 	const shown = times(length, frac(actual, normal));
 	return plainValues(shown, { actual, normal }, frac(normal, actual));
+}
+
+/**
+ * A slash's length cut at the beats it crosses, `start` into the bar, so
+ * each beat shows its own slash. A slot off the beat grid, a triplet's
+ * share, stays whole: cutting it would write tuplets it doesn't need.
+ */
+export function beatPieces(start: Frac, length: Frac, beat: Frac): Frac[] {
+	const inBeats = (f: Frac) => frac(f.n * beat.d, f.d * beat.n);
+	const from = inBeats(start);
+	const to = inBeats(plus(start, length));
+	if (oddPart(from.d) !== 1 || oddPart(to.d) !== 1) return [length];
+	const pieces: Frac[] = [];
+	for (let at = from; before(at, to); ) {
+		const boundary = frac(Math.floor(at.n / at.d) + 1);
+		const next = atMost(boundary, to) ? boundary : to;
+		pieces.push(times(minus(next, at), beat));
+		at = next;
+	}
+	return pieces;
 }

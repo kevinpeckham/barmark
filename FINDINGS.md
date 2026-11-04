@@ -491,3 +491,19 @@ as "the scope doesn't exist". The scope was fine (`npm view
 @barmark/render maintainers` named Kevin); the terminal wasn't logged in
 to npm. `npm login` fixed it. RELEASING.md's first-release step now says
 to run `npm whoami` first.
+
+### Dorico ends a slash region after the last measure with a direction (2026-11-04, musicxml)
+
+Peaceful Dreams imported into Dorico showed beat slashes up to bar 125
+and hollow diamonds from bar 126 to the end. The export turned slash
+style on in bar 1 and never off, which the MusicXML spec says lasts to
+the end of the part. Small test files showed the rule: the region ends
+after the last measure holding a `<direction>` or `<attributes>` (bar
+125 had the "Outro" heading; with no heading it ended after bar 1).
+Restating `<slash type="start">` there or in the last bar didn't help.
+Past the region Dorico shows the placeholder note itself, a whole note
+with a slash notehead, which it draws as a diamond. The export now
+writes one slash note per beat (`beatPieces` in
+`packages/musicxml/src/rhythm.ts`), which looks right with or without
+slash style; the measure-style stays for programs that use it.
+
