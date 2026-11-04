@@ -6,6 +6,19 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-11-04
+
+### Changed
+
+- **Uses** barmark 0.15.0, @barmark/render 0.13.0 and @barmark/musicxml
+  0.2.0. Credit lines (grammar 7.5: `composer:`, `lyricist:`,
+  `arranger:`, `copyright:`): `check` reports their errors and warnings,
+  `format` and `part` keep them in canonical form, `render` sets them
+  under the title and the copyright at the foot, and `export --musicxml`
+  writes them as `<creator>` and `<rights>`. `export --musicxml` also
+  sounds a held note set's notes, tied across bar lines, instead of
+  chordless slashes.
+
 ## [0.2.2] - 2026-11-04
 
 ### Changed
@@ -116,7 +129,8 @@ The first release of the `barmark` command. Uses `barmark` 0.8.0 and
 - **The `barmark` command:** `check`, `format`, `render` and `transpose`
   for `.chart.md` files, on npm and as standalone binaries.
 
-[Unreleased]: https://github.com/kevinpeckham/barmark/compare/cli-v0.2.2...HEAD
+[Unreleased]: https://github.com/kevinpeckham/barmark/compare/cli-v0.3.0...HEAD
+[0.3.0]: https://github.com/kevinpeckham/barmark/compare/cli-v0.2.2...cli-v0.3.0
 [0.2.2]: https://github.com/kevinpeckham/barmark/compare/cli-v0.2.1...cli-v0.2.2
 [0.2.1]: https://github.com/kevinpeckham/barmark/compare/cli-v0.2.0...cli-v0.2.1
 [0.2.0]: https://github.com/kevinpeckham/barmark/compare/cli-v0.1.8...cli-v0.2.0
