@@ -71,6 +71,10 @@ const description =
 		The full rules are in the
 		<a href={LINKS.grammar} class="underline decoration-accent/60 underline-offset-3 hover-text-accent"
 			>Barmark grammar</a
-		>, which this guide follows.
+		>, which this guide follows. Like the grammar, this guide's text and examples are ©
+		2026 Kevin Peckham, licensed under
+		<a href={LINKS.specLicense} class="underline decoration-accent/60 underline-offset-3 hover-text-accent"
+			>CC BY 4.0</a
+		>.
 	</p>
 </main>

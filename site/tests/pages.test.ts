@@ -185,6 +185,19 @@ describe("licences", () => {
 		expect(hrefs).toContain(LINKS.specLicense);
 		expect(text(doc.querySelector("#open-source")?.parentElement)).toContain("CC BY 4.0");
 	});
+	test("the Syntax Guide says it is CC BY 4.0, as the grammar is", () => {
+		const doc = page("syntax.html");
+		const note = [...doc.querySelectorAll("main p")].find((p) => text(p)?.includes("CC BY 4.0"));
+		expect(note).toBeDefined();
+		expect([...(note?.querySelectorAll("a") ?? [])].map((a) => a.getAttribute("href"))).toContain(
+			LINKS.specLicense,
+		);
+	});
+	test("the FAQ says the Syntax Guide is CC BY 4.0", () => {
+		expect(text(page("faq.html").querySelector("#open-source")?.parentElement)).toContain(
+			"Syntax Guide",
+		);
+	});
 	for (const path of ["index.html", "faq.html"])
 		test(`${path}'s footer links both licences`, () => {
 			const hrefs = [...page(path).querySelectorAll("footer a")].map((a) => a.getAttribute("href"));
