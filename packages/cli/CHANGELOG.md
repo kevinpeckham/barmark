@@ -6,6 +6,19 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-11-04
+
+### Changed
+
+- **Uses** barmark 0.16.0, @barmark/render 0.14.0 and @barmark/musicxml
+  0.4.0: every command reads part lines (`Pno.RH |`, `Pno.LH |`), sustain
+  pedal marks (`+G`, `*G`), dotted figures (`C._D`) and `instrument:` and
+  `clef:` on the `part:` line. `format` sorts a part's lines into score
+  order; `part Pno` keeps both hands; `render` draws a row per line with
+  Ped. marks; `export --musicxml` writes a keyboard's hands on its two
+  staves, transposing instruments at their written pitch, pedal marks and
+  dotted values.
+
 ## [0.4.0] - 2026-11-04
 
 ### Changed
@@ -140,7 +153,8 @@ The first release of the `barmark` command. Uses `barmark` 0.8.0 and
 - **The `barmark` command:** `check`, `format`, `render` and `transpose`
   for `.chart.md` files, on npm and as standalone binaries.
 
-[Unreleased]: https://github.com/kevinpeckham/barmark/compare/cli-v0.4.0...HEAD
+[Unreleased]: https://github.com/kevinpeckham/barmark/compare/cli-v0.5.0...HEAD
+[0.5.0]: https://github.com/kevinpeckham/barmark/compare/cli-v0.4.0...cli-v0.5.0
 [0.4.0]: https://github.com/kevinpeckham/barmark/compare/cli-v0.3.0...cli-v0.4.0
 [0.3.0]: https://github.com/kevinpeckham/barmark/compare/cli-v0.2.2...cli-v0.3.0
 [0.2.2]: https://github.com/kevinpeckham/barmark/compare/cli-v0.2.1...cli-v0.2.2
