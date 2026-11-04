@@ -115,6 +115,8 @@ export type ValueStyle = {
 	beams: Beam[];
 	/** The clef in force: a slash sits on its staff's middle line. */
 	clef: Clef;
+	/** Octaves a note is written above where it sounds. */
+	octave: number;
 };
 
 function pitchedXml(n: Pitched, v: NoteValue, style: ValueStyle): string {
@@ -144,13 +146,17 @@ function pitchedXml(n: Pitched, v: NoteValue, style: ValueStyle): string {
 const SLASH: Record<Clef, Pitch> = {
 	G: { step: "B", alter: 0, octave: 4 },
 	F: { step: "D", alter: 0, octave: 3 },
+	G8vb: { step: "B", alter: 0, octave: 3 },
 };
 
 /** One written value of a sound: a rest, a slash note, or a chord of notes. */
 export function soundValueXml(sound: Sound, v: NoteValue, style: ValueStyle): string {
 	if (sound.kind === "rest")
 		return el("note", {}, [el("rest"), text("duration", style.duration), ...valueXml(v)]);
-	const pitches = sound.kind === "slash" ? [SLASH[style.clef]] : sound.pitches;
+	const pitches =
+		sound.kind === "slash"
+			? [SLASH[style.clef]]
+			: sound.pitches.map((p) => ({ ...p, octave: p.octave + style.octave }));
 	const slash = sound.kind === "slash" ? style.stem : null;
 	return pitches
 		.map((pitch, i) => {

@@ -7,22 +7,24 @@
 import type { MeasureEvents } from "./events.js";
 import { belowMiddleC, type Pitch, soundOf } from "./notes.js";
 
-export type Clef = "G" | "F";
+/** Treble, bass, or treble an octave down (a guitar's). */
+export type Clef = "G" | "F" | "G8vb";
+type ByBars = "G" | "F";
 
 const STEPS = "CDEFGAB";
 const diatonic = (p: Pitch) => p.octave * 7 + STEPS.indexOf(p.step);
 /** Each clef's bottom and top staff lines, in diatonic steps from C0. */
-const STAFF: Record<Clef, [number, number]> = { G: [30, 38], F: [18, 26] };
+const STAFF: Record<ByBars, [number, number]> = { G: [30, 38], F: [18, 26] };
 
 /** How many ledger lines a note needs on a clef's staff. */
-function ledgers(p: Pitch, clef: Clef): number {
+function ledgers(p: Pitch, clef: ByBars): number {
 	const [bottom, top] = STAFF[clef];
 	const d = diatonic(p);
 	return Math.max(0, Math.floor((bottom - d) / 2), Math.floor((d - top) / 2));
 }
 
 /** A bar's notes, and the side it sits on: by most of its notes; a bar of slashes is treble; rests alone don't vote. */
-function vote(bar: MeasureEvents): { notes: Pitch[]; clef: Clef | null } {
+function vote(bar: MeasureEvents): { notes: Pitch[]; clef: ByBars | null } {
 	const sounds = bar.events.map(soundOf);
 	const notes = sounds.flatMap((s) => (s.kind === "notes" ? s.pitches : []));
 	if (notes.length === 0)
@@ -33,9 +35,9 @@ function vote(bar: MeasureEvents): { notes: Pitch[]; clef: Clef | null } {
 /** Each measure's clef. */
 export function clefPlan(bars: MeasureEvents[]): Clef[] {
 	const votes = bars.map(vote);
-	const count = (c: Clef) => votes.filter((v) => v.clef === c).length;
-	const part: Clef = count("F") > count("G") ? "F" : "G";
-	const other: Clef = part === "G" ? "F" : "G";
+	const count = (c: ByBars) => votes.filter((v) => v.clef === c).length;
+	const part: ByBars = count("F") > count("G") ? "F" : "G";
+	const other: ByBars = part === "G" ? "F" : "G";
 	const clefs = bars.map((): Clef => part);
 	const change = (run: number[]) => {
 		const far = run.some((i) => votes[i]?.notes.some((p) => ledgers(p, part) > 3));

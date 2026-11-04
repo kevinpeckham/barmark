@@ -27,6 +27,8 @@ export type MeasureContext = {
 	next: Measure | null;
 	/** This bar's clef, and the bar before's (null for the first). */
 	clef: { now: Clef; before: Clef | null };
+	/** Octaves the part is written above where it sounds (a bass's 1). */
+	octave: number;
 	/** Whether this bar shows its rhythm (`rhythmic`): its slashes stemmed, in the meter's values. */
 	rhythmic: boolean;
 	/** Whether this bar shows slashes, and the bar before it (null for the first). */
@@ -85,8 +87,23 @@ function slashStyleXml({ now: on, before }: MeasureContext["slashed"]): string {
 /** The clef, on the first measure and wherever it changes. */
 function clefXml({ now, before }: MeasureContext["clef"]): string {
 	if (now === before) return "";
-	return el("clef", {}, [text("sign", now), text("line", CLEF_LINE[now])]);
+	const sign = now === "F" ? "F" : "G";
+	return el("clef", {}, [
+		text("sign", sign),
+		text("line", CLEF_LINE[sign]),
+		now === "G8vb" ? text("clef-octave-change", -1) : "",
+	]);
 }
+
+/** What a part written above its sound adds back, on its first measure. */
+const transposeXml = (octave: number) =>
+	octave === 0
+		? ""
+		: el("transpose", {}, [
+				text("diatonic", 0),
+				text("chromatic", 0),
+				text("octave-change", -octave),
+			]);
 
 function attributesXml(m: Measure, ctx: MeasureContext): string {
 	const prev = ctx.previous;
@@ -97,6 +114,7 @@ function attributesXml(m: Measure, ctx: MeasureContext): string {
 				keyXml(m, null),
 				timeXml(m, null),
 				clefXml(ctx.clef),
+				transposeXml(ctx.octave),
 				slashStyleXml(ctx.slashed),
 			];
 	return head.some(Boolean) ? el("attributes", {}, head) : "";
@@ -137,7 +155,7 @@ function valuesOf(e: SoundEvent, sound: Sound, start: Frac, meter: Meter, rhythm
 }
 
 /** How a bar's values are drawn: their divisions, slash stems and clef. */
-type BarStyle = { divisions: number; stem: Stem; clef: Clef };
+type BarStyle = { divisions: number; stem: Stem; clef: Clef; octave: number };
 
 /** An event with what it sounds and how it is written. */
 type EventValues = { e: SoundEvent; sound: Sound; values: Written[] };
@@ -152,6 +170,7 @@ function eventXml(w: EventValues, style: BarStyle, beams: () => Beam[]): string 
 			...(i === 0 && e.articulation ? { articulation: e.articulation } : {}),
 			stem: style.stem,
 			clef: style.clef,
+			octave: style.octave,
 			beams: beams(),
 		}),
 	);
@@ -183,7 +202,7 @@ function eventsXml(bar: MeasureEvents, ctx: MeasureContext): string {
 	);
 	let k = 0;
 	const next = () => beams[k++] ?? [];
-	const style = { divisions: ctx.divisions, stem, clef: ctx.clef.now };
+	const style = { divisions: ctx.divisions, stem, clef: ctx.clef.now, octave: ctx.octave };
 	return written.map((w) => eventXml(w, style, next)).join("");
 }
 

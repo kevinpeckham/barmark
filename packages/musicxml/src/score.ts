@@ -9,6 +9,7 @@ import {
 } from "barmark";
 import { clefPlan } from "./clefs.js";
 import { applyHolds, applyPushes, eventsOf, joinHolds } from "./events.js";
+import { type Instrument, instrumentOf } from "./instruments.js";
 import { measureXml } from "./measure-xml.js";
 import { writtenMeasures } from "./measures.js";
 import { rhythmic, slashed } from "./notes.js";
@@ -58,7 +59,17 @@ function scorePart(source: PartSource, i: number): string {
 	return el("score-part", { id: `P${i + 1}` }, [
 		text("part-name", name),
 		label ? text("part-abbreviation", label) : "",
+		soundXml(instrumentOf(source.part), `P${i + 1}-I1`),
 	]);
+}
+
+/** A matched instrument's playback sound: its name and General MIDI program. */
+function soundXml(instrument: Instrument | null, id: string): string {
+	if (!instrument) return "";
+	return [
+		el("score-instrument", { id }, text("instrument-name", instrument.sound)),
+		el("midi-instrument", { id }, text("midi-program", instrument.program)),
+	].join("");
 }
 
 /** A list's value at `index`, and the one before it (null for the first). */
@@ -75,7 +86,9 @@ function partXml(source: PartSource, i: number): string {
 	const rhythmicBars = held.map(rhythmic);
 	const bars = held.map((b, i) => (rhythmicBars[i] ? joinHolds(b) : b));
 	const slashedBars = bars.map(slashed);
-	const clefs = clefPlan(bars);
+	const instrument = instrumentOf(source.part);
+	const fixed = instrument?.clef;
+	const clefs = fixed ? bars.map(() => fixed) : clefPlan(bars);
 	const divisions = divisionsFor(
 		bars.flatMap((b) => [
 			barLength(b.measure.meter),
@@ -92,6 +105,7 @@ function partXml(source: PartSource, i: number): string {
 			slashed: around(slashedBars, index, true),
 			clef: around(clefs, index, "G"),
 			rhythmic: rhythmicBars[index] ?? false,
+			octave: instrument?.octaveUp ? 1 : 0,
 		}),
 	);
 	return el("part", { id: `P${i + 1}` }, xml);

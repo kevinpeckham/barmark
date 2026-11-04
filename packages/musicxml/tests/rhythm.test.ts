@@ -54,8 +54,11 @@ describe("attributes", () => {
 			"<time><beats>6</beats><beat-type>8</beat-type></time>",
 		);
 		const xml = xmlOf(MORNING_SONG);
-		for (const p of ["P1", "P2"])
-			expect(measures(xml, p)[0]).toContain("<clef><sign>G</sign><line>2</line></clef>");
+		// Its guitar's clef is the instrument's: treble 8vb.
+		expect(measures(xml, "P1")[0]).toContain(
+			"<clef><sign>G</sign><line>2</line><clef-octave-change>-1</clef-octave-change></clef>",
+		);
+		expect(measures(xml, "P2")[0]).toContain("<clef><sign>G</sign><line>2</line></clef>");
 	});
 	test("slash notation is switched on", () => {
 		expect(measures(xmlOf("| C |"))[0]).toContain(
