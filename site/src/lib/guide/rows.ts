@@ -90,7 +90,18 @@ export const ROWS: GuideRow[] = [
 		example: "| C D_E_F |",
 		ref: "§2.2",
 		expect: { bars: 1 },
+	},	{
+		id: "dotted",
+		syntax: "C._D",
+		category: "bars",
+		meaning:
+			"A dot after one of two grouped chords makes the pair dotted: C._D is a dotted eighth and a sixteenth in a beat, C_D. the reverse.",
+		terms: ["dotted", "dotted rhythm", "dotted eighth", "swung pair", "long short", "scotch snap"],
+		example: "| C._D / / / | {G2}._{D3} / |",
+		ref: "§2.2",
+		expect: { bars: 2 },
 	},
+
 	{
 		id: "no-chord",
 		syntax: "N.C.",
@@ -248,7 +259,18 @@ export const ROWS: GuideRow[] = [
 		example: "| N.C. |\n|: <D | <G | <A | <Bm :|",
 		ref: "§2.8",
 		expect: { bars: 9 },
+	},	{
+		id: "pedal",
+		syntax: "+G  *C",
+		category: "bars",
+		meaning:
+			"+ before a chord presses the sustain pedal (or changes it, if down); * lifts it. Silence, a tacet bar and the chart's end lift it too.",
+		terms: ["pedal", "sustain", "damper", "Ped.", "pedal change", "release", "piano pedal"],
+		example: "| +G | +C | +D | *G |",
+		ref: "§2.9",
+		expect: { bars: 4 },
 	},
+
 	{
 		id: "empty-cell",
 		syntax: "| |",
@@ -796,7 +818,29 @@ export const ROWS: GuideRow[] = [
 		example: "part: Gtr = Guitar\npart: Pno = Piano\nGtr | G | C |\nPno | Em | C |",
 		ref: "§7.4",
 		expect: { bars: 2 },
+	},	{
+		id: "instrument",
+		syntax: "instrument:  clef:",
+		category: "directives",
+		meaning:
+			"On a part: line, instrument: names the instrument (its clef, staves, transposition and sound for export), and clef: fixes the clef.",
+		terms: ["instrument", "clef", "transposing", "trumpet in Bb", "alto sax", "bass clef", "alto clef", "viola"],
+		example: "part: Tpt = Trumpet, instrument: trumpet in Bb\npart: Va = Viola, clef: alto\nTpt | D | G |\nVa | D | G |",
+		ref: "§7.3",
+		expect: { bars: 2 },
 	},
+	{
+		id: "part-lines",
+		syntax: "Pno.RH |  Pno.LH |",
+		category: "directives",
+		meaning:
+			"A part can write up to four lines that play together, as a pianist's hands; the first in a system carries the chords, the others note sets only.",
+		terms: ["part lines", "hands", "right hand", "left hand", "two staves", "voices", "grand staff", "divisi"],
+		example: "part: Pno = Piano\nPno.RH | G{B3 D4 G4} | C{C4 E4 G4} |\nPno.LH | {G2} | {C3} |",
+		ref: "§7.6",
+		expect: { bars: 2 },
+	},
+
 	{
 		id: "credits",
 		syntax: "composer: Kevin Peckham",
