@@ -38,17 +38,17 @@ package.
 - **Round trip:** for every chord chart in the test fixtures, the chart
   imported from its own export plays the same as the original (see
   "Testing").
-- **Never throws.** Bad XML, a file with no chord symbols or an
-  unsupported structure gives an empty `text` and an error diagnostic.
+- **Never throws.** Bad XML or an unsupported structure gives an empty
+  `text` and an error diagnostic, and so does a file with nothing to
+  import (see "No chord symbols").
 
 ## Non-goals
 
 - **Melody.** Notes are read only as note sets and voicings, in parts
   whose notes behave as chords (see "Notes"); a melody is never turned
   into a run of note sets.
-- **Chord recognition.** A file with no `<harmony>` gives an error, "no
-  chord symbols to import"; the importer never guesses chords from
-  notes.
+- **Chord recognition.** The importer never names chords from notes;
+  notes come in as notes, or not at all (see "No chord symbols").
 - **Rhythm figures:** accents, hits, pushes read from slash rhythms, and
   pedal marks. Pushes written by barmark's export are an exception only
   if they fall out of the placement rule below.
@@ -90,6 +90,39 @@ package.
 | notes attacked together with a `<harmony>` and lasting its span | a voicing, `Cmaj7{E3 G3 B3}` (see "Notes") |
 | notes attacked together with no `<harmony>` | a note set, `{C4 E4 G4}` |
 | a held chord with nothing new | `/`; a bar identical to the one before, as the canonical form prints it |
+
+### Reading a chord symbol
+
+In order, the first that gives a chord barmark's grammar accepts:
+
+1. **Its meaning:** root, `kind`, `<degree>`s and bass, built through
+   barmark's chord model and printed canonically. When meaning and
+   display text disagree, meaning wins (as Dorico reads it).
+2. **Its display text:** the root, then `kind`'s `text` (and the bass),
+   parsed as a barmark chord symbol. This catches `kind="other"` used as
+   text only (`<kind text="7alt">other</kind>`) and qualities stored in
+   an unusual way. It reads what the program printed; it isn't a guess.
+3. **Otherwise `?`,** which always warns, with the original written as
+   words on the bar ("C(♭9♯11)"), so nothing is lost silently. This
+   covers qualities outside Appendix A (`Tristan`, `Neapolitan`),
+   degrees barmark can't spell, and a `<function>` (roman numeral) with
+   no root.
+
+### No chord symbols
+
+A file with no `<harmony>` anywhere isn't refused outright. A file
+written by `@barmark/musicxml` imports its notes as note sets (see
+"Notes"); any other gives an error naming the parts that hold notes and
+the `--part` to import one as note sets ("no chord symbols; these parts
+have notes: Piano, Bass. Import one as note sets with --part"). The
+grammar leaves naming a note set to a linter later (4); nothing is named
+on import.
+
+Chord symbols exported as plain text (older Sibelius and Finale files
+write `<words>Cmaj7</words>`) stay words on their bar, which is honest
+about where they were placed. One diagnostic says so: "text that looks
+like chord symbols in 12 measures; the program exported them as text".
+"Looks like" means the whole text parses as a barmark chord symbol.
 
 A no-break space after a leading "A" (the export's Dorico workaround) is
 read back as a plain space.
@@ -226,6 +259,10 @@ every heading, repeat mark, ending and directive.
 - **Part lines:** Morning Song and a piano chart with an LH-only intro
   and a third line come back with the same lines; a Dorico piano part
   (real piano writing) imports as chords alone.
+- **Chord symbols:** a `kind="other"` symbol with readable text comes in
+  by its text; a `Tristan` comes in as `?` with its text as words; a
+  file of `<words>Cmaj7</words>` keeps them as words and says so once;
+  a file with no harmony gives the `--part` error.
 - **Melody stays out:** a MuseScore lead sheet (melody and chords in one
   part) imports as its chords with no note sets; a voicing with a note
   outside its chord imports as the chord alone.
@@ -265,8 +302,13 @@ the songs bump, per RELEASING.md.
    reverse; they're named `RH`/`LH`/`RH2`/`LH2` or `1`–`4`, since the
    file doesn't keep names. A part whose lines can't all be read gives
    its chords alone.
-2. The output is canonical barmark, and must parse without errors;
-   unreadable chords become `?`.
+2. The output is canonical barmark, and must parse without errors. A
+   chord symbol is read by meaning, then by display text, else `?` with
+   the original as words (Kevin agreed the order and keeping the
+   original, 2026-11-05).
+2a. A file with no chord symbols imports note sets only from barmark's
+   own files or with `--part`; chord symbols written as text stay words,
+   with one diagnostic (Kevin agreed, 2026-11-05).
 3. Bold words at a bar's start become `## Headings`; other words, words
    on a bar.
 4. Parts with identical chords merge into one line; differing ones
