@@ -168,6 +168,14 @@ describe("placeBar", () => {
 		expect(place(events, "4/4", false).result).toBeNull();
 	});
 
+	test("a meter barmark can't write is null, quickly", () => {
+		const t = performance.now();
+		expect(
+			placeBar([{ at: q("0"), symbol: "C" }], frac(4), { n: 1000000000, d: 4 }, true),
+		).toBeNull();
+		expect(performance.now() - t).toBeLessThan(100);
+	});
+
 	test("an event outside the bar is null", () => {
 		expect(place([["4", "C"]], "4/4").result).toBeNull();
 		expect(place([["-1", "C"]], "4/4", false).result).toBeNull();

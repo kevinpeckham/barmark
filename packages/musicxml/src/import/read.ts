@@ -1,5 +1,5 @@
 /** Reads a MusicXML score-partwise into parts, lines and marks at exact positions. */
-import type { Credits, Key, Meter } from "barmark";
+import { type Credits, type Key, type Meter, parseMeter } from "barmark";
 import { MODE_FIFTHS } from "../measure-xml.js";
 import { cmp, type Frac, frac, minus, plus, ZERO } from "../rhythm.js";
 import { writtenPitch } from "../written.js";
@@ -89,6 +89,8 @@ type PartState = {
 	name: string;
 	divisions: number;
 	meter: Meter;
+	/** `<time>`s barmark can't write, kept out of `meter`: the measure's number and the loss. */
+	badTimes: { measure: string; message: string }[];
 	declaredStaves: number;
 	chromatic: number;
 	diatonic: number | null;
@@ -231,12 +233,29 @@ function keyOf(k: XNode, p: PartState): Key | null {
 	return { tonic: tonicName(sounding - MODE_FIFTHS[name]), mode: name };
 }
 
-function timeOf(t: XNode): Meter | null {
+/** A `<time>`'s meter, as text `n/d`; null when it has none. */
+function timeText(t: XNode): string | null {
 	const beats = textOf(t, "beats")
 		.split("+")
 		.reduce((sum, b) => sum + num(b), 0);
 	const d = num(textOf(t, "beat-type"));
-	return beats > 0 && d > 0 ? { n: beats, d } : null;
+	return beats > 0 && d > 0 ? `${beats}/${d}` : null;
+}
+
+/** A `<time>` becomes the running meter, unless barmark can't write it. */
+function readTime(time: XNode | undefined, p: PartState, raw: RawMeasure): void {
+	const text = time ? timeText(time) : null;
+	const meter = text === null ? null : parseMeter(text);
+	if (meter) {
+		raw.time = meter;
+		p.meter = meter;
+	} else if (text !== null) {
+		const kept = `${p.meter.n}/${p.meter.d}`;
+		p.badTimes.push({
+			measure: raw.number,
+			message: `a time signature barmark can't write (${text}); kept ${kept}`,
+		});
+	}
 }
 
 function readAttributes(a: XNode, p: PartState, raw: RawMeasure): void {
@@ -250,12 +269,7 @@ function readAttributes(a: XNode, p: PartState, raw: RawMeasure): void {
 		p.octave = num(textOf(transpose, "octave-change"));
 		p.diatonic = textOf(transpose, "diatonic") === "" ? null : num(textOf(transpose, "diatonic"));
 	}
-	const time = child(a, "time");
-	const meter = time ? timeOf(time) : null;
-	if (meter) {
-		raw.time = meter;
-		p.meter = meter;
-	}
+	readTime(child(a, "time"), p, raw);
 	const key = child(a, "key");
 	const read = key ? keyOf(key, p) : null;
 	if (read) raw.key = read;
@@ -383,7 +397,7 @@ function readMeasure(node: XNode, p: PartState): RawMeasure {
 /** The bar's length in the meter's beat unit (its denominator), or null when it isn't whole. */
 function pickupMeter(length: Frac, meter: Meter): Meter | null {
 	const n = frac(length.n * meter.d, length.d * 4);
-	return n.d === 1 && n.n > 0 ? { n: n.n, d: meter.d } : null;
+	return n.d === 1 && n.n > 0 ? parseMeter(`${n.n}/${meter.d}`) : null;
 }
 
 const NOT_WHOLE = "a short bar's length isn't a whole number of beats; read as a full bar";
@@ -462,6 +476,7 @@ function readPart(node: XNode, meta: Meta, losses: Losses): ReadPart {
 		name: meta.name,
 		divisions: 1,
 		meter: DEFAULT_METER,
+		badTimes: [],
 		declaredStaves: 1,
 		chromatic: 0,
 		diatonic: null,
@@ -471,6 +486,7 @@ function readPart(node: XNode, meta: Meta, losses: Losses): ReadPart {
 	};
 	const raws = children(node, "measure").map((m) => readMeasure(m, p));
 	settleMeters(raws, p, losses);
+	for (const bad of p.badTimes) losses.add("badTime", bad.message, p.name, bad.measure);
 	const staves = Math.max(p.declaredStaves, ...p.places.map((x) => Number.parseInt(x, 10)));
 	const measures = withLines(raws, lineIndexes(p.places, staves));
 	return {

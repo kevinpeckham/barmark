@@ -435,3 +435,17 @@ test("an implicit bar longer than its meter warns that it is too long", () => {
 	const { diagnostics } = read(xml`${measure(1, base(1) + note("C", 4, 6), ' implicit="yes"')}`);
 	expect(diagnostics[0]?.message).toContain("longer than its meter");
 });
+
+test("a time signature barmark can't write keeps the running meter", () => {
+	const t =
+		"<attributes><time><beats>1000000000</beats><beat-type>4</beat-type></time></attributes>";
+	const { score, diagnostics } = read(
+		xml`${measure(1, base(1) + note("C", 4, 4))}${measure(2, t + note("C", 4, 4))}`,
+	);
+	const ms = score?.parts[0]?.measures ?? [];
+	expect(ms.map((m) => m.time)).toEqual([{ n: 4, d: 4 }, null]);
+	expect(ms[1]?.length).toEqual(frac(4));
+	expect(diagnostics.map((d) => d.message)).toEqual([
+		"a time signature barmark can't write (1000000000/4); kept 4/4 in measure 2",
+	]);
+});

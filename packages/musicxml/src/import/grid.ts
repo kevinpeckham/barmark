@@ -1,5 +1,5 @@
 /** Placing timed attacks on barmark's slot grid (grammar 2.1 to 2.3). */
-import { beatsOf, type Meter } from "barmark";
+import { beatsOf, type Meter, parseMeter } from "barmark";
 import { cmp, type Frac, frac, minus, times, ZERO } from "../rhythm.js";
 
 /** One attack: where it starts in the bar (quarters) and the slot symbol it is. */
@@ -112,7 +112,8 @@ function nearestBeat(at: Frac, beat: Frac, beats: number): Frac {
  *
  * Only chord symbols snap, to the nearest beat (`moved`), and only when
  * `exact` is false, a chord landing on an occupied beat being dropped
- * (still `moved`); null when an event can't be placed.
+ * (still `moved`); null when an event can't be placed or the
+ * meter is one barmark can't write (so `beats` is small and bounded).
  */
 export function placeBar(
 	events: Event[],
@@ -120,6 +121,7 @@ export function placeBar(
 	meter: Meter,
 	exact: boolean,
 ): { cell: string; moved: boolean } | null {
+	if (!parseMeter(`${meter.n}/${meter.d}`)) return null;
 	const beats = beatsOf(meter);
 	const sorted = [...events].sort((a, b) => cmp(a.at, b.at));
 	if (sorted.some((e) => cmp(e.at, ZERO) < 0 || cmp(e.at, length) >= 0)) return null;
