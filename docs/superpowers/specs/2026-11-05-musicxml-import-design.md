@@ -5,8 +5,8 @@ questions and asked for a design from Claude's recommendations, so every
 decision below is Claude's call unless marked as Kevin's. The calls list
 at the end gathers them.
 
-Kevin's decision (2026-11-05): import note sets (4) and voicings (4.2),
-which barmark already supports, not chords alone.
+Kevin's decisions (2026-11-05): import note sets (4), voicings (4.2)
+and part lines (7.6), which barmark already supports, not chords alone.
 
 ## Intent
 
@@ -46,8 +46,6 @@ package.
 - **Melody.** Notes are read only as note sets and voicings, in parts
   whose notes behave as chords (see "Notes"); a melody is never turned
   into a run of note sets.
-- **Part lines** (7.6: a keyboard's hands, second voices). A part with
-  more than one staff or voice is read as chords only, this version.
 - **Chord recognition.** A file with no `<harmony>` gives an error, "no
   chord symbols to import"; the importer never guesses chords from
   notes.
@@ -138,6 +136,35 @@ always has them. A voicing note that isn't in its chord (an error in
 4.2) drops the voicing: the chord is written alone, with a warning.
 `!` (a marked root) is never written; MusicXML has no way to say it.
 
+### Part lines
+
+A part's staves and voices are its lines (7.6), the export's layout
+read backwards (`voicesFor` in `measure-xml.ts`):
+
+| MusicXML | Line |
+|---|---|
+| staff 1, its first voice | the first line; it carries the chords |
+| staff 2, its first voice | the second line |
+| staff 1 and staff 2, a second voice each | the third and fourth lines |
+| one staff, voices in order | lines one to four |
+
+- **Names.** MusicXML doesn't keep line names, so the importer names
+  them: `RH`, `LH`, `RH2`, `LH2` on a two-staff part (the grammar's own
+  example), `1` to `4` on a one-staff part (`Gtr.1`, `Gtr.2`). The part
+  gets a label if it has none (its abbreviation, else its name's first
+  letters), since lines hang on one.
+- **When lines are read.** The first line follows "Notes" (a chord
+  line); every other line holds notes only, so it needs only that each
+  attack lands on its own bar's slot grid, chords of notes as note sets
+  and rests as `--`. A part whose first line is a melody, whose other
+  lines fall off the grid, or which has more than four voices is read
+  as its chords alone, with one diagnostic naming why.
+- **A line that rests** through a whole system is left out of it, which
+  the grammar reads as resting (an LH-only intro writes `Pno.LH` alone).
+  A part with one line throughout is written bare (`Pno |`).
+- Lines join systems with the chart's other parts, in score order:
+  first line first (7.6).
+
 ### Parts
 
 Parts that carry `<harmony>` are read, and parts of notes alone as
@@ -162,9 +189,10 @@ every heading, repeat mark, ending and directive.
 
 - **Round trip (the yardstick):** every chord chart among the barmark
   package's fixtures (the grammar's examples, `examples/`, the export's
-  test charts), note sets and voicings included, minus those using part
-  lines, accents, hits or pushes:
-  export, import, and compare the expanded play order (barmark's
+  test charts), note sets, voicings and part lines included, minus those using
+  accents, hits, pushes or pedal:
+  export, import, and compare the expanded play order (line names
+  compared by position, since the file doesn't keep them) (barmark's
   `expand`) bar by bar: meter, key, tempo, feel, section name,
   rehearsal mark, words, and the chord timeline. Section replays don't
   survive (the export writes them out), so the comparison is what plays,
@@ -178,6 +206,9 @@ every heading, repeat mark, ending and directive.
 - **Dorico round trip** through mac-bench: barmark → export → Dorico →
   Dorico's MusicXML → import → same play order. It runs only where
   `MAC_BENCH_URL` is reachable, not in CI.
+- **Part lines:** Morning Song and a piano chart with an LH-only intro
+  and a third line come back with the same lines; a Dorico piano part
+  (real piano writing) imports as chords alone.
 - **Melody stays out:** a MuseScore lead sheet (melody and chords in one
   part) imports as its chords with no note sets; a voicing with a note
   outside its chord imports as the chord alone.
@@ -210,7 +241,10 @@ the songs bump, per RELEASING.md.
    span is slashes or one held attack, every note on the grid); other
    parts with chords give their chords alone. Parts of notes alone are
    read only from barmark's own files or with `--part`.
-1a. Part lines (several staves or voices in a part) are not read yet.
+1a. Part lines come from staves and voices, the export's layout in
+   reverse; they're named `RH`/`LH`/`RH2`/`LH2` or `1`–`4`, since the
+   file doesn't keep names. A part whose lines can't all be read gives
+   its chords alone.
 2. The output is canonical barmark, and must parse without errors;
    unreadable chords become `?`.
 3. Bold words at a bar's start become `## Headings`; other words, words
