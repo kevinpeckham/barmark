@@ -217,11 +217,34 @@ read backwards (`voicesFor` in `measure-xml.ts`):
 
 ### Parts
 
-Parts that carry `<harmony>` are read, and parts of notes alone as
-"Notes" says; the rest are listed in one diagnostic. Parts whose chords are the same throughout make one chart
-line, as a lead sheet's do. Parts whose chords differ become several
-parts (7.4), each named from its `<part-abbreviation>` (else
-`<part-name>`). `--part name` / `options.part` imports that part alone.
+Decided system by system, as the grammar reads several parts (7.4):
+
+- **Tutti where they agree.** In a system where every playing part has
+  the same chords, one unlabelled (tutti) line is written. Where they
+  differ, each part writes its own labelled line. Morning Song's intro
+  comes back as one line and its verse as `Gtr` and `Pno`.
+- **"The same"** means the same chord at every slot, compared at concert
+  pitch (a B♭ trumpet's chords match a piano's). A part carrying
+  voicings, note sets or part lines in a system is never merged there,
+  since merging would drop its notes.
+- **Resting parts.** A part that rests through a system (no chords, no
+  notes) is left out of it, which the grammar reads as tacet; it doesn't
+  stop the other parts merging. A part with chord symbols in some
+  sections only (a guitar's solo) counts as resting elsewhere.
+- **One part throughout** (a lead sheet, or parts that always agree)
+  gives a chart with no `part:` lines at all, unless part lines need a
+  label to hang on.
+- **What a part keeps.** `part: Gtr = Electric Guitar 1` from
+  `<part-name>` and `<part-abbreviation>`; a label cleaned to the
+  grammar's letters and digits (`Pno.` is `Pno`), else the name's first
+  letters, with a number added to tell duplicates apart.
+  `instrument:` when the part's `<instrument-name>` (or its MIDI
+  program) is one barmark knows, so clefs and transposition survive the
+  way back out.
+- **Parts without chords** follow "Notes" and "No chord symbols": note
+  sets from barmark's own files or with `--part`, otherwise listed in
+  one diagnostic. `--part name` / `options.part` imports that part alone
+  (matched against name or abbreviation, in any case).
 
 ### Repeats the grammar can't hold
 
@@ -311,8 +334,10 @@ the songs bump, per RELEASING.md.
    with one diagnostic (Kevin agreed, 2026-11-05).
 3. Bold words at a bar's start become `## Headings`; other words, words
    on a bar.
-4. Parts with identical chords merge into one line; differing ones
-   become `part:` parts; parts without chords are skipped.
+4. Parts merge into a tutti line system by system where their chords
+   agree, and write labelled lines where they differ; parts with notes
+   never merge; parts keep name, label and instrument (Kevin agreed,
+   2026-11-05).
 5. Repeats barmark can't hold are written out in played order, with a
    warning.
 6. Off-grid chords snap to the nearest beat (with a diagnostic) unless
