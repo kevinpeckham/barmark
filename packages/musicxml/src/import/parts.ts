@@ -36,6 +36,7 @@ const WHY = {
 } as const;
 
 const UNPLACED = "a bar barmark's grid can't hold; written as ?";
+const UNREAD = "chord symbols barmark can't read, written as ? with their text as words";
 
 /** Each measure's length, its own meter (a one-bar meter, else the running one) and its chords. */
 function barsOf(part: ReadPart): Bar[] {
@@ -89,7 +90,13 @@ function decide(part: ReadPart, from: { barmark: boolean }, hasChords: boolean):
 	return { ...alone("grid"), offGrid };
 }
 
-function report(d: Decided, part: string, losses: Losses): void {
+function report(d: Decided, part: ReadPart, losses: Losses): void {
+	reportLines(d, part.name, losses);
+	for (const u of d.reads[0]?.unread ?? [])
+		losses.add("unread", UNREAD, part.name, part.measures[u.measure]?.number);
+}
+
+function reportLines(d: Decided, part: string, losses: Losses): void {
 	if (d.why === "grid") for (const m of d.offGrid) losses.add("grid", WHY.grid, part, m);
 	else if (d.why) losses.add(d.why, WHY[d.why], part);
 	for (const r of d.reads) {
@@ -146,7 +153,7 @@ export function importPart(
 	const hasChords = part.measures.some((m) => m.harmonies.length > 0);
 	if (!hasChords && !from.barmark && !from.forced) return null;
 	const decided = decide(part, from, hasChords);
-	report(decided, part.name, losses);
+	report(decided, part, losses);
 	return {
 		name: part.name,
 		label: labelOf(part.name, part.abbreviation),

@@ -482,6 +482,9 @@ test("an unreadable chord is ? and keeps its original", () => {
 	);
 	expect(bars(r)).toEqual(["C ?"]);
 	expect(r.part?.unread).toEqual([{ measure: 0, at: 1, text: "DTristan" }]);
+	expect(r.messages).toContain(
+		"chord symbols barmark can't read, written as ? with their text as words in measure 1",
+	);
 });
 
 test("a chord off the grid moves to the nearest beat, with a warning", () => {
