@@ -6,6 +6,13 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Documentation
+
+- **README: "In Dorico"** notes what Dorico's MusicXML import does with
+  credits (they go to Flow 1's information, not the project's), chord
+  symbols (always global) and repeat counts, and "What it writes" now
+  lists credits.
+
 ## [0.4.1] - 2026-11-05
 
 ### Fixed

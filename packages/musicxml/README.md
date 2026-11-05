@@ -55,6 +55,27 @@ part, "Chart"), at concert pitch except where an instrument transposes:
   and the feel (MusicXML 4.0 swing).
 - **Text:** section headings, rehearsal marks, words on bars, and every
   text line (lyrics, `###` notes) as words, so nothing written is lost.
+  In a score of several parts, headings, rehearsal marks, tempo, feel and
+  jumps are written once, over the top part.
+- **Credits:** the title as the work's title; composers, lyricists,
+  arrangers and copyright lines as the file's creators and rights.
+
+## In Dorico
+
+Checked in Dorico Elements 6.2.31, whose MusicXML import handles a few
+things its own way:
+
+- **Credits land on the flow, not the project.** The title becomes the
+  project's title, but composer, lyricist, arranger and copyright go to
+  Flow 1's information, which the default first page doesn't print. In
+  File → Project Info, copy Flow 1's fields to the project.
+- **Chord symbols are global.** Dorico imports every chord symbol as a
+  global one, shown on every staff set to show chord symbols, keeping
+  the first part's chord where parts differ. No import setting changes
+  this; parts that play different chords need local chord symbols added
+  in Dorico.
+- **Repeat counts aren't read.** A repeat played more than twice is also
+  printed as words ("×3"), since Dorico ignores the count in the file.
 
 Not yet: lyrics placed as `<lyric>` syllables (barmark doesn't place them
 by beat), MusicXML import, and MIDI.
