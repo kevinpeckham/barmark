@@ -12,7 +12,7 @@ import type { Losses } from "./losses.js";
 import { type MeasureMarks, readMarks } from "./marks.js";
 import { playedOrder } from "./order.js";
 import type { ReadMeasure, ReadScore } from "./read.js";
-import { holdsAsWritten, type Repeats, repeatsOf } from "./repeats.js";
+import { type DirectionCell, placeStructure, type Repeats, repeatsOf } from "./repeats.js";
 
 export type BarInfo = {
 	/** The measure's index in each part's `measures`. */
@@ -34,6 +34,7 @@ export type BarInfo = {
 	before: string[];
 	after: string[];
 	opens: boolean;
+	/** The bar closes a repeat played this many times, or open-ended (`x ...`); on an ending bar always 2, a plain `:|`, as the endings give the count (grammar 5.1). */
 	closes: number | "open" | null;
 	/** The ending (5.1) this bar is part of: on every bar from its start to its stop. */
 	ending: number[] | null;
@@ -138,6 +139,22 @@ const flattened = (bar: BarInfo, directives: string | null): BarInfo => ({
 	words: bar.words.map((w) => ({ ...w })),
 });
 
+/** The bars without the direction cells barmark can't place, each a loss. */
+function withoutCells(bars: BarInfo[], dropped: DirectionCell[], losses: Losses): BarInfo[] {
+	for (const c of dropped) {
+		const bar = bars[c.bar] as BarInfo;
+		const side = c.before ? bar.before : bar.after;
+		side.splice(side.indexOf(c.text), 1);
+		losses.add(
+			`direction ${c.text}`,
+			`a ${c.text} barmark can't place left out`,
+			undefined,
+			bar.measure,
+		);
+	}
+	return bars;
+}
+
 /** The score's structure bar by bar, in written order, or in played order when the repeats can't be held. */
 export function readStructure(score: ReadScore, losses: Losses): Structure {
 	const parts = score.parts.map((p) => p.measures);
@@ -169,11 +186,11 @@ export function readStructure(score: ReadScore, losses: Losses): Structure {
 			...(repeats[i] as Repeats),
 		}),
 	);
-	if (holdsAsWritten(bars.map((b) => ({ ...b, heading: b.heading !== null }))))
-		return { bars, writtenOut: false };
+	const placed = placeStructure(bars.map((b) => ({ ...b, heading: b.heading !== null })));
+	if (placed.holds) return { bars: withoutCells(bars, placed.dropped, losses), writtenOut: false };
 	losses.note({ severity: "warning", message: WRITTEN_OUT });
 	const longest = parts.reduce((a, p) => (p.length > a.length ? p : a), [] as ReadMeasure[]);
-	const order = playedOrder(longest);
+	const order = playedOrder(longest, losses);
 	const played = directiveLines(states, order);
 	return {
 		bars: order.map((i, k) => flattened(bars[i] as BarInfo, played[k] ?? null)),

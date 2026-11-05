@@ -64,7 +64,9 @@ function directionOf(text: string): Direction | null {
 	return cell?.length === 1 && only?.kind === "direction" ? only.direction : null;
 }
 
-function addCell(out: MeasureMarks, kind: Cell["kind"], text: string, before: boolean): void {
+/** A direction cell; only a sign (Segno, Coda) goes before the bar: a jump, To Coda and Fine act at its end, where play takes them. */
+function addCell(out: MeasureMarks, kind: Cell["kind"], text: string, start: boolean): void {
+	const before = start && (kind === "segno" || kind === "coda");
 	if (!out.cells.some((c) => c.kind === kind)) out.cells.push({ kind, text, before });
 }
 

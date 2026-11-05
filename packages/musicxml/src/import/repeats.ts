@@ -1,7 +1,7 @@
 /**
  * Repeats and endings bar by bar (grammar 5, 5.1), and whether barmark can
- * hold them as written: the candidate bar lines are built and parsed, so
- * the parser's own pairing rules decide.
+ * hold them and the direction cells (5.2) as written: the candidate bar
+ * lines are built and parsed, so the parser's own rules decide.
  */
 import { parseChart } from "barmark";
 import type { ReadMeasure } from "./read.js";
@@ -20,24 +20,42 @@ function marksAt(measures: (ReadMeasure | undefined)[]) {
 	};
 }
 
-/**
- * Each measure's repeats, from the parts' measures at that index. An ending
- * marks every bar from its start to its stop; a backward repeat with no
- * forward one before it goes back to the first bar, as MusicXML plays it.
- */
-export function repeatsOf(parts: ReadMeasure[][], count: number): Repeats[] {
+/** Each measure's bar-line marks with every ending bar marked, from its start to its stop. */
+function withEndings(parts: ReadMeasure[][], count: number) {
 	let ending: number[] | null = null;
-	const out = Array.from({ length: count }, (_, i): Repeats => {
+	return Array.from({ length: count }, (_, i) => {
 		const m = marksAt(parts.map((p) => p[i]));
 		if (m.ending?.start) ending = m.ending.numbers;
-		const bar = { opens: m.opens, closes: m.closes, ending };
-		if (m.ending?.stop || m.ending?.discontinue) ending = null;
+		const bar = { ...m, ending, last: Boolean(m.ending?.stop || m.ending?.discontinue) };
+		if (bar.last) ending = null;
 		return bar;
 	});
-	const firstClose = out.findIndex((r) => r.closes !== null);
-	const first = out[0];
-	if (first && firstClose >= 0 && !out.slice(0, firstClose + 1).some((r) => r.opens))
-		first.opens = true;
+}
+
+/**
+ * Each measure's repeats, from the parts' measures at that index. An ending
+ * marks every bar from its start to its stop, and its `:|` is a plain one:
+ * the endings give the count (grammar 5.1). A backward repeat with no
+ * forward one goes back to the bar after the last repeat (or the first
+ * bar), as notation programs play it, so that bar opens.
+ */
+export function repeatsOf(parts: ReadMeasure[][], count: number): Repeats[] {
+	const marks = withEndings(parts, count);
+	const out = marks.map(
+		(m): Repeats => ({
+			opens: m.opens,
+			closes: m.closes !== null && m.ending !== null ? 2 : m.closes,
+			ending: m.ending,
+		}),
+	);
+	let open = false;
+	let from = 0;
+	marks.forEach((m, i) => {
+		open ||= m.opens;
+		if (m.closes !== null && !open) (out[from] as Repeats).opens = open = true;
+		const done = m.ending ? m.last && !marks[i + 1]?.ending : m.closes !== null;
+		if (done) [open, from] = [false, i + 1];
+	});
 	return out;
 }
 
@@ -81,7 +99,56 @@ function candidate(bars: CandidateBar[]): string {
 	return lines.join("\n");
 }
 
-/** Whether barmark can write these repeats, endings and directions where they are. */
-export function holdsAsWritten(bars: CandidateBar[]): boolean {
-	return !parseChart(candidate(bars)).diagnostics.some((d) => d.severity === "error");
+const clean = (bars: CandidateBar[]) =>
+	!parseChart(candidate(bars)).diagnostics.some((d) => d.severity === "error");
+
+/** A direction cell on a bar (`...` isn't one: it holds the bar before it). */
+export type DirectionCell = { bar: number; before: boolean; text: string };
+
+const keyOf = (c: DirectionCell) => `${c.bar}|${c.before}|${c.text}`;
+
+/** The bars with only the direction cells in `kept`. */
+function keeping(bars: CandidateBar[], kept: Set<string>): CandidateBar[] {
+	const keeps = (bar: number, before: boolean) => (text: string) =>
+		text === "..." || kept.has(keyOf({ bar, before, text }));
+	return bars.map((b, i) => ({
+		...b,
+		before: b.before.filter(keeps(i, true)),
+		after: b.after.filter(keeps(i, false)),
+	}));
+}
+
+/** The most directions tried in every combination; a score with more keeps all of them or none. */
+const MOST_TRIED = 10;
+
+/**
+ * Ways to keep `cells`: every subset when there are few, else all or none.
+ * Most cells first, and among as many, the earlier cells kept (a jump goes
+ * to the first sign, as play order does).
+ */
+function choices(cells: DirectionCell[]): DirectionCell[][] {
+	if (cells.length > MOST_TRIED) return [cells, []];
+	const n = cells.length;
+	const keeps = (m: number) => cells.filter((_, i) => m & (1 << (n - 1 - i)));
+	const masks = Array.from({ length: 2 ** n }, (_, m) => 2 ** n - 1 - m);
+	return masks.map(keeps).sort((a, b) => b.length - a.length);
+}
+
+/**
+ * Whether barmark can hold the repeats and endings where they are, and if
+ * so which direction cells it can't place. Only repeat and ending pairing
+ * writes a score out; a direction the parser rejects (a stray Fine, a
+ * second Coda) is dropped, keeping as many as parse cleanly together.
+ */
+export function placeStructure(
+	bars: CandidateBar[],
+): { holds: false } | { holds: true; dropped: DirectionCell[] } {
+	if (!clean(keeping(bars, new Set()))) return { holds: false };
+	const cells = bars.flatMap((b, bar) => [
+		...b.before.filter((t) => t !== "...").map((text) => ({ bar, before: true, text })),
+		...b.after.filter((t) => t !== "...").map((text) => ({ bar, before: false, text })),
+	]);
+	const kept = choices(cells).find((c) => clean(keeping(bars, new Set(c.map(keyOf))))) ?? [];
+	const keys = new Set(kept.map(keyOf));
+	return { holds: true, dropped: cells.filter((c) => !keys.has(keyOf(c))) };
 }

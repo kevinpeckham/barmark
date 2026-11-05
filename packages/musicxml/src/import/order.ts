@@ -4,6 +4,7 @@
  * `dalsegno`, `tocoda`, `fine`). After the jump every repeat plays once.
  * It is the order the written-out fallback writes bars in.
  */
+import type { Losses } from "./losses.js";
 import type { ReadMeasure } from "./read.js";
 
 /** The most measures a played order holds: a loop in a broken file stops here. */
@@ -20,13 +21,32 @@ function signAt(ms: ReadMeasure[], sign: "segno" | "coda", value: string): numbe
 	return marked >= 0 ? marked : undefined;
 }
 
-/** The walk through the measures: whether the jump is taken, the repeat's start, each repeat's pass, each ending's last measure. */
+/**
+ * The walk through the measures: whether the jump is taken, the forward
+ * repeats still open (innermost last), the bar after the last repeat
+ * completed (where a backward repeat with no forward one goes back to),
+ * each repeat's pass by its start, each ending's last measure by its
+ * first, and the highest ending number of the endings each ending bar
+ * belongs with.
+ */
 type Walk = {
 	jumped: boolean;
-	from: number;
+	open: number[];
+	after: number;
 	pass: Map<number, number>;
 	spans: Map<number, number>;
+	endings: Map<number, number>;
 };
+
+/** Where the repeat being played starts. */
+const startOf = (w: Walk) => w.open.at(-1) ?? w.after;
+
+/** A repeat has played all its passes: play goes on from `next`. */
+function complete(w: Walk, start: number, next: number): void {
+	if (w.open.at(-1) === start) w.open.pop();
+	w.pass.delete(start);
+	w.after = next;
+}
 
 /** After the jump, To Coda and Fine: where play goes, null to stop, undefined for neither. */
 function afterJump(ms: ReadMeasure[], m: ReadMeasure): number | null | undefined {
@@ -50,14 +70,17 @@ function jump(ms: ReadMeasure[], m: ReadMeasure, w: Walk): number | null | undef
 	return to;
 }
 
-/** A backward repeat goes back until its passes are played; after the jump it plays once. */
+/** A backward repeat goes back until its passes are played (its `times`, or its endings' highest number); after the jump it plays once. */
 function repeatFrom(m: ReadMeasure, i: number, w: Walk): number {
 	if (!m.repeatEnd || w.jumped) return i + 1;
-	const pass = w.pass.get(w.from) ?? 1;
-	const again = pass < m.repeatEnd.times;
-	if (again) w.pass.set(w.from, pass + 1);
-	else w.pass.delete(w.from);
-	return again ? w.from : i + 1;
+	const start = startOf(w);
+	const pass = w.pass.get(start) ?? 1;
+	if (pass < Math.max(m.repeatEnd.times, w.endings.get(i) ?? 0)) {
+		w.pass.set(start, pass + 1);
+		return start;
+	}
+	complete(w, start, i + 1);
+	return i + 1;
 }
 
 /** Each ending's last measure, by its first; an ending never stopped runs to the last measure. */
@@ -75,29 +98,62 @@ function endingSpans(ms: ReadMeasure[]): Map<number, number> {
 	return spans;
 }
 
-/** The highest pass of the endings in a row from `i`: the one taken after the jump. */
-function lastPass(ms: ReadMeasure[], i: number, w: Walk): number {
-	const numbers: number[] = [];
-	for (let at = i; w.spans.has(at); at = (w.spans.get(at) as number) + 1)
-		numbers.push(...(ms[at]?.ending?.numbers ?? []));
-	return Math.max(0, ...numbers);
+/** The endings in a row from `i`, as [first, last] measures. */
+function chain(spans: Map<number, number>, i: number): [number, number][] {
+	const out: [number, number][] = [];
+	for (let at = i; spans.has(at); at = (spans.get(at) as number) + 1)
+		out.push([at, spans.get(at) as number]);
+	return out;
 }
 
-/** Where play goes from measure `i`: on to it, or past an ending this pass doesn't take. A forward repeat is the repeat's start. */
+/** The highest number among the endings in a row from `i`. */
+const highest = (ms: ReadMeasure[], row: [number, number][]) =>
+	Math.max(0, ...row.flatMap(([first]) => ms[first]?.ending?.numbers ?? []));
+
+/** Each ending bar's highest ending number among the endings in its row: the passes its repeat plays. */
+function endingPasses(ms: ReadMeasure[], spans: Map<number, number>): Map<number, number> {
+	const out = new Map<number, number>();
+	for (const first of spans.keys()) {
+		if ([...spans.values()].includes(first - 1)) continue;
+		const row = chain(spans, first);
+		const max = highest(ms, row);
+		for (const [from, to] of row) for (let j = from; j <= to; j++) out.set(j, max);
+	}
+	return out;
+}
+
+/** Where play goes from measure `i`: on to it, or past an ending this pass doesn't take. A forward repeat opens a repeat; the last ending taken completes it. */
 function landing(ms: ReadMeasure[], i: number, w: Walk): number {
-	if (ms[i]?.repeatStart) w.from = i;
+	if (ms[i]?.repeatStart && w.open.at(-1) !== i) w.open.push(i);
 	const last = w.spans.get(i);
 	if (last === undefined) return i;
-	const pass = w.jumped ? lastPass(ms, i, w) : (w.pass.get(w.from) ?? 1);
-	return ms[i]?.ending?.numbers.includes(pass) ? i : landing(ms, last + 1, w);
+	const start = startOf(w);
+	const pass = w.jumped ? highest(ms, chain(w.spans, i)) : (w.pass.get(start) ?? 1);
+	if (!ms[i]?.ending?.numbers.includes(pass)) return landing(ms, last + 1, w);
+	if (!ms.slice(i, last + 1).some((m) => m.repeatEnd)) complete(w, start, last + 1);
+	return i;
 }
 
-/** The indexes of `measures` in the order they play. */
-export function playedOrder(measures: ReadMeasure[]): number[] {
+const TOO_LONG = (n: number) => `play order too long to write out; stopped at ${n} bars`;
+
+/** The indexes of `measures` in the order they play; a runaway stops at a cap, with a loss. */
+export function playedOrder(measures: ReadMeasure[], losses?: Losses): number[] {
 	const out: number[] = [];
-	const w: Walk = { jumped: false, from: 0, pass: new Map(), spans: endingSpans(measures) };
+	const spans = endingSpans(measures);
+	const w: Walk = {
+		jumped: false,
+		open: [],
+		after: 0,
+		pass: new Map(),
+		spans,
+		endings: endingPasses(measures, spans),
+	};
 	let i: number | null = 0;
-	while (i !== null && out.length < MAX_PLAYED) {
+	while (i !== null && i < measures.length) {
+		if (out.length === MAX_PLAYED) {
+			losses?.add("playOrder", TOO_LONG(MAX_PLAYED));
+			break;
+		}
 		i = landing(measures, i, w);
 		const m = measures[i];
 		if (!m) break;

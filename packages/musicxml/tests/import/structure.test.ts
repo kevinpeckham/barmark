@@ -271,3 +271,97 @@ describe("losses", () => {
 		);
 	});
 });
+
+describe("fix round 1", () => {
+	const segno =
+		'<direction placement="above"><direction-type><segno/></direction-type></direction>';
+	const coda = '<direction placement="above"><direction-type><coda/></direction-type></direction>';
+	const jump = (text: string, sound: string) =>
+		`<direction placement="above"><direction-type><words>${text}</words></direction-type><sound ${sound}/></direction>`;
+	const bars = (...bodies: string[]) =>
+		structureOf(
+			xml`${bodies.map((b, i) => measure(i + 1, (i === 0 ? start() : "") + b)).join("")}`,
+		);
+	const messages = (d: ImportDiagnostic[]) => d.map((x) => x.message);
+
+	test("a stray Fine is dropped with a loss, and the repeats stay", () => {
+		const r = bars(
+			`<barline location="left"><repeat direction="forward"/></barline>${whole}${words("Fine")}`,
+			`${whole}<barline location="right"><repeat direction="backward"/></barline>`,
+		);
+		expect(r.writtenOut).toBe(false);
+		expect(pick(r.bars, "after")).toEqual([[], []]);
+		expect(pick(r.bars, "opens")).toEqual([true, false]);
+		expect(pick(r.bars, "closes")).toEqual([null, 2]);
+		expect(messages(r.diagnostics)).toEqual(["a Fine barmark can't place left out in measure 1"]);
+	});
+
+	test("a D.S. with no segno is dropped with a loss", () => {
+		const r = bars(whole, whole + jump("D.S.", 'dalsegno="s1"'));
+		expect(r.writtenOut).toBe(false);
+		expect(pick(r.bars, "after")).toEqual([[], []]);
+		expect(messages(r.diagnostics)).toEqual(["a D.S. barmark can't place left out in measure 2"]);
+	});
+
+	test("a To Coda with no coda is dropped with a loss", () => {
+		const r = bars(
+			segno + whole + jump("To Coda", 'tocoda="c1"'),
+			whole + jump("D.S. al Coda", 'dalsegno="s1"'),
+			whole,
+		);
+		expect(r.writtenOut).toBe(false);
+		expect(r.bars.flatMap((b) => b.after)).not.toContain("To Coda");
+		expect(messages(r.diagnostics)).toContain(
+			"a To Coda barmark can't place left out in measure 1",
+		);
+	});
+
+	test("of two codas, one is dropped with a loss", () => {
+		const r = bars(
+			segno + whole + jump("To Coda", 'tocoda="c1"'),
+			whole + jump("D.S. al Coda", 'dalsegno="s1"'),
+			coda + whole,
+			coda + whole,
+		);
+		expect(r.writtenOut).toBe(false);
+		expect(r.bars.flatMap((b) => b.before)).toEqual(["Segno", "Coda"]);
+		expect(pick(r.bars, "after")).toEqual([["To Coda"], ["D.S. al Coda"], [], []]);
+		expect(messages(r.diagnostics)).toEqual(["a Coda barmark can't place left out in measure 4"]);
+	});
+
+	test("a jump at a bar's start goes after the bar, where it is taken", () => {
+		const r = bars(segno + whole, jump("D.S.", 'dalsegno="s1"') + whole);
+		expect(pick(r.bars, "before")).toEqual([["Segno"], []]);
+		expect(pick(r.bars, "after")).toEqual([[], ["D.S."]]);
+	});
+
+	test("an ending for passes 1 and 2 closes with a plain :|", () => {
+		const r = fromChart("|: A |\n|1,2 B :|\n|3 C |");
+		expect(r.writtenOut).toBe(false);
+		expect(r.diagnostics).toEqual([]);
+		expect(pick(r.bars, "ending")).toEqual([null, [1, 2], [3]]);
+		expect(pick(r.bars, "closes")).toEqual([null, 2, null]);
+	});
+
+	test("a key change inside a repeat", () => {
+		const r = fromChart("|: C |\nkey: G\n| D :|\n| E |");
+		expect(r.writtenOut).toBe(false);
+		expect(pick(r.bars, "directives")).toEqual([null, "key: G", null]);
+	});
+
+	test("a metronome with a dotted beat unit", () => {
+		const dotted =
+			'<direction placement="above"><direction-type><metronome><beat-unit>quarter</beat-unit><beat-unit-dot/><per-minute>60</per-minute></metronome></direction-type></direction>';
+		const in44 = xml`${measure(1, start() + dotted + whole)}`;
+		expect(structureOf(in44).bars[0]?.directives).toBe("tempo: 90");
+		const in68 = xml`${measure(1, start("<beats>6</beats><beat-type>8</beat-type>") + dotted + note("C", 4, 3))}`;
+		expect(structureOf(in68).bars[0]?.directives).toBe("time: 6/8, tempo: 60");
+	});
+
+	test("a backward repeat with none before it opens at the bar after the last repeat", () => {
+		const back = '<barline location="right"><repeat direction="backward"/></barline>';
+		const r = bars(whole + back, whole + back);
+		expect(r.writtenOut).toBe(false);
+		expect(pick(r.bars, "opens")).toEqual([true, true]);
+	});
+});
