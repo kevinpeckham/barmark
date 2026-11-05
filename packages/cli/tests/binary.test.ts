@@ -1,8 +1,10 @@
 import { beforeAll, describe, expect, test } from "bun:test";
-import { copyFileSync, mkdtempSync } from "node:fs";
+import { copyFileSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { exportMusicXml } from "@barmark/musicxml";
 import { PEACEFUL_DREAMS } from "./charts.js";
+import { mxl } from "./mxl.js";
 
 const PACKAGE = join(import.meta.dir, "..");
 let dir = "";
@@ -22,6 +24,9 @@ beforeAll(() => {
 	if (compile.exitCode !== 0)
 		throw new Error(compile.stderr.toString() || compile.stdout.toString());
 	copyFileSync(PEACEFUL_DREAMS, join(dir, "peaceful-dreams.chart.md"));
+	const exported = exportMusicXml("# Song\n\n| D |\n| G | C |\n");
+	if (!exported.ok) throw new Error("export failed");
+	writeFileSync(join(dir, "song.mxl"), mxl("score.musicxml", exported.xml));
 }, 60_000);
 
 describe("the compiled binary, with no node_modules beside it", () => {
@@ -43,5 +48,10 @@ describe("the compiled binary, with no node_modules beside it", () => {
 	});
 	test("render embeds the font", () => {
 		expect(barmark("render", "peaceful-dreams.chart.md").out).toContain("data:font/otf;base64,");
+	});
+	test("import unpacks a .mxl (deflate-raw)", () => {
+		const run = barmark("import", "song.mxl");
+		expect(run.code).toBe(0);
+		expect(run.out).toContain("| G | C |");
 	});
 });

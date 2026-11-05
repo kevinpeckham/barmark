@@ -1,6 +1,6 @@
 # @barmark/cli
 
-The `barmark` command: check, format, part, render, transpose and export
+The `barmark` command: check, format, part, render, transpose, export and import
 [Barmark](https://www.barmark.dev) chord charts (`.chart.md` files) in a
 terminal or in CI. It runs the same `barmark` parser and `@barmark/render`
 renderer as barmark.dev, and `@barmark/musicxml` for MusicXML, at exact
@@ -34,6 +34,7 @@ dot-folders and symlinks. `-` reads from stdin.
 ```sh
 barmark check songs                      # errors and warnings, file:line
 barmark export --musicxml song.chart.md --out song.musicxml   # for MuseScore, Dorico…
+barmark import song.musicxml --out song.chart.md   # or a compressed song.mxl
 barmark check --strict --format github songs   # warnings fail too; PR annotations
 barmark format song.chart.md             # print it in standard form
 barmark format --write songs             # rewrite the files that change
@@ -54,6 +55,12 @@ libraries.
 `export --musicxml` writes MusicXML 4.0 that notation programs open and
 play in the chart's order; `--part <label>` exports one part. A chart
 with errors is not exported. A chart with no title takes its file name.
+
+`import` reads a MusicXML score (`.musicxml`, `.xml` or compressed `.mxl`)
+as a chart. What the chart can't carry over is listed on stderr, one line
+each, as `song.mxl: measure 12 (Piano): message`. `--part <name>` imports
+one part alone, its notes as note sets. It exits 0 when a chart came out,
+even with warnings, and 1 when none did or the file could not be read.
 
 ## Exit codes
 

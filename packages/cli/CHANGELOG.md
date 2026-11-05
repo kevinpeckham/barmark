@@ -6,6 +6,15 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- **`barmark import <file.musicxml|file.mxl>`** reads a MusicXML score,
+  compressed or not, as a chart: to stdout, or to `--out`; `--part <name>`
+  imports one part alone, its notes as note sets. What the chart can't
+  carry over goes to stderr as `file: measure N (Part): message`. Exits 0
+  when a chart came out, even with warnings, and 1 when none did or the
+  file could not be read. The standalone binary includes it.
+
 ## [0.5.1] - 2026-11-05
 
 ### Fixed
