@@ -78,7 +78,7 @@ test("sounding pitch through transpose", () => {
 		partOf(
 			xml`${measure(1, base(1, "<transpose><chromatic>-2</chromatic></transpose>") + note("D", 5, 4))}`,
 		).transpose,
-	).toEqual({ chromatic: -2, octave: 0 });
+	).toEqual({ chromatic: -2, octave: 0, diatonic: null });
 });
 
 test("a transposing part's key reads at concert pitch", () => {

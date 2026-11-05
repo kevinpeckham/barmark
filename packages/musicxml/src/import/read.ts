@@ -62,7 +62,7 @@ export type ReadPart = {
 	staves: number;
 	/** Distinct staff/voice pairs seen; more than four cannot be lines. */
 	voices: number;
-	transpose: { chromatic: number; octave: number };
+	transpose: { chromatic: number; octave: number; diatonic: number | null };
 	measures: ReadMeasure[];
 };
 
@@ -481,7 +481,7 @@ function readPart(node: XNode, meta: Meta, losses: Losses): ReadPart {
 		midiProgram: meta.midiProgram,
 		staves,
 		voices: p.places.length,
-		transpose: { chromatic: p.chromatic, octave: p.octave },
+		transpose: { chromatic: p.chromatic, octave: p.octave, diatonic: p.diatonic },
 		measures,
 	};
 }
