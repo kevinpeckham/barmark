@@ -127,6 +127,21 @@ blocks are named by a hash of their text (`packages/musicxml/tests/charts.ts`);
 the regenerated fixture's twelve old entries were checked identical under
 their new names.
 
+### Dorico files a chart's credits under Flow 1, not the project (2026-11-05, musicxml)
+
+Symptom: Dorico showed the title but no composer, lyricist, arranger or
+copyright, and Project Info's project fields were empty. Six encodings
+through mac-bench changed nothing on the page: `creator`/`rights`
+(what the export writes), a `movement-title`, typed page `<credit>`s,
+positioned ones, untyped ones. Cause: Dorico does import them, from the
+export's own `creator` and `rights`, but into Flow 1's information
+(Kevin checked Project Info); the default first page prints project
+fields only. A `movement-title` becomes the flow's title. Steinberg's
+forum reports the same. No MusicXML route to the project fields turned
+up, and none of Dorico's MusicXML import preferences touch it. Fix:
+none in the export; the package README's "In Dorico" section says to
+copy Flow 1's fields to the project.
+
 ### Dorico drops a leading word "a" from direction text (2026-11-05, musicxml)
 
 Symptom: a heading "A" never showed in Dorico while "B" did; "A section"
