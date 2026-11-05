@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { MORNING_SONG } from "../../barmark/tests/chart/morning-song.js";
+import { cmp, div, frac, plus, ZERO } from "../src/rhythm.js";
 import { all, measures, notes, xmlOf } from "./helpers.js";
 
 describe("slot rhythm", () => {
@@ -77,5 +78,15 @@ describe("attributes", () => {
 		const ms = measures(xmlOf(MORNING_SONG));
 		expect(ms.map((m) => /number="(\d+)"/.exec(m)?.[1])).toEqual(ms.map((_, i) => String(i + 1)));
 		expect(ms.map((m) => /text="(\d+)"/.exec(m)?.[1])).toEqual(ms.map((_, i) => String(i + 1)));
+	});
+});
+
+describe("fraction comparison", () => {
+	test("compares and divides", () => {
+		expect(cmp(plus(frac(1, 3), frac(1, 6)), frac(1, 2))).toBe(0);
+		expect(cmp(frac(1, 3), frac(1, 2))).toBe(-1);
+		expect(cmp(frac(3, 2), frac(1, 2))).toBe(1);
+		expect(div(frac(1, 2), frac(1, 4))).toEqual(frac(2, 1));
+		expect(ZERO).toEqual(frac(0));
 	});
 });
