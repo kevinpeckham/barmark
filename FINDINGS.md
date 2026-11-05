@@ -127,6 +127,17 @@ blocks are named by a hash of their text (`packages/musicxml/tests/charts.ts`);
 the regenerated fixture's twelve old entries were checked identical under
 their new names.
 
+### Dorico drops a leading word "a" from direction text (2026-11-05, musicxml)
+
+Symptom: a heading "A" never showed in Dorico while "B" did; "A section"
+showed "section". Found by mac-bench's Dorico checks, bisected in a few
+runs: transposition, bold and bar 1 made no difference; "A." and "Ab"
+showed; plain "a tempo" became Dorico's tempo mark. Cause: Dorico's import
+reads a leading word "a" as the article in "a tempo" and strips it. Fix:
+chart text written as words holds that "a" to the next word with a
+no-break space (`ownText` in `packages/musicxml/src/directions.ts`);
+barmark's own "a tempo" stays plain so Dorico still recognises it.
+
 ### Dorico ignores `system="only-top"` (2026-11-05, musicxml score marks)
 
 Symptom: with every part writing the headings under MusicXML 4.0's

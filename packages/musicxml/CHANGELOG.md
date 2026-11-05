@@ -14,6 +14,10 @@ package uses [semantic versioning](https://semver.org/).
   they ran into the part above (a piano's Ped. brackets). They carry
   `system="only-top"` too, for programs that read it. A part exported
   alone with `part` still writes them all.
+- **A heading or text line starting with the word "A"** keeps it in
+  Dorico, which reads a leading "a" as the article in "a tempo" and drops
+  it ("A" vanished, "A section" showed "section"): a no-break space now
+  follows that "A". Other programs show the same text.
 - **`x ...` plays once** in notation programs, as barmark plays it: the
   repeat writes `times="1"` (none meant twice).
 - **A bar no pass plays** (one between `D.C. al Coda` and `Coda`) keeps

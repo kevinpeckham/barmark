@@ -2,7 +2,15 @@
 import type { Key, Meter, WrittenInterval } from "barmark";
 import { type Beam, beamsOf } from "./beams.js";
 import type { Clef } from "./clefs.js";
-import { feelXml, jumpXml, scoreDirection, tempoXml, textXml, wordsXml } from "./directions.js";
+import {
+	feelXml,
+	jumpXml,
+	ownText,
+	scoreDirection,
+	tempoXml,
+	textXml,
+	wordsXml,
+} from "./directions.js";
 import type { MeasureEvents, SoundEvent } from "./events.js";
 import { slotHarmonyXml } from "./harmony.js";
 import type { Marks, Measure } from "./measures.js";
@@ -328,7 +336,9 @@ function staffXml(bar: MeasureEvents, ctx: MeasureContext): string {
 function scoreStartXml(m: Measure, ctx: MeasureContext): string {
 	const { marks } = m;
 	return [
-		marks.heading ? scoreDirection(text("words", marks.heading, { "font-weight": "bold" })) : "",
+		marks.heading
+			? scoreDirection(text("words", ownText(marks.heading), { "font-weight": "bold" }))
+			: "",
 		marks.rehearsal ? scoreDirection(text("rehearsal", marks.rehearsal)) : "",
 		tempoXml(m, ctx.previous, ctx.next),
 		feelXml(m, ctx.previous),

@@ -18,7 +18,14 @@ export const scoreDirection = (types: string, sound = "") =>
 		sound,
 	]);
 
-export const wordsXml = (words: string) => direction(text("words", words));
+/**
+ * Text from the chart, with a leading word "a" held to the next by a no-break
+ * space: Dorico reads a lone "a" as the article in "a tempo" and drops it
+ * ("A" vanishes, "A section" shows "section").
+ */
+export const ownText = (s: string) => s.replace(/^([Aa])(?: |$)/, "$1\u00a0");
+
+export const wordsXml = (words: string) => direction(text("words", ownText(words)));
 
 const JUMP_WORDS = { start: "D.C.", segno: "D.S." };
 const AL_WORDS = { fine: " al Fine", coda: " al Coda" };
@@ -109,6 +116,10 @@ export function feelXml(m: Measure, prev: Measure | null): string {
 export const textXml = (lines: Measure["text"]) =>
 	lines
 		.map((l) =>
-			direction(text("words", l.text, l.note ? { "font-style": "italic" } : {}), "", "below"),
+			direction(
+				text("words", ownText(l.text), l.note ? { "font-style": "italic" } : {}),
+				"",
+				"below",
+			),
 		)
 		.join("");

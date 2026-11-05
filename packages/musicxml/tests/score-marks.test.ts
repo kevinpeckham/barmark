@@ -96,3 +96,23 @@ describe("an open repeat", () => {
 		expect(play(xml)).toEqual(expected(text));
 	});
 });
+
+describe("a leading word A", () => {
+	/** Dorico reads a leading "a" as the article in "a tempo" and drops it. */
+	const NBSP = " ";
+	test("a heading A keeps its letter: a no-break space follows it", () => {
+		const xml = xmlOf("## A\n| G | C |\n## A section\n| D |");
+		expect(xml).toContain(`>A${NBSP}</words>`);
+		expect(xml).toContain(`>A${NBSP}section</words>`);
+	});
+	test("so does a text line, in either case", () => {
+		const xml = xmlOf("| G | C |\n### a cappella\n");
+		expect(xml).toContain(`>a${NBSP}cappella</words>`);
+	});
+	test("other text, and barmark's own a tempo, are written as they are", () => {
+		const xml = xmlOf("tempo: 120\n## Abba\n| G |\ntempo: rit.\n| C |\ntempo: a tempo\n| D |");
+		expect(xml).toContain(">Abba</words>");
+		expect(xml).toContain(">a tempo</words>");
+		expect(xml).not.toContain(`${NBSP}tempo`);
+	});
+});

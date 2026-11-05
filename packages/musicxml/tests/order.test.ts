@@ -68,7 +68,7 @@ describe("play order", () => {
 			"1",
 			"2",
 		]);
-		expect(measures(xml)[3]).toContain('<words font-weight="bold">A</words>');
+		expect(measures(xml)[3]).toContain('<words font-weight="bold">A\u00a0</words>');
 	});
 	test("an elision drops its bar, on the last pass of x2 too", () => {
 		plays("## Chorus\n| C | D | E |\n## Chorus ->\n## Out\n| G |");
