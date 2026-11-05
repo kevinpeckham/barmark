@@ -6,12 +6,25 @@ type Syllable = Attack["lyrics"][number];
 
 const PLACEMENT = "lyrics written as text lines; their placement by beat isn't kept";
 
+const tidy = (text: string) => text.replace(/\s+/g, " ").trim();
+
+/** An attack's syllables: whitespace collapsed, empty ones dropped, one per verse (a chord repeats its lyric on every note). */
+function sungAt(attack: Attack): Syllable[] {
+	const seen = new Set<number>();
+	return attack.lyrics.flatMap((s) => {
+		const text = tidy(s.text);
+		if (text === "" || seen.has(s.verse)) return [];
+		seen.add(s.verse);
+		return [{ ...s, text }];
+	});
+}
+
 /** The syllables of each verse sung on a line through some measures, in order. */
 function syllablesByVerse(measures: ReadMeasure[], line: number): Map<number, Syllable[]> {
 	const out = new Map<number, Syllable[]>();
 	for (const m of measures)
 		for (const attack of m.lines[line] ?? [])
-			for (const s of attack.lyrics) out.set(s.verse, [...(out.get(s.verse) ?? []), s]);
+			for (const s of sungAt(attack)) out.set(s.verse, [...(out.get(s.verse) ?? []), s]);
 	return out;
 }
 
@@ -69,9 +82,8 @@ export function lyricLines(
 	return out;
 }
 
-/** The text lines for a system's verses, numbered "1. " only when there is more than one. */
-export function verseText(verses: Map<number, string[]>): string[] {
-	const numbered = verses.size > 1;
+/** The text lines for a system's verses, with "N. " prefixes when the piece has more than one verse. */
+export function verseText(verses: Map<number, string[]>, numbered = false): string[] {
 	return [...verses.entries()]
 		.sort(([a], [b]) => a - b)
 		.map(([verse, words]) => `${numbered ? `${verse}. ` : ""}${words.join(" ")}`.trim());
@@ -91,7 +103,7 @@ const lyricLine = (part: ReadPart) => {
 export function importLyrics(
 	parts: ReadPart[],
 	losses: Losses,
-): { part: number; line: number } | null {
+): { part: number; line: number; numbered: boolean } | null {
 	const found = parts.map((p) => lyricLine(p));
 	const first = found.findIndex((line) => line >= 0);
 	const chosen = parts[first];
@@ -105,5 +117,11 @@ export function importLyrics(
 				p.name,
 			);
 	});
-	return { part: first, line: found[first] ?? 0 };
+	const line = found[first] ?? 0;
+	const verses = new Set(
+		chosen.measures.flatMap((m) =>
+			(m.lines[line] ?? []).flatMap((a) => a.lyrics.map((l) => l.verse)),
+		),
+	);
+	return { part: first, line, numbered: verses.size > 1 };
 }

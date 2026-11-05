@@ -22,12 +22,48 @@ test("two verses get numbers", () => {
 	const ms = measuresOf(
 		xml`${bar(1, sung(lyric("happy", "single", 1) + lyric("merry", "single", 2)), sung(lyric("birthday", "single", 1) + lyric("christmas", "single", 2)))}`,
 	);
-	expect(verseText(lyricLines(ms, 0))).toEqual(["1. happy birthday", "2. merry christmas"]);
+	expect(verseText(lyricLines(ms, 0), true)).toEqual(["1. happy birthday", "2. merry christmas"]);
 });
 
 test("one verse has no number", () => {
-	const ms = measuresOf(xml`${bar(1, sung(lyric("la", "single", 2)))}`);
+	const ms = measuresOf(xml`${bar(1, sung(lyric("la")))}`);
+	const part = partOf(xml`${bar(1, sung(lyric("la")))}`);
+	expect(importLyrics([part], new Losses())?.numbered).toBe(false);
+	expect(verseText(lyricLines(ms, 0), false)).toEqual(["la"]);
+});
+
+test("a system holding only verse 2 of a two-verse piece prints its number", () => {
+	const xmlText = xml`${bar(1, sung(lyric("a", "single", 1)))}${bar(2, sung(lyric("b", "single", 2)))}`;
+	const part = partOf(xmlText);
+	const info = importLyrics([part], new Losses());
+	expect(info?.numbered).toBe(true);
+	const second = part.measures.slice(1);
+	expect(verseText(lyricLines(second, 0), info?.numbered)).toEqual(["2. b"]);
+});
+
+test("whitespace in a syllable never breaks a line or doubles a space", () => {
+	const ms = measuresOf(
+		xml`${bar(1, sung(lyric("hap\npy", "single")), sung(lyric("  \n ", "single")), sung(lyric("day  now", "single")))}`,
+	);
+	expect(verseText(lyricLines(ms, 0))).toEqual(["hap py day now"]);
+});
+
+test("a lyric repeated on every note of a chord is sung once", () => {
+	const chord =
+		sung(lyric("la")) +
+		`<note><chord/><pitch><step>E</step><octave>4</octave></pitch><duration>1</duration>${lyric("la")}</note>`;
+	const ms = measuresOf(xml`${bar(1, chord)}`);
 	expect(verseText(lyricLines(ms, 0))).toEqual(["la"]);
+});
+
+test("a word still open at the end of the piece is kept", () => {
+	const ms = measuresOf(xml`${bar(1, sung(lyric("hap", "begin")))}`);
+	expect(verseText(lyricLines(ms, 0))).toEqual(["hap"]);
+});
+
+test("an orphan end syllable in the first system is dropped", () => {
+	const ms = measuresOf(xml`${bar(1, sung(lyric("py", "end")), sung(lyric("day", "single")))}`);
+	expect(verseText(lyricLines(ms, 0))).toEqual(["day"]);
 });
 
 test("an elision joins with a space", () => {
@@ -63,7 +99,7 @@ test("lyrics from the first part that has them; the others named once", () => {
 	const sop = { ...partOf(xml`${bar(1, sung(lyric("la")))}`), name: "Soprano" };
 	const alto = { ...sop, name: "Alto" };
 	const losses = new Losses();
-	expect(importLyrics([quiet, sop, alto], losses)).toEqual({ part: 1, line: 0 });
+	expect(importLyrics([quiet, sop, alto], losses)).toEqual({ part: 1, line: 0, numbered: false });
 	expect(losses.list().map((d) => [d.part, d.message])).toEqual([
 		["Soprano", "lyrics written as text lines; their placement by beat isn't kept"],
 		["Alto", "lyrics in Alto left out; only Soprano's are kept"],
