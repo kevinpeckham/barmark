@@ -2,8 +2,11 @@
 
 Status: draft for Kevin's review (2026-11-05). Kevin skipped the design
 questions and asked for a design from Claude's recommendations, so every
-decision below is Claude's call unless marked otherwise. The calls list
+decision below is Claude's call unless marked as Kevin's. The calls list
 at the end gathers them.
+
+Kevin's decision (2026-11-05): import note sets (4) and voicings (4.2),
+which barmark already supports, not chords alone.
 
 ## Intent
 
@@ -40,9 +43,11 @@ package.
 
 ## Non-goals
 
-- **Notes.** Melody, bass lines, voicings and note sets are not read; a
-  chart is chords. (barmark's own export writes note sets and voicings
-  as notes; they don't come back in this version.)
+- **Melody.** Notes are read only as note sets and voicings, in parts
+  whose notes behave as chords (see "Notes"); a melody is never turned
+  into a run of note sets.
+- **Part lines** (7.6: a keyboard's hands, second voices). A part with
+  more than one staff or voice is read as chords only, this version.
 - **Chord recognition.** A file with no `<harmony>` gives an error, "no
   chord symbols to import"; the importer never guesses chords from
   notes.
@@ -84,6 +89,8 @@ package.
 | `<rehearsal>` of letters or digits | `@A` |
 | bold `<words>` at a bar's start | `## Heading` (barmark's export writes headings so) |
 | other `<words>` | words on a bar (2.6) |
+| notes attacked together with a `<harmony>` and lasting its span | a voicing, `Cmaj7{E3 G3 B3}` (see "Notes") |
+| notes attacked together with no `<harmony>` | a note set, `{C4 E4 G4}` |
 | a held chord with nothing new | `/`; a bar identical to the one before, as the canonical form prints it |
 
 A no-break space after a leading "A" (the export's Dorico workaround) is
@@ -100,10 +107,41 @@ its beat reaches it exactly (an eighth, a triplet); anything finer moves
 to the nearest beat with a diagnostic. A chord held over the bar line
 is `/` in the next bar.
 
+### Notes
+
+The export writes a chord as a `<harmony>` over slash notes, a voicing
+as a `<harmony>` over notes that start and end with it, and a note set
+as notes with no `<harmony>`. A note set is therefore indistinguishable,
+bar by bar, from a melody under a held chord, so the importer decides
+per part:
+
+- **A chord part** reads its notes. Every chord's span holds either
+  slash notes (a plain chord) or one attack of notes held to the span's
+  end (a voicing), and every other attack lands on the slot grid
+  ("Placing chords"). Attacks with no `<harmony>` are note sets. Notes
+  tied over a bar line, or into the next slot, are `/`.
+- **Any other part with chords is a melody part:** a chord's span holds
+  more than one attack of notes, or a note falls off the grid. Its
+  chords are read and its notes ignored, with one diagnostic ("Lead:
+  notes read as a melody and left out"). A lead sheet is the usual case.
+  Snapping is never applied to notes: a note that would have to move
+  makes the part a melody part.
+- **A part with notes and no chords** (a bass line) is read as note
+  sets when the file was written by `@barmark/musicxml` (its
+  `<encoding><software>`), or when it is named with `--part`. Otherwise
+  it is listed in one diagnostic, with the `--part` to import it, so a
+  full score doesn't import every instrument as note sets.
+
+Pitches are sounding pitch (4.1), through the part's `<transpose>`
+(octave changes included). Octaves are always written, since MusicXML
+always has them. A voicing note that isn't in its chord (an error in
+4.2) drops the voicing: the chord is written alone, with a warning.
+`!` (a marked root) is never written; MusicXML has no way to say it.
+
 ### Parts
 
-Only parts that carry `<harmony>` are read; the rest are listed in one
-diagnostic. Parts whose chords are the same throughout make one chart
+Parts that carry `<harmony>` are read, and parts of notes alone as
+"Notes" says; the rest are listed in one diagnostic. Parts whose chords are the same throughout make one chart
 line, as a lead sheet's do. Parts whose chords differ become several
 parts (7.4), each named from its `<part-abbreviation>` (else
 `<part-name>`). `--part name` / `options.part` imports that part alone.
@@ -124,7 +162,8 @@ every heading, repeat mark, ending and directive.
 
 - **Round trip (the yardstick):** every chord chart among the barmark
   package's fixtures (the grammar's examples, `examples/`, the export's
-  test charts), minus those using note sets, voicings or part lines:
+  test charts), note sets and voicings included, minus those using part
+  lines, accents, hits or pushes:
   export, import, and compare the expanded play order (barmark's
   `expand`) bar by bar: meter, key, tempo, feel, section name,
   rehearsal mark, words, and the chord timeline. Section replays don't
@@ -139,6 +178,9 @@ every heading, repeat mark, ending and directive.
 - **Dorico round trip** through mac-bench: barmark → export → Dorico →
   Dorico's MusicXML → import → same play order. It runs only where
   `MAC_BENCH_URL` is reachable, not in CI.
+- **Melody stays out:** a MuseScore lead sheet (melody and chords in one
+  part) imports as its chords with no note sets; a voicing with a note
+  outside its chord imports as the chord alone.
 - Unit tests per mapping row, and malformed input (bad XML, no
   harmony, a `.mxl` without a rootfile) never throwing.
 - The produced chart parses with no errors, and `format` leaves it
@@ -164,8 +206,11 @@ the songs bump, per RELEASING.md.
 
 ## Claude's calls (for Kevin to check)
 
-1. Chords only: notes, voicings and note sets are not imported in this
-   version.
+1. Note sets and voicings are read only from chord parts (every chord's
+   span is slashes or one held attack, every note on the grid); other
+   parts with chords give their chords alone. Parts of notes alone are
+   read only from barmark's own files or with `--part`.
+1a. Part lines (several staves or voices in a part) are not read yet.
 2. The output is canonical barmark, and must parse without errors;
    unreadable chords become `?`.
 3. Bold words at a bar's start become `## Headings`; other words, words
