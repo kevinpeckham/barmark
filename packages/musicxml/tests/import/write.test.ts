@@ -113,7 +113,7 @@ Pno | G/B | C | Em | D |
 Gtr | G | C | D | G |
 
 ## Chorus
-|: C | G | D | G :|
+| C | G | D | G | x2
 `);
 });
 
@@ -139,18 +139,54 @@ describe("replays", () => {
 		const same = sound(
 			importXml(leadSheet([...chorus(["la", "la"]), ...verse, ...chorus(["la", "la"])])),
 		);
-		expect(same).toBe("## Chorus\n| C | G |\nla la\n\n## Verse\n| D |\noh\n\n## Chorus\n");
+		expect(same).toBe("## Chorus\n| C | G |\nla la\n\n## Verse\n| D |\noh\n\n## Chorus\nla la\n");
 		const sungAnew = sound(
 			importXml(leadSheet([...chorus(["la", "la"]), ...verse, ...chorus(["na", "na"])])),
 		);
 		expect(sungAnew).toBe(
-			"## Chorus\n| C | G |\nla la\n\n## Verse\n| D |\noh\n\n## Chorus\n| C | G |\nna na\n",
+			"## Chorus\n| C | G |\nla la\n\n## Verse\n| D |\noh\n\n## Chorus\nna na\n",
 		);
+		expect(parseChart(sungAnew).bars.map((b) => b.section)).toEqual([
+			"Chorus",
+			"Chorus",
+			"Verse",
+			"Chorus",
+			"Chorus",
+		]);
 	});
 });
 
 test("a repeated bar is %", () => {
 	expect(roundTrip("| C | C | G | G |")).toBe("| C | % | G | % |\n");
+});
+
+describe("a repeat of a whole line or section is x N on it", () => {
+	test("a line", () => {
+		const chart = "| D7sus4 | % | % | % | x2\n| C5 | % | G5(7) | % |\n| D7sus4 | % | % | % | x3";
+		expect(roundTrip(chart)).toBe(canonical(chart));
+	});
+
+	test("an open repeat", () => {
+		expect(roundTrip("| C | D | x ...")).toBe("| C | D | x ...\n");
+	});
+
+	test("every labelled line of the system", () => {
+		const chart = "part: A = Alpha\npart: B = Beta\nA | C | D | x3\nB | E | F | x3";
+		expect(roundTrip(chart)).toBe(canonical(chart));
+	});
+
+	test("a whole section of several lines is x N on its heading, and on its replay", () => {
+		const chart =
+			"## Chorus\n|: C | D | E | F |\n| G :|\n## Verse\n| A |\n## Chorus\n|: C | D | E | F |\n| G :|";
+		expect(roundTrip(chart)).toBe(
+			"## Chorus x2\n| C | D | E | F |\n| G |\n\n## Verse\n| A |\n\n## Chorus x2\n",
+		);
+	});
+
+	test("a repeat with endings keeps its marks", () => {
+		const chart = "|: C | D |\n|1 E :|\n|2 F |";
+		expect(roundTrip(chart)).toBe(canonical(chart));
+	});
 });
 
 test("a held bar stays a hold, never %", () => {
@@ -193,7 +229,7 @@ describe("systems break at a heading, a repeat, an ending, a direction, ..., a t
 	const cases: [string, string][] = [
 		["four bars a system", "| C | D | E | F | G | A |"],
 		["a heading", "## A\n| C | D |\n## B\n| E |"],
-		["a repeat", "| C | D |\n|: E | F :|\n| G |"],
+		["a repeat", "| C | D |\n| E | F | x2\n| G |"],
 		["an ending", "|: C |\n|1 D :|\n|2 E |\n| F |"],
 		["a direction", "| Segno | C | Fine |\n| D | D.S. al Fine |"],
 		["...", "| C | ... | D |"],

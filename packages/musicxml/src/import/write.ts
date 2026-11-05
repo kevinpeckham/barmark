@@ -10,8 +10,8 @@ import { metersOf, settleEndings } from "./endings.js";
 import type { Losses } from "./losses.js";
 import { importLyrics, lyricLines, verseText } from "./lyrics.js";
 import type { ImportedPart } from "./parts.js";
-import type { ReadScore } from "./read.js";
-import { type LyricSource, replaysOf, type Section, sectionsOf } from "./replays.js";
+import type { ReadMeasure, ReadScore } from "./read.js";
+import { replaysOf, type Section, sectionsOf, wholeRepeat } from "./replays.js";
 import { allLines, type Last, playingOf, rowsOf, type Source } from "./rows.js";
 import type { Structure } from "./structure.js";
 import { type System, systemsOf } from "./systems.js";
@@ -30,16 +30,22 @@ export function numbered(labels: string[]): string[] {
 	});
 }
 
+/** Where lyrics are read: the measures of the part that has them, its line, and whether verses are numbered. */
+type LyricSource = { measures: ReadMeasure[]; line: number; numbered: boolean };
+
+/** Bars `from` up to `to` (exclusive): a system or a section. */
+type Span = { from: number; to: number };
+
 /** What the body is written with. */
 type Writer = {
 	src: Source;
 	header: string[];
-	lyrics: (LyricSource & { numbered: boolean }) | null;
+	lyrics: LyricSource | null;
 	last: Last;
 };
 
-/** The lyric text lines for a system's bars, one per verse. */
-function lyricsUnder(w: Writer, s: System): string[] {
+/** The lyric text lines for a system's (or a replayed section's) bars, one per verse. */
+function lyricsUnder(w: Writer, s: Span): string[] {
 	const { lyrics, src } = w;
 	if (!lyrics) return [];
 	const measuresOf = (from: number, to: number) =>
@@ -48,12 +54,18 @@ function lyricsUnder(w: Writer, s: System): string[] {
 	return verseText(verses, lyrics.numbered).flatMap((t) => textLine(t, w.header) ?? []);
 }
 
+/** A section's heading, with `x N` when the section repeats whole; null when the name can't be written as one. */
+function headingOf(w: Writer, s: System, times: string | null): string | null {
+	const name = w.src.bars[s.from]?.heading;
+	const line = name == null ? null : headingLine(name, w.header);
+	return line && times ? `${line} ${times}` : line;
+}
+
 /** What comes before a system's rows: its first bar's directives and heading. */
-function before(w: Writer, s: System): string[] {
-	const bar = w.src.bars[s.from];
-	if (!bar) return [];
-	const heading = bar.heading === null ? null : headingLine(bar.heading, w.header);
-	return [...(bar.directives ? [bar.directives] : []), ...(heading ? [heading] : [])];
+function before(w: Writer, s: System, times: string | null): string[] {
+	const directives = w.src.bars[s.from]?.directives;
+	const heading = headingOf(w, s, times);
+	return [...(directives ? [directives] : []), ...(heading ? [heading] : [])];
 }
 
 /** Every text line the system's bars carry, before its rows (an ending may hold some mid-line). */
@@ -63,18 +75,42 @@ function textOf(w: Writer, s: System): string[] {
 		.flatMap((b) => b.textLines.flatMap((t) => textLine(t, w.header) ?? []));
 }
 
-function systemLines(w: Writer, s: System): string[] {
-	return [...before(w, s), ...textOf(w, s), ...rowsOf(w.src, s, w.last), ...lyricsUnder(w, s)];
+/** How a section is written: as a replay (its heading and lyrics alone), and `x N` when it repeats whole over several systems. */
+type Plan = { replay: boolean; times: string | null };
+
+function plans(w: Writer, systems: System[], sections: Section[]): Map<number, Plan> {
+	const replays = replaysOf(w.src, sections);
+	return new Map(
+		sections.map((s) => {
+			const rows = systems.filter((x) => s.from <= x.from && x.from < s.to).length;
+			const times = rows > 1 ? wholeRepeat(w.src, s) : null;
+			// A replay needs its heading; a name no heading can hold (unreachable in
+			// practice: quoting stops every repeat and elision) writes its bars out.
+			const named = headingOf(w, { from: s.from, to: s.to, tutti: true, lines: [] }, null);
+			return [s.from, { replay: replays.has(s.from) && named !== null, times }];
+		}),
+	);
 }
 
-/** The body: each system, a replayed section as its heading alone. */
+function systemLines(w: Writer, s: System, plan: Plan, first: boolean): string[] {
+	return [
+		...before(w, s, first ? plan.times : null),
+		...textOf(w, s),
+		...rowsOf(w.src, s, w.last, plan.times !== null),
+		...lyricsUnder(w, s),
+	];
+}
+
+/** The body: each system; a replayed section as its heading and its own lyrics. */
 function body(w: Writer, systems: System[], sections: Section[]): string[] {
-	const replays = replaysOf(w.src, sections, w.lyrics);
+	const planned = plans(w, systems, sections);
 	const sectionOf = (i: number) => sections.find((x) => x.from <= i && i < x.to) as Section;
 	return systems.flatMap((s) => {
-		const start = sectionOf(s.from).from;
-		if (!replays.has(start)) return systemLines(w, s);
-		return s.from === start ? before(w, s) : [];
+		const section = sectionOf(s.from);
+		const plan = planned.get(section.from) as Plan;
+		const first = s.from === section.from;
+		if (!plan.replay) return systemLines(w, s, plan, first);
+		return first ? [...before(w, s, plan.times), ...lyricsUnder(w, section)] : [];
 	});
 }
 

@@ -156,8 +156,29 @@ export function allLines(src: Source): Last {
 	);
 }
 
+/** `x2`, or `x ...` for an open repeat, from how many times a repeat plays (grammar 5). */
+export const timesText = (closes: number | "open") => (closes === "open" ? "x ..." : `x${closes}`);
+
+/**
+ * How a system's lines open and close. A repeat of the whole line, with no
+ * endings, is `x N` on it (grammar 5); inside a section repeated whole
+ * (`## Chorus x2`), the lines carry no repeat marks.
+ */
+function frame(first: BarInfo, end: BarInfo, inRepeatedSection: boolean): [string, string] {
+	if (inRepeatedSection) return ["|", "|"];
+	const whole = first.opens && end.closes !== null && first.ending === null && end.ending === null;
+	return whole
+		? ["|", `| ${timesText(end.closes as number | "open")}`]
+		: [opening(first), closing(end)];
+}
+
 /** The system's bar lines, in score order; `last` is kept up to date for the next system. */
-export function rowsOf(src: Source, system: System, last: Last): string[] {
+export function rowsOf(
+	src: Source,
+	system: System,
+	last: Last,
+	inRepeatedSection = false,
+): string[] {
 	const keys: (string | null)[] = system.tutti ? [null] : system.lines;
 	const cells = keys.map(() => [] as string[]);
 	for (let i = system.from; i < system.to; i++) {
@@ -166,7 +187,6 @@ export function rowsOf(src: Source, system: System, last: Last): string[] {
 	}
 	const first = src.bars[system.from] as BarInfo;
 	const end = src.bars[system.to - 1] as BarInfo;
-	return keys.map(
-		(key, r) => `${labelOf(src, key)}${opening(first)} ${cells[r]?.join(" | ")} ${closing(end)}`,
-	);
+	const [open, close] = frame(first, end, inRepeatedSection);
+	return keys.map((key, r) => `${labelOf(src, key)}${open} ${cells[r]?.join(" | ")} ${close}`);
 }
