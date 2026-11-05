@@ -541,26 +541,39 @@ function partMeta(list: XNode | undefined): Map<string, Meta> {
 	return out;
 }
 
-const ROLES = ["composer", "lyricist", "arranger"] as const;
+const EMPTY: XNode = { name: "", attrs: {}, children: [], text: "", pis: [] };
 
-function creditsOf(identification: XNode | undefined): Credits {
+/** The page `<credit>`s of a type (`composer`, `rights`), each its words joined. */
+function typedCredits(root: XNode, type: string): string[] {
+	return children(root, "credit")
+		.filter((c) => children(c, "credit-type").some((t) => textOf(t) === type))
+		.map((c) =>
+			children(c, "credit-words")
+				.map((w) => textOf(w))
+				.filter((w) => w !== "")
+				.join(" "),
+		)
+		.filter((text) => text !== "");
+}
+
+/** The creators and rights; a file that names no creator has its typed page credits read instead. */
+function creditsOf(root: XNode): Credits {
+	const identification = child(root, "identification") ?? EMPTY;
 	const named = (name: string) =>
-		children(
-			identification ?? { name: "", attrs: {}, children: [], text: "", pis: [] },
-			name,
-		).filter((c) => textOf(c) !== "");
-	const creators = named("creator");
+		children(identification, name)
+			.filter((c) => textOf(c) !== "")
+			.map((c) => textOf(c));
+	const creators = children(identification, "creator").filter((c) => textOf(c) !== "");
+	const byRole = (role: string) =>
+		creators.length > 0
+			? creators.filter((c) => c.attrs.type === role).map((c) => textOf(c))
+			: typedCredits(root, role);
+	const rights = named("rights");
 	return {
-		composer: [],
-		lyricist: [],
-		arranger: [],
-		...Object.fromEntries(
-			ROLES.map((role) => [
-				role,
-				creators.filter((c) => c.attrs.type === role).map((c) => textOf(c)),
-			]),
-		),
-		copyright: named("rights").map((r) => textOf(r)),
+		composer: byRole("composer"),
+		lyricist: byRole("lyricist"),
+		arranger: byRole("arranger"),
+		copyright: rights.length > 0 || creators.length > 0 ? rights : typedCredits(root, "rights"),
 	};
 }
 
@@ -580,7 +593,7 @@ export function readScore(root: XNode, losses: Losses): ReadScore | null {
 	const identification = child(root, "identification");
 	return {
 		title: textOf(child(root, "work"), "work-title") || textOf(root, "movement-title") || null,
-		credits: creditsOf(identification),
+		credits: creditsOf(root),
 		software: textOf(child(identification ?? root, "encoding"), "software") || null,
 		parts: children(root, "part").map((part) =>
 			readPart(part, meta.get(part.attrs.id ?? "") ?? noMeta(part.attrs.id ?? ""), losses),

@@ -24,6 +24,27 @@ diagnostics }`, where the diagnostics are warnings. The
 same from a terminal: `barmark export --musicxml chart.md --out
 chart.musicxml`.
 
+## Import
+
+```ts
+import { importMusicXml, readMxl } from "@barmark/musicxml";
+
+const xml = file.endsWith(".mxl") ? await readMxl(bytes) : text;
+const { text: chart, diagnostics } = importMusicXml(xml); // or { part: "Piano" }
+```
+
+`importMusicXml` reads a `score-partwise` file into a canonical barmark
+chart: chord symbols, credits, keys, meters, tempo, sections, repeats,
+endings and jumps, words, lyrics as text lines under each row, parts,
+and the voicings, note sets and part lines of parts whose notes act as
+chords (a melody is left out, its chords kept). It never throws: what
+couldn't come over is in `diagnostics`, one warning per kind and part,
+and a file that gives nothing returns empty `text` and an error. A file
+with no chord symbols names the parts that have notes; `part` imports
+one of them as note sets. `readMxl` unpacks a compressed `.mxl` (it
+needs `DecompressionStream("deflate-raw")`: Node 20.12 or later, Bun or
+a browser) and rejects a damaged or oversized archive with an `Error`.
+
 ## What it writes
 
 A `score-partwise` file, one part per `part:` (a chart with none is one

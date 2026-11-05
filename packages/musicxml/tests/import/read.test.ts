@@ -1,4 +1,4 @@
-import { expect, test } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { frac } from "../../src/rhythm.js";
 import { xmlOf } from "../helpers.js";
@@ -469,4 +469,45 @@ test("piano lines' pedal comes back as a loss", () => {
 			.diagnostics.map((d) => d.message)
 			.join("\n"),
 	).toContain("pedal marks left out");
+});
+
+describe("typed page credits", () => {
+	const page = (credits: string, identification = "") =>
+		`<?xml version="1.0"?><score-partwise version="4.0">${identification}${credits}<part-list><score-part id="P1"><part-name>P</part-name></score-part></part-list><part id="P1"><measure number="1"/></part></score-partwise>`;
+	const credit = (type: string, ...words: string[]) =>
+		`<credit page="1"><credit-type>${type}</credit-type>${words.map((w) => `<credit-words>${w}</credit-words>`).join("")}</credit>`;
+
+	test("read when there are no creators", () => {
+		const { score } = read(
+			page(
+				credit("title", "Song") +
+					credit("composer", "Ann Lee") +
+					credit("lyricist", "Words by", "Lou") +
+					credit("arranger", "Zed") +
+					credit("rights", "© 2026") +
+					'<credit page="1"><credit-words>untyped</credit-words></credit>',
+			),
+		);
+		expect(score?.credits).toEqual({
+			composer: ["Ann Lee"],
+			lyricist: ["Words by Lou"],
+			arranger: ["Zed"],
+			copyright: ["© 2026"],
+		});
+	});
+
+	test("ignored when the file names creators; rights keep <rights>", () => {
+		const { score } = read(
+			page(
+				credit("composer", "Page Name") + credit("rights", "page rights"),
+				'<identification><creator type="composer">Ann</creator><rights>(c) Ann</rights></identification>',
+			),
+		);
+		expect(score?.credits).toEqual({
+			composer: ["Ann"],
+			lyricist: [],
+			arranger: [],
+			copyright: ["(c) Ann"],
+		});
+	});
 });

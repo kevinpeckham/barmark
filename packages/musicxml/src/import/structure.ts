@@ -5,7 +5,7 @@
  * of the whole score are read once, from whichever parts carry them. When
  * barmark can't hold the repeats as written, the bars come in played order.
  */
-import { beatsOf, type Meter } from "barmark";
+import { beatsOf, type Meter, parseChord } from "barmark";
 import { beatLength, div, type Frac } from "../rhythm.js";
 import { directiveLines, type Settings, statesOf } from "./directives.js";
 import type { Losses } from "./losses.js";
@@ -155,6 +155,25 @@ function withoutCells(bars: BarInfo[], dropped: DirectionCell[], losses: Losses)
 	return bars;
 }
 
+/**
+ * One warning for words that are chord symbols in all but name (older
+ * Sibelius and Finale export them as `<words>`): they stay words, which is
+ * where the program put them. Barmark's own words are what the chart wrote.
+ */
+function chordWords(bars: BarInfo[], losses: Losses): void {
+	const measures = bars
+		.filter((b) => b.words.some((w) => parseChord(w.text).ok))
+		.map((b) => b.measure);
+	const [first] = measures;
+	if (first === undefined) return;
+	const where = measures.length === 1 ? `measure ${first}` : `${measures.length} measures`;
+	losses.note({
+		severity: "warning",
+		message: `text that looks like chord symbols in ${where}; the program exported them as text`,
+		measure: first,
+	});
+}
+
 /** The score's structure bar by bar, in written order, or in played order when the repeats can't be held. */
 export function readStructure(score: ReadScore, losses: Losses): Structure {
 	const parts = score.parts.map((p) => p.measures);
@@ -186,6 +205,7 @@ export function readStructure(score: ReadScore, losses: Losses): Structure {
 			...(repeats[i] as Repeats),
 		}),
 	);
+	if (!own) chordWords(bars, losses);
 	const placed = placeStructure(bars.map((b) => ({ ...b, heading: b.heading !== null })));
 	if (placed.holds) return { bars: withoutCells(bars, placed.dropped, losses), writtenOut: false };
 	losses.note({ severity: "warning", message: WRITTEN_OUT });

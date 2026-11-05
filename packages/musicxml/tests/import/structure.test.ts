@@ -367,3 +367,39 @@ describe("fix round 1", () => {
 		expect(pick(r.bars, "opens")).toEqual([true, true]);
 	});
 });
+
+describe("chord symbols written as text", () => {
+	const twelve = Array.from({ length: 12 }, (_, i) =>
+		measure(i + 1, (i === 0 ? start() : "") + words(i % 2 ? "G7" : "Cmaj7") + whole),
+	).join("");
+
+	test("stay words, with one warning counting their measures", () => {
+		const r = structureOf(xml`${twelve}`);
+		expect(r.bars.map((b) => b.words.map((w) => w.text))).toEqual(
+			Array.from({ length: 12 }, (_, i) => [i % 2 ? "G7" : "Cmaj7"]),
+		);
+		expect(r.diagnostics).toEqual([
+			{
+				severity: "warning",
+				message:
+					"text that looks like chord symbols in 12 measures; the program exported them as text",
+				measure: "1",
+			},
+		]);
+	});
+
+	test("one measure is named", () => {
+		const r = structureOf(
+			xml`${measure(1, start() + words("solo") + whole)}${measure(2, words("Bb7") + whole)}`,
+		);
+		expect(r.diagnostics.map((d) => d.message)).toEqual([
+			"text that looks like chord symbols in measure 2; the program exported them as text",
+		]);
+	});
+
+	test("barmark's own words are what the chart wrote", () => {
+		const r = fromChart('| "Cmaj7" C | G |');
+		expect(r.bars[0]?.words).toEqual([{ text: "Cmaj7", at: 0 }]);
+		expect(r.diagnostics).toEqual([]);
+	});
+});

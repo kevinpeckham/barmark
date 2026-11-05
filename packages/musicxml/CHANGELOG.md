@@ -8,6 +8,31 @@ package uses [semantic versioning](https://semver.org/).
 
 ### Added
 
+- **Import:** `importMusicXml(xml, { part? })` reads a MusicXML 4.0
+  `score-partwise` file (MuseScore, Dorico, Sibelius, Finale, or this
+  package's own export) back into a canonical barmark chart: the title
+  and credits (typed page credits when the file names no creators),
+  chord symbols (by meaning, then display text, else `?` with the
+  original kept as words), keys, meters and one-bar meters, tempo,
+  rit. and accel., the feel, headings, rehearsal marks, words and text
+  lines, repeats, endings and jumps, fermatas, lyrics as text lines,
+  parts (merged into tutti lines where they agree), and a chord part's
+  voicings, note sets and part lines. It returns `{ text, diagnostics }`
+  and never throws: each kind of loss is one warning per part with a
+  count and the first measures, and a file that gives nothing (bad XML,
+  `score-timewise`, no chord symbols in another program's file) returns
+  empty text and an error. A file with no chord symbols names the parts
+  that hold notes, and `part` imports one of them as note sets; chord
+  symbols a program exported as plain words stay words, with one
+  warning.
+- **`readMxl(bytes)`** unpacks a compressed `.mxl` to its MusicXML text
+  with no dependency (`DecompressionStream("deflate-raw")`: Node 20.12
+  or later, Bun, browsers), following `META-INF/container.xml`, else the
+  first `.musicxml` or `.xml`. It reads UTF-8, or UTF-16 with a
+  byte-order mark. It treats the archive as untrusted: at most 1000
+  entries, at most 64 MiB unpacked per entry (checked while inflating),
+  every offset checked, ZIP64 and encrypted entries refused. A bad
+  archive rejects with an `Error` naming the problem.
 - **A note set's marked root survives:** the root of `{D3 E3! G3 B3}` (and of a
   voicing) is written as a `<?barmark root?>` processing instruction on its
   `<note>`. Other programs ignore it; nothing sounds or looks different.

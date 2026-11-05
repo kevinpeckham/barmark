@@ -672,3 +672,24 @@ screenshots and logs land in `.playwright-mcp/` at the repository root,
 untracked: the CLI 0.2.2 gate failed on them after a preview check. They
 are now listed in `.git/info/exclude` on the bench VM (`git status`
 doesn't count excluded files); they are never committed.
+
+### The musicxml build has no DOM types, so `readMxl` types the platform itself (2026-11-05, musicxml)
+
+`readMxl` passed `bun run check` and every test, then failed the package
+build that the CLI's Node test runs: `tsconfig.build.json` sets `lib` to
+`ESNext` alone, with no DOM or Node types, so `DecompressionStream` and
+`TextDecoder` don't exist there, though Bun, Node and browsers all have
+them (the root `tsconfig.json` sees Bun's types). `mxl.ts` now declares
+the slice of the platform it uses (`Platform`, read off `globalThis`),
+which also lets it see a missing `DecompressionStream` and say "reading
+.mxl needs Node 20.12 or later". Run `bun run --filter '*' build` (or the
+whole `bun test`) after adding a platform API to `src/`.
+
+### The round trip's yardstick reuses barmark's `timeline` rather than copying it (2026-11-05, musicxml)
+
+The import's round-trip test needed the barmark package's `timeline`
+(each attack's exact place in its bar), and the plan said to copy it.
+Fallow's duplication check failed the copy at once. barmark's
+`tests/chart/fixtures.ts` now exports `timeline`, and
+`packages/musicxml/tests/import/played.ts` imports it across packages:
+one yardstick for both round trips.
