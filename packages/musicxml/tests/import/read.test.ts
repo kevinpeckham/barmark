@@ -162,7 +162,7 @@ test("a lyric with an elision joins its texts", () => {
 		)}`,
 	);
 	expect(m?.lines[0]?.[0]?.lyrics).toEqual([
-		{ verse: 1, syllabic: "single", text: "a_b", elision: true },
+		{ verse: 1, syllabic: "single", text: "a b", elision: true },
 	]);
 });
 

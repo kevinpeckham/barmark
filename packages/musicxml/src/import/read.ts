@@ -131,7 +131,7 @@ const LYRIC_SYLLABIC = ["single", "begin", "middle", "end"] as const;
 function lyricText(l: XNode): { text: string; elision: boolean } {
 	const parts = l.children.filter((c) => c.name === "text" || c.name === "elision");
 	return {
-		text: parts.map((c) => (c.name === "elision" && c.text === "" ? " " : c.text)).join(""),
+		text: parts.map((c) => (c.name === "elision" ? " " : c.text)).join(""),
 		elision: parts.some((c) => c.name === "elision"),
 	};
 }
