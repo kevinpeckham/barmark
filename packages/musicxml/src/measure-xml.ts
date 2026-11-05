@@ -40,6 +40,8 @@ export type MeasureContext = {
 	staves: 1 | 2;
 	/** Each of a part's lines' events in this bar, its first line's first (barmark's grammar 7.6); absent when it writes none. */
 	lines?: SoundEvent[][];
+	/** Whether this part writes the score's marks: the top part, or a part exported alone. */
+	score: boolean;
 };
 
 const LETTER_FIFTHS: Record<string, number> = { F: -1, C: 0, G: 1, D: 2, A: 3, E: 4, B: 5 };
@@ -322,8 +324,8 @@ function staffXml(bar: MeasureEvents, ctx: MeasureContext): string {
 	return voiceXml(bar.events, meter, ctx, one) + bar.after.map(wordsXml).join("");
 }
 
-/** Before the notes: the heading, the rehearsal mark, tempo, feel, Segno, Coda and text lines. */
-function startXml(m: Measure, ctx: MeasureContext): string {
+/** The score's marks before the notes: the heading, the rehearsal mark, tempo, feel, Segno and Coda. */
+function scoreStartXml(m: Measure, ctx: MeasureContext): string {
 	const { marks } = m;
 	return [
 		marks.heading ? scoreDirection(text("words", marks.heading, { "font-weight": "bold" })) : "",
@@ -331,9 +333,12 @@ function startXml(m: Measure, ctx: MeasureContext): string {
 		tempoXml(m, ctx.previous, ctx.next),
 		feelXml(m, ctx.previous),
 		...marks.start.map(jumpXml),
-		textXml(m.text),
 	].join("");
 }
+
+/** Before the notes: the score's marks (top part only), then the part's own text lines. */
+const startXml = (m: Measure, ctx: MeasureContext) =>
+	(ctx.score ? scoreStartXml(m, ctx) : "") + textXml(m.text);
 
 /** A repeat's words: an open one's, or a count above 2, which Dorico won't read from `times`. */
 function repeatWords(end: Marks["repeatEnd"]): string {
@@ -341,9 +346,9 @@ function repeatWords(end: Marks["repeatEnd"]): string {
 	return typeof end === "number" && end > 2 ? scoreDirection(text("words", `×${end}`)) : "";
 }
 
-/** After the notes: a repeat's words, To Coda, Fine and the jump. */
-function endXml(marks: Marks): string {
-	return [repeatWords(marks.repeatEnd), ...marks.end.map(jumpXml)].join("");
+/** After the notes (top part only): a repeat's words, To Coda, Fine and the jump. */
+function endXml(marks: Marks, score: boolean): string {
+	return score ? [repeatWords(marks.repeatEnd), ...marks.end.map(jumpXml)].join("") : "";
 }
 
 const endingXml = (marks: Marks, type: string | null | undefined) =>
@@ -388,7 +393,7 @@ export function measureXml(bar: MeasureEvents, ctx: MeasureContext): string {
 		bar.lift === "start" ? pedalXml("stop", ctx.staves === 2 ? 2 : null) : "",
 		body,
 		bar.lift === "end" ? pedalXml("stop", ctx.staves === 2 ? 2 : null) : "",
-		endXml(m.marks),
+		endXml(m.marks, ctx.score),
 		rightBarlineXml(m.marks),
 	]);
 }

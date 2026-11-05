@@ -8,8 +8,9 @@ const direction = (types: string, sound = "", placement = "above") =>
 
 /**
  * A mark of the whole score (a heading, a rehearsal mark, tempo, feel, a
- * jump), written in every part so each reads alone when extracted, and
- * shown once, over the top part, in the score (MusicXML 4.0's `system`).
+ * jump), written in the top part only: Dorico ignores MusicXML 4.0's
+ * `system` and shows a mark written in every part over every staff.
+ * `system="only-top"` stays for the programs that read it.
  */
 export const scoreDirection = (types: string, sound = "") =>
 	el("direction", { placement: "above", system: "only-top" }, [

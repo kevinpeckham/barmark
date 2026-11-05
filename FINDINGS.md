@@ -127,6 +127,16 @@ blocks are named by a hash of their text (`packages/musicxml/tests/charts.ts`);
 the regenerated fixture's twelve old entries were checked identical under
 their new names.
 
+### Dorico ignores `system="only-top"` (2026-11-05, musicxml score marks)
+
+Symptom: with every part writing the headings under MusicXML 4.0's
+`system="only-top"`, Dorico still showed "Verse" and "Bridge" over every
+staff, where they ran into the piano's Ped. brackets. Cause: Dorico's
+import doesn't read the attribute; each part's direction becomes staff
+text. Fix: the score's marks are written in the top part only
+(`MeasureContext.score` in `packages/musicxml/src/measure-xml.ts`), the
+attribute kept for programs that read it; spec section 5 amended.
+
 ### Dorico doesn't reliably hide a `print-object="no"` rest (2026-11-04, musicxml two staves)
 
 Symptom: Morning Song's piano, exported with a hidden whole-bar rest on

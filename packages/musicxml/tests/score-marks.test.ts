@@ -15,21 +15,29 @@ describe("headings and rehearsal marks belong to the score", () => {
 	/** Each direction of a measure that holds `inner`, as XML. */
 	const holding = (measure: string, inner: string) =>
 		(measure.match(/<direction[ >][\s\S]*?<\/direction>/g) ?? []).filter((d) => d.includes(inner));
-	test("every part writes them, shown once over the top part (system only-top)", () => {
-		const xml = xmlOf(BAND);
-		for (const part of ["P1", "P2"]) {
-			const [first] = measures(xml, part);
-			for (const inner of [">Verse</words>", "<rehearsal>A</rehearsal>"]) {
-				const found = holding(first ?? "", inner);
-				expect(found).toHaveLength(1);
-				expect(found[0]).toContain('system="only-top"');
-			}
+	test("the top part writes them, shown once over it (system only-top)", () => {
+		const [first] = measures(xmlOf(BAND), "P1");
+		for (const inner of [">Verse</words>", "<rehearsal>A</rehearsal>"]) {
+			const found = holding(first ?? "", inner);
+			expect(found).toHaveLength(1);
+			expect(found[0]).toContain('system="only-top"');
 		}
 	});
+	test("the parts below don't, since Dorico ignores system and shows them over every staff", () => {
+		const [first] = measures(xmlOf(BAND), "P2");
+		expect(first).not.toContain(">Verse</words>");
+		expect(first).not.toContain("<rehearsal>");
+	});
 	test("so do tempo, feel and jumps", () => {
-		const xml = xmlOf("tempo: 96, feel: swing\n| D | Segno | G | A | D.S. |");
-		for (const inner of ["<metronome", ">swing</words>", "<segno/>", ">D.S.</words>"])
-			expect(holding(xml, inner).every((d) => d.includes('system="only-top"'))).toBe(true);
+		const xml = xmlOf(
+			`${BAND}tempo: 96, feel: swing\nGtr | D | Segno | G | A | D.S. |\nBs  | {D2} | Segno | {G1} | {A1} | D.S. |\n`,
+		);
+		const [top, below] = ["P1", "P2"].map((p) => measures(xml, p).join(""));
+		for (const inner of ["<metronome", ">swing</words>", "<segno/>", ">D.S.</words>"]) {
+			expect(holding(top ?? "", inner).length).toBeGreaterThan(0);
+			expect(holding(top ?? "", inner).every((d) => d.includes('system="only-top"'))).toBe(true);
+			expect(below).not.toContain(inner);
+		}
 	});
 	test("a part's own words don't", () => {
 		const xml = xmlOf(`${BAND}### play softly\n`);
