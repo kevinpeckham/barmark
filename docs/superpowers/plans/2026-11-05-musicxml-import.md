@@ -15,10 +15,12 @@
 - Never throws: every failure is a diagnostic `{ severity: "error" | "warning", message, part?, measure? }`; `measure` is the file's measure `number` attribute.
 - The chart text is canonical (`printChart(text) === text`) and `parseChart(text)` has no error diagnostics, for every input.
 - Each kind of loss is reported once per part, with a count and at most the first three measures: `"<message> in N measures: 1, 2, 3, …"`.
-- One new runtime dependency (`fast-xml-parser`, exact version); `.mxl` uses only `DecompressionStream("deflate-raw")`. Node ≥ 20.6, Bun, browsers: no `node:` imports in `packages/musicxml/src/`.
+- One new runtime dependency (`fast-xml-parser`, exact version); `.mxl` uses only `DecompressionStream("deflate-raw")`. Bun, browsers and Node: no `node:` imports in `packages/musicxml/src/`. `DecompressionStream("deflate-raw")` needs Node 20.12+ (check Node's changelog when building); on an older runtime `readMxl` rejects with "reading .mxl needs Node 20.12 or later", and everything else still runs on Node 20.6.
 - The parser never fetches the DTD (no external entity resolution).
 - Pitches are sounding pitch, through `<transpose>` (`chromatic`, `octave-change`).
 - Notes never move to fit a grid; only chord symbols snap (to the nearest beat, with a warning).
+- Fractions: extend the export's `packages/musicxml/src/rhythm.ts` (`Frac`, `frac`, `plus`, `minus`, `times`, `atMost`), never a second fraction module (Fallow flags duplication).
+- Rests: a whole-measure rest (`<rest measure="yes"/>`) or an empty measure means the line or part rests (tacet, `null`); a timed `<rest/>` is `--`. A single-part chart never drops a bar.
 - Conventional commits, no `Co-Authored-By` or AI trailer. Test first. `bun run fallow` stays clean.
 - CHANGELOG `[Unreleased]` entries in `packages/musicxml` and `packages/cli`; a FINDINGS.md entry for any surprise.
 
@@ -37,6 +39,13 @@ The spec's chord-part rule ("every chord's span holds slashes or one held attack
 - **A file written by `@barmark/musicxml`:** every part is read structurally. A `<harmony>` over slash notes is a chord; a `<harmony>` with non-slash notes attacked at its onset is a voicing; non-slash notes attacked with no `<harmony>` at that onset are a note set; slash notes after an attack hold it; a rest is `--`.
 - **Any other file:** the same reading, but only in a part that writes slash noteheads somewhere (a comping part), and whose every attack lands exactly on the grid. Any other part with `<harmony>` is a melody part (chords alone). This keeps a lead sheet's melody out whatever its rhythm.
 
+Refinements from the plan review (2026-11-05):
+
+- **A two-staff part without lines.** The export splits one line's notes across the staves by pitch (`staves.ts` `split`: below middle C to staff 2, voice 5; the upper staff keeps the `<harmony>`, as a rest if it has no notes). Voices 1 and 5 are the same whether or not the chart wrote lines. So: when a two-staff part uses only those two voices and every staff-2 attack coincides (onset and length) with a staff-1 attack or rest, merge them into one line (pitches united, ascending); otherwise read them as lines.
+- **A `<harmony>` over a rest** (after merging) is a plain chord.
+- **Slash attacks never count against the grid:** slashes are rhythm only, so a comping part's pushed slashes don't stop its voicings being read.
+- **In another program's file,** an attack with no `<harmony>` becomes a note set only with two or more pitches; a single-pitch attack (a fill, a melody note) makes the part a melody part.
+
 The spec's call 1 is updated to this in Task 12.
 
 ---
@@ -45,8 +54,9 @@ The spec's call 1 is updated to this in Task 12.
 
 **Files:**
 - Modify: `packages/musicxml/package.json` (add `"fast-xml-parser": "<exact latest 5.x>"` to `dependencies`), `bun.lock`
-- Create: `packages/musicxml/src/import/tree.ts`, `packages/musicxml/src/import/losses.ts`, `packages/musicxml/src/import/frac.ts`
-- Test: `packages/musicxml/tests/import/tree.test.ts`, `packages/musicxml/tests/import/losses.test.ts`, `packages/musicxml/tests/import/frac.test.ts`
+- Create: `packages/musicxml/src/import/tree.ts`, `packages/musicxml/src/import/losses.ts`
+- Modify: `packages/musicxml/src/rhythm.ts` (export `cmp`, `div`, `ZERO` beside the existing helpers)
+- Test: `packages/musicxml/tests/import/tree.test.ts`, `packages/musicxml/tests/import/losses.test.ts`, `packages/musicxml/tests/rhythm.test.ts` (add to it, or create it)
 
 **Interfaces:**
 - Produces:
@@ -55,7 +65,7 @@ The spec's call 1 is updated to this in Task 12.
   - `child(n: XNode, name: string): XNode | undefined`, `children(n: XNode, name: string): XNode[]`, `textOf(n: XNode | undefined, name?: string): string`
   - `type ImportDiagnostic = { severity: "error" | "warning"; message: string; part?: string; measure?: string }`
   - `class Losses { add(kind: string, message: string, part?: string, measure?: string): void; note(d: ImportDiagnostic): void; list(): ImportDiagnostic[] }` (`add` groups by `kind`+`part`)
-  - `type Frac = { n: number; d: number }` (reduced, `d > 0`); `frac(n, d)`, `add`, `sub`, `mul`, `div`, `cmp(a, b): -1 | 0 | 1`, `eq`, `ZERO`
+  - from `rhythm.ts`: the existing `Frac`, `frac`, `plus`, `minus`, `times`, plus new `div(a, b): Frac`, `cmp(a, b): -1 | 0 | 1`, `ZERO`
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -82,10 +92,10 @@ test("one diagnostic per kind and part, three measures shown", () => {
 	expect(l.list()).toEqual([{ severity: "warning", part: "Lead", measure: "1",
 		message: "notes read as a melody and left out in 4 measures: 1, 2, 3, …" }]);
 });
-// frac.test.ts
-test("reduces and compares", () => {
-	expect(add(frac(1, 3), frac(1, 6))).toEqual(frac(1, 2));
-	expect(cmp(frac(2, 4), frac(1, 2))).toBe(0);
+// rhythm.test.ts
+test("compares and divides", () => {
+	expect(cmp(plus(frac(1, 3), frac(1, 6)), frac(1, 2))).toBe(0);
+	expect(div(frac(1, 2), frac(1, 4))).toEqual(frac(2, 1));
 });
 ```
 
@@ -94,7 +104,7 @@ test("reduces and compares", () => {
 Run: `bun test packages/musicxml/tests/import`
 Expected: FAIL, modules not found.
 
-- [ ] **Step 3: Implement** `tree.ts` over `fast-xml-parser`'s `XMLParser` with `preserveOrder: true`, `ignoreAttributes: false`, `processEntities: true`, `ignorePiTags: false`, `parseTagValue: false`, `trimValues: false`; validate first with its `XMLValidator.validate` and return null on failure. `losses.ts` and `frac.ts` as the interfaces say (`Losses.add` is `severity: "warning"`; `note` passes a diagnostic through unchanged).
+- [ ] **Step 3: Implement** `tree.ts` over `fast-xml-parser`'s `XMLParser` with `preserveOrder: true`, `ignoreAttributes: false`, `processEntities: true`, `ignorePiTags: false`, `parseTagValue: false`, `trimValues: false`, `allowBooleanAttributes: true` (without it a PI's words vanish: `<?barmark root?>` parses as tag `?barmark` with a boolean attribute `root`; rebuild `pis` entries from the tag name without `?` plus its attribute keys); validate first with its `XMLValidator.validate` and return null on failure. `losses.ts` and the `rhythm.ts` additions as the interfaces say (`Losses.add` is `severity: "warning"`; `note` passes a diagnostic through unchanged).
 
 - [ ] **Step 4: Run to verify they pass**
 
@@ -120,7 +130,7 @@ git commit -m "feat(musicxml): XML tree, exact fractions and grouped diagnostics
   - `type Attack = { at: Frac; length: Frac; kind: "notes" | "slash" | "rest"; pitches: { name: string; octave: number; root: boolean }[]; tieIn: boolean; tieOut: boolean; fermata: boolean; lyrics: { verse: number; syllabic: "single" | "begin" | "middle" | "end"; text: string; elision: boolean }[] }` (pitches sounding, spelled `C`, `F#`, `Bb`; `at` and `length` in quarter notes from the measure's start; `root` from the `barmark root` PI)
   - `type HarmonyMark = { at: Frac; node: XNode }`
   - `type Mark = { at: Frac; kind: "words" | "rehearsal" | "segno" | "coda" | "metronome" | "sound" | "swing"; placement: "above" | "below" | null; bold: boolean; text: string; node: XNode }`
-  - `type ReadMeasure = { number: string; length: Frac; implicit: boolean; time: Meter | null; key: Key | null; repeatStart: boolean; repeatEnd: { times: number } | null; ending: { numbers: number[]; type: "start" | "stop" | "discontinue" } | null; fermataEnd: boolean; marks: Mark[]; harmonies: HarmonyMark[]; lines: Attack[][] }` (`lines[i]` per the design's staff/voice table, filled with a rest where a voice is silent)
+  - `type ReadMeasure = { number: string; written: string | null; length: Frac; implicit: boolean; time: Meter | null; key: Key | null; repeatStart: boolean; repeatEnd: { times: number } | null; ending: { numbers: number[]; type: "start" | "stop" | "discontinue" } | null; fermataEnd: boolean; marks: Mark[]; harmonies: HarmonyMark[]; lines: Attack[][] }` (`written` is the measure's `text` attribute, the export's written bar number; `lines[i]` per the design's staff/voice table; a voice silent through the measure, a `<rest measure="yes"/>` or an empty measure gives that line an empty attack list, which Task 5 reads as resting)
   - `type ReadPart = { id: string; name: string; abbreviation: string | null; instrumentName: string | null; midiProgram: number | null; staves: number; transpose: { chromatic: number; octave: number }; measures: ReadMeasure[] }`
   - `type ReadScore = { title: string | null; credits: Credits; software: string | null; parts: ReadPart[] }`
   - `readScore(root: XNode, losses: Losses): ReadScore | null` (null with an error when the root isn't `score-partwise`; a `score-timewise` file is an error "score-timewise isn't supported; save as partwise")
@@ -132,7 +142,9 @@ test("onsets from durations, backup and forward", () => { /* two voices on one s
 test("divisions change between measures", () => { /* divisions 1 then 6: second measure's triplet onsets are 0, 1/3, 2/3 */ });
 test("sounding pitch through transpose", () => { /* B-flat trumpet (chromatic -2): written D5 sounds C5 */ });
 test("barmark root PI marks the pitch", () => { /* <note><?barmark root?>…E3…</note> in a chord: pitches[1].root === true */ });
-test("empty measure is a rest", () => { /* a measure with only <attributes>: one rest attack of the bar's length */ });
+test("empty measure is a rest", () => { /* a measure with only <attributes>, and one with <rest measure="yes"/>: lines[0] is [] (resting); a timed <rest/> is a "rest" attack */ });
+test("a multi-measure rest gives one resting measure per <measure>", () => {});
+test("lyric number need not be numeric", () => { /* number="verse2" → verses ordered by first appearance */ });
 test("harmony offset", () => { /* <harmony><offset>2</offset> after the last note: at = 2 beats */ });
 test("staff 2 and second voices map to lines 2–4", () => { /* voices 1,5,2,6 on staves 1,2,1,2 → lines 0..3, as voicesFor writes them */ });
 test("credits and title", () => { /* work-title, creator types, rights → title and Credits */ });
@@ -169,13 +181,14 @@ test("Tristan is ? with its text kept", () => { /* <kind text="Tristan">Tristan<
 test("none is N.C.", () => {});
 test("bass", () => { /* C with <bass>E</bass> → "C/E" */ });
 test("concert pitch through transpose", () => { /* chromatic -2: written D → "C" */ });
+test("a function with no root is ? with its text", () => { /* <function>V7</function> → { slot: "?", original: "V7" } */ });
 test("round trips every harmony the export writes", () => { /* for every chord symbol in tests/charts.ts corpus: export, read each <harmony>, expect printChord(parseChord(slot)) to equal the original's canonical */ });
 ```
 
 Use the barmark spellings the existing export tests expect; take each expected `slot` from `parseChord(x).value.canonical`, not by hand.
 
 - [ ] **Step 2: Run to verify they fail.**
-- [ ] **Step 3: Implement** in the spec's order: (1) meaning: `intervalsOf(kind, degrees)` → Harte label `root:(intervals)/bass` → `harteToBarmark`; accept only a named chord (not a `{…}` note set) that `parseChord` accepts; (2) display text: `root + kind@text + (bass ? "/" + bass : "")` through `parseChord`; (3) `"?"` with `original` = that same display string. Roots and basses move by `transpose` with barmark's own note spelling (reuse `written.ts`'s interval arithmetic in reverse).
+- [ ] **Step 3: Implement** in the spec's order: (1) meaning: `intervalsOf(kind, degrees)` (exported from `harmony.ts`) → Harte label `root:(intervals)` with no bass → `harteToBarmark` (it returns a note set such as `{C}` for a label no name fits: accept only a named chord) → append `/${bass}` when there is one → `parseChord` must accept it (barmark doesn't export `intervalBetween`, so the bass never goes into the Harte label); (2) display text: `root + kind@text + (bass ? "/" + bass : "")` through `parseChord`; (3) `"?"` with `original` = that same display string. Roots and basses move by `transpose` with barmark's own note spelling (reuse `written.ts`'s interval arithmetic in reverse).
 - [ ] **Step 4: Run to verify they pass.**
 - [ ] **Step 5: Commit** — `feat(musicxml): read chord symbols by meaning, then display text, else ?`
 
@@ -202,17 +215,22 @@ test.each([
 	[[["0", "C"], ["3/4", "D"]], "4/4", "C._D / / /"],
 	[[["0", "D"], ["7/2", "G"]], "4/4", "D / / /_G"],
 	[[["0", "C"]], "6/8", "C"],
+	[[["0", "C"], ["1", "D"]], "4/4", "C D / /"],
+	[[["0", "{C3}"], ["1/4", "{E3}"], ["1/2", "{G3}"], ["3/4", "{C4}"]], "4/4", "{C3}_{E3}_{G3}_{C4} / / /"],
+	[[["0", "C"], ["1/2", "D"], ["3/4", "E"]], "4/4", "C_/_D_E / / /"],
 ])("places %j in %s as %s", (events, meter, cell) => {});
 test("a chord off every grid snaps to the nearest beat", () => { /* at 1/8 of a beat: moved true */ });
 test("a note off every grid is null when exact", () => {});
-test("pickup bar", () => { /* length 1 in 4/4 (implicit): cell "C" over a one-bar meter [1/4]; placeBar returns cell "[1/4] C" */ });
+test("pickup bar", () => { /* length 1 in 4/4 (implicit): placeBar returns "[1/4] C" */ });
+test("a pickup whose length isn't a whole number of 2^k beats is a full bar with a warning", () => {});
+test("3/4 is never cut into 2 slots", () => { /* [0 C][3/2 G] in 3/4 → "C /_G /" (2 doesn't divide 3 beats; pass 2 groups beat 2), and parseChart gives no uneven-slot warning */ });
 test("an empty start is a hold", () => { /* first event at beat 2: "/ C" after the caller passed the held symbol "/" */ });
 ```
 
 `"8/3"` etc. are quarter-note fractions; parse them in the test with `frac`.
 
 - [ ] **Step 2: Run to verify they fail.**
-- [ ] **Step 3: Implement** the design's rule: try slot counts n in `[1, 2, beats]` (distinct, each dividing the bar evenly); a count fits when every onset is a slot start, or, inside one slot, at its ½, ⅓/⅔, or ¾ (dotted first) or ¼ (dotted second) point; use the smallest n that fits; an unfilled slot is `/`. A bar whose length differs from the meter's writes a one-bar meter (`[n/d]`, grammar 2.4). With `exact` false, move an off-grid chord to the nearest beat (ties go earlier) and set `moved`.
+- [ ] **Step 3: Implement** in two passes. Candidates n are 1, 2 and `beats`, distinct, each dividing `beats` evenly (2.1: a count that doesn't divide the beats warns). **Pass 1:** the smallest n where every onset is a slot start. **Pass 2 (only if pass 1 finds none):** n = `beats`, and inside each beat its onsets must be a subset of an equal k-division (k = 2, 3, 4, 6; the smallest k that holds them), written as a k-member group with `/` for the missing members; or the dotted pair (¾ dotted first, ¼ dotted second). An unfilled slot is `/`. A bar whose length (`length`) differs from the meter's writes a one-bar meter `[n/d]` (grammar 2.4); `n/d` from `length` in the meter's beat unit. With `exact` false, move an off-grid chord to the nearest beat (ties go earlier) and set `moved`.
 - [ ] **Step 4: Run to verify they pass.**
 - [ ] **Step 5: Commit** — `feat(musicxml): place imported attacks on barmark's slot grid`
 
@@ -238,16 +256,22 @@ test("lead sheet with attacks on every change", () => { /* each harmony coincide
 test("a comping part with slashes and a voiced hit reads its notes", () => { /* other software, slash notes plus one voiced chord: the voicing comes in */ });
 test("a voicing note outside its chord drops the voicing", () => { /* Cmaj7 over C# : "Cmaj7" with a warning */ });
 test("marked root comes back as !", () => { /* pitches with root: "{D3 E3! G3 B3}" */ });
-test("piano lines named RH and LH", () => { /* two-staff barmark export: lines named RH, LH */ });
+test("a piano part without lines merges its staves back into one line", () => { /* export of 'part: Pno = Piano' + '| Cmaj7{E3 G3 B3} | {C3 E4 G4} |' (staff 1 harmony over a rest, staff 2 E3 G3 B3; then E4 G4 over C3): lines is one line, bars ["Cmaj7{E3 G3 B3}", "{C3 E4 G4}"] */ });
+test("piano lines named RH and LH", () => { /* two-staff barmark export with Pno.RH and Pno.LH whose rhythms differ: lines named RH, LH */ });
+test("a harmony over a rest is a plain chord", () => {});
+test("pushed slashes don't make a comping part a melody", () => { /* other software: slash part with an eighth-note push and a voiced chord: voicing read */ });
+test("a single-pitch attack in another program's slash part makes it a melody part", () => {});
+test("a timed rest is --, a whole-measure rest is resting", () => {});
 test("a one-staff part's lines are 1 and 2", () => {});
 test("a part with five voices gives chords alone", () => {});
 test("an off-grid note in a line gives chords alone", () => {});
 test("notes-only part: barmark file reads it, another file needs --part", () => {});
+test("a label never starts with a digit", () => { /* "1st Gtr" */ });
 test("label and instrument", () => { /* part-name "Electric Guitar 1", abbreviation "Gtr." → label "Gtr", instrument "electric guitar" from instrument-name or MIDI program 28 */ });
 ```
 
 - [ ] **Step 2: Run to verify they fail.**
-- [ ] **Step 3: Implement** with the planning ruling above (structural reading for barmark's files; slash-notated parts only for others; every attack exact). A note tied over a slot or bar line is `/`; slash notes hold; a rest attack is `--`; a line resting a whole bar is `null`. Labels: abbreviation stripped to letters and digits, else the name's initials; Task 9 numbers duplicates. Instrument: match `instrumentName` case-insensitively against `INSTRUMENTS` names, else the GM program in `instrumentInfo`.
+- [ ] **Step 3: Implement** with the planning ruling above (structural reading for barmark's files; slash-notated parts only for others; every attack exact). A note tied over a slot or bar line is `/`; slash notes hold; a rest attack is `--`; a line resting a whole bar is `null`. Labels: abbreviation stripped to letters and digits, else the name's initials; a label starting with a digit gets a letter prefix (`1st Gtr` → `G1`, the grammar wants letters first); Task 8 numbers duplicates. Instrument: match `instrumentName` case-insensitively against `INSTRUMENTS` names, else the GM program in `instrumentInfo`.
 - [ ] **Step 4: Run to verify they pass.**
 - [ ] **Step 5: Commit** — `feat(musicxml): read a part's notes as voicings, note sets and lines only where they act as chords`
 
@@ -269,6 +293,8 @@ test("two verses get numbers", () => { /* → ["1. happy birthday", "2. merry ch
 test("one verse has no number", () => {});
 test("an elision joins with a space", () => {});
 test("a word split across the system's end stays whole in the system where it starts", () => {});
+test("lyrics from the first part that has them; the others named once", () => {});
+test("the placement diagnostic is given once", () => { /* "lyrics written as text lines; their placement by beat isn't kept" */ });
 ```
 
 - [ ] **Step 2: Run to verify they fail.** **Step 3: Implement.** **Step 4: Run to verify they pass.**
@@ -277,17 +303,19 @@ test("a word split across the system's end stays whole in the system where it st
 ### Task 7: Marks, sections and repeats
 
 **Files:**
-- Create: `packages/musicxml/src/import/structure.ts`
-- Test: `packages/musicxml/tests/import/structure.test.ts`
+- Create: `packages/musicxml/src/import/structure.ts`, `packages/musicxml/src/import/order.ts`
+- Test: `packages/musicxml/tests/import/structure.test.ts`, `packages/musicxml/tests/import/order.test.ts`
 
 **Interfaces:**
 - Consumes: Task 2's `ReadMeasure`.
 - Produces:
-  - `type BarInfo = { measure: string; heading: string | null; rehearsal: string | null; directives: string | null; textLines: string[]; words: { text: string; at: number }[]; before: string[]; after: string[]; opens: boolean; closes: number | "open" | null; ending: number[] | null }` (`before`/`after` are cells between bars: `Segno`, `Coda`, `To Coda`, `Fine`, `D.S. al Coda`, `...`; `directives` is a directive line such as `"key: G, tempo: 120"`)
+  - `playedOrder(measures: ReadMeasure[]): number[]` in `order.ts`: the measure indexes in the order a notation program plays them (repeats with `times`, endings, `dacapo`, `dalsegno`, `tocoda`, `fine`), as `tests/play.ts` plays the export; it is the written-out fallback's order
+  - `type BarInfo = { measure: string; meter: Meter | null; heading: string | null; rehearsal: string | null; directives: string | null; textLines: string[]; words: { text: string; at: number }[]; before: string[]; after: string[]; opens: boolean; closes: number | "open" | null; ending: number[] | null }` (`meter` is a one-bar meter: a `<time>` that reverts on the next measure, or a pickup; `before`/`after` are cells between bars: `Segno`, `Coda`, `To Coda`, `Fine`, `D.S. al Coda`, `...`; `directives` is a directive line such as `"key: G, tempo: 120"`)
   - `readStructure(score: ReadScore, losses: Losses): { bars: BarInfo[]; writtenOut: boolean }` (`writtenOut` when repeats can't be held and bars are in played order instead)
 
-- [ ] **Step 1: Write the failing tests**, one per row of the design's "What it reads" table that isn't a chord or note, and one per entry of "The export's own marks": bold words above → heading; words below → text line; `?` words alone → (consumed; Task 8 writes `?`); "×3" beside `times="3"` → `closes: 3` with no words; `times="1"` + "repeat as needed" → `closes: "open"`; no-break space after "A" → plain space; `<rehearsal>B</rehearsal>` → `rehearsal: "B"`; segno/coda/`<sound dalsegno>` → direction cells; metronome 120 → `tempo: 120`; `<swing>` → `feel:`; key and time changes → directive lines; a fermata at the bar's end → `after: ["..."]`; endings 1 and 2 → `ending`; a repeat crossing a heading → `writtenOut: true` with the warning; marks read once when two parts carry the same heading.
-- [ ] **Step 2: Run to verify they fail.** **Step 3: Implement** (score-wide marks from every part, deduplicated by measure and text; `writtenOut` follows the parser's own pairing rules: build the candidate `|:`/`:|`/ending lines and, if `parseChart` reports a repeat error on them, fall back to played order via the file's repeat semantics). **Step 4: Run to verify they pass.**
+- [ ] **Step 1: Write the failing tests**, one per row of the design's "What it reads" table that isn't a chord or note, and one per entry of "The export's own marks": bold words above → heading; words below → text line; `?` words alone → (consumed; Task 8 writes `?`); "×3" beside `times="3"` → `closes: 3` with no words; `times="1"` + "repeat as needed" → `closes: "open"`; no-break space after "A" → plain space; `<rehearsal>B</rehearsal>` → `rehearsal: "B"`; segno/coda/`<sound dalsegno>` → direction cells; `<metronome>` per-minute → `tempo:` (in the chart's beat: 6/8's dotted quarter); without a metronome, `<sound tempo>` (quarters a minute) converted to the meter's beat; rit. / accel. words with the later `<sound tempo>` target, and `a tempo`, → 7.2's gradual changes; `<swing>` → `feel:`; a `<key>` change → a directive line, its mode read as written (`<mode>dorian</mode>` is `key: D dorian`; barmark has all seven modes); a `<time>` change that lasts → a directive line; a `<time>` that reverts after one measure → `meter`, not a directive; a fermata at the bar's end → `after: ["..."]`; endings 1 and 2 → `ending`; a repeat crossing a heading → `writtenOut: true` with the warning; marks read once when two parts carry the same heading.
+- [ ] Add `order.test.ts`: `playedOrder` equals `tests/play.ts`'s play order for every corpus chart's export.
+- [ ] **Step 2: Run to verify they fail.** **Step 3: Implement** (score-wide marks from every part, deduplicated by measure and text; `writtenOut` follows the parser's own pairing rules: build the candidate `|:`/`:|`/ending lines and, if `parseChart` reports a repeat error on them, fall back to `playedOrder`). **Step 4: Run to verify they pass.**
 - [ ] **Step 5: Commit** — `feat(musicxml): import sections, repeats, endings, jumps and directives`
 
 ### Task 8: Writing the chart
@@ -313,10 +341,13 @@ test("an LH-only intro writes Pno.LH alone", () => {});
 test("systems break at a heading, a repeat, an ending, a direction, ..., a text line, a directive and a change of agreement", () => {});
 test("an unreadable chord: ? with its original as words", () => {});
 test("duplicate labels are numbered", () => {});
+test("an ending is never split across systems", () => { /* a five-bar first ending stays one line */ });
+test("every labelled line of a system repeats the structure", () => { /* |:, :|, endings, ..., directions, @A, [n/d] on each part's line: parseChart has no errors */ });
+test("% needs the same meter and a bar the line played", () => { /* after a tacet bar or a one-bar meter change, the bar is written out */ });
 test("the output is canonical and parses without errors", () => { /* every test above: printChart(t) === t, no error diagnostics */ });
 ```
 
-- [ ] **Step 2: Run to verify they fail.** **Step 3: Implement**: group bars into systems of up to four (the design's "Systems"); per system, write one tutti line where every playing part's `lines[0]` cells are equal and no part carries notes, else each part's lines labelled (`Gtr`, `Pno.RH`); `%` for a cell equal to the previous in its line; replays per the design; credits, title, `part:` declarations (with `instrument:`) first; lyric text lines after each system's rows; then `printChart` and `parseChart` the result, reporting any error as `"importer bug: <message> (line N)"`. **Step 4: Run to verify they pass.**
+- [ ] **Step 2: Run to verify they fail.** **Step 3: Implement**: group bars into systems of up to four (the design's "Systems"); an ending is one bar line however long (grammar 5.1), so the four-bar cap yields to it; every labelled line in a system carries the same structure (7.4); per system, write one tutti line where every playing part's `lines[0]` cells are equal and no part carries notes, else each part's lines labelled (`Gtr`, `Pno.RH`); `%` for a cell equal to the previous in its line, with the same meter, when the line played that previous bar; replays per the design; credits, title, `part:` declarations (with `instrument:`) first; lyric text lines after each system's rows; then `printChart` and `parseChart` the result, reporting any error as `"importer bug: <message> (line N)"`. **Step 4: Run to verify they pass.**
 - [ ] **Step 5: Commit** — `feat(musicxml): write imported charts in systems, tutti where parts agree`
 
 ### Task 9: `importMusicXml` and `readMxl`
@@ -341,10 +372,11 @@ test("no harmony from another program names the parts and --part", () => {
 		"no chord symbols; these parts have notes: Piano, Bass. Import one as note sets with --part");
 });
 test("--part imports one part alone", () => {});
+test("typed page credits when there are no creators", () => {});
 test("words that look like chord symbols", () => { /* <words>Cmaj7</words> in 12 measures: one warning "text that looks like chord symbols in 12 measures; the program exported them as text" and the words kept */ });
 // mxl.test.ts: a stored and a deflated .mxl (build with Bun's zlib in the test), container.xml routing, fallback to the first .musicxml, rootless and truncated archives reject.
 // roundtrip.test.ts — the yardstick:
-const inScope = corpus().filter(([, t]) => !/[>^+*]|!/.test(...)); // charts with no accents, hits, pushes or pedal; see Step 3
+const inScope = corpus().filter(([, t]) => !usesRhythmFigures(parseChart(t))); // no articulation, push or pedal slot anywhere
 test.each(inScope)("%s plays the same after export and import", (_name, text) => {
 	const back = importMusicXml(exportMusicXml(text).xml).text;
 	expect(played(back)).toEqual(played(text));
@@ -352,9 +384,9 @@ test.each(inScope)("%s plays the same after export and import", (_name, text) =>
 });
 ```
 
-Define `played(text)` in `tests/import/played.ts`: `parseChart(text).bars` mapped to `[meter, key, tempo, feel, section, rehearsal, words, timeline(slots), parts?.map(p => p && [timeline(p.slots), p.lines?.map(l => timeline(l.slots))])]`, with `timeline` as in `packages/barmark/tests/chart/fixtures.ts` (copy it; the corpus filter excludes charts whose parse has any `articulation`, `push` or `pedal` slot, checked on the parse, not by regex).
+Define `played(text)` in `tests/import/played.ts`: `parseChart(text).bars` mapped to `[meter, key, tempo, feel, section, rehearsal, words, timeline(slots), parts?.map(p => p && [timeline(p.slots), p.lines?.map(l => timeline(l.slots))])]`, with `timeline` as in `packages/barmark/tests/chart/fixtures.ts` (copy it), and `usesRhythmFigures(p: ChartParse): boolean` (any slot, in any part or line, with `articulation`, `push` or `pedal`).
 
-- [ ] **Step 2: Run to verify they fail.** **Step 3: Implement** `importMusicXml` as the pipeline (parseXml → readScore → importPart per part, honouring `options.part` → readStructure → writeChart), returning `{ text: "", diagnostics }` on any error. `readMxl`: parse the zip's central directory, inflate with `DecompressionStream("deflate-raw")`, follow `META-INF/container.xml`'s first `rootfile`, else the first `.musicxml`/`.xml`. **Step 4: Run to verify they pass**, fixing what the round trip finds in the module that owns it (each fix a failing unit test first in that module's test file).
+- [ ] **Step 2: Run to verify they fail.** **Step 3: Implement** `importMusicXml` as the pipeline (parseXml → readScore → importPart per part, honouring `options.part` → readStructure → writeChart), returning `{ text: "", diagnostics }` on any error. `readMxl`: parse the zip's central directory, inflate with `DecompressionStream("deflate-raw")` (reject with "reading .mxl needs Node 20.12 or later" when it is missing or rejects the format), follow `META-INF/container.xml`'s first `rootfile`, else the first `.musicxml`/`.xml`. **Step 4: Run to verify they pass**, fixing what the round trip finds in the module that owns it (each fix a failing unit test first in that module's test file).
 - [ ] **Step 5: Commit** — `feat(musicxml): importMusicXml and readMxl`
 
 ### Task 10: The export marks a note set's root
@@ -398,7 +430,7 @@ Note: Task 9's round trip already covers `!`; run it after this task to see `!` 
 - Produces: `importCommand(args: string[], io: Io): Promise<number>`; usage `barmark import <file.musicxml|file.mxl> [--out file.chart.md] [--part name]`.
 
 - [ ] **Step 1: Write the failing tests** (in-process with the test `Io`, as `export.test.ts` does): a `.musicxml` file prints the chart to stdout, exit 0; `--out` writes the file; `.mxl` is read as bytes and unpacked; diagnostics go to stderr as `file: measure N (Part): message` (without `(Part)` when there's no part, without `measure N` when there's no measure); an import that produced nothing exits 1 and writes no `--out` file; no file → usage error exit 2; `--help import` prints the command help.
-- [ ] **Step 2: Run to verify they fail.** **Step 3: Implement** (add a bytes read to `Io` only if it has none; read `.mxl` by extension). **Step 4: Run** `bun test packages/cli` — pass, including the built-bin and binary tests.
+- [ ] **Step 2: Run to verify they fail.** **Step 3: Implement** (no `Io` change: `inputs.ts` already reads with `node:fs`; read a `.mxl` by extension as bytes with `readFileSync(resolve(io.cwd, path))`). **Step 4: Run** `bun test packages/cli` — pass, including the built-bin and binary tests.
 - [ ] **Step 5: Commit** — `feat(cli): barmark import`
 
 ### Task 12: Real files, docs and records
@@ -411,7 +443,7 @@ Note: Task 9's round trip already covers `!`; run it after this task to see `!` 
 - [ ] **Step 2: Write `scripts/musescore-fixtures.ts`**: for each source, `mscore -o <name>.musicxml <name>.mscx` (and `-o <name>.mxl` for the lead sheet); it runs on the VM only (`~/.local/bin/mscore`), never in CI.
 - [ ] **Step 3: Write the failing tests** in `programs.test.ts`: each MuseScore file imports to its checked-in `.chart.md`, with the design's diagnostics (melody left out; lyrics as text lines; Tristan as `?`).
 - [ ] **Step 4: Run** `bun scripts/musescore-fixtures.ts && bun test packages/musicxml/tests/import/programs.test.ts`; fix through the owning module's unit tests until they pass; check each expected chart by reading it against the MuseScore score.
-- [ ] **Step 5: Docs and records**: README sections, CHANGELOG `[Unreleased]` entries (musicxml: import, `readMxl`, the root marker; cli: `barmark import`), FINDINGS entries for anything surprising (MuseScore's AppImage needs `xvfb-run` and ignores `QT_QPA_PLATFORM=offscreen` is one), the spec's call 1.
+- [ ] **Step 5: Docs and records**: README sections, CHANGELOG `[Unreleased]` entries (musicxml: import, `readMxl`, the root marker; cli: `barmark import`), FINDINGS entries for anything surprising (MuseScore's AppImage needs `xvfb-run` and ignores `QT_QPA_PLATFORM=offscreen` is one), the spec's call 1 (to the planning ruling and its review refinements) and the spec's `<key>` row (modes are read as written, not as relative major or minor: barmark has all seven).
 - [ ] **Step 6: Full checks** — `bun test && bun run check && bun run fallow` all pass; `bun run verify:package musicxml && bun run verify:package cli` pass.
 - [ ] **Step 7: Commit** — `test(musicxml): MuseScore files for import` and `docs: MusicXML import`
 
