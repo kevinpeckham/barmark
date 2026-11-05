@@ -146,11 +146,10 @@ function cellOf(bar: Bar, attacks: Attack[], run: Run, reading: Reading, out: Li
 }
 
 /** Where the line stands after a bar: its latest chord, and whether it ends silent. */
-function after(run: Run, bar: Bar, attacks: Attack[], cell: string | null, reading: Reading): Run {
+function after(run: Run, bar: Bar, attacks: Attack[], cell: string | null): Run {
 	const latest = [...bar.chords].sort((a, b) => cmp(a.at, b.at)).pop()?.slot ?? run.last;
 	const end = attacks[attacks.length - 1];
-	const restsAtEnd =
-		reading.notes && end?.kind === "rest" && !bar.chords.some((c) => cmp(c.at, end.at) === 0);
+	const restsAtEnd = end?.kind === "rest" && !bar.chords.some((c) => cmp(c.at, end.at) === 0);
 	return { last: latest, silent: cell === null || restsAtEnd, sounding: cell !== null };
 }
 
@@ -169,14 +168,14 @@ export function readLine(bars: Attack[][], shared: Bar[], reading: Reading): Lin
 		const cell = cellOf(bar, attacks, run, reading, out);
 		if (cell !== null && reading.chords) out.unread.push(...unreadIn(cell, bar.chords, i));
 		out.cells.push(cell);
-		run = after(run, bar, attacks, cell, reading);
+		run = after(run, bar, attacks, cell);
 	});
 	return out;
 }
 
-/** A bar with no events: a rest when the line has no attacks, else a hold while something sounds, else the last chord again. */
+/** A bar with no events: a rest when the line only rests (no attacks, or rests alone), else a hold while something sounds, else the last chord again. */
 function holdOrRest(run: Run, attacks: Attack[]): string | null {
-	if (attacks.length === 0) return null;
+	if (attacks.every((a) => a.kind === "rest")) return null;
 	return run.sounding ? "/" : run.last;
 }
 

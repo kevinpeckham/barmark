@@ -156,6 +156,33 @@ test("a melody part rests where its line rests, and comes back on its last chord
 	expect(bars(r)).toEqual(["C", null, "C", "/", "G"]);
 });
 
+test("a melody bar of plain rests rests", () => {
+	const r = importXml(
+		scoreXml(
+			{ software: "MuseScore 4.4.2" },
+			measure(1, time44() + harmony("C") + note("E", 4, 4)) +
+				measure(2, rest(4)) +
+				measure(3, harmony("G") + note("D", 4, 4)),
+		),
+	);
+	expect(bars(r)).toEqual(["C", null, "G"]);
+});
+
+test("chords alone: a bar of plain rests rests, and slashes after it restate the chord", () => {
+	// the single-note fill in bar 4 makes this another program's part a melody part: chords alone
+	const r = importXml(
+		scoreXml(
+			{ software: "MuseScore 4.4.2" },
+			measure(1, time44() + harmony("C") + slashes(4)) +
+				measure(2, rest(2) + rest(2)) +
+				measure(3, slashes(4)) +
+				measure(4, harmony("G") + slashes(2) + note("B", 4, 2)),
+		),
+	);
+	expect(bars(r)).toEqual(["C", null, "C", "G"]);
+	expect(r.messages).toEqual(["notes read as a melody and left out"]);
+});
+
 test("slashes coming back after a rest restate the last chord", () => {
 	const r = importXml(
 		scoreXml(
