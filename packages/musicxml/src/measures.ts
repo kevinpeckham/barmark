@@ -140,21 +140,27 @@ function playedOut(w: Walk, o: SectionOccurrence): void {
 	for (const b of w.parse.bars.slice(o.firstBar - 1, o.lastBar)) add(w, measureOf(b, w.fermatas));
 }
 
-/** A bar no pass plays, as written. */
+type Running = Pick<Measure, "meter" | "key" | "tempo" | "feel" | "swingPercent">;
+
+/** The meter, key, tempo and feel a bar carries on from the one before it; a chart's defaults at its start. */
+function runningAfter(m: Measure | undefined): Running {
+	if (!m) return { meter: { n: 4, d: 4 }, key: null, tempo: null, feel: "straight" };
+	const { meter, key, tempo, feel, swingPercent } = m;
+	return { meter, key, tempo, feel, ...(swingPercent === undefined ? {} : { swingPercent }) };
+}
+
+/** A bar no pass plays, as written, in the meter, key, tempo and feel of the bar before it. */
 function unplayed(w: Walk, cell: Extract<Cell, { kind: "slots" | "simile" }>): Measure {
-	const slots = cell.kind === "slots" ? cell.slots : [];
-	const meter = cell.kind === "slots" && cell.meter ? cell.meter : { n: 4, d: 4 };
+	const running = runningAfter(w.out.at(-1));
+	if (cell.kind === "slots" && cell.meter) running.meter = cell.meter;
 	return {
+		...running,
 		shown: w.written,
 		played: null,
-		meter,
-		key: null,
-		slots,
+		slots: cell.kind === "slots" ? cell.slots : [],
 		words: [],
 		tacet: false,
-		tempo: null,
 		tempoChange: null,
-		feel: "straight",
 		text: [],
 		marks: blank(),
 	};

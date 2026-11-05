@@ -86,7 +86,7 @@ from a chart with errors, as `transpose` and `part` already behave.
 - `# Title` becomes `<work><work-title>`. A chart with no title uses the
   file name in the CLI, and no title from the library.
 - `<identification><encoding>` names the software as
-  `@barmark/musicxml <version> (barmark <version>)`.
+  `@barmark/musicxml <version>`.
 - Parts:
   - A chart with no `part:` is one part, `P1`, with part-name "Chart".
   - A single-part chart's `part:` gives `<part-name>` and, if it has a
@@ -206,9 +206,15 @@ plays wrong" in check.
   measure rests. This is what `extractPart` gives, so the converter
   exports each part from `extractPart`'s parse and never pieces parts
   together itself.
-- Structure marks (repeats, endings, jumps, rehearsal marks, headings,
-  tempo) are written in every part, so each part reads correctly when a
-  program extracts it.
+- Repeats and endings, being barlines, are written in every part. The
+  score's other marks (headings, rehearsal marks, tempo, feel, jumps, a
+  repeat's words) are directions written in the top part only, so a score
+  shows them once: Dorico ignores MusicXML 4.0's `system` attribute and
+  shows a direction written in every part over every staff. They still
+  carry `system="only-top"` for the programs that read it. A part
+  exported alone (`part`) is its own top part and keeps them all; a part
+  extracted from the score inside a notation program does not (amended
+  2026-11-05, Kevin's choice after the Dorico check).
 
 ## Testing
 

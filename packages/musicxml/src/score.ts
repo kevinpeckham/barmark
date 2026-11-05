@@ -131,6 +131,7 @@ function partXml(source: PartSource, i: number): string {
 			rhythmic: rhythmicBars[index] ?? false,
 			written,
 			staves: instrument?.staves ?? 1,
+			score: i === 0,
 			...(lined
 				? { lines: [bar.events, ...streams.slice(1).map((s) => s.bars[index]?.events ?? [])] }
 				: {}),

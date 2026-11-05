@@ -3,23 +3,42 @@ import type { Direction, Meter } from "barmark";
 import type { Measure } from "./measures.js";
 import { el, text } from "./xml.js";
 
-export const direction = (types: string, sound = "", placement = "above") =>
+const direction = (types: string, sound = "", placement = "above") =>
 	el("direction", { placement }, [el("direction-type", {}, types), sound]);
 
-export const wordsXml = (words: string) => direction(text("words", words));
+/**
+ * A mark of the whole score (a heading, a rehearsal mark, tempo, feel, a
+ * jump), written in the top part only: Dorico ignores MusicXML 4.0's
+ * `system` and shows a mark written in every part over every staff.
+ * `system="only-top"` stays for the programs that read it.
+ */
+export const scoreDirection = (types: string, sound = "") =>
+	el("direction", { placement: "above", system: "only-top" }, [
+		el("direction-type", {}, types),
+		sound,
+	]);
+
+/**
+ * Text from the chart, with a leading word "a" held to the next by a no-break
+ * space: Dorico reads a lone "a" as the article in "a tempo" and drops it
+ * ("A" vanishes, "A section" shows "section").
+ */
+export const ownText = (s: string) => s.replace(/^([Aa])(?: |$)/, "$1\u00a0");
+
+export const wordsXml = (words: string) => direction(text("words", ownText(words)));
 
 const JUMP_WORDS = { start: "D.C.", segno: "D.S." };
 const AL_WORDS = { fine: " al Fine", coda: " al Coda" };
 
 /** Segno, Coda, To Coda, Fine and the jump, each with the <sound> that plays it. */
 export function jumpXml(d: Direction): string {
-	if (d.kind === "segno") return direction(el("segno"), el("sound", { segno: "s1" }));
-	if (d.kind === "coda") return direction(el("coda"), el("sound", { coda: "c1" }));
+	if (d.kind === "segno") return scoreDirection(el("segno"), el("sound", { segno: "s1" }));
+	if (d.kind === "coda") return scoreDirection(el("coda"), el("sound", { coda: "c1" }));
 	if (d.kind === "to coda")
-		return direction(text("words", "To Coda"), el("sound", { tocoda: "c1" }));
-	if (d.kind === "fine") return direction(text("words", "Fine"), el("sound", { fine: "yes" }));
+		return scoreDirection(text("words", "To Coda"), el("sound", { tocoda: "c1" }));
+	if (d.kind === "fine") return scoreDirection(text("words", "Fine"), el("sound", { fine: "yes" }));
 	const words = JUMP_WORDS[d.to] + (d.al ? AL_WORDS[d.al] : "");
-	return direction(
+	return scoreDirection(
 		text("words", words),
 		el("sound", d.to === "start" ? { dacapo: "yes" } : { dalsegno: "s1" }),
 	);
@@ -48,7 +67,7 @@ function soundTempo(bpm: number, m: Meter): string {
 }
 
 const metronome = (bpm: number, m: Meter) =>
-	direction(el("metronome", {}, [beatXml(m), text("per-minute", bpm)]), soundTempo(bpm, m));
+	scoreDirection(el("metronome", {}, [beatXml(m), text("per-minute", bpm)]), soundTempo(bpm, m));
 
 const sameChange = (a: Measure | null, b: Measure | null) =>
 	a?.tempoChange?.kind === b?.tempoChange?.kind && a?.tempoChange?.to === b?.tempoChange?.to;
@@ -59,7 +78,7 @@ function changeXml(m: Measure, prev: Measure | null, next: Measure | null): stri
 	if (!change) return "";
 	const words = sameChange(m, prev)
 		? ""
-		: direction(text("words", change.kind === "rit" ? "rit." : "accel."));
+		: scoreDirection(text("words", change.kind === "rit" ? "rit." : "accel."));
 	const target = change.to !== null && !sameChange(m, next) ? soundTempo(change.to, m.meter) : "";
 	return words + target;
 }
@@ -69,7 +88,7 @@ export function tempoXml(m: Measure, prev: Measure | null, next: Measure | null)
 	if (m.tempoChange) return changeXml(m, prev, next);
 	if (m.tempo === null || (prev && prev.tempo === m.tempo && !prev.tempoChange)) return "";
 	if (prev?.tempoChange && prev.tempo === m.tempo)
-		return direction(text("words", "a tempo"), soundTempo(m.tempo, m.meter));
+		return scoreDirection(text("words", "a tempo"), soundTempo(m.tempo, m.meter));
 	return metronome(m.tempo, m.meter);
 }
 
@@ -90,13 +109,17 @@ function swingXml(m: Measure): string {
 /** The feel where it is set (a straight start is the default, and not written). */
 export function feelXml(m: Measure, prev: Measure | null): string {
 	if (prev ? feelName(prev) === feelName(m) : m.feel === "straight") return "";
-	return direction(text("words", feelName(m)), el("sound", {}, swingXml(m)));
+	return scoreDirection(text("words", feelName(m)), el("sound", {}, swingXml(m)));
 }
 
 /** Lyric, note and prose lines, below the measure; `###` notes in italics. */
 export const textXml = (lines: Measure["text"]) =>
 	lines
 		.map((l) =>
-			direction(text("words", l.text, l.note ? { "font-style": "italic" } : {}), "", "below"),
+			direction(
+				text("words", ownText(l.text), l.note ? { "font-style": "italic" } : {}),
+				"",
+				"below",
+			),
 		)
 		.join("");
