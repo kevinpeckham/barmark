@@ -2,7 +2,7 @@
 import type { Key, Meter, WrittenInterval } from "barmark";
 import { type Beam, beamsOf } from "./beams.js";
 import type { Clef } from "./clefs.js";
-import { direction, feelXml, jumpXml, tempoXml, textXml, wordsXml } from "./directions.js";
+import { feelXml, jumpXml, scoreDirection, tempoXml, textXml, wordsXml } from "./directions.js";
 import type { MeasureEvents, SoundEvent } from "./events.js";
 import { slotHarmonyXml } from "./harmony.js";
 import type { Marks, Measure } from "./measures.js";
@@ -326,8 +326,8 @@ function staffXml(bar: MeasureEvents, ctx: MeasureContext): string {
 function startXml(m: Measure, ctx: MeasureContext): string {
 	const { marks } = m;
 	return [
-		marks.heading ? direction(text("words", marks.heading, { "font-weight": "bold" })) : "",
-		marks.rehearsal ? direction(text("rehearsal", marks.rehearsal)) : "",
+		marks.heading ? scoreDirection(text("words", marks.heading, { "font-weight": "bold" })) : "",
+		marks.rehearsal ? scoreDirection(text("rehearsal", marks.rehearsal)) : "",
 		tempoXml(m, ctx.previous, ctx.next),
 		feelXml(m, ctx.previous),
 		...marks.start.map(jumpXml),
@@ -337,8 +337,8 @@ function startXml(m: Measure, ctx: MeasureContext): string {
 
 /** A repeat's words: an open one's, or a count above 2, which Dorico won't read from `times`. */
 function repeatWords(end: Marks["repeatEnd"]): string {
-	if (end === "open") return direction(text("words", "repeat as needed"));
-	return typeof end === "number" && end > 2 ? direction(text("words", `×${end}`)) : "";
+	if (end === "open") return scoreDirection(text("words", "repeat as needed"));
+	return typeof end === "number" && end > 2 ? scoreDirection(text("words", `×${end}`)) : "";
 }
 
 /** After the notes: a repeat's words, To Coda, Fine and the jump. */
@@ -360,9 +360,7 @@ function leftBarlineXml(marks: Marks): string {
 }
 
 const backwardXml = (end: Marks["repeatEnd"]) =>
-	end === null
-		? ""
-		: el("repeat", { direction: "backward", times: end === "open" ? undefined : end });
+	end === null ? "" : el("repeat", { direction: "backward", times: end === "open" ? 1 : end });
 
 function rightBarlineXml(marks: Marks): string {
 	const ending = endingXml(marks, marks.ending?.stop);

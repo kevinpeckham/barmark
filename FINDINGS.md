@@ -9,6 +9,18 @@ not here.
 
 ## Testing
 
+### A test player that reads a missing default wrongly hides the bug it should catch (2026-11-05, @barmark/musicxml)
+
+- **The symptom.** `x ...` (an open repeat, played once by barmark) was
+  exported as a backward repeat with no `times`, and the play-order tests
+  passed. MuseScore and other players play it twice.
+- **The cause.** The tests' MusicXML player (`tests/play.ts`) read a
+  missing `times` as 1, matching barmark, not MusicXML, whose default is
+  2. The player agreed with the exporter's mistake.
+- **The fix.** The player takes MusicXML's default, and the export writes
+  `times="1"`. A test helper that stands in for another program follows
+  that program's rules, defaults included, not ours.
+
 ### A site bump updates the site's own version test (2026-11-04, release chain)
 
 Symptom: the credits release chain stopped after `@barmark/cli` 0.3.0

@@ -6,6 +6,24 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+
+- **A score shows its marks once:** headings, rehearsal marks, tempo,
+  rit. and accel., the feel and jumps carry `system="only-top"`, so a
+  score shows them over the top part only, while each part still writes
+  them for when it is extracted. In Dorico they no longer sit over every
+  staff and run into the part above.
+- **`x ...` plays once** in notation programs, as barmark plays it: the
+  repeat writes `times="1"` (none meant twice).
+- **A bar no pass plays** (one between `D.C. al Coda` and `Coda`) keeps
+  the meter, key, tempo and feel of the bar before it, rather than 4/4 and
+  no key, so the bar after it no longer repeats them as changes.
+- **A push across the last ending** into the bar after it is written
+  early: the last ending plays on, so it isn't a repeat to stay out of.
+- **Values shorter than a 128th** are written as 256th, 512th and
+  1024th notes, and anything shorter still takes its true length, so the
+  bar adds up.
+
 ## [0.4.0] - 2026-11-04
 
 Needs `barmark` 0.16.0.

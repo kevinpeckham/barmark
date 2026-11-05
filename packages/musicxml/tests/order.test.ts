@@ -23,7 +23,7 @@ describe("play order", () => {
 	});
 	test("x ... is an open repeat played once, with the words repeat as needed", () => {
 		const xml = plays("| G | C | x ...\n|: D | A :| x2\n| E |");
-		expect(measures(xml)[1]).toMatch(/<repeat direction="backward"\/>/);
+		expect(measures(xml)[1]).toContain('<repeat direction="backward" times="1"/>');
 		expect(xml).toContain("<words>repeat as needed</words>");
 	});
 	test("a count above 2 is also printed as ×N, since Dorico ignores times on import", () => {

@@ -86,7 +86,7 @@ from a chart with errors, as `transpose` and `part` already behave.
 - `# Title` becomes `<work><work-title>`. A chart with no title uses the
   file name in the CLI, and no title from the library.
 - `<identification><encoding>` names the software as
-  `@barmark/musicxml <version> (barmark <version>)`.
+  `@barmark/musicxml <version>`.
 - Parts:
   - A chart with no `part:` is one part, `P1`, with part-name "Chart".
   - A single-part chart's `part:` gives `<part-name>` and, if it has a
@@ -208,7 +208,8 @@ plays wrong" in check.
   together itself.
 - Structure marks (repeats, endings, jumps, rehearsal marks, headings,
   tempo) are written in every part, so each part reads correctly when a
-  program extracts it.
+  program extracts it. Their directions carry `system="only-top"`
+  (MusicXML 4.0), so a score shows them once, over the top part.
 
 ## Testing
 

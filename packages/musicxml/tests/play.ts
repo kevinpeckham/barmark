@@ -68,8 +68,8 @@ function readMeasure(m: string): M {
 		shown: Number(/<measure [^>]*text="(\d+)"/.exec(m)?.[1]),
 		harmony: harmonies(m),
 		forward: m.includes('<repeat direction="forward"/>'),
-		// No times: an open repeat, played once (as the parser counts it).
-		backward: backward ? { times: Number(attr(backward, "times") ?? 1) } : null,
+		// No times: MusicXML's default, the section played twice.
+		backward: backward ? { times: Number(attr(backward, "times") ?? 2) } : null,
 		ending: endingOf(m),
 		sound: soundOf(m),
 	};

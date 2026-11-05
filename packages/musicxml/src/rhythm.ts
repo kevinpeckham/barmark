@@ -52,13 +52,22 @@ const TYPES: [number, string][] = [
 	[1 / 8, "32nd"],
 	[1 / 16, "64th"],
 	[1 / 32, "128th"],
+	[1 / 64, "256th"],
+	[1 / 128, "512th"],
+	[1 / 256, "1024th"],
 ];
+
+/** Quarters in the shortest type, the denominator every plain value is built on. */
+const GRID = 256;
+
+/** The shortest type, undotted: what time left below it is written as. */
+const SHORTEST = { type: "1024th", dots: 0 as const };
 
 /** The plain values (a type, dotted once or twice or not) from longest to shortest, in quarters. */
 const PLAIN = TYPES.flatMap(([q, type]) => [
-	{ q: frac(q * 32 * 7, 32 * 4), type, dots: 2 as const },
-	{ q: frac(q * 32 * 3, 32 * 2), type, dots: 1 as const },
-	{ q: frac(q * 32, 32), type, dots: 0 as const },
+	{ q: frac(q * GRID * 7, GRID * 4), type, dots: 2 as const },
+	{ q: frac(q * GRID * 3, GRID * 2), type, dots: 1 as const },
+	{ q: frac(q * GRID, GRID), type, dots: 0 as const },
 ]).filter((v) => Number.isInteger(v.q.n) && Number.isInteger(v.q.d));
 
 const oddPart = (n: number) => {
@@ -67,13 +76,16 @@ const oddPart = (n: number) => {
 	return o;
 };
 
-/** Tied plain values summing to `length`, longest first. */
+/**
+ * Tied plain values summing to `length`, longest first. Time left below the
+ * shortest type is a last value of that type with its true length, so the
+ * bar still adds up.
+ */
 function plainValues(length: Frac, tuplet: NoteValue["tuplet"], scale: Frac): NoteValue[] {
 	const out: NoteValue[] = [];
 	let left = length;
 	while (left.n > 0) {
-		const v = PLAIN.find((p) => atMost(p.q, left)) ?? PLAIN[PLAIN.length - 1];
-		if (!v) break;
+		const v = PLAIN.find((p) => atMost(p.q, left)) ?? { ...SHORTEST, q: left };
 		out.push({ length: times(v.q, scale), type: v.type, dots: v.dots, tuplet });
 		left = minus(left, v.q);
 	}

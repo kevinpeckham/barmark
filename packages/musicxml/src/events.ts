@@ -117,12 +117,13 @@ function push(out: MeasureEvents[], giver: Place, at: Place, by: Frac): Pushed {
 /**
  * Play doesn't always reach `to` from `from`: a repeat, an ending or a jump
  * sits between them. A written bar sounds the same on every pass, so an
- * early note there would sound on the wrong pass.
+ * early note there would sound on the wrong pass. The last ending plays on
+ * into the bar after it, so it doesn't leave.
  */
 function crosses(from: Measure, to: Measure): boolean {
 	const f = from.marks;
 	const t = to.marks;
-	const leaves = f.repeatEnd !== null || f.ending?.stop || f.end.length > 0;
+	const leaves = f.repeatEnd !== null || f.ending?.stop === "stop" || f.end.length > 0;
 	return Boolean(leaves || t.repeatStart || t.ending?.start || t.start.length > 0);
 }
 
