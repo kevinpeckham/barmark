@@ -29,6 +29,8 @@ export type Mark = {
 	kind: "words" | "rehearsal" | "segno" | "coda" | "metronome" | "sound" | "swing";
 	placement: "above" | "below" | null;
 	bold: boolean;
+	/** In a direction of the whole score (MusicXML's `system`), as the export writes headings, tempo and jumps. */
+	system: boolean;
 	text: string;
 	node: XNode;
 };
@@ -285,6 +287,7 @@ function soundMarks(s: XNode, at: Frac, placement: Mark["placement"]): Mark[] {
 		kind,
 		placement,
 		bold: false,
+		system: false,
 		text: "",
 		node,
 	});
@@ -311,6 +314,7 @@ function readDirection(d: XNode, p: PartState, at: Frac): Mark[] {
 				kind,
 				placement,
 				bold: c.attrs["font-weight"] === "bold",
+				system: d.attrs.system !== undefined,
 				text,
 				node: c,
 			});
