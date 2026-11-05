@@ -6,6 +6,8 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-11-05
+
 ### Fixed
 
 - **A score shows its marks once:** headings, rehearsal marks, tempo,
@@ -175,7 +177,8 @@ and each grammar example's sounding notes and chord symbols.
 - **Errors:** a chart with errors, or with no bars, returns its
   diagnostics and no XML; characters XML can't hold are left out.
 
-[Unreleased]: https://github.com/kevinpeckham/barmark/compare/musicxml-v0.4.0...HEAD
+[Unreleased]: https://github.com/kevinpeckham/barmark/compare/musicxml-v0.4.1...HEAD
+[0.4.1]: https://github.com/kevinpeckham/barmark/compare/musicxml-v0.4.0...musicxml-v0.4.1
 [0.4.0]: https://github.com/kevinpeckham/barmark/compare/musicxml-v0.3.0...musicxml-v0.4.0
 [0.3.0]: https://github.com/kevinpeckham/barmark/compare/musicxml-v0.2.0...musicxml-v0.3.0
 [0.2.0]: https://github.com/kevinpeckham/barmark/compare/musicxml-v0.1.2...musicxml-v0.2.0
