@@ -95,6 +95,14 @@ describe("placeBar", () => {
 			"C_/_D_E / / /",
 		],
 		[[["1", "C"]], "4/4", "/ C / /"],
+		[
+			[
+				["0", "{C4}"],
+				["1/4", "{D4}"],
+			],
+			"4/4",
+			"{C4}_{D4}. / / /",
+		],
 	] as [[string, string][], string, string][])("places %j in %s as %s", (events, meter, cell) => {
 		const { result } = place(events, meter);
 		expect(result).toEqual({ cell, moved: false });
@@ -112,6 +120,57 @@ describe("placeBar", () => {
 			false,
 		);
 		expect(result).toEqual({ cell: "C G", moved: true });
+	});
+
+	test("chords that each fit alone but not together still snap", () => {
+		const { result } = place(
+			[
+				["0", "C"],
+				["1/4", "D"],
+				["1/3", "E"],
+			],
+			"4/4",
+			false,
+		);
+		expect(result?.moved).toBe(true);
+		expect(result?.cell).toBeDefined();
+	});
+
+	test("a chord snapping onto an occupied beat is dropped, and still counts as moved", () => {
+		const { result } = place(
+			[
+				["0", "C"],
+				["1/8", "D"],
+			],
+			"4/4",
+			false,
+		);
+		expect(result).toEqual({ cell: "C", moved: true });
+	});
+
+	test("a chord late in the bar clamps to the last beat", () => {
+		const { result } = place(
+			[
+				["0", "C"],
+				["31/8", "G"],
+			],
+			"4/4",
+			false,
+		);
+		expect(result).toEqual({ cell: "C / / G", moved: true });
+	});
+
+	test("a voicing never moves", () => {
+		const events: [string, string][] = [
+			["0", "C"],
+			["1/8", "Cmaj7{E3 G3 B3}"],
+		];
+		expect(place(events, "4/4", false).result).toBeNull();
+	});
+
+	test("an event outside the bar is null", () => {
+		expect(place([["4", "C"]], "4/4").result).toBeNull();
+		expect(place([["-1", "C"]], "4/4", false).result).toBeNull();
 	});
 
 	test("a note off every grid is null, exact or not", () => {

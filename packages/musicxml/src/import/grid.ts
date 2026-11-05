@@ -17,23 +17,22 @@ function slotCounts(beats: number): number[] {
 	return [1, 2, beats].filter((n, i, all) => beats % n === 0 && all.indexOf(n) === i);
 }
 
-/** Only a chord symbol moves to fit a grid; notes, voicings and rests never do. */
-const movable = (symbol: string) => !symbol.startsWith("{") && symbol !== "--";
+/** Only a bare chord symbol moves to fit a grid; note sets, voicings (a chord with `{...}`) and rests never do. */
+const movable = (symbol: string) => !symbol.includes("{") && symbol !== "--";
 
 /** A slot's onsets, as positions in [0, 1) of that slot, with their symbols. */
 type Hit = { p: Frac; symbol: string };
 
 /** The smallest division of the slot that holds every onset, if any. */
-const divisionFor = (hits: Hit[], from: number) =>
-	DIVISIONS.find((c) => c >= from && hits.every((h) => whole(times(h.p, frac(c)))));
+const divisionFor = (hits: Hit[]) =>
+	DIVISIONS.find((c) => hits.every((h) => whole(times(h.p, frac(c)))));
 
-/** A dotted figure (a pair): an onset at the start and one at three quarters of the slot. */
+/** A dotted figure (grammar 2.2): the first member dotted (3/4, 1/4) or the second (1/4, 3/4). */
 function dottedPair(hits: Hit[]): string | null {
 	const [first, second] = hits;
-	if (hits.length !== 2 || !first || !second) return null;
-	return first.p.n === 0 && cmp(second.p, frac(3, 4)) === 0
-		? `${first.symbol}._${second.symbol}`
-		: null;
+	if (hits.length !== 2 || !first || !second || first.p.n !== 0) return null;
+	if (cmp(second.p, frac(3, 4)) === 0) return `${first.symbol}._${second.symbol}`;
+	return cmp(second.p, frac(1, 4)) === 0 ? `${first.symbol}_${second.symbol}.` : null;
 }
 
 /** The members of a k-way group, `/` where no onset falls. */
@@ -48,7 +47,7 @@ function writeSlot(hits: Hit[]): string | null {
 	const [only] = hits;
 	if (!only) return "/";
 	if (hits.length === 1 && only.p.n === 0) return only.symbol;
-	const k = divisionFor(hits, 2);
+	const k = divisionFor(hits);
 	const dotted = k === undefined || k >= 4 ? dottedPair(hits) : null;
 	if (dotted) return dotted;
 	return k === undefined ? null : groupOf(hits, k);
@@ -112,7 +111,8 @@ function nearestBeat(at: Frac, beat: Frac, beats: number): Frac {
  * own meter, so its beats are the slot counts the grammar allows.
  *
  * Only chord symbols snap, to the nearest beat (`moved`), and only when
- * `exact` is false; null when an event can't be placed.
+ * `exact` is false, a chord landing on an occupied beat being dropped
+ * (still `moved`); null when an event can't be placed.
  */
 export function placeBar(
 	events: Event[],
@@ -126,22 +126,46 @@ export function placeBar(
 	const cell = fit(sorted, length, beats);
 	if (cell !== null) return { cell, moved: false };
 	if (exact) return null;
-	const beat = times(length, frac(1, beats));
-	let moved = false;
-	const snapped = sorted.map((e) => {
-		if (!movable(e.symbol) || fit([e], length, beats) !== null) return e;
-		moved = true;
-		return { ...e, at: nearestBeat(e.at, beat, beats) };
-	});
-	const again = moved ? fit(dropRepeats(snapped), length, beats) : null;
-	return again === null ? null : { cell: again, moved: true };
+	const snapped = snapChords(sorted, length, beats);
+	return snapped ? { cell: snapped, moved: true } : null;
 }
 
-/** Two attacks snapped onto one beat: the later one stands. */
-function dropRepeats(events: Event[]): Event[] {
-	const sorted = [...events].sort((a, b) => cmp(a.at, b.at));
-	return sorted.filter((e, i) => {
-		const next = sorted[i + 1];
-		return !next || cmp(e.at, next.at) !== 0;
-	});
+type Candidate = Event & { snapped: boolean };
+
+/** Snap `chosen` chords to their nearest beat; on a shared beat the unmoved (or earlier) attack stays. */
+function snapSome(events: Event[], chosen: Set<Event>, length: Frac, beats: number): Event[] {
+	const beat = times(length, frac(1, beats));
+	const all: Candidate[] = events.map((e) =>
+		chosen.has(e)
+			? { ...e, at: nearestBeat(e.at, beat, beats), snapped: true }
+			: { ...e, snapped: false },
+	);
+	const kept: Candidate[] = [];
+	for (const e of all) {
+		const i = kept.findIndex((k) => cmp(k.at, e.at) === 0);
+		const other = kept[i];
+		if (!other) kept.push(e);
+		else if (other.snapped && !e.snapped) kept[i] = e;
+	}
+	return kept.map(({ at, symbol }) => ({ at, symbol }));
+}
+
+/**
+ * The cell once chords have snapped, or null when it can't be done. Chords
+ * that fit no grid alone go first, latest first, then the rest, until the
+ * set fits; the last resort has every chord snapped.
+ */
+function snapChords(events: Event[], length: Frac, beats: number): string | null {
+	const chords = events.filter((e) => movable(e.symbol)).reverse();
+	const offGrid = (e: Event) => fit([e], length, beats) === null;
+	const order = [...chords.filter(offGrid), ...chords.filter((e) => !offGrid(e))];
+	for (let count = 1; count <= order.length; count++) {
+		const cell = fit(
+			snapSome(events, new Set(order.slice(0, count)), length, beats),
+			length,
+			beats,
+		);
+		if (cell !== null) return cell;
+	}
+	return null;
 }
