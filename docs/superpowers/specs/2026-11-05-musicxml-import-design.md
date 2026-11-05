@@ -1,6 +1,6 @@
 # MusicXML import: design
 
-Status: draft for Kevin's review (2026-11-05). Kevin skipped the opening
+Status: approved by Kevin (2026-11-05). Kevin skipped the opening
 design questions and asked for a design from Claude's recommendations,
 then decided several points in review; those are marked as his. The
 lists at the end separate his decisions from Claude's calls.
