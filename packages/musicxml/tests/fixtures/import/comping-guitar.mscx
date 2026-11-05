@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  A comping guitar part written by hand for barmark's MusicXML import
+  tests: chord symbols over rhythmic slashes, a pushed chord, and one
+  voiced, accented hit (B7 as five sounding notes).
+  Copyright (c) 2026 Kevin Peckham. MIT licence, as the repository.
+  scripts/musescore-fixtures.ts converts it with MuseScore 4.
+-->
+<museScore version="4.70">
+  <Score>
+    <Division>480</Division>
+    <metaTag name="workTitle">Comping</metaTag>
+    <Part id="1">
+      <Staff id="1"/>
+      <trackName>Electric Guitar</trackName>
+      <Instrument id="electric-guitar">
+        <longName>Electric Guitar</longName>
+        <shortName>El. Gtr.</shortName>
+        <transposeDiatonic>-7</transposeDiatonic>
+        <transposeChromatic>-12</transposeChromatic>
+        <instrumentId>pluck.guitar.electric</instrumentId>
+        <clef>G8vb</clef>
+        <Channel><program value="27"/></Channel>
+      </Instrument>
+    </Part>
+    <Staff id="1">
+      <VBox>
+        <height>10</height>
+        <Text><style>title</style><text>Comping</text></Text>
+      </VBox>
+      <!-- 1 Am7 -->
+      <Measure>
+        <voice>
+          <TimeSig><sigN>4</sigN><sigD>4</sigD></TimeSig>
+          <Harmony><harmonyInfo><name>m7</name><root>17</root></harmonyInfo></Harmony>
+          <Chord><durationType>quarter</durationType><Note><pitch>59</pitch><tpc>19</tpc><head>slash</head><fixed>1</fixed><fixedLine>4</fixedLine><play>0</play></Note></Chord>
+          <Chord><durationType>quarter</durationType><Note><pitch>59</pitch><tpc>19</tpc><head>slash</head><fixed>1</fixed><fixedLine>4</fixedLine><play>0</play></Note></Chord>
+          <Chord><durationType>quarter</durationType><Note><pitch>59</pitch><tpc>19</tpc><head>slash</head><fixed>1</fixed><fixedLine>4</fixedLine><play>0</play></Note></Chord>
+          <Chord><durationType>quarter</durationType><Note><pitch>59</pitch><tpc>19</tpc><head>slash</head><fixed>1</fixed><fixedLine>4</fixedLine><play>0</play></Note></Chord>
+        </voice>
+      </Measure>
+      <!-- 2 D7 -->
+      <Measure>
+        <voice>
+          <Harmony><harmonyInfo><name>7</name><root>16</root></harmonyInfo></Harmony>
+          <Chord><durationType>quarter</durationType><Note><pitch>59</pitch><tpc>19</tpc><head>slash</head><fixed>1</fixed><fixedLine>4</fixedLine><play>0</play></Note></Chord>
+          <Chord><durationType>quarter</durationType><Note><pitch>59</pitch><tpc>19</tpc><head>slash</head><fixed>1</fixed><fixedLine>4</fixedLine><play>0</play></Note></Chord>
+          <Chord><durationType>quarter</durationType><Note><pitch>59</pitch><tpc>19</tpc><head>slash</head><fixed>1</fixed><fixedLine>4</fixedLine><play>0</play></Note></Chord>
+          <Chord><durationType>quarter</durationType><Note><pitch>59</pitch><tpc>19</tpc><head>slash</head><fixed>1</fixed><fixedLine>4</fixedLine><play>0</play></Note></Chord>
+        </voice>
+      </Measure>
+      <!-- 3 Gmaj7 Cmaj7 -->
+      <Measure>
+        <voice>
+          <Harmony><harmonyInfo><name>maj7</name><root>15</root></harmonyInfo></Harmony>
+          <Chord><durationType>quarter</durationType><Note><pitch>59</pitch><tpc>19</tpc><head>slash</head><fixed>1</fixed><fixedLine>4</fixedLine><play>0</play></Note></Chord>
+          <Chord><durationType>quarter</durationType><Note><pitch>59</pitch><tpc>19</tpc><head>slash</head><fixed>1</fixed><fixedLine>4</fixedLine><play>0</play></Note></Chord>
+          <Harmony><harmonyInfo><name>maj7</name><root>14</root></harmonyInfo></Harmony>
+          <Chord><durationType>quarter</durationType><Note><pitch>59</pitch><tpc>19</tpc><head>slash</head><fixed>1</fixed><fixedLine>4</fixedLine><play>0</play></Note></Chord>
+          <Chord><durationType>quarter</durationType><Note><pitch>59</pitch><tpc>19</tpc><head>slash</head><fixed>1</fixed><fixedLine>4</fixedLine><play>0</play></Note></Chord>
+        </voice>
+      </Measure>
+      <!-- 4 F#m7b5, then the hit: B7 voiced B2 D#3 A3 B3 F#4 (sounding), accented, and a rest -->
+      <Measure>
+        <voice>
+          <Harmony><harmonyInfo><name>m7b5</name><root>20</root></harmonyInfo></Harmony>
+          <Chord><durationType>quarter</durationType><Note><pitch>59</pitch><tpc>19</tpc><head>slash</head><fixed>1</fixed><fixedLine>4</fixedLine><play>0</play></Note></Chord>
+          <Chord><durationType>quarter</durationType><Note><pitch>59</pitch><tpc>19</tpc><head>slash</head><fixed>1</fixed><fixedLine>4</fixedLine><play>0</play></Note></Chord>
+          <Harmony><harmonyInfo><name>7</name><root>19</root></harmonyInfo></Harmony>
+          <Chord>
+            <durationType>quarter</durationType>
+            <Articulation><subtype>articAccentAbove</subtype></Articulation>
+            <Note><pitch>47</pitch><tpc>19</tpc></Note>
+            <Note><pitch>51</pitch><tpc>23</tpc></Note>
+            <Note><pitch>57</pitch><tpc>17</tpc></Note>
+            <Note><pitch>59</pitch><tpc>19</tpc></Note>
+            <Note><pitch>66</pitch><tpc>20</tpc></Note>
+          </Chord>
+          <Rest><durationType>quarter</durationType></Rest>
+        </voice>
+      </Measure>
+      <!-- 5 Em7 -->
+      <Measure>
+        <voice>
+          <Harmony><harmonyInfo><name>m7</name><root>18</root></harmonyInfo></Harmony>
+          <Chord><durationType>quarter</durationType><Note><pitch>59</pitch><tpc>19</tpc><head>slash</head><fixed>1</fixed><fixedLine>4</fixedLine><play>0</play></Note></Chord>
+          <Chord><durationType>quarter</durationType><Note><pitch>59</pitch><tpc>19</tpc><head>slash</head><fixed>1</fixed><fixedLine>4</fixedLine><play>0</play></Note></Chord>
+          <Chord><durationType>quarter</durationType><Note><pitch>59</pitch><tpc>19</tpc><head>slash</head><fixed>1</fixed><fixedLine>4</fixedLine><play>0</play></Note></Chord>
+          <Chord><durationType>quarter</durationType><Note><pitch>59</pitch><tpc>19</tpc><head>slash</head><fixed>1</fixed><fixedLine>4</fixedLine><play>0</play></Note></Chord>
+        </voice>
+      </Measure>
+      <!-- 6 A7, D7 pushed onto the and of four, tied over -->
+      <Measure>
+        <voice>
+          <Harmony><harmonyInfo><name>7</name><root>17</root></harmonyInfo></Harmony>
+          <Chord><durationType>quarter</durationType><Note><pitch>59</pitch><tpc>19</tpc><head>slash</head><fixed>1</fixed><fixedLine>4</fixedLine><play>0</play></Note></Chord>
+          <Chord><durationType>quarter</durationType><Note><pitch>59</pitch><tpc>19</tpc><head>slash</head><fixed>1</fixed><fixedLine>4</fixedLine><play>0</play></Note></Chord>
+          <Chord><durationType>quarter</durationType><Note><pitch>59</pitch><tpc>19</tpc><head>slash</head><fixed>1</fixed><fixedLine>4</fixedLine><play>0</play></Note></Chord>
+          <Chord><durationType>eighth</durationType><Note><pitch>59</pitch><tpc>19</tpc><head>slash</head><fixed>1</fixed><fixedLine>4</fixedLine><play>0</play></Note></Chord>
+          <Harmony><harmonyInfo><name>7</name><root>16</root></harmonyInfo></Harmony>
+          <Chord><durationType>eighth</durationType><Note><Spanner type="Tie"><Tie></Tie><next><location><measures>1</measures><fractions>-1/8</fractions></location></next></Spanner><pitch>59</pitch><tpc>19</tpc><head>slash</head><fixed>1</fixed><fixedLine>4</fixedLine><play>0</play></Note></Chord>
+        </voice>
+      </Measure>
+      <!-- 7 D7 held over, then slashes -->
+      <Measure>
+        <voice>
+          <Chord><durationType>half</durationType><Note><Spanner type="Tie"><prev><location><measures>-1</measures><fractions>1/8</fractions></location></prev></Spanner><pitch>59</pitch><tpc>19</tpc><head>slash</head><fixed>1</fixed><fixedLine>4</fixedLine><play>0</play></Note></Chord>
+          <Chord><durationType>quarter</durationType><Note><pitch>59</pitch><tpc>19</tpc><head>slash</head><fixed>1</fixed><fixedLine>4</fixedLine><play>0</play></Note></Chord>
+          <Chord><durationType>quarter</durationType><Note><pitch>59</pitch><tpc>19</tpc><head>slash</head><fixed>1</fixed><fixedLine>4</fixedLine><play>0</play></Note></Chord>
+        </voice>
+      </Measure>
+      <!-- 8 G6 -->
+      <Measure>
+        <voice>
+          <Harmony><harmonyInfo><name>6</name><root>15</root></harmonyInfo></Harmony>
+          <Chord><durationType>quarter</durationType><Note><pitch>59</pitch><tpc>19</tpc><head>slash</head><fixed>1</fixed><fixedLine>4</fixedLine><play>0</play></Note></Chord>
+          <Chord><durationType>quarter</durationType><Note><pitch>59</pitch><tpc>19</tpc><head>slash</head><fixed>1</fixed><fixedLine>4</fixedLine><play>0</play></Note></Chord>
+          <Chord><durationType>half</durationType><Note><pitch>59</pitch><tpc>19</tpc><head>slash</head><fixed>1</fixed><fixedLine>4</fixedLine><play>0</play></Note></Chord>
+          <BarLine><subtype>end</subtype></BarLine>
+        </voice>
+      </Measure>
+    </Staff>
+  </Score>
+</museScore>
