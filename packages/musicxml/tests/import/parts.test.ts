@@ -127,6 +127,62 @@ test("lead sheet with attacks on every change", () => {
 	expect(r.messages).toEqual(["notes read as a melody and left out"]);
 });
 
+test("lead sheet with slashes elsewhere and single notes on every change", () => {
+	const r = importXml(
+		scoreXml(
+			{ software: "MuseScore 4.4.2" },
+			measure(1, time44() + harmony("C") + slashes(4)) +
+				measure(2, harmony("F") + note("F", 4, 2) + harmony("G") + note("G", 4, 2)),
+		),
+	);
+	expect(bars(r)).toEqual(["C", "F G"]);
+	expect(r.messages).toEqual(["notes read as a melody and left out"]);
+});
+
+const measureRest = (duration = 4) => rest(duration).replace("<rest/>", '<rest measure="yes"/>');
+
+test("a melody part rests where its line rests, and comes back on its last chord", () => {
+	const r = importXml(
+		scoreXml(
+			{ software: "MuseScore 4.4.2" },
+			measure(1, time44() + harmony("C") + note("E", 4, 4)) +
+				measure(2, measureRest()) +
+				measure(3, note("D", 4, 4)) +
+				measure(4, note("E", 4, 4)) +
+				measure(5, harmony("G") + note("D", 4, 4)),
+		),
+	);
+	// after the rest, nothing sounds to hold: the bar restates C, then holds it
+	expect(bars(r)).toEqual(["C", null, "C", "/", "G"]);
+});
+
+test("slashes coming back after a rest restate the last chord", () => {
+	const r = importXml(
+		scoreXml(
+			{ software: "MuseScore 4.4.2" },
+			measure(1, time44() + harmony("C") + slashes(4)) +
+				measure(2, measureRest()) +
+				measure(3, slashes(4)) +
+				measure(4, harmony("G") + slashes(2) + rest(1) + slashes(1)),
+		),
+	);
+	expect(bars(r)).toEqual(["C", null, "C", "G / -- G"]);
+});
+
+test("a chord barmark's grid can't hold is ?, with a warning", () => {
+	const r = importXml(
+		scoreXml(
+			{ software: "MuseScore 4.4.2" },
+			measure(1, time44() + harmony("C", "major", "<offset>9</offset>") + note("E", 4, 4)),
+		),
+	);
+	expect(bars(r)).toEqual(["?"]);
+	expect(r.messages).toEqual([
+		"notes read as a melody and left out",
+		"a bar barmark's grid can't hold; written as ? in measure 1",
+	]);
+});
+
 test("a comping part with slashes and a voiced hit reads its notes", () => {
 	const r = importXml(
 		scoreXml(

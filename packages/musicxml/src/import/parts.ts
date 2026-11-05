@@ -35,6 +35,8 @@ const WHY = {
 	grid: "notes off barmark's grid; notes left out",
 } as const;
 
+const UNPLACED = "a bar barmark's grid can't hold; written as ?";
+
 /** Each measure's length, its own meter (a one-bar meter, else the running one) and its chords. */
 function barsOf(part: ReadPart): Bar[] {
 	let running = DEFAULT_METER;
@@ -67,7 +69,8 @@ function actsAsChords(lines: Line[]): boolean {
 	return slashed && !single;
 }
 
-type Decided = { reads: LineRead[]; why: keyof typeof WHY | null };
+/** The lines as read, why notes were left out, and the measures off the grid when that is why. */
+type Decided = { reads: LineRead[]; why: keyof typeof WHY | null; offGrid: string[] };
 
 /** The lines as read: every line's notes, or the first line alone (its chords alone when it has chords) and why. */
 function decide(part: ReadPart, from: { barmark: boolean }, hasChords: boolean): Decided {
@@ -76,23 +79,23 @@ function decide(part: ReadPart, from: { barmark: boolean }, hasChords: boolean):
 	const alone = (why: keyof typeof WHY): Decided => ({
 		reads: [readLine(lines[0] ?? [], bars, { chords: true, notes: !hasChords })],
 		why,
+		offGrid: [],
 	});
 	if (part.voices > MAX_LINES || lines.length > MAX_LINES) return alone("voices");
 	if (hasChords && !from.barmark && !actsAsChords(lines)) return alone("melody");
 	const reads = lines.map((l, i) => readLine(l, bars, { chords: i === 0, notes: true }));
 	const offGrid = [...new Set(reads.flatMap((r) => r.offGrid))];
-	if (offGrid.length === 0) return { reads, why: null };
-	const out = alone("grid");
-	return { ...out, reads: out.reads.map((r) => ({ ...r, offGrid })) };
+	if (offGrid.length === 0) return { reads, why: null, offGrid };
+	return { ...alone("grid"), offGrid };
 }
 
 function report(d: Decided, part: string, losses: Losses): void {
-	const [first] = d.reads;
-	if (d.why === "grid") for (const m of first?.offGrid ?? []) losses.add("grid", WHY.grid, part, m);
+	if (d.why === "grid") for (const m of d.offGrid) losses.add("grid", WHY.grid, part, m);
 	else if (d.why) losses.add(d.why, WHY[d.why], part);
 	for (const r of d.reads) {
 		for (const m of r.moved)
 			losses.add("moved", "chord symbols moved to the nearest beat", part, m);
+		for (const m of r.offGrid) losses.add("unplaced", UNPLACED, part, m);
 		for (const m of r.stray)
 			losses.add("voicing", "voicing notes outside the chord; the chord written alone", part, m);
 	}

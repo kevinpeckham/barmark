@@ -74,19 +74,44 @@ function symbolOf(a: Attack, chord: Chord | undefined, stray: () => void): strin
 	return voiced ?? chord.slot;
 }
 
-/** The bar's events: chords (voiced by notes attacked with them), note sets and rests; slashes and ties hold. */
-function eventsOf(attacks: Attack[], chords: Chord[], stray: () => void): Event[] {
+/**
+ * Where a line stands between bars: the last chord sounded, whether the
+ * line is silent (after a rest, or a bar it rests), and whether its last
+ * bar was written (so a hold has something to hold).
+ */
+type Run = { last: string | null; silent: boolean; sounding: boolean };
+
+/** The latest chord before `at` in the bar, else the last chord sounded. */
+function chordBefore(chords: Chord[], at: Frac, run: Run): string | null {
+	const before = chords.filter((c) => cmp(c.at, at) < 0).sort((a, b) => cmp(a.at, b.at));
+	return before[before.length - 1]?.slot ?? run.last;
+}
+
+/**
+ * The bar's events: chords (voiced by notes attacked with them), note sets
+ * and rests; slashes and ties hold. Slashes coming back after a rest with
+ * no new chord restate the chord last sounded: the band comes back in on it.
+ */
+function eventsOf(attacks: Attack[], chords: Chord[], run: Run, stray: () => void): Event[] {
 	const events: Event[] = [];
 	const used = new Set<Chord>();
+	let silent = run.silent;
 	for (const a of attacks) {
 		const chord = chords.find((c) => cmp(c.at, a.at) === 0);
 		if (chord) used.add(chord);
-		const symbol = symbolOf(a, chord, stray);
+		const symbol = resumes(a, chord, silent)
+			? chordBefore(chords, a.at, run)
+			: symbolOf(a, chord, stray);
 		if (symbol !== null) events.push({ at: a.at, symbol });
+		silent = a.kind === "rest" && !chord;
 	}
 	for (const c of chords) if (!used.has(c)) events.push({ at: c.at, symbol: c.slot });
 	return events;
 }
+
+/** Whether an attack is slashes coming back after a rest, with no chord of its own. */
+const resumes = (a: Attack, chord: Chord | undefined, silent: boolean) =>
+	a.kind === "slash" && silent && !chord;
 
 /** Where each `?` in a cell is, matched in order with the bar's unreadable chords. */
 function unreadIn(cell: string, chords: Chord[], measure: number): Unread[] {
@@ -106,18 +131,12 @@ function unreadIn(cell: string, chords: Chord[], measure: number): Unread[] {
 }
 
 /** One bar's cell, noting in `out` what didn't come through. */
-function cellOf(
-	bar: Bar,
-	attacks: Attack[],
-	sounding: boolean,
-	reading: Reading,
-	out: LineRead,
-): string | null {
-	const events = eventsOf(reading.notes ? attacks : [], reading.chords ? bar.chords : [], () =>
+function cellOf(bar: Bar, attacks: Attack[], run: Run, reading: Reading, out: LineRead) {
+	const events = eventsOf(reading.notes ? attacks : [], reading.chords ? bar.chords : [], run, () =>
 		out.stray.push(bar.number),
 	);
-	if (events.length === 0) return holdOrRest(sounding, reading, attacks);
-	const placed = place(events, bar, sounding, reading);
+	if (events.length === 0) return holdOrRest(run, attacks);
+	const placed = place(events, bar, run.sounding, reading);
 	if (!placed) {
 		out.offGrid.push(bar.number);
 		return reading.chords ? "?" : "--";
@@ -126,27 +145,39 @@ function cellOf(
 	return placed.cell;
 }
 
+/** Where the line stands after a bar: its latest chord, and whether it ends silent. */
+function after(run: Run, bar: Bar, attacks: Attack[], cell: string | null, reading: Reading): Run {
+	const latest = [...bar.chords].sort((a, b) => cmp(a.at, b.at)).pop()?.slot ?? run.last;
+	const end = attacks[attacks.length - 1];
+	const restsAtEnd =
+		reading.notes && end?.kind === "rest" && !bar.chords.some((c) => cmp(c.at, end.at) === 0);
+	return { last: latest, silent: cell === null || restsAtEnd, sounding: cell !== null };
+}
+
 /**
  * Reads one line: each bar's events placed on its grid. A bar with nothing
- * new holds (`/`) what sounds, or rests (`null`) when nothing does; a bar
- * after a rest that starts with a hold starts with `N.C.` (or `--` on a
- * line of notes) instead, since there is nothing to hold.
+ * new holds (`/`) while something sounds, restates the last chord when the
+ * line comes back from a rest, and rests (`null`) when the line has no
+ * attacks; a bar after a rest that starts with a hold starts with `N.C.`
+ * (or `--` on a line of notes), since there is nothing to hold.
  */
 export function readLine(bars: Attack[][], shared: Bar[], reading: Reading): LineRead {
 	const out: LineRead = { cells: [], offGrid: [], moved: [], stray: [], unread: [] };
-	let sounding = false;
+	let run: Run = { last: null, silent: true, sounding: false };
 	shared.forEach((bar, i) => {
-		const cell = cellOf(bar, bars[i] ?? [], sounding, reading, out);
+		const attacks = bars[i] ?? [];
+		const cell = cellOf(bar, attacks, run, reading, out);
 		if (cell !== null && reading.chords) out.unread.push(...unreadIn(cell, bar.chords, i));
 		out.cells.push(cell);
-		sounding = cell !== null;
+		run = after(run, bar, attacks, cell, reading);
 	});
 	return out;
 }
 
-/** A bar with no events: a hold while something sounds, else a rest; a line of notes resting the whole bar rests. */
-function holdOrRest(sounding: boolean, reading: Reading, attacks: Attack[]): string | null {
-	return sounding && !(reading.notes && attacks.length === 0) ? "/" : null;
+/** A bar with no events: a rest when the line has no attacks, else a hold while something sounds, else the last chord again. */
+function holdOrRest(run: Run, attacks: Attack[]): string | null {
+	if (attacks.length === 0) return null;
+	return run.sounding ? "/" : run.last;
 }
 
 /** The bar's events placed, with `N.C.` (or `--`) on the downbeat when nothing sounds to hold. */
