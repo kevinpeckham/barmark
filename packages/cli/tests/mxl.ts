@@ -1,6 +1,7 @@
 /** A one-entry .mxl (zip) archive, deflated, for tests that need compressed input. */
 import { deflateRawSync } from "node:zlib";
 
+// Mirrors the zip helper in packages/musicxml/tests/import/mxl.test.ts.
 const utf8 = (s: string) => new TextEncoder().encode(s);
 const fields = (...pairs: [number, 2 | 4][]): number[] =>
 	pairs.flatMap(([v, n]) => Array.from({ length: n }, (_, i) => (v >>> (8 * i)) & 0xff));

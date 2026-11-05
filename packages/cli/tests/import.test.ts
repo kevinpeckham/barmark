@@ -55,10 +55,20 @@ describe("barmark import", () => {
 		expect(await importCommand(["b.mxl"], io)).toBe(1);
 		expect(io.err()).toBe("b.mxl: not a .mxl file: no zip directory (the file may be truncated)\n");
 	});
-	test("a missing file is one line on stderr and exit 1", async () => {
+	test("a missing file or a folder is a usage error, as in the other commands", async () => {
+		const io = folder({ "d/x.txt": "" });
+		expect(await main(["import", "gone.musicxml"], io)).toBe(2);
+		expect(io.err()).toBe("barmark: cannot read gone.musicxml\n");
+		const dir = folder({ "d/x.txt": "" });
+		expect(await main(["import", "d"], dir)).toBe(2);
+		expect(dir.err()).toBe("barmark: d is a folder\n");
+	});
+	test("a UTF-16LE file with a byte-order mark imports", async () => {
 		const io = folder({});
-		expect(await importCommand(["gone.musicxml"], io)).toBe(1);
-		expect(io.err()).toBe("gone.musicxml: cannot read the file\n");
+		const utf16 = new Uint8Array([0xff, 0xfe, ...Buffer.from(XML, "utf16le")]);
+		writeFileSync(join(io.dir, "u.musicxml"), utf16);
+		expect(await importCommand(["u.musicxml"], io)).toBe(0);
+		expect(io.out()).toContain("| G | C |");
 	});
 	test("a diagnostic is a line: file: measure N (Part): message", () => {
 		const d = { severity: "warning" as const, message: "lost it" };
@@ -68,6 +78,15 @@ describe("barmark import", () => {
 		expect(importLine("f.mxl", { ...d, measure: "4" })).toBe("f.mxl: measure 4: lost it");
 		expect(importLine("f.mxl", { ...d, part: "Piano" })).toBe("f.mxl: (Piano): lost it");
 		expect(importLine("f.mxl", d)).toBe("f.mxl: lost it");
+	});
+	test("control characters never reach stderr raw", () => {
+		const d = {
+			severity: "warning" as const,
+			message: "a\u001b[31mb",
+			part: "P\u009bx",
+			measure: "1",
+		};
+		expect(importLine("f\u001b.mxl", d)).toBe("f\uFFFD.mxl: measure 1 (P\uFFFDx): a\uFFFD[31mb");
 	});
 	test("warnings go to stderr and still exit 0", async () => {
 		const io = folder({ "s.musicxml": XML });

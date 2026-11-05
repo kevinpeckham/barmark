@@ -38,12 +38,19 @@ const parser = new XMLParser({
 	allowBooleanAttributes: true,
 });
 
+/** C0 and C1 controls, DEL included. */
+export const CONTROLS = /\p{Cc}/gu;
+/** Text keeps tab, newline and return (whitespace the readers collapse); every other control goes. */
+const cleanText = (s: string) => s.replace(/(?![\t\n\r])\p{Cc}/gu, "");
+/** An attribute value is one line: whitespace controls become a space, the rest go. */
+const cleanAttr = (s: string) => s.replace(/[\t\n\r]/g, " ").replace(CONTROLS, "");
+
 type Raw = Record<string, unknown>;
 
 const attrsOf = (raw: Raw): Record<string, string> => {
 	const out: Record<string, string> = {};
 	for (const [k, v] of Object.entries((raw[":@"] as Raw | undefined) ?? {}))
-		out[k.replace(/^@_/, "")] = String(v);
+		out[k.replace(/^@_/, "")] = cleanAttr(String(v));
 	return out;
 };
 
@@ -52,7 +59,7 @@ function build(name: string, raw: Raw): XNode {
 	for (const item of raw[name] as Raw[]) {
 		const [key] = Object.keys(item).filter((k) => k !== ":@");
 		if (key === undefined) continue;
-		if (key === "#text") node.text += String(item[key]);
+		if (key === "#text") node.text += cleanText(String(item[key]));
 		else if (key.startsWith("?"))
 			node.pis.push([key.slice(1), ...Object.keys(attrsOf(item))].join(" "));
 		else node.children.push(build(key, item));

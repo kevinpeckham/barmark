@@ -60,7 +60,8 @@ with errors is not exported. A chart with no title takes its file name.
 as a chart. What the chart can't carry over is listed on stderr, one line
 each, as `song.mxl: measure 12 (Piano): message`. `--part <name>` imports
 one part alone, its notes as note sets. It exits 0 when a chart came out,
-even with warnings, and 1 when none did or the file could not be read.
+even with warnings, and 1 when none did or the `.mxl` is bad. It does not
+read stdin.
 
 ## Exit codes
 

@@ -63,12 +63,12 @@ A standalone HTML page of the chart, with the Edwin font embedded.
   --diagnostics            List the chart's problems below it
   --font-url <url>         Link the font instead of embedding it
 `,
-	import: `Usage: barmark import <file.musicxml|file.mxl> [options]
+	import: `Usage: barmark import <file> [options]
 
-A MusicXML score (from MuseScore, Dorico, Sibelius, Finale…) as a chart.
+A MusicXML score (.musicxml, .xml or compressed .mxl; from MuseScore, Dorico, Sibelius, Finale…) as a chart.
 Chord symbols become chords; what the chart can't carry over goes to
 stderr as file: measure N (Part): message. Exits 0 when a chart came out,
-even with warnings; 1 when none did, or the file could not be read.
+even with warnings; 1 when none did or the .mxl is bad. Does not read stdin.
 
   --out <file>             Write to a file instead of stdout
   --part <name>            Import one part alone, its notes as note sets

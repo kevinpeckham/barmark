@@ -8,6 +8,12 @@ package uses [semantic versioning](https://semver.org/).
 
 ### Added
 
+- **Import drops control characters** from everything it reads from a
+  file (text, attributes, archive entry names), so a score can't put
+  escape sequences into a chart or a message.
+- **`decodeXmlBytes(bytes)`** turns a MusicXML file's bytes into text
+  (UTF-8, or UTF-16 with a byte-order mark), as `readMxl` does inside an
+  archive.
 - **Import:** `importMusicXml(xml, { part? })` reads a MusicXML 4.0
   `score-partwise` file (MuseScore, Dorico, Sibelius, Finale, or this
   package's own export) back into a canonical barmark chart: the title

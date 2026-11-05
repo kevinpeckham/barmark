@@ -7,7 +7,7 @@
  * every offset checked against the file, and ZIP64 and encrypted entries
  * refused.
  */
-import { parseXml, type XNode } from "./tree.js";
+import { CONTROLS, parseXml, type XNode } from "./tree.js";
 
 /** How much an archive may hold: entries in its directory, and bytes in one unpacked entry. */
 export type MxlLimits = { entries: number; bytes: number };
@@ -108,7 +108,7 @@ function readEntry(b: Bytes, at: number, end: number): Entry {
 		compressed: b.u32(at + 20),
 		declared: b.u32(at + 24),
 		offset: b.u32(at + 42),
-		name: names.decode(b.slice(at + CENTRAL_SIZE, nameLength)),
+		name: names.decode(b.slice(at + CENTRAL_SIZE, nameLength)).replace(CONTROLS, ""),
 	};
 	if ([entry.compressed, entry.declared, entry.offset].includes(0xffffffff)) throw new Error(ZIP64);
 	return entry;
@@ -202,15 +202,29 @@ async function inflate(data: Uint8Array, e: Entry, limits: MxlLimits): Promise<U
 	return out;
 }
 
-/** UTF-8, or UTF-16 when a byte-order mark says so (XML's rule for UTF-16). */
-function decode(bytes: Uint8Array, e: Entry): string {
+const NOT_TEXT = "isn't UTF-8 or UTF-16 text";
+
+/**
+ * XML bytes as text: UTF-8, or UTF-16 when a byte-order mark says so (XML's
+ * rule for UTF-16); a byte-order mark is dropped. Throws an `Error` when the
+ * bytes are neither. For `.musicxml` files read off disk as well as archives.
+ */
+export function decodeXmlBytes(bytes: Uint8Array): string {
 	const [a, b] = bytes;
 	const encoding =
 		a === 0xff && b === 0xfe ? "utf-16le" : a === 0xfe && b === 0xff ? "utf-16be" : "utf-8";
 	try {
 		return new platform.TextDecoder(encoding, { fatal: true }).decode(bytes);
 	} catch {
-		throw new Error(`${e.name} in the .mxl isn't UTF-8 or UTF-16 text`);
+		throw new Error(NOT_TEXT);
+	}
+}
+
+function decode(bytes: Uint8Array, e: Entry): string {
+	try {
+		return decodeXmlBytes(bytes);
+	} catch {
+		throw new Error(`${e.name} in the .mxl ${NOT_TEXT}`);
 	}
 }
 
