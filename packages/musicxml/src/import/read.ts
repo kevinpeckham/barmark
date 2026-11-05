@@ -101,7 +101,15 @@ type PartState = {
 	places: string[];
 	/** Lyric `number`s in order of first appearance. */
 	verses: string[];
+	/** Measures holding marks the import leaves out, by kind of mark. */
+	unread: { pedal: Set<string>; accents: Set<string> };
 };
+
+/** The losses `PartState.unread` reports. */
+const LEFT_OUT = {
+	pedal: "pedal marks left out",
+	accents: "accents and articulations left out",
+} as const;
 
 /** A measure as read, before its voices become lines. */
 type RawMeasure = Omit<ReadMeasure, "lines"> & { voices: Map<string, Attack[]> };
@@ -201,6 +209,8 @@ const newAttack = (n: XNode, at: Frac, length: Frac): Attack => ({
 /** One `<note>` into its voice's attacks; a chord note joins the attack before it. A whole-measure rest only registers its voice. */
 function readNote(n: XNode, p: PartState, raw: RawMeasure, cur: Cursor): void {
 	if (child(n, "grace")) return;
+	if (children(n, "notations").some((x) => child(x, "articulations")?.children.length))
+		p.unread.accents.add(raw.number);
 	const duration = frac(num(textOf(n, "duration")), p.divisions);
 	const attacks = attacksFor(n, p, raw);
 	const chord = child(n, "chord") !== undefined;
@@ -300,7 +310,8 @@ function soundMarks(s: XNode, at: Frac, placement: Mark["placement"]): Mark[] {
 
 const DIRECTION_KINDS = ["words", "rehearsal", "segno", "coda", "metronome"] as const;
 
-function readDirection(d: XNode, p: PartState, at: Frac): Mark[] {
+function readDirection(d: XNode, p: PartState, at: Frac, measure: string): Mark[] {
+	if (children(d, "direction-type").some((t) => child(t, "pedal"))) p.unread.pedal.add(measure);
 	const placement = placementOf(d);
 	const where = plus(at, offsetOf(d, p));
 	const marks: Mark[] = [];
@@ -384,7 +395,7 @@ const READERS: Record<string, Reader> = {
 		cur.at = minus(cur.at, divisionsOf(c, p));
 	},
 	forward: (c, p, _raw, cur) => advance(cur, divisionsOf(c, p)),
-	direction: (c, p, raw, cur) => raw.marks.push(...readDirection(c, p, cur.at)),
+	direction: (c, p, raw, cur) => raw.marks.push(...readDirection(c, p, cur.at, raw.number)),
 	sound: (c, _p, raw, cur) => raw.marks.push(...soundMarks(c, cur.at, null)),
 	harmony: (c, p, raw, cur) => raw.harmonies.push({ at: plus(cur.at, offsetOf(c, p)), node: c }),
 	barline: (c, _p, raw) => readBarline(c, raw),
@@ -487,10 +498,13 @@ function readPart(node: XNode, meta: Meta, losses: Losses): ReadPart {
 		octave: 0,
 		places: [],
 		verses: [],
+		unread: { pedal: new Set(), accents: new Set() },
 	};
 	const raws = children(node, "measure").map((m) => readMeasure(m, p));
 	settleMeters(raws, p, losses);
 	for (const bad of p.badTimes) losses.add("badTime", bad.message, p.name, bad.measure);
+	for (const kind of ["pedal", "accents"] as const)
+		for (const m of p.unread[kind]) losses.add(kind, LEFT_OUT[kind], p.name, m);
 	const staves = Math.max(p.declaredStaves, ...p.places.map((x) => Number.parseInt(x, 10)));
 	const measures = withLines(raws, lineIndexes(p.places, staves));
 	return {

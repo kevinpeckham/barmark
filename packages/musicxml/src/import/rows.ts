@@ -141,13 +141,28 @@ function labelOf(src: Source, key: string | null): string {
 
 /** What each line last played, after bar `i` is written on these rows. */
 function played(src: Source, keys: (string | null)[], i: number, last: Last): void {
-	for (const k of last.keys()) last.set(k, null);
+	forget(last);
 	const meter = meterText(src.bars[i]?.meter ?? null);
 	for (const key of keys) {
 		const { slots } = cellFor(src, key, i);
 		for (const k of speaksFor(src, key)) last.set(k, { slots, meter });
 	}
 }
+
+/** Forgets what every line played: after a replay, or at a later ending, the reader comes from elsewhere. */
+export function forget(last: Last): void {
+	for (const k of last.keys()) last.set(k, null);
+}
+
+/** Whether bar `i` starts an ending after the first: played after a `:|`, not after the bar written before it. */
+const startsLaterEnding = (bars: BarInfo[], i: number) => {
+	const [bar, prev] = [bars[i], bars[i - 1]];
+	return (
+		bar?.ending != null &&
+		prev?.ending != null &&
+		(prev.closes !== null || prev.ending.join() !== bar.ending.join())
+	);
+};
 
 /** Every line's key, for a fresh `Last`. */
 export function allLines(src: Source): Last {
@@ -182,6 +197,7 @@ export function rowsOf(
 	const keys: (string | null)[] = system.tutti ? [null] : system.lines;
 	const cells = keys.map(() => [] as string[]);
 	for (let i = system.from; i < system.to; i++) {
+		if (startsLaterEnding(src.bars, i)) forget(last);
 		for (const [r, key] of keys.entries()) cells[r]?.push(...cellsOf(src, key, i, r === 0, last));
 		played(src, keys, i, last);
 	}

@@ -25,7 +25,8 @@ export function sectionsOf(src: Source): Section[] {
 function barKey(src: Source, i: number, first: boolean): string {
 	const bar = src.bars[i];
 	if (!bar) return "";
-	const { index: _i, measure: _m, heading: _h, directives, ...shown } = bar;
+	// Text lines, like lyrics, are a section's own: a replay writes them under its heading.
+	const { index: _i, measure: _m, heading: _h, textLines: _t, directives, ...shown } = bar;
 	const cells = src.parts.map((part, p) => part.lines.map((_, l) => ownCell(src, p, l, i)));
 	return JSON.stringify({ ...shown, directives: first ? null : directives, cells });
 }

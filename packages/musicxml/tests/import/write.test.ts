@@ -160,6 +160,25 @@ test("a repeated bar is %", () => {
 	expect(roundTrip("| C | C | G | G |")).toBe("| C | % | G | % |\n");
 });
 
+describe("% never copies a bar the reader didn't just play", () => {
+	test("at the start of a later ending", () => {
+		const chart = "|: C |\n|1 D :|\n|2 D |";
+		expect(roundTrip(chart)).toBe(canonical(chart));
+	});
+
+	test("after a replay heading", () => {
+		const chart = "## A\n| C |\n## B\n| D |\n## A\n## E\n| D |";
+		expect(roundTrip(chart)).toBe("## A\n| C |\n\n## B\n| D |\n\n## A\n## E\n| D |\n");
+	});
+});
+
+test("a replay keeps its text lines under its heading", () => {
+	const chart = "## Chorus\nWatch for cue\n| C |\n## Verse\n| D |\n## Chorus\nWatch for cue\n| C |";
+	expect(roundTrip(chart)).toBe(
+		"## Chorus\nWatch for cue\n| C |\n\n## Verse\n| D |\n\n## Chorus\nWatch for cue\n",
+	);
+});
+
 describe("a repeat of a whole line or section is x N on it", () => {
 	test("a line", () => {
 		const chart = "| D7sus4 | % | % | % | x2\n| C5 | % | G5(7) | % |\n| D7sus4 | % | % | % | x3";
@@ -332,7 +351,13 @@ describe("words", () => {
 });
 
 describe("text lines that would read as something else", () => {
-	const risky = [
+	const textsOf = (line: string) => {
+		const text = sound(importXml(leadSheet([{ chord: "C" }, { chord: "D", extra: below(line) }])));
+		const parsed = parseChart(text);
+		expect(parsed.diagnostics.filter((d) => d.severity === "error")).toEqual([]);
+		return parsed.lines.flatMap((l) => (l.kind === "text" ? [l.text] : []));
+	};
+	const conflicts = [
 		"| la la |",
 		"# not a title",
 		"## not a heading",
@@ -340,15 +365,13 @@ describe("text lines that would read as something else", () => {
 		"composer: Someone",
 		"part: Voice",
 		"```",
-		"Chorus:",
 	];
-	test.each(risky)("%s stays a text line", (line) => {
-		const text = sound(importXml(leadSheet([{ chord: "C" }, { chord: "D", extra: below(line) }])));
-		const parsed = parseChart(text);
-		const texts = parsed.lines.filter((l) => l.kind === "text");
-		expect(texts).toHaveLength(1);
-		expect(parsed.diagnostics).toEqual([]);
-		expect(texts[0]?.kind === "text" && texts[0].text).toContain(line);
+	test.each(conflicts)("%s is escaped with a backslash", (line) => {
+		expect(textsOf(line)).toEqual([`\\${line}`]);
+	});
+	const warnOnly = ["Chorus:", "[Chorus]", "Am F C G", "meter: 3/4"];
+	test.each(warnOnly)("%s, text that only warns, stays as written", (line) => {
+		expect(textsOf(line)).toEqual([line]);
 	});
 });
 

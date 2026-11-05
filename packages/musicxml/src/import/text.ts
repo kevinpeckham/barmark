@@ -35,12 +35,16 @@ function firstReading(
 	return (ok.find((r) => r.worst === 0) ?? ok[0])?.c ?? null;
 }
 
-/** A text line saying `text`, escaped when it would read as anything else; null when there is nothing to say. */
+/**
+ * A text line saying `text`, escaped only when it would read as something
+ * else (a text line that merely warns, `Chorus:`, stays as written); null
+ * when there is nothing to say.
+ */
 export function textLine(text: string, header: string[]): string | null {
 	const said = tidy(text);
 	if (said === "") return null;
 	const isText = (read: Line | undefined) => read?.kind === "text";
-	return firstReading([said, `\\${said}`], header, isText) ?? `\\${said}`;
+	return isText(probe(said, header).read) ? said : `\\${said}`;
 }
 
 /** Words for a bar (grammar 2.6): no quote or pipe inside, which would end them; null when empty. */

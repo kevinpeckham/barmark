@@ -12,7 +12,7 @@ import { importLyrics, lyricLines, verseText } from "./lyrics.js";
 import type { ImportedPart } from "./parts.js";
 import type { ReadMeasure, ReadScore } from "./read.js";
 import { replaysOf, type Section, sectionsOf, wholeRepeat } from "./replays.js";
-import { allLines, type Last, playingOf, rowsOf, type Source } from "./rows.js";
+import { allLines, forget, type Last, playingOf, rowsOf, type Source } from "./rows.js";
 import type { Structure } from "./structure.js";
 import { type System, systemsOf } from "./systems.js";
 import { creditLines, headingLine, partLine, textLine, titleLine } from "./text.js";
@@ -69,7 +69,7 @@ function before(w: Writer, s: System, times: string | null): string[] {
 }
 
 /** Every text line the system's bars carry, before its rows (an ending may hold some mid-line). */
-function textOf(w: Writer, s: System): string[] {
+function textOf(w: Writer, s: Span): string[] {
 	return w.src.bars
 		.slice(s.from, s.to)
 		.flatMap((b) => b.textLines.flatMap((t) => textLine(t, w.header) ?? []));
@@ -83,10 +83,11 @@ function plans(w: Writer, systems: System[], sections: Section[]): Map<number, P
 	return new Map(
 		sections.map((s) => {
 			const rows = systems.filter((x) => s.from <= x.from && x.from < s.to).length;
-			const times = rows > 1 ? wholeRepeat(w.src, s) : null;
-			// A replay needs its heading; a name no heading can hold (unreachable in
-			// practice: quoting stops every repeat and elision) writes its bars out.
+			// A replay, and `x N` on a heading, need the heading; a name no heading can
+			// hold (unreachable in practice: quoting stops every repeat and elision)
+			// writes its bars out, with their repeat marks.
 			const named = headingOf(w, { from: s.from, to: s.to, tutti: true, lines: [] }, null);
+			const times = rows > 1 && named !== null ? wholeRepeat(w.src, s) : null;
 			return [s.from, { replay: replays.has(s.from) && named !== null, times }];
 		}),
 	);
@@ -110,7 +111,10 @@ function body(w: Writer, systems: System[], sections: Section[]): string[] {
 		const plan = planned.get(section.from) as Plan;
 		const first = s.from === section.from;
 		if (!plan.replay) return systemLines(w, s, plan, first);
-		return first ? [...before(w, s, plan.times), ...lyricsUnder(w, section)] : [];
+		if (!first) return [];
+		// The bars after a replay follow what it played, not the bar written before it.
+		forget(w.last);
+		return [...before(w, s, plan.times), ...textOf(w, section), ...lyricsUnder(w, section)];
 	});
 }
 

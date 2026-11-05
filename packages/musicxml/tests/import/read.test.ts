@@ -1,5 +1,7 @@
 import { expect, test } from "bun:test";
+import { readFileSync } from "node:fs";
 import { frac } from "../../src/rhythm.js";
+import { xmlOf } from "../helpers.js";
 import { attributes, measure, measuresOf, note, partOf, read, rest, xml } from "./helpers.js";
 
 const base = (divisions: number, extra = "") =>
@@ -448,4 +450,23 @@ test("a time signature barmark can't write keeps the running meter", () => {
 	expect(diagnostics.map((d) => d.message)).toEqual([
 		"a time signature barmark can't write (1000000000/4); kept 4/4 in measure 2",
 	]);
+});
+
+test("accents, hits and pedal marks are losses, never silent", () => {
+	const messages = (chart: string) => read(xmlOf(chart)).diagnostics.map((d) => d.message);
+	expect(messages("| >C | ^D | E |")).toContain(
+		"accents and articulations left out in 2 measures: 1, 2",
+	);
+	expect(messages("| +G{B3 D4 G4} | C | *C{C4 E4 G4} |")).toContain(
+		"pedal marks left out in 2 measures: 1, 3",
+	);
+});
+
+test("piano lines' pedal comes back as a loss", () => {
+	const chart = readFileSync(new URL("../fixtures/piano-lines.chart.md", import.meta.url), "utf8");
+	expect(
+		read(xmlOf(chart))
+			.diagnostics.map((d) => d.message)
+			.join("\n"),
+	).toContain("pedal marks left out");
 });

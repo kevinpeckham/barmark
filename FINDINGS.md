@@ -120,7 +120,10 @@ order, not just the written marks.
   other directive to the bar after the endings, with a warning. A grammar
   gap for Kevin, like the next: a text line that would read as something
   else (`| la |`, `key: G`) has no escape, so the importer prefixes a
-  backslash, which barmark keeps as text (`text.ts`).
+  backslash, which barmark keeps as text (`text.ts`), only when the line
+  would not read as text at all; a text line that merely warns
+  (`Chorus:`) stays as written. Whether barmark should have its own text
+  escape is a grammar question for Kevin.
 
 ### A new grammar section breaks the site before its parser is on npm (2026-11-04, sustain pedal)
 

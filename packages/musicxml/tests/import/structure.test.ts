@@ -235,7 +235,9 @@ describe("the corpus", () => {
 		test(`${name}: its export's structure holds as written, with nothing lost`, () => {
 			const { writtenOut, diagnostics } = fromChart(chart);
 			expect(writtenOut).toBe(false);
-			expect(diagnostics).toEqual([]);
+			// Accents, hits and pedal marks are a non-goal, reported by the reader.
+			const figures = /^(pedal marks|accents and articulations) left out/;
+			expect(diagnostics.filter((d) => !figures.test(d.message))).toEqual([]);
 		});
 });
 
