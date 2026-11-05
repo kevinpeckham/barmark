@@ -134,7 +134,24 @@ Pitches are sounding pitch (4.1), through the part's `<transpose>`
 (octave changes included). Octaves are always written, since MusicXML
 always has them. A voicing note that isn't in its chord (an error in
 4.2) drops the voicing: the chord is written alone, with a warning.
-`!` (a marked root) is never written; MusicXML has no way to say it.
+A note carrying the `<?barmark root?>` marker (below) is written with
+`!`.
+
+### The marked root (`!`)
+
+A note set's marked root (4: `{D3 E3! G3 B3}`) has no natural home in
+MusicXML, which records a root only inside a `<harmony>`, and a hidden
+`<harmony>` would come into Dorico and MuseScore as a chord symbol.
+Today the export drops it silently: the bar is written as the same four
+notes as `{D3 E3 G3 B3}`. Kevin's decision (2026-11-05): the export
+writes an XML processing instruction, `<?barmark root?>`, as the first
+child of the root note's `<note>`, and the importer reads it back as
+`!`. Other programs ignore processing instructions, so nothing changes
+there; a round trip through barmark keeps the root, and one through
+another program loses it (that program's file has no marker, so there
+is nothing to warn about). This is an export change, released with the
+import, with a CHANGELOG entry and an export test that the marker is
+written and the file still validates.
 
 ### Part lines
 
@@ -227,7 +244,8 @@ the songs bump, per RELEASING.md.
 
 - **The XML parser.** The export only writes XML; reading needs a
   parser that keeps document order (MusicXML's meaning depends on it),
-  works in browsers, Node and Bun, never fetches the DTD, and is small
+  works in browsers, Node and Bun, never fetches the DTD, exposes
+  processing instructions (for `<?barmark root?>`), and is small
   and maintained, pinned exactly. `fast-xml-parser` with
   `preserveOrder` is the likely choice; another that meets these is
   fine.
@@ -241,6 +259,8 @@ the songs bump, per RELEASING.md.
    span is slashes or one held attack, every note on the grid); other
    parts with chords give their chords alone. Parts of notes alone are
    read only from barmark's own files or with `--part`.
+1b. The export marks a note set's root with `<?barmark root?>` (Kevin
+   chose this route; the placement inside `<note>` is Claude's call).
 1a. Part lines come from staves and voices, the export's layout in
    reverse; they're named `RH`/`LH`/`RH2`/`LH2` or `1`–`4`, since the
    file doesn't keep names. A part whose lines can't all be read gives
