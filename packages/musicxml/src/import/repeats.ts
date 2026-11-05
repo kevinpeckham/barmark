@@ -64,7 +64,8 @@ export type CandidateBar = Repeats & { heading: boolean; before: string[]; after
 
 const sameEnding = (a: number[] | null, b: number[] | null) => a?.join() === b?.join();
 
-function closing(bar: CandidateBar): string {
+/** How a bar line ends after `bar`: `|`, `:|`, `:| x3` or `:| x ...` (an ending's close is always plain). */
+export function closing(bar: Repeats): string {
 	if (bar.closes === null) return "|";
 	if (bar.ending !== null || bar.closes === 2) return ":|";
 	return bar.closes === "open" ? ":| x ..." : `:| x${bar.closes}`;
@@ -74,7 +75,8 @@ function closing(bar: CandidateBar): string {
 const breaksBefore = (bar: CandidateBar, before: CandidateBar | undefined) =>
 	bar.heading || bar.opens || !sameEnding(bar.ending, before?.ending ?? null);
 
-function opening(bar: CandidateBar): string {
+/** How a bar line starting at `bar` opens: `|`, `|:` or an ending's `|1`. */
+export function opening(bar: Repeats): string {
 	if (bar.ending) return `|${bar.ending.join(",")}`;
 	return bar.opens ? "|:" : "|";
 }

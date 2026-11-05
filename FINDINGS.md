@@ -107,6 +107,21 @@ order, not just the written marks.
 
 ## Design
 
+### A chart can't write a directive inside, or between, endings (2026-11-05, MusicXML import)
+
+- **The symptom.** An imported score with a meter or tempo change in a
+  second ending had nowhere to put its `time:` or `tempo:` line: an
+  ending is one bar line, and only text and credits may come between
+  endings (grammar 5.1), so the line made the chart an error.
+- **The cause.** The grammar ties directives to whole lines; scores
+  change meter and tempo anywhere.
+- **The fix.** The importer (`packages/musicxml/src/import/endings.ts`)
+  writes a meter change there as one-bar meters (`[3/4]`) and moves any
+  other directive to the bar after the endings, with a warning. A grammar
+  gap for Kevin, like the next: a text line that would read as something
+  else (`| la |`, `key: G`) has no escape, so the importer prefixes a
+  backslash, which barmark keeps as text (`text.ts`).
+
 ### A new grammar section breaks the site before its parser is on npm (2026-11-04, sustain pedal)
 
 Symptom: grammar 2.9 (pedal marks) failed the site's required check: its
