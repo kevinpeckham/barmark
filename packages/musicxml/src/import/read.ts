@@ -45,7 +45,7 @@ export type ReadMeasure = {
 	key: Key | null;
 	repeatStart: boolean;
 	repeatEnd: { times: number } | null;
-	ending: { numbers: number[]; type: "start" | "stop" | "discontinue" } | null;
+	ending: { numbers: number[]; start: boolean; stop: boolean; discontinue: boolean } | null;
 	fermataEnd: boolean;
 	marks: Mark[];
 	harmonies: HarmonyMark[];
@@ -315,14 +315,16 @@ function endingNumbers(text: string): number[] {
 	});
 }
 
-const ENDING_TYPES = ["start", "stop", "discontinue"] as const;
-
-/** A barline's ending; a one-bar ending starts on the left barline and stops on the right, and the start is what is kept. */
+/** A barline's ending; a one-bar ending starts on the left barline and stops on the right, so the flags merge across the measure's barlines. */
 function readEnding(b: XNode, raw: RawMeasure): void {
 	const ending = child(b, "ending");
-	const type = ENDING_TYPES.find((t) => t === ending?.attrs.type);
-	if (ending && type && raw.ending?.type !== "start")
-		raw.ending = { numbers: endingNumbers(ending.attrs.number ?? ""), type };
+	const type = ending?.attrs.type;
+	if (!ending || (type !== "start" && type !== "stop" && type !== "discontinue")) return;
+	const numbers = endingNumbers(ending.attrs.number ?? "");
+	const merged = raw.ending ?? { numbers, start: false, stop: false, discontinue: false };
+	if (merged.numbers.length === 0) merged.numbers = numbers;
+	merged[type] = true;
+	raw.ending = merged;
 }
 
 function readBarline(b: XNode, raw: RawMeasure): void {
@@ -385,6 +387,7 @@ function pickupMeter(length: Frac, meter: Meter): Meter | null {
 }
 
 const NOT_WHOLE = "a short bar's length isn't a whole number of beats; read as a full bar";
+const TOO_LONG = "an implicit bar is longer than its meter; read as a full bar";
 
 /** Whether a `<time>` that differs from the running meter reverts on the next measure. */
 const reverts = (m: RawMeasure, next: RawMeasure | undefined, running: Meter | null) =>
@@ -397,7 +400,13 @@ const reverts = (m: RawMeasure, next: RawMeasure | undefined, running: Meter | n
 function settlePickup(m: RawMeasure, meter: Meter, partName: string, losses: Losses): void {
 	if (!m.implicit || cmp(m.length, barOf(meter)) === 0) return;
 	m.oneBar = cmp(m.length, barOf(meter)) < 0 ? pickupMeter(m.length, meter) : null;
-	if (!m.oneBar) losses.add("oneBar", NOT_WHOLE, partName, m.number);
+	if (!m.oneBar)
+		losses.add(
+			"oneBar",
+			cmp(m.length, barOf(meter)) < 0 ? NOT_WHOLE : TOO_LONG,
+			partName,
+			m.number,
+		);
 }
 
 /** Settles which measures are bars of their own meter, and which `<time>`s are directives. */

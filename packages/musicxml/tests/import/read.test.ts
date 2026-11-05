@@ -366,13 +366,13 @@ test("barlines: repeats, endings and a fermata", () => {
 	expect(ms[0]).toMatchObject({
 		repeatStart: true,
 		repeatEnd: { times: 3 },
-		ending: { numbers: [1, 2], type: "start" },
+		ending: { numbers: [1, 2], start: true, stop: true, discontinue: false },
 		fermataEnd: true,
 	});
 	expect(ms[1]).toMatchObject({
 		repeatStart: false,
 		repeatEnd: null,
-		ending: { numbers: [3], type: "discontinue" },
+		ending: { numbers: [3], start: false, stop: false, discontinue: true },
 		fermataEnd: false,
 	});
 });
@@ -415,4 +415,23 @@ test("key, written bar number and marks", () => {
 		["swing", "below", false, "", frac(0)],
 	]);
 	expect(m?.marks[3]?.node.attrs).toEqual({ segno: "s1" });
+});
+
+test("a stop-only ending measure", () => {
+	const ms = measuresOf(
+		xml`${measure(1, `${base(1)}${note("C", 4, 4)}<barline location="right"><ending number="1" type="stop"/></barline>`)}`,
+	);
+	expect(ms[0]?.ending).toEqual({ numbers: [1], start: false, stop: true, discontinue: false });
+});
+
+test("a start-only ending measure", () => {
+	const ms = measuresOf(
+		xml`${measure(1, `${base(1)}<barline location="left"><ending number="2" type="start"/></barline>${note("C", 4, 4)}`)}`,
+	);
+	expect(ms[0]?.ending).toEqual({ numbers: [2], start: true, stop: false, discontinue: false });
+});
+
+test("an implicit bar longer than its meter warns that it is too long", () => {
+	const { diagnostics } = read(xml`${measure(1, base(1) + note("C", 4, 6), ' implicit="yes"')}`);
+	expect(diagnostics[0]?.message).toContain("longer than its meter");
 });
