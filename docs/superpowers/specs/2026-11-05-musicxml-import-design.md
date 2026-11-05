@@ -56,8 +56,10 @@ package.
 - **Rhythm figures:** accents, hits, pushes and pedal marks. A push
   comes back as the rhythm the export wrote for it (`| D / / /_G | / |`),
   which plays the same; it isn't marked as a push.
-- **Lyrics** as `<lyric>` syllables; layout, fonts, page and system
-  breaks; MIDI.
+- **Placing lyrics by beat.** Lyrics come in as text lines ("Lyrics");
+  structured lyric lines are a grammar project of their own, next after
+  this one (Kevin, 2026-11-05).
+- Layout, fonts, page and system breaks; MIDI.
 - **Grammar changes.** The importer writes only what the grammar has.
   Gaps it finds become diagnostics, and a list of them for Kevin.
 - **A barmark.dev import page.** A natural follow-up (drop a file on the
@@ -91,6 +93,7 @@ package.
 | bold `<words>` above, at a bar's start | `## Heading` |
 | `<words>` below the staff | a text line before that bar's row (lyrics, `###` notes) |
 | other `<words>` | words on the bar (2.6) |
+| `<lyric>` syllables | text lines under each row, one per verse ("Lyrics") |
 | a fermata at a bar's end (on the bar line or its last note) | `...` after the bar |
 | rests | `--` (silence) |
 | notes with a `<harmony>`, attacked together and lasting its span | a voicing, `Cmaj7{E3 G3 B3}` ("Notes") |
@@ -146,6 +149,34 @@ write `<words>Cmaj7</words>`) stay words on their bar, which is honest
 about where they were placed, with one diagnostic: "text that looks like
 chord symbols in 12 measures; the program exported them as text".
 "Looks like" means the whole text parses as a barmark chord symbol.
+
+### Lyrics
+
+Kevin's decision (2026-11-05): import first, with lyrics as text lines,
+barmark's lyric today (free text between rows); structured lyric lines
+(BRIEF.md item 5, a grammar change) follow as their own project,
+informed by the lead sheets this importer reads, and then replace this
+step.
+
+- **Words from syllables:** `<lyric>` syllables join by their
+  `<syllabic>` (`begin`, `middle`, `end`, `single`) into words
+  ("hap-" "py" is "happy"); `<extend>` and melismas add nothing;
+  `<elision>` joins its syllables with a space.
+- **Under their row:** each system gets one text line per verse
+  (`<lyric number>`), holding the words sung in its bars, after the
+  row's lines. With several verses, each line starts "1.", "2.", … in
+  verse order; a single verse has no number.
+- **From the part that has them,** usually the voice or lead staff, even
+  when that part's notes are left out as a melody. If several parts have
+  lyrics (a choir), the first in score order is used and the others are
+  named in one diagnostic.
+- **One diagnostic** says what's lost: "lyrics written as text lines;
+  their placement by beat isn't kept".
+- A section that comes back as a replay (see "Sections and repeats")
+  keeps its own lyrics as text lines under its heading, as a verse 2
+  with new words is written in barmark (6: a section of lyrics only
+  replays the changes). A section is a replay only if its chords match;
+  its words may differ.
 
 ### Placing attacks in a bar
 
@@ -282,6 +313,9 @@ starting or stopping).
   mark, words, and each line's timeline of chords and notes. Lines are
   compared by position, since the file doesn't keep their names. The
   comparison is of what plays, not how it is written.
+- **Lyrics:** a MuseScore lead sheet with two verses and multi-syllable
+  words comes back with "1." and "2." text lines of whole words under
+  each row, and the one diagnostic.
 - **Reads as written:** Morning Song comes back with its tutti intro and
   its `Gtr`/`Pno` verse; a chart with a replayed chorus comes back with
   the replay; a marked root comes back with `!`.
@@ -342,6 +376,8 @@ songs bump; per RELEASING.md.
    agree; parts with notes never merge; parts keep name, label and
    instrument.
 6. MuseScore 4 goes on the VM and on mac-bench.
+7. Import first, with lyrics as text lines under each row; structured
+   lyric lines are the next project after this one.
 
 ## Claude's calls (for Kevin to check)
 
@@ -349,6 +385,9 @@ songs bump; per RELEASING.md.
    span is slashes or one held attack, every note exactly on the grid);
    otherwise its chords alone. Parts of notes alone come in only from
    barmark's files or with `--part`.
+1a. Lyrics: one text line per verse per system, "1."/"2." prefixes when
+   there are several verses, from the first part that has lyrics; a
+   replayed section keeps its own words.
 2. Line names are `RH`/`LH`/`RH2`/`LH2` or `1`–`4`, since the file
    doesn't keep them.
 3. Chord symbols off the grid snap to the nearest beat with a warning;
