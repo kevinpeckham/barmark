@@ -148,7 +148,13 @@ describe("parts", () => {
 			{ id: "P1", name: "Lead", measures: measure(1, time44 + harmony("C") + note("E", 4, 4)) },
 			{ id: "P2", name: "Bass", measures: measure(1, time44 + note("C", 2, 4)) },
 		]);
-		expect(sound(importMusicXml(xml)).text).toBe("| C |\n");
+		const r = sound(importMusicXml(xml));
+		expect(r.text).toBe("| C |\n");
+		expect(r.diagnostics).toContainEqual({
+			severity: "warning",
+			message:
+				"no chord symbols in these parts, left out: Bass. Import one as note sets with --part",
+		});
 	});
 });
 

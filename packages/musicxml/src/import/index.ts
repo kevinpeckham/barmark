@@ -57,6 +57,16 @@ function noChords(score: ReadScore, losses: Losses): void {
 	losses.note(error);
 }
 
+/** Parts of notes alone, left out beside parts with chords, named with the `--part` that imports one. */
+function leftOut(parts: ReadPart[], losses: Losses): void {
+	if (parts.length === 0) return;
+	const names = parts.map((p) => p.name).join(", ");
+	losses.note({
+		severity: "warning",
+		message: `no chord symbols in these parts, left out: ${names}. Import one as note sets with --part`,
+	});
+}
+
 /** The parts to import: the one `--part` names, else all; null when there is nothing to import. */
 function partsOf(score: ReadScore, options: ImportOptions, losses: Losses): ReadPart[] | null {
 	if (options.part === undefined) return score.parts;
@@ -80,11 +90,16 @@ function run(xml: string, options: ImportOptions, losses: Losses): string {
 	const chosenParts = partsOf(score, options, losses);
 	if (!chosenParts) return "";
 	const forced = options.part !== undefined;
-	const parts = chosenParts.flatMap((p) => importPart(p, { barmark, forced }, losses) ?? []);
+	const imported = chosenParts.map((p) => importPart(p, { barmark, forced }, losses));
+	const parts = imported.flatMap((p) => p ?? []);
 	if (parts.length === 0) {
 		noChords(score, losses);
 		return "";
 	}
+	leftOut(
+		chosenParts.filter((p, i) => imported[i] === null && hasNotes(p)),
+		losses,
+	);
 	return writeChart(score, parts, readStructure(score, losses), losses);
 }
 
