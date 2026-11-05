@@ -13,7 +13,20 @@ type Entry = {
 	declared?: number;
 	compressedSize?: number;
 	offset?: number;
+	/** Written as a streaming writer does (flag bit 3): sizes zero in the local header, a data descriptor after the data. */
+	streamed?: boolean;
 };
+
+/** The local header's sizes and what follows the data: a data descriptor for a streamed entry. */
+function streaming(e: Entry, sizes: [number, 2 | 4][]) {
+	if (!e.streamed) return { local: sizes, after: [] as number[] };
+	const zero: [number, 2 | 4][] = [
+		[0, 4],
+		[0, 4],
+		[0, 4],
+	];
+	return { local: zero, after: fields([0x08074b50, 4], ...sizes) };
+}
 
 const utf8 = (s: string) => new TextEncoder().encode(s);
 
@@ -37,18 +50,29 @@ function packed(e: Entry): { body: Uint8Array; sizes: [number, 2 | 4][] } {
 }
 
 /** A zip archive of the entries, local headers first, then the central directory and its end. */
-function zip(entries: Entry[], end: { count?: number; cdOffset?: number } = {}): Uint8Array {
+function zip(
+	entries: Entry[],
+	end: { count?: number; cdOffset?: number; zip64Locator?: boolean } = {},
+): Uint8Array {
 	const locals: number[] = [];
 	const central: number[] = [];
 	for (const e of entries) {
 		const { body, sizes } = packed(e);
 		const name = utf8(e.name);
-		const head: [number, 2 | 4][] = [[e.flags ?? 0, 2], [e.method ?? 8, 2], [0, 4], ...sizes];
+		const flags = (e.flags ?? 0) | (e.streamed ? 8 : 0);
+		const lead: [number, 2 | 4][] = [
+			[flags, 2],
+			[e.method ?? 8, 2],
+			[0, 4],
+		];
+		const head = [...lead, ...sizes];
+		const { local, after } = streaming(e, sizes);
 		const offset = e.offset ?? locals.length;
 		locals.push(
-			...fields([0x04034b50, 4], [20, 2], ...head, [name.length, 2], [0, 2]),
+			...fields([0x04034b50, 4], [20, 2], ...lead, ...local, [name.length, 2], [0, 2]),
 			...name,
 			...body,
+			...after,
 		);
 		central.push(
 			...fields(
@@ -78,7 +102,9 @@ function zip(entries: Entry[], end: { count?: number; cdOffset?: number } = {}):
 		[end.cdOffset ?? locals.length, 4],
 		[0, 2],
 	);
-	return new Uint8Array([...locals, ...central, ...eocd]);
+	// A ZIP64 end locator: signature, disk, the ZIP64 end record's offset, disks.
+	const locator = end.zip64Locator ? fields([0x07064b50, 4], [0, 4], [0, 4], [0, 4], [1, 4]) : [];
+	return new Uint8Array([...locals, ...central, ...locator, ...eocd]);
 }
 
 const SCORE = '<?xml version="1.0" encoding="UTF-8"?><score-partwise version="4.0"/>';
@@ -131,6 +157,14 @@ describe("reads", () => {
 			{ name: "readme.txt", data: "hello" },
 			{ name: "song.musicxml", data: SCORE },
 			{ name: "later.xml", data: "<later/>" },
+		]);
+		expect(await readMxl(bytes)).toBe(SCORE);
+	});
+
+	test("an entry streamed with a data descriptor (flag bit 3), as many zip writers make them", async () => {
+		const bytes = zip([
+			{ name: "META-INF/container.xml", data: container("score.xml"), streamed: true },
+			{ name: "score.xml", data: SCORE, streamed: true },
 		]);
 		expect(await readMxl(bytes)).toBe(SCORE);
 	});
@@ -208,6 +242,8 @@ describe("rejects", () => {
 	test("ZIP64", async () => {
 		const bytes = zip([{ name: "score.xml", data: SCORE }], { count: 0xffff });
 		expect(await rejection(readMxl(bytes))).toBe("ZIP64 .mxl files aren't supported");
+		const located = zip([{ name: "score.xml", data: SCORE }], { zip64Locator: true });
+		expect(await rejection(readMxl(located))).toBe("ZIP64 .mxl files aren't supported");
 		const sized = zip([{ name: "score.xml", data: SCORE, declared: 0xffffffff }]);
 		expect(await rejection(readMxl(sized))).toBe("ZIP64 .mxl files aren't supported");
 	});

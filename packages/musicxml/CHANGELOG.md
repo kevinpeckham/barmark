@@ -22,9 +22,12 @@ package uses [semantic versioning](https://semver.org/).
   count and the first measures, and a file that gives nothing (bad XML,
   `score-timewise`, no chord symbols in another program's file) returns
   empty text and an error. A file with no chord symbols names the parts
-  that hold notes, and `part` imports one of them as note sets; chord
-  symbols a program exported as plain words stay words, with one
-  warning.
+  that hold notes (and any words that look like chord symbols), and
+  `part` imports one of them as note sets; chord symbols a program
+  exported as plain words stay words, with one warning (a lone root
+  letter, a common section label, counts only beside fuller symbols).
+  The XML is read with fixed bounds: at most 100 elements deep, entities
+  expanding to at most 100,000 characters, no external entities.
 - **`readMxl(bytes)`** unpacks a compressed `.mxl` to its MusicXML text
   with no dependency (`DecompressionStream("deflate-raw")`: Node 20.12
   or later, Bun, browsers), following `META-INF/container.xml`, else the

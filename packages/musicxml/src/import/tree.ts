@@ -10,10 +10,26 @@ export type XNode = {
 	pis: string[];
 };
 
+/** The deepest nesting read: a MusicXML score is about ten deep. */
+const MAX_DEPTH = 100;
+/** The longest text entities may expand to, in all. */
+const MAX_EXPANDED = 100_000;
+
 const parser = new XMLParser({
 	preserveOrder: true,
 	ignoreAttributes: false,
-	processEntities: true,
+	// The bounds are written out, at the library's own defaults or tighter,
+	// so a version bump can't loosen them: an internal entity expands only so
+	// far (billion laughs), and external entities are never fetched.
+	processEntities: {
+		enabled: true,
+		maxEntitySize: 10_000,
+		maxEntityCount: 100,
+		maxExpansionDepth: 10,
+		maxTotalExpansions: 1000,
+		maxExpandedLength: MAX_EXPANDED,
+	},
+	maxNestedTags: MAX_DEPTH,
 	ignorePiTags: false,
 	parseTagValue: false,
 	trimValues: false,
@@ -44,18 +60,35 @@ function build(name: string, raw: Raw): XNode {
 	return node;
 }
 
-/** The document's root element, or null when the XML is malformed. Never throws, never fetches the DTD. */
-export function parseXml(xml: string): XNode | null {
+const NESTED = `XML nested too deeply (more than ${MAX_DEPTH} elements)`;
+const EXPANDED = `XML entities expand past ${MAX_EXPANDED} characters`;
+
+/** What stopped the parser, as the user's problem: nesting, entities, or plain malformed XML. */
+function problemOf(e: unknown): string {
+	const message = e instanceof Error ? e.message : "";
+	if (/nested tags/i.test(message)) return NESTED;
+	if (/expanded content length/i.test(message)) return EXPANDED;
+	return "not well-formed XML";
+}
+
+/** The document's root element, or what is wrong with the XML. Never throws, never fetches the DTD. */
+export function readXml(xml: string): XNode | string {
 	try {
-		if (XMLValidator.validate(xml) !== true) return null;
+		if (XMLValidator.validate(xml) !== true) return "not well-formed XML";
 		for (const item of parser.parse(xml) as Raw[]) {
 			const [key] = Object.keys(item).filter((k) => k !== ":@");
 			if (key !== undefined && !key.startsWith("?") && key !== "#text") return build(key, item);
 		}
-	} catch {
-		// malformed in a way the validator let through
+	} catch (e) {
+		return problemOf(e);
 	}
-	return null;
+	return "not well-formed XML";
+}
+
+/** The document's root element, or null when the XML can't be read. */
+export function parseXml(xml: string): XNode | null {
+	const read = readXml(xml);
+	return typeof read === "string" ? null : read;
 }
 
 export const children = (n: XNode, name: string): XNode[] =>

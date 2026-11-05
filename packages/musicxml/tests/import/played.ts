@@ -9,6 +9,8 @@ export function played(text: string) {
 		b.key,
 		b.tempo,
 		b.feel,
+		// Whitespace collapsed: the printer collapses a heading's whitespace, so a
+		// canonical chart (all the import writes) can't keep a non-canonical original's.
 		b.section?.replace(/\s+/g, " ") ?? null,
 		b.rehearsal ?? null,
 		b.words ?? null,

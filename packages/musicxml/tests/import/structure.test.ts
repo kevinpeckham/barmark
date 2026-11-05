@@ -397,6 +397,23 @@ describe("chord symbols written as text", () => {
 		]);
 	});
 
+	test("a lone root letter is a label, not a chord: no warning", () => {
+		const r = structureOf(
+			xml`${measure(1, start() + words("A") + whole)}${measure(2, words("B") + whole)}${measure(3, words("D") + whole)}`,
+		);
+		expect(r.bars.map((b) => b.words.map((w) => w.text))).toEqual([["A"], ["B"], ["D"]]);
+		expect(r.diagnostics).toEqual([]);
+	});
+
+	test("a lone root letter counts beside other chord-like words", () => {
+		const r = structureOf(
+			xml`${measure(1, start() + words("Am7") + whole)}${measure(2, words("D") + whole)}${measure(3, words("A") + whole)}`,
+		);
+		expect(r.diagnostics.map((d) => d.message)).toEqual([
+			"text that looks like chord symbols in 3 measures; the program exported them as text",
+		]);
+	});
+
 	test("barmark's own words are what the chart wrote", () => {
 		const r = fromChart('| "Cmaj7" C | G |');
 		expect(r.bars[0]?.words).toEqual([{ text: "Cmaj7", at: 0 }]);

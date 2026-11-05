@@ -40,7 +40,12 @@ export type BarInfo = {
 	ending: number[] | null;
 };
 
-export type Structure = { bars: BarInfo[]; writtenOut: boolean };
+export type Structure = {
+	bars: BarInfo[];
+	writtenOut: boolean;
+	/** The measures whose words look like chord symbols (another program's files only). */
+	chordWords: string[];
+};
 
 const WRITTEN_OUT =
 	"repeats, endings or jumps barmark can't hold as written; bars written out in played order";
@@ -155,21 +160,34 @@ function withoutCells(bars: BarInfo[], dropped: DirectionCell[], losses: Losses)
 	return bars;
 }
 
+/** A bare root ("A", "Bb"): a common section label, chord-like only beside fuller chord symbols. */
+const BARE_ROOT = /^[A-G][#b♯♭]?$/;
+
 /**
- * One warning for words that are chord symbols in all but name (older
- * Sibelius and Finale export them as `<words>`): they stay words, which is
- * where the program put them. Barmark's own words are what the chart wrote.
+ * The measures whose words are chord symbols in all but name (older
+ * Sibelius and Finale export them as `<words>`). A bare root counts only
+ * when some word on another bar is a fuller chord symbol.
  */
-function chordWords(bars: BarInfo[], losses: Losses): void {
-	const measures = bars
-		.filter((b) => b.words.some((w) => parseChord(w.text).ok))
+function chordWordMeasures(bars: BarInfo[]): string[] {
+	const chordy = (text: string) => parseChord(text).ok;
+	const full = bars.some((b) => b.words.some((w) => chordy(w.text) && !BARE_ROOT.test(w.text)));
+	return bars
+		.filter((b) => b.words.some((w) => chordy(w.text) && (full || !BARE_ROOT.test(w.text))))
 		.map((b) => b.measure);
+}
+
+/** Where chord-like words are: "measure 5", or "12 measures". */
+export function chordWordsWhere(measures: string[]): string {
+	return measures.length === 1 ? `measure ${measures[0]}` : `${measures.length} measures`;
+}
+
+/** One warning for chord-like words: they stay words, which is where the program put them. */
+function chordWords(measures: string[], losses: Losses): void {
 	const [first] = measures;
 	if (first === undefined) return;
-	const where = measures.length === 1 ? `measure ${first}` : `${measures.length} measures`;
 	losses.note({
 		severity: "warning",
-		message: `text that looks like chord symbols in ${where}; the program exported them as text`,
+		message: `text that looks like chord symbols in ${chordWordsWhere(measures)}; the program exported them as text`,
 		measure: first,
 	});
 }
@@ -205,9 +223,15 @@ export function readStructure(score: ReadScore, losses: Losses): Structure {
 			...(repeats[i] as Repeats),
 		}),
 	);
-	if (!own) chordWords(bars, losses);
+	const chordy = own ? [] : chordWordMeasures(bars);
+	chordWords(chordy, losses);
 	const placed = placeStructure(bars.map((b) => ({ ...b, heading: b.heading !== null })));
-	if (placed.holds) return { bars: withoutCells(bars, placed.dropped, losses), writtenOut: false };
+	if (placed.holds)
+		return {
+			bars: withoutCells(bars, placed.dropped, losses),
+			writtenOut: false,
+			chordWords: chordy,
+		};
 	losses.note({ severity: "warning", message: WRITTEN_OUT });
 	const longest = parts.reduce((a, p) => (p.length > a.length ? p : a), [] as ReadMeasure[]);
 	const order = playedOrder(longest, losses);
@@ -215,5 +239,6 @@ export function readStructure(score: ReadScore, losses: Losses): Structure {
 	return {
 		bars: order.map((i, k) => flattened(bars[i] as BarInfo, played[k] ?? null)),
 		writtenOut: true,
+		chordWords: chordy,
 	};
 }

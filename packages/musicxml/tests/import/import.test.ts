@@ -53,6 +53,11 @@ describe("errors, never throws", () => {
 		expect(errorOf(r)).toBe("not well-formed XML");
 	});
 
+	test("XML nested too deeply says so", () => {
+		const deep = `<score-partwise>${"<a>".repeat(150)}${"</a>".repeat(150)}</score-partwise>`;
+		expect(errorOf(importMusicXml(deep))).toBe("XML nested too deeply (more than 100 elements)");
+	});
+
 	test("a document that isn't a score is an error", () => {
 		expect(errorOf(importMusicXml("<html/>"))).toBe(
 			"not a MusicXML score: the root element is <html>",
@@ -64,6 +69,35 @@ describe("errors, never throws", () => {
 			"no chord symbols; these parts have notes: Piano, Bass. Import one as note sets with --part",
 		);
 		expect(importMusicXml(pianoAndBassNoHarmony).text).toBe("");
+	});
+
+	test("no harmony, but words that look like chord symbols: the hint is in the error", () => {
+		const words = (t: string) =>
+			`<direction placement="above"><direction-type><words>${t}</words></direction-type></direction>`;
+		const measures = [1, 2, 3]
+			.map((n) => measure(n, (n === 1 ? time44 : "") + words("Cmaj7") + note("E", 4, 4)))
+			.join("");
+		const r = importMusicXml(score([{ id: "P1", name: "Lead", measures }]));
+		expect(r.text).toBe("");
+		expect(r.diagnostics).toEqual([
+			{
+				severity: "error",
+				message:
+					"no chord symbols; text that looks like chord symbols in 3 measures (the program exported them as text); these parts have notes: Lead. Import one as note sets with --part",
+				measure: "1",
+			},
+		]);
+	});
+
+	test("--part naming a part with neither chords nor notes says so", () => {
+		const xml = score([
+			{ id: "P1", name: "Lead", measures: measure(1, time44 + harmony("C") + note("E", 4, 4)) },
+			{ id: "P2", name: "Empty", measures: measure(1, time44) },
+		]);
+		expect(importMusicXml(xml, { part: "Empty" })).toEqual({
+			text: "",
+			diagnostics: [{ severity: "error", message: "Empty has no chord symbols or notes" }],
+		});
 	});
 
 	test("a score with neither chords nor notes has nothing to import", () => {

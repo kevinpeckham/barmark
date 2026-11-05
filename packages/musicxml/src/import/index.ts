@@ -6,8 +6,8 @@
 import { type ImportDiagnostic, Losses } from "./losses.js";
 import { importPart } from "./parts.js";
 import { type ReadPart, type ReadScore, readScore } from "./read.js";
-import { readStructure } from "./structure.js";
-import { parseXml } from "./tree.js";
+import { chordWordsWhere, readStructure } from "./structure.js";
+import { readXml } from "./tree.js";
 import { writeChart } from "./write.js";
 
 export type ImportOptions = {
@@ -36,33 +36,51 @@ function chosen(score: ReadScore, name: string, losses: Losses): ReadPart | null
 const hasNotes = (p: ReadPart) =>
 	p.measures.some((m) => m.lines.some((l) => l.some((a) => a.kind === "notes")));
 
-/** Why nothing came in: no chord symbols, and the parts whose notes `--part` could import. */
+/** Why nothing came in: no chord symbols (with any words that look like them), and the parts whose notes `--part` could import. */
 function noChords(score: ReadScore, losses: Losses): void {
 	const named = score.parts.filter(hasNotes).map((p) => p.name);
-	losses.note({
+	if (named.length === 0) {
+		losses.note({ severity: "error", message: "nothing to import: no chord symbols and no notes" });
+		return;
+	}
+	// The structure is read only for its chord-like words; its other losses don't apply.
+	const measures = readStructure(score, new Losses()).chordWords;
+	const words =
+		measures.length === 0
+			? ""
+			: `text that looks like chord symbols in ${chordWordsWhere(measures)} (the program exported them as text); `;
+	const error: ImportDiagnostic = {
 		severity: "error",
-		message:
-			named.length === 0
-				? "nothing to import: no chord symbols and no notes"
-				: `no chord symbols; these parts have notes: ${named.join(", ")}. Import one as note sets with --part`,
-	});
+		message: `no chord symbols; ${words}these parts have notes: ${named.join(", ")}. Import one as note sets with --part`,
+	};
+	if (measures[0] !== undefined) error.measure = measures[0];
+	losses.note(error);
+}
+
+/** The parts to import: the one `--part` names, else all; null when there is nothing to import. */
+function partsOf(score: ReadScore, options: ImportOptions, losses: Losses): ReadPart[] | null {
+	if (options.part === undefined) return score.parts;
+	const part = chosen(score, options.part, losses);
+	if (part && !hasNotes(part) && !part.measures.some((m) => m.harmonies.length > 0)) {
+		losses.note({ severity: "error", message: `${part.name} has no chord symbols or notes` });
+		return null;
+	}
+	return part ? [part] : null;
 }
 
 function run(xml: string, options: ImportOptions, losses: Losses): string {
-	const root = parseXml(xml);
-	if (!root) {
-		losses.note({ severity: "error", message: "not well-formed XML" });
+	const root = readXml(xml);
+	if (typeof root === "string") {
+		losses.note({ severity: "error", message: root });
 		return "";
 	}
 	const score = readScore(root, losses);
 	if (!score) return "";
 	const barmark = score.software?.startsWith("@barmark/musicxml") ?? false;
+	const chosenParts = partsOf(score, options, losses);
+	if (!chosenParts) return "";
 	const forced = options.part !== undefined;
-	const part = options.part === undefined ? null : chosen(score, options.part, losses);
-	if (forced && !part) return "";
-	const parts = (part ? [part] : score.parts).flatMap(
-		(p) => importPart(p, { barmark, forced }, losses) ?? [],
-	);
+	const parts = chosenParts.flatMap((p) => importPart(p, { barmark, forced }, losses) ?? []);
 	if (parts.length === 0) {
 		noChords(score, losses);
 		return "";
