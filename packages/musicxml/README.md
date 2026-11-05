@@ -33,7 +33,9 @@ part, "Chart"), at concert pitch except where an instrument transposes:
   spelling shown and `<degree>`s that make the exact chord. barmark never
   invents a melody.
 - **Note sets and voicings** (`{C E G}`, `Cmaj7{E3 G3 B3}`) are real
-  notes; a part whose notes sit low gets a bass clef.
+  notes; a part whose notes sit low gets a bass clef. A marked root
+  (`E3!`) is kept as a `<?barmark root?>` processing instruction on its
+  note, which other programs ignore.
 - **Instruments:** a part's `instrument:` gives its clef, staves and
   playback sound; a transposing one (trumpet in B♭, alto and tenor sax)
   is written at its pitch with a `<transpose>`. `clef:` fixes a clef,

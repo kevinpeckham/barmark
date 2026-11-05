@@ -6,6 +6,12 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- **A note set's marked root survives:** the root of `{D3 E3! G3 B3}` (and of a
+  voicing) is written as a `<?barmark root?>` processing instruction on its
+  `<note>`. Other programs ignore it; nothing sounds or looks different.
+
 ### Documentation
 
 - **README: "In Dorico"** notes what Dorico's MusicXML import does with

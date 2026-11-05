@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { parseChart } from "barmark";
 import { pitchesOf } from "../src/notes.js";
 import { measures, notes, xmlOf } from "./helpers.js";
+import { validate } from "./schema.js";
 
 const noteSet = (text: string) => {
 	const slot = parseChart(`| ${text} |`).bars[0]?.slots[0];
@@ -84,5 +85,22 @@ describe("notes", () => {
 		const [m] = measures(xmlOf("| ? |"));
 		expect(m).toMatch(/<words>\?<\/words>[\s\S]*<notehead>slash<\/notehead>/);
 		expect(m).not.toContain("<harmony>");
+	});
+
+	test("a marked root is a processing instruction on its note", () => {
+		const xml = xmlOf("# R\n\n| {D3 E3! G3 B3} |\n");
+		expect(xml).toContain("<note><?barmark root?><chord/>"); // E3 is the second note
+		expect(xml.match(/<\?barmark root\?>/g)?.length).toBe(1);
+		expect(validate(xml)).toEqual([]);
+	});
+
+	test("a voicing's marked root is marked too", () => {
+		const xml = xmlOf("# R\n\n| C{E3! G3} |\n");
+		expect(xml.match(/<\?barmark root\?>/g)?.length).toBe(1);
+		expect(validate(xml)).toEqual([]);
+	});
+
+	test("no marker without a marked root", () => {
+		expect(xmlOf("# R\n\n| {D3 E3 G3 B3} |\n")).not.toContain("<?barmark");
 	});
 });

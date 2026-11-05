@@ -7,7 +7,7 @@ import { beatLength, type Frac, type NoteValue, onBeat, plus } from "./rhythm.js
 import { writtenPitch } from "./written.js";
 import { el, text } from "./xml.js";
 
-export type Pitch = { step: string; alter: number; octave: number };
+export type Pitch = { step: string; alter: number; octave: number; root?: true };
 
 /** What a value sounds: a rest, a slash, or real notes. */
 export type Sound = { kind: "rest" } | { kind: "slash" } | { kind: "notes"; pitches: Pitch[] };
@@ -21,12 +21,15 @@ const MIDDLE_C = height({ step: "C", alter: 0, octave: 4 });
 /** A note set's pitches: written octaves kept; the rest rise from the note before, or from octave 4. */
 export function pitchesOf(record: ChordRecord): Pitch[] {
 	const out: Pitch[] = [];
-	for (const label of record.pitches) {
+	// The record names the root but not which note; its canonical text puts `!` after it.
+	const marks = record.canonical.slice(1, -1).split(" ");
+	for (const [i, label] of record.pitches.entries()) {
 		const m = /^([A-G])([#b]*)(-?\d+)?$/.exec(label);
 		const step = m?.[1] ?? "C";
 		const alter = [...(m?.[2] ?? "")].reduce((a, c) => a + (c === "#" ? 1 : -1), 0);
 		const prev = out[out.length - 1];
-		const p = { step, alter, octave: m?.[3] ? Number(m[3]) : (prev?.octave ?? 4) };
+		const p: Pitch = { step, alter, octave: m?.[3] ? Number(m[3]) : (prev?.octave ?? 4) };
+		if (record.kind === "notes" && marks[i]?.endsWith("!")) p.root = true;
 		if (!m?.[3] && prev) while (height(p) <= height(prev)) p.octave++;
 		out.push(p);
 	}
@@ -138,6 +141,8 @@ function pitchedXml(n: Pitched, v: NoteValue, style: ValueStyle): string {
 		n.articulation ? el("articulations", {}, ARTICULATIONS[n.articulation]) : "",
 	];
 	return el("note", {}, [
+		// A processing instruction: other programs ignore it, the importer reads it back as `!`.
+		n.pitch.root ? "<?barmark root?>" : "",
 		n.chord ? el("chord") : "",
 		el("pitch", {}, [
 			text("step", n.pitch.step),
