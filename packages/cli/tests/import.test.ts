@@ -40,7 +40,7 @@ describe("barmark import", () => {
 	test("--part names a part", async () => {
 		const io = folder({ "s.musicxml": XML });
 		expect(await importCommand(["s.musicxml", "--part", "Nope"], io)).toBe(1);
-		expect(io.err()).toMatch(/^s\.musicxml: no part named Nope/);
+		expect(io.err()).toMatch(/^s\.musicxml: error: no part named Nope/);
 		expect(io.out()).toBe("");
 	});
 	test("an import that gives nothing exits 1 and writes no --out file", async () => {
@@ -70,14 +70,29 @@ describe("barmark import", () => {
 		expect(await importCommand(["u.musicxml"], io)).toBe(0);
 		expect(io.out()).toContain("| G | C |");
 	});
-	test("a diagnostic is a line: file: measure N (Part): message", () => {
+	test("a diagnostic is a line: file: measure N (Part): severity: message, as check prints it", () => {
 		const d = { severity: "warning" as const, message: "lost it" };
 		expect(importLine("f.mxl", { ...d, measure: "4", part: "Piano" })).toBe(
-			"f.mxl: measure 4 (Piano): lost it",
+			"f.mxl: measure 4 (Piano): warning: lost it",
 		);
-		expect(importLine("f.mxl", { ...d, measure: "4" })).toBe("f.mxl: measure 4: lost it");
-		expect(importLine("f.mxl", { ...d, part: "Piano" })).toBe("f.mxl: (Piano): lost it");
-		expect(importLine("f.mxl", d)).toBe("f.mxl: lost it");
+		expect(importLine("f.mxl", { ...d, measure: "4" })).toBe("f.mxl: measure 4: warning: lost it");
+		expect(importLine("f.mxl", { ...d, part: "Piano" })).toBe("f.mxl: (Piano): warning: lost it");
+		expect(importLine("f.mxl", d)).toBe("f.mxl: warning: lost it");
+		expect(importLine("f.mxl", { severity: "error", message: "not a score" })).toBe(
+			"f.mxl: error: not a score",
+		);
+	});
+	test("a message that names its measures isn't prefixed with the first again", () => {
+		const d = { severity: "warning" as const, measure: "3", part: "Gtr" };
+		expect(importLine("f.mxl", { ...d, message: "notes left out in measure 3" })).toBe(
+			"f.mxl: (Gtr): warning: notes left out in measure 3",
+		);
+		expect(importLine("f.mxl", { ...d, message: "notes left out in 4 measures: 3, 5, 7, 9" })).toBe(
+			"f.mxl: (Gtr): warning: notes left out in 4 measures: 3, 5, 7, 9",
+		);
+		expect(importLine("f.mxl", { ...d, message: "notes left out in measure 30" })).toBe(
+			"f.mxl: measure 3 (Gtr): warning: notes left out in measure 30",
+		);
 	});
 	test("control characters never reach stderr raw", () => {
 		const d = {
@@ -86,7 +101,9 @@ describe("barmark import", () => {
 			part: "P\u009bx",
 			measure: "1",
 		};
-		expect(importLine("f\u001b.mxl", d)).toBe("f\uFFFD.mxl: measure 1 (P\uFFFDx): a\uFFFD[31mb");
+		expect(importLine("f\u001b.mxl", d)).toBe(
+			"f\uFFFD.mxl: measure 1 (P\uFFFDx): warning: a\uFFFD[31mb",
+		);
 	});
 	test("warnings go to stderr and still exit 0", async () => {
 		const io = folder({ "s.musicxml": XML });

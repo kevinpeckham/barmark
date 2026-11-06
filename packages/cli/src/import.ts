@@ -8,13 +8,30 @@ import { writeOutput } from "./output.js";
 /** Control characters shown as U+FFFD: nothing from a file reaches the terminal as an escape sequence. */
 const printable = (text: string) => text.replace(/\p{Cc}/gu, "\uFFFD");
 
-/** `file: measure N (Part): message`, each piece left out when the diagnostic has none. */
+/** Whether the message already says where it is: "in measure N" for its own measure, or "N measures: …". */
+function namesMeasures(d: ImportDiagnostic): boolean {
+	if (/\d+ measures: /.test(d.message)) return true;
+	// The measure number is the file's text: matched as it is, never as a pattern.
+	const own = `measure ${d.measure}`;
+	for (let at = d.message.indexOf(own); at >= 0; at = d.message.indexOf(own, at + 1)) {
+		const next = d.message[at + own.length] ?? "";
+		if (!/[\w.]/.test(next) && (at === 0 || !/\w/.test(d.message[at - 1] ?? ""))) return true;
+	}
+	return false;
+}
+
+/**
+ * `file: measure N (Part): severity: message`, as `check` prints its
+ * `file:line: severity: message`; each piece of the place left out when the
+ * diagnostic has none, or when the message names its measures itself.
+ */
 export function importLine(path: string, d: ImportDiagnostic): string {
 	const where = [
-		d.measure === undefined ? "" : `measure ${d.measure}`,
+		d.measure === undefined || namesMeasures(d) ? "" : `measure ${d.measure}`,
 		d.part === undefined ? "" : `(${d.part})`,
 	].filter(Boolean);
-	return printable(`${path}: ${where.length ? `${where.join(" ")}: ` : ""}${d.message}`);
+	const place = where.length ? `${where.join(" ")}: ` : "";
+	return printable(`${path}: ${place}${d.severity}: ${d.message}`);
 }
 
 /** The score's XML text: a .mxl is unpacked. Rejects with a message naming the problem. */
