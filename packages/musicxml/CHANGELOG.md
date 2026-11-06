@@ -6,6 +6,26 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- **Export: lyrics** (barmark's grammar 4.3 and 7.7). A syllable on a
+  note is a `<lyric number="1">` on it, with `syllabic` (single, begin,
+  middle or end, from the word's `-`s); `~` writes `<elision>` between
+  the syllables on one note; `:/` writes a `<lyric>` of `<extend/>`
+  alone on its note, and `<extend type="start"/>` on the syllable it
+  holds (which MuseScore keeps); a tied note carries its syllable on
+  without a mark. A numbered verse is `<lyric number="N">` on the same
+  notes: stacked on bars written once, or sung on a repeat's pass N. A
+  replay is written out, so its lyric rows go on its own measures. A
+  lyric row with no melody under it (no part sings, or the singer writes
+  no notes) is a part of its own after the others, "Lyrics": a one-line
+  percussion-clef staff of slash notes at the syllables' onsets, held as
+  the row holds them, rests where every verse breathes, the syllables on
+  the slashes, its instrument at volume 0, and `<?barmark lyrics?>` in
+  its first measure so the import can read it back as a lyric row. A
+  part exported alone (`part`) leaves it out. Text-line lyrics are words,
+  as before. Needs the next `barmark` release.
+
 ### Changed
 
 - **Export:** a part's bare line with its named lines written after it
@@ -18,6 +38,12 @@ package uses [semantic versioning](https://semver.org/).
   the next voice on the upper staff, after the named lines. Where the
   part writes only its bare line, it plays in the first line's place;
   systems without it export as before. Needs the next `barmark` release.
+
+### Fixed
+
+- **Export:** a lyric row or a `---` line between a repeat's endings no
+  longer cuts the repeat's passes short (`times` on the backward
+  repeat), as barmark already reads them.
 - **Import:** where one labelled system would otherwise run into the
   next (a part stops or enters), a `---` line keeps them apart, instead
   of a text line such as `Gtr tacet` or `Pno enters`. Needs `barmark`

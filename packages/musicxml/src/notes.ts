@@ -127,6 +127,8 @@ export type ValueStyle = {
 	staff: number | null;
 	/** A note's stem on a staff two lines share (barmark's grammar 7.6): the first line's up, the others' down. */
 	noteStem?: "up" | "down";
+	/** The `<lyric>`s on the value's note (its first, in a chord). */
+	lyrics?: string;
 };
 
 const staffXml = (staff: number | null) => (staff === null ? "" : text("staff", staff));
@@ -144,19 +146,33 @@ function pitchedXml(n: Pitched, v: NoteValue, style: ValueStyle): string {
 		// A processing instruction: other programs ignore it, the importer reads it back as `!`.
 		n.pitch.root ? "<?barmark root?>" : "",
 		n.chord ? el("chord") : "",
-		el("pitch", {}, [
-			text("step", n.pitch.step),
-			n.pitch.alter ? text("alter", n.pitch.alter) : "",
-			text("octave", n.pitch.octave),
-		]),
+		pitchXml(n.pitch, style.clef),
 		text("duration", duration),
 		...tieEnds("tie", tie),
 		...valueXml(v, style.voice),
 		stemXml(n.slash ?? style.noteStem),
 		n.slash ? text("notehead", "slash") : "",
 		staffXml(style.staff),
-		...(n.chord ? [] : style.beams.map((b, i) => text("beam", b, { number: i + 1 }))),
-		notations.some(Boolean) ? el("notations", {}, notations) : "",
+		...tailXml(n.chord, style, notations),
+	]);
+}
+
+/** A note's beams, notations and lyrics; a chord's later notes have no beams or lyrics of their own. */
+function tailXml(chord: boolean, style: ValueStyle, notations: string[]): string[] {
+	const marked = notations.some(Boolean) ? el("notations", {}, notations) : "";
+	if (chord) return [marked];
+	const beams = style.beams.map((b, i) => text("beam", b, { number: i + 1 }));
+	return [...beams, marked, style.lyrics ?? ""];
+}
+
+/** A note's pitch; on a rhythm staff, where it is shown, as it has none. */
+function pitchXml(p: Pitch, clef: Clef): string {
+	if (clef === "rhythm")
+		return el("unpitched", {}, [text("display-step", p.step), text("display-octave", p.octave)]);
+	return el("pitch", {}, [
+		text("step", p.step),
+		p.alter ? text("alter", p.alter) : "",
+		text("octave", p.octave),
 	]);
 }
 
@@ -166,6 +182,7 @@ const SLASH: Record<Clef, Pitch> = {
 	F: { step: "D", alter: 0, octave: 3 },
 	G8vb: { step: "B", alter: 0, octave: 3 },
 	C: { step: "C", alter: 0, octave: 4 },
+	rhythm: { step: "B", alter: 0, octave: 4 },
 };
 
 /** One written value of a sound: a rest, a slash note, or a chord of notes. */

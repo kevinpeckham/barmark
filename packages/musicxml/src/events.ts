@@ -5,11 +5,13 @@
  * bar before.
  */
 import type { Articulation, Push, SimpleSlot, Slot } from "barmark";
+import { type Sung, sungAt } from "./lyrics.js";
 import type { Measure } from "./measures.js";
 import { noteSetOf, type Pitch, soundOf } from "./notes.js";
 import type { PedalMark } from "./pedal.js";
 import {
 	barLength,
+	beatLength,
 	dyadic,
 	type Frac,
 	frac,
@@ -18,6 +20,7 @@ import {
 	plus,
 	slotLengths,
 	times,
+	ZERO,
 } from "./rhythm.js";
 
 export type SoundEvent = {
@@ -35,6 +38,8 @@ export type SoundEvent = {
 	notes?: Pitch[];
 	/** The sustain pedal's marks before it (`applyPedals`). */
 	pedal?: PedalMark[];
+	/** The syllables sung on its note, one per verse (grammar 4.3, 7.7). */
+	lyrics?: Sung[];
 };
 
 export type MeasureEvents = {
@@ -45,11 +50,19 @@ export type MeasureEvents = {
 	lift?: "start" | "end";
 };
 
+/** Every length a part's bars need whole in divisions: their bars, beats and events. */
+export const lengthsIn = (bars: MeasureEvents[]): Frac[] =>
+	bars.flatMap((b) => [
+		barLength(b.measure.meter),
+		beatLength(b.measure.meter),
+		...b.events.map((e) => e.length),
+	]);
+
 const PUSH: Record<Push, Frac> = { eighth: frac(1, 2), sixteenth: frac(1, 4) };
 
 const NO_TIE = { start: false, stop: false };
 
-function simple(slot: SimpleSlot, length: Frac, words: string[]): SoundEvent {
+function simple(slot: SimpleSlot, length: Frac, words: string[], lyrics: Sung[] = []): SoundEvent {
 	const articulation = slot.kind === "chord" ? slot.articulation : undefined;
 	return {
 		slot,
@@ -58,6 +71,7 @@ function simple(slot: SimpleSlot, length: Frac, words: string[]): SoundEvent {
 		harmony: true,
 		...(articulation ? { articulation } : {}),
 		tie: NO_TIE,
+		...(lyrics.length ? { lyrics } : {}),
 	};
 }
 
@@ -68,15 +82,22 @@ function memberLengths(slot: Frac, members: SimpleSlot[]): Frac[] {
 	return members.map((_, j) => times(slot, frac(j === dotted ? 3 : 1, 4)));
 }
 
-/** A measure's events in order; a tacet measure has none. */
+/** A measure's events in order, each with the syllables sung on its note; a tacet measure has none. */
 export function eventsOf(m: Measure): MeasureEvents {
 	const wordsAt = (at: number) => m.words.filter((w) => w.at === at).map((w) => w.text);
+	const onNotes = m.lyrics.filter((s) => s.note);
+	let at = ZERO;
+	const timed = (slot: SimpleSlot, length: Frac, words: string[]) => {
+		const e = simple(slot, length, words, sungAt(onNotes, at));
+		at = plus(at, length);
+		return e;
+	};
 	const lengths = m.tacet ? [] : slotLengths(m.slots, m.meter);
 	const events = lengths.flatMap((len, i) => {
 		const slot = m.slots[i] as Slot;
-		if (slot.kind !== "group") return [simple(slot, len, wordsAt(i))];
+		if (slot.kind !== "group") return [timed(slot, len, wordsAt(i))];
 		const each = memberLengths(len, slot.members);
-		return slot.members.map((s, j) => simple(s, each[j] ?? len, j === 0 ? wordsAt(i) : []));
+		return slot.members.map((s, j) => timed(s, each[j] ?? len, j === 0 ? wordsAt(i) : []));
 	});
 	return { measure: m, events, after: m.tacet ? [] : wordsAt(m.slots.length) };
 }
@@ -108,7 +129,8 @@ function push(out: MeasureEvents[], giver: Place, at: Place, by: Frac): Pushed {
 		harmony: false,
 		tie: { start: false, stop: tied },
 	});
-	const early = { ...simple(event.slot, by, []), tie: { start: tied, stop: false } };
+	// The early note is the attack: it takes the syllable.
+	const early = { ...simple(event.slot, by, [], event.lyrics), tie: { start: tied, stop: false } };
 	from.length = minus(from.length, by);
 	out[giver.bar]?.events.splice(giver.index + 1, 0, early);
 	return "inserted";
@@ -120,7 +142,7 @@ function push(out: MeasureEvents[], giver: Place, at: Place, by: Frac): Pushed {
  * early note there would sound on the wrong pass. The last ending plays on
  * into the bar after it, so it doesn't leave.
  */
-function crosses(from: Measure, to: Measure): boolean {
+export function crosses(from: Measure, to: Measure): boolean {
 	const f = from.marks;
 	const t = to.marks;
 	const leaves = f.repeatEnd !== null || f.ending?.stop === "stop" || f.end.length > 0;

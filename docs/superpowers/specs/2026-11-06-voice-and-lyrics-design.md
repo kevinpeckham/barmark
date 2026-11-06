@@ -306,3 +306,14 @@ Each goes into the draft's decisions log with the date.
 8. `%` on a voice line copies notes, not syllables.
 9. A lyric row with no melody exports marked `<?barmark lyrics?>`, so it
    comes back as a lyric row.
+10. The lyric row's staff (Task 7) is a part after the chart's parts,
+    named "Lyrics" with an instrument of the same name at MIDI volume 0:
+    words have no pitch, so a program shouldn't play one. It is a
+    one-line staff with a percussion clef and unpitched slash notes
+    (stems up, the row's rhythm): a slash at each syllable's onset in
+    any verse, held while a verse holds, a rest where every verse
+    breathes. A part exported alone (`part`) leaves it out.
+11. `:/` writes `<extend/>` alone on the held note, as section 7 says,
+    and also `<extend type="start"/>` on the syllable it holds: MuseScore
+    4.7 drops a `<lyric>` with no text and keeps a melisma only as an
+    extend on its syllable (FINDINGS.md).

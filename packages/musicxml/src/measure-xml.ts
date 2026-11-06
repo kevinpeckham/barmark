@@ -14,6 +14,7 @@ import {
 } from "./directions.js";
 import type { MeasureEvents, SoundEvent } from "./events.js";
 import { slotHarmonyXml } from "./harmony.js";
+import { lyricsXml } from "./lyrics.js";
 import type { Marks, Measure } from "./measures.js";
 import { type Sound, type Stem, soundOf, soundValueXml, type Tie } from "./notes.js";
 import { pedalXml } from "./pedal.js";
@@ -53,6 +54,8 @@ export type MeasureContext = {
 	bare?: MeasureEvents;
 	/** Whether this part writes the score's marks: the top part, or a part exported alone. */
 	score: boolean;
+	/** The first measure of a lyric row's staff, marked so the import reads it back as one. */
+	lyricRow?: true;
 };
 
 const LETTER_FIFTHS: Record<string, number> = { F: -1, C: 0, G: 1, D: 2, A: 3, E: 4, B: 5 };
@@ -95,7 +98,7 @@ function timeXml(m: Measure, prev: Measure | null): string {
 	return el("time", {}, [text("beats", m.meter.n), text("beat-type", m.meter.d)]);
 }
 
-const CLEF_LINE = { G: 2, F: 4, C: 3 };
+const CLEF_LINE: Record<string, number> = { G: 2, F: 4, C: 3 };
 
 /** Slash style on from the first slashed measure, off for a measure of notes, and on again after. */
 function slashStyleXml({ now: on, before }: MeasureContext["slashed"], staves: 1 | 2): string {
@@ -107,13 +110,18 @@ function slashStyleXml({ now: on, before }: MeasureContext["slashed"], staves: 1
 	);
 }
 
+/** A rhythm staff's percussion clef, on one line. */
+const RHYTHM_CLEF =
+	el("clef", {}, text("sign", "percussion")) + el("staff-details", {}, text("staff-lines", 1));
+
 /** The clef, on the first measure and wherever it changes. */
 function clefXml({ now, before }: MeasureContext["clef"], staff?: number): string {
 	if (now === before) return "";
+	if (now === "rhythm") return RHYTHM_CLEF;
 	const sign = now === "G8vb" ? "G" : now;
 	return el("clef", staff ? { number: staff } : {}, [
 		text("sign", sign),
-		text("line", CLEF_LINE[sign]),
+		text("line", CLEF_LINE[sign] ?? 2),
 		now === "G8vb" ? text("clef-octave-change", -1) : "",
 	]);
 }
@@ -189,11 +197,13 @@ type EventValues = { e: SoundEvent; sound: Sound; values: Written[] };
 /** One event: its words, its harmony, then its values, each with its beams. */
 function eventXml(w: EventValues, style: BarStyle, beams: () => Beam[], before = ""): string {
 	const { e, sound } = w;
+	const lyrics = e.lyrics?.length ? lyricsXml(e.lyrics) : "";
 	const notes = w.values.map(({ v, tie }, i) =>
 		soundValueXml(sound, v, {
 			duration: whole(v.length, style.divisions),
 			tie,
 			...(i === 0 && e.articulation ? { articulation: e.articulation } : {}),
+			...(i === 0 && lyrics ? { lyrics } : {}),
 			stem: style.stem,
 			clef: style.clef,
 			written: style.written,
@@ -426,6 +436,13 @@ function rightBarlineXml(marks: Marks): string {
 	]);
 }
 
+/** A measure's place among a part's measures: its index, and the measures either side. */
+export const placeIn = (measures: Measure[], index: number) => ({
+	index,
+	previous: measures[index - 1] ?? null,
+	next: measures[index + 1] ?? null,
+});
+
 export function measureXml(bar: MeasureEvents, ctx: MeasureContext): string {
 	const m = bar.measure;
 	const body = ctx.lines
@@ -434,6 +451,8 @@ export function measureXml(bar: MeasureEvents, ctx: MeasureContext): string {
 			? stavesXml(bar, ctx)
 			: staffXml(bar, ctx);
 	return el("measure", { number: ctx.index + 1, text: m.shown }, [
+		// A processing instruction: other programs ignore it, the importer reads a lyric row.
+		ctx.lyricRow ? "<?barmark lyrics?>" : "",
 		attributesXml(m, ctx),
 		leftBarlineXml(m.marks),
 		startXml(m, ctx),

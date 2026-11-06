@@ -462,6 +462,26 @@ and round-trip it through `format`.
   `dorico-*.musicxml` with expected charts. Revisit if a Dorico release
   documents export filter IDs and a destination parameter.
 
+### MuseScore keeps a melisma only on its syllable, and writes an elision as a glyph (2026-11-06, voice and lyrics)
+
+- **The symptom.** An exported lead sheet went through MuseScore 4.7
+  (`mscore -o`) with its lyric numbers and `syllabic` intact, but the
+  `:/` notes' `<lyric number="1"><extend/></lyric>` came back as no
+  lyric at all, and `<text>the</text><elision/><text>end</text>` came
+  back as three `<text>`s, the middle one SMuFL's lyrics elision glyph
+  (U+E551) in Leland Text, with no `<elision/>`.
+- **The cause.** MuseScore models a melisma as an extension line on the
+  syllable that is held, so it reads `<extend>` only beside a `<text>`
+  and drops a `<lyric>` that has none. It stores an elision as a
+  character in the lyric's text, and writes it back that way.
+- **The fix.** The export also writes `<extend type="start"/>` on the
+  syllable a `:/` holds (spec, Claude's call 11), which MuseScore keeps
+  (as `<extend/>`). `scripts/musescore-fixtures.ts` checks an exported
+  lead sheet's lyrics survive MuseScore, reading U+E551 as an elision.
+  The import (Task 8) must read both forms: an extend on a syllable
+  holds it over the following unsung notes, and U+E551 between texts is
+  `~`.
+
 ### MuseScore's AppImage needs `xvfb-run`; it ignores `QT_QPA_PLATFORM=offscreen` (2026-11-05, MusicXML import)
 
 - **The symptom.** `mscore -o out.musicxml in.mscx` on the bench VM, with

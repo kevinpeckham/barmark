@@ -8,13 +8,21 @@ import {
 	parseChart,
 } from "barmark";
 import { clefPlan } from "./clefs.js";
-import { applyHolds, applyPushes, eventsOf, joinHolds, type MeasureEvents } from "./events.js";
+import {
+	applyHolds,
+	applyPushes,
+	eventsOf,
+	joinHolds,
+	lengthsIn,
+	type MeasureEvents,
+} from "./events.js";
 import { type Instrument, instrumentOf } from "./instruments.js";
-import { fifthsOf, measureXml } from "./measure-xml.js";
+import { lyricPartXml, lyricScorePart } from "./lyric-staff.js";
+import { fifthsOf, measureXml, placeIn } from "./measure-xml.js";
 import { writtenMeasures } from "./measures.js";
 import { rhythmic, slashed, soundOf } from "./notes.js";
 import { applyPedals } from "./pedal.js";
-import { barLength, beatLength, divisionsFor } from "./rhythm.js";
+import { divisionsFor } from "./rhythm.js";
 import { VERSION } from "./version.js";
 import { fitWritten } from "./written.js";
 import { el, text } from "./xml.js";
@@ -162,20 +170,12 @@ function partXml(source: PartSource, i: number): string {
 	const fixed = instrument?.clef;
 	const clefs = fixed ? bars.map(() => fixed) : clefPlan(bars);
 	const divisions = divisionsFor(
-		streams.flatMap((s) =>
-			[...s.bars, ...(bare?.bars ?? [])].flatMap((b) => [
-				barLength(b.measure.meter),
-				beatLength(b.measure.meter),
-				...b.events.map((e) => e.length),
-			]),
-		),
+		streams.flatMap((s) => lengthsIn([...s.bars, ...(bare?.bars ?? [])])),
 	);
 	const xml = bars.map((bar, index) =>
 		measureXml(bar, {
 			divisions,
-			index,
-			previous: measures[index - 1] ?? null,
-			next: measures[index + 1] ?? null,
+			...placeIn(measures, index),
 			slashed: around(slashedBars, index, true),
 			clef: around(clefs, index, "G"),
 			rhythmic: rhythmicBars[index] ?? false,
@@ -190,6 +190,35 @@ function partXml(source: PartSource, i: number): string {
 	);
 	return el("part", { id: `P${i + 1}` }, xml);
 }
+
+/** Whether a chart with no parts sings on its notes: some note carries a syllable (grammar 4.3). */
+const notesSing = (parse: ChartParse) =>
+	parse.lines.some(
+		(l) =>
+			l.kind === "bars" &&
+			l.cells.some(
+				(c) =>
+					c.kind === "slots" &&
+					c.slots.some((s) =>
+						(s.kind === "group" ? s.members : [s]).some((m) => m.kind === "chord" && m.syllable),
+					),
+			),
+	);
+
+/**
+ * Whether a parse's words have no melody to sit on (grammar 7.7): no part
+ * sings, or the part whose they are writes no notes.
+ */
+function unsung(parse: ChartParse): boolean {
+	const words = parse.bars.flatMap((b) => b.lyrics ?? []).find((l) => l.syllables.length > 0);
+	if (!words) return false;
+	if (parse.parts.length === 0) return !notesSing(parse);
+	return parse.parts.find((p) => p.label === words.part)?.sings === undefined;
+}
+
+/** The parse that carries a lyric row with no melody, if any: the chart's words, or a singer's with no notes. */
+const lyricSource = (sources: PartSource[]) =>
+	sources.flatMap((s) => [...s.parses, ...(s.bare ? [s.bare] : [])]).find(unsung);
 
 /** MusicXML needs at least one measure in every part. */
 const NO_BARS: ChartDiagnostic = {
@@ -219,11 +248,15 @@ export function exportMusicXml(chart: string, options: MusicXmlOptions = {}): Mu
 	if (options.part && sources.length === 0)
 		return { ok: false, diagnostics: [noPart(options.part), ...parse.diagnostics] };
 	const title = parse.title ?? options.title;
+	// A lyric row with no melody is a staff of its own, after the parts; a part exported alone leaves it out.
+	const words = options.part ? undefined : lyricSource(sources);
+	const wordsId = `P${sources.length + 1}`;
 	const head = [
 		title ? el("work", {}, text("work-title", title)) : "",
 		identificationXml(parse.credits),
-		el("part-list", {}, sources.map(scorePart)),
+		el("part-list", {}, [...sources.map(scorePart), words ? lyricScorePart(wordsId) : ""]),
 	];
-	const xml = `<?xml version="1.0" encoding="UTF-8"?>\n${DOCTYPE}\n${el("score-partwise", { version: "4.0" }, [...head, ...sources.map(partXml)])}\n`;
+	const parts = [...sources.map(partXml), words ? lyricPartXml(words, wordsId) : ""];
+	const xml = `<?xml version="1.0" encoding="UTF-8"?>\n${DOCTYPE}\n${el("score-partwise", { version: "4.0" }, [...head, ...parts])}\n`;
 	return { ok: true, xml, diagnostics: parse.diagnostics };
 }

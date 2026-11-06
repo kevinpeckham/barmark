@@ -80,8 +80,16 @@ part, "Chart"), at concert pitch except where an instrument transposes:
   bar numbers.
 - **Directives:** key, time, tempo (a metronome mark), rit. and accel.,
   and the feel (MusicXML 4.0 swing).
+- **Lyrics:** syllables on notes (`{G4}:maz-`) are `<lyric>`s on their
+  notes with `syllabic`; `~` is an `<elision>`, `:/` an `<extend>`, a
+  tie carries its syllable on. Verse N (`lyrics N:`, or pass N of a
+  repeat) is `<lyric number="N">` on the same notes; a replay's words go
+  on its written-out measures. A lyric row with no melody under it is a
+  part of its own, "Lyrics": a silent one-line staff of slash notes at
+  the syllables' onsets, marked `<?barmark lyrics?>` in its first
+  measure.
 - **Text:** section headings, rehearsal marks, words on bars, and every
-  text line (lyrics, `###` notes) as words, so nothing written is lost.
+  text line (free-text lyrics, `###` notes) as words, so nothing written is lost.
   In a score of several parts, headings, rehearsal marks, tempo, feel and
   jumps are written once, over the top part.
 - **Credits:** the title as the work's title; composers, lyricists,
@@ -104,9 +112,8 @@ things its own way:
 - **Repeat counts aren't read.** A repeat played more than twice is also
   printed as words ("×3"), since Dorico ignores the count in the file.
 
-Not yet: lyrics placed as `<lyric>` syllables (barmark doesn't place them
-by beat, so the import reads them as text lines and the export writes
-them as words), and MIDI.
+Not yet: importing lyrics as syllables (the import still reads them as
+text lines), and MIDI.
 
 ## License
 

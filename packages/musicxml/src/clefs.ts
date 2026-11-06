@@ -7,8 +7,11 @@
 import type { MeasureEvents } from "./events.js";
 import { belowMiddleC, type Pitch, soundOf } from "./notes.js";
 
-/** Treble, bass, treble an octave down (a guitar's), or alto (barmark's grammar 7.3). */
-export type Clef = "G" | "F" | "G8vb" | "C";
+/**
+ * Treble, bass, treble an octave down (a guitar's), or alto (barmark's
+ * grammar 7.3); or a one-line rhythm staff's percussion clef (a lyric row's).
+ */
+export type Clef = "G" | "F" | "G8vb" | "C" | "rhythm";
 type ByBars = "G" | "F";
 
 const STEPS = "CDEFGAB";
