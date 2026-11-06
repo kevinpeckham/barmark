@@ -82,6 +82,25 @@ showed the rule needed refining.
   characters are still stripped after decoding, so `&#27;` can't reach
   a terminal. Tested with 5,000 `&apos;` beside the billion-laughs test.
 
+### A search inside a loop over measures turns a hostile file into a slow one (2026-11-06, MusicXML import)
+
+- **The symptom.** 5,000 measures each with an unwritable time signature
+  took 2.2 s to import; one measure of 3,000 notes on two staves with 200
+  chord symbols at odd offsets took 8.9 s.
+- **The cause.** Lookups written as `findIndex`, `find`, `filter` or
+  `includes` inside loops and sort comparators: the meter losses sorted
+  by finding each measure's index twice per comparison, snapping chords
+  searched the kept onsets for each chord and then tried every count of
+  snapped chords, and merging staves searched the upper staff for each
+  low note. Each is fine on a real score and quadratic (or worse) on a
+  file built to be large.
+- **The fix.** Each such lookup is a `Map` or `Set` keyed by index or by
+  onset (fractions are in lowest terms, so `n/d` is a key), or a binary
+  search over a sorted list; at most 16 snap counts are tried before
+  every chord snaps (`grid.ts`). `tests/import/scale.test.ts` holds the
+  large files, timed as the best of two warmed-up runs, and checks that
+  ten times the measures doesn't take a hundred times as long.
+
 ### A repeat inside a repeat exports as two backward repeats, which no program plays as barmark does (2026-11-05, MusicXML import)
 
 - **The symptom.** `|: D | x2` then `| A :|` plays six bars in barmark
