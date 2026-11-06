@@ -8,7 +8,7 @@
 import { beatsOf, type Meter, parseChord } from "barmark";
 import { beatLength, div, type Frac } from "../rhythm.js";
 import { directiveLines, type Settings, statesOf } from "./directives.js";
-import type { Losses } from "./losses.js";
+import { type Losses, measuresText } from "./losses.js";
 import { type MeasureMarks, readMarks } from "./marks.js";
 import { playedOrder } from "./order.js";
 import type { ReadMeasure, ReadScore } from "./read.js";
@@ -183,18 +183,13 @@ function chordWordMeasures(bars: BarInfo[]): string[] {
 		.map((b) => b.measure);
 }
 
-/** Where chord-like words are: "measure 5", or "12 measures". */
-export function chordWordsWhere(measures: string[]): string {
-	return measures.length === 1 ? `measure ${measures[0]}` : `${measures.length} measures`;
-}
-
 /** One warning for chord-like words: they stay words, which is where the program put them. */
 function chordWords(measures: string[], losses: Losses): void {
 	const [first] = measures;
 	if (first === undefined) return;
 	losses.note({
 		severity: "warning",
-		message: `text that looks like chord symbols in ${chordWordsWhere(measures)}; the program exported them as text`,
+		message: `text that looks like chord symbols in ${measuresText(measures)}; the program exported them as text`,
 		measure: first,
 	});
 }

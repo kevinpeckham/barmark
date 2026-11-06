@@ -1,6 +1,6 @@
 /** Untrusted files with many measures: nothing in the import may grow faster than the file. */
 import { expect, test } from "bun:test";
-import { importMusicXml } from "../../src/index.js";
+import { type ImportDiagnostic, importMusicXml } from "../../src/index.js";
 
 const harmony = "<harmony><root><root-step>C</root-step></root><kind>major</kind></harmony>";
 const slash =
@@ -13,22 +13,38 @@ function score(count: number, measure: (i: number) => string, software = "MuseSc
 	return `<?xml version="1.0"?><score-partwise version="4.0"><identification><encoding><software>${software}</software></encoding></identification><part-list><score-part id="P1"><part-name>Gtr</part-name></score-part></part-list><part id="P1">${body}</part></score-partwise>`;
 }
 
-test("5,000 measures each with a time signature barmark can't write import well under a second", () => {
-	const xml = score(
-		5000,
-		(i) =>
-			`<attributes>${i === 0 ? "<divisions>1</divisions>" : ""}<time><beats>7</beats><beat-type>3</beat-type></time></attributes>${harmony}${slash}`,
-	);
-	// Warm up first: the chord tables barmark builds on first use aren't the file's cost.
+/**
+ * The time an import takes: warmed up (the chord tables barmark builds on
+ * first use aren't the file's cost), the best of two runs, so a busy
+ * machine's pause isn't counted.
+ */
+function timed(xml: string): { ms: number; text: string; diagnostics: ImportDiagnostic[] } {
 	importMusicXml(
 		score(
 			4,
 			(i) => (i === 0 ? "<attributes><divisions>1</divisions></attributes>" : "") + harmony + slash,
 		),
 	);
-	const start = performance.now();
-	const r = importMusicXml(xml);
-	expect(performance.now() - start).toBeLessThan(1000);
+	let ms = Number.POSITIVE_INFINITY;
+	let r = importMusicXml("");
+	for (let run = 0; run < 2; run++) {
+		const start = performance.now();
+		r = importMusicXml(xml);
+		ms = Math.min(ms, performance.now() - start);
+	}
+	return { ms, text: r.text, diagnostics: r.diagnostics };
+}
+
+const badTimes = (count: number) =>
+	score(
+		count,
+		(i) =>
+			`<attributes>${i === 0 ? "<divisions>1</divisions>" : ""}<time><beats>7</beats><beat-type>3</beat-type></time></attributes>${harmony}${slash}`,
+	);
+
+test("5,000 measures each with a time signature barmark can't write import well under a second", () => {
+	const r = timed(badTimes(5000));
+	expect(r.ms).toBeLessThan(1000);
 	expect(r.diagnostics.filter((d) => d.message.includes("time signature"))).toEqual([
 		{
 			severity: "warning",
@@ -36,20 +52,9 @@ test("5,000 measures each with a time signature barmark can't write import well 
 			measure: "1",
 		},
 	]);
+	// And it grows with the file: ten times the measures, not a hundred times the time.
+	expect(r.ms / timed(badTimes(500)).ms).toBeLessThan(25);
 });
-
-/** The time an import takes, warmed up. */
-function timed(xml: string): { ms: number; text: string } {
-	importMusicXml(
-		score(
-			4,
-			(i) => (i === 0 ? "<attributes><divisions>1</divisions></attributes>" : "") + harmony + slash,
-		),
-	);
-	const start = performance.now();
-	const r = importMusicXml(xml);
-	return { ms: performance.now() - start, text: r.text };
-}
 
 test("one measure with thousands of attacks and chord symbols, on two staves, imports in under a second", () => {
 	const n = 3000;

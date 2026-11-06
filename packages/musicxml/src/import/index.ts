@@ -3,10 +3,10 @@
  * couldn't carry over. The pipeline reads the XML, the score, each part,
  * then the structure, and writes the chart; it never throws.
  */
-import { type ImportDiagnostic, Losses } from "./losses.js";
+import { type ImportDiagnostic, Losses, measuresText } from "./losses.js";
 import { importPart } from "./parts.js";
 import { type ReadPart, type ReadScore, readScore, reportMeters } from "./read.js";
-import { chordWordsWhere, readStructure } from "./structure.js";
+import { readStructure } from "./structure.js";
 import { readXml } from "./tree.js";
 import { writeChart } from "./write.js";
 
@@ -48,7 +48,7 @@ function noChords(score: ReadScore, losses: Losses): void {
 	const words =
 		measures.length === 0
 			? ""
-			: `text that looks like chord symbols in ${chordWordsWhere(measures)} (the program exported them as text); `;
+			: `text that looks like chord symbols in ${measuresText(measures)} (the program exported them as text); `;
 	const error: ImportDiagnostic = {
 		severity: "error",
 		message: `no chord symbols; ${words}these parts have notes: ${named.join(", ")}. Import one as note sets with --part`,

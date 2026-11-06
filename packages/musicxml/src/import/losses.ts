@@ -44,10 +44,13 @@ function render(g: Group): ImportDiagnostic {
 	const [first] = named;
 	if (first === undefined) return out;
 	out.measure = first;
-	if (named.length === 1) out.message = `${g.message} in measure ${first}`;
-	else {
-		const shown = named.slice(0, SHOWN).join(", ");
-		out.message = `${g.message} in ${named.length} measures: ${shown}${named.length > SHOWN ? ", …" : ""}`;
-	}
+	out.message = `${g.message} in ${measuresText(named)}`;
 	return out;
+}
+
+/** Where a loss is: "measure 5", or "12 measures: 1, 2, 3, …" (the first few named). */
+export function measuresText(measures: string[]): string {
+	if (measures.length === 1) return `measure ${measures[0]}`;
+	const shown = measures.slice(0, SHOWN).join(", ");
+	return `${measures.length} measures: ${shown}${measures.length > SHOWN ? ", …" : ""}`;
 }

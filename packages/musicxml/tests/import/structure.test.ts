@@ -382,7 +382,7 @@ describe("chord symbols written as text", () => {
 			{
 				severity: "warning",
 				message:
-					"text that looks like chord symbols in 12 measures; the program exported them as text",
+					"text that looks like chord symbols in 12 measures: 1, 2, 3, …; the program exported them as text",
 				measure: "1",
 			},
 		]);
@@ -410,7 +410,7 @@ describe("chord symbols written as text", () => {
 			xml`${measure(1, start() + words("Am7") + whole)}${measure(2, words("D") + whole)}${measure(3, words("A") + whole)}`,
 		);
 		expect(r.diagnostics.map((d) => d.message)).toEqual([
-			"text that looks like chord symbols in 3 measures; the program exported them as text",
+			"text that looks like chord symbols in 3 measures: 1, 2, 3; the program exported them as text",
 		]);
 	});
 

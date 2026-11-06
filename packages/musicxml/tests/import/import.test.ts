@@ -83,7 +83,7 @@ describe("errors, never throws", () => {
 			{
 				severity: "error",
 				message:
-					"no chord symbols; text that looks like chord symbols in 3 measures (the program exported them as text); these parts have notes: Lead. Import one as note sets with --part",
+					"no chord symbols; text that looks like chord symbols in 3 measures: 1, 2, 3 (the program exported them as text); these parts have notes: Lead. Import one as note sets with --part",
 				measure: "1",
 			},
 		]);
@@ -217,7 +217,7 @@ describe("words that look like chord symbols", () => {
 		const xml = score([{ id: "P1", name: "Lead", measures }]);
 		const r = sound(importMusicXml(xml, { part: "Lead" }));
 		expect(r.diagnostics.map((d) => d.message)).toEqual([
-			"text that looks like chord symbols in 12 measures; the program exported them as text",
+			"text that looks like chord symbols in 12 measures: 1, 2, 3, …; the program exported them as text",
 		]);
 		expect(r.text.match(/"Cmaj7"/g)).toHaveLength(12);
 	});
