@@ -1009,3 +1009,22 @@ Fallow's duplication check failed the copy at once. barmark's
 `tests/chart/fixtures.ts` now exports `timeline`, and
 `packages/musicxml/tests/import/played.ts` imports it across packages:
 one yardstick for both round trips.
+
+### MuseScore reads a dotted note's `<dots>` only before its `<durationType>` (2026-11-06, musicxml)
+
+The hand-written `hymn.mscx` fixture's dotted half came out of MuseScore
+as a plain half followed by a quarter rest: in a `.mscx` `<Chord>`,
+MuseScore reads `<dots>1</dots>` only when it comes before
+`<durationType>`, and silently fills the bar with a rest otherwise. Write
+`<dots>` first in a hand-written `.mscx`, and read each regenerated
+`.musicxml`'s durations (and the `.chart.md` the script writes beside it)
+before committing.
+
+### Our export's pickup isn't MuseScore's (2026-11-06, musicxml)
+
+barmark's export writes a `[1/4]` pickup as a short first measure in a
+`<time>` of its own, then the full meter, with no `implicit="yes"`
+(MuseScore's mark for a pickup); the import read that back as
+`time: 1/4` then `time: 3/4`, so Amazing Grace never came back as
+written. The import now reads both shapes as a pickup
+(`settleFirstPickup` in `import/read.ts`).
