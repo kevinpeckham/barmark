@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { parseChart, printChart } from "barmark";
 import { exportMusicXml, type ImportResult, importMusicXml } from "../../src/index.js";
-import { attributes, measure, note } from "./helpers.js";
+import { attributes, measure, note, rest } from "./helpers.js";
 
 /** What every import must give: canonical text that parses without errors, and no importer bug. */
 function sound(r: ImportResult): ImportResult {
@@ -239,5 +239,75 @@ describe("words that look like chord symbols", () => {
 			"text that looks like chord symbols in 12 measures: 1, 2, 3, …; the program exported them as text",
 		]);
 		expect(r.text.match(/"Cmaj7"/g)).toHaveLength(12);
+	});
+});
+
+describe("systems that would join", () => {
+	test("systems that would join are separated by ---, with no cue words", () => {
+		const slash = note("B", 4, 4, "<notehead>slash</notehead>");
+		const resting = rest(4).replace("<rest/>", '<rest measure="yes"/>');
+		const bars = (from: number, steps: string[] | null) =>
+			Array.from({ length: 4 }, (_, i) => {
+				const step = steps?.[i];
+				const body = step ? harmony(step) + slash : resting;
+				return measure(from + i, (from === 1 && i === 0 ? time44 : "") + body);
+			}).join("");
+		const xml = score(
+			[
+				{ id: "P1", name: "Guitar", measures: bars(1, ["A", "B", "C", "D"]) + bars(5, null) },
+				{ id: "P2", name: "Piano", measures: bars(1, null) + bars(5, ["E", "F", "G", "A"]) },
+			],
+			"",
+			"MuseScore 4.4",
+		);
+		const r = sound(importMusicXml(xml));
+		expect(r.text).toBe(
+			"part: G = Guitar\npart: P = Piano\nG | A | B | C | D |\n---\nP | E | F | G | A |\n",
+		);
+		expect(r.text).not.toMatch(/tacet|enters/);
+		const parsed = parseChart(r.text);
+		expect(parsed.bars.map((b) => b.parts?.map((p) => p?.slots[0]?.kind === "chord"))).toEqual([
+			...Array.from({ length: 4 }, () => [true, false]),
+			...Array.from({ length: 4 }, () => [false, true]),
+		]);
+	});
+});
+
+describe("a melody in thirds", () => {
+	const time44in8ths = attributes(
+		"<divisions>2</divisions><time><beats>4</beats><beat-type>4</beat-type></time>",
+	);
+	const dyad = (low: string, high: string, duration: number, highOctave = 4) =>
+		note(low, 4, duration) + note(high, highOctave, duration).replace("<note>", "<note><chord/>");
+	const slashIntro = harmony("C") + note("B", 4, 2, "<notehead>slash</notehead>").repeat(4);
+	const guitar = (measures: string) =>
+		importMusicXml(score([{ id: "P1", name: "Guitar", measures }], "", "MuseScore 4.4"));
+
+	test("a melody doubled in thirds in a part that writes slashes is a melody, not voicings", () => {
+		const thirds = ["C", "D", "E", "F", "G", "F", "E", "D"].map((s, i) =>
+			dyad(s, ["E", "F", "G", "A", "B", "A", "G", "F"][i] as string, 1),
+		);
+		const r = sound(
+			guitar(
+				measure(1, time44in8ths + slashIntro) +
+					measure(2, harmony("F") + thirds.join("")) +
+					measure(3, harmony("G") + thirds.join("")),
+			),
+		);
+		expect(r.text).toBe("| C | F | G |\n");
+		expect(r.diagnostics.map((d) => d.message)).toEqual([
+			"notes read as a melody and left out in 2 measures: 2, 3",
+		]);
+	});
+
+	test("two-note attacks that land on each chord change stay voicings", () => {
+		const r = sound(
+			guitar(
+				measure(1, time44in8ths + slashIntro) +
+					measure(2, harmony("F") + dyad("A", "C", 4, 5) + harmony("G") + dyad("B", "D", 4, 5)),
+			),
+		);
+		expect(r.text).toBe("| C | F{A4 C5} G{B4 D5} |\n");
+		expect(r.diagnostics).toEqual([]);
 	});
 });

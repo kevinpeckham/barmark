@@ -224,7 +224,9 @@ per part:
   Every part of a file `@barmark/musicxml` wrote is read this way. In
   another program's file a part is a chord part only when it writes
   slash noteheads somewhere, its first line attacks no single notes
-  (a note set needs two or more pitches), and every note lands exactly
+  (a note set needs two or more pitches), every attack on its first line
+  lands on a chord change or a slash beat (a melody doubled in thirds
+  attacks between them; Kevin, 2026-11-06), and every note lands exactly
   on the grid; slashes are rhythm only and never count against the
   grid. A two-staff part whose second staff only doubles the first's
   rhythm (or sounds under its rests), as the export splits one line by
@@ -343,9 +345,11 @@ and wherever the parts' agreement changes (tutti to labelled, or a part
 starting or stopping).
 Two labelled systems with nothing between them would join into one
 (grammar 7.4), so where the second's first row names a part the first
-didn't write, a cue goes between them as a text line: who stops
-(`Gtr tacet`), else who starts (`Gtr enters`). (Added while building,
-2026-11-06: the grammar has no silent separator; for Kevin to confirm.)
+didn't write, a `---` line goes between them, which ends a labelled
+system and means nothing else. (Added while building, 2026-11-06, as a
+cue text line, `Gtr tacet` or `Gtr enters`, since the grammar had no
+silent separator; Kevin added `---` to the grammar the same day, and
+the importer writes it instead of the cue.)
 The importer plays the chart back and compares every part's line with
 what it meant to write; a difference is an "importer bug" error.
 
@@ -435,8 +439,9 @@ songs bump; per RELEASING.md.
    are read structurally (`<harmony>` over slashes a chord, over notes
    attacked with it a voicing, notes with no `<harmony>` a note set);
    another program's part is read that way only when it writes slash
-   noteheads somewhere, its first line has no single-pitch attacks, and
-   every note is exactly on the grid (slashes never count against it).
+   noteheads somewhere, its first line has no single-pitch attacks and
+   attacks only on chord changes or slash beats (see 12), and every note
+   is exactly on the grid (slashes never count against it).
    Any other part with chords is a melody part. A two-staff part whose
    lower staff only doubles the upper's rhythm, or sounds under its
    rests, is one line. Parts of notes alone come in only from barmark's
@@ -473,7 +478,11 @@ Found while building (2026-11-05), for Kevin to check:
     attacks on the changes passes the chord-part test, so its melody
     comes in as voicings and note sets, contrary to the non-goal "a
     melody never becomes a run of note sets". Telling it apart needs a
-    new melody rule; Kevin's call.
+    new melody rule; Kevin's call. **Ruled (Kevin, 2026-11-06):** a
+    bar's attacks read as voicings only when each starts on a chord
+    change or on a beat (where a slash would fall); otherwise the part
+    is a melody part. A melody doubled in thirds attacks between the
+    beats, so it is left out with the melody warning.
 13. **The text-line escape is a grammar question.** A text line that
     would read as something else (`| la |`, `key: G`) is written with a
     leading backslash, which barmark keeps as text; the grammar has no

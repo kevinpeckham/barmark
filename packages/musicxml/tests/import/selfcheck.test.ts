@@ -48,7 +48,7 @@ const written = [0, 1, 2, 3, 4, 5, 6, 7];
 const header = "part: G = Guitar\npart: P = Piano\n";
 
 test("a chart that plays what the importer meant has no mismatch", () => {
-	const chart = `${header}G | A | B | C | D |\nG tacet\nP | E | F | G | A |\n`;
+	const chart = `${header}G | A | B | C | D |\n---\nP | E | F | G | A |\n`;
 	expect(mismatches(parseChart(chart), trade, written)).toEqual([]);
 });
 

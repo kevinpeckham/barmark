@@ -6,6 +6,18 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- **Import:** where one labelled system would otherwise run into the
+  next (a part stops or enters), a `---` line keeps them apart, instead
+  of a text line such as `Gtr tacet` or `Pno enters`. Needs `barmark`
+  with `---` (it ends a labelled system).
+- **Import:** a melody doubled in thirds (or any two-note melody) in a
+  part that writes slashes somewhere is read as a melody, its notes left
+  out with the melody warning, instead of as voicings and note sets. In
+  another program's file, a part's notes read as voicings only when each
+  attack on its first line starts on a chord change or on a beat.
+
 ## [0.5.0] - 2026-11-06
 
 ### Added

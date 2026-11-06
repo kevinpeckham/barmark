@@ -191,13 +191,15 @@ order, not just the written marks.
   didn't write joins that system.
 - **The fix.** Where nothing else (a heading, a directive, text, lyrics)
   stands between two labelled systems and the second would join the
-  first, the importer writes a cue as a text line between them, naming
-  who stops (`G tacet`) or, when nobody stops, who starts (`G enters`).
-  Text lines have no musical meaning (grammar 1), so this is the writable
-  form that changes nothing that plays; the other options (a resting
-  part's line of `--` or `N.C.`, or a restated directive) each change
-  the music or the score's marks. The grammar has no silent system
-  separator: a question for Kevin. And the guard: `writeChart` now plays
+  first, the importer writes `---` between them. At first it wrote a cue
+  as a text line, naming who stops (`G tacet`) or, when nobody stops,
+  who starts (`G enters`), since text lines have no musical meaning
+  (grammar 1) and the other options (a resting part's line of `--` or
+  `N.C.`, or a restated directive) each change the music or the score's
+  marks. The grammar had no silent system separator; Kevin added one
+  (2026-11-06): a line of three or more hyphens ends a labelled system
+  and means nothing else, and the importer now writes it instead of the
+  cue (`separator` in `write.ts`). And the guard: `writeChart` now plays
   the chart back (`selfcheck.ts`) and compares every part's line, bar by
   bar in play order, with the cells it meant to write; any difference is
   an "importer bug" error. A property test (`tests/import/property.test.ts`)

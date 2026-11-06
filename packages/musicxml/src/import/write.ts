@@ -121,32 +121,16 @@ function plans(w: Writer, systems: System[], sections: Section[]): Map<number, P
 /** A labelled system's lines as `"part.line"` keys; null for a tutti line. */
 const keysOf = (s: System): string[] | null => (s.tutti ? null : s.lines);
 
-/** A label as the rows write it: `Gtr`, `Pno.RH`. */
-function rowLabel(src: Source, key: string): string {
-	const [p = 0, l = 0] = key.split(".").map(Number);
-	const name = src.parts[p]?.lines[l]?.name;
-	return `${src.labels[p]}${name ? `.${name}` : ""}`;
-}
-
 /**
- * The text line that keeps a labelled system from joining the labelled
- * system written just before it (grammar 7.4 joins consecutive labelled
- * lines while no label repeats), or nothing when its first row repeats a
- * label of that system and starts a new one by itself. It names who stops
- * playing (`Gtr tacet`), else who starts (`Gtr enters`): a cue, as charts
- * write one, that changes nothing that plays.
+ * The `---` that keeps a labelled system from joining the labelled system
+ * written just before it (grammar 7.4 joins consecutive labelled lines
+ * while no label repeats), or nothing when its first row repeats a label
+ * of that system and starts a new one by itself.
  */
-function separator(w: Writer, previous: string[] | null, s: System): string[] {
+function separator(previous: string[] | null, s: System): string[] {
 	const keys = keysOf(s);
 	if (previous === null || keys === null || previous.includes(keys[0] ?? "")) return [];
-	const leaving = previous.filter((k) => !keys.includes(k));
-	const entering = keys.filter((k) => !previous.includes(k));
-	const names = (ks: string[]) => ks.map((k) => rowLabel(w.src, k)).join(", ");
-	const cue =
-		leaving.length > 0
-			? `${names(leaving)} tacet`
-			: `${names(entering)} ${entering.length > 1 ? "enter" : "enters"}`;
-	return [textLine(cue, w.header) ?? cue];
+	return ["---"];
 }
 
 /**
@@ -168,12 +152,7 @@ function systemLines(
 	}
 	const rows = rowsOf(w.src, s, w.last, plan.times !== null);
 	const lyrics = lyricsUnder(w, s);
-	const lines = [
-		...lead,
-		...(lead.length === 0 ? separator(w, previous, s) : []),
-		...rows,
-		...lyrics,
-	];
+	const lines = [...lead, ...(lead.length === 0 ? separator(previous, s) : []), ...rows, ...lyrics];
 	return { lines, open: lyrics.length === 0 ? keysOf(s) : null };
 }
 
