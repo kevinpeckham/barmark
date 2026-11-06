@@ -223,17 +223,17 @@ test("slashes coming back after a rest restate the last chord", () => {
 	expect(bars(r)).toEqual(["C", null, "C", "G / -- G"]);
 });
 
-test("a chord barmark's grid can't hold is ?, with a warning", () => {
+test("a chord placed past its bar's end moves to the last beat, with a warning", () => {
 	const r = importXml(
 		scoreXml(
 			{ software: "MuseScore 4.4.2" },
 			measure(1, time44() + harmony("C", "major", "<offset>9</offset>") + note("E", 4, 4)),
 		),
 	);
-	expect(bars(r)).toEqual(["?"]);
+	expect(bars(r)).toEqual(["N.C. / / C"]);
 	expect(r.messages).toEqual([
 		"notes read as a melody and left out in measure 1",
-		"a bar barmark's grid can't hold; written as ? in measure 1",
+		"chord symbols moved to the nearest beat in measure 1",
 	]);
 });
 

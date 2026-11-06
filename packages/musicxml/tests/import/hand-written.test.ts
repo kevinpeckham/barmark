@@ -106,3 +106,22 @@ test("score-wide losses come once, with no part; a part left out reports none", 
 		},
 	]);
 });
+
+test("a chord symbol placed outside its bar moves to the nearest beat inside it", () => {
+	const r = sound(importMusicXml(text("harmony-edges.musicxml")));
+	expect(r.text).toBe(text("harmony-edges.chart.md"));
+	expect(r.diagnostics).toEqual([
+		{
+			severity: "warning",
+			message: "notes read as a melody and left out in 4 measures: 1, 3, 4, …",
+			part: "Lead",
+			measure: "1",
+		},
+		{
+			severity: "warning",
+			message: "chord symbols moved to the nearest beat in 3 measures: 3, 4, 5",
+			part: "Lead",
+			measure: "3",
+		},
+	]);
+});

@@ -176,9 +176,8 @@ describe("placeBar", () => {
 		expect(performance.now() - t).toBeLessThan(100);
 	});
 
-	test("an event outside the bar is null", () => {
+	test("an event outside the bar is null when placing exactly", () => {
 		expect(place([["4", "C"]], "4/4").result).toBeNull();
-		expect(place([["-1", "C"]], "4/4", false).result).toBeNull();
 	});
 
 	test("a note off every grid is null, exact or not", () => {
@@ -235,5 +234,51 @@ describe("placeBar", () => {
 
 	test("no events is a hold", () => {
 		expect(place([], "4/4").result?.cell).toBe("/");
+	});
+});
+
+describe("onsets outside the bar", () => {
+	const meter = { n: 4, d: 4 };
+	test("a chord symbol past the bar's end moves to its last beat", () => {
+		expect(
+			placeBar(
+				[
+					{ at: frac(0), symbol: "F" },
+					{ at: frac(5), symbol: "A" },
+				],
+				frac(4),
+				meter,
+				false,
+			),
+		).toEqual({
+			cell: "F / / A",
+			moved: true,
+		});
+	});
+	test("a chord symbol before the bar's start moves to its downbeat", () => {
+		expect(placeBar([{ at: frac(-1), symbol: "D" }], frac(4), meter, false)).toEqual({
+			cell: "D",
+			moved: true,
+		});
+	});
+	test("onto an occupied beat, the chord placed there stays", () => {
+		expect(
+			placeBar(
+				[
+					{ at: frac(-1), symbol: "D" },
+					{ at: frac(0), symbol: "C" },
+				],
+				frac(4),
+				meter,
+				false,
+			),
+		).toEqual({
+			cell: "C",
+			moved: true,
+		});
+	});
+	test("a note outside the bar, or an exact placing, still can't be placed", () => {
+		expect(placeBar([{ at: frac(5), symbol: "{C4}" }], frac(4), meter, false)).toBeNull();
+		expect(placeBar([{ at: frac(5), symbol: "A" }], frac(4), meter, true)).toBeNull();
 	});
 });

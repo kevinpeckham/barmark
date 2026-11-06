@@ -101,7 +101,7 @@ function nearestBeat(at: Frac, beat: Frac, beats: number): Frac {
 	const beatsIn = ratio(at, beat);
 	const base = floor(beatsIn);
 	const up = cmp(minus(beatsIn, frac(base)), frac(1, 2)) > 0;
-	return times(frac(Math.min(up ? base + 1 : base, beats - 1)), beat);
+	return times(frac(Math.max(0, Math.min(up ? base + 1 : base, beats - 1))), beat);
 }
 
 /**
@@ -111,7 +111,8 @@ function nearestBeat(at: Frac, beat: Frac, beats: number): Frac {
  * own meter, so its beats are the slot counts the grammar allows.
  *
  * Only chord symbols snap, to the nearest beat (`moved`), and only when
- * `exact` is false, a chord landing on an occupied beat being dropped
+ * `exact` is false (one placed outside the bar moves to its nearest beat
+ * inside it), a chord landing on an occupied beat being dropped
  * (still `moved`); null when an event can't be placed or the
  * meter is one barmark can't write (so `beats` is small and bounded).
  */
@@ -124,11 +125,13 @@ export function placeBar(
 	if (!parseMeter(`${meter.n}/${meter.d}`)) return null;
 	const beats = beatsOf(meter);
 	const sorted = [...events].sort((a, b) => cmp(a.at, b.at));
-	if (sorted.some((e) => cmp(e.at, ZERO) < 0 || cmp(e.at, length) >= 0)) return null;
-	const cell = fit(sorted, length, beats);
+	const outside = sorted.filter((e) => cmp(e.at, ZERO) < 0 || cmp(e.at, length) >= 0);
+	// A chord symbol outside the bar moves into it; anything else there can't be placed.
+	if (outside.some((e) => exact || !movable(e.symbol))) return null;
+	const cell = outside.length === 0 ? fit(sorted, length, beats) : null;
 	if (cell !== null) return { cell, moved: false };
 	if (exact) return null;
-	const snapped = snapChords(sorted, length, beats);
+	const snapped = snapChords(sorted, length, beats, new Set(outside));
 	return snapped ? { cell: snapped, moved: true } : null;
 }
 
@@ -157,11 +160,16 @@ function snapSome(events: Event[], chosen: Set<Event>, length: Frac, beats: numb
  * that fit no grid alone go first, latest first, then the rest, until the
  * set fits; the last resort has every chord snapped.
  */
-function snapChords(events: Event[], length: Frac, beats: number): string | null {
+function snapChords(
+	events: Event[],
+	length: Frac,
+	beats: number,
+	outside: Set<Event>,
+): string | null {
 	const chords = events.filter((e) => movable(e.symbol)).reverse();
-	const offGrid = (e: Event) => fit([e], length, beats) === null;
+	const offGrid = (e: Event) => outside.has(e) || fit([e], length, beats) === null;
 	const order = [...chords.filter(offGrid), ...chords.filter((e) => !offGrid(e))];
-	for (let count = 1; count <= order.length; count++) {
+	for (let count = Math.max(1, outside.size); count <= order.length; count++) {
 		const cell = fit(
 			snapSome(events, new Set(order.slice(0, count)), length, beats),
 			length,
