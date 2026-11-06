@@ -15,8 +15,13 @@ package uses [semantic versioning](https://semver.org/).
 - **Import:** a melody doubled in thirds (or any two-note melody) in a
   part that writes slashes somewhere is read as a melody, its notes left
   out with the melody warning, instead of as voicings and note sets. In
-  another program's file, a part's notes read as voicings only when each
-  attack on its first line starts on a chord change or on a beat.
+  another program's file, a bar of a chord part reads as voicings only
+  where its attacks land on chord changes or beats; an attack off both
+  makes the bar a melody's only when its pitches move from the voicing
+  sounding and it isn't a push into the next chord, so re-struck and
+  pushed comping keeps its voicings. A melody bar writes its chords
+  alone and the warning names it; the part's other bars keep their
+  notes.
 
 ## [0.5.0] - 2026-11-06
 

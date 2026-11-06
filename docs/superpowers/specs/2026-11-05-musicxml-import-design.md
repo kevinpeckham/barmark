@@ -224,13 +224,22 @@ per part:
   Every part of a file `@barmark/musicxml` wrote is read this way. In
   another program's file a part is a chord part only when it writes
   slash noteheads somewhere, its first line attacks no single notes
-  (a note set needs two or more pitches), every attack on its first line
-  lands on a chord change or a slash beat (a melody doubled in thirds
-  attacks between them; Kevin, 2026-11-06), and every note lands exactly
+  (a note set needs two or more pitches), and every note lands exactly
   on the grid; slashes are rhythm only and never count against the
   grid. A two-staff part whose second staff only doubles the first's
   rhythm (or sounds under its rests), as the export splits one line by
-  pitch, is one line.
+  pitch, is one line. Bar by bar, a chord part's first line reads as
+  voicings only where its attacks land on chord changes or slash beats
+  (Kevin, 2026-11-06, call 12); a bar whose attacks don't is a melody's,
+  and writes its chords alone, named in the melody warning. An attack
+  off the changes and beats makes its bar a melody's only when it moves
+  (its pitches differ from the voicing sounding in that line, which a
+  chord change clears) and isn't a push (an attack an eighth or
+  sixteenth before a change in its bar, holding into it, or one tied
+  over the bar line into a chord on the next downbeat): a re-strike
+  (a Charleston, stabs, eighth-note comping) is comping. (Claude's
+  calls, for Kevin to confirm.) A part whose every bar of notes is a
+  melody's is a melody part.
 - **Any other part with chords is a melody part:** its chords are read
   and its notes left out, with one diagnostic. A lead sheet is the usual
   case. The melody's rests never end a chord: once a chord has sounded, a
@@ -439,9 +448,9 @@ songs bump; per RELEASING.md.
    are read structurally (`<harmony>` over slashes a chord, over notes
    attacked with it a voicing, notes with no `<harmony>` a note set);
    another program's part is read that way only when it writes slash
-   noteheads somewhere, its first line has no single-pitch attacks and
-   attacks only on chord changes or slash beats (see 12), and every note
-   is exactly on the grid (slashes never count against it).
+   noteheads somewhere, its first line has no single-pitch attacks, and
+   every note is exactly on the grid; then a bar whose attacks miss the
+   changes and slash beats is a melody's, its chords alone (see 12) (slashes never count against it).
    Any other part with chords is a melody part. A two-staff part whose
    lower staff only doubles the upper's rhythm, or sounds under its
    rests, is one line. Parts of notes alone come in only from barmark's
@@ -478,11 +487,24 @@ Found while building (2026-11-05), for Kevin to check:
     attacks on the changes passes the chord-part test, so its melody
     comes in as voicings and note sets, contrary to the non-goal "a
     melody never becomes a run of note sets". Telling it apart needs a
-    new melody rule; Kevin's call. **Ruled (Kevin, 2026-11-06):** a
-    bar's attacks read as voicings only when each starts on a chord
-    change or on a beat (where a slash would fall); otherwise the part
-    is a melody part. A melody doubled in thirds attacks between the
-    beats, so it is left out with the melody warning.
+    new melody rule; Kevin's call. **Ruled (Kevin, 2026-11-06, spec
+    2026-11-06-voice-and-lyrics-design 8.5):** "a bar's notes read as
+    voicings only where its attacks land on chord changes or slash
+    beats." Applied per bar: a melody bar in a chord part writes its
+    chords alone and the warning names it; the other bars keep their
+    voicings and note sets. **Claude's calls, for Kevin to confirm**
+    (found when the rule as first built dropped all syncopated
+    comping): an attack off the changes and beats counts only when it
+    moves, its pitches differing from the voicing sounding in that line
+    (a chord change clears it), so a re-strike (a Charleston, stabs,
+    eighth-note or 6/8 comping) stays comping; a push (an eighth or
+    sixteenth before a change in its bar, holding into it, or tied over
+    the bar line into a chord on the next downbeat) is comping; and a
+    part whose every bar of notes is a melody's takes the whole-part
+    melody path, as before. A melody doubled in thirds moves between
+    the beats, so it is left out with the melody warning. The cost if
+    wrong: a comp whose inner voice moves off the beat reads as melody
+    in that bar alone.
 13. **The text-line escape is a grammar question.** A text line that
     would read as something else (`| la |`, `key: G`) is written with a
     leading backslash, which barmark keeps as text; the grammar has no

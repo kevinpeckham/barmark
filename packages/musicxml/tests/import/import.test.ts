@@ -311,3 +311,134 @@ describe("a melody in thirds", () => {
 		expect(r.diagnostics).toEqual([]);
 	});
 });
+
+describe("comping off the beat stays voicings; a moving bar alone is melody", () => {
+	const time = (beats: number, beatType: number) =>
+		attributes(
+			`<divisions>2</divisions><time><beats>${beats}</beats><beat-type>${beatType}</beat-type></time>`,
+		);
+	const pitches = {
+		F: [
+			["F", 4],
+			["A", 4],
+			["C", 5],
+		],
+		G: [
+			["D", 4],
+			["G", 4],
+			["B", 4],
+		],
+	} as const;
+	/** A voicing of F or G held for `eighths`, with `extra` (a tie) on each note. */
+	const hit = (chord: "F" | "G", eighths: number, extra = "") =>
+		pitches[chord]
+			.map(([s, o], i) =>
+				note(s, o, eighths, extra).replace("<note>", i ? "<note><chord/>" : "<note>"),
+			)
+			.join("");
+	const tieStart = '<tie type="start"/>';
+	const tieStop = '<tie type="stop"/>';
+	const slashes = (n: number, eighths = 2) =>
+		note("B", 4, eighths, "<notehead>slash</notehead>").repeat(n);
+	const intro = time(4, 4) + harmony("C") + slashes(4);
+	const guitar = (measures: string) =>
+		sound(importMusicXml(score([{ id: "P1", name: "Guitar", measures }], "", "MuseScore 4.4")));
+	const F = "{F4 A4 C5}";
+	const G = "{D4 G4 B4}";
+
+	test("a Charleston (1 and the and of 2) re-strikes its voicing: voicings", () => {
+		const r = guitar(
+			measure(1, intro) +
+				measure(2, harmony("F") + hit("F", 3) + hit("F", 5)) +
+				measure(3, harmony("G") + hit("G", 3) + hit("G", 5)),
+		);
+		expect(r.text).toBe(`| C | F${F} /_${F} / / | G${G} /_${G} / / |\n`);
+		expect(r.diagnostics).toEqual([]);
+	});
+
+	test("a push tied over the bar line into the next chord: voicings", () => {
+		const r = guitar(
+			measure(1, intro) +
+				measure(2, harmony("F") + hit("F", 7) + hit("G", 1, tieStart)) +
+				measure(3, harmony("G") + hit("G", 8, tieStop)),
+		);
+		expect(r.text).toBe(`| C | F${F} / / /_${G} | G |\n`);
+		expect(r.diagnostics).toEqual([]);
+	});
+
+	test("a push an eighth before a change within the bar, holding into it: voicings", () => {
+		const r = guitar(
+			measure(1, intro) +
+				measure(
+					2,
+					harmony("F") + hit("F", 3) + hit("G", 1, tieStart) + harmony("G") + hit("G", 4, tieStop),
+				),
+		);
+		expect(r.text).toBe(`| C | F${F} /_${G} G / |\n`);
+		expect(r.diagnostics).toEqual([]);
+	});
+
+	test("stabs on 2, 4 and the and of 4: voicings", () => {
+		const r = guitar(
+			measure(1, intro) +
+				measure(2, harmony("F") + rest(2) + hit("F", 2) + rest(2) + hit("F", 1) + hit("F", 1)) +
+				measure(3, harmony("G") + hit("G", 8)),
+		);
+		expect(r.text).toBe(`| C | F ${F} -- ${F}_${F} | G${G} |\n`);
+		expect(r.diagnostics).toEqual([]);
+	});
+
+	test("eighth-note rock comping: voicings", () => {
+		const r = guitar(measure(1, intro) + measure(2, harmony("F") + hit("F", 1).repeat(8)));
+		expect(r.text).toBe(`| C | F${F}_${F} ${F}_${F} ${F}_${F} ${F}_${F} |\n`);
+		expect(r.diagnostics).toEqual([]);
+	});
+
+	test("6/8 comping in eighths: voicings", () => {
+		const r = guitar(
+			measure(1, time(6, 8) + harmony("C") + slashes(2, 3)) +
+				measure(2, harmony("F") + hit("F", 1).repeat(6)) +
+				measure(3, harmony("G") + hit("G", 1).repeat(6)),
+		);
+		expect(r.text).toBe(
+			`time: 6/8\n| C | F${F}_${F}_${F} ${F}_${F}_${F} | G${G}_${G}_${G} ${G}_${G}_${G} |\n`,
+		);
+		expect(r.diagnostics).toEqual([]);
+	});
+
+	test("fifteen bars of voicings and one pushed bar keep every voicing", () => {
+		const bars = Array.from({ length: 15 }, (_, k) => {
+			const i = k + 2;
+			const chord = i % 2 ? "G" : "F";
+			if (i === 15) return measure(i, harmony("G") + hit("G", 7) + hit("F", 1, tieStart));
+			if (i === 16) return measure(i, harmony("F") + hit("F", 8, tieStop));
+			return measure(i, harmony(chord) + hit(chord, 8));
+		});
+		const r = guitar(measure(1, intro) + bars.join(""));
+		const v = (c: "F" | "G") => `${c}${c === "F" ? F : G}`;
+		expect(r.text).toBe(
+			`| C | ${v("F")} | ${v("G")} | ${v("F")} |\n| ${v("G")} | ${v("F")} | ${v("G")} | ${v("F")} |\n| ${v("G")} | ${v("F")} | ${v("G")} | ${v("F")} |\n| ${v("G")} | ${v("F")} | ${v("G")} / / /_${F} | F |\n`,
+		);
+		expect(r.diagnostics).toEqual([]);
+	});
+
+	test("a part that comps, then plays one bar of moving thirds, loses that bar's notes alone", () => {
+		const thirds = ["B", "C", "D", "C", "B", "A", "B", "C"]
+			.map((s, i) => {
+				const up = ["D", "E", "F", "E", "D", "C", "D", "E"][i] as string;
+				const octave = (n: string) => (n === "C" || n === "D" || n === "E" || n === "F" ? 5 : 4);
+				return note(s, octave(s), 1) + note(up, octave(up), 1).replace("<note>", "<note><chord/>");
+			})
+			.join("");
+		const r = guitar(
+			measure(1, intro) +
+				measure(2, harmony("F") + hit("F", 8)) +
+				measure(3, harmony("G") + thirds) +
+				measure(4, harmony("F") + hit("F", 8)),
+		);
+		expect(r.text).toBe(`| C | F${F} | G | F${F} |\n`);
+		expect(r.diagnostics.map((d) => d.message)).toEqual([
+			"notes read as a melody and left out in measure 3",
+		]);
+	});
+});

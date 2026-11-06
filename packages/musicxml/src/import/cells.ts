@@ -27,7 +27,13 @@ export type LineRead = {
  * read, and whether they are a melody left out (its rests never end a
  * chord: lead sheets write chords only on change).
  */
-export type Reading = { chords: boolean; notes: boolean; melody?: boolean };
+export type Reading = {
+	chords: boolean;
+	notes: boolean;
+	melody?: boolean;
+	/** Bars (by index) read as a melody's: their chords alone. */
+	melodyBars?: ReadonlySet<number>;
+};
 
 type Pitch = Attack["pitches"][number];
 
@@ -193,10 +199,13 @@ export function readLine(bars: Attack[][], shared: Bar[], reading: Reading): Lin
 	let run: Run = { last: null, silent: true, sounding: false };
 	shared.forEach((bar, i) => {
 		const attacks = bars[i] ?? [];
-		const cell = cellOf(bar, attacks, run, reading, out);
+		const here = reading.melodyBars?.has(i)
+			? { chords: reading.chords, notes: false, melody: true }
+			: reading;
+		const cell = cellOf(bar, attacks, run, here, out);
 		if (cell !== null && reading.chords) out.unread.push(...unreadIn(cell, bar.chords, i));
 		out.cells.push(cell);
-		run = after(run, bar, attacks, cell, reading.melody);
+		run = after(run, bar, attacks, cell, here.melody);
 	});
 	return out;
 }

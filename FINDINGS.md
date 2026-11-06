@@ -177,6 +177,30 @@ order, not just the written marks.
 
 ## Design
 
+### Timing alone can't tell comping from a melody; pitch motion can (2026-11-06, MusicXML import)
+
+- **The symptom.** The first melody-in-thirds rule (a bar's attacks are
+  voicings only on chord changes or beats) dropped ordinary comping: a
+  Charleston, stabs on the and of 4, eighth-note rock or 6/8 comping, and
+  a push into the next chord all came in as chords alone. One push in
+  bar 15 of a 16-bar part cost all 15 bars their voicings, and the
+  warning listed bars 2, 3, 4, never 15.
+- **The cause.** Syncopated comping and a melody both attack between the
+  beats, so timing alone can't separate them. What separates them is
+  motion: comping re-strikes the voicing it holds, a melody changes
+  pitch. And the rule was applied to the whole part, where the spec
+  said per bar.
+- **The fix.** An attack off the changes and beats makes its bar a
+  melody's only when its pitches differ from the voicing sounding in
+  that line (a chord change clears it) and it isn't a push (an eighth
+  or sixteenth before a change, holding into it, or tied over the bar
+  line into a chord on the next downbeat). The rule is per bar: a
+  melody bar writes its chords alone and the warning names it.
+  `melodyBars` in `packages/musicxml/src/import/melody.ts`, used by
+  `decide` in `parts.ts` and read per bar by `readLine` in `cells.ts`
+  (`Reading.melodyBars`). Tests in `tests/import/import.test.ts`,
+  "comping off the beat stays voicings".
+
 ### Two labelled systems in a row join into one, and still parse cleanly (2026-11-06, MusicXML import)
 
 - **The symptom.** Trading fours (the guitar's four bars, then the

@@ -4,12 +4,12 @@
  * are left out and its chords read alone.
  */
 import { INSTRUMENTS, type InstrumentName, instrumentInfo, MAX_LINES, type Meter } from "barmark";
-import { beatLength, cmp, div } from "../rhythm.js";
 import { type Bar, type LineRead, readLine, type Unread } from "./cells.js";
 import { harmonyOf } from "./chords.js";
 import type { Losses } from "./losses.js";
+import { melodyBars } from "./melody.js";
 import { type Line, mergeStaves } from "./merge.js";
-import { type Attack, LEFT_OUT, type LeftOut, ON_NOTES, type ReadPart } from "./read.js";
+import { LEFT_OUT, type LeftOut, ON_NOTES, type ReadPart } from "./read.js";
 
 /** One line's cell text per measure, `null` where the line rests the whole bar. */
 export type LineBars = { name: string | null; bars: (string | null)[] };
@@ -63,34 +63,34 @@ function linesOf(part: ReadPart): Line[] {
 	return merged ? [merged] : lines;
 }
 
-/** A note attack (not a tie's continuation) that lands neither on a chord change nor on a beat, where a slash would. */
-function offChange(a: Attack, bar: Bar): boolean {
-	if (a.kind !== "notes" || a.tieIn) return false;
-	if (bar.chords.some((c) => cmp(c.at, a.at) === 0)) return false;
-	return div(a.at, beatLength(bar.meter)).d !== 1;
-}
-
 /**
- * Another program's part acts as chords when it writes slashes and its
- * first line attacks no single notes, and every attack on that line lands
- * on a chord change or a slash beat: otherwise its notes are a melody (a
- * melody doubled in thirds attacks between the beats).
+ * Another program's part with chords: whether it is a melody part (no
+ * slashes, a single-note attack on its first line, or every bar of notes
+ * a melody's), else the bars of its first line that are a melody's.
  */
-function actsAsChords(lines: Line[], bars: Bar[]): boolean {
-	const slashed = lines.some((l) => l.some((bar) => bar.some((a) => a.kind === "slash")));
+function melodyOf(lines: Line[], bars: Bar[]): { part: boolean; bars: number[] } {
 	const first = lines[0] ?? [];
+	const slashed = lines.some((l) => l.some((bar) => bar.some((a) => a.kind === "slash")));
 	const single = first.some((bar) =>
 		bar.some((a) => a.kind === "notes" && !a.tieIn && a.pitches.length === 1),
 	);
-	const melody = first.some((attacks, i) => {
-		const bar = bars[i];
-		return bar !== undefined && attacks.some((a) => offChange(a, bar));
-	});
-	return slashed && !single && !melody;
+	if (!slashed || single) return { part: true, bars: [] };
+	const melodic = melodyBars(first, bars);
+	const noteBars = first.filter((bar) => bar.some((a) => a.kind === "notes" && !a.tieIn)).length;
+	return { part: melodic.length > 0 && melodic.length === noteBars, bars: melodic };
 }
 
-/** The lines as read, why notes were left out, and the measures off the grid when that is why. */
-type Decided = { reads: LineRead[]; why: keyof typeof WHY | null; offGrid: string[] };
+/**
+ * The lines as read, why notes were left out, the measures off the grid
+ * when that is why, and the bars whose notes alone were left out as a
+ * melody's.
+ */
+type Decided = {
+	reads: LineRead[];
+	why: keyof typeof WHY | null;
+	offGrid: string[];
+	melodic: number[];
+};
 
 /** The lines as read: every line's notes, or the first line alone (its chords alone when it has chords) and why. */
 function decide(part: ReadPart, from: { barmark: boolean }, hasChords: boolean): Decided {
@@ -106,12 +106,18 @@ function decide(part: ReadPart, from: { barmark: boolean }, hasChords: boolean):
 		],
 		why,
 		offGrid: [],
+		melodic: [],
 	});
 	if (part.voices > MAX_LINES || lines.length > MAX_LINES) return alone("voices");
-	if (hasChords && !from.barmark && !actsAsChords(lines, bars)) return alone("melody");
-	const reads = lines.map((l, i) => readLine(l, bars, { chords: i === 0, notes: true }));
+	const melody = hasChords && !from.barmark ? melodyOf(lines, bars) : { part: false, bars: [] };
+	if (melody.part) return alone("melody");
+	const melodic = melody.bars;
+	const first = { chords: true, notes: true, melodyBars: new Set(melodic) };
+	const reads = lines.map((l, i) =>
+		readLine(l, bars, i === 0 ? first : { chords: false, notes: true }),
+	);
 	const offGrid = [...new Set(reads.flatMap((r) => r.offGrid))];
-	if (offGrid.length === 0) return { reads, why: null, offGrid };
+	if (offGrid.length === 0) return { reads, why: null, offGrid, melodic };
 	return { ...alone("grid"), offGrid };
 }
 
@@ -132,6 +138,9 @@ const noteMeasures = (part: ReadPart) =>
 function reportWhy(d: Decided, part: ReadPart, losses: Losses): void {
 	if (d.why === "grid") for (const m of d.offGrid) losses.add("grid", WHY.grid, part.name, m);
 	else if (d.why) for (const m of noteMeasures(part)) losses.add(d.why, WHY[d.why], part.name, m);
+	else
+		for (const i of d.melodic)
+			losses.add("melody", WHY.melody, part.name, part.measures[i]?.number);
 }
 
 function report(d: Decided, part: ReadPart, hasChords: boolean, losses: Losses): void {
@@ -192,7 +201,8 @@ function instrumentOf(part: ReadPart): InstrumentName | null {
  * barmark wrote nor `--part` named. Barmark's own files are read
  * structurally; another program's part reads its notes only when it writes
  * slashes and no single notes on its first line, and every note lands on
- * the grid.
+ * the grid, and then reads a bar whose notes move as a melody's (see
+ * `melody.ts`) as its chords alone.
  */
 export function importPart(
 	part: ReadPart,
