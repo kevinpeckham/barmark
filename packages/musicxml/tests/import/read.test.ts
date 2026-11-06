@@ -348,6 +348,27 @@ test.each([
 	},
 );
 
+test("a short first bar in its own meter, then the full meter, is a pickup (barmark's export)", () => {
+	const t = (n: number) =>
+		`<attributes><time><beats>${n}</beats><beat-type>4</beat-type></time></attributes>`;
+	const ms = measuresOf(
+		xml`${measure(1, attributes("<divisions>1</divisions><time><beats>1</beats><beat-type>4</beat-type></time>") + note("D", 4, 1))}${measure(2, t(3) + note("G", 4, 3))}${measure(3, note("C", 4, 3))}`,
+	);
+	expect(ms.map((m) => m.oneBar)).toEqual([{ n: 1, d: 4 }, null, null]);
+	expect(ms.map((m) => m.time)).toEqual([{ n: 3, d: 4 }, null, null]);
+	expect(ms[0]?.length).toEqual(frac(1));
+});
+
+test("a long first bar before a shorter meter is a time change, not a pickup", () => {
+	const t = (n: number) =>
+		`<attributes><time><beats>${n}</beats><beat-type>4</beat-type></time></attributes>`;
+	const ms = measuresOf(
+		xml`${measure(1, base(1) + note("C", 4, 4))}${measure(2, t(3) + note("G", 4, 3))}`,
+	);
+	expect(ms.map((m) => m.time)).toEqual([{ n: 4, d: 4 }, { n: 3, d: 4 }]);
+	expect(ms.map((m) => m.oneBar)).toEqual([null, null]);
+});
+
 test("a pickup that no meter expresses is a warning", () => {
 	const { score, diagnostics } = read(
 		xml`${measure(0, base(3) + note("G", 4, 1), ' implicit="yes"')}${measure(1, note("C", 4, 12))}`,

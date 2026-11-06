@@ -76,6 +76,10 @@ package uses [semantic versioning](https://semver.org/).
 
 ### Fixed
 
+- **Import:** a pickup written as barmark's export writes it (a short
+  first bar in its own `<time>`, then the full meter) is a `[1/4]` pickup
+  again under `time: 3/4`, not `time: 1/4` then `time: 3/4`; and a pickup
+  doesn't count toward a system's four bars.
 - **Export:** a lyric row or a `---` line between a repeat's endings no
   longer cuts the repeat's passes short (`times` on the backward
   repeat), as barmark already reads them.

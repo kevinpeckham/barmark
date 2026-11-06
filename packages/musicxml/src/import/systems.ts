@@ -114,11 +114,15 @@ function absorbed(runs: Run[], playing: Playing[]): Run[] {
 		}, []);
 }
 
-/** A run in systems of up to four bars. */
-function chunks(run: Run): System[] {
+/** A run in systems of up to four bars; a pickup (the first bar, in a meter of its own) is a fifth. */
+function chunks(run: Run, bars: BarInfo[]): System[] {
 	const out: System[] = [];
-	for (let from = run.from; from < run.to; from += BARS)
-		out.push({ from, to: Math.min(run.to, from + BARS), ...run.playing });
+	const pickup = run.from === 0 && bars[0]?.meter != null ? 1 : 0;
+	for (let from = run.from; from < run.to; ) {
+		const to = Math.min(run.to, from + BARS + (from === 0 ? pickup : 0));
+		out.push({ from, to, ...run.playing });
+		from = to;
+	}
 	return out;
 }
 
@@ -185,7 +189,7 @@ export function systemsOf(bars: BarInfo[], playing: Playing[], lines: number[] =
 	const systems = segments(bars).flatMap(([from, to]) =>
 		bars[from]?.ending != null
 			? [ending(playing, from, to)]
-			: absorbed(runsOf(playing, from, to), playing).flatMap(chunks),
+			: absorbed(runsOf(playing, from, to), playing).flatMap((run) => chunks(run, bars)),
 	);
 	return lines.reduce((out, count, p) => (count > 1 ? pinOrder(out, p, count) : out), systems);
 }

@@ -567,8 +567,23 @@ function settlePickup(m: RawMeasure, at: number, meter: Meter, part: PartState):
 		});
 }
 
+/**
+ * A first bar in a meter of its own, shorter than the meter the next bar
+ * sets, is a pickup (`[1/4]` before `time: 3/4`), as barmark's export
+ * writes one; MuseScore marks its pickups `implicit` instead.
+ */
+function settleFirstPickup(measures: RawMeasure[]): void {
+	const [first, next] = measures;
+	if (!first?.time || !next?.time || first.implicit) return;
+	if (cmp(barOf(first.time), barOf(next.time)) >= 0) return;
+	first.oneBar = first.time;
+	first.time = next.time;
+	next.time = null;
+}
+
 /** Settles which measures are bars of their own meter, and which `<time>`s are directives. */
 function settleMeters(measures: RawMeasure[], part: PartState): void {
+	settleFirstPickup(measures);
 	let running: Meter | null = null;
 	measures.forEach((m, i) => {
 		const next = measures[i + 1];
