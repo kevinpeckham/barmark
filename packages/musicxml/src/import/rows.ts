@@ -91,23 +91,39 @@ function writtenBefore(src: Source, i: number): BarInfo | undefined {
  * there: the hold has nothing to hold (grammar 2.3), so the held attack
  * is written again, else `N.C.` (or `--` on a line of notes).
  */
-function restated(src: Source, p: number, l: number, i: number, slots: string): string {
+function restated(
+	src: Source,
+	p: number,
+	l: number,
+	i: number,
+	slots: string,
+	always: boolean,
+): string {
 	if (!LEADING_HOLD.test(slots)) return slots;
 	const index = (src.bars[i] as BarInfo).index;
 	const cells = src.parts[p]?.lines[l]?.bars ?? [];
-	const prev = writtenBefore(src, i);
-	if (prev?.index === index - 1 && cells[prev.index] != null) return slots;
+	if (!always && follows(src, i, cells)) return slots;
 	return slots.replace(LEADING_HOLD, heldInto(cells, index) ?? (l === 0 ? "N.C." : "--"));
 }
 
-/** Line `l` of part `p` in bar `i`, as the part reads it. */
-export function ownCell(src: Source, p: number, l: number, i: number): Own {
+/** Whether bar `i` is written right after the measure before it, and the line played there: a hold holds it. */
+function follows(src: Source, i: number, cells: (string | null)[]): boolean {
+	const prev = writtenBefore(src, i);
+	return prev?.index === (src.bars[i] as BarInfo).index - 1 && cells[prev.index] != null;
+}
+
+/**
+ * Line `l` of part `p` in bar `i`, as the part reads it; `always` restates
+ * a leading hold whatever bar is written before (the writer learns that
+ * only as it writes, after a replay).
+ */
+export function ownCell(src: Source, p: number, l: number, i: number, always = false): Own {
 	const bar = src.bars[i] as BarInfo;
 	const part = src.parts[p] as ImportedPart;
 	if (l === 0 && bar.question && asks(part, bar.index)) return { slots: "?", unread: [] };
 	const read = part.lines[l]?.bars[bar.index] ?? null;
 	if (read === null) return null;
-	const slots = restated(src, p, l, i, read);
+	const slots = restated(src, p, l, i, read, always);
 	const unread = l === 0 ? part.unread.filter((u) => u.measure === bar.index) : [];
 	return { slots, unread: unread.map(({ text, at }) => ({ text, at })) };
 }
@@ -122,7 +138,11 @@ export function playingOf(src: Source, i: number): Playing {
 	const firsts = owns.map((ls) => ls[0] ?? null);
 	const alone = owns.every((ls) => ls[0] && ls.slice(1).every((o) => o === null));
 	const notes = src.parts.length > 1 && firsts.some((o) => o?.slots.includes("{"));
-	return { tutti: alone && !notes && firsts.every((o) => same(o, firsts[0] ?? null)), lines };
+	// Alike as written, and alike if each holds what it held: a hold restated
+	// (after a replay) must not tell the parts apart inside one tutti line.
+	const restatedFirsts = src.parts.map((_, p) => ownCell(src, p, 0, i, true));
+	const alike = (os: Own[]) => os.every((o) => same(o, os[0] ?? null));
+	return { tutti: alone && !notes && alike(firsts) && alike(restatedFirsts), lines };
 }
 
 const place = (key: string) => key.split(".").map(Number) as [number, number];

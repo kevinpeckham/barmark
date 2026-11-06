@@ -208,7 +208,13 @@ order, not just the written marks.
   bar with a one-bar meter, which every line of a system must write; and
   a part whose first system of two lines left out its first line, so the
   reader took another line as the one carrying the harmony (grammar 7.6
-  orders lines by that system; now it writes all of them there).
+  orders lines by that system; now it writes all of them there). The
+  reviewer's fuzz then found one more: after a section written as a
+  replay, each part's next bar restates the chord it held, but the
+  parts had been merged into one tutti line before the writer knew a
+  replay came first, so both played the first part's chord. Parts are
+  now tutti only if they also agree with every leading hold restated
+  (`playingOf` in `rows.ts`).
 
 ### Jumps written only as words don't reach the played order (2026-11-05, MusicXML import)
 
