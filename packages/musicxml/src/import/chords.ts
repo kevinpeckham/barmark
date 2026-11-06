@@ -53,6 +53,26 @@ const chordOf = (text: string) => {
 
 const notesOf = (intervals: Interval[]) => intervals.map(spelled).sort().join(" ");
 
+/** A node written out whole, as a key for what it means. */
+const keyOf = (n: XNode): string =>
+	`<${n.name} ${JSON.stringify(n.attrs)}>${n.text}${n.children.map(keyOf).join("")}</>`;
+
+/** Chords already read, by their <harmony> and transposition: a long score repeats a few chords. */
+const read = new Map<string, ReadChord>();
+/** The most chords remembered. */
+const REMEMBERED = 10_000;
+
+/** `readHarmony`, remembered: a long score repeats a few chords. */
+export function harmonyOf(node: XNode, transpose: Transpose): ReadChord {
+	const key = `${JSON.stringify(transpose)}${keyOf(node)}`;
+	const known = read.get(key);
+	if (known) return { ...known };
+	const chord = readHarmony(node, transpose);
+	if (read.size >= REMEMBERED) read.clear();
+	read.set(key, chord);
+	return { ...chord };
+}
+
 /** A <harmony> as a slot symbol, its names moved to concert pitch by the part's <transpose>. */
 export function readHarmony(node: XNode, transpose: Transpose): ReadChord {
 	const kindNode = child(node, "kind");

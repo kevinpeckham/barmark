@@ -72,8 +72,8 @@ export type ReadPart = {
 	meterLosses: MeterLoss[];
 };
 
-/** A meter barmark can't write, in a measure. */
-export type MeterLoss = { measure: string; message: string };
+/** A meter barmark can't write, in a measure (`at`, its index in the part). */
+export type MeterLoss = { measure: string; at: number; message: string };
 
 /**
  * The meters barmark can't write, in the parts imported: a loss of the
@@ -114,14 +114,18 @@ type PartState = {
 	meter: Meter;
 	/** Meters barmark can't write (a `<time>`, kept out of `meter`, or a pickup's length): the measure's number and the loss. */
 	meterLosses: MeterLoss[];
+	/** The index of the measure being read. */
+	at: number;
 	declaredStaves: number;
 	chromatic: number;
 	diatonic: number | null;
 	octave: number;
 	/** `staff|voice` in order of first appearance. */
 	places: string[];
-	/** Lyric `number`s in order of first appearance. */
-	verses: string[];
+	/** The same places, to look up. */
+	placed: Set<string>;
+	/** Lyric `number`s, numbered from 1 in order of first appearance. */
+	verses: Map<string, number>;
 	/** Measures holding marks the import leaves out, by kind of mark. */
 	unread: Record<LeftOut, Set<string>>;
 };
@@ -197,11 +201,10 @@ const syllabicOf = (l: XNode) =>
 function lyricsOf(note: XNode, p: PartState): Attack["lyrics"] {
 	return children(note, "lyric").flatMap((l) => {
 		const key = l.attrs.number ?? l.attrs.name ?? "";
-		if (!p.verses.includes(key)) p.verses.push(key);
+		const verse = p.verses.get(key) ?? p.verses.size + 1;
+		p.verses.set(key, verse);
 		const { text, elision } = lyricText(l);
-		return text === ""
-			? []
-			: [{ verse: p.verses.indexOf(key) + 1, syllabic: syllabicOf(l), text, elision }];
+		return text === "" ? [] : [{ verse, syllabic: syllabicOf(l), text, elision }];
 	});
 }
 
@@ -234,7 +237,10 @@ function addNote(attack: Attack, n: XNode, p: PartState): void {
 /** The voice's attack list for a note's place, registering the place on first sight. */
 function attacksFor(n: XNode, p: PartState, raw: RawMeasure): Attack[] {
 	const place = `${num(textOf(n, "staff"), 1)}|${textOf(n, "voice") || "1"}`;
-	if (!p.places.includes(place)) p.places.push(place);
+	if (!p.placed.has(place)) {
+		p.placed.add(place);
+		p.places.push(place);
+	}
 	const attacks = raw.voices.get(place) ?? [];
 	raw.voices.set(place, attacks);
 	return attacks;
@@ -321,6 +327,7 @@ function readTime(time: XNode | undefined, p: PartState, raw: RawMeasure): void 
 		const kept = `${p.meter.n}/${p.meter.d}`;
 		p.meterLosses.push({
 			measure: raw.number,
+			at: p.at,
 			message: `a time signature barmark can't write (${text}); kept ${kept}`,
 		});
 	}
@@ -505,12 +512,13 @@ const reverts = (m: RawMeasure, next: RawMeasure | undefined, running: Meter | n
 	sameMeter(next?.time ?? null, running);
 
 /** An implicit bar short of the running meter is a pickup bar of its own. */
-function settlePickup(m: RawMeasure, meter: Meter, part: PartState): void {
+function settlePickup(m: RawMeasure, at: number, meter: Meter, part: PartState): void {
 	if (!m.implicit || cmp(m.length, barOf(meter)) === 0) return;
 	m.oneBar = cmp(m.length, barOf(meter)) < 0 ? pickupMeter(m.length, meter) : null;
 	if (!m.oneBar)
 		part.meterLosses.push({
 			measure: m.number,
+			at,
 			message: cmp(m.length, barOf(meter)) < 0 ? NOT_WHOLE : TOO_LONG,
 		});
 }
@@ -527,7 +535,7 @@ function settleMeters(measures: RawMeasure[], part: PartState): void {
 			return;
 		}
 		running = m.time ?? running;
-		settlePickup(m, running ?? DEFAULT_METER, part);
+		settlePickup(m, i, running ?? DEFAULT_METER, part);
 	});
 }
 
@@ -569,17 +577,22 @@ function readPart(node: XNode, meta: Meta): ReadPart {
 		divisions: 1,
 		meter: DEFAULT_METER,
 		meterLosses: [],
+		at: 0,
 		declaredStaves: 1,
 		chromatic: 0,
 		diatonic: null,
 		octave: 0,
 		places: [],
-		verses: [],
+		placed: new Set(),
+		verses: new Map(),
 		unread: Object.fromEntries(
 			Object.keys(LEFT_OUT).map((k) => [k, new Set<string>()]),
 		) as PartState["unread"],
 	};
-	const raws = children(node, "measure").map((m) => readMeasure(m, p));
+	const raws = children(node, "measure").map((m, i) => {
+		p.at = i;
+		return readMeasure(m, p);
+	});
 	settleMeters(raws, p);
 	const staves = Math.max(p.declaredStaves, ...p.places.map((x) => Number.parseInt(x, 10)));
 	const measures = withLines(raws, lineIndexes(p.places, staves));
@@ -593,11 +606,7 @@ function readPart(node: XNode, meta: Meta): ReadPart {
 		voices: p.places.length,
 		transpose: { chromatic: p.chromatic, octave: p.octave, diatonic: p.diatonic },
 		measures,
-		meterLosses: p.meterLosses.sort(
-			(a, b) =>
-				raws.findIndex((m) => m.number === a.measure) -
-				raws.findIndex((m) => m.number === b.measure),
-		),
+		meterLosses: p.meterLosses.sort((a, b) => a.at - b.at),
 		unread: Object.fromEntries(
 			Object.entries(p.unread).map(([k, v]) => [k, [...v]]),
 		) as ReadPart["unread"],

@@ -41,9 +41,28 @@ function asks(part: ImportedPart, index: number): boolean {
 	);
 }
 
+/** What each line's cells leave sounding into each measure, once worked out: a long hold isn't walked back again. */
+const heldCache = new WeakMap<(string | null)[], Map<number, string | null>>();
+
 /** What a line's cells leave sounding into measure `index`: the last attack before it, null when it rested there. */
 function heldInto(cells: (string | null)[], index: number): string | null {
+	const cache = heldCache.get(cells) ?? new Map<number, string | null>();
+	heldCache.set(cells, cache);
+	const known = cache.get(index);
+	if (known !== undefined) return known;
+	const held = lastAttackBefore(cells, index, cache);
+	cache.set(index, held);
+	return held;
+}
+
+function lastAttackBefore(
+	cells: (string | null)[],
+	index: number,
+	cache: Map<number, string | null>,
+): string | null {
 	for (let m = index - 1; m >= 0; m--) {
+		const known = cache.get(m + 1);
+		if (known !== undefined && m + 1 < index) return known;
 		const cell = cells[m];
 		if (cell === null || cell === undefined) return null;
 		// A slot's members, a note set's spaces inside it.

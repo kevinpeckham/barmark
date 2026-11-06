@@ -85,10 +85,16 @@ function symbolOf(a: Attack, chord: Chord | undefined, stray: () => void): strin
  */
 type Run = { last: string | null; silent: boolean; sounding: boolean };
 
-/** The latest chord before `at` in the bar, else the last chord sounded. */
-function chordBefore(chords: Chord[], at: Frac, run: Run): string | null {
-	const before = chords.filter((c) => cmp(c.at, at) < 0).sort((a, b) => cmp(a.at, b.at));
-	return before[before.length - 1]?.slot ?? run.last;
+/** The latest chord before `at` in the bar (`sorted` by onset), else the last chord sounded. */
+function chordBefore(sorted: Chord[], at: Frac, run: Run): string | null {
+	let lo = 0;
+	let hi = sorted.length;
+	while (lo < hi) {
+		const mid = (lo + hi) >> 1;
+		if (cmp((sorted[mid] as Chord).at, at) < 0) lo = mid + 1;
+		else hi = mid;
+	}
+	return sorted[lo - 1]?.slot ?? run.last;
 }
 
 /**
@@ -99,18 +105,30 @@ function chordBefore(chords: Chord[], at: Frac, run: Run): string | null {
 function eventsOf(attacks: Attack[], chords: Chord[], run: Run, stray: () => void): Event[] {
 	const events: Event[] = [];
 	const used = new Set<Chord>();
+	const byOnset = chordsByOnset(chords);
+	const sorted = [...chords].sort((a, b) => cmp(a.at, b.at));
 	let silent = run.silent;
 	for (const a of attacks) {
-		const chord = chords.find((c) => cmp(c.at, a.at) === 0);
+		const chord = byOnset.get(onset(a.at));
 		if (chord) used.add(chord);
 		const symbol = resumes(a, chord, silent)
-			? chordBefore(chords, a.at, run)
+			? chordBefore(sorted, a.at, run)
 			: symbolOf(a, chord, stray);
 		if (symbol !== null) events.push({ at: a.at, symbol });
 		silent = a.kind === "rest" && !chord;
 	}
 	for (const c of chords) if (!used.has(c)) events.push({ at: c.at, symbol: c.slot });
 	return events;
+}
+
+/** An onset as a key: fractions are in lowest terms, so equal onsets share one. */
+const onset = (at: Frac) => `${at.n}/${at.d}`;
+
+/** The first chord at each onset, found without searching the bar for every attack. */
+function chordsByOnset(chords: Chord[]): Map<string, Chord> {
+	const out = new Map<string, Chord>();
+	for (const c of chords) if (!out.has(onset(c.at))) out.set(onset(c.at), c);
+	return out;
 }
 
 /** Whether an attack is slashes coming back after a rest, with no chord of its own. */
@@ -124,12 +142,13 @@ function unreadIn(cell: string, chords: Chord[], measure: number): Unread[] {
 		.sort((a, b) => cmp(a.at, b.at))
 		.map((c) => c.original);
 	const out: Unread[] = [];
+	let next = 0;
 	cell.split(" ").forEach((slot, at) => {
 		for (const member of slot.split("_")) {
 			// A `?` for a bar the grid can't hold matches no chord; its own loss says so.
-			if (member.replace(/\.$/, "") !== "?" || originals.length === 0) continue;
+			if (member.replace(/\.$/, "") !== "?" || next >= originals.length) continue;
 			// A `?` with no text of the program's own is still reported, with no words.
-			out.push({ measure, at, text: originals.shift() ?? "" });
+			out.push({ measure, at, text: originals[next++] ?? "" });
 		}
 	});
 	return out;

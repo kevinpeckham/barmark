@@ -15,11 +15,23 @@ const soundOf = (m: ReadMeasure | undefined, name: string): string | undefined =
 	m?.marks.find((k) => k.kind === "sound" && k.node.attrs[name] !== undefined)?.node.attrs[name];
 
 /** The measure a jump goes to: the one whose `<sound>` names the sign, else the first carrying the sign itself. */
-function signAt(ms: ReadMeasure[], sign: "segno" | "coda", value: string): number | undefined {
+function findSign(ms: ReadMeasure[], sign: "segno" | "coda", value: string): number | undefined {
 	const named = ms.findIndex((m) => soundOf(m, sign) === value);
 	if (named >= 0) return named;
 	const marked = ms.findIndex((m) => m.marks.some((k) => k.kind === sign));
 	return marked >= 0 ? marked : undefined;
+}
+
+/** `findSign`, each sign looked for once: a walk may pass a jump many times. */
+function signAt(
+	ms: ReadMeasure[],
+	sign: "segno" | "coda",
+	value: string,
+	w: Walk,
+): number | undefined {
+	const key = `${sign}\u0000${value}`;
+	if (!w.signs.has(key)) w.signs.set(key, findSign(ms, sign, value));
+	return w.signs.get(key);
 }
 
 /**
@@ -39,6 +51,8 @@ type Walk = {
 	pass: Map<number, number>;
 	spans: Map<number, number>;
 	endings: Map<number, number>;
+	/** Where each sign is, once looked for. */
+	signs: Map<string, number | undefined>;
 };
 
 /** Where the repeat being played starts. */
@@ -55,7 +69,7 @@ function complete(w: Walk, start: number, next: number): void {
 function afterJump(ms: ReadMeasure[], i: number, w: Walk): number | null | undefined {
 	const m = ms[i] as ReadMeasure;
 	const toCoda = soundOf(m, "tocoda");
-	const coda = toCoda === undefined || w.coda ? undefined : signAt(ms, "coda", toCoda);
+	const coda = toCoda === undefined || w.coda ? undefined : signAt(ms, "coda", toCoda, w);
 	if (coda !== undefined && coda > i) {
 		w.coda = true;
 		return coda;
@@ -64,16 +78,16 @@ function afterJump(ms: ReadMeasure[], i: number, w: Walk): number | null | undef
 }
 
 /** Where a measure's jump goes: the start, or the segno; undefined for no jump, or no sign to go to. */
-function jumpTarget(ms: ReadMeasure[], m: ReadMeasure): number | undefined {
+function jumpTarget(ms: ReadMeasure[], m: ReadMeasure, w: Walk): number | undefined {
 	if (soundOf(m, "dacapo") !== undefined) return 0;
 	const segno = soundOf(m, "dalsegno");
-	return segno === undefined ? undefined : signAt(ms, "segno", segno);
+	return segno === undefined ? undefined : signAt(ms, "segno", segno, w);
 }
 
 /** The jump itself, taken once; after it, To Coda and Fine. */
 function jump(ms: ReadMeasure[], i: number, w: Walk): number | null | undefined {
 	if (w.jumped) return afterJump(ms, i, w);
-	const to = jumpTarget(ms, ms[i] as ReadMeasure);
+	const to = jumpTarget(ms, ms[i] as ReadMeasure, w);
 	if (to !== undefined) w.jumped = true;
 	return to;
 }
@@ -121,8 +135,9 @@ const highest = (ms: ReadMeasure[], row: [number, number][]) =>
 /** Each ending bar's highest ending number among the endings in its row: the passes its repeat plays. */
 function endingPasses(ms: ReadMeasure[], spans: Map<number, number>): Map<number, number> {
 	const out = new Map<number, number>();
+	const lasts = new Set(spans.values());
 	for (const first of spans.keys()) {
-		if ([...spans.values()].includes(first - 1)) continue;
+		if (lasts.has(first - 1)) continue;
 		const row = chain(spans, first);
 		const max = highest(ms, row);
 		for (const [from, to] of row) for (let j = from; j <= to; j++) out.set(j, max);
@@ -130,13 +145,17 @@ function endingPasses(ms: ReadMeasure[], spans: Map<number, number>): Map<number
 	return out;
 }
 
+/** The pass an ending at `i` is reached on; after the jump, its row's last, as `endingPasses` counted them. */
+const passAt = (i: number, start: number, w: Walk) =>
+	w.jumped ? (w.endings.get(i) ?? 0) : (w.pass.get(start) ?? 1);
+
 /** Where play goes from measure `i`: on to it, or past an ending this pass doesn't take. A forward repeat opens a repeat; the last ending taken completes it. */
 function landing(ms: ReadMeasure[], i: number, w: Walk): number {
 	if (ms[i]?.repeatStart && w.open.at(-1) !== i) w.open.push(i);
 	const last = w.spans.get(i);
 	if (last === undefined) return i;
 	const start = startOf(w);
-	const pass = w.jumped ? highest(ms, chain(w.spans, i)) : (w.pass.get(start) ?? 1);
+	const pass = passAt(i, start, w);
 	if (!ms[i]?.ending?.numbers.includes(pass)) return landing(ms, last + 1, w);
 	if (!ms.slice(i, last + 1).some((m) => m.repeatEnd)) complete(w, start, last + 1);
 	return i;
@@ -157,6 +176,7 @@ export function playedOrder(measures: ReadMeasure[], losses?: Losses): number[] 
 		pass: new Map(),
 		spans,
 		endings: endingPasses(measures, spans),
+		signs: new Map(),
 	};
 	const cap = maxPlayed(measures.length);
 	let i: number | null = 0;

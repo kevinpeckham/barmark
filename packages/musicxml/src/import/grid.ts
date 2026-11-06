@@ -146,11 +146,16 @@ function snapSome(events: Event[], chosen: Set<Event>, length: Frac, beats: numb
 			: { ...e, snapped: false },
 	);
 	const kept: Candidate[] = [];
+	// Each onset's place in `kept` (fractions are in lowest terms, so equal onsets share a key).
+	const where = new Map<string, number>();
 	for (const e of all) {
-		const i = kept.findIndex((k) => cmp(k.at, e.at) === 0);
-		const other = kept[i];
-		if (!other) kept.push(e);
-		else if (other.snapped && !e.snapped) kept[i] = e;
+		const key = `${e.at.n}/${e.at.d}`;
+		const i = where.get(key);
+		const other = i === undefined ? undefined : kept[i];
+		if (i === undefined || !other) {
+			where.set(key, kept.length);
+			kept.push(e);
+		} else if (other.snapped && !e.snapped) kept[i] = e;
 	}
 	return kept.map(({ at, symbol }) => ({ at, symbol }));
 }
@@ -167,9 +172,9 @@ function snapChords(
 	outside: Set<Event>,
 ): string | null {
 	const chords = events.filter((e) => movable(e.symbol)).reverse();
-	const offGrid = (e: Event) => outside.has(e) || fit([e], length, beats) === null;
-	const order = [...chords.filter(offGrid), ...chords.filter((e) => !offGrid(e))];
-	for (let count = Math.max(1, outside.size); count <= order.length; count++) {
+	const off = new Set(chords.filter((e) => outside.has(e) || fit([e], length, beats) === null));
+	const order = [...chords.filter((e) => off.has(e)), ...chords.filter((e) => !off.has(e))];
+	for (const count of counts(Math.max(1, outside.size), order.length)) {
 		const cell = fit(
 			snapSome(events, new Set(order.slice(0, count)), length, beats),
 			length,
@@ -178,4 +183,15 @@ function snapChords(
 		if (cell !== null) return cell;
 	}
 	return null;
+}
+
+/** The most chords snapped one more at a time; past it, every chord snaps at once. */
+const MOST_SNAPPED = 16;
+
+/** How many chords to snap, in the order tried: one more each time, then all of them. */
+function counts(from: number, all: number): number[] {
+	const out: number[] = [];
+	for (let c = from; c <= Math.min(all, from + MOST_SNAPPED - 1); c++) out.push(c);
+	if (all > (out[out.length - 1] ?? 0)) out.push(all);
+	return out;
 }

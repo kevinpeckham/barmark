@@ -5,7 +5,7 @@
  */
 import { INSTRUMENTS, type InstrumentName, instrumentInfo, MAX_LINES, type Meter } from "barmark";
 import { type Bar, type LineRead, readLine, type Unread } from "./cells.js";
-import { readHarmony } from "./chords.js";
+import { harmonyOf } from "./chords.js";
 import type { Losses } from "./losses.js";
 import { type Line, mergeStaves } from "./merge.js";
 import { LEFT_OUT, type LeftOut, ON_NOTES, type ReadPart } from "./read.js";
@@ -48,7 +48,7 @@ function barsOf(part: ReadPart): Bar[] {
 			number: m.number,
 			length: m.length,
 			meter: m.oneBar ?? running,
-			chords: m.harmonies.map((h) => ({ at: h.at, ...readHarmony(h.node, part.transpose) })),
+			chords: m.harmonies.map((h) => ({ at: h.at, ...harmonyOf(h.node, part.transpose) })),
 		};
 	});
 }

@@ -104,6 +104,14 @@ function candidate(bars: CandidateBar[]): string {
 const clean = (bars: CandidateBar[]) =>
 	!parseChart(candidate(bars)).diagnostics.some((d) => d.severity === "error");
 
+/** A bar with no repeat mark, ending or direction cell (a fermata's `...` isn't one). */
+const plain = (b: CandidateBar) =>
+	!b.opens &&
+	b.closes === null &&
+	b.ending === null &&
+	b.before.length === 0 &&
+	b.after.every((t) => t === "...");
+
 /** A direction cell on a bar (`...` isn't one: it holds the bar before it). */
 export type DirectionCell = { bar: number; before: boolean; text: string };
 
@@ -145,6 +153,8 @@ function choices(cells: DirectionCell[]): DirectionCell[][] {
 export function placeStructure(
 	bars: CandidateBar[],
 ): { holds: false } | { holds: true; dropped: DirectionCell[] } {
+	// No repeat, ending or direction: nothing can fail to pair, and a long score skips the parse.
+	if (bars.every(plain)) return { holds: true, dropped: [] };
 	if (!clean(keeping(bars, new Set()))) return { holds: false };
 	const cells = bars.flatMap((b, bar) => [
 		...b.before.filter((t) => t !== "...").map((text) => ({ bar, before: true, text })),

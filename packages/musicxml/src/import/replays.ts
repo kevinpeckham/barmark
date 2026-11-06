@@ -61,14 +61,14 @@ const nameKey = (name: string) => name.replace(/\s+/g, " ").trim().toLowerCase()
 /** The first bars of the sections written as replays. */
 export function replaysOf(src: Source, sections: Section[]): Set<number> {
 	const out = new Set<number>();
-	sections.forEach((s, k) => {
-		if (s.name === null) return;
+	// The most recent section of each name so far.
+	const latest = new Map<string, Section>();
+	for (const s of sections) {
+		if (s.name === null) continue;
 		const name = nameKey(s.name);
-		const earlier = sections
-			.slice(0, k)
-			.reverse()
-			.find((e) => e.name !== null && nameKey(e.name) === name);
+		const earlier = latest.get(name);
 		if (earlier && alike(src, earlier, s)) out.add(s.from);
-	});
+		latest.set(name, s);
+	}
 	return out;
 }

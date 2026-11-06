@@ -51,8 +51,15 @@ const WRITTEN_OUT =
 	"repeats, endings or jumps barmark can't hold as written; bars written out in played order";
 
 /** Each item once, in order: marks two parts share are read once, marks that differ kept from each. */
-const once = <T>(items: T[], key: (t: T) => string = String): T[] =>
-	items.filter((t, i) => items.findIndex((u) => key(u) === key(t)) === i);
+function once<T>(items: T[], key: (t: T) => string = String): T[] {
+	const seen = new Set<string>();
+	return items.filter((t) => {
+		const k = key(t);
+		if (seen.has(k)) return false;
+		seen.add(k);
+		return true;
+	});
+}
 
 const first = <T>(items: (T | null)[]): T | null => items.find((t) => t !== null) ?? null;
 

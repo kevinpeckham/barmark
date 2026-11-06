@@ -5,7 +5,7 @@
  * where a section comes back unchanged. The importer parses what it wrote:
  * an error there is an importer bug, reported as one.
  */
-import { parseChart, printChart } from "barmark";
+import { type ChartParse, parseChart, printParsed } from "barmark";
 import { metersOf, settleEndings } from "./endings.js";
 import type { Losses } from "./losses.js";
 import { importLyrics, lyricLines, verseText } from "./lyrics.js";
@@ -88,11 +88,24 @@ function textOf(w: Writer, s: Span): string[] {
 /** How a section is written: as a replay (its heading and lyrics alone), and `x N` when it repeats whole over several systems. */
 type Plan = { replay: boolean; times: string | null };
 
+/** Each section's first bar, for every bar: a section is found without searching them all. */
+function sectionStarts(sections: Section[], bars: number): number[] {
+	const out = Array<number>(bars).fill(0);
+	for (const s of sections) for (let i = s.from; i < s.to; i++) out[i] = s.from;
+	return out;
+}
+
 function plans(w: Writer, systems: System[], sections: Section[]): Map<number, Plan> {
 	const replays = replaysOf(w.src, sections);
+	const starts = sectionStarts(sections, w.src.bars.length);
+	const rowsIn = new Map<number, number>();
+	for (const x of systems) {
+		const start = starts[x.from] ?? 0;
+		rowsIn.set(start, (rowsIn.get(start) ?? 0) + 1);
+	}
 	return new Map(
 		sections.map((s) => {
-			const rows = systems.filter((x) => s.from <= x.from && x.from < s.to).length;
+			const rows = rowsIn.get(s.from) ?? 0;
 			// A replay, and `x N` on a heading, need the heading; a name no heading can
 			// hold (unreachable in practice: quoting stops every repeat and elision)
 			// writes its bars out, with their repeat marks.
@@ -165,7 +178,9 @@ function systemLines(
 /** The body: each system; a replayed section as its heading and its own lyrics. */
 function body(w: Writer, systems: System[], sections: Section[]): string[] {
 	const planned = plans(w, systems, sections);
-	const sectionOf = (i: number) => sections.find((x) => x.from <= i && i < x.to) as Section;
+	const starts = sectionStarts(sections, w.src.bars.length);
+	const byStart = new Map(sections.map((x) => [x.from, x]));
+	const sectionOf = (i: number) => byStart.get(starts[i] ?? 0) as Section;
 	// The keys of the labelled system just written, while nothing has followed its rows.
 	let previous: string[] | null = null;
 	return systems.flatMap((s) => {
@@ -186,8 +201,7 @@ function body(w: Writer, systems: System[], sections: Section[]): string[] {
 }
 
 /** The chart's errors, and every bar where a part plays other than the importer meant, each reported as the importer's bug. */
-function check(text: string, w: Writer, losses: Losses): void {
-	const parsed = parseChart(text);
+function check(parsed: ChartParse, w: Writer, losses: Losses): void {
 	const errors = parsed.diagnostics
 		.filter((d) => d.severity === "error")
 		.map((d) => `${d.message} (line ${d.line})`);
@@ -236,7 +250,10 @@ export function writeChart(
 		...header,
 		...body(w, systems, sectionsOf(src)),
 	];
-	const text = printChart(`${lines.join("\n")}\n`);
-	check(text, w, losses);
+	const raw = `${lines.join("\n")}\n`;
+	const first = parseChart(raw);
+	const text = printParsed(raw, first);
+	// The rows are written canonical, so the printed chart is usually the one already parsed.
+	check(text === raw ? first : parseChart(text), w, losses);
 	return text;
 }
