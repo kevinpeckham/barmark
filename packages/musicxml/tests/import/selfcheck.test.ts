@@ -3,8 +3,9 @@ import { parseChart } from "barmark";
 import { Losses } from "../../src/import/losses.js";
 import type { ImportedPart } from "../../src/import/parts.js";
 import type { Source } from "../../src/import/rows.js";
-import { mismatches, reportBugs } from "../../src/import/selfcheck.js";
+import { mismatches, reportBugs, verseMismatches } from "../../src/import/selfcheck.js";
 import type { BarInfo } from "../../src/import/structure.js";
+import { sungKey } from "../../src/import/verses.js";
 
 const bar = (index: number): BarInfo => ({
 	index,
@@ -31,6 +32,7 @@ const part = (label: string, bars: (string | null)[]): ImportedPart => ({
 	lyrics: [],
 	hasChords: true,
 	unread: [],
+	sings: null,
 });
 
 /** Trading fours: the guitar plays bars 1 to 4, the piano bars 5 to 8. */
@@ -48,7 +50,7 @@ const written = [0, 1, 2, 3, 4, 5, 6, 7];
 const header = "part: G = Guitar\npart: P = Piano\n";
 
 test("a chart that plays what the importer meant has no mismatch", () => {
-	const chart = `${header}G | A | B | C | D |\nG tacet\nP | E | F | G | A |\n`;
+	const chart = `${header}G | A | B | C | D |\n---\nP | E | F | G | A |\n`;
 	expect(mismatches(parseChart(chart), trade, written)).toEqual([]);
 });
 
@@ -85,4 +87,27 @@ test("importer bugs are capped: the first three, then how many more", () => {
 		["error", "importer bug: c"],
 		["error", "importer bug: and 2 more"],
 	]);
+});
+
+test("every verse's syllables are compared, each by its onset in the bar", () => {
+	const chart = parseChart(
+		"part: V = Voice, instrument: voice\nV         | {C4}:la {D4}:da |\nlyrics 2: | na ma           |\n",
+	);
+	const meant = (second: string) =>
+		new Map([
+			[
+				0,
+				new Set([
+					sungKey("V", 1, 0, "la", true),
+					sungKey("V", 1, 0.5, "da", true),
+					sungKey("V", 2, 0, "na", true),
+					sungKey("V", 2, 0.5, second, true),
+				]),
+			],
+		]);
+	expect(verseMismatches(chart, [0], meant("ma"), () => "1")).toEqual([]);
+	const [wrong] = verseMismatches(chart, [0], meant("mo"), () => "1");
+	expect(wrong).toStartWith("measure 1 sings ");
+	expect(wrong).toContain("ma");
+	expect(wrong).toContain("mo");
 });

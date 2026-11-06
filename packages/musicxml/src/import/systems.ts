@@ -114,11 +114,15 @@ function absorbed(runs: Run[], playing: Playing[]): Run[] {
 		}, []);
 }
 
-/** A run in systems of up to four bars. */
-function chunks(run: Run): System[] {
+/** A run in systems of up to four bars; a pickup (the first bar, in a meter of its own) is a fifth. */
+function chunks(run: Run, bars: BarInfo[]): System[] {
 	const out: System[] = [];
-	for (let from = run.from; from < run.to; from += BARS)
-		out.push({ from, to: Math.min(run.to, from + BARS), ...run.playing });
+	const pickup = run.from === 0 && bars[0]?.meter != null ? 1 : 0;
+	for (let from = run.from; from < run.to; ) {
+		const to = Math.min(run.to, from + BARS + (from === 0 ? pickup : 0));
+		out.push({ from, to, ...run.playing });
+		from = to;
+	}
 	return out;
 }
 
@@ -168,7 +172,10 @@ function readOrder(systems: System[], p: number): number[] {
  */
 function pinOrder(systems: System[], p: number, count: number): System[] {
 	const order = readOrder(systems, p);
-	if (order.every((l, k) => k === 0 || l > (order[k - 1] ?? 0))) return systems;
+	// A reader takes the first line written by name as the part's first, which
+	// a tutti line plays: it must be the part's first line.
+	const first = order[0] === undefined || order[0] === 0;
+	if (first && order.every((l, k) => k === 0 || l > (order[k - 1] ?? 0))) return systems;
 	const at = systems.findIndex((s) => linesIn(s, p).some((l) => l > 0));
 	return systems.map((s, i) => {
 		if (i !== at) return s;
@@ -182,7 +189,7 @@ export function systemsOf(bars: BarInfo[], playing: Playing[], lines: number[] =
 	const systems = segments(bars).flatMap(([from, to]) =>
 		bars[from]?.ending != null
 			? [ending(playing, from, to)]
-			: absorbed(runsOf(playing, from, to), playing).flatMap(chunks),
+			: absorbed(runsOf(playing, from, to), playing).flatMap((run) => chunks(run, bars)),
 	);
 	return lines.reduce((out, count, p) => (count > 1 ? pinOrder(out, p, count) : out), systems);
 }

@@ -232,6 +232,98 @@ test.describe("piano marks", () => {
 	});
 });
 
+test.describe("lyrics", () => {
+	test("a voice line's syllables sit under its pitch names, verse under verse", async ({
+		page,
+	}) => {
+		await page.goto("/chart?chart=lead");
+		await page.evaluate(() => document.fonts.ready);
+		const placed = await inChart(page, (root) => {
+			const box = (e: Element | null | undefined) => e?.getBoundingClientRect() ?? new DOMRect();
+			const melody = root.querySelector(".bm-sings") as Element;
+			// Each note's column: its pitch name, then each verse's syllable, stacked and left-aligned.
+			const columns = [...melody.querySelectorAll(".bm-sung")].map((c) => {
+				const note = box(c.querySelector(".bm-sung-note"));
+				const lines = [...c.querySelectorAll(".bm-under")].map(box);
+				return {
+					under: lines.every(
+						(l, i) => l.top >= (i ? (lines[i - 1]?.bottom ?? 0) : note.bottom) - 1,
+					),
+					aligned: lines.every((l) => Math.abs(l.left - note.left) <= 1),
+				};
+			});
+			// Each verse's number on its verse's line, left of the first bar line.
+			const bar = box(melody.querySelector(".bm-bar"));
+			const numbers = [...melody.querySelectorAll(".bm-verse")].map((n, i) => {
+				const line = box(melody.querySelectorAll(`.bm-under[data-verse="${i + 1}"]`)[0]);
+				const b = box(n);
+				return (
+					b.right <= bar.left &&
+					Math.abs((b.top + b.bottom) / 2 - (line.top + line.bottom) / 2) <= 3
+				);
+			});
+			// No syllable runs into the next one on its line.
+			const clear = [1, 2].every((v) => {
+				const words = [...melody.querySelectorAll(`.bm-under[data-verse="${v}"] .bm-syllable`)].map(
+					box,
+				);
+				return words.every((w, i) => i === 0 || (words[i - 1]?.right ?? 0) <= w.left);
+			});
+			return {
+				columns: columns.length,
+				under: columns.every((c) => c.under),
+				aligned: columns.every((c) => c.aligned),
+				numbers,
+				clear,
+				extender: box(root.querySelector(".bm-extender")).width > 4,
+			};
+		});
+		expect(placed).toEqual({
+			columns: 14,
+			under: true,
+			aligned: true,
+			numbers: [true, true],
+			clear: true,
+			extender: true,
+		});
+	});
+});
+
+test.describe("lyric rows on no melody", () => {
+	test("on a phone, each bar's words wrap with the bar they cover", async ({ page }) => {
+		await page.setViewportSize({ width: 390, height: 800 });
+		for (const chart of ["spoken", "verses"]) {
+			await page.goto(`/chart?chart=${chart}`);
+			await page.evaluate(() => document.fonts.ready);
+			const lines = await inChart(page, (root) =>
+				[...root.querySelectorAll(".bm-beats")].map((line) => {
+					const bar = line.closest(".bm-bar") as Element;
+					const chord = bar.querySelector(".bm-bar-body") as Element;
+					return {
+						left:
+							Math.abs(line.getBoundingClientRect().left - chord.getBoundingClientRect().left) <= 1,
+						under: line.getBoundingClientRect().top >= chord.getBoundingClientRect().bottom - 1,
+						chord: chord.querySelector(".bm-chord") !== null,
+					};
+				}),
+			);
+			expect(lines.length).toBeGreaterThan(0);
+			expect(lines.every((l) => l.left && l.under && l.chord)).toBe(true);
+			// The narrow screen does wrap: the bars sit on more than one line.
+			const tops = await inChart(
+				page,
+				(root) =>
+					new Set(
+						[...root.querySelectorAll(".bm-bar")].map((b) =>
+							Math.round(b.getBoundingClientRect().top),
+						),
+					).size,
+			);
+			expect(tops).toBeGreaterThan(chart === "spoken" ? 1 : 2);
+		}
+	});
+});
+
 test.describe("accessibility", () => {
 	test("a screen reader hears sections and bars as music", async ({ page }) => {
 		await page.goto("/chart");

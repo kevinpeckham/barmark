@@ -1,6 +1,7 @@
 /** Part lines as staves and voices (barmark's grammar 7.6). */
 import { describe, expect, test } from "bun:test";
 import { voicesFor } from "../src/measure-xml.js";
+import { AMAZING_GRACE } from "./charts.js";
 import { measures, notes, xmlOf } from "./helpers.js";
 
 const MORNING = `# Morning Song
@@ -54,6 +55,77 @@ describe("part lines in MusicXML", () => {
 		]);
 		expect(measures(xml)).toHaveLength(4);
 		expect(measures(xml, "P2")).toHaveLength(4);
+	});
+	test("a bare chord line beside a piano's hands: harmony over the RH, hands on their staves (7.6)", () => {
+		const xml = xmlOf(
+			"part: Pno = Piano, instrument: piano\nPno | Cmaj7 |\nPno.RH | {E4 G4 B4} |\nPno.LH | {C2} |\n",
+		);
+		const [first = ""] = measures(xml, "P1");
+		expect(placed(first)).toEqual([
+			["E4", 1, 1, null],
+			["G4", 1, 1, null],
+			["B4", 1, 1, null],
+			["C2", 5, 2, null],
+		]);
+		expect(first.match(/<harmony>/g)).toHaveLength(1);
+		expect(first).toMatch(/<\/harmony><note><pitch><step>E<\/step>/);
+		expect(first).not.toContain("<notehead>slash</notehead>");
+		expect(first).not.toContain("<measure-style>");
+	});
+	test("the spec's lead sheet: one voice, each chord symbol before the note it falls on (7.6, 7.7)", () => {
+		const xml = xmlOf(AMAZING_GRACE);
+		const bars = measures(xml, "P1");
+		expect(bars).toHaveLength(5);
+		for (const bar of bars) {
+			expect(notes(bar).every((n) => tag(n, "voice") === "1")).toBe(true);
+			expect(bar).not.toContain("<notehead>slash</notehead>");
+			expect(bar).not.toContain("<measure-style>");
+		}
+		// Each chord symbol's kind, and the note it stands right before.
+		const chords = (bar: string) =>
+			[...bar.matchAll(/<kind[^>]*>(\w+)<\/kind><\/harmony><note><pitch><step>([A-G])/g)].map(
+				(m) => `${m[1]} ${m[2]}`,
+			);
+		expect(chords(bars[0] ?? "")).toEqual(["none D"]);
+		expect(chords(bars[1] ?? "")).toEqual(["major G"]);
+		expect(chords(bars[2] ?? "")).toEqual(["major B", "dominant A"]);
+		expect(chords(bars[3] ?? "")).toEqual(["major G"]);
+		expect(bars.join("")).not.toContain("<offset>");
+	});
+	test("a hands-only system beside a bare-plus-hands one exports as it did without the bare line", () => {
+		const hands = "Pno.RH | {F4} |\nPno.LH | {F2} |\n";
+		const head = "part: Pno = Piano, instrument: piano\n";
+		const withBare = xmlOf(`${head}Pno | C |\nPno.RH | {E4} |\nPno.LH | {C2} |\n---\n${hands}`);
+		const without = xmlOf(`${head}Pno.RH | {E4} |\nPno.LH | {C2} |\n---\n${hands}`);
+		expect(measures(withBare, "P1")[1]).toBe(measures(without, "P1")[1]);
+	});
+	test("a bare line with notes of its own beside named lines is the next voice on staff 1", () => {
+		const xml = xmlOf(
+			"part: Pno = Piano, instrument: piano\nPno | {G3 C4} |\nPno.RH | {E4} |\nPno.LH | {C2} |\n",
+		);
+		expect(placed(measures(xml, "P1")[0] ?? "")).toEqual([
+			["E4", 1, 1, "up"],
+			["C2", 5, 2, null],
+			["G3", 2, 1, "down"],
+			["C4", 2, 1, "down"],
+		]);
+		const lead = xmlOf(
+			"part: Vox = Voice, instrument: voice\nVox | {D4} |\nVox.Mel | {G4} / {B4} / |\n",
+		);
+		expect(placed(measures(lead, "P1")[0] ?? "").map(([p, v]) => [p, v])).toEqual([
+			["G4", 1],
+			["B4", 1],
+			["D4", 2],
+		]);
+	});
+	test("a bare line alone in a system plays where the first line would", () => {
+		const xml = xmlOf(
+			"part: Pno = Piano, instrument: piano\nPno | C |\nPno.RH | {E4} |\nPno.LH | {C2} |\n---\nPno | {D4} |\n",
+		);
+		expect(placed(measures(xml, "P1")[1] ?? "")).toEqual([
+			["D4", 1, 1, null],
+			["rest", 5, 2, null],
+		]);
 	});
 	test("a resting line: the lower staff rests", () => {
 		const xml = xmlOf(`${MORNING}\nPno.RH | Em{E4 G4 B4} |\nBs | {E1} |\n`);

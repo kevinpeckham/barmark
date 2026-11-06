@@ -123,6 +123,32 @@ pedalStates(chart.bars); // whether the pedal is down after each slot
 `chart.part` still gives the one part of a single-part chart, and is
 deprecated in favour of `parts`.
 
+### Voice and lyrics
+
+```
+part: Vox = Voice, instrument: voice
+key: G, time: 3/4
+
+Vox       | [1/4] N.C.    | G                           | G / G7                |
+Vox.Mel   | [1/4] {D4}:A- | {G4}:maz- / {B4}:ing_{G4}:/ | {B4}:grace / {A4}:how |
+lyrics 2: | 'Twas         | grace / that                | taught / my           |
+```
+
+A lead sheet puts the chords on the voice part's bare line and its melody
+on a second line, `Vox.Mel` (grammar 7.6). A syllable follows a note
+after a colon (`{G4}:maz-`; a trailing `-` continues the word, `~` joins
+elided syllables, `:/` holds the syllable over a new note). A **lyric
+row** (`lyrics:`, or `lyrics N:` for verse N; grammar 7.7) writes later
+verses under a system, one cell per bar. `---` on a line of its own
+separates blocks, and a text line that starts with `\` is text.
+
+```ts
+chart.bars[0].lyrics; // a PlayedLyrics per verse the bar sings: { verse, part?, syllables }
+chart.parts[0].sings; // the name of the line whose notes carry the words ("Mel" here; "" for a bare line)
+```
+
+Verses come out in play order: inside a repeat, verse N is pass N.
+
 - **`parseChart`** never throws. A line with an error is left out of the
   play order and reported, and the rest of the chart still reads.
 - **`printChart`** changes spelling and layout only: lines with errors and

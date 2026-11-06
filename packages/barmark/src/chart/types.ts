@@ -57,12 +57,24 @@ export type Articulation = "accent" | "hit";
 export type Push = "eighth" | "sixteenth";
 /** `+` presses the sustain pedal, or changes it when it is down; `*` lifts it (grammar 2.9). */
 export type Pedal = "press" | "release";
+/** A syllable sung on a note (grammar 4.3). `held` is `:/`. `parts` holds elided syllables (`the~end`). */
+export type Syllable = { kind: "sung"; parts: string[]; continues: boolean } | { kind: "held" };
 /**
  * A chord slot holds a chord symbol or a note set; `chord.kind` tells
  * which. `voicing` is the exact notes written after a chord's name
- * (`Cmaj7{E3 G3 B3}`, grammar 4.2). The optional fields are present only
- * when written.
+ * (`Cmaj7{E3 G3 B3}`, grammar 4.2). `syllable` is sung on a note set
+ * (`{G4}:maz-`, grammar 4.3), never on a chord name or a voicing. The
+ * optional fields are present only when written.
  */
+/**
+ * A slot of a lyric row (grammar 7.7): a syllable, `/` holding the one
+ * before, `--` a breath (nothing sung), or `_` splitting the slot.
+ */
+export type LyricSlot =
+	| { kind: "syllable"; syllable: Syllable }
+	| { kind: "hold" }
+	| { kind: "breath" }
+	| { kind: "group"; members: LyricSlot[] };
 export type SimpleSlot = (
 	| {
 			kind: "chord";
@@ -71,6 +83,7 @@ export type SimpleSlot = (
 			pedal?: Pedal;
 			articulation?: Articulation;
 			push?: Push;
+			syllable?: Syllable;
 	  }
 	| { kind: "hold" }
 	| { kind: "nc"; push?: Push }
@@ -146,7 +159,24 @@ export type Line =
 			/** Set when the line's bars or structure differ from its system's (an error): its part is tacet there. */
 			dropped?: true;
 	  }
-	| { kind: "text"; line: number; text: string }
+	/** A text line; `escaped` when written with a leading `\` (grammar 1), which `text` leaves off. */
+	| { kind: "text"; line: number; text: string; escaped?: true }
+	/** `---` alone (grammar 1, 7.4): ends a system, and means nothing else. */
+	| { kind: "break"; line: number }
+	/**
+	 * `lyrics:` or `lyrics N:` then a bar line (grammar 7.7): syllables on the
+	 * beats, one cell per bar. `verse` is N, null when unnumbered. `covers`
+	 * holds the source lines of the bar lines it lies under, in order: one,
+	 * a system's lines, or under a replay heading the replayed section's
+	 * line; empty when it covers none (an error).
+	 */
+	| {
+			kind: "lyrics";
+			line: number;
+			verse: number | null;
+			cells: LyricSlot[][];
+			covers: number[];
+	  }
 	/** `composer: …` and the other credit lines (grammar 7.5). */
 	| { kind: "credit"; line: number; role: CreditRole; text: string }
 	/**
@@ -200,7 +230,22 @@ export type PlayedBar = {
 	parts?: PartBar[];
 	/** A single part's lines (grammar 7.6), as on `PartBar`: in a single-part chart or an extracted part that writes lines. */
 	lines?: LineBar[];
+	/**
+	 * The words sung in this bar (grammar 4.3, 7.7), one entry per verse in
+	 * verse order: on a repeat's pass N only verse N; absent when none.
+	 */
+	lyrics?: PlayedLyrics[];
 };
+/**
+ * A syllable as played: `at` is its onset in whole notes from the bar's
+ * start; `note` is true when a note of the singing line starts there.
+ */
+export type PlayedSyllable = { at: number; syllable: Syllable; note: boolean };
+/**
+ * One verse's syllables in a played bar; `part` is the label of the part
+ * singing (absent in a chart with no voice part).
+ */
+export type PlayedLyrics = { verse: number; part?: string; syllables: PlayedSyllable[] };
 /** One part's line's share of a played bar (grammar 7.6): its name, the line it is written on, its slots and words. */
 export type LineBar = { name: string; line: number; slots: Slot[]; words?: Words[] };
 /**
@@ -230,8 +275,13 @@ export type SectionOccurrence = {
 	form: number;
 };
 
-/** A declared part as the parse reports it: `lines` names its lines in score order (grammar 7.6), present only when it writes some. */
-export type DeclaredPart = Part & { lines?: string[] };
+/**
+ * A declared part as the parse reports it: `lines` names its lines in score
+ * order (grammar 7.6), present only when it writes some. `sings`, on the
+ * part that sings (grammar 7.7), names the line whose notes carry the
+ * lyrics, or is "" for its bare line; absent when it writes no notes.
+ */
+export type DeclaredPart = Part & { lines?: string[]; sings?: string };
 
 export type ChartParse = {
 	title: string | null;

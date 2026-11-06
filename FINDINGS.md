@@ -9,6 +9,55 @@ not here.
 
 ## Testing
 
+### A hold worked out in file order is wrong in played order (2026-11-06, @barmark/musicxml)
+
+- **The symptom.** Random lyric scores (the Task 8 reviewer's lyric
+  fuzzers) gave "importer bug: measure N sings nothing, not V 2 0 /":
+  the import meant a later verse to hold a syllable where barmark sang
+  nothing.
+- **The cause.** The import decides a verse's `/` holds measure by
+  measure in the file's order. A repeat barmark can't hold is written out
+  in played order, so a held bar can follow a bar where that verse
+  breathes; barmark's row `/` holds only from the row's start or its last
+  syllable, and a breath ends it.
+- **The fix.** `settled` in `packages/musicxml/src/import/verses.ts`
+  reads each row as barmark does and writes a `/` with nothing to hold as
+  `--`; the self-check drops those holds for the written bar whose row
+  says so (`holdKey`, keyed by written bar, as one measure can be written
+  in two contexts). Tests in `tests/import/lyrics.test.ts`.
+
+### Onsets must be compared as a share of the bar, not in whole notes (2026-11-06, @barmark/musicxml)
+
+- **The symptom.** The import's verse self-check (property tests,
+  `packages/musicxml/tests/import/property.test.ts`) reported every
+  syllable of some random scores as misplaced, though the chart read
+  right.
+- **The cause.** barmark's parse places a syllable (`PlayedSyllable.at`)
+  in whole notes from the bar's meter, while the importer measures a
+  bar by the notes it holds: a pickup or an over-full measure has a
+  length its meter doesn't give, so the same syllable sat at two
+  different numbers.
+- **The fix.** `verseMismatches` (`src/import/selfcheck.ts`) compares an
+  onset as a share of its bar on both sides: the parse's `at / (n/d)`,
+  the importer's onset over the measure's length (`Words.lengths`).
+
+### The MusicXML corpus misses the grammar's examples after section 6 (2026-11-06, @barmark/musicxml)
+
+- **The symptom.** Grammar 7.7's two new examples parse cleanly, yet the
+  sounding corpus (`packages/musicxml/tests/charts.ts`) still had 15
+  charts and `sounding.json` needed no new entry.
+- **The cause.** `grammarCharts()` finds blocks with
+  ``/```[a-z]*\n([\s\S]*?)\n```/g``, which needs a closing fence at the
+  start of a line. An indented fence inside a list item (section 6's
+  `## Chorus ->` example) opens a match that its own indented closing
+  fence can't end, so every later pair is read inside out: prose between
+  fences, with errors, which the corpus filter drops. Nothing past
+  section 6 has been in the corpus since that example was indented.
+- **The fix.** Not made here (a corpus change re-keys `sounding.json`):
+  the regex should allow leading spaces on both fences
+  (``/^ *```[a-z]*\n([\s\S]*?)\n *```/gm``) and the fixture be
+  regenerated for the blocks that join.
+
 ### A test player that reads a missing default wrongly hides the bug it should catch (2026-11-05, @barmark/musicxml)
 
 - **The symptom.** `x ...` (an open repeat, played once by barmark) was
@@ -177,6 +226,79 @@ order, not just the written marks.
 
 ## Design
 
+### Syllables drawn as rows of their own drifted off their notes (2026-11-06, @barmark/render)
+
+- **The symptom.** The first draft drew each verse as a row under the
+  melody row, its slots built like the melody's. In Chromium, bar 2 of
+  Amazing Grace put "ing" 13px right of its B (`render.pw.ts`, "lyrics").
+- **The cause.** A bar's slots are `flex: 1 1 0` with `min-width:
+  max-content`, so they share a bar equally only when it has room to
+  spare. A bar column is exactly as wide as its widest row's content, so
+  the row that sets the width has no slack: each slot keeps its own
+  content's width, and the pitch row and a verse row, with different
+  contents, split the same width differently.
+- **The fix.** Each note of a singing line is a column (`.bm-sung`): the
+  pitch name, then one line per verse, so a syllable is under its note
+  however the bar is laid out or wrapped. The singing bar's body is a
+  grid of `1fr` columns, which sizes every column to the widest one:
+  slots are spaced by beat, and the chord row above, sharing the bar
+  column, gets the slack to space its chords the same way. A lyric row on
+  no melody went the same way in review: drawn as a row of its own, it
+  wrapped at different bars from its chord row on a phone (words under no
+  chord), so its lines now sit inside the bars they cover.
+
+### The spec's lead sheet read as two systems with no diagnostic (2026-11-06, barmark)
+
+- **The symptom.** The voice-and-lyrics spec's Amazing Grace, a bare
+  `Vox` chord line over `Vox.Mel`, parsed cleanly into 10 bars: the
+  chords played first, then the melody, and `lyrics 2:` covered only
+  the melody line.
+- **The cause.** Grammar 7.6 said a part writes its lines or its bare
+  line in a system, not both, and `systems.ts` started a new system when
+  they met. The spec was written and approved against what part lines
+  "already" did, and nobody parsed its example until building verses.
+  Every line read cleanly, so nothing warned.
+- **The fix.** Kevin amended 7.6: named lines written after their
+  part's bare line join it, the bare line first, `""` in
+  `DeclaredPart.lines` (`claimsOf` in `systems.ts`, `checkLines`). A
+  first cut let a bare line join named lines before it too, which
+  silently changed `Pno.RH`/`Pno.LH` then `Pno` from one after the other
+  to together; only a bare line written first joins now. A spec example
+  belongs in a test as soon as the spec is approved.
+- **The same gap in the export.** MusicXML's `voicesFor` placed lines by
+  index, so the new `""` line took voice 1 on the upper staff: the lead
+  sheet came out as a slash voice with the melody as voice 2, stems
+  down, and a piano's chord line pushed its right hand onto the lower
+  staff, in every system, even those without the bare line. A bare line
+  beside named lines is now `<harmony>` over the first named line, or
+  the next upper-staff voice when it writes notes (`bare.ts`,
+  `bareAlone` in `score.ts`). A new line kind needs checking in every
+  place that numbers lines, not just where it is read.
+
+### Timing alone can't tell comping from a melody; pitch motion can (2026-11-06, MusicXML import)
+
+- **The symptom.** The first melody-in-thirds rule (a bar's attacks are
+  voicings only on chord changes or beats) dropped ordinary comping: a
+  Charleston, stabs on the and of 4, eighth-note rock or 6/8 comping, and
+  a push into the next chord all came in as chords alone. One push in
+  bar 15 of a 16-bar part cost all 15 bars their voicings, and the
+  warning listed bars 2, 3, 4, never 15.
+- **The cause.** Syncopated comping and a melody both attack between the
+  beats, so timing alone can't separate them. What separates them is
+  motion: comping re-strikes the voicing it holds, a melody changes
+  pitch. And the rule was applied to the whole part, where the spec
+  said per bar.
+- **The fix.** An attack off the changes and beats makes its bar a
+  melody's only when its pitches differ from the voicing sounding in
+  that line (a chord change clears it) and it isn't a push (an eighth
+  or sixteenth before a change, holding into it, or tied over the bar
+  line into a chord on the next downbeat). The rule is per bar: a
+  melody bar writes its chords alone and the warning names it.
+  `melodyBars` in `packages/musicxml/src/import/melody.ts`, used by
+  `decide` in `parts.ts` and read per bar by `readLine` in `cells.ts`
+  (`Reading.melodyBars`). Tests in `tests/import/import.test.ts`,
+  "comping off the beat stays voicings".
+
 ### Two labelled systems in a row join into one, and still parse cleanly (2026-11-06, MusicXML import)
 
 - **The symptom.** Trading fours (the guitar's four bars, then the
@@ -191,13 +313,15 @@ order, not just the written marks.
   didn't write joins that system.
 - **The fix.** Where nothing else (a heading, a directive, text, lyrics)
   stands between two labelled systems and the second would join the
-  first, the importer writes a cue as a text line between them, naming
-  who stops (`G tacet`) or, when nobody stops, who starts (`G enters`).
-  Text lines have no musical meaning (grammar 1), so this is the writable
-  form that changes nothing that plays; the other options (a resting
-  part's line of `--` or `N.C.`, or a restated directive) each change
-  the music or the score's marks. The grammar has no silent system
-  separator: a question for Kevin. And the guard: `writeChart` now plays
+  first, the importer writes `---` between them. At first it wrote a cue
+  as a text line, naming who stops (`G tacet`) or, when nobody stops,
+  who starts (`G enters`), since text lines have no musical meaning
+  (grammar 1) and the other options (a resting part's line of `--` or
+  `N.C.`, or a restated directive) each change the music or the score's
+  marks. The grammar had no silent system separator; Kevin added one
+  (2026-11-06): a line of three or more hyphens ends a labelled system
+  and means nothing else, and the importer now writes it instead of the
+  cue (`separator` in `write.ts`). And the guard: `writeChart` now plays
   the chart back (`selfcheck.ts`) and compares every part's line, bar by
   bar in play order, with the cells it meant to write; any difference is
   an "importer bug" error. A property test (`tests/import/property.test.ts`)
@@ -369,6 +493,32 @@ and round-trip it through `format`.
   in Dorico and choose File > Export > MusicXML. They are checked in as
   `dorico-*.musicxml` with expected charts. Revisit if a Dorico release
   documents export filter IDs and a destination parameter.
+
+### MuseScore keeps a melisma only on its syllable, and writes an elision as a glyph (2026-11-06, voice and lyrics)
+
+- **The symptom.** An exported lead sheet went through MuseScore 4.7
+  (`mscore -o`) with its lyric numbers and `syllabic` intact, but the
+  `:/` notes' `<lyric number="1"><extend/></lyric>` came back as no
+  lyric at all, and `<text>the</text><elision/><text>end</text>` came
+  back as three `<text>`s, the middle one SMuFL's lyrics elision glyph
+  (U+E551) in Leland Text, with no `<elision/>`.
+- **The cause.** MuseScore models a melisma as an extension line on the
+  syllable that is held, so it reads `<extend>` only beside a `<text>`
+  and drops a `<lyric>` that has none. It stores an elision as a
+  character in the lyric's text, and writes it back that way.
+- **The fix.** The export also writes `<extend type="start"/>` on the
+  syllable a `:/` holds (spec, Claude's call 11), which MuseScore keeps
+  (as `<extend/>`). `scripts/musescore-fixtures.ts` checks an exported
+  lead sheet's lyrics survive MuseScore, reading U+E551 as an elision.
+  The import (Task 8) must read both forms: an extend on a syllable
+  holds it over the following unsung notes, and U+E551 between texts is
+  `~`.
+- **And only on a word's last syllable** (found in review). MuseScore
+  keeps `<extend>` only on an end or single syllable. A begin or middle
+  syllable held by `:/` (`{G4}:maz-_{A4}:/`) comes back with no extend:
+  MuseScore draws the word's hyphens across the unsung notes instead, so
+  the import must read a begin or middle syllable followed by unsung
+  notes as held over them too.
 
 ### MuseScore's AppImage needs `xvfb-run`; it ignores `QT_QPA_PLATFORM=offscreen` (2026-11-05, MusicXML import)
 
@@ -859,3 +1009,96 @@ Fallow's duplication check failed the copy at once. barmark's
 `tests/chart/fixtures.ts` now exports `timeline`, and
 `packages/musicxml/tests/import/played.ts` imports it across packages:
 one yardstick for both round trips.
+
+### MuseScore reads a dotted note's `<dots>` only before its `<durationType>` (2026-11-06, musicxml)
+
+The hand-written `hymn.mscx` fixture's dotted half came out of MuseScore
+as a plain half followed by a quarter rest: in a `.mscx` `<Chord>`,
+MuseScore reads `<dots>1</dots>` only when it comes before
+`<durationType>`, and silently fills the bar with a rest otherwise. Write
+`<dots>` first in a hand-written `.mscx`, and read each regenerated
+`.musicxml`'s durations (and the `.chart.md` the script writes beside it)
+before committing.
+
+### Our export's pickup isn't MuseScore's (2026-11-06, musicxml)
+
+barmark's export writes a `[1/4]` pickup as a short first measure in a
+`<time>` of its own, then the full meter, with no `implicit="yes"`
+(MuseScore's mark for a pickup); the import read that back as
+`time: 1/4` then `time: 3/4`, so Amazing Grace never came back as
+written. The import now reads both shapes as a pickup
+(`settleFirstPickup` in `import/read.ts`).
+
+### A lyric row ends its system (grammar 7.7), and examples feed several tests (2026-11-06, examples)
+
+**Symptom:** the first draft of `examples/shenandoah.chart.md` failed the
+examples test (warnings that a syllable "falls where the voice starts no
+note"), then the MusicXML sounding snapshot and the export/import round trip:
+the import wrote the guitar as a second system with a line of `Vox` slashes.
+**Cause:** by design (grammar 7.7, not a bug), a lyric row covers the system just above it, so a part line
+written after the row starts a new system; and a row's cells divide a bar on
+their own grid, so three words under four notes put one where no note
+starts. Every file in `examples/` also feeds `sounding.json` and the
+round-trip test.
+**Fix:** put the row last in its system, give it as many tokens per bar as
+the melody has slots, generate the canonical text with `printChart`, and add
+the chart to `sounding.json` with `bun scripts/musicxml-sounding.ts` (the
+other entries do not change). Lives in `examples/shenandoah.chart.md`.
+
+### Two programs, two shapes of a melisma's `<extend>` (2026-11-06, musicxml)
+
+**Symptom:** a melisma our own export wrote never ended on import: the
+unsung note after it came back as `:/`, a breath after a row's melisma as
+`/`, and a melisma before a repeat's endings held into the first ending
+(an "importer bug" and a spurious row).
+**Cause:** MuseScore writes `<extend/>` on the syllable and nothing on the
+notes it holds over, and draws a word's first or middle syllable held as
+hyphens, so the import held a syllable until the next syllable or rest.
+Our export writes the syllable with `<extend type="start"/>` and a lyric
+holding only `<extend/>` on each held note, which says where the hold
+ends; the import read that lyric as more of the hold and never stopped.
+A row starting with `/` had the same root on barmark's side: its start
+was read as holding, so the export wrote an `<extend/>` with no start.
+**Fix:** a held note's own lyric (ours, or an extend's `stop`) sings `/`
+and ends the hold; the begin/middle guess applies only until a verse
+writes such a lyric (`tokensAt` and `Holds` in `import/lyrics.ts`). A
+row starting with `/` holds what its verse last left held in play order
+(`ends` in barmark's `chart/verses.ts`), and nothing before the verse has
+sung; the import's `settled` (`import/verses.ts`) carries the same state
+from row to row. A first cut made every row's start hold nothing, which
+broke a word held across a line break, an ordinary lead-sheet shape.
+
+### A hold follows play order, but the import reads measures in written order (2026-11-06, musicxml)
+
+**Symptom:** a verse 2 melisma from a repeat's body into its second ending
+came back with a spurious `lyrics 2: | -- |` under the first ending, a
+false "verse 2 is never sung", and `-- z` for `/ z`. Carrying a row's
+leading `/` from the row written before it raised importer bugs whenever
+a repeat or ending lay between them.
+**Cause:** MusicXML holds a syllable in written order, through the first
+ending's notes; barmark holds it in play order, where pass 1 never sings
+verse 2 and the second ending follows the body directly.
+**Fix:** the import's holds enter each ending from what the body held,
+and holds no verse its passes don't sing (`enterEnding` in
+`import/lyrics.ts`, `Bar.ending` from `barsOf`). A row's leading `/`
+carries from the row just before it in play order only where that is
+sure (`carried` in `import/verses.ts`); elsewhere it is `--`, reported as
+a loss naming the measure.
+
+### A verse in every measure made the lyric import verses × measures (2026-11-06, musicxml)
+
+**Symptom:** Vercel's Security Review on PR #162 flagged a denial of
+service: a MusicXML file whose every measure sings a lyric `number` no
+other measure sings. 4,000 such measures took 84 s to import.
+**Cause:** three loops over every verse of the piece. `wordsOf` worked
+out each verse's row cell in every measure up front. Each system asked
+every verse whether its bars sang it. `tokensAt` looked at every verse
+ever seen on each new note, because a verse that stopped holding stayed
+in `holds.on` as `false`. `verseOf` also rebuilt the set of taken verse
+numbers for each new one.
+**Fix:** row cells are worked out when a row asks for one (`Words.cell`).
+Each measure keeps its own verses (`Words.versesIn`), and a system reads
+only its bars' verses (`versesOver` in `import/verses.ts`). `holds.on`
+holds only the verses holding now. `PartState.taken` grows as verses are
+numbered. The same 4,000 measures import in about 2 s, and
+`scale.test.ts` checks the ratio against 400.

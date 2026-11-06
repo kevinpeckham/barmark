@@ -52,16 +52,16 @@ export const streamKey = (part: string, lineName?: string): string =>
 	(lineName === undefined ? part : `${part}.${lineName}`).toLowerCase();
 
 /**
- * What a line takes in its system, and what it can't share it with: its
- * own stream, and its part written bare or as lines, which can't share a
- * system (grammar 7.6).
+ * What a line takes in its system, and what it can't follow there (grammar
+ * 7.6): each line once, and a part's named lines may follow its bare line
+ * but a bare line can't follow them, so a bare line after its part's
+ * lines starts a new system, as it did before bare lines could join.
  */
 function claimsOf(l: Labelled): { takes: string[]; clashes: string[] } {
 	const part = (l.part ?? "").toLowerCase();
-	if (l.lineName === undefined)
-		return { takes: [part, `${part}#bare`], clashes: [part, `${part}#lines`] };
 	const own = streamKey(part, l.lineName);
-	return { takes: [own, `${part}#lines`], clashes: [own, `${part}#bare`] };
+	if (l.lineName === undefined) return { takes: [own], clashes: [own, `${part}#lines`] };
+	return { takes: [own, `${part}#lines`], clashes: [own] };
 }
 
 /** Number each run of labelled lines with no label twice (grammar 7.4). */

@@ -35,6 +35,17 @@ const pianoLines: [string, string] = [
 	readFileSync(new URL("fixtures/piano-lines.chart.md", import.meta.url), "utf8"),
 ];
 
+/** The voice-and-lyrics design's lead sheet (section 1): a pickup, a melisma and a second verse. */
+export const AMAZING_GRACE = `# Amazing Grace
+part: Vox = Voice, instrument: voice
+key: G, time: 3/4
+
+## Verse
+Vox       | [1/4] N.C.    | G                           | G          / G7       | C            / /      | G              |
+Vox.Mel   | [1/4] {D4}:A- | {G4}:maz- / {B4}:ing_{G4}:/ | {B4}:grace / {A4}:how | {G4}:sweet / {E4}:the | {D4}:sound / / |
+lyrics 2: | 'Twas         | grace / that                | taught / my           | heart / to            | fear / /       |
+`;
+
 /** Each chart's name and text. */
 export const corpus = (): [string, string][] => [
 	...examples,

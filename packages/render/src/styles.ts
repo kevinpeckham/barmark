@@ -20,6 +20,7 @@ const SIZES = {
 	text: 0.9,
 	noChord: 1.03,
 	noteNames: 0.9,
+	syllables: 0.9,
 	superscript: 0.84,
 	octave: 0.79,
 	tuplet: 0.84,
@@ -42,6 +43,14 @@ const ROW_GAP = 0.35;
  * nothing is painted over it and any paper shows through.
  */
 const BRACKET = { top: 0.6, hook: 0.3, line: 0.06 };
+/**
+ * A singing line's lines, in chord sizes: the note's (the chart's line
+ * height), then each verse's under it. The verse numbers left of the first
+ * bar sit on the verses' lines, below the bar's top padding and the note's.
+ * A singing bar spaces its slots by beat: equal grid columns, each as wide
+ * as the widest note or syllable.
+ */
+const SUNG = { note: 1.3, verse: 1.25, barTop: 0.65 };
 /** The single note's ring, in its own em: padding, and the border it spills past. */
 const RING = { y: 0.21, x: 0.5, border: 0.07 };
 
@@ -160,6 +169,25 @@ const css = `
 .bm-bar[data-tempo-change]::before{content:"";position:absolute;inset:.15em 0 auto;border-top:.08em dashed var(--barmark-directive,var(--bm-muted))}
 .bm-bar[data-cut]{outline:.08em dashed var(--bm-muted);outline-offset:-.25em}
 .bm-cut{position:absolute;top:.3em;right:.45em;font:${em(SIZES.cut)}/1 ${SANS};color:var(--bm-muted)}
+.bm-pitch{font-size:${em(SIZES.noteNames)}}
+.bm-sung{display:inline-flex;flex-direction:column}
+.bm-sung-note{height:${em(SUNG.note)}}
+.bm-sings .bm-bar-body{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;column-gap:.6em;align-items:baseline}
+.bm-sings .bm-bar-body:has(>.bm-meter){grid-template-columns:auto}
+.bm-sings .bm-meter{align-self:start}
+.bm-under{height:${at(SIZES.syllables, SUNG.verse)}}
+.bm-verse-numbers{position:absolute;right:100%;top:${em(SUNG.barTop + SUNG.note)};display:flex;flex-direction:column;align-items:flex-end;margin-right:.45em}
+.bm-verse-numbers>.bm-verse{height:${at(SIZES.barNumber, SUNG.verse)};line-height:${at(SIZES.barNumber, SUNG.verse)}}
+.bm-verse{font:italic ${em(SIZES.barNumber)} ${SANS};color:var(--bm-muted)}
+.bm-bar-stack{display:flex;flex:1;flex-direction:column}
+.bm-bar-stack>.bm-bar-body{flex:none}
+.bm-beats{position:relative;display:flex;align-items:baseline;gap:.3em;margin-top:.15em}
+.bm-beats>.bm-syllable-slot{flex:1 1 0;min-width:max-content}
+.bm-beats>.bm-verse{position:absolute;right:calc(100% + ${at(SIZES.barNumber, 0.7 + 0.45)})}
+:is(.bm-syllable-slot,.bm-under){display:flex;align-items:baseline;gap:.3em;font:italic ${em(SIZES.syllables)}/${SUNG.verse / SIZES.syllables} ${TEXT};color:var(--barmark-lyrics,var(--bm-ink));white-space:nowrap}
+.bm-syllable{display:flex;flex:1;align-items:baseline}
+.bm-hyphen{flex:1;text-align:center;padding-inline:.15em}
+.bm-extender{flex:1;min-width:.8em;align-self:flex-end;margin-bottom:.3em;border-bottom:.07em solid currentColor}
 .bm-text{grid-column:1/-1;margin:.2em 0 .5em ${at(SIZES.text, GUTTER)};font-family:${TEXT};font-size:${em(SIZES.text)}}
 .bm-note{font-style:italic;color:var(--barmark-note,var(--bm-ink))}
 .bm-error{grid-column:1/-1;margin:.3em 0}
@@ -168,7 +196,7 @@ const css = `
 .bm-diagnostics .bm-error{color:var(--bm-accent)}
 @media (forced-colors:active){
 	.bm-bar,.bm-row>div.bm-bar:first-of-type,.bm-row>div.bm-bar[data-repeat-start],.bm-row>div.bm-bar[data-repeat-end]{border-color:CanvasText}
-	.bm-ring,.bm-tuplet::before,.bm-tuplet::after{border-color:CanvasText}
+	.bm-ring,.bm-tuplet::before,.bm-tuplet::after,.bm-extender{border-color:CanvasText}
 	.bm-silence{background:CanvasText;forced-color-adjust:none}
 	.bm-bar[data-cut]{outline-color:CanvasText}
 }

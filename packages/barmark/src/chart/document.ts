@@ -3,6 +3,7 @@ import { misplacedRepeat, parseBarLine, readRepeat, repeatTail } from "./barLine
 import { creditsOf, nearCredit, readCredit } from "./credits.js";
 import { parseDirectiveLine } from "./directives.js";
 import { checkLines } from "./lines.js";
+import { attachLyrics, readLyricRow } from "./lyricRows.js";
 import { readPart } from "./partLine.js";
 import { groupSystems } from "./systems.js";
 import type { ChartDiagnostic, Credits, DeclaredPart, Line, Part, Repeat } from "./types.js";
@@ -119,6 +120,8 @@ function splitLabel(t: string): { word: string; space: boolean; rest: string } |
 const LINE_NAME = /^[A-Za-z0-9]+$/;
 
 /** A label and the bar line after it: `Gtr | G |` (grammar 7.4). */
+/** Three or more hyphens alone: `---` ends a system (grammar 1, 7.4). */
+const BREAK = /^-{3,}$/;
 const LABELLED = /^([^\s|]+)(\s*)(\|.*)$/;
 
 const readsCleanly = (barLine: string) => {
@@ -193,7 +196,7 @@ function escapedBarLine(text: string): string | null {
 /** A chart whose text holds no bar line at all says so, rather than looking empty. */
 function noBarLines(lines: Line[]): ChartDiagnostic | null {
 	if (lines.some((l) => l.kind === "bars" || l.kind === "invalid")) return null;
-	const first = lines.find((l) => l.kind === "text");
+	const first = lines.find((l) => l.kind === "text" && !l.escaped);
 	if (first?.kind !== "text") return null;
 	return {
 		line: first.line,
@@ -302,8 +305,26 @@ export function readDocument(text: string): {
 		const read = barLine(rest, line);
 		return read.kind === "bars" || read.kind === "invalid" ? { ...read, ...owner } : read;
 	};
+	/** A leading `\` makes the rest text, whatever it looks like (grammar 1). */
+	const escapedLine = (t: string, line: number): Line => {
+		const text = t.slice(1);
+		const old = oldFormat(text, line);
+		if (old) diagnostics.push(old);
+		return { kind: "text", line, text, escaped: true };
+	};
+	/** `lyrics:` or `lyrics N:` then a bar line (grammar 7.7); one with an error stays text. */
+	const lyricRow = (t: string, line: number): Line | null => {
+		const read = readLyricRow(t, line);
+		diagnostics.push(...read.diagnostics);
+		if (read.row || read.diagnostics.length) return read.row ?? { kind: "text", line, text: t };
+		return null;
+	};
 	const classify = (t: string, line: number): Line => {
+		if (BREAK.test(t)) return { kind: "break", line };
+		if (t.startsWith("\\")) return escapedLine(t, line);
 		if (t.startsWith("|")) return barLine(t, line);
+		const row = lyricRow(t, line);
+		if (row) return row;
 		const labelled = labelledLine(t, line);
 		if (labelled) return labelled;
 		if (t.startsWith("# ")) return titleLine(t, line);
@@ -321,14 +342,15 @@ export function readDocument(text: string): {
 	if (empty) diagnostics.push(empty);
 	const read = checkParts(lines, diagnostics);
 	const grouped = groupParts(lines, read);
-	diagnostics.push(...grouped.diagnostics);
+	const lyrics = attachLyrics(grouped.lines);
+	diagnostics.push(...grouped.diagnostics, ...lyrics.diagnostics);
 	const { parts } = grouped;
 	return {
 		title,
 		part: parts.length === 1 ? (parts[0] ?? null) : null,
 		parts,
 		credits: creditsOf(lines),
-		lines: grouped.lines,
+		lines: lyrics.lines,
 		diagnostics,
 	};
 }

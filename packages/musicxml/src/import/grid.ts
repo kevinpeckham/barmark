@@ -27,12 +27,18 @@ type Hit = { p: Frac; symbol: string };
 const divisionFor = (hits: Hit[]) =>
 	DIVISIONS.find((c) => hits.every((h) => whole(times(h.p, frac(c)))));
 
+/** A member dotted: the dot goes after a note set's brace, before its syllable (grammar 4.3: `{C4}.:maz-`). */
+function dotted(symbol: string): string {
+	const brace = symbol.indexOf("}:");
+	return brace < 0 ? `${symbol}.` : `${symbol.slice(0, brace + 1)}.${symbol.slice(brace + 1)}`;
+}
+
 /** A dotted figure (grammar 2.2): the first member dotted (3/4, 1/4) or the second (1/4, 3/4). */
 function dottedPair(hits: Hit[]): string | null {
 	const [first, second] = hits;
 	if (hits.length !== 2 || !first || !second || first.p.n !== 0) return null;
-	if (cmp(second.p, frac(3, 4)) === 0) return `${first.symbol}._${second.symbol}`;
-	return cmp(second.p, frac(1, 4)) === 0 ? `${first.symbol}_${second.symbol}.` : null;
+	if (cmp(second.p, frac(3, 4)) === 0) return `${dotted(first.symbol)}_${second.symbol}`;
+	return cmp(second.p, frac(1, 4)) === 0 ? `${first.symbol}_${dotted(second.symbol)}` : null;
 }
 
 /** The members of a k-way group, `/` where no onset falls. */
@@ -43,18 +49,24 @@ function groupOf(hits: Hit[], k: number): string {
 }
 
 /** One slot as text: a symbol, or a group when its onsets need one. */
-function writeSlot(hits: Hit[]): string | null {
+function writeSlot(hits: Hit[], dots: boolean): string | null {
 	const [only] = hits;
 	if (!only) return "/";
 	if (hits.length === 1 && only.p.n === 0) return only.symbol;
 	const k = divisionFor(hits);
-	const dotted = k === undefined || k >= 4 ? dottedPair(hits) : null;
-	if (dotted) return dotted;
+	const pair = dots && (k === undefined || k >= 4) ? dottedPair(hits) : null;
+	if (pair) return pair;
 	return k === undefined ? null : groupOf(hits, k);
 }
 
 /** The slots for `n` slots over the bar, or null when some onset has no place. */
-function layOut(events: Event[], length: Frac, n: number, groups: boolean): string | null {
+function layOut(
+	events: Event[],
+	length: Frac,
+	n: number,
+	groups: boolean,
+	dots = true,
+): string | null {
 	const slot = times(length, frac(1, n));
 	const slots: Hit[][] = Array.from({ length: n }, () => []);
 	for (const e of events) {
@@ -67,7 +79,7 @@ function layOut(events: Event[], length: Frac, n: number, groups: boolean): stri
 	if (!groups && slots.some((hits) => hits.some((h) => h.p.n !== 0))) return null;
 	const out: string[] = [];
 	for (const hits of slots) {
-		const text = writeSlot(hits);
+		const text = writeSlot(hits, dots);
 		if (text === null) return null;
 		out.push(text);
 	}
@@ -82,7 +94,7 @@ const grouped = (cell: string) =>
 		.reduce((sum, slot) => sum + slot.split("_").length, 0);
 
 /** The cell for these onsets: the fewest slots that start every onset, else groups inside slots, preferring the fewest group members (finer slots win a tie). */
-function fit(events: Event[], length: Frac, beats: number): string | null {
+function fit(events: Event[], length: Frac, beats: number, dots = true): string | null {
 	const counts = slotCounts(beats);
 	for (const n of counts) {
 		const cell = layOut(events, length, n, false);
@@ -90,7 +102,7 @@ function fit(events: Event[], length: Frac, beats: number): string | null {
 	}
 	let best: string | null = null;
 	for (const n of [...counts].reverse()) {
-		const cell = layOut(events, length, n, true);
+		const cell = layOut(events, length, n, true, dots);
 		if (cell !== null && (best === null || grouped(cell) < grouped(best))) best = cell;
 	}
 	return best;
@@ -115,12 +127,14 @@ function nearestBeat(at: Frac, beat: Frac, beats: number): Frac {
  * inside it), a chord landing on an occupied beat being dropped
  * (still `moved`); null when an event can't be placed or the
  * meter is one barmark can't write (so `beats` is small and bounded).
+ * Without `dots`, no dotted pair is written: a lyric row has none.
  */
 export function placeBar(
 	events: Event[],
 	length: Frac,
 	meter: Meter,
 	exact: boolean,
+	dots = true,
 ): { cell: string; moved: boolean } | null {
 	if (!parseMeter(`${meter.n}/${meter.d}`)) return null;
 	const beats = beatsOf(meter);
@@ -128,7 +142,7 @@ export function placeBar(
 	const outside = sorted.filter((e) => cmp(e.at, ZERO) < 0 || cmp(e.at, length) >= 0);
 	// A chord symbol outside the bar moves into it; anything else there can't be placed.
 	if (outside.some((e) => exact || !movable(e.symbol))) return null;
-	const cell = outside.length === 0 ? fit(sorted, length, beats) : null;
+	const cell = outside.length === 0 ? fit(sorted, length, beats, dots) : null;
 	if (cell !== null) return { cell, moved: false };
 	if (exact) return null;
 	const snapped = snapChords(sorted, length, beats, new Set(outside));

@@ -14,12 +14,19 @@ export type Attack = {
 	tieIn: boolean;
 	tieOut: boolean;
 	fermata: boolean;
-	lyrics: {
-		verse: number;
-		syllabic: "single" | "begin" | "middle" | "end";
-		text: string;
-		elision: boolean;
-	}[];
+	lyrics: Lyric[];
+};
+
+/**
+ * A `<lyric>` on a note: its verse, where it falls in its word, its
+ * syllables (several when elided; none for a held note's lyric, which has
+ * only an `<extend>`), and whether an extend holds it over the notes after.
+ */
+export type Lyric = {
+	verse: number;
+	syllabic: "single" | "begin" | "middle" | "end";
+	parts: string[];
+	extend: boolean;
 };
 
 export type HarmonyMark = { at: Frac; node: XNode };
@@ -62,6 +69,10 @@ export type ReadPart = {
 	instrumentName: string | null;
 	midiProgram: number | null;
 	staves: number;
+	/** The part's `<instrument-sound>` (`voice.vocals`), null when none. */
+	sound: string | null;
+	/** A lyric row's staff (barmark's `<?barmark lyrics?>`, or MuseScore's copy of one): its words come in as lyric rows. */
+	lyricStaff: boolean;
 	/** Distinct staff/voice pairs seen; more than four cannot be lines. */
 	voices: number;
 	transpose: { chromatic: number; octave: number; diatonic: number | null };
@@ -124,8 +135,12 @@ type PartState = {
 	places: string[];
 	/** The same places, to look up. */
 	placed: Set<string>;
-	/** Lyric `number`s, numbered from 1 in order of first appearance. */
+	/** Lyric `number`s as verses: a whole number as itself, any other from the next free number in order of first appearance. */
 	verses: Map<string, number>;
+	/** The verses those numbers took, kept as they're taken: rebuilding it for each new number would grow with the square of the verses. */
+	taken: Set<number>;
+	/** The lines of the staff (`<staff-lines>`), null when not given. */
+	staffLines: number | null;
 	/** Measures holding marks the import leaves out, by kind of mark. */
 	unread: Record<LeftOut, Set<string>>;
 };
@@ -186,25 +201,46 @@ function soundingPitch(note: XNode, p: PartState): { name: string; octave: numbe
 
 const LYRIC_SYLLABIC = ["single", "begin", "middle", "end"] as const;
 
-/** A lyric's text, its `<elision>`s joining the texts around them. */
-function lyricText(l: XNode): { text: string; elision: boolean } {
-	const parts = l.children.filter((c) => c.name === "text" || c.name === "elision");
-	return {
-		text: parts.map((c) => (c.name === "elision" ? " " : c.text)).join(""),
-		elision: parts.some((c) => c.name === "elision"),
-	};
+/** SMuFL's lyrics elision glyph, which MuseScore writes as text in place of `<elision>`. */
+const ELISION_GLYPH = "\uE551";
+
+/** A lyric's syllables: its texts, split at each `<elision>` and at MuseScore's elision glyph; blank ones dropped. */
+function lyricParts(l: XNode): string[] {
+	const parts = [""];
+	for (const c of l.children) {
+		if (c.name === "elision") parts.push("");
+		if (c.name !== "text") continue;
+		const [first = "", ...rest] = c.text.split(ELISION_GLYPH);
+		parts[parts.length - 1] += first;
+		parts.push(...rest);
+	}
+	return parts.map((p) => p.replace(/\s+/g, " ").trim()).filter((p) => p !== "");
 }
 
 const syllabicOf = (l: XNode) =>
 	LYRIC_SYLLABIC.find((s) => s === textOf(l, "syllabic")) ?? "single";
 
+/** A lyric `number` as its verse: a whole number as itself, else the next number not taken. */
+function verseOf(key: string, p: PartState): number {
+	const known = p.verses.get(key);
+	if (known !== undefined) return known;
+	const whole = /^\d{1,6}$/.test(key) && Number(key) > 0 ? Number(key) : null;
+	let verse = whole ?? 1;
+	while (whole === null && p.taken.has(verse)) verse++;
+	p.verses.set(key, verse);
+	p.taken.add(verse);
+	return verse;
+}
+
+/** A note's lyrics: those with syllables, and those holding one (an `<extend>` alone). */
 function lyricsOf(note: XNode, p: PartState): Attack["lyrics"] {
 	return children(note, "lyric").flatMap((l) => {
-		const key = l.attrs.number ?? l.attrs.name ?? "";
-		const verse = p.verses.get(key) ?? p.verses.size + 1;
-		p.verses.set(key, verse);
-		const { text, elision } = lyricText(l);
-		return text === "" ? [] : [{ verse, syllabic: syllabicOf(l), text, elision }];
+		const parts = lyricParts(l);
+		const extends_ = children(l, "extend");
+		const extend = extends_.some((e) => e.attrs.type !== "stop");
+		if (parts.length === 0 && extends_.length === 0) return [];
+		const verse = verseOf(l.attrs.number ?? l.attrs.name ?? "", p);
+		return [{ verse, syllabic: syllabicOf(l), parts, extend: extend || parts.length === 0 }];
 	});
 }
 
@@ -338,6 +374,8 @@ function readAttributes(a: XNode, p: PartState, raw: RawMeasure): void {
 	if (divisions > 0) p.divisions = divisions;
 	const staves = num(textOf(a, "staves"));
 	if (staves > 0) p.declaredStaves = staves;
+	const lines = textOf(child(a, "staff-details"), "staff-lines");
+	if (lines !== "") p.staffLines = num(lines);
 	if (children(a, "staff-details").some((d) => child(d, "capo"))) lose(p, "capo", raw.number);
 	const transpose = child(a, "transpose");
 	if (transpose) {
@@ -531,8 +569,23 @@ function settlePickup(m: RawMeasure, at: number, meter: Meter, part: PartState):
 		});
 }
 
+/**
+ * A first bar in a meter of its own, shorter than the meter the next bar
+ * sets, is a pickup (`[1/4]` before `time: 3/4`), as barmark's export
+ * writes one; MuseScore marks its pickups `implicit` instead.
+ */
+function settleFirstPickup(measures: RawMeasure[]): void {
+	const [first, next] = measures;
+	if (!first?.time || !next?.time || first.implicit) return;
+	if (cmp(barOf(first.time), barOf(next.time)) >= 0) return;
+	first.oneBar = first.time;
+	first.time = next.time;
+	next.time = null;
+}
+
 /** Settles which measures are bars of their own meter, and which `<time>`s are directives. */
 function settleMeters(measures: RawMeasure[], part: PartState): void {
+	settleFirstPickup(measures);
 	let running: Meter | null = null;
 	measures.forEach((m, i) => {
 		const next = measures[i + 1];
@@ -575,7 +628,27 @@ type Meta = {
 	abbreviation: string | null;
 	instrumentName: string | null;
 	midiProgram: number | null;
+	sound: string | null;
 };
+
+/** The name barmark's export gives a lyric row's staff, which MuseScore keeps. */
+const LYRICS_NAME = "Lyrics";
+
+/**
+ * Whether a part is a lyric row's staff: marked `<?barmark lyrics?>`, or,
+ * since MuseScore drops the mark (and pitches the slashes), named "Lyrics"
+ * on a one-line staff of slashes alone that carry lyrics.
+ */
+function isLyricStaff(node: XNode, p: PartState, measures: ReadMeasure[]): boolean {
+	if (children(node, "measure").some((m) => m.pis.includes("barmark lyrics"))) return true;
+	const attacks = measures.flatMap((m) => m.lines.flat());
+	return (
+		p.name === LYRICS_NAME &&
+		p.staffLines === 1 &&
+		attacks.every((a) => a.kind !== "notes") &&
+		attacks.some((a) => a.lyrics.length > 0)
+	);
+}
 
 function readPart(node: XNode, meta: Meta): ReadPart {
 	const id = node.attrs.id ?? "";
@@ -593,6 +666,8 @@ function readPart(node: XNode, meta: Meta): ReadPart {
 		places: [],
 		placed: new Set(),
 		verses: new Map(),
+		taken: new Set(),
+		staffLines: null,
 		unread: Object.fromEntries(
 			Object.keys(LEFT_OUT).map((k) => [k, new Set<string>()]),
 		) as PartState["unread"],
@@ -611,6 +686,8 @@ function readPart(node: XNode, meta: Meta): ReadPart {
 		instrumentName: meta.instrumentName,
 		midiProgram: meta.midiProgram,
 		staves,
+		sound: meta.sound,
+		lyricStaff: isLyricStaff(node, p, measures),
 		voices: p.places.length,
 		transpose: { chromatic: p.chromatic, octave: p.octave, diatonic: p.diatonic },
 		measures,
@@ -626,20 +703,26 @@ const noMeta = (id: string): Meta => ({
 	abbreviation: null,
 	instrumentName: null,
 	midiProgram: null,
+	sound: null,
 });
 
+/** A `<score-part>`'s name, abbreviation, instrument, program and sound. */
+function metaOf(sp: XNode): Meta {
+	const program = textOf(child(sp, "midi-instrument"), "midi-program");
+	const instrument = child(sp, "score-instrument");
+	const id = sp.attrs.id ?? "";
+	return {
+		name: cut(textOf(sp, "part-name") || id, NAME_CHARS),
+		abbreviation: cut(textOf(sp, "part-abbreviation"), NAME_CHARS) || null,
+		instrumentName: textOf(instrument, "instrument-name") || null,
+		midiProgram: program === "" ? null : num(program),
+		sound: textOf(instrument, "instrument-sound") || null,
+	};
+}
+
 function partMeta(list: XNode | undefined): Map<string, Meta> {
-	const out = new Map<string, Meta>();
-	for (const sp of children(list ?? ({ children: [] } as unknown as XNode), "score-part")) {
-		const program = textOf(child(sp, "midi-instrument"), "midi-program");
-		out.set(sp.attrs.id ?? "", {
-			name: cut(textOf(sp, "part-name") || (sp.attrs.id ?? ""), NAME_CHARS),
-			abbreviation: cut(textOf(sp, "part-abbreviation"), NAME_CHARS) || null,
-			instrumentName: textOf(child(sp, "score-instrument"), "instrument-name") || null,
-			midiProgram: program === "" ? null : num(program),
-		});
-	}
-	return out;
+	const parts = children(list ?? ({ children: [] } as unknown as XNode), "score-part");
+	return new Map(parts.map((sp) => [sp.attrs.id ?? "", metaOf(sp)]));
 }
 
 const EMPTY: XNode = { name: "", attrs: {}, children: [], text: "", pis: [] };

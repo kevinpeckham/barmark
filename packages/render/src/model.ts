@@ -25,7 +25,9 @@ import type {
 	LayoutOptions,
 	RowItem,
 	SectionBlock,
+	Verse,
 } from "./types.js";
+import { type Landing, landings, rowVerses, singerOf, sungVerses } from "./verses.js";
 
 type SectionLine = Extract<Line, { kind: "section" }>;
 type BarsLine = Extract<Line, { kind: "bars" }>;
@@ -283,24 +285,81 @@ function layoutLines(
 	let previous: SlotsCell | null = null;
 	for (const [i, l] of lines.entries()) {
 		const system = systemOf(l);
-		if (system !== null) {
-			// A system is laid out once, at its first line.
-			if (systemOf(lines[i - 1]) === system) continue;
-			const item = layoutSystem(systemLines(lines, i), occurrence, previous, ctx);
-			previous = lastOfSystem(item) ?? previous;
-			items.push(item);
-			continue;
-		}
-		if (ctx.errors.has(l.line)) {
-			items.push(errorItem(l.line, ctx));
-			continue;
-		}
-		const item = layoutLine(l, occurrence, previous, ctx);
-		if (!item) continue;
-		if (item.kind === "row") previous = lastSlots(item.cells) ?? previous;
-		items.push(item);
+		// A system is laid out once, at its first line.
+		if (system !== null && systemOf(lines[i - 1]) === system) continue;
+		const laid: Laid =
+			system === null
+				? layoutOne(l, occurrence, previous, ctx)
+				: layoutSystemAt(systemLines(lines, i), occurrence, previous, ctx);
+		previous = laid.previous;
+		items.push(...laid.items);
 	}
 	return items;
+}
+
+/** What laying out a line gives: its items, and the last bar drawn so far, whose meter `%` borrows. */
+type Laid = { items: BlockItem[]; previous: SlotsCell | null };
+
+/** A system, and the words under it that no line in it sings. */
+function layoutSystemAt(
+	lines: SystemLine[],
+	occurrence: SectionOccurrence | undefined,
+	previous: SlotsCell | null,
+	ctx: Context,
+): Laid {
+	const item = layoutSystem(lines, occurrence, previous, ctx);
+	const lyrics = lyricRows(lines, occurrence, ctx);
+	// The words go under the system: in its last row that plays.
+	const last = item.rows.findLastIndex((p) => p.row.kind === "row" && !p.row.cells.some(isTacet));
+	const rows = item.rows.map((p, i) =>
+		i === last && p.row.kind === "row" && lyrics.length ? { ...p, row: { ...p.row, lyrics } } : p,
+	);
+	return { items: [{ ...item, rows }], previous: lastOfSystem(item) ?? previous };
+}
+
+/** A line outside a system: as written when it has an error; a bar line with the words under it. */
+function layoutOne(
+	l: Line,
+	occurrence: SectionOccurrence | undefined,
+	previous: SlotsCell | null,
+	ctx: Context,
+): Laid {
+	if (ctx.errors.has(l.line)) return { items: [errorItem(l.line, ctx)], previous };
+	const item = layoutLine(l, occurrence, previous, ctx);
+	if (!item) return { items: [], previous };
+	if (item.kind !== "row" || l.kind !== "bars") return { items: [item], previous };
+	const lyrics = lyricRows([l], occurrence, ctx);
+	const row = lyrics.length ? { ...item, lyrics } : item;
+	return { items: [row], previous: lastSlots(item.cells) ?? previous };
+}
+
+/** The written bars a bar line draws, as played in the occurrence: a cut bar as written. */
+function landingsOn(l: BarsLine, played: PlayedBar[], ctx: Context): Landing[] {
+	const written = ctx.bars.filter((b) => b.line === l.line);
+	let bar = 0;
+	const bars = l.cells.map((cell) => {
+		if (cell.kind !== "slots" && cell.kind !== "simile") return undefined;
+		const i = bar++;
+		return played[i] ?? written[i];
+	});
+	return landings(bars, played.length ? played : written);
+}
+
+/**
+ * The words under a row or system that no line in it sings under its
+ * slots (barmark's grammar 7.7): a lyric row on no melody, spaced by beat.
+ */
+function lyricRows(
+	lines: SystemLine[],
+	occurrence: SectionOccurrence | undefined,
+	ctx: Context,
+): Verse[] {
+	const drawn = lines.filter((l): l is BarsLine => l.kind === "bars" && !ctx.errors.has(l.line));
+	const ref = drawn[0];
+	if (!ref) return [];
+	const sung = new Set(drawn.flatMap((l) => singerOf(l, ctx.parse) ?? []));
+	const lands = landingsOn(ref, playedOn(ref.line, occurrence, ctx.bars), ctx);
+	return rowVerses(lands, sung);
 }
 
 type SystemLine = Extract<Line, { kind: "bars" | "invalid" }>;
@@ -471,7 +530,17 @@ function layoutRow(
 		repeat: l.repeat,
 		ending: l.ending,
 		cells,
+		...singing(l, cells, played, ctx),
 	};
+}
+
+/** A singing line's fields: its note sets as pitch names, and the verses under its slots (barmark's grammar 7.7). */
+function singing(l: BarsLine, cells: CellModel[], played: PlayedBar[], ctx: Context) {
+	const singer = singerOf(l, ctx.parse);
+	if (singer === null) return {};
+	const verses = sungVerses(cells, landingsOn(l, played, ctx), singer);
+	// A line with no words draws as any part line does.
+	return verses.length ? { sings: true as const, verses } : {};
 }
 
 /** A cell as drawn: `%` becomes the bar it copies, its slots as the parser resolved them; `previous` lends only its meter. */

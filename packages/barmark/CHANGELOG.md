@@ -9,6 +9,98 @@ Releases follow the process in [RELEASING.md](RELEASING.md).
 
 ## [Unreleased]
 
+**Changes what an existing chart means.** A line of only `---` (three or
+more hyphens) is now a break that ends a system, not text. A part's bare
+line followed directly by its named lines (`Pno | C |` then
+`Pno.RH | … |`) is now one system, the bare line the part's first line;
+it used to be two systems played one after the other (put `---` between
+them for that). Also: a `lyrics:` or `lyrics N:` line followed by a bar
+line is a lyric row, and a text line's leading `\` is no longer shown.
+
+### Added
+
+- `---` (three or more hyphens alone) ends a system and means nothing else;
+  it parses as a `break` line and prints as `---` (grammar 1, 7.4).
+- Syllables on notes (grammar 4.3): `{G4}:maz-` sings a syllable on a note
+  set, a trailing `-` continues the word, `:/` holds the syllable before
+  over a new note and `~` joins elided syllables (`{C4}:the~end`). A dotted
+  note takes its dot before the colon (`{C4}.:maz-`). The slot gains
+  `syllable` (the new `Syllable` type); the printer writes it back, and `%`
+  copies a bar's notes without their syllables. A syllable on a chord
+  name, a voicing, `/`, `--`, `N.C.` or `?`, an empty one, or `:/-` (a
+  hold can't begin or continue a word) is an error.
+  A syllable ends only at a space, `_`, `|`, `{` or a straight quote, so
+  curly quotes and brackets are characters of it (`{C4}:“Ho-`,
+  `{C4}:[x]`): they open no words and no one-bar meter.
+- Lyric rows (grammar 7.7): `lyrics:` or `lyrics N:` (verse N) then a bar
+  line writes syllables on the beats, its bars divided as a chord row's
+  (`/` holds, `_` splits a slot, `--` is a breath). A row covers the bar
+  line or system just above it, or under a replay heading the replayed
+  section's lines in order, and must match its bar count. It parses as a
+  `lyrics` line (the new `LyricSlot` type) with `verse`, `cells` and
+  `covers`, the source lines of the bar lines it covers. The printer lines
+  a row up under its bars, the wider cell of each column setting its
+  width. A row with no bar line above it, a wrong bar count, an empty bar
+  or syllable, a quote or brace, or a verse number of 0 or past
+  `Number.MAX_SAFE_INTEGER` is an error.
+- Verses in play order (grammar 7.7): each played bar gains `lyrics`, one
+  `PlayedLyrics` per verse it sings, each syllable with its onset `at` in
+  whole notes and `note` (true when a note of the singing line starts
+  there). Syllables on notes are verse 1 and `lyrics N:` verse N; outside a
+  repeat every verse is sung, and inside one verse N on pass N (a second
+  ending holds verse 2's words; a jump's pass back sings pass 1's). Bars
+  whose only verse is verse 1 sing it on every pass; a lone `lyrics N:`
+  row (N from 2) sings on pass N only, and the other passes warn. A
+  replay's rows replace its words. The first part with `instrument: voice`,
+  else the first with syllables, sings; its `DeclaredPart` gains `sings`,
+  the line its notes carry the syllables on. `lyrics 1:` or an unnumbered
+  row under notes with syllables, an unnumbered row among numbered ones and
+  a verse written twice over the same bars are errors; a row's syllable
+  where the singing line starts no note, and a `:/` with nothing sung
+  before it, warn. Another part's extract (`extractPart`, `printPart`)
+  leaves the singer's rows out.
+  Syllables on a part's notes are that part's, so a choir chart's bars
+  carry one `PlayedLyrics` per part and verse (verse order, then score
+  order), each part's `DeclaredPart.sings` set; lyric rows stay the
+  singer's, and only the singer's syllables clash with a row over them.
+  A numbered verse that no pass sings, a repeat's pass that sings
+  nothing where other passes sing, and syllables on notes that no pass
+  sings (verse 1 on a second ending), warn.
+  A row's `/` where the singing line starts a new note is a held syllable
+  there (`{ kind: "held" }`, `note: true`), as `:/` on the notes is: a
+  melisma the converters extend and the renderer draws.
+  A row starting with `/` holds on what its verse last sang, in play
+  order, unless the verse breathed since, so a verse holds a word across
+  a line break. Before its verse has sung anything the `/` sings nothing
+  and warns as a `:/` with nothing sung before it does (so the export
+  writes no `<extend/>` with nothing before it).
+
+### Changed
+
+- `Line` gains the `break` and `lyrics` kinds, so an exhaustive `switch`
+  on `Line["kind"]` needs a case for each.
+- A text line written with a leading `\` now holds its text without the
+  backslash, marked `escaped: true`; the printer writes the backslash back.
+  The escaped-pipes warning still applies to the rest of the line, and a
+  chart whose only text is escaped no longer warns that it has no bar lines.
+- A `---` line between endings no longer ends the repeat (grammar 5.1);
+  like text and credit lines, it may sit between them, and so may a lyric
+  row under an ending.
+- `lyrics:` followed by a bar line is now a lyric row, not text with a
+  warning to write `lyricist:`; followed by anything else it still warns.
+- A part's named lines written after its bare line now join it in a
+  system (grammar 7.6, amended): `Vox` then `Vox.Mel` play together, the
+  bare line as the part's first line (it holds the harmony; `Vox.Mel` holds
+  notes only). Such a part lists the bare line first in
+  `DeclaredPart.lines` as `""`, and its bars' `lines` give it the name
+  `""`; `extractPart(text, "Vox", "")` extracts it alone. A bare line
+  counts toward the four lines. Named lines written straight after their
+  part's bare line used to start a new system and now join it; put `---`
+  between them to keep them apart. A bare line after its part's named
+  lines still starts a new system. A bare line that is a fifth line
+  (an error) is dropped and none of the part's lines plays it: its four
+  named lines play, the first of them first.
+
 ## [0.16.0] - 2026-11-04
 
 A grammar change: part lines (7.6), sustain pedal marks (2.9), dotted

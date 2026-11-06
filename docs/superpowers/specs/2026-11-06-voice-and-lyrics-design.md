@@ -60,7 +60,13 @@ Two kinds of song need this, and the design serves both:
 - **Lyrics that need a melody.** A lyric row stands alone; rap must not
   need fake notes.
 - **Changing what any chart means today.** Text lines stay text, and a
-  chart with no voice part or lyric row reads exactly as before.
+  chart with no voice part or lyric row reads exactly as before, with
+  these exceptions, each decided by Kevin (2026-11-06): a `---` line is a
+  break that ends a system, a leading `\` escapes a text line (section
+  8), and a part's bare line followed directly by its named lines
+  (`Pno | C |` then `Pno.RH | … |`) is one system, where it used to be
+  two played one after the other (grammar 7.6; `---` between them keeps
+  them apart).
 
 ## 1. A voice part and its melody
 
@@ -306,3 +312,126 @@ Each goes into the draft's decisions log with the date.
 8. `%` on a voice line copies notes, not syllables.
 9. A lyric row with no melody exports marked `<?barmark lyrics?>`, so it
    comes back as a lyric row.
+10. The lyric row's staff (Task 7) is a part after the chart's parts,
+    named "Lyrics" with an instrument of the same name at MIDI volume 0:
+    words have no pitch, so a program shouldn't play one. It is a
+    one-line staff with a percussion clef and unpitched slash notes
+    (stems up, the row's rhythm): a slash at each syllable's onset in
+    any verse, held while a verse holds, a rest where every verse
+    breathes. A part exported alone (`part`) leaves it out.
+11. `:/` writes `<extend/>` alone on the held note, as section 7 says,
+    and also `<extend type="start"/>` on the syllable it holds: MuseScore
+    4.7 drops a `<lyric>` with no text and keeps a melisma only as an
+    extend on its syllable (FINDINGS.md).
+12. A rhythm the grammar can't write snaps (Task 8): each beat's onsets
+    move to the halves, thirds, quarters or sixths of the beat (or the
+    beat itself) that move them least without two landing together;
+    the bar's last beat can't push one out of the bar, and two that land
+    together all the same keep the first. A loss names the measures
+    ("a rhythm barmark can't write, snapped to the nearest it can"); the
+    self-check compares the snapped onsets, so it stays honest about
+    what the chart says.
+13. A part sings when it has lyrics or its `<instrument-sound>` is a
+    `voice.*` sound. Its first line is the harmony (chords where the
+    melody sings, `N.C.` where it sings before any chord, slashes'
+    rhythm elsewhere); its melody line is `Mel` when it is the one line
+    under the harmony, or the line that sings beside others on one
+    staff (`RH`/`LH` on two); with no chords the melody is the bare
+    line. A melisma is `:/` on the unsung notes after a syllable with
+    `<extend>`, or after a word's first or middle syllable (MuseScore
+    draws a held first syllable as hyphens, with no extend).
+14. A lyric staff is a part marked `<?barmark lyrics?>` in any measure,
+    or one named "Lyrics" on a one-line staff that has lyrics and plays
+    only slashes (MuseScore's). It becomes lyric rows only when no part
+    sings words of its own; otherwise it is left out with a warning. A
+    slash with no syllable holds the word before it.
+15. Smaller calls in the import: a syllable's `"`, `{`, `}` and `|`
+    become `”`, `(`, `)` and `¦`, a lone `/` becomes `∕`, and spaces or
+    `_` inside one elide (`~`); a whole-number `<lyric number>` is kept
+    as the verse, any other takes the next free number. A replay is a
+    replay when its notes match with the syllables set aside; its rows
+    are written only when its words differ from the section it replays.
+    Under a melody, a later verse's row says nothing of a note it
+    doesn't sing unless a slot of the row starts there (then `--`). The
+    self-check compares each syllable's onset as a share of its bar.
+    The import's system writer pins line order whenever the first line
+    read by name isn't the part's first line (a property-test seed
+    played a tutti line as the wrong line).
+16. Lyrics the import can't place are a loss naming the part and the
+    measures (Task 8 review ruling): lyrics on a line other than the one
+    that sings, on a rest, slash or tie, or lost as a rhythm is placed;
+    later verses of a part whose rows no one sings say why ("the lyric
+    rows are X's", or "no part sings verse 1 or is a voice to sing
+    them"). A repeat with more stacked verses than passes keeps every
+    verse as a row and its play count; barmark's "verse N is never sung"
+    is passed on, and the self-check compares a verse only where some
+    pass sings it.
+17. A row's `/` is written to mean what barmark reads (Task 8 fix round
+    2): the import works out a verse's holds in the file's measure order,
+    but a chart written out in played order can put a held bar after a
+    breath, where barmark's `/` holds nothing. Each row is settled as
+    barmark reads it (holding from the row's start or its last syllable,
+    a breath ending it): a `/` with nothing to hold is written `--`, a
+    slot or bar of breaths alone is one `--`, and the self-check leaves
+    out those holds for the written bar whose row says so. A lyric of
+    hyphens alone is no syllable.
+18. The round trips' canonical choices (Task 9): a lyric row writes its
+    bars on one grid, as many slots a beat as its finest bar, a syllable
+    held over the new slots (`fear / /` beside `grace / that`), except
+    where a new slot would start on a note (a hold there sings) or follow
+    a breath; a system whose rows sing verse 1 alone writes `lyrics:`,
+    except in an ending of a chart that numbers its verses; an unsung
+    melody bar playing the bar before's notes is `%`; a lyric staff's
+    rows keep the chart's `part:` lines, so they stay the voice part's;
+    a short first measure in its own `<time>` before the full meter is a
+    `[n/d]` pickup (barmark's export writes one so; MuseScore marks it
+    `implicit`), and a pickup is a fifth bar on its system. Kept from
+    before: `time: 4/4` is never written, one part plays as a tutti line,
+    `instrument:` is written, `|: … :|` around a whole line is `x2`, and a
+    push (`<`) comes back as the tie it sounds as.
+19. Changed while building, for Kevin to confirm: (a) the melody-in-thirds
+    rule is per bar, and an attack off the changes is melody only when
+    its pitches differ from the voicing sounding in that line; re-strikes
+    and pushes are comping (call 12's "attacks on changes or slash beats"
+    as built would have dropped all syncopated comping). (b) Only a bare
+    line written first joins its part's named lines (7.6); a bare line
+    after them starts a new system, and a bare line beside four named
+    lines is an error. (c) A bare line beside named lines that writes no
+    notes exports as `<harmony>` on the first named line's staff, with no
+    voice of its own. (d) A syllable ends at a straight `"`, and `{`
+    straight after one is an error (decisions log: Claude's
+    recommendation). (e) Render draws each note as one column (pitch, then
+    a line per verse), since separate rows drifted 13px in Chromium, and a
+    singing row shows every note of a set. (f) A lyric row's `/` over a
+    new note of the singing line is a held syllable, exactly as `:/`. (g)
+    Syllables on notes belong to their own part (a choir lists each
+    part's words); rows belong to the singer. (h) The narrow-screen
+    overlap of systems (render's `fitWidth` ignores them) is not fixed
+    here and is on the backlog.
+
+    Also changed or settled while building (same status, for Kevin to
+    confirm unless marked his): (i) a bare line beside named lines is a
+    voice or marks bar by bar, and a bar where the named lines rest
+    exports the bare chords as slashes in the first line's voice. (j)
+    `{C4}:/-` is an error (a hold can't begin or continue a word). (k)
+    Inside a syllable `[` and curly quotes are plain characters; only a
+    straight `"` ends one, and in a row only a well-formed `[n/d]` at a
+    cell's start is a meter. (l) A leading `[1/4]` in a lyric row is a
+    syllable (rows write no one-bar meters). (m) A verse number above
+    `Number.MAX_SAFE_INTEGER` is an error, like `lyrics 0:`. (n) `---`
+    between endings keeps the repeat (Kevin's own decision: it "means
+    nothing else"). (o) A dotted row syllable with no note under it is
+    warned and dropped. (p) The "no bar lines" warning skips escaped
+    lines, and a break prints as `---` whatever its length. (q) A lyric
+    row writes all its bars on one grid (its finest bar's slots per
+    beat), so `fall` comes back as `fall /` (see call 18).
+
+### Open questions for Kevin
+
+- Choir verses 2+ for parts other than the rows' owner can't be written
+  today (rows belong to the singer). Proposal: part-labelled rows such as
+  `A lyrics 2:`.
+- A rap row over bars where the singer plays no notes is lost at export,
+  with a warning.
+- `|:`, `:|` or `|1` copied into a lyric row silently become syllables.
+- Systems overlap on narrow screens (render's `fitWidth` ignores them).

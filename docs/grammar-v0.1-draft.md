@@ -77,9 +77,16 @@ Each line is classified by its start, after leading whitespace is ignored:
 | `part:` (any case) | a **part** the chart is for (before the first bar, 7.3, 7.4) | `part: Electric Guitar 1` |
 | `composer:` `lyricist:` `arranger:` `copyright:` (any case) | a **credit** line (7.5) | `composer: Kevin Peckham` |
 | a part's label, then `\|` | that part's **bar line**, in a chart with several parts (7.4) | `Gtr \| G \| C \|` |
+| `lyrics:` or `lyrics N:` (any case), then `\|` | a **lyric row**: syllables on the beats of the bars above it (7.7) | `lyrics: \| Down / by the \|` |
+| `---` alone (three or more hyphens) | a **break**: ends a system (7.4) and means nothing else | `---` |
+| `\` | **text**, whatever follows; the backslash is not shown | `\| la la \|` |
 | anything else | **text** (lyrics, notes, prose) | `Watch Kevin for the cutoff` |
 
 - Blank lines mean nothing.
+- A leading `\` makes the rest of the line text even when it would read as
+  something else (`\| la la |`, `\key: G`). The backslash is not shown, and
+  printing writes it back. The escaped-pipes warning (9) still applies when
+  the rest of the line has `\|`.
 - Text lines are kept in the parse tree, so printing round-trips, but they
   have no musical meaning. Text is never scanned for chords, tempos or keys.
 - `###` and deeper headings are text.
@@ -463,6 +470,46 @@ number is an extension (`C7`, `C13`), so it can't also be an octave.
   ascending. Without octaves, written order is the voicing, and a repeated
   note is a **warning**.
 
+### 4.3 Syllables
+
+A syllable sung on a note follows its note set after a colon:
+
+```
+time: 3/4
+| {G4}:maz- / {B4}:ing_{G4}:/ | {B4}:grace / {A4}:how |
+```
+
+- **The syllable** runs from the colon to the next space, `_`, `|`, `{`
+  or straight quote `"` (the quote: Claude's recommendation), and may hold
+  any other character: `don't`, `o'er`, `¿qué?`, `yeah...`, and curly
+  quotes and brackets, `“Ho-`, `ly”`, `[x]` (Claude's recommendation):
+  inside a syllable they open no words and no one-bar meter. A `{` straight after a
+  syllable is an **error**; a space goes before the next note (Claude's
+  recommendation). A dot directly after the brace is the
+  rhythm's (2.2), so a dotted note with a syllable is `{C4}.:maz-`; a dot
+  after the colon is the syllable's.
+- **A trailing `-`** says the word continues: `{G4}:maz-` then
+  `{B4}:ing` sing "mazing". A syllable with no trailing `-` ends its word.
+  (MusicXML's `syllabic` begin, middle, end and single come from these.)
+- **A note with no syllable is unsung**: an "ooh", a vocalise, a lick on
+  the voice staff. **`:/` holds the syllable before it** over a new note,
+  a melisma: `{B4}:ing_{G4}:/` (MusicXML's `<extend>`). A `/` slot (a tie)
+  holds its syllable without a mark. A hold can't begin or continue a
+  word, so `:/-` is an **error**; a `:/` with no syllable before it to hold
+  reads here, and is checked in play order.
+- **`~` joins two syllables on one note**, an elision: `{C4}:the~end`
+  (MusicXML's `<elision>`).
+- A note set of two or more notes takes one syllable (a choir's divisi
+  sing the same word).
+- `%` copies the notes of the bar before it, not its syllables, as it
+  doesn't copy words (2.6).
+- A `:|` straight after a syllable closes the repeat (`{C4}:la:|`): the
+  syllable ends at the `|`.
+- A syllable goes **only on a note set**. On a chord name, a voicing
+  (`Cmaj7{E3 G3}:la`; write the notes alone), `/`, `--`, `N.C.` or `?` it
+  is an **error**, and so is an empty syllable (`{C4}:`, or `~` with
+  nothing on one side) and `:/-`.
+
 ## 5. Repeats
 
 `x N` repeats **whatever its line denotes.**
@@ -512,7 +559,7 @@ This plays `C F G C G G7`, then `C F G C G C`.
   range `|1-3`, or a list `|1,3`. The ending is that one bar line. A long
   ending is a long line.
 - Endings follow the bars of a `|: … :|` repeat, one after another; only
-  text and credit lines may come between them. Every ending but the last closes with
+  text, credit, lyric-row (7.7) and `---` lines may come between them. Every ending but the last closes with
   `:|`, which goes back to `|:`. The last does not: it plays and moves on.
 - The repeat plays as many passes as its highest ending number. Each pass
   plays the bars from `|:` to the first ending, then that pass's ending:
@@ -576,7 +623,9 @@ the coda at `To Coda`, and plays to the end.
 - **A section with no bar lines replays the most recent section with that
   name.** A section is written once and referenced by name after that. A
   section holding only lyrics or notes (verse 2's words, for example)
-  replays the changes.
+  replays the changes; lyric rows under its heading give the replay its
+  words (7.7). A bare replay of a section written `## X xN` plays
+  it once; `## X xN` again plays it N times.
 - Names match case-insensitively with whitespace collapsed; otherwise the
   match is exact. `## Verse 2` does not match `## Verse`. An empty section
   that matches nothing is an **error**, and there is no intentionally empty
@@ -830,7 +879,9 @@ the piano is **tacet**: it isn't written, so it rests.
 - **Systems.** Consecutive labelled bar lines (blank lines ignored) in
   which no label repeats are one system. A label written again starts the
   next system; any other line (text, a heading, a directive, an
-  unlabelled bar line) ends one. Lines within a system may come in any
+  unlabelled bar line, a lyric row (7.7), or `---`) ends one. `---` is the way to end a system
+  without writing any of those, as when the next system's parts are the
+  same ones. Lines within a system may come in any
   order; the canonical form sorts them into score order.
 - **Tutti and tacet.** An unlabelled bar line in a multi-part chart is a
   system of its own that every part plays. A part not written in a system
@@ -896,7 +947,8 @@ copyright: All rights reserved.
   line starting with a near miss and a colon, with the right name
   suggested: `author:`, `writer:` and `music:` (composer), `words:` and
   `lyrics:` (lyricist), `arr:` and `arranged:` (arranger), `rights:` and
-  `©:` (copyright).
+  `©:` (copyright). `lyrics:` warns only when no bar line follows it:
+  `lyrics: | la |` is a lyric row (7.7).
 
 ### 7.6 Part lines
 
@@ -921,10 +973,25 @@ Bs     | {G1}        | {C2}        | {D2}           | {G1}        |
   is matched whole first.
 - **In a system.** Line labels join systems as part labels do (7.4): a
   system is a run of labelled lines in which no label repeats, so
-  `Pno.RH` and `Pno.LH` in one system play together. A part may write its
-  lines in some systems and a bare `Pno |` line in others, but not both in
-  one system. A bare line, and a tutti line, play as the part's first
-  line; its other lines rest there.
+  `Pno.RH` and `Pno.LH` in one system play together.
+- **A bare line, then its lines.** A part's named lines written after
+  its bare line join it in a system, as a lead sheet writes its chords on
+  `Vox` and its melody on `Vox.Mel` under them (7.7). The bare line is
+  then the part's first line, in every system, and is listed first among
+  its lines with the name `""` (A.7). A bare line written after its
+  part's named lines starts a new system, so `Pno.RH`, `Pno.LH`, then
+  `Pno` play one after the other; and each line still appears once in a
+  system: a second bare line, or a second `Vox.Mel`, starts a new one. A
+  bare line counts toward the four lines. `---` keeps a bare line and the
+  named lines after it apart. Once a part writes its bare line beside its
+  named lines, the bare line is its own line in every system, so in a
+  system where only the bare line is written the named lines rest, and a
+  `%` or `/` on a named line after it has nothing to copy (an error, as
+  below).
+- **Otherwise** a bare line, and a tutti line, play as the part's first
+  line; its other lines rest there. A part that never writes its bare
+  line before its named lines may write them in different systems, as
+  before.
 - **The first line carries the harmony.** The part's first line in a
   system, in score order (below), may hold anything a bar holds. Its other lines
   hold **notes only**: note sets, `/`, `--`, `%`, words, accents, hits and
@@ -951,6 +1018,116 @@ Bs     | {G1}        | {C2}        | {D2}           | {G1}        |
   those staves; a one-staff instrument writes its lines as voices on its
   staff. Two rhythms on one staff, a held note under a moving line, are a
   third line: `Pno.RH2 | {D4} / / / |`.
+
+### 7.7 Lyrics
+
+A **lyric row** writes the words on the beats of the bar line above it,
+its bars divided the way a chord row's are:
+
+```
+        | Am7                      | D9                       |
+lyrics: | I_got roll-_in' on_the / | beat_and -- I_keep it_up |
+```
+
+- **The row.** `lyrics:`, or `lyrics N:` for verse N (from 1; any case),
+  then a bar line. Its cells divide their bars as a chord row's slots do
+  (2.1, 2.2): `/` holds the syllable before, `_` splits a slot, and `--`
+  is a breath, where nothing is sung. **Every other token is a
+  syllable**, read as on a note (4.3): a trailing `-` continues the word
+  and `~` joins elided syllables (`the~end`). An empty bar, an empty
+  syllable (`a__b`, `a~`) and `/-` are **errors**; so is a straight
+  quote `"` or a brace, since a row holds syllables only (Claude's
+  recommendation). Curly quotes and brackets are characters of a
+  syllable (`“Ho- ly”`, `[x]`; Claude's recommendation). The
+  verse number is MusicXML's `<lyric number="N">`; 0, or a number past
+  9007199254740991 (which would not print back as written), is an
+  **error**.
+- **No structure.** A row writes no repeat marks, endings, rehearsal
+  marks, directions, fermatas, one-bar meters, `%`, `...` or words:
+  those are the bar line's, and in a row `Fine`, `x2`, `@A` and `%` are
+  syllables. A fermata, mark or direction isn't a bar, so the row has no
+  cell for it.
+- **What it covers.** A row covers the bar line just above it, or in a
+  chart of several parts the system above it (7.4), whose parts share its
+  bars. Several rows may follow one bar line, one per verse. A row has
+  the same number of bars as what it covers; a different count is an
+  **error**, and so is a row with no bar line above it (after text, a
+  directive, a heading or `---`).
+- **Under a replay heading** (6), rows cover the replayed section's
+  written lines (or systems) in order, one row per line, each with that
+  line's bar count; each verse's rows start again at the section's first
+  line. A row with no line left to cover is an **error**. A replay
+  without rows sings the words it was written with.
+
+  ```
+  ## Verse
+          | C             | F         | G           | C |
+  lyrics: | Down / by the | riv- / er | wait- / ing | / |
+          | Am          | F          | G         | C  |
+  lyrics: | morn- / ing | comes / a- | gain / to | me |
+
+  ## Verse
+  lyrics: | Out / on the | o- / cean | sail- / ing | / |
+  lyrics: | home / is | where / I will | find / my | way |
+  ```
+
+- **Verses.** The syllables on the singing line's notes (4.3) are verse
+  1; a numbered row is its verse, and an unnumbered row is verse 1.
+  - **Outside a repeat**, every verse is sung on its bars each time they
+    play: verses stacked on bars written once don't change the play
+    order.
+  - **Inside a repeat** (`|: :|`, or `x N` on a bar line or a heading),
+    verse N is sung on pass N, counting the passes of the innermost
+    repeat; a repeat's endings count its passes too, so a second ending
+    holds only verse 2's words. Bars whose only verse is verse 1 (their
+    notes' syllables, or an unnumbered row) sing it on every pass; a lone
+    `lyrics N:` row (N from 2) sings on pass N only. Bars with several
+    verses, or a lone verse N, sing none on a pass with no verse of its
+    number. An open repeat's passes are unknown (5), so it sings every
+    verse.
+  - **A jump's pass back** (D.C., D.S.) is not a pass: its repeats play
+    once (5.2) and sing pass 1's words.
+  - **Under a replay heading**, a line with rows sings those rows alone,
+    in place of its notes' syllables and the rows written under it; a
+    line without one sings the words it was written with.
+- **Every syllable is written once.** Over the same bars, `lyrics 1:` or
+  an unnumbered row under notes that carry syllables (number it from 2),
+  an unnumbered row among numbered ones, and a verse written twice are
+  **errors**, and the row sings nothing. A replay's rows replace the
+  words, so they may lie under notes with syllables.
+- **Who sings.** Syllables on a part's notes are that part's: in a choir
+  chart each part sings its own verse 1. The lyric rows belong to the
+  singer: the first part with `instrument: voice` (7.3), else the first
+  part with syllables on its notes. Each part sings on the first of its
+  lines (7.6, in score order) whose notes carry syllables, else the
+  first with notes: in a lead sheet, the melody line under the bare
+  chord line. A chart that declares no part sings its own notes'
+  syllables. With no one singing, a row's words are the chart's, sung or
+  spoken over the band, on no melody. Only the singer's syllables make a
+  row over them verse 2 or later; another part's extract has its own
+  syllables and leaves the singer's rows out.
+- **Against the melody**, each of a row's syllables lands on the note
+  that starts at its beat. One where the singing line starts no note is a
+  **warning**, since MusicXML hangs a syllable on a note. So is a `:/`
+  with no syllable sung before it, in play order, to hold. A row's `/`
+  where the singing line starts a new note holds the syllable before it
+  over that note, as `:/` does (4.3, a melisma); over a tie, after a
+  breath, or where no note starts, it only holds. A row starting with `/`
+  (Claude's ruling) holds on what its verse last sang, in play order, as a
+  word held across a line break, unless the verse breathed (`--`) since.
+  Before its verse has sung anything there is nothing to hold: the `/`
+  sings nothing, and over a new note warns as a `:/` with nothing before
+  it does.
+- **Verses the passes miss.** A numbered verse no pass sings (`lyrics 3:`
+  under bars played `x2`) is a **warning** on its row, and so is a pass
+  that sings nothing where other passes sing (pass 3 of an `x3` over two
+  verses), on the bar line. So are syllables on notes that no pass sings
+  (verse 1 on a second ending), on their bar line (Claude's
+  recommendation).
+- **A row ends the system** it follows, as any line but a labelled bar
+  line does (7.4).
+- `lyrics:` followed by anything but a bar line is text, and warns as a
+  near miss of `lyricist:` (7.5).
 
 ## 8. The canonical form
 
@@ -993,6 +1170,13 @@ A canonical printer writes:
   lines have no label column; a single-part chart's labelled lines print
   unlabelled. A system holding a line with an error is neither sorted nor
   padded
+- a lyric row as `lyrics:` or `lyrics N:`, its slots as written (never
+  reduced: its holds place the syllables), under the bar line or system
+  it covers with labels padded and pipes lined up, the wider of a column's
+  cells setting its width; a row's cell spans a fermata, mark or
+  direction after its bar, and an unlabelled bar line is indented to the
+  row's pipes (7.7). A row under a replay heading has nothing above it to
+  line up with and prints single-spaced
 
 Canonicalizing changes spelling only. It never rewrites one chord as a
 different chord with the same notes (`aug7` stays `aug7`; `7(#5)` stays
@@ -1042,6 +1226,7 @@ keeps what cannot reduce:
 | error | an unclosed quote, empty quotes, words with no bar to sit on |
 | error | `no3` or `no5` that leaves out a tone the chord doesn't have or alters, any other omission, an omission written twice |
 | error | a voicing note that is not in its chord |
+| error | a syllable on anything but a note set (a chord name, a voicing, `/`, `--`, `N.C.`, `?`), an empty syllable or an empty side of `~`, a `{` straight after a syllable |
 | error | an accent or a hit on anything but a chord or a note set |
 | error | a push with nothing played before it, longer than the slot before it, on `/`, `%` or `?`, inside a group, of three or more `<`, or after its accent (`^<D`) |
 | error | a second `D.C.` or `D.S.`, or a second `Segno`, `Coda`, `To Coda` or `Fine`; `D.S.` with no `Segno` before it; `al Fine` with no `Fine`; `al Coda` without a `To Coda` and a `Coda` after it; a `Segno`, `Coda`, `To Coda` or `Fine` that no jump uses |
@@ -1051,6 +1236,8 @@ keeps what cannot reduce:
 | error | `part:` with no name or no label before `=`, after the first bar, or sharing its line with another directive |
 | error | a credit with no value (`composer:`) |
 | error | a part without a label in a chart of several, two parts with one label, a label starting with `\|`, `#`, `@` or a digit, no space between a label and its `\|` |
+| error | a lyric row with no bar line above it, a bar count other than what it covers, no line left to cover under a replay heading, an empty bar, an empty syllable, `/-`, a quote or a brace, or verse 0 or past 9007199254740991 (7.7) |
+| error | over the same bars: `lyrics 1:` or an unnumbered row under notes that carry syllables, an unnumbered row among numbered ones, a verse written twice (7.7) |
 | error | lines of a system with different bar counts or different structure (7.4); `%` or a leading `/` after the part was tacet; parts playing one bar in different meters (a `%` copying a one-bar meter) |
 | error | invalid directive value (`time: 4/3`, `tempo: fast`, `rit. to fast`, `feel: lazy`, `feel: swing 80%`, `feel: swing 58`, `feel: straight 55%`) |
 | error | `[n/d]` not at the start of a cell, or with an invalid meter |
@@ -1058,7 +1245,7 @@ keeps what cannot reduce:
 | error | more than one root mark `!` in a note set |
 | warning | `?` (unknown harmony) |
 | warning | `tempo: a tempo` with no rit. or accel. in force; `rit. to` a tempo not slower than the steady one, or `accel. to` one not faster |
-| warning | missing trailing `\|` |
+| warning | missing trailing `\|` (on a bar line or a lyric row) |
 | warning | top-level slot count uneven for the meter |
 | warning | `x N` with N > 8 |
 | warning | note set with octaves out of ascending order; repeated note without octaves |
@@ -1066,6 +1253,7 @@ keeps what cannot reduce:
 | warning | a text line that looks like an old-style label (`Chorus:`, `[Chorus]`), an old bare chord line, a bar line written with escaped pipes (`D \\| A \\|`), a misnamed directive (`meter:`, `bpm:`) or a misnamed credit (`author:`, `words:`), with a suggested fix |
 | warning | a credit with a directive after its value on the line (`composer: A, key: G`) |
 | warning | a bar line after a word that is not a declared part label (`Bass \| E \|`), or after a chord, its leading `\|` left off (`G \| C \|`, suggesting `\| G \| C \|`) |
+| warning | a lyric row's syllable where the singing line starts no note; a `:/` with no syllable sung before it in play order; a numbered verse no pass sings; a repeat's pass that sings nothing where other passes sing (7.7) |
 | warning | a chart with text but no bar line at all (reported once, at the first text line), so a chart in another format never reads as empty |
 
 Every message gives the line number and quotes the offending token.
@@ -1134,11 +1322,34 @@ human to say whether the band was silent, and the structure line.
 | Part | Decided by Kevin (2026-11-03, issue #70): `part:` names the chart's part, with an optional label (`part: Gtr = Electric Guitar 1`), once, before the first bar, on a line of its own (7.3). MusicXML requires a `<part-name>` on every part, so a converter otherwise invents one. The instrument (MusicXML's `<instrument-sound>`, a MIDI program) is separate and waits for the converters. The `Label = Name` form is chosen so several parts can follow. |
 | Several parts | Decided by Kevin (2026-11-03): one `part: Label = Name` line per part; a bar line starting with a label belongs to that part, and consecutive labelled lines form a system sharing the timeline (7.4). A part missing from a system is tacet; an unlabelled line is tutti. A system's structure (repeats, endings, marks, directions, fermatas, one-bar meters) is written on every line and checked, so each part's line reads alone. A renderer draws a tutti line as one row and a tacet part as an empty row; an extracted part writes tacet as `N.C.`. Rejected: structure written once, which makes a part's line wrong read alone. |
 | Part line order | Decided by Kevin (2026-11-04): score order comes from the first system writing two or more of a part's lines, and the harmony line in each system is the first in score order, not in written order. Found in review: with first-appearance order, an LH-only intro made the LH the first line, so `format` sorted LH above RH, turning the RH's chords into errors, and MusicXML swapped the hands. Rejected: declaring the order on the `part:` line (an attribute to learn for a rare case) and keeping first appearance (the author would have to write the RH first). |
+| A bare line beside named lines | Decided by Kevin (2026-11-06): a part's named lines written after its bare line join it in a system, the bare line its first line, named `""` and first in score order; a repeated bare or named line still starts a new system, and the bare line counts toward the four (7.6). Found building verses: the spec's lead sheet (`Vox` chords over `Vox.Mel`) read as two systems played one after the other. Only a bare line written first joins (review ruling; Claude's recommendation; so a chart that read before keeps its meaning): a bare line after its part's named lines starts a new system, as before, and the printer keeps such a pair as written. Before, a bare line and named lines of one part could not share a system. Rejected: naming the chords line (`Vox.Ch`), which a lead sheet from MuseScore or Dorico doesn't have. |
 | Part lines | Decided by Kevin (2026-11-04): up to four lines per part, labelled `Pno.RH` with nothing declared (7.6), joining systems as parts do; the first line carries the harmony and the others notes only, so a converter never has to choose between chord symbols. Rejected: lines declared on the `part:` line, chord symbols on any line, and two parts for two hands (a score program shows them as two instruments). |
 | Sustain pedal | Decided by Kevin (2026-11-04): `+` before a chord or a note set presses or changes the pedal and `*` lifts it (2.9), marked where it happens as a printed part marks it; `--`, a tacet bar and the end lift it too. Rejected: a pedal line of its own (`Pno.Ped`), and a directive that changes the pedal with every chord, which can't say a held pedal. |
 | Dotted figures | Decided by Kevin (2026-11-04): a dot after one member of a two-member group, `C._D` (3:1) or `C_D.` (1:3) (2.2), so a dotted figure needs no beat split into four. Rejected: no shorthand, and swing written as figures (`feel:` states it). |
 | Instruments and clefs | Decided by Kevin (2026-11-04): `instrument:` and `clef:` after the name on the `part:` line (7.3), the instrument from a closed list of 16 that tells converters the clef, written transposition, staves and playback sound; an unknown name is an error with near suggestions. Charts stay at concert pitch. Rejected: free-form instrument names (a converter could not know what to write), an `instrument:` line of its own, and an octave hint (note sets carry their octaves). |
 | Credits | Decided by Kevin (2026-11-04): `composer:`, `lyricist:`, `arranger:` and `copyright:`, each a line of its own, allowed anywhere and repeatable, one entry per line (7.5). Before, credits were text, so a renderer or converter could not use them. Rejected: composition year, work number, opus, flow number and other information, which nothing reads (Dorico imports no Project Info from MusicXML but the title) and MusicXML has no standard place for; text still holds notes. |
+| `---` ends a system | Decided by Kevin (2026-11-06): a line of only `---` (three or more hyphens) ends a labelled system and means nothing else (1, 7.4), so a converter can end a system where labels alone would join the next one to it. Rejected: cue lines ("X tacet", "X enters"). |
+| A leading backslash | Decided by Kevin (2026-11-06): a line starting with `\` is text, and the backslash is not shown (1). The escaped-pipes warning (9) stays when the rest of the line still has `\|`. Before, a line starting with `\` was text with the backslash kept. |
+| A bare replay of `## X x2` | Decided by Kevin (2026-11-06): it plays once; `## X x2` again plays it twice (6). This is what the parser already did; now written down and tested. |
+| Syllables on notes | Decided by Kevin (2026-11-06): a syllable follows its note set after a colon, `{G4}:maz-` (4.3); a trailing `-` continues the word, and it runs to a space, `_`, `\|` or `{`, holding any other character. Only a note set takes one: on a chord name, a voicing, `/`, `--`, `N.C.` or `?` it is an error. A dot after the brace is the rhythm's (`{C4}.:maz-`). Before, a colon in a slot was an error, so no chart that read changes meaning. |
+| A syllable's edges: a quote, a brace and `:/-` | Claude's recommendation (2026-11-06): a quote also ends a syllable, as it ends any slot (the words read apart, 2.6); a `{` straight after a syllable is an error, since a note with no space before it has no reading; and a hold can't begin or continue a word, so `:/-` is an error (4.3). |
+| Unsung notes and held syllables | Decided by Kevin (2026-11-06): a note with no syllable is unsung (MusicXML writes no `<lyric>`); `:/` holds the syllable before it over a new note, a melisma (`<extend>`), and a tie holds it without a mark (4.3). |
+| Elisions, and `%` on a voice line | Decided by Kevin (2026-11-06, Claude's recommendation): `~` joins two syllables on one note (`{C4}:the~end`, MusicXML's `<elision>`), and `%` copies a bar's notes, not its syllables, as it doesn't copy words (4.3). |
+| Lyric rows | Decided by Kevin (2026-11-06): `lyrics:` then a bar line writes syllables on the beats, its bars divided as a chord row's (7.7): `/` holds, `_` splits a slot, `--` is a breath, and a syllable reads as on a note (trailing `-`, `~`), so rap and spoken word are placed by beat with no melody. `lyrics N:` numbers verse N. `lyrics:` followed by anything else stays the `lyricist:` near miss (7.5). Before, a `lyrics:` line was text with that warning. |
+| What a lyric row covers | Claude's recommendation (2026-11-06): the bar line just above it, or in a chart of several parts the system above it, with the same bar count (an error otherwise); under a replay heading, the replayed section's written lines (or systems) in order, one row per line, each verse's rows starting again at the first line. A row with no bar line above it is an error, and a row ends the system it follows (7.7). |
+| A lyric row writes no structure | Claude's recommendation (2026-11-06): every token but `/`, `--` and `_` is a syllable, `Fine`, `x2`, `@A` and `%` included; repeat marks, endings, marks, directions, fermatas, one-bar meters and words are the bar line's, and a fermata, mark or direction has no cell in the row. A quote or a brace in a row is an error, as a row holds syllables only (7.7). |
+| Curly quotes and brackets in a syllable | Claude's recommendation (2026-11-06, Task 8 review): a syllable ends only at a space, `_`, `\|`, `{` or a straight quote `"`, so a curly quote (`“ ” „ ‘ ’`) or a `[` inside one is a character of it: `{C4}:“Ho-`, `{C4}:[x]` and a row's `“Ho- ly”` read as written. Outside a syllable curly quotes still enclose words (2.6), and only a `[n/d]` at a cell's start is a meter. Found importing lyrics: ordinary quoted words read as unclosed words or a misplaced meter. One chart that read changes: a curly-quoted word written straight after a syllable (`{C4}:la“soft”`) read as the syllable `la` and the words “soft”, and now joins the syllable (`la“soft”`); the others were errors. No released barmark reads either, as a colon in a slot was an error there. |
+| Lines between endings | Decided by Kevin (2026-11-06): a `---` between endings keeps the repeat, as text and credit lines do (5.1), since `---` ends a system and means nothing else; a lyric row under an ending does too (following from it; Claude's recommendation), as it only writes words on its ending's bars. Before, either ended the repeat, with false errors. |
+| A lyric row's canonical form | Claude's recommendation (2026-11-06): its slots as written, never reduced; under its bar line or system, labels padded and pipes lined up, the wider of a column's cells setting its width, so a long syllable widens the bar line's cell too, and an unlabelled bar line is indented to the row's pipes, as the design's example writes it. A row under a replay heading prints single-spaced (8). |
+| Verses | Decided by Kevin (2026-11-06): syllables on notes are verse 1 and `lyrics N:` is verse N. Numbered rows stack verses anywhere: outside a repeat they don't change the play order, and inside one verse N is sung on pass N. By section, rows under a replay heading give the replay its words, and a replay without them sings the words it was written with (7.7). Before, verses were text lines. |
+| Verses in play order | Claude's recommendation (2026-11-06): an unnumbered row is verse 1; a pass is the innermost repeat's, an ending's pass included; bars with a single verse sing it on every pass (amended by Kevin below: only a lone verse 1 does), and bars with several sing none on a pass with no verse of its number; an open repeat sings every verse; a jump's pass back is no pass, so its repeats sing pass 1's words; a replay's rows replace the words line by line (7.7). |
+| A lone numbered verse in a repeat | Decided by Kevin (2026-11-06): only verse 1 (the notes' syllables, or an unnumbered `lyrics:` row) sings on every pass when a bar has one verse; a lone `lyrics N:` row (N from 2) sings on pass N only, and the other passes warn that they sing nothing (7.7). So `\|: {C4}:a \| {D4} :\|` over `lyrics 2: \| b \| c \|` sings nothing in its second bar on pass 1. Before (Claude's recommendation, unreleased), a lone verse of any number sang on every pass. |
+| Every syllable written once | Claude's recommendation (2026-11-06): over the same bars, `lyrics 1:` or an unnumbered row under notes with syllables, an unnumbered row among numbered ones, and a verse written twice are errors, and the row sings nothing; a replay's rows may lie under notes with syllables, since they replace the words (7.7). |
+| Each part's syllables are its own | Claude's recommendation (2026-11-06, after review): syllables on a part's notes are that part's verse 1, so a choir chart's parts each sing their own words, and only the singer's syllables make a row over them verse 2 or later; lyric rows stay the singer's (7.7). |
+| Verses the passes miss | Claude's recommendation (2026-11-06, after review): a numbered verse that no pass sings, and a repeat's pass that sings nothing where other passes sing, warn (7.7), so a verse lost to a pass count is never silent. |
+| A row's start, and notes no pass sings | Claude's recommendation (2026-11-06, final review): a lyric row starting with `/` holds its verse's last syllable, in play order, when the verse hasn't breathed since, so a verse holds a word across a line break; before the verse has sung anything it sings nothing and warns as a `:/` with nothing before it does (a held syllable there had nothing to hold, and MusicXML an `<extend>` with no start). Syllables on notes that no pass sings (verse 1 on a second ending) warn on their bar line, as a numbered verse no pass sings does (7.7), so no syllable is lost silently. |
+| A row's hold over a new note | Decided by Kevin (2026-11-06, Task 7 review): a lyric row's `/` where the singing line starts a new note is the held syllable `:/` would write there (4.3, 7.7), so a row's melisma gets MusicXML's `<extend>` and the renderer's extender line; over a tie, after a breath or where no note starts it sings nothing. Before, a row's hold wrote no extension. |
+| Who sings, and against what | Claude's recommendation (2026-11-06): the first part with `instrument: voice`, else the first with syllables on its notes, sings on its first line with syllables, else its first with notes (a lead sheet's melody line); with no singer a row's words are the chart's. A row's syllable where the singing line starts no note warns, as MusicXML hangs syllables on notes, and so does a `:/` with nothing sung before it in play order. Another part's extract leaves the singer's rows out (7.7). |
 | Written bar numbers | Machine output gains `written` on each played bar (A.7), the bar's number as written, so a host can speak a printed score's measure numbers (issue #70: a correction editor for a score read). No change to what any chart means. |
 
 ## Open questions
@@ -1292,10 +1503,12 @@ Each slot parses to one record:
 | `pedal` | on a chord slot: `press` (`+`) or `release` (`*`), or absent; `pedalStates` gives whether the pedal is down at the end of each slot, in play order |
 | `dotted` | on a group member: `true` when dotted (2.2), or absent; `memberShares` gives each member's share of the slot |
 | `lineName` | on a labelled bar line: the part's line it is (`RH`), as first written; absent on a bare line |
-| `lines` | on a declared part: its line names in score order, present when it writes lines; on a played bar's part entry (and an extracted part's bar), one entry per line playing there (`name`, `line`, `slots`, `words`), the part's `slots` being its first playing line's |
+| `lines` | on a declared part: its line names in score order, present when it writes lines, with `""` first for a bare line written beside them (7.6); on a played bar's part entry (and an extracted part's bar), one entry per line playing there (`name`, `line`, `slots`, `words`), the part's `slots` being its first playing line's |
 | `part` | on the parse: the chart's one part, its `name`, `label`, `instrument` and `clef` (each absent when not written), or empty when it names none or several (deprecated: use `parts`) |
 | `credits` | on the parse: `composer`, `lyricist`, `arranger` and `copyright`, each a list of the credit lines' values in written order, empty when none is written |
 | `parts` | on the parse: every declared part in score order; on a played bar of a multi-part chart, one entry per part (its `line`, `slots` and `words`), or empty where that part is tacet |
+| `lyrics` | on a played bar: one entry per verse and part it sings (7.7), in verse order then score order, with its `verse`, the `part` singing (absent when no part sings) and its `syllables`, each with `at` (its onset in whole notes from the bar's start), the `syllable` and `note` (true when a note of the singing line starts there); absent when none |
+| `sings` | on each declared part that sings (7.7): the line whose notes carry its syllables, `""` for its bare line; absent when it writes no notes |
 | `tacet` | on a played bar of a multi-part chart: true when the first part is tacet there (its slots then read `N.C.`) |
 | `source` | the symbol as written |
 
