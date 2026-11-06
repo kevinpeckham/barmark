@@ -1,14 +1,15 @@
 /**
  * The order a notation program plays a part's measures in: repeats with
  * their `times`, endings, and the jumps `<sound>` makes (`dacapo`,
- * `dalsegno`, `tocoda`, `fine`). After the jump every repeat plays once.
- * It is the order the written-out fallback writes bars in.
+ * `dalsegno`, `tocoda`, `fine`). After the jump every repeat plays once,
+ * and a To Coda is taken once, forward only. It is the order the
+ * written-out fallback writes bars in.
  */
 import type { Losses } from "./losses.js";
 import type { ReadMeasure } from "./read.js";
 
-/** The most measures a played order holds: a loop in a broken file stops here. */
-const MAX_PLAYED = 10000;
+/** The most bars a played order holds: four times the measures, and at least 64. A longer one (a loop in a broken file, a huge `times`) isn't written out. */
+const maxPlayed = (measures: number) => Math.max(4 * measures, 64);
 
 const soundOf = (m: ReadMeasure | undefined, name: string): string | undefined =>
 	m?.marks.find((k) => k.kind === "sound" && k.node.attrs[name] !== undefined)?.node.attrs[name];
@@ -31,6 +32,8 @@ function signAt(ms: ReadMeasure[], sign: "segno" | "coda", value: string): numbe
  */
 type Walk = {
 	jumped: boolean;
+	/** Whether the To Coda has been taken: only once. */
+	coda: boolean;
 	open: number[];
 	after: number;
 	pass: Map<number, number>;
@@ -48,10 +51,15 @@ function complete(w: Walk, start: number, next: number): void {
 	w.after = next;
 }
 
-/** After the jump, To Coda and Fine: where play goes, null to stop, undefined for neither. */
-function afterJump(ms: ReadMeasure[], m: ReadMeasure): number | null | undefined {
+/** After the jump, To Coda (once, and only to a coda ahead) and Fine: where play goes, null to stop, undefined for neither. */
+function afterJump(ms: ReadMeasure[], i: number, w: Walk): number | null | undefined {
+	const m = ms[i] as ReadMeasure;
 	const toCoda = soundOf(m, "tocoda");
-	if (toCoda !== undefined) return signAt(ms, "coda", toCoda);
+	const coda = toCoda === undefined || w.coda ? undefined : signAt(ms, "coda", toCoda);
+	if (coda !== undefined && coda > i) {
+		w.coda = true;
+		return coda;
+	}
 	return soundOf(m, "fine") !== undefined ? null : undefined;
 }
 
@@ -63,9 +71,9 @@ function jumpTarget(ms: ReadMeasure[], m: ReadMeasure): number | undefined {
 }
 
 /** The jump itself, taken once; after it, To Coda and Fine. */
-function jump(ms: ReadMeasure[], m: ReadMeasure, w: Walk): number | null | undefined {
-	if (w.jumped) return afterJump(ms, m);
-	const to = jumpTarget(ms, m);
+function jump(ms: ReadMeasure[], i: number, w: Walk): number | null | undefined {
+	if (w.jumped) return afterJump(ms, i, w);
+	const to = jumpTarget(ms, ms[i] as ReadMeasure);
 	if (to !== undefined) w.jumped = true;
 	return to;
 }
@@ -134,31 +142,34 @@ function landing(ms: ReadMeasure[], i: number, w: Walk): number {
 	return i;
 }
 
-const TOO_LONG = (n: number) => `play order too long to write out; stopped at ${n} bars`;
+const TOO_LONG = (n: number) =>
+	`play order runs past ${n} bars; bars written once each, in written order`;
 
-/** The indexes of `measures` in the order they play; a runaway stops at a cap, with a loss. */
-export function playedOrder(measures: ReadMeasure[], losses?: Losses): number[] {
+/** The indexes of `measures` in the order they play; null, with a loss, when that runs past the cap. */
+export function playedOrder(measures: ReadMeasure[], losses?: Losses): number[] | null {
 	const out: number[] = [];
 	const spans = endingSpans(measures);
 	const w: Walk = {
 		jumped: false,
+		coda: false,
 		open: [],
 		after: 0,
 		pass: new Map(),
 		spans,
 		endings: endingPasses(measures, spans),
 	};
+	const cap = maxPlayed(measures.length);
 	let i: number | null = 0;
 	while (i !== null && i < measures.length) {
-		if (out.length === MAX_PLAYED) {
-			losses?.add("playOrder", TOO_LONG(MAX_PLAYED));
-			break;
+		if (out.length === cap) {
+			losses?.note({ severity: "warning", message: TOO_LONG(cap) });
+			return null;
 		}
 		i = landing(measures, i, w);
 		const m = measures[i];
 		if (!m) break;
 		out.push(i);
-		const to = jump(measures, m, w);
+		const to = jump(measures, i, w);
 		i = to === undefined ? repeatFrom(m, i, w) : to;
 	}
 	return out;

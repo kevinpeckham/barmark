@@ -13,7 +13,7 @@ function shownInOrder(text: string, part: number): number[] {
 	const root = parseXml(text);
 	const score = root ? readScore(root, new Losses()) : null;
 	const measures = score?.parts[part]?.measures ?? [];
-	return playedOrder(measures).map((i) => Number(measures[i]?.written));
+	return (playedOrder(measures) ?? []).map((i) => Number(measures[i]?.written));
 }
 
 describe("played order", () => {
@@ -106,14 +106,44 @@ describe("repeats as notation programs play them", () => {
 		]);
 	});
 
-	test("a play order too long to write out stops, with a loss", () => {
+	test("a To Coda is taken once, after the jump, and only forward", () => {
+		const coda =
+			'<direction><direction-type><coda/></direction-type><sound coda="c1"/></direction>';
+		const start = performance.now();
+		// The coda sign before the To Coda: a jump back would loop for ever.
+		expect(
+			orderOf(`${coda}${bar}`, `${bar}<sound tocoda="c1"/>`, `${bar}<sound dacapo="yes"/>`),
+		).toEqual([0, 1, 2, 0, 1, 2]);
+		expect(performance.now() - start).toBeLessThan(100);
+		// Two To Codas: the second, reached in the coda, isn't taken again.
+		expect(
+			orderOf(
+				`${bar}<sound tocoda="c1"/>`,
+				`${bar}<sound dacapo="yes"/>`,
+				`${coda}${bar}`,
+				`${bar}<sound tocoda="c1"/>`,
+				bar,
+			),
+		).toEqual([0, 1, 0, 2, 3, 4]);
+	});
+
+	test("a play order longer than four times the measures (at least 64) is refused, with a loss", () => {
 		const losses = new Losses();
 		const ms = measuresOf(
 			xml`${measure(1, `${attributes("<divisions>1</divisions>")}${forward}${bar}${backward(' times="20000"')}`)}`,
 		);
-		expect(playedOrder(ms, losses)).toHaveLength(10000);
+		const start = performance.now();
+		expect(playedOrder(ms, losses)).toBeNull();
+		expect(performance.now() - start).toBeLessThan(100);
 		expect(losses.list().map((d) => d.message)).toEqual([
-			"play order too long to write out; stopped at 10000 bars",
+			"play order runs past 64 bars; bars written once each, in written order",
 		]);
+	});
+
+	test("a play order of 64 bars or four times the measures is kept", () => {
+		const ms = measuresOf(
+			xml`${measure(1, `${attributes("<divisions>1</divisions>")}${forward}${bar}${backward(' times="64"')}`)}`,
+		);
+		expect(playedOrder(ms)).toHaveLength(64);
 	});
 });

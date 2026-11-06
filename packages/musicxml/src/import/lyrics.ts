@@ -24,7 +24,11 @@ function syllablesByVerse(measures: ReadMeasure[], line: number): Map<number, Sy
 	const out = new Map<number, Syllable[]>();
 	for (const m of measures)
 		for (const attack of m.lines[line] ?? [])
-			for (const s of sungAt(attack)) out.set(s.verse, [...(out.get(s.verse) ?? []), s]);
+			for (const s of sungAt(attack)) {
+				const verse = out.get(s.verse);
+				if (verse) verse.push(s);
+				else out.set(s.verse, [s]);
+			}
 	return out;
 }
 

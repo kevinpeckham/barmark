@@ -47,13 +47,20 @@ type Writer = {
 	written: number[];
 };
 
+/** How many bars after a system are read for the end of a word it starts: a word's syllables come bar after bar. */
+const FOLLOWING = 8;
+
 /** The lyric text lines for a system's (or a replayed section's) bars, one per verse. */
 function lyricsUnder(w: Writer, s: Span): string[] {
 	const { lyrics, src } = w;
 	if (!lyrics) return [];
 	const measuresOf = (from: number, to: number) =>
 		src.bars.slice(from, to).flatMap((b) => lyrics.measures[b.index] ?? []);
-	const verses = lyricLines(measuresOf(s.from, s.to), lyrics.line, measuresOf(s.to, Infinity));
+	const verses = lyricLines(
+		measuresOf(s.from, s.to),
+		lyrics.line,
+		measuresOf(s.to, s.to + FOLLOWING),
+	);
 	return verseText(verses, lyrics.numbered).flatMap((t) => textLine(t, w.header) ?? []);
 }
 

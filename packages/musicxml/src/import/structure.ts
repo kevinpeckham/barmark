@@ -232,9 +232,10 @@ export function readStructure(score: ReadScore, losses: Losses): Structure {
 			writtenOut: false,
 			chordWords: chordy,
 		};
-	losses.note({ severity: "warning", message: WRITTEN_OUT });
 	const longest = parts.reduce((a, p) => (p.length > a.length ? p : a), [] as ReadMeasure[]);
-	const order = playedOrder(longest, losses);
+	// A play order too long to write out falls back to each bar once, as written.
+	const order = playedOrder(longest, losses) ?? written;
+	if (order !== written) losses.note({ severity: "warning", message: WRITTEN_OUT });
 	const played = directiveLines(states, order);
 	return {
 		bars: order.map((i, k) => flattened(bars[i] as BarInfo, played[k] ?? null)),

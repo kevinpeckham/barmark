@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 import { Losses } from "../../src/import/losses.js";
 import { importLyrics, lyricLines, verseText } from "../../src/import/lyrics.js";
+import { importMusicXml } from "../../src/index.js";
 import { attributes, measure, measuresOf, note, partOf, xml } from "./helpers.js";
 
 const base = attributes(
@@ -120,3 +121,30 @@ test("the placement diagnostic is given once", () => {
 });
 
 const quietPart = () => partOf(xml`${bar(1, note("C", 4, 4))}`);
+
+test("three verses over 400 bars import in about a second", () => {
+	const syllabic = ["begin", "middle", "end", "single"];
+	const lyric = (b: number) =>
+		[1, 2, 3]
+			.map(
+				(v) =>
+					`<lyric number="${v}"><syllabic>${syllabic[b % 4]}</syllabic><text>ka${b}</text></lyric>`,
+			)
+			.join("");
+	let measures = "";
+	for (let i = 0; i < 400; i++) {
+		const attributes =
+			i === 0
+				? "<attributes><divisions>2</divisions><time><beats>4</beats><beat-type>4</beat-type></time></attributes>"
+				: "";
+		let notes = "";
+		for (let b = 0; b < 8; b++)
+			notes += `<note><pitch><step>C</step><octave>5</octave></pitch><duration>1</duration><voice>1</voice>${lyric(b)}</note>`;
+		measures += `<measure number="${i + 1}">${attributes}<harmony><root><root-step>C</root-step></root><kind>major</kind></harmony>${notes}</measure>`;
+	}
+	const score = `<score-partwise version="4.0"><part-list><score-part id="P1"><part-name>V</part-name></score-part></part-list><part id="P1">${measures}</part></score-partwise>`;
+	const start = performance.now();
+	const r = importMusicXml(score);
+	expect(performance.now() - start).toBeLessThan(1500);
+	expect(r.text).toContain("3. ka0ka1ka2 ka3");
+});
