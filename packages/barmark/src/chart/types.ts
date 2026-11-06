@@ -66,6 +66,15 @@ export type Syllable = { kind: "sung"; parts: string[]; continues: boolean } | {
  * (`{G4}:maz-`, grammar 4.3), never on a chord name or a voicing. The
  * optional fields are present only when written.
  */
+/**
+ * A slot of a lyric row (grammar 7.7): a syllable, `/` holding the one
+ * before, `--` a breath (nothing sung), or `_` splitting the slot.
+ */
+export type LyricSlot =
+	| { kind: "syllable"; syllable: Syllable }
+	| { kind: "hold" }
+	| { kind: "breath" }
+	| { kind: "group"; members: LyricSlot[] };
 export type SimpleSlot = (
 	| {
 			kind: "chord";
@@ -154,6 +163,20 @@ export type Line =
 	| { kind: "text"; line: number; text: string; escaped?: true }
 	/** `---` alone (grammar 1, 7.4): ends a system, and means nothing else. */
 	| { kind: "break"; line: number }
+	/**
+	 * `lyrics:` or `lyrics N:` then a bar line (grammar 7.7): syllables on the
+	 * beats, one cell per bar. `verse` is N, null when unnumbered. `covers`
+	 * holds the source lines of the bar lines it lies under, in order: one,
+	 * a system's lines, or under a replay heading the replayed section's
+	 * line; empty when it covers none (an error).
+	 */
+	| {
+			kind: "lyrics";
+			line: number;
+			verse: number | null;
+			cells: LyricSlot[][];
+			covers: number[];
+	  }
 	/** `composer: …` and the other credit lines (grammar 7.5). */
 	| { kind: "credit"; line: number; role: CreditRole; text: string }
 	/**

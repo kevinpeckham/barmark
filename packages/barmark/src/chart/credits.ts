@@ -1,4 +1,5 @@
 import { DIRECTIVE_AFTER } from "./directives.js";
+import { LYRIC_ROW } from "./lyricRows.js";
 import type { ChartDiagnostic, CreditRole, Credits, Line } from "./types.js";
 
 /** The credit roles, in the order MusicXML writes them (grammar 7.5). */
@@ -46,8 +47,10 @@ export function readCredit(
 	return { kind: "credit", line, role, text: value };
 }
 
-/** A text line that reads like a credit under another name: `author: X`. */
+/** A text line that reads like a credit under another name: `author: X` (not a lyric row, 7.7). */
 export function nearCredit(text: string, line: number): ChartDiagnostic | null {
+	// `lyrics:` then a bar line is a lyric row (7.7); escaped, it is text, and no near miss.
+	if (LYRIC_ROW.test(text)) return null;
 	const m = /^([^\s:]+)\s*:\s*(.*)$/.exec(text);
 	const role = m?.[1] ? NEAR_CREDITS[m[1].toLowerCase()] : undefined;
 	if (!m || !role) return null;

@@ -3,6 +3,7 @@ import { misplacedRepeat, parseBarLine, readRepeat, repeatTail } from "./barLine
 import { creditsOf, nearCredit, readCredit } from "./credits.js";
 import { parseDirectiveLine } from "./directives.js";
 import { checkLines } from "./lines.js";
+import { attachLyrics, readLyricRow } from "./lyricRows.js";
 import { readPart } from "./partLine.js";
 import { groupSystems } from "./systems.js";
 import type { ChartDiagnostic, Credits, DeclaredPart, Line, Part, Repeat } from "./types.js";
@@ -311,10 +312,19 @@ export function readDocument(text: string): {
 		if (old) diagnostics.push(old);
 		return { kind: "text", line, text, escaped: true };
 	};
+	/** `lyrics:` or `lyrics N:` then a bar line (grammar 7.7); one with an error stays text. */
+	const lyricRow = (t: string, line: number): Line | null => {
+		const read = readLyricRow(t, line);
+		diagnostics.push(...read.diagnostics);
+		if (read.row || read.diagnostics.length) return read.row ?? { kind: "text", line, text: t };
+		return null;
+	};
 	const classify = (t: string, line: number): Line => {
 		if (BREAK.test(t)) return { kind: "break", line };
 		if (t.startsWith("\\")) return escapedLine(t, line);
 		if (t.startsWith("|")) return barLine(t, line);
+		const row = lyricRow(t, line);
+		if (row) return row;
 		const labelled = labelledLine(t, line);
 		if (labelled) return labelled;
 		if (t.startsWith("# ")) return titleLine(t, line);
@@ -332,14 +342,15 @@ export function readDocument(text: string): {
 	if (empty) diagnostics.push(empty);
 	const read = checkParts(lines, diagnostics);
 	const grouped = groupParts(lines, read);
-	diagnostics.push(...grouped.diagnostics);
+	const lyrics = attachLyrics(grouped.lines);
+	diagnostics.push(...grouped.diagnostics, ...lyrics.diagnostics);
 	const { parts } = grouped;
 	return {
 		title,
 		part: parts.length === 1 ? (parts[0] ?? null) : null,
 		parts,
 		credits: creditsOf(lines),
-		lines: grouped.lines,
+		lines: lyrics.lines,
 		diagnostics,
 	};
 }

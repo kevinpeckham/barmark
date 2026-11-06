@@ -21,6 +21,16 @@ Releases follow the process in [RELEASING.md](RELEASING.md).
   copies a bar's notes without their syllables. A syllable on a chord
   name, a voicing, `/`, `--`, `N.C.` or `?`, an empty one, or `:/-` (a
   hold can't begin or continue a word) is an error.
+- Lyric rows (grammar 7.7): `lyrics:` or `lyrics N:` (verse N) then a bar
+  line writes syllables on the beats, its bars divided as a chord row's
+  (`/` holds, `_` splits a slot, `--` is a breath). A row covers the bar
+  line or system just above it, or under a replay heading the replayed
+  section's lines in order, and must match its bar count. It parses as a
+  `lyrics` line (the new `LyricSlot` type) with `verse`, `cells` and
+  `covers`, the source lines of the bar lines it covers. The printer lines
+  a row up under its bars, the wider cell of each column setting its
+  width. A row with no bar line above it, a wrong bar count, an empty bar
+  or syllable, or a quote or brace is an error.
 
 ### Changed
 
@@ -28,6 +38,8 @@ Releases follow the process in [RELEASING.md](RELEASING.md).
   backslash, marked `escaped: true`; the printer writes the backslash back.
   The escaped-pipes warning still applies to the rest of the line, and a
   chart whose only text is escaped no longer warns that it has no bar lines.
+- `lyrics:` followed by a bar line is now a lyric row, not text with a
+  warning to write `lyricist:`; followed by anything else it still warns.
 
 ## [0.16.0] - 2026-11-04
 

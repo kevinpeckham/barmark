@@ -9,6 +9,23 @@ not here.
 
 ## Testing
 
+### The MusicXML corpus misses the grammar's examples after section 6 (2026-11-06, @barmark/musicxml)
+
+- **The symptom.** Grammar 7.7's two new examples parse cleanly, yet the
+  sounding corpus (`packages/musicxml/tests/charts.ts`) still had 15
+  charts and `sounding.json` needed no new entry.
+- **The cause.** `grammarCharts()` finds blocks with
+  ``/```[a-z]*\n([\s\S]*?)\n```/g``, which needs a closing fence at the
+  start of a line. An indented fence inside a list item (section 6's
+  `## Chorus ->` example) opens a match that its own indented closing
+  fence can't end, so every later pair is read inside out: prose between
+  fences, with errors, which the corpus filter drops. Nothing past
+  section 6 has been in the corpus since that example was indented.
+- **The fix.** Not made here (a corpus change re-keys `sounding.json`):
+  the regex should allow leading spaces on both fences
+  (``/^ *```[a-z]*\n([\s\S]*?)\n *```/gm``) and the fixture be
+  regenerated for the blocks that join.
+
 ### A test player that reads a missing default wrongly hides the bug it should catch (2026-11-05, @barmark/musicxml)
 
 - **The symptom.** `x ...` (an open repeat, played once by barmark) was
