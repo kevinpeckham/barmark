@@ -49,3 +49,11 @@ test("a part entering after four bars plays only from there", () => {
 		["P", ["C", "F", "G", "C", "E", "F", "G", "A"]],
 	]);
 });
+
+test.each(["melody-rest", "melody-measure-rest"])(
+	"%s: a lead sheet's melody resting a bar holds the chord",
+	(name) => {
+		const r = sound(importMusicXml(text(`${name}.musicxml`)));
+		expect(r.text).toBe(text(`${name}.chart.md`));
+	},
+);

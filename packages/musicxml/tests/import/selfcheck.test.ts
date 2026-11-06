@@ -41,6 +41,7 @@ const trade: Source = {
 	labels: ["G", "P"],
 	bars: Array.from({ length: 8 }, (_, i) => bar(i)),
 	meters: Array.from({ length: 8 }, () => ({ n: 4, d: 4 })),
+	previous: [],
 };
 const written = [0, 1, 2, 3, 4, 5, 6, 7];
 const header = "part: G = Guitar\npart: P = Piano\n";

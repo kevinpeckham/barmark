@@ -221,7 +221,10 @@ per part:
   pitch, is one line.
 - **Any other part with chords is a melody part:** its chords are read
   and its notes left out, with one diagnostic. A lead sheet is the usual
-  case.
+  case. The melody's rests never end a chord: once a chord has sounded, a
+  bar with no chord holds it, as lead sheets write chords only on change;
+  only a chord part's own line (slashes, comping) rests. (Changed while
+  building, 2026-11-06; for Kevin to confirm.)
 - **A part with notes and no chords** (a bass line) is read as note sets
   when `@barmark/musicxml` wrote the file (its `<encoding><software>`),
   or when it is named with `--part`; otherwise it is listed in one

@@ -141,7 +141,7 @@ test("lead sheet with slashes elsewhere and single notes on every change", () =>
 
 const measureRest = (duration = 4) => rest(duration).replace("<rest/>", '<rest measure="yes"/>');
 
-test("a melody part rests where its line rests, and comes back on its last chord", () => {
+test("a melody's rests never end the chord: a bar with no harmony holds once a chord has sounded", () => {
 	const r = importXml(
 		scoreXml(
 			{ software: "MuseScore 4.4.2" },
@@ -152,11 +152,11 @@ test("a melody part rests where its line rests, and comes back on its last chord
 				measure(5, harmony("G") + note("D", 4, 4)),
 		),
 	);
-	// after the rest, nothing sounds to hold: the bar restates C, then holds it
-	expect(bars(r)).toEqual(["C", null, "C", "/", "G"]);
+	// lead sheets write chords only on change: C holds through the melody's rest
+	expect(bars(r)).toEqual(["C", "/", "/", "/", "G"]);
 });
 
-test("a melody bar of plain rests rests", () => {
+test("a melody bar of plain rests holds the chord", () => {
 	const r = importXml(
 		scoreXml(
 			{ software: "MuseScore 4.4.2" },
@@ -165,10 +165,37 @@ test("a melody bar of plain rests rests", () => {
 				measure(3, harmony("G") + note("D", 4, 4)),
 		),
 	);
-	expect(bars(r)).toEqual(["C", null, "G"]);
+	expect(bars(r)).toEqual(["C", "/", "G"]);
 });
 
-test("chords alone: a bar of plain rests rests, and slashes after it restate the chord", () => {
+test("a melody resting before its first chord rests", () => {
+	const r = importXml(
+		scoreXml(
+			{ software: "MuseScore 4.4.2" },
+			measure(1, time44() + measureRest()) +
+				measure(2, harmony("C") + note("E", 4, 4)) +
+				measure(3, rest(4)),
+		),
+	);
+	expect(bars(r)).toEqual([null, "C", "/"]);
+});
+
+test("a guitar's solo: a chord part with chords in some bars only rests elsewhere", () => {
+	const r = importXml(
+		scoreXml(
+			{ software: "MuseScore 4.4.2" },
+			measure(1, time44() + measureRest()) +
+				measure(2, harmony("A") + slashes(4)) +
+				measure(3, harmony("D") + slashes(4)) +
+				measure(4, measureRest()) +
+				measure(5, measureRest()),
+		),
+	);
+	expect(bars(r)).toEqual([null, "A", "D", null, null]);
+	expect(r.messages).toEqual([]);
+});
+
+test("chords alone because of a melody: a bar of plain rests holds the chord", () => {
 	// the single-note fill in bar 4 makes this another program's part a melody part: chords alone
 	const r = importXml(
 		scoreXml(
@@ -179,7 +206,7 @@ test("chords alone: a bar of plain rests rests, and slashes after it restate the
 				measure(4, harmony("G") + slashes(2) + note("B", 4, 2)),
 		),
 	);
-	expect(bars(r)).toEqual(["C", null, "C", "G"]);
+	expect(bars(r)).toEqual(["C", "/", "/", "G"]);
 	expect(r.messages).toEqual(["notes read as a melody and left out in measure 4"]);
 });
 

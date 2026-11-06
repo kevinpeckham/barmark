@@ -78,7 +78,13 @@ function decide(part: ReadPart, from: { barmark: boolean }, hasChords: boolean):
 	const lines = linesOf(part);
 	const bars = barsOf(part);
 	const alone = (why: keyof typeof WHY): Decided => ({
-		reads: [readLine(lines[0] ?? [], bars, { chords: true, notes: !hasChords })],
+		reads: [
+			readLine(lines[0] ?? [], bars, {
+				chords: true,
+				notes: !hasChords,
+				melody: why === "melody",
+			}),
+		],
 		why,
 		offGrid: [],
 	});

@@ -147,9 +147,12 @@ function systemLines(
 	previous: string[] | null,
 ): { lines: string[]; open: string[] | null } {
 	const lead = [...before(w, s, first ? plan.times : null), ...textOf(w, s)];
+	for (let i = s.from; i < s.to; i++) {
+		w.src.previous[i] = w.written[w.written.length - 1] ?? null;
+		w.written.push(i);
+	}
 	const rows = rowsOf(w.src, s, w.last, plan.times !== null);
 	const lyrics = lyricsUnder(w, s);
-	for (let i = s.from; i < s.to; i++) w.written.push(i);
 	const lines = [
 		...lead,
 		...(lead.length === 0 ? separator(w, previous, s) : []),
@@ -221,7 +224,7 @@ export function writeChart(
 ): string {
 	const bars = settleEndings(structure.bars, losses);
 	const labels = numbered(parts.map((p) => p.label));
-	const src: Source = { parts, labels, bars, meters: metersOf(bars) };
+	const src: Source = { parts, labels, bars, meters: metersOf(bars), previous: [] };
 	const systems =
 		parts.length === 0
 			? []

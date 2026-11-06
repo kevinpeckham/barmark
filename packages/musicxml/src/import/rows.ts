@@ -12,7 +12,14 @@ import type { Playing, System } from "./systems.js";
 import { wordsText } from "./text.js";
 
 /** What the rows are written from: the parts with their labels, the bars, and each bar's own meter. */
-export type Source = { parts: ImportedPart[]; labels: string[]; bars: BarInfo[]; meters: Meter[] };
+export type Source = {
+	parts: ImportedPart[];
+	labels: string[];
+	bars: BarInfo[];
+	meters: Meter[];
+	/** The bar written just before each bar, null for none, as the writer writes them (a replay writes no bars); unset, the bar before. */
+	previous: (number | null)[];
+};
 
 type Placed = { text: string; at: number };
 
@@ -51,21 +58,27 @@ function heldInto(cells: (string | null)[], index: number): string | null {
 
 const LEADING_HOLD = /^\/(?=[ _]|$)/;
 
+/** The bar written just before bar `i`: as the writer recorded it, else the bar before. */
+function writtenBefore(src: Source, i: number): BarInfo | undefined {
+	const before = src.previous[i];
+	if (before === undefined) return src.bars[i - 1];
+	return before === null ? undefined : src.bars[before];
+}
+
 /**
  * A cell that starts by holding what the measure before it left sounding,
- * written where the bar before it isn't that measure (bars in played
- * order, after a jump) or the line rested there: the hold has nothing to
- * hold (grammar 2.3), so the held attack is written again, else `N.C.` (or
- * `--` on a line of notes).
+ * written where the bar written before it isn't that measure (bars in
+ * played order, after a jump, or after a replay) or the line rested
+ * there: the hold has nothing to hold (grammar 2.3), so the held attack
+ * is written again, else `N.C.` (or `--` on a line of notes).
  */
 function restated(src: Source, p: number, l: number, i: number, slots: string): string {
-	const bar = src.bars[i] as BarInfo;
+	if (!LEADING_HOLD.test(slots)) return slots;
+	const index = (src.bars[i] as BarInfo).index;
 	const cells = src.parts[p]?.lines[l]?.bars ?? [];
-	const prev = src.bars[i - 1];
-	const follows = prev !== undefined && prev.index === bar.index - 1 && cells[prev.index] != null;
-	if (follows || !LEADING_HOLD.test(slots)) return slots;
-	const held = heldInto(cells, bar.index) ?? (l === 0 ? "N.C." : "--");
-	return slots.replace(LEADING_HOLD, held);
+	const prev = writtenBefore(src, i);
+	if (prev?.index === index - 1 && cells[prev.index] != null) return slots;
+	return slots.replace(LEADING_HOLD, heldInto(cells, index) ?? (l === 0 ? "N.C." : "--"));
 }
 
 /** Line `l` of part `p` in bar `i`, as the part reads it. */

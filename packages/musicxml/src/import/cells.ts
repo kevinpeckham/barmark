@@ -22,8 +22,12 @@ export type LineRead = {
 	unread: Unread[];
 };
 
-/** How a line is read: whether it carries the chords, and whether its notes are read. */
-export type Reading = { chords: boolean; notes: boolean };
+/**
+ * How a line is read: whether it carries the chords, whether its notes are
+ * read, and whether they are a melody left out (its rests never end a
+ * chord: lead sheets write chords only on change).
+ */
+export type Reading = { chords: boolean; notes: boolean; melody?: boolean };
 
 type Pitch = Attack["pitches"][number];
 
@@ -135,7 +139,7 @@ function cellOf(bar: Bar, attacks: Attack[], run: Run, reading: Reading, out: Li
 	const events = eventsOf(reading.notes ? attacks : [], reading.chords ? bar.chords : [], run, () =>
 		out.stray.push(bar.number),
 	);
-	if (events.length === 0) return holdOrRest(run, attacks);
+	if (events.length === 0) return reading.melody ? held(run) : holdOrRest(run, attacks);
 	const placed = place(events, bar, run.sounding, reading);
 	if (!placed) {
 		out.offGrid.push(bar.number);
@@ -145,9 +149,13 @@ function cellOf(bar: Bar, attacks: Attack[], run: Run, reading: Reading, out: Li
 	return placed.cell;
 }
 
-/** Where the line stands after a bar: its latest chord, and whether it ends silent. */
-function after(run: Run, bar: Bar, attacks: Attack[], cell: string | null): Run {
+/** A melody's bar with no chord: it holds the chord sounding, if one has sounded. */
+const held = (run: Run): string | null => (run.last === null ? null : "/");
+
+/** Where the line stands after a bar: its latest chord, and whether it ends silent (a melody's line never does once a chord has sounded). */
+function after(run: Run, bar: Bar, attacks: Attack[], cell: string | null, melody = false): Run {
 	const latest = [...bar.chords].sort((a, b) => cmp(a.at, b.at)).pop()?.slot ?? run.last;
+	if (melody) return { last: latest, silent: latest === null, sounding: latest !== null };
 	const end = attacks[attacks.length - 1];
 	const restsAtEnd = end?.kind === "rest" && !bar.chords.some((c) => cmp(c.at, end.at) === 0);
 	return { last: latest, silent: cell === null || restsAtEnd, sounding: cell !== null };
@@ -168,7 +176,7 @@ export function readLine(bars: Attack[][], shared: Bar[], reading: Reading): Lin
 		const cell = cellOf(bar, attacks, run, reading, out);
 		if (cell !== null && reading.chords) out.unread.push(...unreadIn(cell, bar.chords, i));
 		out.cells.push(cell);
-		run = after(run, bar, attacks, cell);
+		run = after(run, bar, attacks, cell, reading.melody);
 	});
 	return out;
 }
