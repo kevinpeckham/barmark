@@ -402,3 +402,30 @@ Each goes into the draft's decisions log with the date.
     part's words); rows belong to the singer. (h) The narrow-screen
     overlap of systems (render's `fitWidth` ignores them) is not fixed
     here and is on the backlog.
+
+    Also changed or settled while building (same status, for Kevin to
+    confirm unless marked his): (i) a bare line beside named lines is a
+    voice or marks bar by bar, and a bar where the named lines rest
+    exports the bare chords as slashes in the first line's voice. (j)
+    `{C4}:/-` is an error (a hold can't begin or continue a word). (k)
+    Inside a syllable `[` and curly quotes are plain characters; only a
+    straight `"` ends one, and in a row only a well-formed `[n/d]` at a
+    cell's start is a meter. (l) A leading `[1/4]` in a lyric row is a
+    syllable (rows write no one-bar meters). (m) A verse number above
+    `Number.MAX_SAFE_INTEGER` is an error, like `lyrics 0:`. (n) `---`
+    between endings keeps the repeat (Kevin's own decision: it "means
+    nothing else"). (o) A dotted row syllable with no note under it is
+    warned and dropped. (p) The "no bar lines" warning skips escaped
+    lines, and a break prints as `---` whatever its length. (q) A lyric
+    row writes all its bars on one grid (its finest bar's slots per
+    beat), so `fall` comes back as `fall /` (see call 18).
+
+### Open questions for Kevin
+
+- Choir verses 2+ for parts other than the rows' owner can't be written
+  today (rows belong to the singer). Proposal: part-labelled rows such as
+  `A lyrics 2:`.
+- A rap row over bars where the singer plays no notes is lost at export,
+  with a warning.
+- `|:`, `:|` or `|1` copied into a lyric row silently become syllables.
+- Systems overlap on narrow screens (render's `fitWidth` ignores them).

@@ -1029,13 +1029,13 @@ barmark's export writes a `[1/4]` pickup as a short first measure in a
 written. The import now reads both shapes as a pickup
 (`settleFirstPickup` in `import/read.ts`).
 
-### A lyric row ends its system, and every example is checked five ways (2026-11-06, examples)
+### A lyric row ends its system (grammar 7.7), and examples feed several tests (2026-11-06, examples)
 
 **Symptom:** the first draft of `examples/shenandoah.chart.md` failed the
 examples test (warnings that a syllable "falls where the voice starts no
 note"), then the MusicXML sounding snapshot and the export/import round trip:
 the import wrote the guitar as a second system with a line of `Vox` slashes.
-**Cause:** a lyric row covers the system just above it, so a part line
+**Cause:** by design (grammar 7.7, not a bug), a lyric row covers the system just above it, so a part line
 written after the row starts a new system; and a row's cells divide a bar on
 their own grid, so three words under four notes put one where no note
 starts. Every file in `examples/` also feeds `sounding.json` and the

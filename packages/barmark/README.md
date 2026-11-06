@@ -127,8 +127,9 @@ deprecated in favour of `parts`.
 
 ```
 part: Vox = Voice, instrument: voice
+key: G, time: 3/4
 
-Vox       | [1/4] N.C.    | G                           | G          / G7       |
+Vox       | [1/4] N.C.    | G                           | G / G7                |
 Vox.Mel   | [1/4] {D4}:A- | {G4}:maz- / {B4}:ing_{G4}:/ | {B4}:grace / {A4}:how |
 lyrics 2: | 'Twas         | grace / that                | taught / my           |
 ```
@@ -143,7 +144,7 @@ separates blocks, and a text line that starts with `\` is text.
 
 ```ts
 chart.bars[0].lyrics; // a PlayedLyrics per verse the bar sings: { verse, part?, syllables }
-chart.parts[0].sings; // true for the part whose melody carries the words
+chart.parts[0].sings; // the name of the line whose notes carry the words ("Mel" here; "" for a bare line)
 ```
 
 Verses come out in play order: inside a repeat, verse N is pass N.
