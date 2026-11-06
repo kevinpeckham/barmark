@@ -9,6 +9,21 @@ not here.
 
 ## Testing
 
+### Onsets must be compared as a share of the bar, not in whole notes (2026-11-06, @barmark/musicxml)
+
+- **The symptom.** The import's verse self-check (property tests,
+  `packages/musicxml/tests/import/property.test.ts`) reported every
+  syllable of some random scores as misplaced, though the chart read
+  right.
+- **The cause.** barmark's parse places a syllable (`PlayedSyllable.at`)
+  in whole notes from the bar's meter, while the importer measures a
+  bar by the notes it holds: a pickup or an over-full measure has a
+  length its meter doesn't give, so the same syllable sat at two
+  different numbers.
+- **The fix.** `verseMismatches` (`src/import/selfcheck.ts`) compares an
+  onset as a share of its bar on both sides: the parse's `at / (n/d)`,
+  the importer's onset over the measure's length (`Words.lengths`).
+
 ### The MusicXML corpus misses the grammar's examples after section 6 (2026-11-06, @barmark/musicxml)
 
 - **The symptom.** Grammar 7.7's two new examples parse cleanly, yet the

@@ -36,9 +36,19 @@ const { text: chart, diagnostics } = importMusicXml(xml); // or { part: "Piano" 
 
 `importMusicXml` reads a `score-partwise` file into a canonical barmark
 chart: chord symbols, credits, keys, meters, tempo, sections, repeats,
-endings and jumps, words, lyrics as text lines under each row, parts, and
-the voicings, note sets and part lines of parts whose notes act as chords
-(a melody is left out, its chords kept). A chord symbol barmark can't name
+endings and jumps, words, parts, and the voicings, note sets and part
+lines of parts whose notes act as chords. A part that sings (it has
+lyrics, or a `voice.*` instrument sound) keeps its melody: its chords on
+its bare line (`Vox |`), its notes with verse 1's syllables on a melody
+line (`Vox.Mel | {G4}:maz- / {B4}:ing |`, or the bare line when it has no
+chords), `~` for an elision and `:/` for a melisma, MuseScore's ways of
+writing both included. Later verses are `lyrics N:` rows under each
+system; a section sung again to the same notes with new words is a replay
+with its `lyrics:` rows. In a choir each part keeps its own syllables. A
+lyric staff (the export's, or MuseScore's one-line "Lyrics" staff of
+slashes) comes back as lyric rows. A rhythm barmark can't write snaps to
+the nearest it can, with a warning naming the measures; another part's
+melody is still left out, its chords kept. A chord symbol barmark can't name
 (a Tristan chord) comes in as `?`, its original kept as words on the bar.
 It never throws: what couldn't come over is in `diagnostics`, one warning
 per kind and part, and a file that gives nothing returns empty `text` and
@@ -112,8 +122,7 @@ things its own way:
 - **Repeat counts aren't read.** A repeat played more than twice is also
   printed as words ("×3"), since Dorico ignores the count in the file.
 
-Not yet: importing lyrics as syllables (the import still reads them as
-text lines), and MIDI.
+Not yet: MIDI.
 
 ## License
 

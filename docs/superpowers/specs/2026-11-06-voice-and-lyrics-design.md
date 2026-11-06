@@ -317,3 +317,37 @@ Each goes into the draft's decisions log with the date.
     and also `<extend type="start"/>` on the syllable it holds: MuseScore
     4.7 drops a `<lyric>` with no text and keeps a melisma only as an
     extend on its syllable (FINDINGS.md).
+12. A rhythm the grammar can't write snaps (Task 8): each beat's onsets
+    move to the halves, thirds, quarters or sixths of the beat (or the
+    beat itself) that move them least without two landing together;
+    the bar's last beat can't push one out of the bar, and two that land
+    together all the same keep the first. A loss names the measures
+    ("a rhythm barmark can't write, snapped to the nearest it can"); the
+    self-check compares the snapped onsets, so it stays honest about
+    what the chart says.
+13. A part sings when it has lyrics or its `<instrument-sound>` is a
+    `voice.*` sound. Its first line is the harmony (chords where the
+    melody sings, `N.C.` where it sings before any chord, slashes'
+    rhythm elsewhere); its melody line is `Mel` when it is the one line
+    under the harmony, or the line that sings beside others on one
+    staff (`RH`/`LH` on two); with no chords the melody is the bare
+    line. A melisma is `:/` on the unsung notes after a syllable with
+    `<extend>`, or after a word's first or middle syllable (MuseScore
+    draws a held first syllable as hyphens, with no extend).
+14. A lyric staff is a part marked `<?barmark lyrics?>` in any measure,
+    or one named "Lyrics" on a one-line staff that has lyrics and plays
+    only slashes (MuseScore's). It becomes lyric rows only when no part
+    sings words of its own; otherwise it is left out with a warning. A
+    slash with no syllable holds the word before it.
+15. Smaller calls in the import: a syllable's `"`, `{`, `}` and `|`
+    become `”`, `(`, `)` and `¦`, a lone `/` becomes `∕`, and spaces or
+    `_` inside one elide (`~`); a whole-number `<lyric number>` is kept
+    as the verse, any other takes the next free number. A replay is a
+    replay when its notes match with the syllables set aside; its rows
+    are written only when its words differ from the section it replays.
+    Under a melody, a later verse's row says nothing of a note it
+    doesn't sing unless a slot of the row starts there (then `--`). The
+    self-check compares each syllable's onset as a share of its bar.
+    The import's system writer pins line order whenever the first line
+    read by name isn't the part's first line (a property-test seed
+    played a tutti line as the wrong line).

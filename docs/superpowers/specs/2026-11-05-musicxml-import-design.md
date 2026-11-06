@@ -106,7 +106,7 @@ package.
 | bold `<words>` above, at a bar's start | `## Heading` |
 | `<words>` below the staff | a text line before that bar's row (lyrics, `###` notes); a line that would read as something else (`\| la \|`, `key: G`) starts with a backslash, which barmark keeps as text |
 | other `<words>` | words on the bar (2.6) |
-| `<lyric>` syllables | text lines under each row, one per verse ("Lyrics") |
+| `<lyric>` syllables | a singing part's melody with verse 1's syllables, later verses as `lyrics N:` rows (2026-11-06-voice-and-lyrics-design, 8) |
 | a fermata at a bar's end (on the bar line or its last note) | `...` after the bar |
 | rests | `--` (silence) |
 | notes with a `<harmony>`, attacked together and lasting its span | a voicing, `Cmaj7{E3 G3 B3}` ("Notes") |
@@ -168,6 +168,10 @@ don't). A file whose chord symbols are only such words has no
 the words as well as the parts with notes.
 
 ### Lyrics
+
+Superseded (2026-11-06) by the voice-and-lyrics design, section 8:
+lyrics now come in as syllables on a singing part's notes and as lyric
+rows. What follows is the text-line step it replaced.
 
 Kevin's decision (2026-11-05): import first, with lyrics as text lines,
 barmark's lyric today (free text between rows); structured lyric lines

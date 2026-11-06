@@ -8,6 +8,24 @@ package uses [semantic versioning](https://semver.org/).
 
 ### Added
 
+- **Import: melodies and verses** (barmark's grammar 4.3 and 7.7). A
+  part that sings (lyrics, or a `voice.*` instrument sound) comes in as a
+  lead sheet: chords on its bare line, the melody with verse 1's
+  syllables on `Vox.Mel` (on the bare line when the part has no chords),
+  `~` for an elision (`<elision>`, or MuseScore's U+E551 glyph) and `:/`
+  for a melisma (`<extend/>`, or a word's first or middle syllable over
+  unsung notes, as MuseScore writes one). Later verses are `lyrics N:`
+  rows; a section sung again to the same notes with new words is a
+  replay heading with its `lyrics:` rows; inside a repeat, verse N stays
+  pass N. Each part of a choir keeps its own syllables, the rows being the
+  first voice part's. A lyric staff (`<?barmark lyrics?>`, or a one-line
+  staff named "Lyrics" with only slashes and words) comes back as lyric
+  rows. A rhythm the grammar can't write snaps to the nearest it can,
+  with a warning naming the measures. The self-check compares every
+  verse's syllables as the chart plays them. Endings that no pass plays
+  are now an error rather than an empty chart. Barmark → MusicXML →
+  barmark gives a lead sheet back as written.
+
 - **Export: lyrics** (barmark's grammar 4.3 and 7.7). A syllable on a
   note is a `<lyric number="1">` on it, with `syllabic` (single, begin,
   middle or end, from the word's `-`s); `~` writes `<elision>` between
@@ -30,6 +48,11 @@ package uses [semantic versioning](https://semver.org/).
 
 ### Changed
 
+- **Import:** lyrics are no longer text lines under each row, and the
+  "lyrics written as text lines" warning is gone; a singing part's melody
+  is no longer "left out as a melody". The `lead-sheet` fixture now reads
+  `part: Vo = Voice, instrument: voice` with its melody and a `lyrics 2:`
+  row.
 - **Export:** a part's bare line with its named lines written after it
   (`Vox` over `Vox.Mel`, barmark's amended grammar 7.6) plays with them in
   the same measures. One that writes no notes (chords, `/`, `N.C.`,
