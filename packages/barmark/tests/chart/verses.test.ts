@@ -116,6 +116,36 @@ describe("verses in play order (spec sections 3 and 4)", () => {
 			["1: b"],
 		]);
 	});
+	test("a lone lyrics 2: row in a repeat sings on pass 2 only (decided by Kevin, 2026-11-06)", () => {
+		const one = parseChart("|: {C4}:a | {D4} :|\nlyrics 2: | b | c |\n");
+		expect(sung(one.bars)).toEqual([["1: a"], [], ["2: b"], ["2: c"]]);
+		expect(one.diagnostics).toMatchObject([
+			{ line: 1, message: "pass 1 of this repeat sings nothing: its bars have verse 2" },
+		]);
+		const two = parseChart("|: {C4} {D4} :|\nlyrics 2: | x y |\n");
+		expect(sung(two.bars)).toEqual([[], ["2: x y"]]);
+		expect(two.diagnostics).toMatchObject([
+			{ line: 1, message: "pass 1 of this repeat sings nothing: its bars have verse 2" },
+		]);
+		// `%` copies the notes, not their syllables: the copied bar has verse 2 alone.
+		const pct = parseChart(
+			`${VOICE}time: 4/4\nV | [1/4] {G3}:Oh |\nlyrics 2: | Hey |\nV |: {C4}:la {D4}:li {E4}:lu {F4}:lo | % |\nlyrics 2: | ho / hum / | dum / de / |\nV |1 {G4}:end :|\nlyrics 2: | fin |\nV |2 {A4}:done |\nlyrics 2: | two |\n`,
+		);
+		expect(pct.diagnostics.map((d) => `${d.line} ${d.message}`)).toEqual([
+			"5 pass 1 of this repeat sings nothing: its bars have verse 2",
+			"8 verse 2 is never sung: no pass of its repeat is pass 2",
+			"9 verse 1 is never sung: no pass of its repeat is pass 1",
+		]);
+		expect(sung(pct.bars)).toEqual([
+			["1: Oh", "2: Hey"],
+			["1: la li lu lo"],
+			[],
+			["1: end"],
+			["2: ho / hum /"],
+			["2: dum / de /"],
+			["2: two"],
+		]);
+	});
 	test("a second ending carries only verse 2", () => {
 		const chart =
 			"|: C | D |\nlyrics 1: | a | b |\nlyrics 2: | c | d |\n|1 E :|\nlyrics 1: | e |\n|2 F |\nlyrics 2: | f |\n";

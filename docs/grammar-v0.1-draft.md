@@ -1079,8 +1079,10 @@ lyrics: | I_got roll-_in' on_the / | beat_and -- I_keep it_up |
   - **Inside a repeat** (`|: :|`, or `x N` on a bar line or a heading),
     verse N is sung on pass N, counting the passes of the innermost
     repeat; a repeat's endings count its passes too, so a second ending
-    holds only verse 2's words. Bars with a single verse sing it on every
-    pass; bars with several sing none on a pass with no verse of its
+    holds only verse 2's words. Bars whose only verse is verse 1 (their
+    notes' syllables, or an unnumbered row) sing it on every pass; a lone
+    `lyrics N:` row (N from 2) sings on pass N only. Bars with several
+    verses, or a lone verse N, sing none on a pass with no verse of its
     number. An open repeat's passes are unknown (5), so it sings every
     verse.
   - **A jump's pass back** (D.C., D.S.) is not a pass: its repeats play
@@ -1337,7 +1339,8 @@ human to say whether the band was silent, and the structure line.
 | Lines between endings | Decided by Kevin (2026-11-06): a `---` between endings keeps the repeat, as text and credit lines do (5.1), since `---` ends a system and means nothing else; a lyric row under an ending does too (following from it; Claude's recommendation), as it only writes words on its ending's bars. Before, either ended the repeat, with false errors. |
 | A lyric row's canonical form | Claude's recommendation (2026-11-06): its slots as written, never reduced; under its bar line or system, labels padded and pipes lined up, the wider of a column's cells setting its width, so a long syllable widens the bar line's cell too, and an unlabelled bar line is indented to the row's pipes, as the design's example writes it. A row under a replay heading prints single-spaced (8). |
 | Verses | Decided by Kevin (2026-11-06): syllables on notes are verse 1 and `lyrics N:` is verse N. Numbered rows stack verses anywhere: outside a repeat they don't change the play order, and inside one verse N is sung on pass N. By section, rows under a replay heading give the replay its words, and a replay without them sings the words it was written with (7.7). Before, verses were text lines. |
-| Verses in play order | Claude's recommendation (2026-11-06): an unnumbered row is verse 1; a pass is the innermost repeat's, an ending's pass included; bars with a single verse sing it on every pass, and bars with several sing none on a pass with no verse of its number; an open repeat sings every verse; a jump's pass back is no pass, so its repeats sing pass 1's words; a replay's rows replace the words line by line (7.7). |
+| Verses in play order | Claude's recommendation (2026-11-06): an unnumbered row is verse 1; a pass is the innermost repeat's, an ending's pass included; bars with a single verse sing it on every pass (amended by Kevin below: only a lone verse 1 does), and bars with several sing none on a pass with no verse of its number; an open repeat sings every verse; a jump's pass back is no pass, so its repeats sing pass 1's words; a replay's rows replace the words line by line (7.7). |
+| A lone numbered verse in a repeat | Decided by Kevin (2026-11-06): only verse 1 (the notes' syllables, or an unnumbered `lyrics:` row) sings on every pass when a bar has one verse; a lone `lyrics N:` row (N from 2) sings on pass N only, and the other passes warn that they sing nothing (7.7). So `\|: {C4}:a \| {D4} :\|` over `lyrics 2: \| b \| c \|` sings nothing in its second bar on pass 1. Before (Claude's recommendation, unreleased), a lone verse of any number sang on every pass. |
 | Every syllable written once | Claude's recommendation (2026-11-06): over the same bars, `lyrics 1:` or an unnumbered row under notes with syllables, an unnumbered row among numbered ones, and a verse written twice are errors, and the row sings nothing; a replay's rows may lie under notes with syllables, since they replace the words (7.7). |
 | Each part's syllables are its own | Claude's recommendation (2026-11-06, after review): syllables on a part's notes are that part's verse 1, so a choir chart's parts each sing their own words, and only the singer's syllables make a row over them verse 2 or later; lyric rows stay the singer's (7.7). |
 | Verses the passes miss | Claude's recommendation (2026-11-06, after review): a numbered verse that no pass sings, and a repeat's pass that sings nothing where other passes sing, warn (7.7), so a verse lost to a pass count is never silent. |

@@ -378,6 +378,31 @@ lyrics 2: | uno dos           | tres /     |
 	});
 });
 
+describe("a lone lyrics 2: row in a repeat (pass 2 only, decided by Kevin 2026-11-06)", () => {
+	test("goes out as verse 2 and comes back as a lyrics 2: row", () => {
+		for (const [chart, back] of [
+			[
+				"|: {C4}:a | {D4} :|\nlyrics 2: | b | c |\n",
+				"          | {C4}:a | {D4} | x2\nlyrics 2: | b      | c    |\n",
+			],
+			[
+				"|: {C4} {D4} :|\nlyrics 2: | x y |\n",
+				"          | {C4} {D4} | x2\nlyrics 2: | x y       |\n",
+			],
+		] as const) {
+			const out = exportMusicXml(chart);
+			expect(out.diagnostics.map((d) => d.message)).toEqual([
+				"pass 1 of this repeat sings nothing: its bars have verse 2",
+			]);
+			expect(out.ok && out.xml).toContain('<lyric number="2">');
+			expect(out.ok && out.xml).not.toContain(
+				'<lyric number="1"><syllabic>single</syllabic><text>c',
+			);
+			expect(sound(importMusicXml(xmlOf(chart))).text).toBe(back);
+		}
+	});
+});
+
 describe("a melisma ends at our held note's extend", () => {
 	test("a row's melisma ends at its held note: the breath after it stays a breath", () => {
 		// 4/4 is the default meter: the import doesn't write it.

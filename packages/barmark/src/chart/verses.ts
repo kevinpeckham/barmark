@@ -245,11 +245,16 @@ function heldAt(row: LyricsLine, i: number): Held {
 	return last === undefined ? "start" : last.kind === "breath" ? "breath" : "sung";
 }
 
-/** The verses a pass sings: outside a repeat every verse; on pass N verse N, or a lone verse on every pass. */
+/**
+ * The verses a pass sings: outside a repeat every verse; on pass N verse
+ * N, or a lone verse 1 on every pass. A lone `lyrics N:` (N ≥ 2) sings on
+ * pass N only (decided by Kevin, 2026-11-06).
+ */
 function forPass<T extends { verse: number }>(verses: T[], pass: number | null): T[] {
 	if (pass === null) return verses;
 	const own = verses.filter((v) => v.verse === pass);
-	return own.length ? own : verses.length === 1 ? verses : [];
+	if (own.length) return own;
+	return verses.every((v) => v.verse === 1) ? verses : [];
 }
 
 const textOf = (s: PlayedSyllable) =>
@@ -258,6 +263,12 @@ const textOf = (s: PlayedSyllable) =>
 /** "1 and 2", "1, 2 and 3". */
 const listOf = (ns: number[]) =>
 	ns.length < 2 ? `${ns[0] ?? ""}` : `${ns.slice(0, -1).join(", ")} and ${ns.at(-1)}`;
+
+/** "verse 2", "verses 1 and 2": each verse once. */
+const versesNamed = (ns: number[]) => {
+	const each = [...new Set(ns)];
+	return `${each.length === 1 ? "verse" : "verses"} ${listOf(each)}`;
+};
 
 /** A verse a bar could sing, and the row that writes it (null for its notes' syllables). */
 type Candidate = { verse: number; row: LyricsLine | null; lyrics: PlayedLyrics };
@@ -332,7 +343,7 @@ function singing(
 	const silent = (all: Candidate[], from: BarSource) =>
 		warn(
 			from.line,
-			`pass ${from.pass} of this repeat sings nothing: its bars have verses ${listOf(all.map((c) => c.verse))}`,
+			`pass ${from.pass} of this repeat sings nothing: its bars have ${versesNamed(all.map((c) => c.verse))}`,
 			"lyrics",
 		);
 	/** Each written bar's notes' syllables, by their line, and whether a pass sang them. */

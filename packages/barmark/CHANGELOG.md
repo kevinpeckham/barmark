@@ -40,7 +40,9 @@ Releases follow the process in [RELEASING.md](RELEASING.md).
   whole notes and `note` (true when a note of the singing line starts
   there). Syllables on notes are verse 1 and `lyrics N:` verse N; outside a
   repeat every verse is sung, and inside one verse N on pass N (a second
-  ending holds verse 2's words; a jump's pass back sings pass 1's). A
+  ending holds verse 2's words; a jump's pass back sings pass 1's). Bars
+  whose only verse is verse 1 sing it on every pass; a lone `lyrics N:`
+  row (N from 2) sings on pass N only, and the other passes warn. A
   replay's rows replace its words. The first part with `instrument: voice`,
   else the first with syllables, sings; its `DeclaredPart` gains `sings`,
   the line its notes carry the syllables on. `lyrics 1:` or an unnumbered
