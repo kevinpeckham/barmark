@@ -1028,3 +1028,19 @@ barmark's export writes a `[1/4]` pickup as a short first measure in a
 `time: 1/4` then `time: 3/4`, so Amazing Grace never came back as
 written. The import now reads both shapes as a pickup
 (`settleFirstPickup` in `import/read.ts`).
+
+### A lyric row ends its system, and every example is checked five ways (2026-11-06, examples)
+
+**Symptom:** the first draft of `examples/shenandoah.chart.md` failed the
+examples test (warnings that a syllable "falls where the voice starts no
+note"), then the MusicXML sounding snapshot and the export/import round trip:
+the import wrote the guitar as a second system with a line of `Vox` slashes.
+**Cause:** a lyric row covers the system just above it, so a part line
+written after the row starts a new system; and a row's cells divide a bar on
+their own grid, so three words under four notes put one where no note
+starts. Every file in `examples/` also feeds `sounding.json` and the
+round-trip test.
+**Fix:** put the row last in its system, give it as many tokens per bar as
+the melody has slots, generate the canonical text with `printChart`, and add
+the chart to `sounding.json` with `bun scripts/musicxml-sounding.ts` (the
+other entries do not change). Lives in `examples/shenandoah.chart.md`.

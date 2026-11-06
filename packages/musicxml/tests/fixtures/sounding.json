@@ -646,6 +646,101 @@
 			]
 		}
 	},
+	"shenandoah.chart.md": {
+		"P1": {
+			"notes": [
+				{
+					"pitch": 55,
+					"at": "0/1",
+					"length": "1/1"
+				},
+				{
+					"pitch": 60,
+					"at": "1/1",
+					"length": "1/1"
+				},
+				{
+					"pitch": 60,
+					"at": "2/1",
+					"length": "1/1"
+				},
+				{
+					"pitch": 64,
+					"at": "3/1",
+					"length": "1/1"
+				},
+				{
+					"pitch": 67,
+					"at": "4/1",
+					"length": "1/1"
+				},
+				{
+					"pitch": 67,
+					"at": "5/1",
+					"length": "1/1"
+				},
+				{
+					"pitch": 67,
+					"at": "6/1",
+					"length": "1/1"
+				},
+				{
+					"pitch": 64,
+					"at": "7/1",
+					"length": "1/1"
+				},
+				{
+					"pitch": 60,
+					"at": "8/1",
+					"length": "1/1"
+				},
+				{
+					"pitch": 62,
+					"at": "9/1",
+					"length": "4/1"
+				}
+			],
+			"harmonies": [
+				{
+					"text": "N.C.",
+					"at": "0/1"
+				},
+				{
+					"text": "C",
+					"at": "1/1"
+				},
+				{
+					"text": "C",
+					"at": "5/1"
+				},
+				{
+					"text": "F",
+					"at": "9/1"
+				}
+			]
+		},
+		"P2": {
+			"notes": [],
+			"harmonies": [
+				{
+					"text": "C",
+					"at": "0/1"
+				},
+				{
+					"text": "C",
+					"at": "1/1"
+				},
+				{
+					"text": "C",
+					"at": "5/1"
+				},
+				{
+					"text": "F",
+					"at": "9/1"
+				}
+			]
+		}
+	},
 	"three-parts.chart.md": {
 		"P1": {
 			"notes": [

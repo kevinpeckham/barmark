@@ -383,3 +383,22 @@ Each goes into the draft's decisions log with the date.
     before: `time: 4/4` is never written, one part plays as a tutti line,
     `instrument:` is written, `|: … :|` around a whole line is `x2`, and a
     push (`<`) comes back as the tie it sounds as.
+19. Changed while building, for Kevin to confirm: (a) the melody-in-thirds
+    rule is per bar, and an attack off the changes is melody only when
+    its pitches differ from the voicing sounding in that line; re-strikes
+    and pushes are comping (call 12's "attacks on changes or slash beats"
+    as built would have dropped all syncopated comping). (b) Only a bare
+    line written first joins its part's named lines (7.6); a bare line
+    after them starts a new system, and a bare line beside four named
+    lines is an error. (c) A bare line beside named lines that writes no
+    notes exports as `<harmony>` on the first named line's staff, with no
+    voice of its own. (d) A syllable ends at a straight `"`, and `{`
+    straight after one is an error (decisions log: Claude's
+    recommendation). (e) Render draws each note as one column (pitch, then
+    a line per verse), since separate rows drifted 13px in Chromium, and a
+    singing row shows every note of a set. (f) A lyric row's `/` over a
+    new note of the singing line is a held syllable, exactly as `:/`. (g)
+    Syllables on notes belong to their own part (a choir lists each
+    part's words); rows belong to the singer. (h) The narrow-screen
+    overlap of systems (render's `fitWidth` ignores them) is not fixed
+    here and is on the backlog.

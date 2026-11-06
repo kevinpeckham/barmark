@@ -122,7 +122,7 @@ things its own way:
 - **Repeat counts aren't read.** A repeat played more than twice is also
   printed as words ("×3"), since Dorico ignores the count in the file.
 
-Not yet: MIDI.
+Not yet: ChordPro and MIDI.
 
 ## License
 

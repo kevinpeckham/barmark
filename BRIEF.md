@@ -149,13 +149,14 @@ parse then print should round-trip).
      `setHTMLUnsafe` to the element, so the site shows off the component
      it ships.
 3. `@barmark/cli`: validate, render, canonicalize `.chart.md` files.
-4. Later: the Nashville converter; converters to and from MIDI and to
-   and from MusicXML; a conformance-test runner the bench can point at
-   any implementation.
-5. Grammar, later: a structured lyric line that places words or
-   syllables by bar and beat under the row of chords above it (today a
-   lyric is free text between rows). A grammar change, so Kevin decides
-   its shape.
+4. Later: the Nashville converter; a conformance-test runner the bench
+   can point at any implementation.
+5. ~~Grammar: a structured lyric line~~ **Done** (2026-11-06): syllables
+   on notes, `lyrics N:` rows and verses in play order (grammar 4.3, 7.6
+   and 7.7), drawn by `@barmark/render` and carried both ways by
+   `@barmark/musicxml`.
+6. Converters, in phases: (1) MusicXML, both ways, shipped as
+   `@barmark/musicxml`; (2) ChordPro, both ways; (3) MIDI.
 
 ## Site roadmap: agent readiness (AEO)
 
