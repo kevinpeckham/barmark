@@ -7,7 +7,7 @@
   <identification>
     <encoding>
       <software>MuseScore Studio 4.7.6</software>
-      <encoding-date>2026-11-05</encoding-date>
+      <encoding-date>2026-11-06</encoding-date>
       <supports element="accidental" type="yes"/>
       <supports element="beam" type="yes"/>
       <supports element="print" attribute="new-page" type="yes" value="yes"/>
@@ -15,7 +15,7 @@
       <supports element="stem" type="yes"/>
       </encoding>
     <miscellaneous>
-      <miscellaneous-field name="creationDate">2026-11-05</miscellaneous-field>
+      <miscellaneous-field name="creationDate">2026-11-06</miscellaneous-field>
       <miscellaneous-field name="platform">Linux</miscellaneous-field>
       </miscellaneous>
     </identification>
@@ -90,7 +90,7 @@
       </score-part>
     </part-list>
   <part id="P1">
-    <measure number="1" width="246.68">
+    <measure number="1" width="260.49">
       <print>
         <system-layout>
           <system-margins>
@@ -103,7 +103,7 @@
       <attributes>
         <divisions>2</divisions>
         <key>
-          <fifths>0</fifths>
+          <fifths>1</fifths>
           </key>
         <time>
           <beats>4</beats>
@@ -125,7 +125,7 @@
           </root>
         <kind text="m7">minor-seventh</kind>
         </harmony>
-      <note default-x="76.12" default-y="-20">
+      <note default-x="93.39" default-y="-20">
         <pitch>
           <step>B</step>
           <octave>4</octave>
@@ -136,7 +136,7 @@
         <stem>down</stem>
         <notehead>slash</notehead>
         </note>
-      <note default-x="117.29" default-y="-20">
+      <note default-x="133.69" default-y="-20">
         <pitch>
           <step>B</step>
           <octave>4</octave>
@@ -147,7 +147,7 @@
         <stem>down</stem>
         <notehead>slash</notehead>
         </note>
-      <note default-x="158.45" default-y="-20">
+      <note default-x="173.99" default-y="-20">
         <pitch>
           <step>B</step>
           <octave>4</octave>
@@ -158,7 +158,7 @@
         <stem>down</stem>
         <notehead>slash</notehead>
         </note>
-      <note default-x="199.62" default-y="-20">
+      <note default-x="214.29" default-y="-20">
         <pitch>
           <step>B</step>
           <octave>4</octave>
@@ -170,7 +170,7 @@
         <notehead>slash</notehead>
         </note>
       </measure>
-    <measure number="2" width="183.06">
+    <measure number="2" width="179.6">
       <harmony print-frame="no">
         <root>
           <root-step>D</root-step>
@@ -188,7 +188,7 @@
         <stem>down</stem>
         <notehead>slash</notehead>
         </note>
-      <note default-x="53.66" default-y="-20">
+      <note default-x="52.8" default-y="-20">
         <pitch>
           <step>B</step>
           <octave>4</octave>
@@ -199,7 +199,7 @@
         <stem>down</stem>
         <notehead>slash</notehead>
         </note>
-      <note default-x="94.83" default-y="-20">
+      <note default-x="93.1" default-y="-20">
         <pitch>
           <step>B</step>
           <octave>4</octave>
@@ -210,7 +210,7 @@
         <stem>down</stem>
         <notehead>slash</notehead>
         </note>
-      <note default-x="135.99" default-y="-20">
+      <note default-x="133.4" default-y="-20">
         <pitch>
           <step>B</step>
           <octave>4</octave>
@@ -222,7 +222,7 @@
         <notehead>slash</notehead>
         </note>
       </measure>
-    <measure number="3" width="183.06">
+    <measure number="3" width="179.6">
       <harmony print-frame="no">
         <root>
           <root-step>G</root-step>
@@ -240,7 +240,7 @@
         <stem>down</stem>
         <notehead>slash</notehead>
         </note>
-      <note default-x="53.66" default-y="-20">
+      <note default-x="52.8" default-y="-20">
         <pitch>
           <step>B</step>
           <octave>4</octave>
@@ -257,7 +257,7 @@
           </root>
         <kind text="maj7">major-seventh</kind>
         </harmony>
-      <note default-x="94.83" default-y="-20">
+      <note default-x="93.1" default-y="-20">
         <pitch>
           <step>B</step>
           <octave>4</octave>
@@ -268,7 +268,7 @@
         <stem>down</stem>
         <notehead>slash</notehead>
         </note>
-      <note default-x="135.99" default-y="-20">
+      <note default-x="133.4" default-y="-20">
         <pitch>
           <step>B</step>
           <octave>4</octave>
@@ -280,7 +280,7 @@
         <notehead>slash</notehead>
         </note>
       </measure>
-    <measure number="4" width="183.06">
+    <measure number="4" width="179.6">
       <harmony print-frame="no">
         <root>
           <root-step>F</root-step>
@@ -299,7 +299,7 @@
         <stem>down</stem>
         <notehead>slash</notehead>
         </note>
-      <note default-x="53.66" default-y="-20">
+      <note default-x="52.8" default-y="-20">
         <pitch>
           <step>B</step>
           <octave>4</octave>
@@ -316,7 +316,7 @@
           </root>
         <kind text="7">dominant</kind>
         </harmony>
-      <note default-x="98.93" default-y="-55">
+      <note default-x="97.2" default-y="-55">
         <pitch>
           <step>B</step>
           <octave>3</octave>
@@ -331,7 +331,7 @@
             </articulations>
           </notations>
         </note>
-      <note default-x="98.93" default-y="-45">
+      <note default-x="97.2" default-y="-45">
         <chord/>
         <pitch>
           <step>D</step>
@@ -344,7 +344,7 @@
         <accidental>sharp</accidental>
         <stem>up</stem>
         </note>
-      <note default-x="98.93" default-y="-25">
+      <note default-x="97.2" default-y="-25">
         <chord/>
         <pitch>
           <step>A</step>
@@ -355,7 +355,7 @@
         <type>quarter</type>
         <stem>up</stem>
         </note>
-      <note default-x="110.93" default-y="-20">
+      <note default-x="109.2" default-y="-20">
         <chord/>
         <pitch>
           <step>B</step>
@@ -366,7 +366,7 @@
         <type>quarter</type>
         <stem>up</stem>
         </note>
-      <note default-x="98.93" default-y="0">
+      <note default-x="97.2" default-y="0">
         <chord/>
         <pitch>
           <step>F</step>
@@ -376,17 +376,16 @@
         <duration>2</duration>
         <voice>1</voice>
         <type>quarter</type>
-        <accidental>sharp</accidental>
         <stem>up</stem>
         </note>
-      <note default-x="140.09" default-y="-20">
+      <note default-x="137.5" default-y="-20">
         <rest/>
         <duration>2</duration>
         <voice>1</voice>
         <type>quarter</type>
         </note>
       </measure>
-    <measure number="5" width="183.06">
+    <measure number="5" width="179.6">
       <harmony print-frame="no">
         <root>
           <root-step>E</root-step>
@@ -404,7 +403,7 @@
         <stem>down</stem>
         <notehead>slash</notehead>
         </note>
-      <note default-x="53.66" default-y="-20">
+      <note default-x="52.8" default-y="-20">
         <pitch>
           <step>B</step>
           <octave>4</octave>
@@ -415,7 +414,7 @@
         <stem>down</stem>
         <notehead>slash</notehead>
         </note>
-      <note default-x="94.83" default-y="-20">
+      <note default-x="93.1" default-y="-20">
         <pitch>
           <step>B</step>
           <octave>4</octave>
@@ -426,7 +425,7 @@
         <stem>down</stem>
         <notehead>slash</notehead>
         </note>
-      <note default-x="135.99" default-y="-20">
+      <note default-x="133.4" default-y="-20">
         <pitch>
           <step>B</step>
           <octave>4</octave>
@@ -438,7 +437,7 @@
         <notehead>slash</notehead>
         </note>
       </measure>
-    <measure number="6" width="410.9">
+    <measure number="6" width="421.56">
       <print new-system="yes">
         <system-layout>
           <system-margins>
@@ -454,7 +453,7 @@
           </root>
         <kind text="7">dominant</kind>
         </harmony>
-      <note default-x="54" default-y="-20">
+      <note default-x="71.26" default-y="-20">
         <pitch>
           <step>B</step>
           <octave>4</octave>
@@ -465,7 +464,7 @@
         <stem>down</stem>
         <notehead>slash</notehead>
         </note>
-      <note default-x="135" default-y="-20">
+      <note default-x="150.74" default-y="-20">
         <pitch>
           <step>B</step>
           <octave>4</octave>
@@ -476,7 +475,7 @@
         <stem>down</stem>
         <notehead>slash</notehead>
         </note>
-      <note default-x="216" default-y="-20">
+      <note default-x="230.22" default-y="-20">
         <pitch>
           <step>B</step>
           <octave>4</octave>
@@ -487,7 +486,7 @@
         <stem>down</stem>
         <notehead>slash</notehead>
         </note>
-      <note default-x="297" default-y="-20">
+      <note default-x="309.69" default-y="-20">
         <pitch>
           <step>B</step>
           <octave>4</octave>
@@ -505,7 +504,7 @@
           </root>
         <kind text="7">dominant</kind>
         </harmony>
-      <note default-x="351" default-y="-20">
+      <note default-x="362.68" default-y="-20">
         <pitch>
           <step>B</step>
           <octave>4</octave>
@@ -522,7 +521,7 @@
           </notations>
         </note>
       </measure>
-    <measure number="7" width="306.9">
+    <measure number="7" width="301.57">
       <note default-x="12.5" default-y="-20">
         <pitch>
           <step>B</step>
@@ -538,7 +537,7 @@
           <tied type="stop"/>
           </notations>
         </note>
-      <note default-x="139" default-y="-20">
+      <note default-x="136.72" default-y="-20">
         <pitch>
           <step>B</step>
           <octave>4</octave>
@@ -549,7 +548,7 @@
         <stem>down</stem>
         <notehead>slash</notehead>
         </note>
-      <note default-x="220" default-y="-20">
+      <note default-x="216.19" default-y="-20">
         <pitch>
           <step>B</step>
           <octave>4</octave>
@@ -561,7 +560,7 @@
         <notehead>slash</notehead>
         </note>
       </measure>
-    <measure number="8" width="311.1">
+    <measure number="8" width="305.77">
       <harmony print-frame="no">
         <root>
           <root-step>G</root-step>
@@ -579,7 +578,7 @@
         <stem>down</stem>
         <notehead>slash</notehead>
         </note>
-      <note default-x="93.5" default-y="-20">
+      <note default-x="91.98" default-y="-20">
         <pitch>
           <step>B</step>
           <octave>4</octave>
@@ -590,7 +589,7 @@
         <stem>down</stem>
         <notehead>slash</notehead>
         </note>
-      <note default-x="169.5" default-y="-20">
+      <note default-x="166.45" default-y="-20">
         <pitch>
           <step>B</step>
           <octave>4</octave>

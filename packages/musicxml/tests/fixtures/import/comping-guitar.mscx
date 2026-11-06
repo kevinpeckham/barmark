@@ -31,6 +31,7 @@
       <!-- 1 Am7 -->
       <Measure>
         <voice>
+          <KeySig><concertKey>1</concertKey></KeySig>
           <TimeSig><sigN>4</sigN><sigD>4</sigD></TimeSig>
           <Harmony><harmonyInfo><name>m7</name><root>17</root></harmonyInfo></Harmony>
           <Chord><durationType>quarter</durationType><Note><pitch>59</pitch><tpc>19</tpc><head>slash</head><fixed>1</fixed><fixedLine>4</fixedLine><play>0</play></Note></Chord>
