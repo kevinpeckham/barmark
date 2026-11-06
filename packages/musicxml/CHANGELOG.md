@@ -18,7 +18,10 @@ package uses [semantic versioning](https://semver.org/).
   rehearsal marks, words and text lines, repeats (`x N` on a whole line
   or section), endings and jumps, fermatas, lyrics as text lines,
   replayed sections, parts (merged into tutti lines where they agree),
-  and a chord part's voicings, note sets and part lines. It returns
+  and a chord part's voicings, note sets and part lines. Where one
+  labelled system would otherwise run into the next (a part stops or
+  enters), a text line such as `Gtr tacet` or `Pno enters` keeps them
+  apart, since the grammar joins consecutive labelled lines. It returns
   `{ text, diagnostics }` and never throws. A diagnostic is `{ severity,
   message, part?, measure?, measures? }`: `measure` is the first measure
   it is about (the file's `number`), and `measures`, when present, every
