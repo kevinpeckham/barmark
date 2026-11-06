@@ -105,7 +105,9 @@ runs, and `verify:package cli` fails on anything else.
    package's entry in `bun.lock` (`"packages/<pkg>": { ..., "version": ... }`).
    Bun does not update a workspace package's version in the lockfile, and
    `bun pm pack` reads it from there when it turns `workspace:^` into a
-   range; `verify:package` fails if the two disagree.
+   range; `verify:package` fails if the two disagree. For
+   `@barmark/musicxml`, also `packages/musicxml/src/version.ts`: the
+   export names it in each file's `<encoding>`, and a test checks it.
 3. **The package's CHANGELOG.md:** move the `[Unreleased]` entries into a
    new `## [x.y.z] - YYYY-MM-DD` section, leave `[Unreleased]` empty, and
    update the compare links at the bottom. Use `### Added`, `### Changed`,
