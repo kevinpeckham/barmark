@@ -60,7 +60,13 @@ Two kinds of song need this, and the design serves both:
 - **Lyrics that need a melody.** A lyric row stands alone; rap must not
   need fake notes.
 - **Changing what any chart means today.** Text lines stay text, and a
-  chart with no voice part or lyric row reads exactly as before.
+  chart with no voice part or lyric row reads exactly as before, with
+  these exceptions, each decided by Kevin (2026-11-06): a `---` line is a
+  break that ends a system, a leading `\` escapes a text line (section
+  8), and a part's bare line followed directly by its named lines
+  (`Pno | C |` then `Pno.RH | … |`) is one system, where it used to be
+  two played one after the other (grammar 7.6; `---` between them keeps
+  them apart).
 
 ## 1. A voice part and its melody
 

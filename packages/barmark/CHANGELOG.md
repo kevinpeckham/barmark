@@ -9,6 +9,14 @@ Releases follow the process in [RELEASING.md](RELEASING.md).
 
 ## [Unreleased]
 
+**Changes what an existing chart means.** A line of only `---` (three or
+more hyphens) is now a break that ends a system, not text. A part's bare
+line followed directly by its named lines (`Pno | C |` then
+`Pno.RH | … |`) is now one system, the bare line the part's first line;
+it used to be two systems played one after the other (put `---` between
+them for that). Also: a `lyrics:` or `lyrics N:` line followed by a bar
+line is a lyric row, and a text line's leading `\` is no longer shown.
+
 ### Added
 
 - `---` (three or more hyphens alone) ends a system and means nothing else;
@@ -67,6 +75,8 @@ Releases follow the process in [RELEASING.md](RELEASING.md).
 
 ### Changed
 
+- `Line` gains the `break` and `lyrics` kinds, so an exhaustive `switch`
+  on `Line["kind"]` needs a case for each.
 - A text line written with a leading `\` now holds its text without the
   backslash, marked `escaped: true`; the printer writes the backslash back.
   The escaped-pipes warning still applies to the rest of the line, and a
