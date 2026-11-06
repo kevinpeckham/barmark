@@ -130,6 +130,36 @@ function spread(cell: string, by: number): string[] | null {
 	return out;
 }
 
+/** A place in a bar, as a key: a share of the bar, rounded. */
+const shareKey = (share: number) => Math.round(share * 1e6);
+
+/** Whether a cell may be spread: not a bar held whole, and no breath (a hold after one holds nothing). */
+const spreads = (cell: string) => cell !== "/" && !cell.includes("--");
+
+/** The finest of a row's bars that may be spread, in slots a beat, as [n, d]. */
+function finest(cells: string[], beats: number[]): [number, number] {
+	let [n, d] = [0, 1];
+	cells.forEach((cell, i) => {
+		const [k, b] = [cell.split(" ").length, beats[i] ?? 4];
+		if (spreads(cell) && k * d > n * b) [n, d] = [k, b];
+	});
+	return [n, d];
+}
+
+/** A cell spread to `want` slots, where that says nothing new (no new slot starts on a note); else as it is. */
+function spreadTo(v: Verses, cell: string, want: number, measure: number): string {
+	const k = cell.split(" ").length;
+	if (!spreads(cell) || !Number.isInteger(want) || want <= k || want % k) return cell;
+	const out = spread(cell, want / k)?.join(" ");
+	if (out === undefined) return cell;
+	const length = v.words.lengths[measure] ?? 4;
+	const onsets = new Set(
+		(v.words.bars[measure] ?? []).map((e) => shareKey(e.at.n / e.at.d / length)),
+	);
+	const before = new Set(startsAt(cell));
+	return startsAt(out).every((at) => before.has(at) || !onsets.has(at)) ? out : cell;
+}
+
 /**
  * A row's cells on one grid, as a chart writes a row: a bar that needs
  * fewer slots than the finest bar (for its beats) is spread to as many,
@@ -139,35 +169,20 @@ function spread(cell: string, by: number): string[] | null {
  */
 function oneGrid(v: Verses, cells: string[], bars: RowBar[]): string[] {
 	const beats = bars.map(({ measure }) => v.words.beats[measure] ?? 4);
-	const slots = cells.map((c) => c.split(" ").length);
-	// The finest bar's slots a beat, as a fraction n/d.
-	let [n, d] = [0, 1];
-	cells.forEach((c, i) => {
-		const b = beats[i] ?? 4;
-		if (!c.includes("--") && c !== "/" && (slots[i] ?? 1) * d > n * b) [n, d] = [slots[i] ?? 1, b];
-	});
-	return cells.map((cell, i) => {
-		const want = ((beats[i] ?? 4) * n) / d;
-		const k = slots[i] ?? 1;
-		if (cell.includes("--") || cell === "/" || !Number.isInteger(want) || want <= k || want % k)
-			return cell;
-		const out = spread(cell, want / k);
-		const measure = bars[i]?.measure ?? -1;
-		const onsets = new Set(
-			(v.words.bars[measure] ?? []).map((e) => e.at.n / e.at.d / (v.words.lengths[measure] ?? 4)),
-		);
-		const before = new Set(startsAt(cell));
-		const free = startsAt(out?.join(" ") ?? "").every((at) => before.has(at) || !onsets.has(at));
-		return out && free ? out.join(" ") : cell;
-	});
+	const [n, d] = finest(cells, beats);
+	return cells.map((cell, i) =>
+		spreadTo(v, cell, ((beats[i] ?? 4) * n) / d, bars[i]?.measure ?? -1),
+	);
 }
 
-/** Where a cell's slots and members start, as shares of the bar. */
+/** Where a cell's slots and members start, as `shareKey`s. */
 function startsAt(cell: string): number[] {
 	const slots = cell.split(" ");
 	return slots.flatMap((slot, i) => {
 		const members = slot.split("_");
-		return members.map((_, j) => (i * members.length + j) / (slots.length * members.length));
+		return members.map((_, j) =>
+			shareKey((i * members.length + j) / (slots.length * members.length)),
+		);
 	});
 }
 

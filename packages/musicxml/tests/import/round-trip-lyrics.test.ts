@@ -25,15 +25,20 @@ const ELISION_GLYPH = "";
  * Null for a lyric with no text (our `<extend/>` alone on a held note).
  */
 function lyricOf(l: XNode): string | null {
-	const parts: string[] = [""];
-	for (const c of l.children) {
-		if (c.name === "elision" || (c.name === "text" && textOf(c) === ELISION_GLYPH)) parts.push("");
-		else if (c.name === "text") parts[parts.length - 1] += textOf(c);
-	}
 	if (!children(l, "text").length) return null;
 	const syllabic = textOf(l, "syllabic") || "single";
 	const extend = child(l, "extend") && (syllabic === "end" || syllabic === "single") ? " +" : "";
-	return `${l.attrs.number} ${syllabic} ${parts.join("~")}${extend}`;
+	return `${l.attrs.number} ${syllabic} ${syllablesOf(l)}${extend}`;
+}
+
+/** A lyric's syllables joined by `~`, at an `<elision/>` or MuseScore's glyph. */
+function syllablesOf(l: XNode): string {
+	const elides = (c: XNode) =>
+		c.name === "elision" || (c.name === "text" && textOf(c) === ELISION_GLYPH);
+	return l.children
+		.filter((c) => c.name === "text" || elides(c))
+		.map((c) => (elides(c) ? "~" : textOf(c)))
+		.join("");
 }
 
 /** A note as compared: its measure, pitch (or rest), length in quarters, ties and lyrics. */
