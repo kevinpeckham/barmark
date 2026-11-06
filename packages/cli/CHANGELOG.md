@@ -6,6 +6,8 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-11-06
+
 ### Added
 
 - **`barmark import <file>`** reads a MusicXML score (`.musicxml`, `.xml`
@@ -17,6 +19,8 @@ package uses [semantic versioning](https://semver.org/).
   left out when the diagnostic lists its measures (the message is never
   searched). Exits 0 when a chart came out, even with warnings, and
   1 when none did or the `.mxl` is bad. The standalone binary includes it.
+- **Uses** @barmark/musicxml 0.5.0 (with barmark 0.16.0 and
+  @barmark/render 0.14.0).
 
 ## [0.5.1] - 2026-11-05
 
@@ -175,7 +179,8 @@ The first release of the `barmark` command. Uses `barmark` 0.8.0 and
 - **The `barmark` command:** `check`, `format`, `render` and `transpose`
   for `.chart.md` files, on npm and as standalone binaries.
 
-[Unreleased]: https://github.com/kevinpeckham/barmark/compare/cli-v0.5.1...HEAD
+[Unreleased]: https://github.com/kevinpeckham/barmark/compare/cli-v0.6.0...HEAD
+[0.6.0]: https://github.com/kevinpeckham/barmark/compare/cli-v0.5.1...cli-v0.6.0
 [0.5.1]: https://github.com/kevinpeckham/barmark/compare/cli-v0.5.0...cli-v0.5.1
 [0.5.0]: https://github.com/kevinpeckham/barmark/compare/cli-v0.4.0...cli-v0.5.0
 [0.4.0]: https://github.com/kevinpeckham/barmark/compare/cli-v0.3.0...cli-v0.4.0
