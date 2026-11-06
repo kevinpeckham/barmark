@@ -57,3 +57,12 @@ test.each(["melody-rest", "melody-measure-rest"])(
 		expect(r.text).toBe(text(`${name}.chart.md`));
 	},
 );
+
+test("an eighth-note pickup in 4/4 is [1/8]", () => {
+	const pickup = `<measure number="0" implicit="yes"><attributes><divisions>2</divisions><time><beats>4</beats><beat-type>4</beat-type></time></attributes><harmony><root><root-step>C</root-step></root><kind>major</kind></harmony><note><pitch><step>B</step><octave>4</octave></pitch><duration>1</duration><notehead>slash</notehead></note></measure>`;
+	const bar = `<measure number="1"><harmony><root><root-step>D</root-step></root><kind>major</kind></harmony><note><pitch><step>B</step><octave>4</octave></pitch><duration>8</duration><notehead>slash</notehead></note></measure>`;
+	const xml = `<?xml version="1.0"?><score-partwise version="4.0"><part-list><score-part id="P1"><part-name>Gtr</part-name></score-part></part-list><part id="P1">${pickup}${bar}</part></score-partwise>`;
+	const r = sound(importMusicXml(xml));
+	expect(r.text).toBe("| [1/8] C | D |\n");
+	expect(r.diagnostics).toEqual([]);
+});

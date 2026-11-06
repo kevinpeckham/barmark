@@ -304,6 +304,21 @@ test("a pickup of 1 beat in 4/4", () => {
 	expect(ms[1]).toMatchObject({ implicit: false, oneBar: null, length: frac(4) });
 });
 
+test.each([
+	[2, { n: 1, d: 8 }],
+	[6, { n: 3, d: 8 }],
+	[3, { n: 3, d: 16 }],
+])(
+	"a pickup shorter than a beat in 4/4 (%i sixteenths) counts a finer unit",
+	(sixteenths, meter) => {
+		const { score, diagnostics } = read(
+			xml`${measure(0, base(4) + note("G", 4, sixteenths), ' implicit="yes"')}${measure(1, note("C", 4, 16))}`,
+		);
+		expect(score?.parts[0]?.measures[0]?.oneBar).toEqual(meter);
+		expect(diagnostics).toEqual([]);
+	},
+);
+
 test("a pickup that no meter expresses is a warning", () => {
 	const { score, diagnostics } = read(
 		xml`${measure(0, base(3) + note("G", 4, 1), ' implicit="yes"')}${measure(1, note("C", 4, 12))}`,

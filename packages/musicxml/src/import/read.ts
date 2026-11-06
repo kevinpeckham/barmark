@@ -463,13 +463,19 @@ function readMeasure(node: XNode, p: PartState): RawMeasure {
 	return raw;
 }
 
-/** The bar's length in the meter's beat unit (its denominator), or null when it isn't whole. */
+/** The finest unit a pickup is counted in: a 32nd. */
+const FINEST = 32;
+
+/** The bar's length in the meter's beat unit (its denominator), else in halves of it and so on to 32nds; null when none counts it whole. */
 function pickupMeter(length: Frac, meter: Meter): Meter | null {
-	const n = frac(length.n * meter.d, length.d * 4);
-	return n.d === 1 && n.n > 0 ? parseMeter(`${n.n}/${meter.d}`) : null;
+	for (let d = meter.d; d <= FINEST; d *= 2) {
+		const n = frac(length.n * d, length.d * 4);
+		if (n.d === 1 && n.n > 0) return parseMeter(`${n.n}/${d}`);
+	}
+	return null;
 }
 
-const NOT_WHOLE = "a short bar's length isn't a whole number of beats; read as a full bar";
+const NOT_WHOLE = "a short bar's length can't be written as a meter; read as a full bar";
 const TOO_LONG = "an implicit bar is longer than its meter; read as a full bar";
 
 /** Whether a `<time>` that differs from the running meter reverts on the next measure. */
