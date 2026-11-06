@@ -27,9 +27,10 @@ chart.musicxml`.
 ## Import
 
 ```ts
-import { importMusicXml, readMxl } from "@barmark/musicxml";
+import { decodeXmlBytes, importMusicXml, readMxl } from "@barmark/musicxml";
 
-const xml = file.endsWith(".mxl") ? await readMxl(bytes) : text;
+// bytes: the file's contents (a Uint8Array); UTF-8, or UTF-16 with a byte-order mark
+const xml = file.endsWith(".mxl") ? await readMxl(bytes) : decodeXmlBytes(bytes);
 const { text: chart, diagnostics } = importMusicXml(xml); // or { part: "Piano" }
 ```
 

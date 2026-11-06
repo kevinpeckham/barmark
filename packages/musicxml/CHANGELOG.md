@@ -8,7 +8,7 @@ package uses [semantic versioning](https://semver.org/).
 
 ### Added
 
-- **Import:** `importMusicXml(xml, { part? })` reads a MusicXML 4.0
+- **Import:** `importMusicXml(xml, { part? })` reads a MusicXML
   `score-partwise` file (MuseScore, Dorico, Sibelius, Finale, or this
   package's own export) back into a canonical barmark chart: the title
   and credits (typed page credits when the file names no creators),
@@ -20,8 +20,9 @@ package uses [semantic versioning](https://semver.org/).
   replayed sections, parts (merged into tutti lines where they agree),
   and a chord part's voicings, note sets and part lines. It returns
   `{ text, diagnostics }` and never throws: each kind of loss is one
-  warning per part with a count and the first measures, and a file that
-  gives nothing (bad XML, `score-timewise`, no chord symbols in another
+  warning per part with a count and the first measures (a loss of the
+  whole score, such as a meter, is reported once, with no part), and a
+  file that gives nothing (bad XML, `score-timewise`, no chord symbols in another
   program's file) returns empty text and an error. A file with no chord
   symbols names the parts that hold notes (and any words that look like
   chord symbols), and `part` (a part's name, abbreviation or id,
@@ -31,14 +32,19 @@ package uses [semantic versioning](https://semver.org/).
   ornaments, grace notes, chord diagrams, a capo, pedal, accents,
   fermatas within a bar) are one warning each; those on the notes alone
   aren't reported for a part whose notes are left out anyway.
-  `<other-direction>` text is read as words. Chord symbols a program
+  `<other-direction>` text is read as words. Chord symbols marked
+  `print-object="no"` (hidden in the program's score) are imported like
+  any other: they are still the file's harmony. Chord symbols a program
   exported as plain words stay words, with one warning (a lone root
   letter, a common section label, counts only beside fuller symbols).
   Control characters in the file are dropped, so a score can't put
-  escape sequences into a chart or a message. The XML is read with
-  fixed bounds: at most 100 elements deep, entities expanding to at most
-  100,000 characters, no external entities. Tested on MuseScore 4 files
-  as well as the export's own.
+  escape sequences into a chart or a message; numeric character
+  references (`&#233;`, `&#x266d;`) are decoded first. The XML is read
+  with fixed bounds: at most 100 elements deep, entities expanding to at
+  most 100,000 characters, no external entities. The chart it writes is
+  parsed and played back against what it meant to write; any difference
+  is an `importer bug` error (the first three, then a count). Tested on
+  MuseScore 4 files as well as the export's own.
 - **`readMxl(bytes)`** unpacks a compressed `.mxl` to its MusicXML text
   with no dependency (`DecompressionStream("deflate-raw")`: Node 20.12
   or later, Bun, browsers), following `META-INF/container.xml`, else the
