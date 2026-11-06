@@ -137,11 +137,52 @@ function ending(playing: Playing[], from: number, to: number): System {
 	return { from, to, tutti, lines: tutti ? [] : lines };
 }
 
-/** The bars as systems, given who plays each bar. */
-export function systemsOf(bars: BarInfo[], playing: Playing[]): System[] {
-	return segments(bars).flatMap(([from, to]) =>
+/** Part `p`'s line numbers in a system. */
+const linesIn = (s: System, p: number) =>
+	s.tutti
+		? []
+		: s.lines
+				.map(place)
+				.filter(([q]) => q === p)
+				.map(([, l]) => l);
+
+const place = (key: string) => key.split(".").map(Number) as [number, number];
+
+/**
+ * The order a reader gives part `p`'s lines (grammar 7.6): as the first
+ * system writing two or more of them writes them (in order, as rows are),
+ * then the others as they first appear.
+ */
+function readOrder(systems: System[], p: number): number[] {
+	const sets = systems.map((s) => linesIn(s, p)).filter((ls) => ls.length > 0);
+	const order = sets.find((ls) => ls.length > 1) ?? [];
+	for (const l of sets.flat()) if (!order.includes(l)) order.push(l);
+	return order;
+}
+
+/**
+ * Systems in which a reader takes part `p`'s lines in the part's own order,
+ * the first carrying the harmony: where it wouldn't, the first system that
+ * writes a line after the first writes all of the part's lines (those that
+ * rest there as `--`, which plays the same as leaving them out).
+ */
+function pinOrder(systems: System[], p: number, count: number): System[] {
+	const order = readOrder(systems, p);
+	if (order.every((l, k) => k === 0 || l > (order[k - 1] ?? 0))) return systems;
+	const at = systems.findIndex((s) => linesIn(s, p).some((l) => l > 0));
+	return systems.map((s, i) => {
+		if (i !== at) return s;
+		const all = Array.from({ length: count }, (_, l) => `${p}.${l}`);
+		return { ...s, lines: [...new Set([...s.lines, ...all])].sort(byPlace) };
+	});
+}
+
+/** The bars as systems, given who plays each bar and how many lines each part has. */
+export function systemsOf(bars: BarInfo[], playing: Playing[], lines: number[] = []): System[] {
+	const systems = segments(bars).flatMap(([from, to]) =>
 		bars[from]?.ending != null
 			? [ending(playing, from, to)]
 			: absorbed(runsOf(playing, from, to), playing).flatMap(chunks),
 	);
+	return lines.reduce((out, count, p) => (count > 1 ? pinOrder(out, p, count) : out), systems);
 }

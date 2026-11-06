@@ -34,13 +34,48 @@ function asks(part: ImportedPart, index: number): boolean {
 	);
 }
 
+/** What a line's cells leave sounding into measure `index`: the last attack before it, null when it rested there. */
+function heldInto(cells: (string | null)[], index: number): string | null {
+	for (let m = index - 1; m >= 0; m--) {
+		const cell = cells[m];
+		if (cell === null || cell === undefined) return null;
+		// A slot's members, a note set's spaces inside it.
+		const attacks = (cell.match(/[^\s_{]*\{[^}]*\}\.?|[^\s_]+/g) ?? [])
+			.map((t) => t.replace(/(?<!N\.C)\.$/, ""))
+			.filter((t) => t !== "/");
+		const last = attacks[attacks.length - 1];
+		if (last !== undefined) return last;
+	}
+	return null;
+}
+
+const LEADING_HOLD = /^\/(?=[ _]|$)/;
+
+/**
+ * A cell that starts by holding what the measure before it left sounding,
+ * written where the bar before it isn't that measure (bars in played
+ * order, after a jump) or the line rested there: the hold has nothing to
+ * hold (grammar 2.3), so the held attack is written again, else `N.C.` (or
+ * `--` on a line of notes).
+ */
+function restated(src: Source, p: number, l: number, i: number, slots: string): string {
+	const bar = src.bars[i] as BarInfo;
+	const cells = src.parts[p]?.lines[l]?.bars ?? [];
+	const prev = src.bars[i - 1];
+	const follows = prev !== undefined && prev.index === bar.index - 1 && cells[prev.index] != null;
+	if (follows || !LEADING_HOLD.test(slots)) return slots;
+	const held = heldInto(cells, bar.index) ?? (l === 0 ? "N.C." : "--");
+	return slots.replace(LEADING_HOLD, held);
+}
+
 /** Line `l` of part `p` in bar `i`, as the part reads it. */
 export function ownCell(src: Source, p: number, l: number, i: number): Own {
 	const bar = src.bars[i] as BarInfo;
 	const part = src.parts[p] as ImportedPart;
 	if (l === 0 && bar.question && asks(part, bar.index)) return { slots: "?", unread: [] };
-	const slots = part.lines[l]?.bars[bar.index] ?? null;
-	if (slots === null) return null;
+	const read = part.lines[l]?.bars[bar.index] ?? null;
+	if (read === null) return null;
+	const slots = restated(src, p, l, i, read);
 	const unread = l === 0 ? part.unread.filter((u) => u.measure === bar.index) : [];
 	return { slots, unread: unread.map(({ text, at }) => ({ text, at })) };
 }
@@ -100,7 +135,8 @@ const speaksFor = (src: Source, key: string | null) =>
 /** Whether bar `i` repeats what each of these lines just played, in the same meter. */
 function simile(src: Source, keys: string[], slots: string, i: number, last: Last): boolean {
 	const bar = src.bars[i] as BarInfo;
-	if (bar.directives?.includes("time:")) return false;
+	// `%` can't carry a one-bar meter, which every line writes (grammar 7.4).
+	if (bar.directives?.includes("time:") || bar.meter !== null) return false;
 	const meter = meterText(bar.meter);
 	return keys.every((k) => {
 		const before = last.get(k);

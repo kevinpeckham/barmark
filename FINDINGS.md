@@ -149,7 +149,14 @@ order, not just the written marks.
   the chart back (`selfcheck.ts`) and compares every part's line, bar by
   bar in play order, with the cells it meant to write; any difference is
   an "importer bug" error. A property test (`tests/import/property.test.ts`)
-  runs random multi-part scores through it.
+  runs random multi-part scores through it. Its first run found three
+  more charts that didn't read back as written: a bar written in played
+  order (after a jump) starting with `/`, holding a bar that no longer
+  comes before it (now the held chord is written again); `%` copying a
+  bar with a one-bar meter, which every line of a system must write; and
+  a part whose first system of two lines left out its first line, so the
+  reader took another line as the one carrying the harmony (grammar 7.6
+  orders lines by that system; now it writes all of them there).
 
 ### Jumps written only as words don't reach the played order (2026-11-05, MusicXML import)
 

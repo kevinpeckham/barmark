@@ -228,6 +228,7 @@ export function writeChart(
 			: systemsOf(
 					bars,
 					bars.map((_, i) => playingOf(src, i)),
+					parts.map((p) => p.lines.length),
 				);
 	const labelled = systems.some((s) => !s.tutti);
 	const header = labelled
