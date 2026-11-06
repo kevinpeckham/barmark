@@ -1,5 +1,6 @@
 /** Lyrics as MusicXML <lyric>s (barmark's grammar 4.3, 7.7). */
 import { describe, expect, test } from "bun:test";
+import { AMAZING_GRACE } from "./charts.js";
 import { measures, notes, xmlOf } from "./helpers.js";
 
 const tag = (n: string, name: string) => new RegExp(`<${name}>([^<]*)</${name}>`).exec(n)?.[1];
@@ -22,16 +23,6 @@ const held = (number: number, syllabic: string, text: string) =>
 	lyric(number, syllabic, text).replace("</lyric>", '<extend type="start"/></lyric>');
 
 const VOX = "part: Vox = Voice, instrument: voice\n";
-
-const AMAZING_GRACE = `# Amazing Grace
-part: Vox = Voice, instrument: voice
-key: G, time: 3/4
-
-## Verse
-Vox       | [1/4] N.C.    | G                           | G          / G7       | C            / /      | G              |
-Vox.Mel   | [1/4] {D4}:A- | {G4}:maz- / {B4}:ing_{G4}:/ | {B4}:grace / {A4}:how | {G4}:sweet / {E4}:the | {D4}:sound / / |
-lyrics 2: | 'Twas         | grace / that                | taught / my           | heart / to            | fear / /       |
-`;
 
 describe("lyrics on notes", () => {
 	test("a syllable becomes <lyric number=1> on its note, with syllabic", () => {

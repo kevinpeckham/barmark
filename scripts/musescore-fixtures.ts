@@ -1,8 +1,9 @@
 /**
  * Regenerates the MuseScore files the import tests read
  * (packages/musicxml/tests/fixtures/import/): each `.mscx` source we wrote,
- * converted by MuseScore 4 to `.musicxml`, and the lead sheet also to a
- * compressed `.mxl`. It runs on the VM only, where `~/.local/bin/mscore`
+ * converted by MuseScore 4 to `.musicxml` (the lead sheet also to a
+ * compressed `.mxl`), and each one's import as its expected `.chart.md`,
+ * to read over before committing. It runs on the VM only, where `~/.local/bin/mscore`
  * runs MuseScore's AppImage under `xvfb-run` (FINDINGS.md); CI reads the
  * checked-in outputs and never needs MuseScore. It then checks that our
  * export's lyrics survive MuseScore; `--lyrics` runs that check alone.
@@ -12,7 +13,7 @@ import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "no
 import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { exportMusicXml } from "../packages/musicxml/src/index.js";
+import { exportMusicXml, importMusicXml } from "../packages/musicxml/src/index.js";
 
 const MSCORE = `${homedir()}/.local/bin/mscore`;
 const DIR = fileURLToPath(new URL("../packages/musicxml/tests/fixtures/import/", import.meta.url));
@@ -23,6 +24,7 @@ const SOURCES: [string, string[]][] = [
 	["comping-guitar", ["musicxml"]],
 	["piano", ["musicxml"]],
 	["band", ["musicxml"]],
+	["hymn", ["musicxml"]],
 ];
 
 /** Converts one file; MuseScore prints Qt warnings and may exit 0 on failure, so the output file decides. */
@@ -40,13 +42,17 @@ function checkSoftware(xml: string): void {
 
 if (!existsSync(MSCORE))
 	throw new Error(`MuseScore not found at ${MSCORE} (this script runs on the VM)`);
-/** Regenerates every fixture from its `.mscx`. */
+/** Regenerates every fixture from its `.mscx`, and the chart each `.musicxml` imports to. */
 function regenerate(): void {
 	for (const [name, formats] of SOURCES)
 		for (const format of formats) {
 			convert(`${DIR}${name}.mscx`, `${DIR}${name}.${format}`);
-			if (format === "musicxml") checkSoftware(`${DIR}${name}.${format}`);
 			console.log(`${name}.${format}`);
+			if (format !== "musicxml") continue;
+			checkSoftware(`${DIR}${name}.${format}`);
+			const chart = importMusicXml(readFileSync(`${DIR}${name}.${format}`, "utf8")).text;
+			writeFileSync(`${DIR}${name}.chart.md`, chart);
+			console.log(`${name}.chart.md`);
 		}
 }
 

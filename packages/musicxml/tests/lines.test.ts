@@ -1,6 +1,7 @@
 /** Part lines as staves and voices (barmark's grammar 7.6). */
 import { describe, expect, test } from "bun:test";
 import { voicesFor } from "../src/measure-xml.js";
+import { AMAZING_GRACE } from "./charts.js";
 import { measures, notes, xmlOf } from "./helpers.js";
 
 const MORNING = `# Morning Song
@@ -11,16 +12,6 @@ part: Bs = Bass, instrument: electric bass
 Pno.RH | G{B3 D4 G4} | C{C4 E4 G4} | D{D4 F#4 A4} | G{B3 D4 G4} |
 Pno.LH | {G2}        | {C3}        | {D3} / {F#2} / | {G2}       |
 Bs     | {G1}        | {C2}        | {D2}         | {G1}         |
-`;
-
-const AMAZING_GRACE = `# Amazing Grace
-part: Vox = Voice, instrument: voice
-key: G, time: 3/4
-
-## Verse
-Vox       | [1/4] N.C.    | G                           | G          / G7       | C            / /      | G              |
-Vox.Mel   | [1/4] {D4}:A- | {G4}:maz- / {B4}:ing_{G4}:/ | {B4}:grace / {A4}:how | {G4}:sweet / {E4}:the | {D4}:sound / / |
-lyrics 2: | 'Twas         | grace / that                | taught / my           | heart / to            | fear / /       |
 `;
 
 const tag = (n: string, name: string) => new RegExp(`<${name}>([^<]*)</${name}>`).exec(n)?.[1];
