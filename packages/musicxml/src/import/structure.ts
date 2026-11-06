@@ -11,7 +11,7 @@ import { directiveLines, type Settings, statesOf } from "./directives.js";
 import { type Losses, measuresText } from "./losses.js";
 import { type MeasureMarks, readMarks } from "./marks.js";
 import { playedOrder } from "./order.js";
-import type { ReadMeasure, ReadScore } from "./read.js";
+import type { ReadMeasure, ReadPart, ReadScore } from "./read.js";
 import { type DirectionCell, placeStructure, type Repeats, repeatsOf } from "./repeats.js";
 
 export type BarInfo = {
@@ -194,8 +194,15 @@ function chordWords(measures: string[], losses: Losses): void {
 	});
 }
 
-/** The score's structure bar by bar, in written order, or in played order when the repeats can't be held. */
-export function readStructure(score: ReadScore, losses: Losses): Structure {
+/** A part's marks without its words and text lines: a part `--part` didn't choose. */
+const wordless = (m: MeasureMarks): MeasureMarks => ({ ...m, words: [], textLines: [] });
+
+/**
+ * The score's structure bar by bar, in written order, or in played order
+ * when the repeats can't be held; words and text lines from the parts in
+ * `words` alone, when given.
+ */
+export function readStructure(score: ReadScore, losses: Losses, words?: Set<ReadPart>): Structure {
 	const parts = score.parts.map((p) => p.measures);
 	const count = Math.max(0, ...parts.map((p) => p.length));
 	const at = (i: number) => parts.map((p) => p[i]);
@@ -203,7 +210,9 @@ export function readStructure(score: ReadScore, losses: Losses): Structure {
 	const marks = Array.from({ length: count }, (_, i) =>
 		score.parts.flatMap((p) => {
 			const m = p.measures[i];
-			return m ? [readMarks(m, p.name, losses, own)] : [];
+			if (!m) return [];
+			const read = readMarks(m, p.name, losses, own);
+			return [words && !words.has(p) ? wordless(read) : read];
 		}),
 	);
 	const all = marks.flat().flatMap((m) => m.cells);

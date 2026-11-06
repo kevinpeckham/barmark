@@ -105,7 +105,11 @@ function run(xml: string, options: ImportOptions, losses: Losses): string {
 		chosenParts.filter((_, i) => imported[i] !== null),
 		losses,
 	);
-	return writeChart(score, parts, readStructure(score, losses), losses);
+	// With --part, words on the bars, text lines and lyrics come from the chosen part
+	// alone; the score's structure (headings, tempo, repeats) from every part.
+	const scoped = forced ? { ...score, parts: chosenParts } : score;
+	const words = forced ? new Set(chosenParts) : undefined;
+	return writeChart(scoped, parts, readStructure(score, losses, words), losses);
 }
 
 /**

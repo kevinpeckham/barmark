@@ -310,7 +310,9 @@ Decided system by system, as the grammar reads several parts (7.4)
   clefs and transposition survive the way back out.
 - **`--part name`** imports one part alone (its name, abbreviation or
   id, ignoring case and punctuation), with its notes as note sets when
-  it has no chords.
+  it has no chords. Words on the bars, text lines and lyrics come from
+  that part alone; headings, tempo, repeats and jumps are the score's,
+  read from every part.
 
 ### Sections and repeats
 

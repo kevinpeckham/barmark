@@ -131,6 +131,24 @@ describe("parts", () => {
 		expect(r.diagnostics).toEqual([]);
 	});
 
+	test("--part reads words and lyrics from the chosen part alone; headings are the score's", () => {
+		const above = (t: string, bold = false) =>
+			`<direction placement="above"><direction-type><words${bold ? ' font-weight="bold"' : ""}>${t}</words></direction-type></direction>`;
+		const sung = '<lyric number="1"><syllabic>single</syllabic><text>la</text></lyric>';
+		const xml = score([
+			{ id: "P1", name: "Gtr", measures: measure(1, time44 + harmony("C") + note("E", 4, 4)) },
+			{
+				id: "P2",
+				name: "Voice",
+				measures: measure(
+					1,
+					time44 + above("Verse", true) + above("softly") + harmony("D") + note("F", 4, 4, sung),
+				),
+			},
+		]);
+		expect(sound(importMusicXml(xml, { part: "Gtr" })).text).toBe("## Verse\n| C |\n");
+	});
+
 	test("--part matches the part's name in any case", () => {
 		expect(sound(importMusicXml(pianoAndBassNoHarmony, { part: "piano" })).text).toBe(
 			"| {C4 E4} | {E4 F4} |\n",
