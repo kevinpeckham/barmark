@@ -202,6 +202,19 @@ lyrics: | sev- en | eight / |
 		expect(sound(importMusicXml(xmlOf(chart))).text).toBe(chart);
 	});
 
+	test("the rows stay the voice part's when every part plays alike", () => {
+		const chart = `part: Gtr = Guitar
+${VOX}Gtr     | C       | G       |
+Vox     | C       | G       |
+lyrics: | hel- lo | there / |
+`;
+		const back = sound(importMusicXml(xmlOf(chart))).text;
+		const singers = (t: string) =>
+			parseChart(t).bars.flatMap((b) => (b.lyrics ?? []).map((l) => l.part ?? null));
+		expect(singers(back)).toEqual(["Vox", "Vox"]);
+		expect(back).toContain(VOX);
+	});
+
 	test("after MuseScore (no marker, pitched B4 slashes) it is still a lyric row", () => {
 		const xml = xmlOf(CHART)
 			.replace("<?barmark lyrics?>", "")

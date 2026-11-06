@@ -41,7 +41,8 @@ package uses [semantic versioning](https://semver.org/).
   follow a breath. A system whose rows sing verse 1 alone writes
   `lyrics:`, however other systems number theirs. A melody bar playing
   the notes of the bar before it, unsung, is `%` (which copies notes, not
-  syllables).
+  syllables). A lyric staff's rows stay the voice part's: the chart
+  keeps its `part:` lines even where every part plays one tutti line.
 
 - **Export: lyrics** (barmark's grammar 4.3 and 7.7). A syllable on a
   note is a `<lyric number="1">` on it, with `syllabic` (single, begin,

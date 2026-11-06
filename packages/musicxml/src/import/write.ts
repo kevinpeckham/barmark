@@ -279,7 +279,9 @@ export function writeChart(
 					bars.map((_, i) => playingOf(src, i)),
 					parts.map((p) => p.lines.length),
 				);
-	const labelled = systems.some((s) => !s.tutti);
+	// A lyric staff's rows are the voice part's only when the chart names its parts (grammar 7.7).
+	const voiced = verses?.from === 1 && verses.owner !== null;
+	const labelled = voiced || systems.some((s) => !s.tutti);
 	const header = labelled
 		? parts.map((p, i) => partLine(labels[i] ?? p.label, p.name, p.instrument))
 		: [];
