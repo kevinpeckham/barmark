@@ -210,8 +210,10 @@ order, not just the written marks.
   however the bar is laid out or wrapped. The singing bar's body is a
   grid of `1fr` columns, which sizes every column to the widest one:
   slots are spaced by beat, and the chord row above, sharing the bar
-  column, gets the slack to space its chords the same way. Only a lyric
-  row on no melody is still a row of its own, spaced by beat.
+  column, gets the slack to space its chords the same way. A lyric row on
+  no melody went the same way in review: drawn as a row of its own, it
+  wrapped at different bars from its chord row on a phone (words under no
+  chord), so its lines now sit inside the bars they cover.
 
 ### The spec's lead sheet read as two systems with no diagnostic (2026-11-06, barmark)
 

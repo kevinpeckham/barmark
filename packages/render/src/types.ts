@@ -57,17 +57,17 @@ export type BlockItem =
 			/** The passes an ending plays on; null for any other row. */
 			ending: number[] | null;
 			cells: CellModel[];
-			/** Set on a line that sings (barmark's grammar 7.7): its note sets draw as pitch names. */
+			/** Set on a line that sings words (barmark's grammar 7.7): its note sets draw as pitch names over them. */
 			sings?: true;
 			/** The verses sung on a singing line's bars, in verse order, each syllable under its slot. */
 			verses?: Verse[];
+			/**
+			 * A lyric row on no melody under this row, or under the system whose
+			 * last row this is (barmark's grammar 7.7): each verse's syllables in
+			 * the bars they cover, spaced by beat.
+			 */
+			lyrics?: Verse[];
 	  }
-	/**
-	 * A lyric row on no melody (barmark's grammar 7.7), under the row or
-	 * system on `line`: each verse's syllables spaced by beat, its cells
-	 * aligned with that row's.
-	 */
-	| { kind: "lyrics"; line: number; barNumber: number | null; verses: Verse[] }
 	/**
 	 * A system (barmark's grammar 7.4): a row per declared part, in score
 	 * order, sharing bars. A part tacet there has a row of `tacet` bars; a

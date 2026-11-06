@@ -20,6 +20,10 @@ const CHARTS: Record<string, string> = {
 	rit: "tempo: 145\n## Outro\n| D5 | % |\ntempo: rit. to 90\n| D5 | % |",
 	parts: MORNING_SONG,
 	lead: AMAZING_GRACE,
+	spoken:
+		"# Spoken\n| Am7 | D9 |\nlyrics: | I_got roll-_in' on_the / | beat_and -- I_keep it_up |\n",
+	verses:
+		"# Rows\ntime: 4/4\n## Verse\n| C | F | G | C |\nlyrics: | Down / by the | riv- / er | wait- / ing | / |\n| Am | F | G | C |\nlyrics 1: | morn- / ing | comes / a- | gain / to | me |\nlyrics 2: | eve- / ning | falls / up- | on / the | sea |\n",
 	piano:
 		"# Piano\npart: Pno = Piano\npart: Bs = Bass\n## A\nPno.RH | +G{B3 D4 G4} / C._D / | *C{C4 E4 G4} |\nPno.LH | {G2} / / / | {C3} |\nBs | {G1} | {C2} |\n| G | C |",
 	pianoAlone:

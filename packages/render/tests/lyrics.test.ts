@@ -13,8 +13,10 @@ const VOICE = "part: V = Voice, instrument: voice\n";
 const doc = (text: string) => parseHTML(`<body>${renderChartUnwrapped(text)}</body>`).document;
 const texts = (root: ParentNode | null | undefined, selector: string) =>
 	[...(root?.querySelectorAll(selector) ?? [])].map((e) => e.textContent ?? "");
-/** The lyric rows drawn after a row on no melody, in order. */
-const verseRows = (text: string) => [...doc(text).querySelectorAll(".bm-lyrics-row")];
+/** A lyric row's lines on no melody, verse `n`'s in each bar it covers, in order. */
+const beatLines = (text: string, n = 1) => [
+	...doc(text).querySelectorAll(`.bm-bar > .bm-bar-stack > .bm-beats[data-verse="${n}"]`),
+];
 /** A singing row's syllables, verse by verse: each verse's under its slots, in order. */
 const sungRows = (row: Element | undefined, verses: number) =>
 	Array.from({ length: verses }, (_, v) =>
@@ -57,7 +59,6 @@ describe("voice lines and lyrics (spec section 5)", () => {
 			["B", "ing", "that"],
 			["G"],
 		]);
-		expect(d.querySelector(".bm-lyrics-row")).toBeNull();
 	});
 	test("a stacked verse draws as a second syllable row, numbered", () => {
 		const mel = singing(AMAZING_GRACE)[0];
@@ -75,9 +76,10 @@ describe("voice lines and lyrics (spec section 5)", () => {
 	});
 	test("a lyric row with no melody draws its syllables spaced by beat", () => {
 		const items = layoutChart(SPOKEN).blocks[0]?.items ?? [];
-		expect(items.map((i) => i.kind)).toEqual(["row", "lyrics"]);
-		const bars = [...(verseRows(SPOKEN)[0]?.querySelectorAll(".bm-bar") ?? [])];
-		expect(bars.map(positions)).toEqual([
+		expect(items.map((i) => i.kind)).toEqual(["row"]);
+		expect((items[0] as RowItem).lyrics?.map((v) => v.verse)).toEqual([1]);
+		// Each bar's words are drawn in the bar they cover, so they wrap with it.
+		expect(beatLines(SPOKEN).map(positions)).toEqual([
 			["I", "got", "roll –", "in'", "on", "the", "", ""],
 			["beat", "and", "", "", "I", "keep", "it", "up"],
 		]);
@@ -125,12 +127,38 @@ describe("voice lines and lyrics (spec section 5)", () => {
 			"bar 1: note C four, note D four, sung “the end ma-”",
 			"bar 2: note E four, sung “ny”",
 		]);
-		// A lyric row's words are spoken from its own bars; what is drawn is hidden.
-		const spoken = verseRows(SPOKEN)[0];
-		expect(texts(spoken, ".bm-sr")).toEqual([
-			"bar 1, words “I got roll-in' on the”",
-			"bar 2, words “beat and I keep it up”",
+		// A lyric row's words are spoken with the bar they cover; what is drawn is hidden.
+		expect(texts(doc(SPOKEN), ".bm-bar > .bm-sr")).toEqual([
+			"bar 1: A minor seven, words “I got roll-in' on the”",
+			"bar 2: D nine, words “beat and I keep it up”",
 		]);
-		expect(spoken?.querySelector(".bm-bar-body")?.getAttribute("aria-hidden")).toBe("true");
+		expect(beatLines(SPOKEN)[0]?.getAttribute("aria-hidden")).toBe("true");
+	});
+	test("stacked lyric rows on no melody are numbered in their first bar", () => {
+		const chart = "| C | D |\nlyrics 1: | a | b |\nlyrics 2: | c | d |\n";
+		expect([1, 2].map((n) => beatLines(chart, n).map(positions))).toEqual([
+			[["a"], ["b"]],
+			[["c"], ["d"]],
+		]);
+		expect([1, 2].map((n) => texts(beatLines(chart, n)[0], ".bm-verse"))).toEqual([["1."], ["2."]]);
+		expect(beatLines(chart, 1)[1]?.querySelector(".bm-verse")).toBeNull();
+	});
+	test("a lyric row under a system draws in the system's last row", () => {
+		const chart =
+			"part: V = Voice, instrument: voice\npart: G = Guitar\nV | C | D |\nG | C | D |\nlyrics: | x | y |\n";
+		const rows = [...doc(chart).querySelectorAll(".bm-part-row")];
+		expect(rows.map((r) => texts(r, ".bm-beats"))).toEqual([[], ["x", "y"]]);
+	});
+	test("a voice line with no words draws as any part line does", () => {
+		const notes = "Vox | G | C |\nVox.Mel | {G4} {B4} {D5}_{C5} {B4} | {C5 E5} / / / |\n";
+		const voice = renderChartUnwrapped(`part: Vox = Voice, instrument: voice\n${notes}`);
+		expect(voice).toBe(renderChartUnwrapped(`part: Vox = Voice\n${notes}`));
+		expect(voice).toContain("E<sub>5</sub>");
+		expect(voice).not.toContain("bm-sings");
+	});
+	test("a divisi on a singing line shows every note's name", () => {
+		const mel = singing(`${VOICE}| {G4 A4}:God {C5}:save |\n`)[0];
+		expect(texts(mel, ".bm-pitch")).toEqual(["G A", "C"]);
+		expect(sungRows(mel, 1)).toEqual([["God", "save"]]);
 	});
 });

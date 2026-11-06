@@ -25,6 +25,7 @@ import type {
 	LayoutOptions,
 	RowItem,
 	SectionBlock,
+	Verse,
 } from "./types.js";
 import { type Landing, landings, rowVerses, singerOf, sungVerses } from "./verses.js";
 
@@ -218,7 +219,7 @@ function substituteText(items: BlockItem[], own: BlockItem[]): BlockItem[] {
 	});
 	// Extra lines continue after the last row and any text already following it.
 	const after = Math.max(
-		out.findLastIndex((i) => i.kind === "row" || i.kind === "system" || i.kind === "lyrics"),
+		out.findLastIndex((i) => i.kind === "row" || i.kind === "system"),
 		out.findLastIndex((i) => i.kind === "text"),
 	);
 	out.splice(after + 1, 0, ...queue);
@@ -258,9 +259,7 @@ const widthOf = (i: BlockItem) =>
 		? i.cells.length
 		: i.kind === "system"
 			? Math.max(0, ...i.rows.map((p) => (p.row.kind === "row" ? p.row.cells.length : 0)))
-			: i.kind === "lyrics"
-				? (i.verses[0]?.cells.length ?? 0)
-				: 0;
+			: 0;
 
 function blockOf(
 	h: SectionLine | null,
@@ -309,10 +308,13 @@ function layoutSystemAt(
 	ctx: Context,
 ): Laid {
 	const item = layoutSystem(lines, occurrence, previous, ctx);
-	return {
-		items: [item, ...lyricRows(lines, occurrence, ctx)],
-		previous: lastOfSystem(item) ?? previous,
-	};
+	const lyrics = lyricRows(lines, occurrence, ctx);
+	// The words go under the system: in its last row that plays.
+	const last = item.rows.findLastIndex((p) => p.row.kind === "row" && !p.row.cells.some(isTacet));
+	const rows = item.rows.map((p, i) =>
+		i === last && p.row.kind === "row" && lyrics.length ? { ...p, row: { ...p.row, lyrics } } : p,
+	);
+	return { items: [{ ...item, rows }], previous: lastOfSystem(item) ?? previous };
 }
 
 /** A line outside a system: as written when it has an error; a bar line with the words under it. */
@@ -325,9 +327,10 @@ function layoutOne(
 	if (ctx.errors.has(l.line)) return { items: [errorItem(l.line, ctx)], previous };
 	const item = layoutLine(l, occurrence, previous, ctx);
 	if (!item) return { items: [], previous };
-	const words = l.kind === "bars" ? lyricRows([l], occurrence, ctx) : [];
-	const last = item.kind === "row" ? lastSlots(item.cells) : null;
-	return { items: [item, ...words], previous: last ?? previous };
+	if (item.kind !== "row" || l.kind !== "bars") return { items: [item], previous };
+	const lyrics = lyricRows([l], occurrence, ctx);
+	const row = lyrics.length ? { ...item, lyrics } : item;
+	return { items: [row], previous: lastSlots(item.cells) ?? previous };
 }
 
 /** The written bars a bar line draws, as played in the occurrence: a cut bar as written. */
@@ -350,16 +353,13 @@ function lyricRows(
 	lines: SystemLine[],
 	occurrence: SectionOccurrence | undefined,
 	ctx: Context,
-): BlockItem[] {
+): Verse[] {
 	const drawn = lines.filter((l): l is BarsLine => l.kind === "bars" && !ctx.errors.has(l.line));
 	const ref = drawn[0];
 	if (!ref) return [];
 	const sung = new Set(drawn.flatMap((l) => singerOf(l, ctx.parse) ?? []));
 	const lands = landingsOn(ref, playedOn(ref.line, occurrence, ctx.bars), ctx);
-	const verses = rowVerses(lands, sung);
-	if (!verses.length) return [];
-	const barNumber = lands.find((x) => x !== null)?.bar.written ?? null;
-	return [{ kind: "lyrics", line: ref.line, barNumber, verses }];
+	return rowVerses(lands, sung);
 }
 
 type SystemLine = Extract<Line, { kind: "bars" | "invalid" }>;
@@ -539,7 +539,8 @@ function singing(l: BarsLine, cells: CellModel[], played: PlayedBar[], ctx: Cont
 	const singer = singerOf(l, ctx.parse);
 	if (singer === null) return {};
 	const verses = sungVerses(cells, landingsOn(l, played, ctx), singer);
-	return { sings: true as const, ...(verses.length && { verses }) };
+	// A line with no words draws as any part line does.
+	return verses.length ? { sings: true as const, verses } : {};
 }
 
 /** A cell as drawn: `%` becomes the bar it copies, its slots as the parser resolved them; `previous` lends only its meter. */

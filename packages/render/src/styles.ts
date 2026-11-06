@@ -127,7 +127,7 @@ const css = `
 .bm-row>div.bm-bar[data-repeat-start]{border-left:.25em double var(--bm-rule)}
 .bm-row>div.bm-bar[data-repeat-end]{border-right:.25em double var(--bm-rule)}
 .bm-bar-body{display:flex;flex:1;align-items:baseline;gap:.6em}
-.bm-bar-body>:not(.bm-meter,.bm-cut,.bm-verse){flex:1 1 0;min-width:max-content}
+.bm-bar-body>:not(.bm-meter,.bm-cut){flex:1 1 0;min-width:max-content}
 .bm-repeat{display:flex;align-items:center;padding-left:.4em;white-space:nowrap}
 .bm-repeat .bm-times{font-size:${em(SIZES.repeat)}}
 .bm-chord{white-space:nowrap}
@@ -179,10 +179,11 @@ const css = `
 .bm-verse-numbers{position:absolute;right:100%;top:${em(SUNG.barTop + SUNG.note)};display:flex;flex-direction:column;align-items:flex-end;margin-right:.45em}
 .bm-verse-numbers>.bm-verse{height:${at(SIZES.barNumber, SUNG.verse)};line-height:${at(SIZES.barNumber, SUNG.verse)}}
 .bm-verse{font:italic ${em(SIZES.barNumber)} ${SANS};color:var(--bm-muted)}
-.bm-row.bm-lyrics-row>*,.bm-row.bm-lyrics-row>.bm-bar-number{margin-top:0}
-.bm-row.bm-lyrics-row>div.bm-bar{min-height:0;padding-block:.1em .2em;border-color:transparent}
-.bm-lyrics-row>.bm-verse{padding-top:${at(SIZES.barNumber, 0.1)}}
-.bm-bar-body>.bm-verse{margin-right:.4em}
+.bm-bar-stack{display:flex;flex:1;flex-direction:column}
+.bm-bar-stack>.bm-bar-body{flex:none}
+.bm-beats{position:relative;display:flex;align-items:baseline;gap:.3em;margin-top:.15em}
+.bm-beats>.bm-syllable-slot{flex:1 1 0;min-width:max-content}
+.bm-beats>.bm-verse{position:absolute;right:calc(100% + ${at(SIZES.barNumber, 0.7 + 0.45)})}
 :is(.bm-syllable-slot,.bm-under){display:flex;align-items:baseline;gap:.3em;font:italic ${em(SIZES.syllables)}/${SUNG.verse / SIZES.syllables} ${TEXT};color:var(--barmark-lyrics,var(--bm-ink));white-space:nowrap}
 .bm-syllable{display:flex;flex:1;align-items:baseline}
 .bm-hyphen{flex:1;text-align:center;padding-inline:.15em}

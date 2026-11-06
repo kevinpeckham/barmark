@@ -2,20 +2,19 @@
  * The words as HTML (barmark's grammar 4.3, 7.7). A singing line draws
  * each note as its pitch name with each verse's syllable under it, in one
  * column per slot, so words stay under their notes however the bar is laid
- * out or wrapped. A lyric row on no melody draws a row per verse, spaced
- * by beat. Every syllable is escaped text.
+ * out or wrapped. A lyric row on no melody draws a line per verse in each
+ * bar it covers, spaced by beat, so its words wrap with their bars. Every
+ * syllable is escaped text.
  */
 import type { ChordRecord, Syllable } from "barmark";
 import { splitPitch } from "./chord.js";
 import { escapeHtml } from "./escape.js";
-import { speakVerses } from "./speech.js";
 import type { Verse } from "./types.js";
 
-/** A note set on a singing line: its first note's name, without the octave. */
+/** A note set on a singing line: its notes' names, without octaves (a divisi shows each). */
 export function pitchHtml(record: ChordRecord): string {
-	const first = record.canonical.replace(/^\{|\}$/g, "").split(/\s+/)[0] ?? "";
-	const { name } = splitPitch(first.replace(/!$/, ""));
-	return `<span class="bm-chord bm-pitch" part="chord">${escapeHtml(name)}</span>`;
+	const names = record.pitches.map((p) => splitPitch(p).name).join(" ");
+	return `<span class="bm-chord bm-pitch" part="chord">${escapeHtml(names)}</span>`;
 }
 
 /** Elided syllables (`the~end`) join under a tie, as a lead sheet prints them. */
@@ -47,7 +46,7 @@ export function sungSlotHtml(slot: string, bar: SungBar): string {
 	const k = bar.next++;
 	const lines = bar.verses.map(
 		(v) =>
-			`<span class="bm-under" data-verse="${v.verse}">${syllablesHtml(v.places[k] ?? [])}</span>`,
+			`<span class="bm-under" part="lyrics" data-verse="${v.verse}">${syllablesHtml(v.places[k] ?? [])}</span>`,
 	);
 	return `<span class="bm-sung"><span class="bm-sung-note">${slot}</span>${lines.join("")}</span>`;
 }
@@ -58,52 +57,22 @@ export const verseNumbersHtml = (bar: SungBar | null) =>
 		? `<span class="bm-verse-numbers" aria-hidden="true">${bar.verses.map((v) => `<span class="bm-verse">${v.verse}.</span>`).join("")}</span>`
 		: "";
 
-const EMPTY = `<span class="bm-empty" aria-hidden="true"></span>`;
-
 /** One step of a lyric row's bar. */
 const stepHtml = (syllables: Syllable[]) =>
 	`<span class="bm-syllable-slot">${syllablesHtml(syllables)}</span>`;
 
-/** One verse's bars, spaced by beat, each with its words as a screen reader hears them. */
-function lyricCells(
-	verse: Verse,
-	barNumber: number | null,
-	numbered: boolean,
-	lead: string,
-): string[] {
-	let bar = barNumber;
-	let first = lead;
-	return verse.cells.map((steps) => {
-		if (!steps.length) return EMPTY;
-		const before = first;
-		first = "";
-		const words = speakVerses([{ verse: verse.verse, syllables: steps.flat() }], numbered, "words");
-		const said = `bar${bar === null ? "" : ` ${bar}`}, ${words}`;
-		const spoken = words ? `<span class="bm-sr">${escapeHtml(said)}</span>` : "";
-		if (bar !== null) bar++;
-		return `<div class="bm-bar bm-syllables">${spoken}<span class="bm-bar-body" aria-hidden="true">${before}${steps.map(stepHtml).join("")}</span></div>`;
-	});
-}
-
-/** A lyric row on no melody: a row per verse, numbered in the gutter when there are several. */
-export function lyricRowsHtml(
-	verses: Verse[],
-	barNumber: number | null,
-	columns: number,
-	gutter: boolean,
-): string {
-	const numbered = verses.length > 1;
-	return verses
+/**
+ * A lyric row's words on no melody in the bar `i` they cover, a line per
+ * verse spaced by beat, each numbered at the row's first bar when there
+ * are several. Empty when the row has none.
+ */
+export function beatLinesHtml(verses: Verse[] | undefined, i: number, first: boolean): string {
+	const numbered = (verses?.length ?? 0) > 1;
+	return (verses ?? [])
 		.map((v) => {
-			const shown = numbered ? `${v.verse}.` : "";
-			// With no gutter, the number goes before the first bar's words.
-			const lead = !gutter && shown ? `<span class="bm-verse">${shown}</span>` : "";
-			const cells = lyricCells(v, barNumber, numbered, lead);
-			const fill = EMPTY.repeat(Math.max(0, columns - cells.length));
-			const number = gutter
-				? `<span class="bm-bar-number bm-verse" aria-hidden="true">${shown}</span>`
-				: "";
-			return `<div class="bm-row bm-lyrics-row" part="lyrics">${number}${cells.join("")}${fill}<span class="bm-repeat"></span></div>`;
+			const number = numbered && first ? `<span class="bm-verse">${v.verse}.</span>` : "";
+			const steps = (v.cells[i] ?? []).map(stepHtml).join("");
+			return `<span class="bm-beats" part="lyrics" data-verse="${v.verse}" aria-hidden="true">${number}${steps}</span>`;
 		})
 		.join("");
 }

@@ -32,7 +32,7 @@ import { speakBar, speakVerses } from "./speech.js";
 import { FIT_STEPS, MIN_BAR, stylesheet } from "./styles.js";
 import type { BlockItem, CellModel, ChartModel, SectionBlock, Verse } from "./types.js";
 import {
-	lyricRowsHtml,
+	beatLinesHtml,
 	pitchHtml,
 	type SungBar,
 	sungBar,
@@ -202,8 +202,7 @@ function fitWidth(block: SectionBlock): number {
 	};
 	for (const item of block.items) {
 		if (item.kind === "row") widen(item.cells.map(cellWidth));
-		const verses =
-			item.kind === "row" ? (item.verses ?? []) : item.kind === "lyrics" ? item.verses : [];
+		const verses = item.kind === "row" ? [...(item.verses ?? []), ...(item.lyrics ?? [])] : [];
 		for (const v of verses) widen(v.cells.map(verseWidth));
 	}
 	const total = 5 + widths.reduce((a, b) => a + b, 0);
@@ -258,8 +257,6 @@ function itemHtml(item: BlockItem, columns: number, settings: Settings): string 
 			return rowHtml(item, columns, settings);
 		case "system":
 			return systemHtml(item, columns, settings);
-		case "lyrics":
-			return lyricRowsHtml(item.verses, item.barNumber, columns, settings.gutter);
 		case "text":
 			return `<p class="bm-text${item.note ? " bm-note" : ""}" part="text">${escapeHtml(item.text)}</p>`;
 		case "directive":
@@ -311,9 +308,12 @@ function rowCells(row: Row, numerals: Numerals | null, ending: string): string[]
 		const marks = repeatMarks(row, i) + (i === 0 ? ending : "");
 		const sung: Sung = {
 			pitches: row.sings === true,
-			words: sungOn(row.verses ?? [], i),
+			words: [wordsOn(row.verses, i, "sung"), wordsOn(row.lyrics, i, "words")]
+				.filter(Boolean)
+				.join(", "),
 			bar: sungBar(row.verses, i),
 			first: i === firstBar,
+			beats: beatLinesHtml(row.lyrics, i, i === firstBar),
 		};
 		const html = isTacetCell(cell)
 			? tacetHtml(cell, n, marks, i === firstTacet)
@@ -323,12 +323,12 @@ function rowCells(row: Row, numerals: Numerals | null, ending: string): string[]
 	});
 }
 
-/** The words sung on a row's cell, as a screen reader hears them after the bar's notes. */
-const sungOn = (verses: Verse[], i: number) =>
+/** The words on a row's cell, as a screen reader hears them after the bar's notes. */
+const wordsOn = (verses: Verse[] = [], i: number, label: "sung" | "words") =>
 	speakVerses(
 		verses.map((v) => ({ verse: v.verse, syllables: v.cells[i]?.flat() ?? [] })),
 		verses.length > 1,
-		"sung",
+		label,
 	);
 
 const sr = (text: string) => (text ? `<span class="bm-sr">${text}</span>` : "");
@@ -389,11 +389,18 @@ function rowRepeatHtml(row: Row): string {
 }
 
 /**
- * A singing line's bar: its note sets as pitch names, its syllables under
- * them, the verse numbers when it is the row's first bar, and its words as
- * a screen reader hears them.
+ * The words on a bar: on a singing line its note sets as pitch names, its
+ * syllables under them and the verse numbers when it is the row's first
+ * bar; a lyric row's lines on no melody (`beats`); and all of it as a
+ * screen reader hears it.
  */
-type Sung = { pitches: boolean; words: string; bar: SungBar | null; first: boolean };
+type Sung = {
+	pitches: boolean;
+	words: string;
+	bar: SungBar | null;
+	first: boolean;
+	beats: string;
+};
 
 function cellHtml(
 	cell: CellModel,
@@ -410,7 +417,10 @@ function cellHtml(
 	const change = cell.tempoChange ? ` data-tempo-change="${cell.tempoChange}"` : "";
 	const [body, end] = barBody(cell, { numeral, pitches: sung.pitches, sung: sung.bar });
 	const numbers = sung.first ? verseNumbersHtml(sung.bar) : "";
-	return `<div class="bm-bar" part="bar"${cell.cut ? " data-cut" : ""}${change}${marks}>${spoken}${numbers}<span class="bm-bar-body" aria-hidden="true">${body}</span>${end}</div>`;
+	const drawn = `<span class="bm-bar-body" aria-hidden="true">${body}</span>`;
+	// A lyric row's lines go under the bar body, in a stack that wraps with the bar.
+	const stack = sung.beats ? `<span class="bm-bar-stack">${drawn}${sung.beats}</span>` : drawn;
+	return `<div class="bm-bar" part="bar"${cell.cut ? " data-cut" : ""}${change}${marks}>${spoken}${numbers}${stack}${end}</div>`;
 }
 
 /** What a bar shows: its meter, its slots (or `%`), and "cut"; then the words after its last slot. */

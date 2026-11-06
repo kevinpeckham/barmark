@@ -143,8 +143,8 @@ barmark-chart::part(heading) {
 ```
 
 `::part()` names: `title`, `meta`, `heading`, `bar`, `chord`, `text`,
-`bar-number`, `rehearsal`, `lyrics` (a lyric row on no melody; a voice
-line's syllables are inside its `bar`). These, the custom properties and the
+`bar-number`, `rehearsal`, `lyrics` (each verse's line of words, inside
+its `bar`). These, the custom properties and the
 attributes are the public surface: changing them is a breaking change.
 
 ## Light, dark and print
@@ -200,7 +200,7 @@ narrow for a section, its rows wrap one by one, as any row does.
 
 A voice line (barmark's grammar 4.3 and 7.7: the line a part sings on,
 such as `Vox.Mel` under a lead sheet's bare `Vox` chord line) draws each
-note as its pitch name (the first note of a set, without the octave) and
+note as its pitch name (every note of a set, without octaves) and
 under it, in italics, the syllable each verse sings there: verse 1 from
 the syllables on the notes, then each `lyrics N:` row, numbered "1.",
 "2." left of the first bar when there are several. A hyphen follows a
@@ -208,11 +208,13 @@ syllable whose word goes on, and a held syllable (`:/`) draws an extender
 line. The notes are spaced by beat, each as wide as the widest note or
 syllable. Verses come from the parser as played, placed under the written
 bars: a repeat's verse 2 is drawn under the bars it is sung on, and a
-replay draws its own words. A lyric row on no melody (the chart's words,
-or a singer who writes no notes there) draws as a row of syllables under
-its bar line or system, spaced by beat. A screen reader hears the words
-after each bar's notes: "bar 2: note G four, hold, …, verse 1 “maz-ing”,
-verse 2 “grace that”".
+replay draws its own words. A voice line with no words draws as any part
+line does. A lyric row on no melody (the chart's words, or a singer who
+writes no notes there) draws its words inside the bars it covers, a line
+per verse spaced by beat, so on a narrow screen they wrap with their
+bars; under a system they go in its last row. A screen reader hears the
+words after each bar's notes: "bar 2: note G four, hold, …, verse 1
+“maz-ing”, verse 2 “grace that”".
 
 ## License
 

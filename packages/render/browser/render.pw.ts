@@ -289,6 +289,41 @@ test.describe("lyrics", () => {
 	});
 });
 
+test.describe("lyric rows on no melody", () => {
+	test("on a phone, each bar's words wrap with the bar they cover", async ({ page }) => {
+		await page.setViewportSize({ width: 390, height: 800 });
+		for (const chart of ["spoken", "verses"]) {
+			await page.goto(`/chart?chart=${chart}`);
+			await page.evaluate(() => document.fonts.ready);
+			const lines = await inChart(page, (root) =>
+				[...root.querySelectorAll(".bm-beats")].map((line) => {
+					const bar = line.closest(".bm-bar") as Element;
+					const chord = bar.querySelector(".bm-bar-body") as Element;
+					return {
+						left:
+							Math.abs(line.getBoundingClientRect().left - chord.getBoundingClientRect().left) <= 1,
+						under: line.getBoundingClientRect().top >= chord.getBoundingClientRect().bottom - 1,
+						chord: chord.querySelector(".bm-chord") !== null,
+					};
+				}),
+			);
+			expect(lines.length).toBeGreaterThan(0);
+			expect(lines.every((l) => l.left && l.under && l.chord)).toBe(true);
+			// The narrow screen does wrap: the bars sit on more than one line.
+			const tops = await inChart(
+				page,
+				(root) =>
+					new Set(
+						[...root.querySelectorAll(".bm-bar")].map((b) =>
+							Math.round(b.getBoundingClientRect().top),
+						),
+					).size,
+			);
+			expect(tops).toBeGreaterThan(chart === "spoken" ? 1 : 2);
+		}
+	});
+});
+
 test.describe("accessibility", () => {
 	test("a screen reader hears sections and bars as music", async ({ page }) => {
 		await page.goto("/chart");
