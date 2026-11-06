@@ -181,24 +181,19 @@ function row(v: Verses, verse: number, label: string, bars: RowBar[]): string {
 
 const labelOf = (verse: number, numbered: boolean) => (numbered ? `lyrics ${verse}:` : "lyrics:");
 
-/** The rows under a system: each later verse its bars sing (from verse 1 for a lyric staff), numbered when one is past verse 1 (verse 1 alone is `lyrics:`). */
-export function rowsUnder(v: Verses | null, bars: RowBar[]): string[] {
+/**
+ * The rows under a system: each later verse its bars sing (from verse 1
+ * for a lyric staff), numbered when one is past verse 1, or in an ending
+ * (`inEnding`) of a chart that numbers its verses; else verse 1 alone is
+ * `lyrics:`.
+ */
+export function rowsUnder(v: Verses | null, bars: RowBar[], inEnding = false): string[] {
 	if (!v) return [];
-	return v.words.verses
-		.filter(
-			(verse) => verse >= v.from && bars.some(({ measure }) => sings(v.words.bars[measure], verse)),
-		)
-		.map((verse, _, sung) =>
-			row(
-				v,
-				verse,
-				labelOf(
-					verse,
-					sung.some((n) => n !== 1),
-				),
-				bars,
-			),
-		);
+	const sung = v.words.verses.filter(
+		(verse) => verse >= v.from && bars.some(({ measure }) => sings(v.words.bars[measure], verse)),
+	);
+	const numbered = sung.some((n) => n !== 1) || (inEnding && v.words.verses.some((n) => n !== 1));
+	return sung.map((verse) => row(v, verse, labelOf(verse, numbered), bars));
 }
 
 /** A bar's words as one key: every verse's tokens at their onsets. */

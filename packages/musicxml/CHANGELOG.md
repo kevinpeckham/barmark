@@ -39,7 +39,8 @@ package uses [semantic versioning](https://semver.org/).
   finest bar, so a held syllable keeps its holds (`fear / /` beside
   `grace / that`), except where a hold would sing on a new note or
   follow a breath. A system whose rows sing verse 1 alone writes
-  `lyrics:`, however other systems number theirs. A melody bar playing
+  `lyrics:`, however other systems number theirs (an ending's rows stay
+  numbered in a chart that numbers its verses). A melody bar playing
   the notes of the bar before it, unsung, is `%` (which copies notes, not
   syllables). A lyric staff's rows stay the voice part's: the chart
   keeps its `part:` lines even where every part plays one tutti line.

@@ -171,7 +171,7 @@ function systemLines(
 		mean(w, i, i);
 	}
 	const rows = rowsOf(w.src, s, w.last, plan.times !== null);
-	const lyrics = rowsUnder(w.verses, rowBars(w, s));
+	const lyrics = rowsUnder(w.verses, rowBars(w, s), w.src.bars[s.from]?.ending != null);
 	const lines = [...lead, ...(lead.length === 0 ? separator(previous, s) : []), ...rows, ...lyrics];
 	return { lines, open: lyrics.length === 0 ? keysOf(s) : null };
 }

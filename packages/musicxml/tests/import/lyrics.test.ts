@@ -215,6 +215,18 @@ lyrics: | hel- lo | there / |
 		expect(back).toContain(VOX);
 	});
 
+	test("an ending's rows stay numbered when the chart numbers its verses", () => {
+		const chart = `          |: C   |
+lyrics 1: | one |
+lyrics 2: | two |
+          |1 G    :|
+lyrics 1: | five |
+          |2 G7   | C   |
+lyrics 2: | done | end |
+`;
+		expect(sound(importMusicXml(xmlOf(chart))).text).toBe(chart);
+	});
+
 	test("after MuseScore (no marker, pitched B4 slashes) it is still a lyric row", () => {
 		const xml = xmlOf(CHART)
 			.replace("<?barmark lyrics?>", "")
