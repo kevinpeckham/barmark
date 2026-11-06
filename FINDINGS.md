@@ -205,10 +205,12 @@ order, not just the written marks.
   they met. The spec was written and approved against what part lines
   "already" did, and nobody parsed its example until building verses.
   Every line read cleanly, so nothing warned.
-- **The fix.** Kevin amended 7.6: a bare line may share a system with
-  its part's named lines and is its first line, `""` in
-  `DeclaredPart.lines`. `numberSystems` now claims one key per line
-  (`streamKey`), and `checkLines` puts `""` first. A spec example
+- **The fix.** Kevin amended 7.6: named lines written after their
+  part's bare line join it, the bare line first, `""` in
+  `DeclaredPart.lines` (`claimsOf` in `systems.ts`, `checkLines`). A
+  first cut let a bare line join named lines before it too, which
+  silently changed `Pno.RH`/`Pno.LH` then `Pno` from one after the other
+  to together; only a bare line written first joins now. A spec example
   belongs in a test as soon as the spec is approved.
 
 ### Timing alone can't tell comping from a melody; pitch motion can (2026-11-06, MusicXML import)

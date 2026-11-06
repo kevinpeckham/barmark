@@ -39,8 +39,7 @@ describe("playing part lines (grammar 7.6)", () => {
 		expect(p.bars[4]?.parts?.[1]?.slots.map(printSlot)).toEqual(["G"]);
 	});
 	test("a bare part line plays as the first line", () => {
-		// Bs first: since the 7.6 amendment a bare Pno line straight after the lined system would join it.
-		const p = parseChart(`${MORNING}\nBs | {E1} |\nPno | Em |\n`);
+		const p = parseChart(`${MORNING}\nPno | Em |\nBs | {E1} |\n`);
 		expect(pianoLines(p.bars[4])).toEqual([["RH", "Em"]]);
 	});
 	test("a line not written rests; the part plays its first playing line", () => {

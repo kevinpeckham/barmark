@@ -51,6 +51,19 @@ const isLabelled = (l: Line): l is Labelled =>
 export const streamKey = (part: string, lineName?: string): string =>
 	(lineName === undefined ? part : `${part}.${lineName}`).toLowerCase();
 
+/**
+ * What a line takes in its system, and what it can't follow there (grammar
+ * 7.6): each line once, and a part's named lines may follow its bare line
+ * but a bare line can't follow them, so a bare line after its part's
+ * lines starts a new system, as it did before bare lines could join.
+ */
+function claimsOf(l: Labelled): { takes: string[]; clashes: string[] } {
+	const part = (l.part ?? "").toLowerCase();
+	const own = streamKey(part, l.lineName);
+	if (l.lineName === undefined) return { takes: [own], clashes: [own, `${part}#lines`] };
+	return { takes: [own, `${part}#lines`], clashes: [own] };
+}
+
 /** Number each run of labelled lines with no label twice (grammar 7.4). */
 function numberSystems(lines: Line[]): Line[] {
 	let system = -1;
@@ -60,13 +73,12 @@ function numberSystems(lines: Line[]): Line[] {
 			seen = null;
 			return l;
 		}
-		// A bare line and its part's named lines may share a system (grammar 7.6); each only once.
-		const own = streamKey(l.part ?? "", l.lineName);
-		if (!seen || seen.has(own)) {
+		const { takes, clashes } = claimsOf(l);
+		if (!seen || clashes.some((c) => seen?.has(c))) {
 			system++;
 			seen = new Set();
 		}
-		seen.add(own);
+		for (const c of takes) seen.add(c);
 		return { ...l, system };
 	});
 }

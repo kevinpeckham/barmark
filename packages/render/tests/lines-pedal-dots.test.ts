@@ -36,7 +36,7 @@ describe("part lines (barmark's grammar 7.6)", () => {
 		expect(third?.kind === "slots" && third.slots.length).toBe(4);
 	});
 	test("a bare line beside a named line: the bare line's row first (7.6, amended)", () => {
-		const lead = "part: Vox = Voice, instrument: voice\nVox.Mel | {G4} |\nVox | G |\n";
+		const lead = "part: Vox = Voice, instrument: voice\nVox | G |\nVox.Mel | {G4} |\n";
 		expect(rowLabels(lead)).toEqual([["Vox", "Vox.Mel"]]);
 		expect(rowLabels(lead, "Vox")).toEqual([["Vox", "Vox.Mel"]]);
 		const system = doc(lead).querySelector(".bm-system");

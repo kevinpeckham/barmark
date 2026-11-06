@@ -8,8 +8,8 @@ package uses [semantic versioning](https://semver.org/).
 
 ### Changed
 
-- **Export:** a part's bare line written beside its named lines (`Vox`
-  over `Vox.Mel`, barmark's amended grammar 7.6) is its first voice,
+- **Export:** a part's bare line with its named lines written after it
+  (`Vox` over `Vox.Mel`, barmark's amended grammar 7.6) is its first voice,
   played with them in the same measures. Needs the next `barmark`
   release.
 - **Import:** where one labelled system would otherwise run into the

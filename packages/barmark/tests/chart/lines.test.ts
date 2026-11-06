@@ -87,13 +87,13 @@ describe("part lines (grammar 7.6)", () => {
 		expect(e.map((d) => d.line)).toEqual([6]);
 		expect(e[0]?.message).toContain("four lines");
 	});
-	// Changed by the 7.6 amendment (Kevin, 2026-11-06): a bare line used to start a new system here.
-	test("a bare line joins its part's lines in a system, and plays as the first line", () => {
+	test("a bare line after its part's lines starts a new system, and they play one after the other", () => {
 		const text =
 			"part: Pno = Piano\npart: Bs = Bass\nPno.RH | {G4} |\nPno.LH | {G2} |\nPno | G |\nBs | {G1} |\n";
-		expect(barLines(text).map((l) => l.system)).toEqual([0, 0, 0, 0]);
+		expect(barLines(text).map((l) => l.system)).toEqual([0, 0, 1, 1]);
 		expect(errors(text)).toEqual([]);
-		expect(parseChart(text).parts[0]?.lines).toEqual(["", "RH", "LH"]);
+		expect(parseChart(text).parts[0]?.lines).toEqual(["RH", "LH"]);
+		expect(parseChart(text).bars).toHaveLength(2);
 	});
 	test("structure across lines", () => {
 		const text = "part: Pno = Piano\nPno.RH |: {G4} :|\nPno.LH | {G2} |\n";

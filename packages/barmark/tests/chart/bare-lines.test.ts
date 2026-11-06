@@ -28,11 +28,24 @@ describe("a bare line beside its part's named lines (grammar 7.6, amended 2026-1
 		]);
 		expect(p.bars[0]?.slots).toMatchObject([{ kind: "chord", chord: { canonical: "G" } }]);
 	});
-	test("the bare line comes first in score order wherever it is written", () => {
+	test("only a bare line written first joins: Vox.Mel then Vox is two systems", () => {
 		const text = `${VOX}Vox.Mel | {G4} |\nVox | G |\n`;
-		expect(systems(text)).toEqual([0, 0]);
-		expect(parseChart(text).parts[0]?.lines).toEqual(["", "Mel"]);
-		expect(printChart(text)).toBe(`${VOX}Vox     | G    |\nVox.Mel | {G4} |\n`);
+		expect(systems(text)).toEqual([0, 1]);
+		expect(parseChart(text).parts[0]?.lines).toEqual(["Mel"]);
+		expect(parseChart(text).bars).toHaveLength(2);
+		// The printer keeps them as written: sorting them would join them.
+		expect(printChart(text)).toBe(`${VOX}Vox.Mel | {G4} |\nVox     | G |\n`);
+	});
+	test("lines written with another part between still sort with the bare line first", () => {
+		const text = `${VOX}part: Gtr = Guitar\nVox | G |\nGtr | G |\nVox.Mel | {G4} |\n`;
+		expect(systems(text)).toEqual([0, 0, 0]);
+		const once = printChart(text);
+		expect(once.split("\n").slice(2, 5)).toEqual([
+			"Vox     | G    |",
+			"Vox.Mel | {G4} |",
+			"Gtr     | G    |",
+		]);
+		expect(systems(once)).toEqual([0, 0, 0]);
 	});
 	test("a repeated bare line or a repeated named line starts a new system", () => {
 		expect(systems(`${VOX}Vox | G |\nVox.Mel | {G4} |\nVox | C |\n`)).toEqual([0, 0, 1]);
@@ -73,13 +86,8 @@ describe("a bare line beside its part's named lines (grammar 7.6, amended 2026-1
 		]);
 		expect(printPart(LEAD, "Vox")).toBe(printChart(LEAD));
 	});
-	test("in a chart of several parts, the bare line's part is aligned with the others", () => {
+	test("a bare line after another part's line and its own named line starts a new system", () => {
 		const text = `${VOX}part: Gtr = Guitar\nVox.Mel | {G4} |\nGtr | G |\nVox | G |\n`;
-		expect(systems(text)).toEqual([0, 0, 0]);
-		expect(printChart(text).split("\n").slice(2, 5)).toEqual([
-			"Vox     | G    |",
-			"Vox.Mel | {G4} |",
-			"Gtr     | G    |",
-		]);
+		expect(systems(text)).toEqual([0, 0, 1]);
 	});
 });

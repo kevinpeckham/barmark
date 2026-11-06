@@ -57,7 +57,7 @@ describe("part lines in MusicXML", () => {
 	});
 	test("a bare line beside a named line is the first voice (7.6, amended)", () => {
 		const xml = xmlOf(
-			"part: Vox = Voice, instrument: voice\nVox.Mel | {G4} / {B4} / |\nVox | {D4} |\n",
+			"part: Vox = Voice, instrument: voice\nVox | {D4} |\nVox.Mel | {G4} / {B4} / |\n",
 		);
 		const [first] = measures(xml, "P1");
 		expect(placed(first ?? "").map(([p, v]) => [p, v])).toEqual([

@@ -10,7 +10,7 @@ package uses [semantic versioning](https://semver.org/).
 
 - A `---` break draws nothing, and a text line written with a leading `\`
   shows without the backslash. Needs the next `barmark` release.
-- A part's bare line written beside its named lines (`Vox` over
+- A part's bare line with its named lines written after it (`Vox` over
   `Vox.Mel`, barmark's amended grammar 7.6) draws in the same system, as
   the part's first row. Needs the next `barmark` release.
 

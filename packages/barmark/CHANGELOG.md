@@ -64,15 +64,16 @@ Releases follow the process in [RELEASING.md](RELEASING.md).
   row under an ending.
 - `lyrics:` followed by a bar line is now a lyric row, not text with a
   warning to write `lyricist:`; followed by anything else it still warns.
-- A part's bare line may now share a system with its named lines
-  (grammar 7.6, amended): `Vox` and `Vox.Mel` play together, the bare
-  line as the part's first line (it holds the harmony; `Vox.Mel` holds
+- A part's named lines written after its bare line now join it in a
+  system (grammar 7.6, amended): `Vox` then `Vox.Mel` play together, the
+  bare line as the part's first line (it holds the harmony; `Vox.Mel` holds
   notes only). Such a part lists the bare line first in
   `DeclaredPart.lines` as `""`, and its bars' `lines` give it the name
   `""`; `extractPart(text, "Vox", "")` extracts it alone. A bare line
-  counts toward the four lines. A bare line written straight after its
-  part's lined system used to start a new system and now joins it; put
-  `---` between them to keep them apart.
+  counts toward the four lines. Named lines written straight after their
+  part's bare line used to start a new system and now join it; put `---`
+  between them to keep them apart. A bare line after its part's named
+  lines still starts a new system.
 
 ## [0.16.0] - 2026-11-04
 
