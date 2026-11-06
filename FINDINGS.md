@@ -1044,3 +1044,23 @@ round-trip test.
 the melody has slots, generate the canonical text with `printChart`, and add
 the chart to `sounding.json` with `bun scripts/musicxml-sounding.ts` (the
 other entries do not change). Lives in `examples/shenandoah.chart.md`.
+
+### Two programs, two shapes of a melisma's `<extend>` (2026-11-06, musicxml)
+
+**Symptom:** a melisma our own export wrote never ended on import: the
+unsung note after it came back as `:/`, a breath after a row's melisma as
+`/`, and a melisma before a repeat's endings held into the first ending
+(an "importer bug" and a spurious row).
+**Cause:** MuseScore writes `<extend/>` on the syllable and nothing on the
+notes it holds over, and draws a word's first or middle syllable held as
+hyphens, so the import held a syllable until the next syllable or rest.
+Our export writes the syllable with `<extend type="start"/>` and a lyric
+holding only `<extend/>` on each held note, which says where the hold
+ends; the import read that lyric as more of the hold and never stopped.
+A row starting with `/` had the same root on barmark's side: its start
+was read as holding, so the export wrote an `<extend/>` with no start.
+**Fix:** a held note's own lyric (ours, or an extend's `stop`) sings `/`
+and ends the hold; the begin/middle guess applies only until a verse
+writes such a lyric (`tokensAt` and `Holds` in `import/lyrics.ts`). A
+row's start holds nothing (`heldAt` in barmark's `chart/verses.ts`), and
+the import's `settled` (`import/verses.ts`) mirrors it.
