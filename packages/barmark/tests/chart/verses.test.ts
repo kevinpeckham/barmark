@@ -4,17 +4,13 @@ import { printPart } from "../../src/chart/print.js";
 import { transposeChart } from "../../src/chart/transpose.js";
 import type { PlayedBar } from "../../src/chart/types.js";
 
-/**
- * Amazing Grace from the spec's section 1. Its chords are on a named first
- * line (`Vox.Ch`): grammar 7.6 doesn't let a bare `Vox` line share a system
- * with `Vox.Mel`.
- */
+/** Amazing Grace, exactly as the spec's section 1 writes it: one system (grammar 7.6, amended 2026-11-06). */
 const AMAZING_GRACE = `# Amazing Grace
 part: Vox = Voice, instrument: voice
 key: G, time: 3/4
 
 ## Verse
-Vox.Ch    | [1/4] N.C.    | G                           | G          / G7       | C            / /      | G              |
+Vox       | [1/4] N.C.    | G                           | G          / G7       | C            / /      | G              |
 Vox.Mel   | [1/4] {D4}:A- | {G4}:maz- / {B4}:ing_{G4}:/ | {B4}:grace / {A4}:how | {G4}:sweet / {E4}:the | {D4}:sound / / |
 lyrics 2: | 'Twas         | grace / that                | taught / my           | heart / to            | fear / /       |
 `;
@@ -37,7 +33,10 @@ describe("verses in play order (spec sections 3 and 4)", () => {
 	test("syllables on notes are verse 1, at their notes' onsets", () => {
 		const p = parseChart(AMAZING_GRACE);
 		expect(p.diagnostics).toEqual([]);
+		expect(p.parts[0]?.lines).toEqual(["", "Mel"]);
 		expect(p.parts[0]?.sings).toBe("Mel");
+		expect(p.bars).toHaveLength(5);
+		expect(p.bars[1]?.lines?.map((l) => l.name)).toEqual(["", "Mel"]);
 		expect(p.bars[1]?.lyrics?.[0]).toEqual({
 			verse: 1,
 			part: "Vox",
@@ -181,6 +180,18 @@ describe("verses in play order (spec sections 3 and 4)", () => {
 		]);
 		expect(warnings(`${VOICE}V | {C4}:la | {D4}:/ |\n`)).toEqual([]);
 	});
+	test("a bare line that sings, beside a named line", () => {
+		const chart = `${VOICE}V | {G4}:la | {E4}:lo |\nV.Alt | {D4} | {C4} |\nlyrics 2: | a | b |\n`;
+		const p = parseChart(chart);
+		expect(p.diagnostics).toEqual([]);
+		expect(p.parts[0]?.sings).toBe("");
+		expect(sung(p.bars)).toEqual([
+			["1: la", "2: a"],
+			["1: lo", "2: b"],
+		]);
+		expect(sung(extractPart(chart, "V", "")?.bars ?? [])).toEqual(sung(p.bars));
+		expect(extractPart(chart, "V", "Alt")?.bars.some((b) => b.lyrics)).toBe(false);
+	});
 	test("the lyrics belong to the first voice part, else the first part with syllables", () => {
 		const voices =
 			"part: G = Guitar\npart: A = Alto, instrument: voice\npart: B = Bari, instrument: voice\nG | C |\nA | {E4}:la |\nB | {C3}:lo |\n";
@@ -243,7 +254,7 @@ describe("verses in play order (spec sections 3 and 4)", () => {
 	});
 	test("extracting the voice part keeps its lines, syllables and lyric rows; another part's extract has none", () => {
 		const chart =
-			"part: Vox = Voice, instrument: voice\npart: Gtr = Guitar\nVox.Ch  | G | C |\nVox.Mel | {G4}:la | {E4}:lo |\nGtr     | G | C |\nlyrics 2: | a | b |\n";
+			"part: Vox = Voice, instrument: voice\npart: Gtr = Guitar\nVox     | G | C |\nVox.Mel | {G4}:la | {E4}:lo |\nGtr     | G | C |\nlyrics 2: | a | b |\n";
 		const p = parseChart(chart);
 		expect(p.diagnostics).toEqual([]);
 		expect(sung(p.bars)).toEqual([

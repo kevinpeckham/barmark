@@ -55,6 +55,18 @@ describe("part lines in MusicXML", () => {
 		expect(measures(xml)).toHaveLength(4);
 		expect(measures(xml, "P2")).toHaveLength(4);
 	});
+	test("a bare line beside a named line is the first voice (7.6, amended)", () => {
+		const xml = xmlOf(
+			"part: Vox = Voice, instrument: voice\nVox.Mel | {G4} / {B4} / |\nVox | {D4} |\n",
+		);
+		const [first] = measures(xml, "P1");
+		expect(placed(first ?? "").map(([p, v]) => [p, v])).toEqual([
+			["D4", 1],
+			["G4", 2],
+			["B4", 2],
+		]);
+		expect(measures(xml, "P1")).toHaveLength(1);
+	});
 	test("a resting line: the lower staff rests", () => {
 		const xml = xmlOf(`${MORNING}\nPno.RH | Em{E4 G4 B4} |\nBs | {E1} |\n`);
 		const last = measures(xml, "P1")[4] ?? "";

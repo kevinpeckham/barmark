@@ -226,7 +226,7 @@ const labelOf = (l: BarsLine) =>
 	`${l.part ?? ""}${l.lineName === undefined ? "" : `.${l.lineName}`}`;
 const labelsOf = (p: DeclaredPart) => [
 	p.label ?? "",
-	...(p.lines ?? []).map((n) => `${p.label}.${n}`),
+	...(p.lines ?? []).map((n) => (n ? `${p.label}.${n}` : (p.label ?? ""))),
 ];
 
 /** Score order: by part, then by the part's line, a bare line first. */

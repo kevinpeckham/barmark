@@ -35,6 +35,16 @@ describe("part lines (barmark's grammar 7.6)", () => {
 		const third = lh?.kind === "row" ? lh.cells[2] : undefined;
 		expect(third?.kind === "slots" && third.slots.length).toBe(4);
 	});
+	test("a bare line beside a named line: the bare line's row first (7.6, amended)", () => {
+		const lead = "part: Vox = Voice, instrument: voice\nVox.Mel | {G4} |\nVox | G |\n";
+		expect(rowLabels(lead)).toEqual([["Vox", "Vox.Mel"]]);
+		expect(rowLabels(lead, "Vox")).toEqual([["Vox", "Vox.Mel"]]);
+		const system = doc(lead).querySelector(".bm-system");
+		expect(system?.getAttribute("aria-label")).toContain("Voice, Voice Mel");
+		expect(doc(lead).querySelector(".bm-chart")?.getAttribute("style")).toContain(
+			"--bm-label-chars:7",
+		);
+	});
 	test("a system writing only RH", () => {
 		expect(rowLabels(`${MORNING}\nPno.RH | Em |\nBs | {E1} |\n`)[1]).toEqual(["Pno.RH", "Bs"]);
 	});

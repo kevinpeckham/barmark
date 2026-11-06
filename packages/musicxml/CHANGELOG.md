@@ -8,6 +8,10 @@ package uses [semantic versioning](https://semver.org/).
 
 ### Changed
 
+- **Export:** a part's bare line written beside its named lines (`Vox`
+  over `Vox.Mel`, barmark's amended grammar 7.6) is its first voice,
+  played with them in the same measures. Needs the next `barmark`
+  release.
 - **Import:** where one labelled system would otherwise run into the
   next (a part stops or enters), a `---` line keeps them apart, instead
   of a text line such as `Gtr tacet` or `Pno enters`. Needs `barmark`

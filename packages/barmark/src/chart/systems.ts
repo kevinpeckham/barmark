@@ -51,19 +51,6 @@ const isLabelled = (l: Line): l is Labelled =>
 export const streamKey = (part: string, lineName?: string): string =>
 	(lineName === undefined ? part : `${part}.${lineName}`).toLowerCase();
 
-/**
- * What a line takes in its system, and what it can't share it with: its
- * own stream, and its part written bare or as lines, which can't share a
- * system (grammar 7.6).
- */
-function claimsOf(l: Labelled): { takes: string[]; clashes: string[] } {
-	const part = (l.part ?? "").toLowerCase();
-	if (l.lineName === undefined)
-		return { takes: [part, `${part}#bare`], clashes: [part, `${part}#lines`] };
-	const own = streamKey(part, l.lineName);
-	return { takes: [own, `${part}#lines`], clashes: [own, `${part}#bare`] };
-}
-
 /** Number each run of labelled lines with no label twice (grammar 7.4). */
 function numberSystems(lines: Line[]): Line[] {
 	let system = -1;
@@ -73,12 +60,13 @@ function numberSystems(lines: Line[]): Line[] {
 			seen = null;
 			return l;
 		}
-		const { takes, clashes } = claimsOf(l);
-		if (!seen || clashes.some((c) => seen?.has(c))) {
+		// A bare line and its part's named lines may share a system (grammar 7.6); each only once.
+		const own = streamKey(l.part ?? "", l.lineName);
+		if (!seen || seen.has(own)) {
 			system++;
 			seen = new Set();
 		}
-		for (const c of takes) seen.add(c);
+		seen.add(own);
 		return { ...l, system };
 	});
 }

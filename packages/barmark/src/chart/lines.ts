@@ -71,6 +71,40 @@ function scoreOrder(names: Map<string, string[]>, systems: Labelled[][]): Map<st
 	return out;
 }
 
+/**
+ * Each part's bare lines written beside its named lines in a system: the
+ * bare line is then the part's first line, its name "" (grammar 7.6).
+ */
+function bareBeside(systems: Labelled[][]): Map<string, Labelled[]> {
+	const out = new Map<string, Labelled[]>();
+	for (const system of systems)
+		for (const [part, own] of byPart(system)) {
+			const bare = own.filter((l) => l.lineName === undefined);
+			if (bare.length && bare.length < own.length)
+				out.set(part, [...(out.get(part) ?? []), ...bare]);
+		}
+	return out;
+}
+
+/**
+ * Score order with each bare line written beside named lines first (as
+ * ""), unless the part already names four lines: those bare lines are
+ * then errors, and are reported.
+ */
+function withBare(
+	order: Map<string, string[]>,
+	bare: Map<string, Labelled[]>,
+	report: (l: Labelled, message: string) => void,
+): Map<string, string[]> {
+	const out = new Map(order);
+	for (const [part, lines] of bare) {
+		const named = order.get(part) ?? [];
+		if (named.length < MAX_LINES) out.set(part, ["", ...named]);
+		else for (const l of lines) report(l, "a part has at most four lines");
+	}
+	return out;
+}
+
 /** A system's lines of each part, after the first in score order, hold notes only. */
 function checkSystem(
 	system: Labelled[],
@@ -110,8 +144,14 @@ export function checkLines(
 	for (const l of named.lines)
 		if (isLabelled(l) && l.system !== undefined && !failed.has(l.line))
 			systems.set(l.system, [...(systems.get(l.system) ?? []), l]);
-	const order = scoreOrder(named.names, [...systems.values()]);
-	for (const system of systems.values()) checkSystem(system, order, report);
+	const bare = bareBeside([...systems.values()]);
+	const order = withBare(scoreOrder(named.names, [...systems.values()]), bare, report);
+	for (const system of systems.values())
+		checkSystem(
+			system.filter((l) => !failed.has(l.line)),
+			order,
+			report,
+		);
 	const out = named.lines.map((l) =>
 		l.kind === "bars" && failed.has(l.line) ? { ...l, dropped: true as const } : l,
 	);

@@ -194,6 +194,23 @@ order, not just the written marks.
 
 ## Design
 
+### The spec's lead sheet read as two systems with no diagnostic (2026-11-06, barmark)
+
+- **The symptom.** The voice-and-lyrics spec's Amazing Grace, a bare
+  `Vox` chord line over `Vox.Mel`, parsed cleanly into 10 bars: the
+  chords played first, then the melody, and `lyrics 2:` covered only
+  the melody line.
+- **The cause.** Grammar 7.6 said a part writes its lines or its bare
+  line in a system, not both, and `systems.ts` started a new system when
+  they met. The spec was written and approved against what part lines
+  "already" did, and nobody parsed its example until building verses.
+  Every line read cleanly, so nothing warned.
+- **The fix.** Kevin amended 7.6: a bare line may share a system with
+  its part's named lines and is its first line, `""` in
+  `DeclaredPart.lines`. `numberSystems` now claims one key per line
+  (`streamKey`), and `checkLines` puts `""` first. A spec example
+  belongs in a test as soon as the spec is approved.
+
 ### Timing alone can't tell comping from a melody; pitch motion can (2026-11-06, MusicXML import)
 
 - **The symptom.** The first melody-in-thirds rule (a bar's attacks are

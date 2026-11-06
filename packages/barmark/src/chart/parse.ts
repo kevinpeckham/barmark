@@ -120,6 +120,9 @@ export function zipEvents(
 /** One played stream: a part, or one of its lines (grammar 7.6); `part` indexes the parts shown. */
 type Stream = { part: number; label: string; name: string | null };
 
+/** How a stream's line is labelled in its messages: `Pno.RH`, or the part's label for its bare line. */
+const lineLabel = (label: string, name: string | null) => (name ? `${label}.${name}` : label);
+
 const streamsOf = (shown: DeclaredPart[]): Stream[] =>
 	shown.flatMap((p, part): Stream[] =>
 		p.lines?.length
@@ -216,7 +219,7 @@ function playStreams(
 	const played = streams.map((s, i) =>
 		expand(
 			projectPart(lines, parts, s.label, s.name),
-			s.name === null ? s.label : `${s.label}.${s.name}`,
+			lineLabel(s.label, s.name),
 			streams.length,
 			s.name === null,
 			i === sings ? voice?.sing : undefined,
@@ -296,9 +299,9 @@ function extractOf(
 	const label = part.label ?? "";
 	if (lineName !== undefined) {
 		const name = part.lines?.find((n) => n.toLowerCase() === lineName.toLowerCase());
-		if (!name) return null;
+		if (name === undefined) return null;
 		const lines = projectPart(doc.lines, doc.parts, label, name);
-		return { lines, played: expand(lines, `${label}.${name}`, 1, true, voice?.sing) };
+		return { lines, played: expand(lines, lineLabel(label, name), 1, true, voice?.sing) };
 	}
 	if (part.lines?.length)
 		return {
