@@ -259,6 +259,26 @@ and round-trip it through `format`.
 
 ## Tooling
 
+### Dorico's MusicXML export can't be driven without a dialog, so Dorico import fixtures are exported by hand (2026-11-06, MusicXML import)
+
+- **The symptom.** The import plan's Dorico spike wanted mac-bench to open
+  a file in Dorico and send `File.Export?FilterID=…` over Remote Control.
+  The command list Dorico Elements 6.2 reports (mac-bench's
+  `tests/recordings/spike1.log`) gives `File.Export` an optional
+  `FilterID` but lists no filter IDs, and no command names a file to
+  export to.
+- **The cause.** Dorico already ignores the `File` parameter of
+  `File.Save` and opens the Save dialog (mac-bench FINDINGS). An export
+  that can't be given a path will do the same. A dialog left open on the
+  unattended cloud Mac blocks Remote Control, and with it every mac-bench
+  job, until someone dismisses it by screen sharing. So the spike was not
+  run live.
+- **The fix.** Dorico's MusicXML files for the import tests are exported
+  by hand, once: open each `packages/musicxml/tests/fixtures/import/*.musicxml`
+  in Dorico and choose File > Export > MusicXML. They are checked in as
+  `dorico-*.musicxml` with expected charts. Revisit if a Dorico release
+  documents export filter IDs and a destination parameter.
+
 ### MuseScore's AppImage needs `xvfb-run`; it ignores `QT_QPA_PLATFORM=offscreen` (2026-11-05, MusicXML import)
 
 - **The symptom.** `mscore -o out.musicxml in.mscx` on the bench VM, with
