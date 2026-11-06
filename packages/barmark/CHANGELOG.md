@@ -13,6 +13,13 @@ Releases follow the process in [RELEASING.md](RELEASING.md).
 
 - `---` (three or more hyphens alone) ends a system and means nothing else;
   it parses as a `break` line and prints as `---` (grammar 1, 7.4).
+- Syllables on notes (grammar 4.3): `{G4}:maz-` sings a syllable on a note
+  set, a trailing `-` continues the word, `:/` holds the syllable before
+  over a new note and `~` joins elided syllables (`{C4}:the~end`). A dotted
+  note takes its dot before the colon (`{C4}.:maz-`). The slot gains
+  `syllable` (the new `Syllable` type); the printer writes it back, and `%`
+  copies a bar's notes without their syllables. A syllable on a chord
+  name, a voicing, `/`, `--`, `N.C.` or `?`, or an empty one, is an error.
 
 ### Changed
 

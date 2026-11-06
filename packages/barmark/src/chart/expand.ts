@@ -26,6 +26,15 @@ import type {
 export const MAX_EXPANDED_BARS = 10_000;
 
 type BarsLine = Extract<Line, { kind: "bars" }>;
+
+/** A slot without its syllable: `%` copies a bar's notes, not its words (grammar 4.3). */
+const unsungSimple = (s: SimpleSlot): SimpleSlot => {
+	if (s.kind !== "chord" || !s.syllable) return s;
+	const { syllable: _, ...rest } = s;
+	return rest;
+};
+const unsung = (s: Slot): Slot =>
+	s.kind === "group" ? { ...s, members: s.members.map(unsungSimple) } : unsungSimple(s);
 type SectionLine = Extract<Line, { kind: "section" }>;
 type Section = { heading: SectionLine | null; lines: Line[] };
 /** A cell with `%` already resolved to the slots it copies. */
@@ -200,7 +209,7 @@ export function expand(
 		if (!previous) error(line, "% has no bar before it to repeat", "%");
 		else if (previous.tacet) tacetBefore(line, "% has nothing to copy");
 		const meter = previous?.meter ?? null;
-		const slots: Slot[] = previous?.slots ?? [{ kind: "hold" }];
+		const slots: Slot[] = previous?.slots.map(unsung) ?? [{ kind: "hold" }];
 		return marked({ kind: "bar", meter, slots, own: false, written: ++written }, c.words);
 	};
 	/** A bar that opens with `/` holds what was sounding before it. */

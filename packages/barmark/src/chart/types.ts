@@ -57,11 +57,14 @@ export type Articulation = "accent" | "hit";
 export type Push = "eighth" | "sixteenth";
 /** `+` presses the sustain pedal, or changes it when it is down; `*` lifts it (grammar 2.9). */
 export type Pedal = "press" | "release";
+/** A syllable sung on a note (grammar 4.3). `held` is `:/`. `parts` holds elided syllables (`the~end`). */
+export type Syllable = { kind: "sung"; parts: string[]; continues: boolean } | { kind: "held" };
 /**
  * A chord slot holds a chord symbol or a note set; `chord.kind` tells
  * which. `voicing` is the exact notes written after a chord's name
- * (`Cmaj7{E3 G3 B3}`, grammar 4.2). The optional fields are present only
- * when written.
+ * (`Cmaj7{E3 G3 B3}`, grammar 4.2). `syllable` is sung on a note set
+ * (`{G4}:maz-`, grammar 4.3), never on a chord name or a voicing. The
+ * optional fields are present only when written.
  */
 export type SimpleSlot = (
 	| {
@@ -71,6 +74,7 @@ export type SimpleSlot = (
 			pedal?: Pedal;
 			articulation?: Articulation;
 			push?: Push;
+			syllable?: Syllable;
 	  }
 	| { kind: "hold" }
 	| { kind: "nc"; push?: Push }

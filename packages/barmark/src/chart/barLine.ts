@@ -4,6 +4,7 @@ import { parseChord } from "../chords/parse.js";
 import type { ChordRecord, ParseResult } from "../chords/types.js";
 import { isDirectionWord, readDirection } from "./direction.js";
 import { parseMeter } from "./directives.js";
+import { readSyllable, type Split, splitSyllable } from "./syllable.js";
 import type {
 	Articulation,
 	Cell,
@@ -353,6 +354,26 @@ function marksProblem(marks: Marks, inGroup: boolean, token: string): Problem | 
 	return broken ? { problem: broken[1], token } : null;
 }
 
+const NOT_A_NOTE_SET = "a syllable follows a note set, like {G4}:la";
+
+/** The slot with this syllable sung on it, or why it can't be (grammar 4.3). */
+function sungOn(slot: SimpleSlot, written: string): SimpleSlot | { problem: string } {
+	if (slot.kind === "chord" && slot.voicing)
+		return {
+			problem: `a syllable goes on a note set, not a voicing; write the notes alone (${slot.voicing.canonical}:${written})`,
+		};
+	if (slot.kind !== "chord" || slot.chord.kind !== "notes") return { problem: NOT_A_NOTE_SET };
+	if (written.includes("{"))
+		return { problem: "a syllable ends at {; put a space before the next note" };
+	const syllable = readSyllable(written);
+	if (syllable) return { ...slot, syllable };
+	return {
+		problem: written.includes("~")
+			? "~ joins two syllables; write one on each side"
+			: "an empty syllable; write one after the colon, or leave the note unsung",
+	};
+}
+
 /** Whether a voicing's note is one of the chord's, by pitch class. */
 const inChord = (note: string, chord: ChordRecord) => {
 	const pc = (n: string) => (noteSemitone(n.replace(/\d|!/g, "")) + 12) % 12;
@@ -526,16 +547,34 @@ export function parseBarLine(
 		const s = markedSlot(m.slice(0, -1), true);
 		return s && { ...s, dotted: true };
 	};
+	/** A slot read by `read`, with the syllable written after it, if any (grammar 4.3). */
+	const withSyllable = (
+		{ note, syllable }: Split,
+		read: (note: string) => SimpleSlot | null,
+	): SimpleSlot | null => {
+		const written = `${note}:${syllable}`;
+		if (syllable !== null && !note) return error(NOT_A_NOTE_SET, written);
+		const slot = read(note);
+		if (syllable === null || !slot) return slot;
+		const sung = sungOn(slot, syllable);
+		return "problem" in sung ? error(sung.problem, written) : sung;
+	};
 	/** One slot token: a simple slot, or a `_` group of them. */
 	const slotOf = (token: string): Slot | null => {
-		const members = groupMembers(token);
-		if (members.length === 1)
-			return isDotted(token) ? error(DOT_PLACE, token) : markedSlot(token, false);
-		const dots = members.filter(isDotted).length;
-		if (dots && (members.length > 2 || dots > 1)) return error(DOT_PLACE, token);
+		const members = groupMembers(token).map(splitSyllable);
+		const dots = members.filter((m) => isDotted(m.note)).length;
+		if (dots && (members.length !== 2 || dots > 1)) return error(DOT_PLACE, token);
+		const [only] = members;
+		if (only && members.length === 1) return withSyllable(only, (n) => markedSlot(n, false));
+		return groupOf(members, token);
+	};
+	const groupOf = (members: Split[], token: string): Slot => {
 		const out: SimpleSlot[] = [];
 		for (const m of members) {
-			const s = m ? memberOf(m) : error("an empty member in a group", token);
+			const s =
+				m.note || m.syllable !== null
+					? withSyllable(m, memberOf)
+					: error("an empty member in a group", token);
 			if (s) out.push(s);
 		}
 		return { kind: "group", members: out };

@@ -13,6 +13,7 @@ import type {
 	Repeat,
 	SimpleSlot,
 	Slot,
+	Syllable,
 	TempoChange,
 	Words,
 } from "./types.js";
@@ -65,10 +66,15 @@ function printMarks(s: SimpleSlot): string {
 	return pedal + push + (s.kind === "chord" && s.articulation ? ARTICULATIONS[s.articulation] : "");
 }
 
+/** A syllable as written after its note's colon (grammar 4.3). */
+const printSyllable = (s: Syllable) =>
+	s.kind === "held" ? "/" : s.parts.join("~") + (s.continues ? "-" : "");
+
 function printSimple(s: SimpleSlot): string {
 	const body =
 		s.kind === "chord" ? s.chord.canonical + (s.voicing?.canonical ?? "") : SYMBOLS[s.kind];
-	return printMarks(s) + body + (s.dotted ? "." : "");
+	const sung = s.kind === "chord" && s.syllable ? `:${printSyllable(s.syllable)}` : "";
+	return printMarks(s) + body + (s.dotted ? "." : "") + sung;
 }
 
 /** A slot in canonical spelling; a group's members are joined with `_`. */
