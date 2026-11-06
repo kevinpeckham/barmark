@@ -32,6 +32,20 @@ Releases follow the process in [RELEASING.md](RELEASING.md).
   width. A row with no bar line above it, a wrong bar count, an empty bar
   or syllable, a quote or brace, or a verse number of 0 or past
   `Number.MAX_SAFE_INTEGER` is an error.
+- Verses in play order (grammar 7.7): each played bar gains `lyrics`, one
+  `PlayedLyrics` per verse it sings, each syllable with its onset `at` in
+  whole notes and `note` (true when a note of the singing line starts
+  there). Syllables on notes are verse 1 and `lyrics N:` verse N; outside a
+  repeat every verse is sung, and inside one verse N on pass N (a second
+  ending holds verse 2's words; a jump's pass back sings pass 1's). A
+  replay's rows replace its words. The first part with `instrument: voice`,
+  else the first with syllables, sings; its `DeclaredPart` gains `sings`,
+  the line its notes carry the syllables on. `lyrics 1:` or an unnumbered
+  row under notes with syllables, an unnumbered row among numbered ones and
+  a verse written twice over the same bars are errors; a row's syllable
+  where the singing line starts no note, and a `:/` with nothing sung
+  before it, warn. Another part's extract (`extractPart`, `printPart`)
+  leaves the singer's rows out.
 
 ### Changed
 

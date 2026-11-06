@@ -2,7 +2,7 @@ import { type JumpPlan, planJump } from "./direction.js";
 import { beatsOf } from "./directives.js";
 import { pedalWarnings } from "./pedal.js";
 import { type Entry, type Item, pairRepeats } from "./repeats.js";
-import { memberShares } from "./shares.js";
+import { slotTimes } from "./shares.js";
 import type {
 	ChartDiagnostic,
 	ChartEvent,
@@ -21,6 +21,16 @@ import type {
 	TempoChange,
 	Words,
 } from "./types.js";
+
+/**
+ * Where a played bar comes from, for its words (grammar 7.7): its bar
+ * line, its place among that line's bars (from 0), the pass of the repeat
+ * it plays in (null outside one, and in an open repeat, whose passes are
+ * unknown), and the line of the replay heading it plays under, if any.
+ */
+export type BarSource = { line: number; bar: number; pass: number | null; replay: number | null };
+/** The words a played bar sings, given where it comes from; undefined when none. */
+export type Sing = (bar: PlayedBar, from: BarSource) => PlayedBar["lyrics"];
 
 /** Nested repeats multiply; expansion stops here rather than run away. */
 export const MAX_EXPANDED_BARS = 10_000;
@@ -45,6 +55,8 @@ type Played =
 			slots: Slot[];
 			own: boolean;
 			written: number;
+			/** Its place among its line's bars, from 0. */
+			bar: number;
 			rehearsal?: string;
 			words?: Words[];
 			tacet?: true;
@@ -81,19 +93,6 @@ function uneven(slots: number, meter: Meter, line: number): ChartDiagnostic | nu
 
 const PUSH_MARKS = { eighth: "<", sixteenth: "<<" } as const;
 const PUSH_LENGTH = { eighth: 1 / 8, sixteenth: 1 / 16 } as const;
-
-/** Each simple slot of a bar, in order, with how long it lasts in whole notes. */
-function timed(bar: PlayedBar): { slot: SimpleSlot & { push?: Push }; length: number }[] {
-	const each = bar.meter.n / bar.meter.d / bar.slots.length;
-	return bar.slots.flatMap((s) =>
-		s.kind === "group"
-			? memberShares(s.members).map((share, i) => ({
-					slot: s.members[i] as SimpleSlot,
-					length: each * share,
-				}))
-			: [{ slot: s, length: each }],
-	);
-}
 
 /** Why a push can't take its time from a slot this long; null when it can. */
 function pushProblem(push: Push, before: number | null): string | null {
@@ -158,6 +157,8 @@ export function expand(
 	share = 1,
 	/** False for one line of a part (grammar 7.6): the pedal is the part's, warned of once its lines are folded. */
 	pedal = true,
+	/** The words each bar sings, for the line that sings them (grammar 7.7). */
+	sing?: Sing,
 ): {
 	events: ChartEvent[];
 	sections: SectionOccurrence[];
@@ -210,7 +211,7 @@ export function expand(
 		else if (previous.tacet) tacetBefore(line, "% has nothing to copy");
 		const meter = previous?.meter ?? null;
 		const slots: Slot[] = previous?.slots.map(unsung) ?? [{ kind: "hold" }];
-		return marked({ kind: "bar", meter, slots, own: false, written: ++written }, c.words);
+		return marked({ kind: "bar", meter, slots, own: false, written: ++written, bar: 0 }, c.words);
 	};
 	/** A bar that opens with `/` holds what was sounding before it. */
 	const checkHold = (c: Extract<WrittenCell, { kind: "slots" }>, line: number) => {
@@ -229,6 +230,7 @@ export function expand(
 			slots: c.slots,
 			own: true,
 			written: ++written,
+			bar: 0,
 			...(c.tacet && { tacet: c.tacet }),
 		} as const;
 		return marked(bar, c.words);
@@ -242,9 +244,13 @@ export function expand(
 	for (const l of sections.flatMap((s) => s.lines)) {
 		if (l.kind === "invalid") written += l.written;
 		if (l.kind !== "bars") continue;
+		let bar = 0;
 		resolved.set(
 			l,
-			l.cells.map((c) => resolveCell(c, l.line)).filter((p): p is Played => p !== null),
+			l.cells
+				.map((c) => resolveCell(c, l.line))
+				.filter((p): p is Played => p !== null)
+				.map((p) => (p.kind === "bar" ? { ...p, bar: bar++ } : p)),
 		);
 	}
 	const unused = pending.mark;
@@ -319,6 +325,8 @@ export function expand(
 		error(line, `expansion stopped at ${maxBars} bars`, "x");
 	};
 	let sectionName: string | null = null;
+	/** The pass of the repeat being played, and the replay heading being played, for the words (grammar 7.7). */
+	const where: Pick<BarSource, "pass" | "replay"> = { pass: null, replay: null };
 	let phase: Phase = "main";
 	const stopped = () => capped || phase === "jumped" || phase === "done";
 	const jumped = () => phase === "jumped";
@@ -354,12 +362,21 @@ export function expand(
 			...(p.tacet && { tacet: p.tacet }),
 		};
 	};
+	/** The bar with the words it sings here, if any (grammar 7.7). */
+	const sung = (bar: PlayedBar, p: Extract<Played, { kind: "bar" }>, line: number): PlayedBar => {
+		const lyrics = sing?.(bar, { line, bar: p.bar, ...where });
+		return lyrics ? { ...bar, lyrics } : bar;
+	};
 	/** How long the slot played just before is, in whole notes; null after a fermata or at the start. */
 	const before: { length: number | null } = { length: null };
 	const pushReported = new Set<string>();
 	/** Each push takes its time from the slot played just before it (grammar 2.8). */
 	const checkPushes = (bar: PlayedBar) => {
-		for (const { slot, length } of timed(bar)) {
+		const timed: { slot: SimpleSlot & { push?: Push }; length: number }[] = slotTimes(
+			bar.slots,
+			bar.meter,
+		);
+		for (const { slot, length } of timed) {
 			const problem = slot.push && pushProblem(slot.push, before.length);
 			const key = `${bar.line}\u0000${problem}`;
 			if (problem && !pushReported.has(key)) {
@@ -382,7 +399,7 @@ export function expand(
 		count++;
 		const bar = barOf(p, line);
 		checkPushes(bar);
-		out.push({ kind: "bar", bar });
+		out.push({ kind: "bar", bar: sung(bar, p, line) });
 	};
 	/** Play `body` `repeat` times into `out`; an open repeat plays one pass inside an open event. */
 	const times = (
@@ -407,11 +424,17 @@ export function expand(
 			return;
 		}
 		// After the jump every repeat plays once.
-		const passes = phase === "main" ? (repeat ?? 1) : 1;
-		for (let i = 0; i < passes && !stopped(); i++) {
+		passes(phase === "main" ? (repeat ?? 1) : 1, repeat !== null, line, () => body(out));
+	};
+	/** Play `n` passes; a repeat's are numbered for the words (grammar 7.7), a plain line's are not. */
+	const passes = (n: number, counted: boolean, line: number, play: () => void) => {
+		const outer = where.pass;
+		for (let i = 0; i < n && !stopped(); i++) {
 			if (++work > maxWork) return stop(line);
-			body(out);
+			if (counted) where.pass = i + 1;
+			play();
 		}
+		where.pass = outer;
 	};
 
 	const playLine = ({ line: l, repeat }: Entry, out: ChartEvent[]) => {
@@ -436,12 +459,16 @@ export function expand(
 	const playEndings = (it: Extract<Item, { kind: "bracket" }>, out: ChartEvent[]) => {
 		const highest = typeof it.repeat === "number" ? it.repeat : 1;
 		const first = phase === "main" ? 1 : highest;
+		const outer = where.pass;
 		for (let pass = first; pass <= highest && !stopped(); pass++) {
 			if (++work > maxWork) return stop(it.line);
+			// The return after a jump is no new pass: it plays pass 1's words (grammar 7.7).
+			where.pass = phase === "main" ? pass : 1;
 			for (const e of it.entries) playLine(e, out);
 			const ending = it.endings.find((x) => x.passes.includes(pass));
 			if (ending) playLine(ending.entry, out);
 		}
+		where.pass = outer;
 	};
 
 	const events: ChartEvent[] = [];
@@ -472,7 +499,9 @@ export function expand(
 			error(h.line, unmatchedReplay(h, sections), h.name);
 			return null;
 		}
+		where.replay = h.line;
 		times(h.repeat, h.line, out, (into) => playItems(itemsOf.get(source) ?? [], into));
+		where.replay = null;
 		const elided = h.elided && removeLastBar(out);
 		// A replay heading stands for its bars: its own lines (directives) come after them.
 		playItems(itemsOf.get(s) ?? [], out);

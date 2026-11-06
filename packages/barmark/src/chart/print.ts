@@ -489,7 +489,11 @@ export function printPart(text: string, label: string): string | null {
 				(l) =>
 					// A `part:` demoted to text (a shared label) would declare a part again in the extract.
 					(l.kind === "text" && /^part\s*:/i.test(l.text)) ||
-					((l.kind === "part" || l.kind === "bars" || l.kind === "invalid") && !kept.has(l.line)),
+					((l.kind === "part" ||
+						l.kind === "bars" ||
+						l.kind === "invalid" ||
+						l.kind === "lyrics") &&
+						!kept.has(l.line)),
 			)
 			.map((l) => l.line),
 	);
