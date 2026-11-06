@@ -4,7 +4,8 @@
  * converted by MuseScore 4 to `.musicxml`, and the lead sheet also to a
  * compressed `.mxl`. It runs on the VM only, where `~/.local/bin/mscore`
  * runs MuseScore's AppImage under `xvfb-run` (FINDINGS.md); CI reads the
- * checked-in outputs and never needs MuseScore.
+ * checked-in outputs and never needs MuseScore. It then checks that our
+ * export's lyrics survive MuseScore; `--lyrics` runs that check alone.
  */
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
@@ -39,12 +40,15 @@ function checkSoftware(xml: string): void {
 
 if (!existsSync(MSCORE))
 	throw new Error(`MuseScore not found at ${MSCORE} (this script runs on the VM)`);
-for (const [name, formats] of SOURCES)
-	for (const format of formats) {
-		convert(`${DIR}${name}.mscx`, `${DIR}${name}.${format}`);
-		if (format === "musicxml") checkSoftware(`${DIR}${name}.${format}`);
-		console.log(`${name}.${format}`);
-	}
+/** Regenerates every fixture from its `.mscx`. */
+function regenerate(): void {
+	for (const [name, formats] of SOURCES)
+		for (const format of formats) {
+			convert(`${DIR}${name}.mscx`, `${DIR}${name}.${format}`);
+			if (format === "musicxml") checkSoftware(`${DIR}${name}.${format}`);
+			console.log(`${name}.${format}`);
+		}
+}
 
 /** A lead sheet with two verses, a melisma and an elision, for the lyrics check. */
 const LYRICS_CHART = `# Lyrics Check
@@ -101,4 +105,6 @@ function checkLyrics(): void {
 	console.log(`lyrics: ${want.length} survive MuseScore`);
 }
 
+// `--lyrics` runs the lyrics check alone, leaving the fixtures as they are.
+if (!process.argv.includes("--lyrics")) regenerate();
 checkLyrics();

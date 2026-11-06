@@ -10,6 +10,7 @@ import type {
 	PlayedLyrics,
 	PlayedSyllable,
 	SimpleSlot,
+	Syllable,
 } from "./types.js";
 
 type BarsLine = Extract<Line, { kind: "bars" }>;
@@ -200,13 +201,41 @@ function onNotes(bar: PlayedBar): PlayedSyllable[] {
 const noteOnsets = (bar: PlayedBar): number[] =>
 	slotTimes(bar.slots, bar.meter).flatMap(({ slot, at }) => (isNote(slot) ? [at] : []));
 
-/** A row's cell as played: each syllable at its beat, on a note when one starts there. */
-function onBeats(cell: LyricSlot[], bar: PlayedBar, onsets: number[]): PlayedSyllable[] {
-	return slotTimes(cell, bar.meter).flatMap(({ slot, at }) =>
-		slot.kind === "syllable"
-			? [{ at, syllable: slot.syllable, note: onsets.some((o) => near(o, at)) }]
-			: [],
-	);
+const HELD: Syllable = { kind: "held" };
+
+/**
+ * A row's cell as played: each syllable at its beat, on a note when one
+ * starts there; a `/` holding a syllable over a new note of the melody is
+ * held there, as `:/` is (4.3). Over a tie, after a breath or where no
+ * note starts, a `/` sings nothing. `sounding`: a syllable is held as the
+ * cell begins.
+ */
+function onBeats(
+	cell: LyricSlot[],
+	bar: PlayedBar,
+	onsets: number[],
+	sounding: boolean,
+): PlayedSyllable[] {
+	let holding = sounding;
+	return slotTimes(cell, bar.meter).flatMap(({ slot, at }): PlayedSyllable[] => {
+		const note = onsets.some((o) => near(o, at));
+		if (slot.kind === "syllable") {
+			holding = true;
+			return [{ at, syllable: slot.syllable, note }];
+		}
+		if (slot.kind === "breath") holding = false;
+		return slot.kind === "hold" && holding && note ? [{ at, syllable: HELD, note }] : [];
+	});
+}
+
+/** Whether a row holds a syllable as its cell `i` begins: its last syllable or breath before, a syllable (or none, at its start). */
+function soundingAt(row: LyricsLine, i: number): boolean {
+	const before = row.cells
+		.slice(0, i)
+		.flat()
+		.flatMap((s) => (s.kind === "group" ? s.members : [s]))
+		.filter((s) => s.kind !== "hold");
+	return before.at(-1)?.kind !== "breath";
 }
 
 /** The verses a pass sings: outside a repeat every verse; on pass N verse N, or a lone verse on every pass. */
@@ -263,7 +292,7 @@ function singing(
 		from: BarSource,
 		onsets: number[],
 	): Candidate => {
-		const syllables = onBeats(row.cells[from.bar] ?? [], bar, onsets);
+		const syllables = onBeats(row.cells[from.bar] ?? [], bar, onsets, soundingAt(row, from.bar));
 		const missed = melody ? syllables.find((s) => !s.note) : undefined;
 		if (missed)
 			warn(row.line, `"${textOf(missed)}" falls where the voice starts no note`, textOf(missed));

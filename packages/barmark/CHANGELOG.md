@@ -52,6 +52,9 @@ Releases follow the process in [RELEASING.md](RELEASING.md).
   singer's, and only the singer's syllables clash with a row over them.
   A numbered verse that no pass sings, and a repeat's pass that sings
   nothing where other passes sing, warn.
+  A row's `/` where the singing line starts a new note is a held syllable
+  there (`{ kind: "held" }`, `note: true`), as `:/` on the notes is: a
+  melisma the converters extend and the renderer draws.
 
 ### Changed
 

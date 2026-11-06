@@ -64,13 +64,22 @@ function cellsOf(lines: Line[]): Map<number, number> {
 const within = (o: SectionOccurrence, index: number) =>
 	o.firstBar !== null && o.lastBar !== null && o.firstBar <= index && index <= o.lastBar;
 
+/** A parse's rows and where each written bar sits in its bar line, read once. */
+type Rows = { parse: ChartParse; rows: Placed[]; cells: Map<number, number> };
+
+const rowsIn = (parse: ChartParse): Rows => ({
+	parse,
+	rows: rowsOf(parse.lines),
+	cells: cellsOf(parse.lines),
+});
+
 /** What the rows say of a played bar: each verse's cell, from its replay's rows if it has any, else from the rows under its line. */
-function rowCells(parse: ChartParse, bar: PlayedBar): Map<number, LyricSlot[]> {
-	const rows = rowsOf(parse.lines).filter((r) => r.row.covers.includes(bar.line));
+function rowCells({ parse, rows: all, cells }: Rows, bar: PlayedBar): Map<number, LyricSlot[]> {
+	const rows = all.filter((r) => r.row.covers.includes(bar.line));
 	const replay = parse.sections.find((o) => o.replayOf !== null && within(o, bar.index));
 	const own = replay ? rows.filter((r) => r.replay === replay.line) : [];
 	const chosen = own.length ? own : rows.filter((r) => r.replay === null);
-	const cell = cellsOf(parse.lines).get(bar.written) ?? 0;
+	const cell = cells.get(bar.written) ?? 0;
 	return new Map(chosen.map(({ row }) => [row.verse ?? 1, row.cells[cell] ?? []]));
 }
 
@@ -194,6 +203,7 @@ function staffBar(m: Measure, cells: Map<number, LyricSlot[]>, carried: boolean)
 /** The lyric staff's bars, in written order. */
 function staffBars(parse: ChartParse): MeasureEvents[] {
 	const byIndex = new Map(parse.bars.map((b) => [b.index, b]));
+	const rows = rowsIn(parse);
 	const out: MeasureEvents[] = [];
 	let carried = false;
 	for (const written of writtenMeasures(parse)) {
@@ -201,7 +211,7 @@ function staffBars(parse: ChartParse): MeasureEvents[] {
 		const played = m.played === null ? undefined : byIndex.get(m.played);
 		const { bar, held, sounding } = staffBar(
 			m,
-			played ? rowCells(parse, played) : new Map(),
+			played ? rowCells(rows, played) : new Map(),
 			carried,
 		);
 		if (held) tieOver(out[out.length - 1], bar);

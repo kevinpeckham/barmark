@@ -31,7 +31,14 @@ function split(e: SoundEvent): [SoundEvent, SoundEvent] {
 	const { pedal: _p, lyrics: _l, ...unmarked } = e;
 	const lower =
 		low.length > 0 ? { ...unmarked, words: [], harmony: false, notes: low } : silence(e);
-	return [{ ...e, notes: high }, lower];
+	return sungOn({ ...e, notes: high }, lower);
+}
+
+/** The syllables go on the staff that sounds the note: the upper when it has one, else the lower. */
+function sungOn(upper: SoundEvent, lower: SoundEvent): [SoundEvent, SoundEvent] {
+	const { lyrics, ...rest } = upper;
+	if (!lyrics || upper.notes?.length) return [upper, lower];
+	return [rest, { ...lower, lyrics }];
 }
 
 /** A rest followed by rests that write nothing is one rest. */

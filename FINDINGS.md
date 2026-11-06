@@ -481,6 +481,12 @@ and round-trip it through `format`.
   The import (Task 8) must read both forms: an extend on a syllable
   holds it over the following unsung notes, and U+E551 between texts is
   `~`.
+- **And only on a word's last syllable** (found in review). MuseScore
+  keeps `<extend>` only on an end or single syllable. A begin or middle
+  syllable held by `:/` (`{G4}:maz-_{A4}:/`) comes back with no extend:
+  MuseScore draws the word's hyphens across the unsung notes instead, so
+  the import must read a begin or middle syllable followed by unsung
+  notes as held over them too.
 
 ### MuseScore's AppImage needs `xvfb-run`; it ignores `QT_QPA_PLATFORM=offscreen` (2026-11-05, MusicXML import)
 

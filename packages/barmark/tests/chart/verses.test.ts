@@ -57,6 +57,35 @@ describe("verses in play order (spec sections 3 and 4)", () => {
 			],
 		});
 	});
+	test("a row's / over a new note holds the syllable (held, on the note); over a tie, a breath or no note, nothing", () => {
+		const held = { kind: "held" } as const;
+		const at = (chart: string) =>
+			parseChart(VOICE + chart).bars[0]?.lyrics?.[0]?.syllables.map((s) => [
+				s.at,
+				s.syllable.kind === "held" ? "/" : s.syllable.parts.join(""),
+				s.note,
+			]);
+		expect(at("V | {C4} {D4} {E4} / |\nlyrics: | Name / of / |\n")).toEqual([
+			[0, "Name", true],
+			[1 / 4, "/", true],
+			[1 / 2, "of", true],
+		]);
+		expect(at("V | {C4} / {E4} {F4} |\nlyrics: | la / da / |\n")).toEqual([
+			[0, "la", true],
+			[1 / 2, "da", true],
+			[3 / 4, "/", true],
+		]);
+		expect(at("V | {C4} {D4} {E4} {F4} |\nlyrics: | -- / la / |\n")).toEqual([
+			[1 / 2, "la", true],
+			[3 / 4, "/", true],
+		]);
+		expect(
+			parseChart(`${VOICE}V | {C4} {D4} |\nlyrics: | la / |\n`).bars[0]?.lyrics?.[0]?.syllables[1]
+				?.syllable,
+		).toEqual(held);
+		// With no melody, a row's / is the row's rhythm, not a syllable.
+		expect(sung(parseChart("| C |\nlyrics: | la / |\n").bars)).toEqual([["1: la"]]);
+	});
 	test("stacked verses outside a repeat don't change the play order", () => {
 		const p = parseChart(AMAZING_GRACE);
 		expect(p.bars).toHaveLength(5);

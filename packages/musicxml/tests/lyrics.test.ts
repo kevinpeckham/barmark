@@ -139,6 +139,28 @@ describe("lyrics on notes", () => {
 			["B", lyric(1, "single", "ah")],
 		]);
 	});
+	test("a lyric row's / over a new note extends its syllable, as :/ does; over a tie it doesn't", () => {
+		const xml = xmlOf(
+			"part: S = Soprano, instrument: voice\npart: A = Alto, instrument: voice\nS | {E5}:Ho- {E5}:ly | {G5}:Lord {G5}:/ {E5}:God / |\nA | {C5}:Ho- {C5}:ly | {E5}:Lord {D5}:/ {C5}:God / |\nlyrics 2: | Ev- er | Name / of / |\n",
+		);
+		const extend = (n: number) => `<lyric number="${n}"><extend/></lyric>`;
+		expect(sung(measures(xml, "P1")[1] ?? "")).toEqual([
+			["G", held(1, "single", "Lord"), held(2, "single", "Name")],
+			["G", extend(1), extend(2)],
+			["E", lyric(1, "single", "God"), lyric(2, "single", "of")],
+		]);
+		// The row is the first voice part's: the alto sings only its own verse.
+		expect(measures(xml, "P2").join("")).not.toContain('<lyric number="2"');
+	});
+	test("a keyboard's syllables go on the staff that sounds their note", () => {
+		const xml = xmlOf("part: P = Piano\nP | {C3}:la {E3}:da {C5}:hi {G2 C5}:lo |\n");
+		const words = (staff: number) =>
+			notes(measures(xml)[0] ?? "")
+				.filter((n) => n.includes(`<staff>${staff}</staff>`))
+				.flatMap((n) => [...n.matchAll(/<text>([^<]*)<\/text>/g)].map((m) => m[1]));
+		expect(words(1)).toEqual(["hi", "lo"]);
+		expect(words(2)).toEqual(["la", "da"]);
+	});
 	test("a pushed syllable goes on its early note", () => {
 		const xml = xmlOf("| {C4}:la {D4}:da | <{E4}:lo / |\n");
 		const [first = "", second = ""] = measures(xml);

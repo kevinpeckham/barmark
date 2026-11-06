@@ -60,6 +60,15 @@ describe("voice lines and lyrics (spec section 5)", () => {
 			["G"],
 		]);
 	});
+	test("a lyric row's / over a new note draws an extender under it, as :/ does", () => {
+		const text = `${VOICE}V | {C4}:la {D4} {E4} / |\nlyrics 2: | Name / of / |\n`;
+		const under = singing(text)[0]?.querySelectorAll('.bm-under[data-verse="2"]');
+		const shown = [...(under ?? [])].map((u) =>
+			u.querySelector(".bm-extender") ? "_" : (u.textContent ?? "").trim(),
+		);
+		// Over the tie in the melody, the row's / draws nothing.
+		expect(shown).toEqual(["Name", "_", "of", ""]);
+	});
 	test("a stacked verse draws as a second syllable row, numbered", () => {
 		const mel = singing(AMAZING_GRACE)[0];
 		expect(sungRows(mel, 2)).toEqual([

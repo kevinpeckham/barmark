@@ -13,8 +13,10 @@ package uses [semantic versioning](https://semver.org/).
   middle or end, from the word's `-`s); `~` writes `<elision>` between
   the syllables on one note; `:/` writes a `<lyric>` of `<extend/>`
   alone on its note, and `<extend type="start"/>` on the syllable it
-  holds (which MuseScore keeps); a tied note carries its syllable on
-  without a mark. A numbered verse is `<lyric number="N">` on the same
+  holds (which MuseScore keeps), and so does a lyric row's `/` over a
+  new note of the melody; a tied note carries its syllable on without a
+  mark. A keyboard part's syllables go on the staff that sounds their
+  note. A numbered verse is `<lyric number="N">` on the same
   notes: stacked on bars written once, or sung on a repeat's pass N. A
   replay is written out, so its lyric rows go on its own measures. A
   lyric row with no melody under it (no part sings, or the singer writes
