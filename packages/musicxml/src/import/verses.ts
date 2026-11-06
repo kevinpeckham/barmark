@@ -7,7 +7,6 @@
  */
 import type { Losses } from "./losses.js";
 import type { SungEvent, Words } from "./lyrics.js";
-import { sings } from "./lyrics.js";
 import type { ImportedPart } from "./parts.js";
 
 /**
@@ -291,10 +290,18 @@ function startsAt(cell: string): number[] {
 
 /** A row: its label, then the verse's cell in each of these bars. */
 function row(v: Verses, verse: number, label: string, bars: RowBar[]): string {
-	const read = bars.map(({ measure }) => v.words.rows.get(verse)?.[measure] ?? "--");
+	const read = bars.map(({ measure }) => v.words.cell(verse, measure));
 	const written = oneGrid(v, read, bars);
 	const cells = v.words.onNotes ? settled(written, bars, verse, v) : written;
 	return `${label} | ${cells.join(" | ")} |`;
+}
+
+/** The verses these bars sing, in order: from each measure's own, never every verse of the piece. */
+function versesOver(v: Verses, bars: RowBar[]): number[] {
+	const found = new Set<number>();
+	for (const { measure } of bars)
+		for (const verse of v.words.versesIn[measure] ?? []) found.add(verse);
+	return [...found].sort((a, b) => a - b);
 }
 
 const labelOf = (verse: number, numbered: boolean) => (numbered ? `lyrics ${verse}:` : "lyrics:");
@@ -307,9 +314,7 @@ const labelOf = (verse: number, numbered: boolean) => (numbered ? `lyrics ${vers
  */
 export function rowsUnder(v: Verses | null, bars: RowBar[], inEnding = false): string[] {
 	if (!v) return [];
-	const sung = v.words.verses.filter(
-		(verse) => verse >= v.from && bars.some(({ measure }) => sings(v.words.bars[measure], verse)),
-	);
+	const sung = versesOver(v, bars).filter((verse) => verse >= v.from);
 	const numbered = sung.some((n) => n !== 1) || (inEnding && v.words.verses.some((n) => n !== 1));
 	return sung.map((verse) => row(v, verse, labelOf(verse, numbered), bars));
 }
@@ -334,9 +339,7 @@ export function replayRows(
 	const same = (b: RowBar, k: number) =>
 		barWords(v?.words.bars[b.measure]) === barWords(v?.words.bars[root[k] ?? -1]);
 	if (!v || replay.every(same)) return [];
-	const sung = v.words.verses.filter((verse) =>
-		replay.some(({ measure }) => sings(v.words.bars[measure], verse)),
-	);
+	const sung = versesOver(v, replay);
 	const verses = sung.length > 0 ? sung : [1];
 	const numbered = verses.some((verse) => verse !== 1);
 	return verses.flatMap((verse) =>

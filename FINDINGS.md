@@ -1084,3 +1084,21 @@ and holds no verse its passes don't sing (`enterEnding` in
 carries from the row just before it in play order only where that is
 sure (`carried` in `import/verses.ts`); elsewhere it is `--`, reported as
 a loss naming the measure.
+
+### A verse in every measure made the lyric import verses × measures (2026-11-06, musicxml)
+
+**Symptom:** Vercel's Security Review on PR #162 flagged a denial of
+service: a MusicXML file whose every measure sings a lyric `number` no
+other measure sings. 4,000 such measures took 84 s to import.
+**Cause:** three loops over every verse of the piece. `wordsOf` worked
+out each verse's row cell in every measure up front. Each system asked
+every verse whether its bars sang it. `tokensAt` looked at every verse
+ever seen on each new note, because a verse that stopped holding stayed
+in `holds.on` as `false`. `verseOf` also rebuilt the set of taken verse
+numbers for each new one.
+**Fix:** row cells are worked out when a row asks for one (`Words.cell`).
+Each measure keeps its own verses (`Words.versesIn`), and a system reads
+only its bars' verses (`versesOver` in `import/verses.ts`). `holds.on`
+holds only the verses holding now. `PartState.taken` grows as verses are
+numbered. The same 4,000 measures import in about 2 s, and
+`scale.test.ts` checks the ratio against 400.

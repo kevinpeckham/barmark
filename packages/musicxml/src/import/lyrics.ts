@@ -30,8 +30,11 @@ export type Words = {
 	/** Each measure's beats (grammar 2.1), which a row's slots are counted against. */
 	beats: number[];
 	verses: number[];
+	/** Each measure's verses, so a system looks only at the verses its own bars sing. */
+	versesIn: Set<number>[];
 	onNotes: boolean;
-	rows: Map<number, string[]>;
+	/** A verse's row cell in a measure, worked out when a row asks for it: never every verse in every measure. */
+	cell: (verse: number, measure: number) => string;
 };
 
 /** Characters a syllable can't hold (grammar 4.3, 7.7), each as the nearest it can. */
@@ -63,6 +66,7 @@ function syllableOf(l: Lyric): string | null {
  * from then on that verse's holds are written, not guessed.
  */
 export type Holds = {
+	/** Only the verses holding now: a verse that stops holding leaves, so each note looks at the few that hold, never every verse so far. */
 	on: Map<number, boolean>;
 	written: Set<number>;
 	/** What was held as a repeat's endings began, which each ending starts from. */
@@ -85,7 +89,7 @@ export function enterEnding(holds: Holds, ending: number[] | null, before: numbe
 	if (!before) holds.body = new Map(holds.on);
 	holds.on = new Map(holds.body ?? holds.on);
 	for (const verse of holds.on.keys())
-		if (verse !== 1 && !ending.includes(verse)) holds.on.set(verse, false);
+		if (verse !== 1 && !ending.includes(verse)) holds.on.delete(verse);
 }
 
 /**
@@ -102,19 +106,32 @@ export function tokensAt(lyrics: Lyric[], holds: Holds): Map<number, string> {
 	const byVerse = new Map<number, Lyric>();
 	for (const l of lyrics) if (!byVerse.has(l.verse)) byVerse.set(l.verse, l);
 	for (const verse of new Set([...holds.on.keys(), ...byVerse.keys()])) {
-		const l = byVerse.get(verse);
-		const token = l ? syllableOf(l) : null;
-		if (l && l.parts.length === 0) {
-			out.set(verse, "/");
-			holds.on.set(verse, false);
-			holds.written.add(verse);
-		} else if (l && token !== null) {
-			out.set(verse, token);
-			const continues = l.syllabic === "begin" || l.syllabic === "middle";
-			holds.on.set(verse, l.extend || (continues && !holds.written.has(verse)));
-		} else if (holds.on.get(verse)) out.set(verse, "/");
+		const token = tokenFor(verse, byVerse.get(verse), holds);
+		if (token !== null) out.set(verse, token);
 	}
 	return out;
+}
+
+/** One verse's token on a new note, keeping its hold up to date: null when it sings nothing there. */
+function tokenFor(verse: number, l: Lyric | undefined, holds: Holds): string | null {
+	if (!l) return holds.on.get(verse) ? "/" : null;
+	if (l.parts.length === 0) {
+		holds.on.delete(verse);
+		holds.written.add(verse);
+		return "/";
+	}
+	const token = syllableOf(l);
+	if (token === null) return holds.on.get(verse) ? "/" : null;
+	setHold(holds, verse, l.extend || (continuesWord(l) && !holds.written.has(verse)));
+	return token;
+}
+
+const continuesWord = (l: Lyric) => l.syllabic === "begin" || l.syllabic === "middle";
+
+/** A verse holds, or leaves `holds.on`: only the verses holding now stay in it. */
+function setHold(holds: Holds, verse: number, on: boolean): void {
+	if (on) holds.on.set(verse, true);
+	else holds.on.delete(verse);
 }
 
 /** Where a row cell's slots and group members start, as onset keys: a row's members share their slot evenly (it has no dots). */
@@ -172,22 +189,27 @@ function rowCell(
  * a lyric staff passes none, its words on no melody.
  */
 export function wordsOf(bars: SungEvent[][], shared: Bar[], held: boolean[]): Words {
-	const verses = [...new Set(bars.flat().flatMap((e) => [...e.tokens.keys()]))].sort(
-		(a, b) => a - b,
-	);
-	const cells = (v: number) =>
-		shared.map((bar, i) => rowCell(bars[i] ?? [], v, bar, held[i] ?? false, held.length > 0));
+	const versesIn = bars.map((events) => new Set(events.flatMap((e) => [...e.tokens.keys()])));
+	const verses = [...new Set(versesIn.flatMap((set) => [...set]))].sort((a, b) => a - b);
+	const cells = new Map<string, string>();
+	const cell = (verse: number, measure: number) => {
+		const k = `${verse} ${measure}`;
+		const bar = shared[measure];
+		if (bar === undefined) return "--";
+		const known = cells.get(k);
+		if (known !== undefined) return known;
+		const made = rowCell(bars[measure] ?? [], verse, bar, held[measure] ?? false, held.length > 0);
+		cells.set(k, made);
+		return made;
+	};
 	const lengths = shared.map((bar) => bar.length.n / bar.length.d);
 	return {
 		bars,
 		lengths,
 		beats: shared.map((bar) => beatsOf(bar.meter)),
 		verses,
+		versesIn,
 		onNotes: held.length > 0,
-		rows: new Map(verses.map((v) => [v, cells(v)])),
+		cell,
 	};
 }
-
-/** Whether a measure's onsets sing verse `verse`. */
-export const sings = (events: SungEvent[] | undefined, verse: number) =>
-	(events ?? []).some((e) => e.tokens.has(verse));

@@ -137,6 +137,8 @@ type PartState = {
 	placed: Set<string>;
 	/** Lyric `number`s as verses: a whole number as itself, any other from the next free number in order of first appearance. */
 	verses: Map<string, number>;
+	/** The verses those numbers took, kept as they're taken: rebuilding it for each new number would grow with the square of the verses. */
+	taken: Set<number>;
 	/** The lines of the staff (`<staff-lines>`), null when not given. */
 	staffLines: number | null;
 	/** Measures holding marks the import leaves out, by kind of mark. */
@@ -223,10 +225,10 @@ function verseOf(key: string, p: PartState): number {
 	const known = p.verses.get(key);
 	if (known !== undefined) return known;
 	const whole = /^\d{1,6}$/.test(key) && Number(key) > 0 ? Number(key) : null;
-	const taken = new Set(p.verses.values());
 	let verse = whole ?? 1;
-	while (whole === null && taken.has(verse)) verse++;
+	while (whole === null && p.taken.has(verse)) verse++;
 	p.verses.set(key, verse);
+	p.taken.add(verse);
 	return verse;
 }
 
@@ -664,6 +666,7 @@ function readPart(node: XNode, meta: Meta): ReadPart {
 		places: [],
 		placed: new Set(),
 		verses: new Map(),
+		taken: new Set(),
 		staffLines: null,
 		unread: Object.fromEntries(
 			Object.keys(LEFT_OUT).map((k) => [k, new Set<string>()]),

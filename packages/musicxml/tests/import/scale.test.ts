@@ -159,3 +159,22 @@ test(
 	},
 	TIMEOUT,
 );
+
+/** A lead sheet whose every measure sings a verse no other measure sings: one distinct lyric `number` a measure. */
+const verseAMeasure = (count: number) =>
+	score(
+		count,
+		(i) =>
+			`${i === 0 ? "<attributes><divisions>1</divisions><time><beats>4</beats><beat-type>4</beat-type></time></attributes>" : ""}${harmony}<note><pitch><step>C</step><octave>5</octave></pitch><duration>4</duration><voice>1</voice><lyric number="${i + 1}"><syllabic>single</syllabic><text>la</text></lyric></note>`,
+	);
+
+test(
+	"a verse in every measure doesn't make the rows verses × measures",
+	() => {
+		const big = timed(verseAMeasure(4000));
+		expect(big.text).not.toBe("");
+		expect(big.ms).toBeLessThan(5000);
+		expect(big.ms / timed(verseAMeasure(400)).ms).toBeLessThan(25);
+	},
+	TIMEOUT,
+);
