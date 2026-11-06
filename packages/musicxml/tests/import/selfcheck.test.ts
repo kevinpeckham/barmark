@@ -1,8 +1,9 @@
 import { expect, test } from "bun:test";
 import { parseChart } from "barmark";
+import { Losses } from "../../src/import/losses.js";
 import type { ImportedPart } from "../../src/import/parts.js";
 import type { Source } from "../../src/import/rows.js";
-import { mismatches } from "../../src/import/selfcheck.js";
+import { mismatches, reportBugs } from "../../src/import/selfcheck.js";
 import type { BarInfo } from "../../src/import/structure.js";
 
 const bar = (index: number): BarInfo => ({
@@ -73,4 +74,15 @@ test("a rest and a part that doesn't play compare alike", () => {
 		],
 	};
 	expect(mismatches(parseChart(chart), src, written)).toEqual([]);
+});
+
+test("importer bugs are capped: the first three, then how many more", () => {
+	const losses = new Losses();
+	reportBugs(["a", "b", "c", "d", "e"], losses);
+	expect(losses.list().map((d) => [d.severity, d.message])).toEqual([
+		["error", "importer bug: a"],
+		["error", "importer bug: b"],
+		["error", "importer bug: c"],
+		["error", "importer bug: and 2 more"],
+	]);
 });

@@ -66,3 +66,43 @@ test("an eighth-note pickup in 4/4 is [1/8]", () => {
 	expect(r.text).toBe("| [1/8] C | D |\n");
 	expect(r.diagnostics).toEqual([]);
 });
+
+test("six guitars: a meter barmark can't write is reported once for the score", () => {
+	const r = sound(importMusicXml(text("six-guitars.musicxml")));
+	expect(r.text).toBe(text("six-guitars.chart.md"));
+	const meters = r.diagnostics.filter((d) => d.message.includes("time signature"));
+	expect(meters).toEqual([
+		{
+			severity: "warning",
+			message: "a time signature barmark can't write (7/3); kept 4/4 in measure 1",
+			measure: "1",
+		},
+	]);
+});
+
+test("score-wide losses come once, with no part; a part left out reports none", () => {
+	const head = (divisions: number) =>
+		`<attributes><divisions>${divisions}</divisions><time><beats>4</beats><beat-type>4</beat-type></time></attributes>`;
+	const bad = "<attributes><time><beats>7</beats><beat-type>3</beat-type></time></attributes>";
+	const chords = (id: string) =>
+		`<part id="${id}"><measure number="0" implicit="yes">${head(3)}<harmony><root><root-step>C</root-step></root><kind>major</kind></harmony><note><pitch><step>B</step><octave>4</octave></pitch><duration>1</duration><notehead>slash</notehead></note></measure><measure number="1">${bad}<harmony><root><root-step>D</root-step></root><kind>major</kind></harmony><note><pitch><step>B</step><octave>4</octave></pitch><duration>12</duration><notehead>slash</notehead></note></measure></part>`;
+	// The bass has notes alone, and a meter of its own barmark can't write.
+	const bass = `<part id="P3"><measure number="0" implicit="yes">${head(3)}<note><pitch><step>C</step><octave>2</octave></pitch><duration>1</duration></note></measure><measure number="1"><attributes><time><beats>9</beats><beat-type>5</beat-type></time></attributes><note><pitch><step>D</step><octave>2</octave></pitch><duration>12</duration></note></measure></part>`;
+	const list = ["Gtr", "Keys", "Bass"]
+		.map((name, i) => `<score-part id="P${i + 1}"><part-name>${name}</part-name></score-part>`)
+		.join("");
+	const xml = `<?xml version="1.0"?><score-partwise version="4.0"><part-list>${list}</part-list>${chords("P1")}${chords("P2")}${bass}</score-partwise>`;
+	const r = sound(importMusicXml(xml));
+	expect(r.diagnostics.filter((d) => /meter|time signature/.test(d.message))).toEqual([
+		{
+			severity: "warning",
+			message: "a short bar's length can't be written as a meter; read as a full bar in measure 0",
+			measure: "0",
+		},
+		{
+			severity: "warning",
+			message: "a time signature barmark can't write (7/3); kept 4/4 in measure 1",
+			measure: "1",
+		},
+	]);
+});

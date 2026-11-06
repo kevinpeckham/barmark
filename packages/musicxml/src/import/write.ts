@@ -13,7 +13,7 @@ import type { ImportedPart } from "./parts.js";
 import type { ReadMeasure, ReadScore } from "./read.js";
 import { replaysOf, type Section, sectionsOf, wholeRepeat } from "./replays.js";
 import { allLines, forget, type Last, playingOf, rowsOf, type Source } from "./rows.js";
-import { mismatches } from "./selfcheck.js";
+import { mismatches, reportBugs } from "./selfcheck.js";
 import type { Structure } from "./structure.js";
 import { type System, systemsOf } from "./systems.js";
 import { creditLines, headingLine, partLine, textLine, titleLine } from "./text.js";
@@ -185,27 +185,13 @@ function body(w: Writer, systems: System[], sections: Section[]): string[] {
 	});
 }
 
-/** The most importer bugs listed one by one; the rest are counted. */
-const BUGS_SHOWN = 3;
-
-/**
- * The chart's errors, and every bar where a part plays other than the
- * importer meant, each reported as the importer's bug: the first few, then
- * how many more.
- */
+/** The chart's errors, and every bar where a part plays other than the importer meant, each reported as the importer's bug. */
 function check(text: string, w: Writer, losses: Losses): void {
 	const parsed = parseChart(text);
 	const errors = parsed.diagnostics
 		.filter((d) => d.severity === "error")
 		.map((d) => `${d.message} (line ${d.line})`);
-	const bugs = errors.length > 0 ? errors : mismatches(parsed, w.src, w.written);
-	for (const bug of bugs.slice(0, BUGS_SHOWN))
-		losses.note({ severity: "error", message: `importer bug: ${bug}` });
-	if (bugs.length > BUGS_SHOWN)
-		losses.note({
-			severity: "error",
-			message: `importer bug: and ${bugs.length - BUGS_SHOWN} more`,
-		});
+	reportBugs(errors.length > 0 ? errors : mismatches(parsed, w.src, w.written), losses);
 }
 
 /** Where the lyrics come from, if any part has them. */

@@ -5,7 +5,7 @@
  */
 import { type ImportDiagnostic, Losses } from "./losses.js";
 import { importPart } from "./parts.js";
-import { type ReadPart, type ReadScore, readScore } from "./read.js";
+import { type ReadPart, type ReadScore, readScore, reportMeters } from "./read.js";
 import { chordWordsWhere, readStructure } from "./structure.js";
 import { readXml } from "./tree.js";
 import { writeChart } from "./write.js";
@@ -98,6 +98,11 @@ function run(xml: string, options: ImportOptions, losses: Losses): string {
 	}
 	leftOut(
 		chosenParts.filter((p, i) => imported[i] === null && hasNotes(p)),
+		losses,
+	);
+	// A part left out reports no losses.
+	reportMeters(
+		chosenParts.filter((_, i) => imported[i] !== null),
 		losses,
 	);
 	return writeChart(score, parts, readStructure(score, losses), losses);

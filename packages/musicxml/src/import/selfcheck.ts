@@ -13,6 +13,7 @@ import {
 	type SimpleSlot,
 	type Slot,
 } from "barmark";
+import type { Losses } from "./losses.js";
 import { ownCell, type Source } from "./rows.js";
 
 /** A slot member as the check names it: what sounds, with its marks. */
@@ -125,4 +126,18 @@ export function mismatches(parse: ChartParse, src: Source, written: number[]): s
 				out.push(`written bar ${k + 1} (measure ${src.bars[i]?.measure}) never plays`);
 		});
 	return out;
+}
+
+/** The most importer bugs listed one by one; the rest are counted. */
+const BUGS_SHOWN = 3;
+
+/** Importer bugs as errors: the first few, then how many more. */
+export function reportBugs(bugs: string[], losses: Losses): void {
+	for (const bug of bugs.slice(0, BUGS_SHOWN))
+		losses.note({ severity: "error", message: `importer bug: ${bug}` });
+	if (bugs.length > BUGS_SHOWN)
+		losses.note({
+			severity: "error",
+			message: `importer bug: and ${bugs.length - BUGS_SHOWN} more`,
+		});
 }

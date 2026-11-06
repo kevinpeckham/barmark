@@ -34,11 +34,15 @@ package.
 - `barmark import <file.musicxml|file.mxl> [--out file.chart.md]
   [--part name]` in `@barmark/cli`, following `export`'s conventions for
   `--out` and output: the chart to standard output or the file,
-  diagnostics on standard error as `file: measure N (Part): message`.
+  diagnostics on standard error as `file: measure N (Part): severity:
+  message`, as `check` prints them (the measure left out when the
+  message already lists its measures).
   Exit 1 when the import produced nothing (an error), else 0.
-- **The chart always parses without errors.** The importer parses its
-  own output; an error there is an importer bug, reported as an error
-  diagnostic (and every test asserts there are none).
+- **The chart always parses without errors, and plays as the file
+  does.** The importer parses and plays its own output, comparing every
+  part's line with what it meant to write; an error or a difference is
+  an importer bug, reported as an error diagnostic (the first three,
+  then how many more), and every test asserts there are none.
 - **Round trip:** every fixture chart within scope (see "Testing"),
   exported and imported, plays the same as the original.
 - **Never throws.** Bad XML, an unsupported structure or a file with
@@ -77,7 +81,9 @@ package.
 - Output that doesn't parse, or that barmark would reformat.
 - A wall of diagnostics: each kind of loss is reported once per part,
   with a count and the first few measures ("notes read as a melody and
-  left out in 64 measures: 1, 2, 3, …").
+  left out in 64 measures: 1, 2, 3, …"). A loss of the whole score (a
+  meter barmark can't write) is reported once, with no part; a part left
+  out reports none.
 
 ## What it reads
 

@@ -5,6 +5,7 @@ import {
 	type ReadPart,
 	type ReadScore,
 	readScore,
+	reportMeters,
 } from "../../src/import/read.js";
 import { parseXml } from "../../src/import/tree.js";
 
@@ -22,6 +23,7 @@ export function read(text: string): { score: ReadScore | null; diagnostics: Impo
 	const losses = new Losses();
 	const root = parseXml(text);
 	const score = root ? readScore(root, losses) : null;
+	if (score) reportMeters(score.parts, losses);
 	return { score, diagnostics: losses.list() };
 }
 
