@@ -9,6 +9,23 @@ not here.
 
 ## Testing
 
+### A hold worked out in file order is wrong in played order (2026-11-06, @barmark/musicxml)
+
+- **The symptom.** Random lyric scores (the Task 8 reviewer's lyric
+  fuzzers) gave "importer bug: measure N sings nothing, not V 2 0 /":
+  the import meant a later verse to hold a syllable where barmark sang
+  nothing.
+- **The cause.** The import decides a verse's `/` holds measure by
+  measure in the file's order. A repeat barmark can't hold is written out
+  in played order, so a held bar can follow a bar where that verse
+  breathes; barmark's row `/` holds only from the row's start or its last
+  syllable, and a breath ends it.
+- **The fix.** `settled` in `packages/musicxml/src/import/verses.ts`
+  reads each row as barmark does and writes a `/` with nothing to hold as
+  `--`; the self-check drops those holds for the written bar whose row
+  says so (`holdKey`, keyed by written bar, as one measure can be written
+  in two contexts). Tests in `tests/import/lyrics.test.ts`.
+
 ### Onsets must be compared as a share of the bar, not in whole notes (2026-11-06, @barmark/musicxml)
 
 - **The symptom.** The import's verse self-check (property tests,

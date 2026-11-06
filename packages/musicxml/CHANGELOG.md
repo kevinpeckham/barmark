@@ -31,6 +31,10 @@ package uses [semantic versioning](https://semver.org/).
   more stacked verses than passes keeps every verse as a `lyrics N:` row
   and its play count, passing on barmark's "verse N is never sung".
   Lyrics with curly quotes or brackets (`“Ho-`, `[x]`) import cleanly.
+  A lyric row's `/` means what barmark reads: where the chart plays a bar
+  after a breath (a repeat written out in played order) and nothing is
+  held, the row writes `--`, and a bar that only breathes is one `--`. A
+  syllable of hyphens alone is no syllable, so it never reads as a breath.
 
 - **Export: lyrics** (barmark's grammar 4.3 and 7.7). A syllable on a
   note is a `<lyric number="1">` on it, with `syllabic` (single, begin,

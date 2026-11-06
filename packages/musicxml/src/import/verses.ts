@@ -21,7 +21,18 @@ export type Verses = {
 	owner: number | null;
 	/** `lyrics N:` rather than `lyrics:`. */
 	numbered: boolean;
+	/** The rows' holds as written, by `holdKey`: those barmark sings, and those it can't (written `--`). */
+	holds: { kept: Set<string>; dropped: Set<string> };
 };
+
+const newHolds = () => ({ kept: new Set<string>(), dropped: new Set<string>() });
+
+/** A row's hold as the self-check knows it: the written bar it lies under, its verse and its onset as a share of the bar. */
+const holdKey = (bar: number, verse: number, share: number) =>
+	`${bar}|${verse}|${Math.round(share * 1e6)}`;
+
+/** The bars a row lies under: each one's measure, and the written bar (its index in the writer's bars) it lies under. */
+export type RowBar = { measure: number; bar: number };
 
 const STAFF_LEFT_OUT = "the lyric staff's words left out: a part sings words of its own";
 
@@ -59,27 +70,72 @@ export function versesOf(
 	});
 	if (staff && staff.verses.length > 0) {
 		if (!parts.some(hasWords))
-			return { words: staff, from: 1, owner, numbered: staff.verses.some((v) => v > 1) };
+			return {
+				words: staff,
+				from: 1,
+				owner,
+				numbered: staff.verses.some((v) => v > 1),
+				holds: newHolds(),
+			};
 		losses.add("staff", STAFF_LEFT_OUT);
 	}
 	const words = singer?.sings?.words;
-	return words ? { words, from: 2, owner, numbered: true } : null;
+	return words ? { words, from: 2, owner, numbered: true, holds: newHolds() } : null;
 }
 
-/** A row: its label, then the verse's cell in each of these measures. */
-function row(v: Verses, verse: number, label: string, measures: number[]): string {
-	const cells = measures.map((m) => v.words.rows.get(verse)?.[m] ?? "--");
+/**
+ * A row's cells with each `/` read as barmark reads it (grammar 7.7): it
+ * holds a syllable only while one is held, from the row's start or its
+ * last syllable, and a breath ends that. A `/` with nothing to hold (the
+ * file held a syllable sung in another order than the chart plays) is
+ * written `--`, which it means; the holds are noted for the self-check.
+ */
+function settled(cells: string[], bars: RowBar[], verse: number, holds: Verses["holds"]) {
+	let holding = true;
+	return cells
+		.map((cell, c) => {
+			const slots = cell.split(" ");
+			return slots
+				.map((slot, i) => {
+					const members = slot.split("_");
+					return members
+						.map((token, j) => {
+							const share = (i * members.length + j) / (slots.length * members.length);
+							const key = holdKey(bars[c]?.bar ?? -1, verse, share);
+							if (token !== "/") holding = token !== "--";
+							else (holding ? holds.kept : holds.dropped).add(key);
+							return token === "/" && !holding ? "--" : token;
+						})
+						.join("_");
+				})
+				.join(" ");
+		})
+		.map(breathes);
+}
+
+/** A cell, or a slot of it, that only breathes, written as one breath. */
+function breathes(cell: string): string {
+	const slots = cell.split(" ").map((slot) => (/^--(_--)*$/.test(slot) ? "--" : slot));
+	return slots.every((slot) => slot === "--") ? "--" : slots.join(" ");
+}
+
+/** A row: its label, then the verse's cell in each of these bars. */
+function row(v: Verses, verse: number, label: string, bars: RowBar[]): string {
+	const written = bars.map(({ measure }) => v.words.rows.get(verse)?.[measure] ?? "--");
+	const cells = v.words.onNotes ? settled(written, bars, verse, v.holds) : written;
 	return `${label} | ${cells.join(" | ")} |`;
 }
 
 const labelOf = (verse: number, numbered: boolean) => (numbered ? `lyrics ${verse}:` : "lyrics:");
 
 /** The rows under a system: each later verse its bars sing (from verse 1 for a lyric staff). */
-export function rowsUnder(v: Verses | null, measures: number[]): string[] {
+export function rowsUnder(v: Verses | null, bars: RowBar[]): string[] {
 	if (!v) return [];
 	return v.words.verses
-		.filter((verse) => verse >= v.from && measures.some((m) => sings(v.words.bars[m], verse)))
-		.map((verse) => row(v, verse, labelOf(verse, v.numbered), measures));
+		.filter(
+			(verse) => verse >= v.from && bars.some(({ measure }) => sings(v.words.bars[measure], verse)),
+		)
+		.map((verse) => row(v, verse, labelOf(verse, v.numbered), bars));
 }
 
 /** A bar's words as one key: every verse's tokens at their onsets. */
@@ -89,32 +145,31 @@ const barWords = (events: SungEvent[] | undefined) =>
 /**
  * The rows under a replay heading, when it sings other words than the
  * section it replays (`root`, the one written out): one row per line the
- * section is written in (`lines`, measures by written line), each verse's
- * rows starting again at its first line; a replay that sings nothing
- * breathes through. None when the words are the same.
+ * section is written in (`lines`, positions in the section by written
+ * line), each verse's rows starting again at its first line; a replay
+ * that sings nothing breathes through. None when the words are the same.
  */
 export function replayRows(
 	v: Verses | null,
-	replay: number[],
+	replay: RowBar[],
 	root: number[],
 	lines: number[][],
 ): string[] {
-	if (
-		!v ||
-		replay.every((m, k) => barWords(v.words.bars[m]) === barWords(v.words.bars[root[k] ?? -1]))
-	)
-		return [];
-	const sung = v.words.verses.filter((verse) => replay.some((m) => sings(v.words.bars[m], verse)));
+	const same = (b: RowBar, k: number) =>
+		barWords(v?.words.bars[b.measure]) === barWords(v?.words.bars[root[k] ?? -1]);
+	if (!v || replay.every(same)) return [];
+	const sung = v.words.verses.filter((verse) =>
+		replay.some(({ measure }) => sings(v.words.bars[measure], verse)),
+	);
 	const verses = sung.length > 0 ? sung : [1];
 	const numbered = verses.some((verse) => verse !== 1);
-	const at = new Map(root.map((m, k) => [m, replay[k] ?? m]));
 	return verses.flatMap((verse) =>
 		lines.map((line) =>
 			row(
 				v,
 				verse,
 				labelOf(verse, numbered),
-				line.map((m) => at.get(m) ?? m),
+				line.flatMap((k) => replay[k] ?? []),
 			),
 		),
 	);
@@ -132,16 +187,21 @@ export const sungKey = (part: string, verse: number, at: number, token: string, 
 export function meantAt(
 	parts: ImportedPart[],
 	v: Verses | null,
-	m: number,
+	{ measure: m, bar }: RowBar,
 	label: (p: number | null) => string,
 ): string[] {
+	const share = (words: Words, e: SungEvent) => e.at.n / e.at.d / (words.lengths[m] ?? 4);
+	// A row's `/` that barmark reads as nothing held, where every row that writes it says so.
+	const unheld = (verse: number, at: number) => {
+		const key = holdKey(bar, verse, at);
+		return !!v?.holds.dropped.has(key) && !v.holds.kept.has(key);
+	};
 	const keys = (words: Words, who: string, verses: (n: number) => boolean) =>
 		(words.bars[m] ?? []).flatMap((e) =>
 			[...e.tokens]
 				.filter(([verse, token]) => verses(verse) && (words.onNotes || token !== "/"))
-				.map(([verse, token]) =>
-					sungKey(who, verse, e.at.n / e.at.d / (words.lengths[m] ?? 4), token, words.onNotes),
-				),
+				.filter(([verse, token]) => token !== "/" || verse === 1 || !unheld(verse, share(words, e)))
+				.map(([verse, token]) => sungKey(who, verse, share(words, e), token, words.onNotes)),
 		);
 	// The singer's later verses are its rows; a lyric staff's rows are every verse.
 	const later = (i: number) => v?.from === 2 && v.owner === i;

@@ -360,3 +360,12 @@ Each goes into the draft's decisions log with the date.
     verse as a row and its play count; barmark's "verse N is never sung"
     is passed on, and the self-check compares a verse only where some
     pass sings it.
+17. A row's `/` is written to mean what barmark reads (Task 8 fix round
+    2): the import works out a verse's holds in the file's measure order,
+    but a chart written out in played order can put a held bar after a
+    breath, where barmark's `/` holds nothing. Each row is settled as
+    barmark reads it (holding from the row's start or its last syllable,
+    a breath ending it): a `/` with nothing to hold is written `--`, a
+    slot or bar of breaths alone is one `--`, and the self-check leaves
+    out those holds for the written bar whose row says so. A lyric of
+    hyphens alone is no syllable.

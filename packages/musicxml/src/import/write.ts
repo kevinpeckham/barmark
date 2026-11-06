@@ -18,7 +18,7 @@ import { mismatches, NEVER_SUNG, reportBugs, verseMismatches } from "./selfcheck
 import type { Structure } from "./structure.js";
 import { type System, systemsOf } from "./systems.js";
 import { creditLines, headingLine, partLine, textLine, titleLine } from "./text.js";
-import { meantAt, replayRows, rowsUnder, type Verses, versesOf } from "./verses.js";
+import { meantAt, type RowBar, replayRows, rowsUnder, type Verses, versesOf } from "./verses.js";
 
 /** Labels told apart: each label two parts share is numbered (`Gtr1`, `Gtr2`), skipping labels already taken. */
 export function numbered(labels: string[]): string[] {
@@ -44,8 +44,8 @@ type Writer = {
 	last: Last;
 	/** Each bar written so far, in written order, as its index in `src.bars`: what the self-check plays back. */
 	written: number[];
-	/** What each written bar (its index in `src.bars`) means to sing, every pass and replay of it together. */
-	meant: Map<number, Set<string>>;
+	/** Each written bar (its index in `src.bars`) and what it sings, every pass and replay of it: a measure, under the rows of a written bar. What it means is read once the rows are written. */
+	sung: [number, RowBar][];
 };
 
 /** The measures of bars `s` (indices in `src.bars`). */
@@ -55,11 +55,27 @@ const measuresIn = (w: Writer, s: Span) => w.src.bars.slice(s.from, s.to).map((b
 const labelFor = (w: Writer) => (p: number | null) =>
 	w.header.length > 0 && p !== null ? (w.src.labels[p] ?? "") : "";
 
-/** Notes what measure `measure` sings as written bar `bar`'s (its index in `src.bars`). */
-function mean(w: Writer, bar: number, measure: number): void {
-	const set = w.meant.get(bar) ?? new Set<string>();
-	w.meant.set(bar, set);
-	for (const k of meantAt(w.src.parts, w.verses, measure, labelFor(w))) set.add(k);
+/** Notes that written bar `bar` (its index in `src.bars`) sings as written bar `as` does. */
+function mean(w: Writer, bar: number, as: number): void {
+	w.sung.push([bar, rowBar(w, as)]);
+}
+
+/** Written bar `i` as its rows see it: its measure, and itself. */
+const rowBar = (w: Writer, i: number): RowBar => ({ measure: w.src.bars[i]?.index ?? i, bar: i });
+
+/** The bars `s` as rows see them. */
+const rowBars = (w: Writer, s: Span) =>
+	Array.from({ length: s.to - s.from }, (_, k) => rowBar(w, s.from + k));
+
+/** What each written bar means to sing, every pass and replay of it together, as `sungKey`s. */
+function meantOf(w: Writer): Map<number, Set<string>> {
+	const out = new Map<number, Set<string>>();
+	for (const [bar, as] of w.sung) {
+		const set = out.get(bar) ?? new Set<string>();
+		out.set(bar, set);
+		for (const k of meantAt(w.src.parts, w.verses, as, labelFor(w))) set.add(k);
+	}
+	return out;
 }
 
 /** A section's heading, with `x N` when the section repeats whole; null when the name can't be written as one. */
@@ -152,10 +168,10 @@ function systemLines(
 	for (let i = s.from; i < s.to; i++) {
 		w.src.previous[i] = w.written[w.written.length - 1] ?? null;
 		w.written.push(i);
-		mean(w, i, w.src.bars[i]?.index ?? i);
+		mean(w, i, i);
 	}
 	const rows = rowsOf(w.src, s, w.last, plan.times !== null);
-	const lyrics = rowsUnder(w.verses, measuresIn(w, s));
+	const lyrics = rowsUnder(w.verses, rowBars(w, s));
 	const lines = [...lead, ...(lead.length === 0 ? separator(previous, s) : []), ...rows, ...lyrics];
 	return { lines, open: lyrics.length === 0 ? keysOf(s) : null };
 }
@@ -168,10 +184,12 @@ function systemLines(
 function replayed(w: Writer, section: Section, root: Section, systems: System[]): string[] {
 	const lines = systems
 		.filter((x) => x.from >= root.from && x.to <= root.to)
-		.map((x) => measuresIn(w, x));
-	for (let k = 0; k < section.to - section.from; k++)
-		mean(w, root.from + k, w.src.bars[section.from + k]?.index ?? 0);
-	return replayRows(w.verses, measuresIn(w, section), measuresIn(w, root), lines);
+		.map((x) => Array.from({ length: x.to - x.from }, (_, k) => x.from - root.from + k));
+	const rows = replayRows(w.verses, rowBars(w, section), measuresIn(w, root), lines);
+	// With no rows of its own, a replay sings the root's rows as the root does.
+	const from = rows.length > 0 ? section.from : root.from;
+	for (let k = 0; k < section.to - section.from; k++) mean(w, root.from + k, from + k);
+	return rows;
 }
 
 /** The body: each system; a replayed section as its heading, and its rows when it sings new words. */
@@ -215,7 +233,7 @@ function check(parsed: ChartParse, w: Writer, losses: Losses): void {
 			? errors
 			: [
 					...mismatches(parsed, w.src, w.written),
-					...verseMismatches(parsed, w.written, w.meant, (i) => w.src.bars[i]?.measure ?? ""),
+					...verseMismatches(parsed, w.written, meantOf(w), (i) => w.src.bars[i]?.measure ?? ""),
 				];
 	reportBugs(bugs, losses);
 	// More stacked verses than a repeat has passes: every row is kept, and barmark says which aren't sung.
@@ -271,7 +289,7 @@ export function writeChart(
 		verses,
 		last: allLines(src),
 		written: [],
-		meant: new Map(),
+		sung: [],
 	};
 	const lines = [
 		...titleLine(score.title),

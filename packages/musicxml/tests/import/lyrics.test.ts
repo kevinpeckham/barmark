@@ -430,3 +430,64 @@ lyrics 3: | three c         | z           |
 		]);
 	});
 });
+
+describe("a row's holds mean what barmark reads (grammar 7.7)", () => {
+	const fwd = '<barline location="left"><repeat direction="forward"/></barline>';
+	const back = '<barline location="right"><repeat direction="backward"/></barline>';
+	const heading = (text: string) =>
+		`<direction placement="above"><direction-type><words font-weight="bold">${text}</words></direction-type></direction>`;
+	const v2 = (text: string, extra = "") => lyric(text, "single", 2, extra);
+
+	test("a hold written out after a breath, in played order, is a breath (lyfuzz 22, 26, 65, 67, 251, 252, 273)", () => {
+		// Measure 2's first note holds verse 2's syllable from measure 1; played
+		// again after measure 3, where verse 2 breathes, it has nothing to hold.
+		const xml = score([
+			voice([
+				chord("C") + n("C4", 8, lyric("a") + v2("hold", "<extend/>")),
+				fwd + chord("F") + n("D4", 4, lyric("b")) + n("E4", 4, lyric("c") + v2("y")),
+				heading("Chorus") + chord("G") + n("F4", 8, lyric("d")) + back,
+				chord("C") + n("G4", 8, lyric("e") + v2("z")),
+			]),
+		]);
+		const result = sound(importMusicXml(xml));
+		expect(result.text).toBe(`${VOX}Vox       | C      | F             |
+Vox.Mel   | {C4}:a | {D4}:b {E4}:c |
+lyrics 2: | hold   | / y           |
+
+## Chorus
+Vox       | G      | F             |
+Vox.Mel   | {F4}:d | {D4}:b {E4}:c |
+lyrics 2: | --     | -- y          |
+
+## Chorus
+Vox       | G      | C      |
+Vox.Mel   | {F4}:d | {G4}:e |
+lyrics 2: | --     | z      |
+`);
+	});
+
+	test("several holds in a bar played after a breath are breaths, the bar one breath (lyfuzz 67, 252)", () => {
+		const xml = score([
+			voice([
+				chord("C") + n("C4", 8, lyric("a") + v2("hold", "<extend/>")),
+				fwd + chord("F") + n("D4", 2, lyric("b")) + n("E4", 2, lyric("c")) + r(4),
+				heading("Chorus") + chord("G") + n("F4", 8, lyric("e")) + back,
+				chord("C") + n("G4", 8, lyric("f")),
+			]),
+		]);
+		const result = sound(importMusicXml(xml));
+		expect(result.text).toContain("lyrics 2: | hold   | / / / /            |");
+		expect(result.text).toContain("lyrics 2: | --     | --                 |");
+	});
+
+	test("hyphens alone are no syllable, so never a breath in a row (lyfuzz 142)", () => {
+		const dash =
+			'<lyric number="2"><syllabic>begin</syllabic><text>-</text><elision/><text>-</text></lyric>';
+		const xml = score([
+			voice([chord("C") + n("C4", 4, lyric("la") + v2("na")) + n("D4", 4, lyric("da") + dash)]),
+		]);
+		const result = sound(importMusicXml(xml));
+		expect(result.text).not.toContain("{D4}:--");
+		expect(result.text).toMatch(/lyrics 2: \| na +\|/);
+	});
+});

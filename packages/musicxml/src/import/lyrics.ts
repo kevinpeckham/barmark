@@ -38,7 +38,8 @@ const SWAPS: Record<string, string> = { '"': "”", "{": "(", "}": ")", "|": "¦
 function cleanParts(parts: string[]): string[] {
 	const out = parts
 		.flatMap((p) => p.replace(/["{}|]/g, (c) => SWAPS[c] ?? c).split(/[\s_~]+/))
-		.filter((p) => p !== "");
+		// Hyphens alone say nothing: `--` would read as a breath, `-` as an empty syllable.
+		.filter((p) => !/^-*$/.test(p));
 	const last = (out.pop() ?? "").replace(/-+$/, "");
 	if (last !== "") out.push(last);
 	// `/` alone would read as a hold, `--` as a breath in a lyric row.
