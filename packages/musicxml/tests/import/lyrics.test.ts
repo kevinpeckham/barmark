@@ -411,7 +411,8 @@ describe("lyrics the import can't place are named, never dropped silently", () =
 		const result = sound(importMusicXml(xml));
 		expect(loss(result, "lyrics in Choir left out")).toEqual({
 			severity: "warning",
-			message: "lyrics in Choir left out (only the line that sings carries syllables) in measure 1",
+			message:
+				"lyrics in Choir left out (on a line that doesn't sing: only the line that sings carries syllables) in measure 1",
 			part: "Choir",
 			measure: "1",
 			measures: ["1"],
@@ -432,6 +433,46 @@ describe("lyrics the import can't place are named, never dropped silently", () =
 		]);
 		const result = sound(importMusicXml(xml));
 		expect(loss(result, "lyrics in Voice left out")?.measures).toEqual(["2"]);
+		expect(loss(result, "lyrics in Voice left out")?.message).toBe(
+			"lyrics in Voice left out (on slash notes, which carry no syllables) in measure 2",
+		);
+	});
+
+	test.each([
+		["a rest", r(4)],
+		["a tied note", n("C4", 4, '<tie type="stop"/>')],
+	])("lyrics on %s", (_, attack) => {
+		const xml = score([
+			voice([
+				chord("C") + n("C4", 4, lyric("sing")) + n("C4", 4, '<tie type="start"/>'),
+				chord("G") + attack.replace("</duration>", `</duration>${lyric("yo")}`) + n("D4", 4),
+			]),
+		]);
+		const result = sound(importMusicXml(xml));
+		expect(loss(result, "lyrics in Voice left out")?.message).toBe(
+			"lyrics in Voice left out (on a rest or a tied note, where no syllable starts) in measure 2",
+		);
+	});
+
+	test("lyrics lost as a rhythm snaps", () => {
+		// Seven notes in a quarter: no grid holds them apart, so two land on one note.
+		const septuplet = Array.from(
+			{ length: 7 },
+			(_, i) =>
+				`<note><pitch><step>${"CDEFGAB"[i]}</step><octave>4</octave></pitch><duration>1</duration><voice>1</voice><time-modification><actual-notes>7</actual-notes><normal-notes>4</normal-notes></time-modification>${lyric(`l${i}`)}</note>`,
+		).join("");
+		const xml = score([
+			{
+				...voice([]),
+				measures: [
+					`<attributes><divisions>7</divisions></attributes>${chord("C")}${septuplet}<note><pitch><step>C</step><octave>5</octave></pitch><duration>21</duration><voice>1</voice></note>`,
+				],
+			},
+		]);
+		const result = sound(importMusicXml(xml));
+		expect(loss(result, "lyrics in Voice left out")?.message).toBe(
+			"lyrics in Voice left out (a rhythm snapped, and two syllables landed on one note) in measure 1",
+		);
 	});
 
 	test("verse 2 alone, with no verse 1 or voice part to sing it", () => {

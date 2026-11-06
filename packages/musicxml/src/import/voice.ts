@@ -131,9 +131,12 @@ export type Sung = {
 	snapped: string[];
 	/** Lines left out past barmark's four. */
 	dropped: boolean;
-	/** The indexes of the bars with lyrics no note of the line that sings carries. */
-	unplaced: number[];
+	/** The bars with lyrics no note of the line that sings carries, each with why. */
+	unplaced: Unplaced[];
 };
+
+/** Why a bar's lyrics weren't placed: on another line, a rest or tie, a slash, or lost as the rhythm snapped. */
+export type Unplaced = { index: number; why: "line" | "rest" | "slash" | "snap" };
 
 /** Whether an attack carries words (not only an extend held on from before). */
 const worded = (a: Attack) => a.lyrics.some((l) => l.parts.some((p) => p.trim() !== ""));
@@ -147,13 +150,16 @@ const carried = (events: SungEvent[]) =>
  * on a rest, slash or tie of the line that does, or lost as its rhythm was
  * placed.
  */
-function unplacedIn(lines: Line[], singing: number, own: VoiceRead, bars: Bar[]): number[] {
-	return bars.flatMap((_, i) => {
-		const other = lines.some((l, k) => k !== singing && (l[i] ?? []).some(worded));
-		const mine = (lines[singing]?.[i] ?? []).filter(worded);
-		const off = mine.some((a) => !newNote(a));
-		const lost = mine.filter(newNote).length > carried(own.sung[i] ?? []);
-		return other || off || lost ? [i] : [];
+function unplacedIn(lines: Line[], singing: number, own: VoiceRead, bars: Bar[]): Unplaced[] {
+	return bars.flatMap((_, index): Unplaced[] => {
+		const mine = (lines[singing]?.[index] ?? []).filter(worded);
+		const off = mine.filter((a) => !newNote(a));
+		if (lines.some((l, k) => k !== singing && (l[index] ?? []).some(worded)))
+			return [{ index, why: "line" }];
+		if (off.some((a) => a.kind === "slash")) return [{ index, why: "slash" }];
+		if (off.length > 0) return [{ index, why: "rest" }];
+		const lost = mine.filter(newNote).length > carried(own.sung[index] ?? []);
+		return lost ? [{ index, why: "snap" }] : [];
 	});
 }
 

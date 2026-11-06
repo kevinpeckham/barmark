@@ -11,7 +11,7 @@ import type { Words } from "./lyrics.js";
 import { melodyBars } from "./melody.js";
 import { type Line, mergeStaves } from "./merge.js";
 import { LEFT_OUT, type LeftOut, ON_NOTES, type ReadPart } from "./read.js";
-import { readSinging, type Sung } from "./voice.js";
+import { readSinging, type Sung, type Unplaced } from "./voice.js";
 
 /** One line's cell text per measure, `null` where the line rests the whole bar. */
 export type LineBars = { name: string | null; bars: (string | null)[] };
@@ -207,8 +207,13 @@ function instrumentOf(part: ReadPart): InstrumentName | null {
 
 const SNAPPED = "a rhythm barmark can't write, snapped to the nearest it can";
 const DROPPED = "more than four lines with the harmony; only the line that sings kept";
-const UNPLACED_WORDS = (part: string) =>
-	`lyrics in ${part} left out (only the line that sings carries syllables)`;
+/** Why lyrics were left out, as the loss says it. */
+const UNPLACED_WHY: Record<Unplaced["why"], string> = {
+	line: "on a line that doesn't sing: only the line that sings carries syllables",
+	rest: "on a rest or a tied note, where no syllable starts",
+	slash: "on slash notes, which carry no syllables",
+	snap: "a rhythm snapped, and two syllables landed on one note",
+};
 
 /** Whether a part sings (the voice-and-lyrics design, section 7): it has lyrics, or a voice's sound. */
 const singsAt = (part: ReadPart) =>
@@ -243,8 +248,14 @@ const lyricBars = (part: ReadPart) =>
 function reportSung(part: ReadPart, sung: Sung, silent: boolean, losses: Losses): void {
 	for (const m of sung.snapped) losses.add("snapped", SNAPPED, part.name, m);
 	if (sung.dropped) losses.add("dropped", DROPPED, part.name);
-	for (const i of silent ? lyricBars(part) : sung.unplaced)
-		losses.add("words", UNPLACED_WORDS(part.name), part.name, part.measures[i]?.number);
+	// With no line that sings, every bar's lyrics are left out: on the slashes, unless found elsewhere.
+	const why = new Map(sung.unplaced.map((u) => [u.index, u.why]));
+	const bars = silent ? lyricBars(part) : sung.unplaced.map((u) => u.index);
+	for (const i of bars) {
+		const reason = UNPLACED_WHY[why.get(i) ?? "slash"];
+		const message = `lyrics in ${part.name} left out (${reason})`;
+		losses.add(`words ${reason}`, message, part.name, part.measures[i]?.number);
+	}
 }
 
 /** A part that sings: its harmony on its bare line, its melody under it, and what was lost. */
