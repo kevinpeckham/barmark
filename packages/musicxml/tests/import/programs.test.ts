@@ -39,7 +39,7 @@ const FILES: [string, ImportDiagnostic[]][] = [
 	[
 		"lead-sheet",
 		[
-			warning(MELODY, "Voice"),
+			warning(`${MELODY} in 4 measures: 3, 4, 5, …`, "Voice", "3"),
 			warning(
 				"chord symbols barmark can't read, written as ? with their text as words in measure 5",
 				"Voice",
@@ -52,7 +52,13 @@ const FILES: [string, ImportDiagnostic[]][] = [
 		"comping-guitar",
 		[warning("accents and articulations left out in measure 4", "Electric Guitar", "4")],
 	],
-	["piano", [warning(MELODY, "Piano")]],
+	[
+		"piano",
+		[
+			warning(`${MELODY} in 4 measures: 1, 2, 3, …`, "Piano", "1"),
+			warning("dynamics left out in measure 1", "Piano", "1"),
+		],
+	],
 	[
 		"band",
 		[

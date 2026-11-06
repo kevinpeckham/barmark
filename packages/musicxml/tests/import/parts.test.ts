@@ -100,7 +100,7 @@ test("a lead sheet is a melody part", () => {
 	);
 	expect(r.part?.lines).toHaveLength(1);
 	expect(bars(r)).toEqual(["C", "G7"]);
-	expect(r.messages).toEqual(["notes read as a melody and left out"]);
+	expect(r.messages).toEqual(["notes read as a melody and left out in 2 measures: 1, 2"]);
 });
 
 test("lead sheet with attacks on every change", () => {
@@ -124,7 +124,7 @@ test("lead sheet with attacks on every change", () => {
 		),
 	);
 	expect(bars(r)).toEqual(["C F", "G"]);
-	expect(r.messages).toEqual(["notes read as a melody and left out"]);
+	expect(r.messages).toEqual(["notes read as a melody and left out in 2 measures: 1, 2"]);
 });
 
 test("lead sheet with slashes elsewhere and single notes on every change", () => {
@@ -136,7 +136,7 @@ test("lead sheet with slashes elsewhere and single notes on every change", () =>
 		),
 	);
 	expect(bars(r)).toEqual(["C", "F G"]);
-	expect(r.messages).toEqual(["notes read as a melody and left out"]);
+	expect(r.messages).toEqual(["notes read as a melody and left out in measure 2"]);
 });
 
 const measureRest = (duration = 4) => rest(duration).replace("<rest/>", '<rest measure="yes"/>');
@@ -180,7 +180,7 @@ test("chords alone: a bar of plain rests rests, and slashes after it restate the
 		),
 	);
 	expect(bars(r)).toEqual(["C", null, "C", "G"]);
-	expect(r.messages).toEqual(["notes read as a melody and left out"]);
+	expect(r.messages).toEqual(["notes read as a melody and left out in measure 4"]);
 });
 
 test("slashes coming back after a rest restate the last chord", () => {
@@ -205,7 +205,7 @@ test("a chord barmark's grid can't hold is ?, with a warning", () => {
 	);
 	expect(bars(r)).toEqual(["?"]);
 	expect(r.messages).toEqual([
-		"notes read as a melody and left out",
+		"notes read as a melody and left out in measure 1",
 		"a bar barmark's grid can't hold; written as ? in measure 1",
 	]);
 });
@@ -375,7 +375,7 @@ test("a single-pitch attack in another program's slash part makes it a melody pa
 		),
 	);
 	expect(bars(r)).toEqual(["C", "G"]);
-	expect(r.messages).toEqual(["notes read as a melody and left out"]);
+	expect(r.messages).toEqual(["notes read as a melody and left out in measure 2"]);
 });
 
 test("a timed rest is --, a whole-measure rest is resting", () => {
@@ -423,7 +423,7 @@ test("a part with five voices gives chords alone", () => {
 	);
 	expect(r.part?.lines).toHaveLength(1);
 	expect(bars(r)).toEqual(["C"]);
-	expect(r.messages).toEqual(["more than four voices; notes left out"]);
+	expect(r.messages).toEqual(["more than four voices; notes left out in measure 1"]);
 });
 
 test("an off-grid note in a line gives chords alone", () => {

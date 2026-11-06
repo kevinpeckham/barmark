@@ -452,23 +452,83 @@ test("a time signature barmark can't write keeps the running meter", () => {
 	]);
 });
 
-test("accents, hits and pedal marks are losses, never silent", () => {
-	const messages = (chart: string) => read(xmlOf(chart)).diagnostics.map((d) => d.message);
-	expect(messages("| >C | ^D | E |")).toContain(
-		"accents and articulations left out in 2 measures: 1, 2",
-	);
-	expect(messages("| +G{B3 D4 G4} | C | *C{C4 E4 G4} |")).toContain(
-		"pedal marks left out in 2 measures: 1, 3",
-	);
+test("accents, hits and pedal marks are recorded, never silent", () => {
+	const unread = (chart: string) => partOf(xmlOf(chart)).unread;
+	expect(unread("| >C | ^D | E |").accents).toEqual(["1", "2"]);
+	expect(unread("| +G{B3 D4 G4} | C | *C{C4 E4 G4} |").pedal).toEqual(["1", "3"]);
 });
 
-test("piano lines' pedal comes back as a loss", () => {
+test("piano lines' pedal is recorded", () => {
 	const chart = readFileSync(new URL("../fixtures/piano-lines.chart.md", import.meta.url), "utf8");
-	expect(
-		read(xmlOf(chart))
-			.diagnostics.map((d) => d.message)
-			.join("\n"),
-	).toContain("pedal marks left out");
+	expect(partOf(xmlOf(chart)).unread.pedal.length).toBeGreaterThan(0);
+});
+
+describe("marks barmark can't write are recorded by measure", () => {
+	const direction = (type: string) =>
+		`<direction placement="below"><direction-type>${type}</direction-type></direction>`;
+	const notations = (inner: string) => note("C", 4, 4, `<notations>${inner}</notations>`);
+	const cases: [string, string, string][] = [
+		["dynamics", "a dynamic", direction("<dynamics><f/></dynamics>") + note("C", 4, 4)],
+		["dynamics", "a hairpin", direction('<wedge type="crescendo"/>') + note("C", 4, 4)],
+		["dynamics", "a dynamic on a note", notations("<dynamics><sf/></dynamics>")],
+		["slurs", "a slur", notations('<slur type="start" number="1"/>')],
+		["slurs", "an ornament", notations("<ornaments><trill-mark/></ornaments>")],
+		["slurs", "a tremolo", notations('<ornaments><tremolo type="single">3</tremolo></ornaments>')],
+		["slurs", "fingering", notations("<technical><fingering>1</fingering></technical>")],
+		["slurs", "an arpeggio", notations("<arpeggiate/>")],
+		["slurs", "a glissando", notations('<glissando type="start"/>')],
+		["slurs", "a slide", notations('<slide type="start"/>')],
+		[
+			"grace",
+			"a grace note",
+			"<note><grace/><pitch><step>D</step><octave>4</octave></pitch><type>eighth</type></note>" +
+				note("C", 4, 4),
+		],
+		[
+			"frames",
+			"a chord diagram",
+			"<harmony><root><root-step>C</root-step></root><kind>major</kind><frame><frame-strings>6</frame-strings><frame-frets>4</frame-frets></frame></harmony>" +
+				note("C", 4, 4),
+		],
+		[
+			"capo",
+			"a capo",
+			attributes("<staff-details><capo>2</capo></staff-details>") + note("C", 4, 4),
+		],
+		[
+			"fermatas",
+			"a fermata before the bar's end",
+			note("C", 4, 2, "<notations><fermata/></notations>") + note("D", 4, 2),
+		],
+	];
+	test.each(cases)("%s: %s", (kind, _what, body) => {
+		const unread = partOf(xml`${measure(1, base(1) + body)}`).unread;
+		expect(unread[kind as keyof typeof unread]).toEqual(["1"]);
+	});
+
+	test("a fermata on the bar's last note is kept, not a loss", () => {
+		const body = note("C", 4, 2) + note("D", 4, 2, "<notations><fermata/></notations>");
+		expect(partOf(xml`${measure(1, base(1) + body)}`).unread.fermatas).toEqual([]);
+	});
+
+	test("an octave shift changes only how notes are shown: pitches stand, nothing is lost", () => {
+		const body =
+			'<direction><direction-type><octave-shift type="down" size="8"/></direction-type></direction>' +
+			note("C", 6, 4);
+		const part = partOf(xml`${measure(1, base(1) + body)}`);
+		expect(part.measures[0]?.lines[0]?.[0]?.pitches).toEqual([
+			{ name: "C", octave: 6, root: false },
+		]);
+		expect(Object.values(part.unread).flat()).toEqual([]);
+	});
+
+	test("<other-direction> text is read as words", () => {
+		const body =
+			'<direction placement="above"><direction-type><other-direction>let ring</other-direction></direction-type></direction>' +
+			note("C", 4, 4);
+		const [m] = measuresOf(xml`${measure(1, base(1) + body)}`);
+		expect(m?.marks.map((k) => [k.kind, k.text])).toEqual([["words", "let ring"]]);
+	});
 });
 
 describe("typed page credits", () => {

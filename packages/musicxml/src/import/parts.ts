@@ -8,7 +8,7 @@ import { type Bar, type LineRead, readLine, type Unread } from "./cells.js";
 import { readHarmony } from "./chords.js";
 import type { Losses } from "./losses.js";
 import { type Line, mergeStaves } from "./merge.js";
-import type { ReadPart } from "./read.js";
+import { LEFT_OUT, type LeftOut, ON_NOTES, type ReadPart } from "./read.js";
 
 /** One line's cell text per measure, `null` where the line rests the whole bar. */
 export type LineBars = { name: string | null; bars: (string | null)[] };
@@ -90,15 +90,34 @@ function decide(part: ReadPart, from: { barmark: boolean }, hasChords: boolean):
 	return { ...alone("grid"), offGrid };
 }
 
-function report(d: Decided, part: ReadPart, losses: Losses): void {
+/** The marks barmark can't write; those on the notes alone only when the notes come in. */
+function reportMarks(part: ReadPart, notesKept: boolean, losses: Losses): void {
+	for (const kind of Object.keys(LEFT_OUT) as LeftOut[])
+		if (notesKept || !ON_NOTES.includes(kind))
+			for (const m of part.unread[kind]) losses.add(kind, LEFT_OUT[kind], part.name, m);
+}
+
+/** The measures where a part attacks notes: those a melody or too many voices leave out. */
+const noteMeasures = (part: ReadPart) =>
+	part.measures
+		.filter((m) => m.lines.some((l) => l.some((a) => a.kind === "notes")))
+		.map((m) => m.number);
+
+/** Why notes were left out, by measure. */
+function reportWhy(d: Decided, part: ReadPart, losses: Losses): void {
+	if (d.why === "grid") for (const m of d.offGrid) losses.add("grid", WHY.grid, part.name, m);
+	else if (d.why) for (const m of noteMeasures(part)) losses.add(d.why, WHY[d.why], part.name, m);
+}
+
+function report(d: Decided, part: ReadPart, hasChords: boolean, losses: Losses): void {
+	reportWhy(d, part, losses);
 	reportLines(d, part.name, losses);
+	reportMarks(part, d.why === null || !hasChords, losses);
 	for (const u of d.reads[0]?.unread ?? [])
 		losses.add("unread", UNREAD, part.name, part.measures[u.measure]?.number);
 }
 
 function reportLines(d: Decided, part: string, losses: Losses): void {
-	if (d.why === "grid") for (const m of d.offGrid) losses.add("grid", WHY.grid, part, m);
-	else if (d.why) losses.add(d.why, WHY[d.why], part);
 	for (const r of d.reads) {
 		for (const m of r.moved)
 			losses.add("moved", "chord symbols moved to the nearest beat", part, m);
@@ -153,7 +172,7 @@ export function importPart(
 	const hasChords = part.measures.some((m) => m.harmonies.length > 0);
 	if (!hasChords && !from.barmark && !from.forced) return null;
 	const decided = decide(part, from, hasChords);
-	report(decided, part, losses);
+	report(decided, part, hasChords, losses);
 	return {
 		name: part.name,
 		label: labelOf(part.name, part.abbreviation),

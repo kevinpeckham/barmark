@@ -158,6 +158,41 @@ describe("parts", () => {
 	});
 });
 
+describe("marks barmark can't write", () => {
+	const dynamic = `<direction placement="below"><direction-type><dynamics><p/></dynamics></direction-type></direction>`;
+	const slurred = (step: string) =>
+		note(
+			step,
+			4,
+			4,
+			`<notations><slur type="start" number="1"/><articulations><accent/></articulations></notations>`,
+		);
+	const messages = (measures: string) =>
+		importMusicXml(score([{ id: "P1", name: "Lead", measures }])).diagnostics.map((d) => d.message);
+
+	test("are reported in a part whose notes are read", () => {
+		const slash = note("B", 4, 4, "<notehead>slash</notehead>");
+		const hit = slurred("C") + note("E", 4, 4).replace("<note>", "<note><chord/>");
+		const measures =
+			measure(1, time44 + dynamic + harmony("C") + slash) + measure(2, harmony("C") + hit);
+		expect(messages(measures)).toEqual([
+			"dynamics left out in measure 1",
+			"accents and articulations left out in measure 2",
+			"slurs and ornaments left out in measure 2",
+		]);
+	});
+
+	test("on a melody's notes are not reported, as the notes are left out; its other marks are", () => {
+		const measures =
+			measure(1, time44 + dynamic + harmony("C") + slurred("E")) +
+			measure(2, harmony("F") + slurred("F"));
+		expect(messages(measures)).toEqual([
+			"notes read as a melody and left out in 2 measures: 1, 2",
+			"dynamics left out in measure 1",
+		]);
+	});
+});
+
 describe("credits", () => {
 	test("typed page credits when there are no creators", () => {
 		const head =

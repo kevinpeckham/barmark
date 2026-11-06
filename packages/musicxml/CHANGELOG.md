@@ -13,7 +13,7 @@ package uses [semantic versioning](https://semver.org/).
   package's own export) back into a canonical barmark chart: the title
   and credits (typed page credits when the file names no creators),
   chord symbols (by meaning, then display text, else `?` with the
-  original kept as words and a warning), keys (modes as written),
+  original kept as words, with a warning), keys (modes as written),
   meters and one-bar meters, tempo, rit. and accel., the feel, headings,
   rehearsal marks, words and text lines, repeats (`x N` on a whole line
   or section), endings and jumps, fermatas, lyrics as text lines,
@@ -24,9 +24,14 @@ package uses [semantic versioning](https://semver.org/).
   gives nothing (bad XML, `score-timewise`, no chord symbols in another
   program's file) returns empty text and an error. A file with no chord
   symbols names the parts that hold notes (and any words that look like
-  chord symbols), and `part` (a part's name, abbreviation or id, any
-  case) imports one of them as note sets; beside parts with chords, the
-  parts of notes alone are named in one warning. Chord symbols a program
+  chord symbols), and `part` (a part's name, abbreviation or id,
+  ignoring case and punctuation) imports one of them as note sets;
+  beside parts with chords, the parts of notes alone are named in one
+  warning. Marks barmark can't write (dynamics and hairpins, slurs and
+  ornaments, grace notes, chord diagrams, a capo, pedal, accents,
+  fermatas within a bar) are one warning each; those on the notes alone
+  aren't reported for a part whose notes are left out anyway.
+  `<other-direction>` text is read as words. Chord symbols a program
   exported as plain words stay words, with one warning (a lone root
   letter, a common section label, counts only beside fuller symbols).
   Control characters in the file are dropped, so a score can't put
