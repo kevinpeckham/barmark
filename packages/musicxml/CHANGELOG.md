@@ -53,10 +53,14 @@ package uses [semantic versioning](https://semver.org/).
   over unsung notes, as MuseScore writes a melisma, only until its verse
   writes such a held note. A lyric row starting with `/` holds on what
   its verse's row before it left held, as barmark reads it, so a verse 2
-  melisma held across two systems comes back as written. With nothing
-  held (the verse breathed, or hasn't sung yet), or where a repeat or
-  ending between the rows leaves it unsure what barmark held, it is
-  written `--`.
+  melisma held across two systems, or from a repeat's body into the
+  second ending that sings it, comes back as written. A melisma holds
+  along play order: each ending starts from what the body held, and a
+  first ending doesn't hold verse 2, which its pass doesn't sing. With
+  nothing held (the verse breathed, or hasn't sung yet) the row's `/` is
+  written `--`; where a repeat or ending between the rows leaves it
+  unsure what barmark holds, it is `--` too, and a warning names the
+  measure.
 
 - **Export: lyrics** (barmark's grammar 4.3 and 7.7). A syllable on a
   note is a `<lyric number="1">` on it, with `syllabic` (single, begin,

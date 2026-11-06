@@ -47,14 +47,19 @@ const UNREAD_BARE = "chord symbols barmark can't read, written as ?";
 /** Each measure's length, its own meter (a one-bar meter, else the running one) and its chords. */
 export function barsOf(part: ReadPart): Bar[] {
 	let running = DEFAULT_METER;
+	let ending: number[] | null = null;
 	return part.measures.map((m) => {
 		running = m.time ?? running;
-		return {
+		if (m.ending?.start) ending = m.ending.numbers;
+		const bar: Bar = {
 			number: m.number,
 			length: m.length,
 			meter: m.oneBar ?? running,
 			chords: m.harmonies.map((h) => ({ at: h.at, ...harmonyOf(h.node, part.transpose) })),
+			ending,
 		};
+		if (m.ending?.stop || m.ending?.discontinue) ending = null;
+		return bar;
 	});
 }
 

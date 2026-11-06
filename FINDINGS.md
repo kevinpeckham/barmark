@@ -1067,3 +1067,20 @@ row starting with `/` holds what its verse last left held in play order
 sung; the import's `settled` (`import/verses.ts`) carries the same state
 from row to row. A first cut made every row's start hold nothing, which
 broke a word held across a line break, an ordinary lead-sheet shape.
+
+### A hold follows play order, but the import reads measures in written order (2026-11-06, musicxml)
+
+**Symptom:** a verse 2 melisma from a repeat's body into its second ending
+came back with a spurious `lyrics 2: | -- |` under the first ending, a
+false "verse 2 is never sung", and `-- z` for `/ z`. Carrying a row's
+leading `/` from the row written before it raised importer bugs whenever
+a repeat or ending lay between them.
+**Cause:** MusicXML holds a syllable in written order, through the first
+ending's notes; barmark holds it in play order, where pass 1 never sings
+verse 2 and the second ending follows the body directly.
+**Fix:** the import's holds enter each ending from what the body held,
+and holds no verse its passes don't sing (`enterEnding` in
+`import/lyrics.ts`, `Bar.ending` from `barsOf`). A row's leading `/`
+carries from the row just before it in play order only where that is
+sure (`carried` in `import/verses.ts`); elsewhere it is `--`, reported as
+a loss naming the measure.

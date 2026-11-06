@@ -21,46 +21,90 @@ export type Verses = {
 	owner: number | null;
 	/**
 	 * The rows' holds as written, by `holdKey`: those barmark sings, and
-	 * those it can't (written `--`); and each verse's last row: whether it
-	 * ended holding a syllable, which a row starting with `/` holds on, and
-	 * its last bar.
+	 * those it can't (written `--`); and where each verse's rows ended, by
+	 * verse and last bar (`endKey`), and its latest row: whether it ended
+	 * holding a syllable, which a row starting with `/` holds on.
 	 */
-	holds: { kept: Set<string>; dropped: Set<string>; ends: Map<number, RowEnd> };
+	holds: {
+		kept: Set<string>;
+		dropped: Set<string>;
+		ends: Map<string, RowEnd>;
+		latest: Map<number, RowEnd>;
+	};
+	/** Where a hold the rows can't carry is reported. */
+	losses: Losses | null;
 };
 
-/** Where a verse's last row ended: holding a syllable or not, at which bar, and whether that bar plays plainly. */
-type RowEnd = { holding: boolean; bar: number; plain: boolean };
+/** Where a verse's row ended: holding a syllable or not, and whether its last bar plays plainly. */
+type RowEnd = { holding: boolean; plain: boolean };
+
+const endKey = (verse: number, bar: number) => `${verse}|${bar}`;
 
 const newHolds = () => ({
 	kept: new Set<string>(),
 	dropped: new Set<string>(),
-	ends: new Map<number, RowEnd>(),
+	ends: new Map<string, RowEnd>(),
+	latest: new Map<number, RowEnd>(),
 });
 
+const HOLD_LOST =
+	"a syllable held into a lyric row across a repeat or ending, written -- (barmark can't be sure what it holds there)";
+
+const sameEnding = (a: RowBar, b: RowBar) => a.ending?.join() === b.ending?.join();
+
 /**
- * What a row starts holding: what its verse's row before it left held,
- * when barmark is sure to have sung that row just before this one (the
- * bar before, both playing plainly); else nothing, and a hold the file
- * carries in is written `--`, which barmark then reads as it means.
+ * What a row starts holding, as barmark plays it: what its verse's row
+ * just before left held, when that is sure. Before an ending, the
+ * repeat's body is just before, for an ending whose passes sing the
+ * verse; else the bar before, both playing plainly. Otherwise nothing,
+ * and a hold the file carries in is written `--`, which barmark then
+ * reads as it means.
  */
 function carried(bars: RowBar[], verse: number, holds: Verses["holds"]): boolean {
-	const end = holds.ends.get(verse);
 	const first = bars[0];
-	if (!end?.holding || !first || !end.plain) return false;
-	return end.bar + 1 === first.bar && bars.every((b) => b.plain === true);
+	if (!first) return false;
+	return first.ending ? intoEnding(bars, first, verse, holds) : plainly(bars, first, verse, holds);
+}
+
+/** An ending's row holds what the repeat's body left held, when its passes sing the verse. */
+function intoEnding(bars: RowBar[], first: RowBar, verse: number, holds: Verses["holds"]): boolean {
+	const body = holds.ends.get(endKey(verse, first.body ?? -1));
+	const sings = first.ending?.includes(verse) === true;
+	return body?.holding === true && sings && bars.every((b) => sameEnding(b, first));
+}
+
+/** A plainly played row holds what the plainly played bar before it left held. */
+function plainly(bars: RowBar[], first: RowBar, verse: number, holds: Verses["holds"]): boolean {
+	const end = holds.ends.get(endKey(verse, first.bar - 1));
+	return end?.holding === true && end.plain && bars.every((b) => b.plain === true);
+}
+
+/** Whether the file held a syllable into this row: the verse's latest row, or the body before its ending, ended holding one. */
+function heldIn(bars: RowBar[], verse: number, holds: Verses["holds"]): boolean {
+	const first = bars[0];
+	const body = first?.ending ? holds.ends.get(endKey(verse, first.body ?? -1)) : undefined;
+	return !!holds.latest.get(verse)?.holding || !!body?.holding;
 }
 
 /** A row's hold as the self-check knows it: the written bar it lies under, its verse and its onset as a share of the bar. */
 const holdKey = (bar: number, verse: number, share: number) =>
 	`${bar}|${verse}|${Math.round(share * 1e6)}`;
 
-/** The bars a row lies under: each one's measure, and the written bar (its index in the writer's bars) it lies under. */
 /**
- * A bar a row covers: its measure, its place among the bars, and whether
- * it plays plainly, once each time it is reached (no repeat or ending),
- * so a verse's rows there are sung on every pass.
+ * A bar a row lies under: its measure, the written bar (its index in the
+ * writer's bars), and how it plays: plainly, once each time it is reached
+ * (no repeat or ending), so a verse's rows there are sung on every pass;
+ * or in an ending (its numbers), after the repeat's body ending at
+ * written bar `body`. `number` is the file's measure number.
  */
-export type RowBar = { measure: number; bar: number; plain?: boolean };
+export type RowBar = {
+	measure: number;
+	bar: number;
+	plain?: boolean;
+	ending?: number[] | null;
+	body?: number;
+	number?: string | undefined;
+};
 
 const STAFF_LEFT_OUT = "the lyric staff's words left out: a part sings words of its own";
 
@@ -103,11 +147,12 @@ export function versesOf(
 				from: 1,
 				owner,
 				holds: newHolds(),
+				losses,
 			};
 		losses.add("staff", STAFF_LEFT_OUT);
 	}
 	const words = singer?.sings?.words;
-	return words ? { words, from: 2, owner, holds: newHolds() } : null;
+	return words ? { words, from: 2, owner, holds: newHolds(), losses } : null;
 }
 
 /**
@@ -118,21 +163,20 @@ export function versesOf(
  * syllable sung in another order than the chart plays) is written `--`,
  * which it means; the holds are noted for the self-check.
  */
-function settled(cells: string[], bars: RowBar[], verse: number, holds: Verses["holds"]) {
-	let holding = carried(bars, verse, holds);
+function settled(cells: string[], bars: RowBar[], verse: number, v: Verses) {
+	const holds = v.holds;
+	const read = reader(v, carried(bars, verse, holds), heldIn(bars, verse, holds));
 	const out = cells
 		.map((cell, c) => {
 			const slots = cell.split(" ");
+			const bar = bars[c];
 			return slots
 				.map((slot, i) => {
 					const members = slot.split("_");
 					return members
 						.map((token, j) => {
 							const share = (i * members.length + j) / (slots.length * members.length);
-							const key = holdKey(bars[c]?.bar ?? -1, verse, share);
-							if (token !== "/") holding = token !== "--";
-							else (holding ? holds.kept : holds.dropped).add(key);
-							return token === "/" && !holding ? "--" : token;
+							return read(token, holdKey(bar?.bar ?? -1, verse, share), bar?.number);
 						})
 						.join("_");
 				})
@@ -140,8 +184,33 @@ function settled(cells: string[], bars: RowBar[], verse: number, holds: Verses["
 		})
 		.map(breathes);
 	const last = bars.at(-1);
-	if (last) holds.ends.set(verse, { holding, bar: last.bar, plain: last.plain === true });
+	const end = { holding: read.holding(), plain: last?.plain === true };
+	if (last) holds.ends.set(endKey(verse, last.bar), end);
+	holds.latest.set(verse, end);
 	return out;
+}
+
+/**
+ * A row's tokens read in turn: a `/` holds while a syllable is held
+ * (noted as kept or dropped by its key) and is `--` otherwise. A `/`
+ * leading the row where the file held a syllable in (`heldIn`) that the
+ * row can't carry is a loss, reported in its measure.
+ */
+function reader(v: Verses, carried: boolean, heldIn: boolean) {
+	let holding = carried;
+	let head = !carried && heldIn;
+	const read = (token: string, key: string, measure: string | undefined) => {
+		if (token !== "/") {
+			holding = token !== "--";
+			head = false;
+			return token;
+		}
+		(holding ? v.holds.kept : v.holds.dropped).add(key);
+		if (head) v.losses?.add("held", HOLD_LOST, undefined, measure);
+		head = false;
+		return holding ? token : "--";
+	};
+	return Object.assign(read, { holding: () => holding });
 }
 
 /** A cell, or a slot of it, that only breathes, written as one breath. */
@@ -224,7 +293,7 @@ function startsAt(cell: string): number[] {
 function row(v: Verses, verse: number, label: string, bars: RowBar[]): string {
 	const read = bars.map(({ measure }) => v.words.rows.get(verse)?.[measure] ?? "--");
 	const written = oneGrid(v, read, bars);
-	const cells = v.words.onNotes ? settled(written, bars, verse, v.holds) : written;
+	const cells = v.words.onNotes ? settled(written, bars, verse, v) : written;
 	return `${label} | ${cells.join(" | ")} |`;
 }
 

@@ -62,9 +62,31 @@ function syllableOf(l: Lyric): string | null {
  * have written a held note's own lyric (an `<extend>` alone, or a stop):
  * from then on that verse's holds are written, not guessed.
  */
-export type Holds = { on: Map<number, boolean>; written: Set<number> };
+export type Holds = {
+	on: Map<number, boolean>;
+	written: Set<number>;
+	/** What was held as a repeat's endings began, which each ending starts from. */
+	body?: Map<number, boolean> | undefined;
+};
 
 export const newHolds = (): Holds => ({ on: new Map(), written: new Set() });
+
+/**
+ * Holds follow play order into a repeat's endings: each ending starts
+ * from what was held as the first began, and holds no verse its passes
+ * don't sing (verse 2 in a first ending), as barmark reads them (7.7).
+ */
+export function enterEnding(holds: Holds, ending: number[] | null, before: number[] | null): void {
+	if (!ending) {
+		holds.body = undefined;
+		return;
+	}
+	if (ending === before) return;
+	if (!before) holds.body = new Map(holds.on);
+	holds.on = new Map(holds.body ?? holds.on);
+	for (const verse of holds.on.keys())
+		if (verse !== 1 && !ending.includes(verse)) holds.on.set(verse, false);
+}
 
 /**
  * The tokens a new note sings, verse by verse, keeping `holds` up to date.

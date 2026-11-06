@@ -9,7 +9,15 @@ import { beatsOf, MAX_LINES } from "barmark";
 import { cmp, type Frac, ZERO } from "../rhythm.js";
 import { type Bar, type LineRead, noteSet, readLine } from "./cells.js";
 import { placeBar } from "./grid.js";
-import { type Holds, newHolds, type SungEvent, tokensAt, type Words, wordsOf } from "./lyrics.js";
+import {
+	enterEnding,
+	type Holds,
+	newHolds,
+	type SungEvent,
+	tokensAt,
+	type Words,
+	wordsOf,
+} from "./lyrics.js";
 import type { Line } from "./merge.js";
 import type { Attack } from "./read.js";
 import { snapOnsets } from "./snap.js";
@@ -82,6 +90,7 @@ function readVoice(bars: Attack[][], shared: Bar[], sing: boolean): VoiceRead {
 	const holding = newHolds();
 	let sounding = false;
 	shared.forEach((bar, i) => {
+		enterEnding(holding, bar.ending ?? null, shared[i - 1]?.ending ?? null);
 		const read = voiceBar(bars[i] ?? [], bar, sounding, holding, sing);
 		out.cells.push(read.cell);
 		out.sung.push(read.sung);

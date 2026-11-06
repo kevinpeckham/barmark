@@ -442,6 +442,28 @@ lyrics 2: | / z               |
 		expect(result.diagnostics).toEqual([]);
 	});
 
+	test("a melisma held into a second ending holds along play order, not through the first ending", () => {
+		const chart =
+			"|: {C4}:a {D4}:b |\nlyrics 2: | x y |\n|1 {E4}:c :|\n|2 {F4} {G4} |\nlyrics 2: | / z |\n";
+		expect(parseChart(chart).diagnostics).toEqual([]);
+		const result = sound(importMusicXml(xmlOf(chart)));
+		expect(result.text).toBe(printChart(chart));
+		expect(result.diagnostics).toEqual([]);
+	});
+
+	test("a hold the rows can't carry into a repeat is written -- and reported, naming the measure", () => {
+		const chart = "| {C4}:a {D4}:b |\nlyrics 2: | x y |\n|: {E4}:c {F4}:d :|\nlyrics 2: | / z |\n";
+		const result = sound(importMusicXml(xmlOf(chart)));
+		expect(result.text).toContain("lyrics 2: | -- z");
+		expect(result.diagnostics).toMatchObject([
+			{
+				message:
+					"a syllable held into a lyric row across a repeat or ending, written -- (barmark can't be sure what it holds there) in measure 2",
+				measure: "2",
+			},
+		]);
+	});
+
 	test("a held note's melisma ends there: the unsung note after it stays unsung", () => {
 		const chart = "| {C4}:la {D4}:/ {E4} {F4}:lo |\n";
 		const result = sound(importMusicXml(xmlOf(`time: 4/4\n${chart}`)));

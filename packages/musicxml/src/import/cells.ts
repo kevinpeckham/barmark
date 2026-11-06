@@ -8,7 +8,14 @@ import type { Attack } from "./read.js";
 export type Chord = { at: Frac; slot: string; original: string | null };
 
 /** A measure as all of a part's lines share it: its length, its own meter and its chords. */
-export type Bar = { number: string; length: Frac; meter: Meter; chords: Chord[] };
+/** A measure as the lines read it; `ending`, the numbers of the ending (5.1) it is part of. */
+export type Bar = {
+	number: string;
+	length: Frac;
+	meter: Meter;
+	chords: Chord[];
+	ending?: number[] | null;
+};
 
 /** An unreadable chord's place (measure index, slot index) and the program's own text, empty when it has none. */
 export type Unread = { measure: number; at: number; text: string };
