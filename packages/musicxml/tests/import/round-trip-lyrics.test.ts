@@ -89,6 +89,18 @@ describe("MusicXML → barmark → MusicXML", () => {
 		expect(all).toContain("5 D4 2 stop");
 		expect(all).toMatch(/^0 D4 1 1 begin A 2 single 'Twas$/m);
 	});
+
+	test("MuseScore's lead sheet keeps every melody note, rhythm and syllable", () => {
+		const lead = fixture("lead-sheet.musicxml");
+		const exported = exportMusicXml(importMusicXml(lead).text);
+		if (!exported.ok) throw new Error(exported.diagnostics.map((d) => d.message).join("; "));
+		// The two intro measures are slash notes, which MuseScore writes as B-flat 4 and
+		// we write as B4 (a chord line's slashes have no pitch); everything sung is compared.
+		const sung = (xml: string) => sungNotes(xml).map((p) => p.filter((n) => !/^[01] /.test(n)));
+		const want = sung(lead);
+		expect(sung(exported.xml)).toEqual(want);
+		expect(want.flat().join("\n")).toContain("2 end ning,");
+	});
 });
 
 describe("barmark → MusicXML → barmark gives the chart back", () => {

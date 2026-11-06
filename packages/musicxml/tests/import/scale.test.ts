@@ -1,6 +1,9 @@
 /** Untrusted files with many measures: nothing in the import may grow faster than the file. */
-import { expect, test } from "bun:test";
+import { expect, setDefaultTimeout, test } from "bun:test";
 import { type ImportDiagnostic, importMusicXml } from "../../src/index.js";
+
+// The bounds below are best-of-two timings; the test timeout only keeps a loaded machine from cutting a run short.
+setDefaultTimeout(30_000);
 
 const harmony = "<harmony><root><root-step>C</root-step></root><kind>major</kind></harmony>";
 const slash =
