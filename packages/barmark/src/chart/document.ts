@@ -119,6 +119,8 @@ function splitLabel(t: string): { word: string; space: boolean; rest: string } |
 const LINE_NAME = /^[A-Za-z0-9]+$/;
 
 /** A label and the bar line after it: `Gtr | G |` (grammar 7.4). */
+/** Three or more hyphens alone: `---` ends a system (grammar 1, 7.4). */
+const BREAK = /^-{3,}$/;
 const LABELLED = /^([^\s|]+)(\s*)(\|.*)$/;
 
 const readsCleanly = (barLine: string) => {
@@ -193,7 +195,7 @@ function escapedBarLine(text: string): string | null {
 /** A chart whose text holds no bar line at all says so, rather than looking empty. */
 function noBarLines(lines: Line[]): ChartDiagnostic | null {
 	if (lines.some((l) => l.kind === "bars" || l.kind === "invalid")) return null;
-	const first = lines.find((l) => l.kind === "text");
+	const first = lines.find((l) => l.kind === "text" && !l.escaped);
 	if (first?.kind !== "text") return null;
 	return {
 		line: first.line,
@@ -302,7 +304,16 @@ export function readDocument(text: string): {
 		const read = barLine(rest, line);
 		return read.kind === "bars" || read.kind === "invalid" ? { ...read, ...owner } : read;
 	};
+	/** A leading `\` makes the rest text, whatever it looks like (grammar 1). */
+	const escapedLine = (t: string, line: number): Line => {
+		const text = t.slice(1);
+		const old = oldFormat(text, line);
+		if (old) diagnostics.push(old);
+		return { kind: "text", line, text, escaped: true };
+	};
 	const classify = (t: string, line: number): Line => {
+		if (BREAK.test(t)) return { kind: "break", line };
+		if (t.startsWith("\\")) return escapedLine(t, line);
 		if (t.startsWith("|")) return barLine(t, line);
 		const labelled = labelledLine(t, line);
 		if (labelled) return labelled;

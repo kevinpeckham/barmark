@@ -6,6 +6,11 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- A `---` break draws nothing, and a text line written with a leading `\`
+  shows without the backslash. Needs the next `barmark` release.
+
 ## [0.14.0] - 2026-11-04
 
 Needs `barmark` 0.16.0.

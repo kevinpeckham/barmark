@@ -9,6 +9,18 @@ Releases follow the process in [RELEASING.md](RELEASING.md).
 
 ## [Unreleased]
 
+### Added
+
+- `---` (three or more hyphens alone) ends a system and means nothing else;
+  it parses as a `break` line and prints as `---` (grammar 1, 7.4).
+
+### Changed
+
+- A text line written with a leading `\` now holds its text without the
+  backslash, marked `escaped: true`; the printer writes the backslash back.
+  The escaped-pipes warning still applies to the rest of the line, and a
+  chart whose only text is escaped no longer warns that it has no bar lines.
+
 ## [0.16.0] - 2026-11-04
 
 A grammar change: part lines (7.6), sustain pedal marks (2.9), dotted

@@ -146,7 +146,10 @@ export type Line =
 			/** Set when the line's bars or structure differ from its system's (an error): its part is tacet there. */
 			dropped?: true;
 	  }
-	| { kind: "text"; line: number; text: string }
+	/** A text line; `escaped` when written with a leading `\` (grammar 1), which `text` leaves off. */
+	| { kind: "text"; line: number; text: string; escaped?: true }
+	/** `---` alone (grammar 1, 7.4): ends a system, and means nothing else. */
+	| { kind: "break"; line: number }
 	/** `composer: …` and the other credit lines (grammar 7.5). */
 	| { kind: "credit"; line: number; role: CreditRole; text: string }
 	/**

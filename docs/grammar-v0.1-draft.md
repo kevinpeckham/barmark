@@ -77,9 +77,15 @@ Each line is classified by its start, after leading whitespace is ignored:
 | `part:` (any case) | a **part** the chart is for (before the first bar, 7.3, 7.4) | `part: Electric Guitar 1` |
 | `composer:` `lyricist:` `arranger:` `copyright:` (any case) | a **credit** line (7.5) | `composer: Kevin Peckham` |
 | a part's label, then `\|` | that part's **bar line**, in a chart with several parts (7.4) | `Gtr \| G \| C \|` |
+| `---` alone (three or more hyphens) | a **break**: ends a system (7.4) and means nothing else | `---` |
+| `\` | **text**, whatever follows; the backslash is not shown | `\| la la \|` |
 | anything else | **text** (lyrics, notes, prose) | `Watch Kevin for the cutoff` |
 
 - Blank lines mean nothing.
+- A leading `\` makes the rest of the line text even when it would read as
+  something else (`\| la la |`, `\key: G`). The backslash is not shown, and
+  printing writes it back. The escaped-pipes warning (9) still applies when
+  the rest of the line has `\|`.
 - Text lines are kept in the parse tree, so printing round-trips, but they
   have no musical meaning. Text is never scanned for chords, tempos or keys.
 - `###` and deeper headings are text.
@@ -576,7 +582,8 @@ the coda at `To Coda`, and plays to the end.
 - **A section with no bar lines replays the most recent section with that
   name.** A section is written once and referenced by name after that. A
   section holding only lyrics or notes (verse 2's words, for example)
-  replays the changes.
+  replays the changes. A bare replay of a section written `## X xN` plays
+  it once; `## X xN` again plays it N times.
 - Names match case-insensitively with whitespace collapsed; otherwise the
   match is exact. `## Verse 2` does not match `## Verse`. An empty section
   that matches nothing is an **error**, and there is no intentionally empty
@@ -830,7 +837,9 @@ the piano is **tacet**: it isn't written, so it rests.
 - **Systems.** Consecutive labelled bar lines (blank lines ignored) in
   which no label repeats are one system. A label written again starts the
   next system; any other line (text, a heading, a directive, an
-  unlabelled bar line) ends one. Lines within a system may come in any
+  unlabelled bar line, or `---`) ends one. `---` is the way to end a system
+  without writing any of those, as when the next system's parts are the
+  same ones. Lines within a system may come in any
   order; the canonical form sorts them into score order.
 - **Tutti and tacet.** An unlabelled bar line in a multi-part chart is a
   system of its own that every part plays. A part not written in a system
@@ -1139,6 +1148,9 @@ human to say whether the band was silent, and the structure line.
 | Dotted figures | Decided by Kevin (2026-11-04): a dot after one member of a two-member group, `C._D` (3:1) or `C_D.` (1:3) (2.2), so a dotted figure needs no beat split into four. Rejected: no shorthand, and swing written as figures (`feel:` states it). |
 | Instruments and clefs | Decided by Kevin (2026-11-04): `instrument:` and `clef:` after the name on the `part:` line (7.3), the instrument from a closed list of 16 that tells converters the clef, written transposition, staves and playback sound; an unknown name is an error with near suggestions. Charts stay at concert pitch. Rejected: free-form instrument names (a converter could not know what to write), an `instrument:` line of its own, and an octave hint (note sets carry their octaves). |
 | Credits | Decided by Kevin (2026-11-04): `composer:`, `lyricist:`, `arranger:` and `copyright:`, each a line of its own, allowed anywhere and repeatable, one entry per line (7.5). Before, credits were text, so a renderer or converter could not use them. Rejected: composition year, work number, opus, flow number and other information, which nothing reads (Dorico imports no Project Info from MusicXML but the title) and MusicXML has no standard place for; text still holds notes. |
+| `---` ends a system | Decided by Kevin (2026-11-06): a line of only `---` (three or more hyphens) ends a labelled system and means nothing else (1, 7.4), so a converter can end a system where labels alone would join the next one to it. Rejected: cue lines ("X tacet", "X enters"). |
+| A leading backslash | Decided by Kevin (2026-11-06): a line starting with `\` is text, and the backslash is not shown (1). The escaped-pipes warning (9) stays when the rest of the line still has `\|`. Before, a line starting with `\` was text with the backslash kept. |
+| A bare replay of `## X x2` | Decided by Kevin (2026-11-06): it plays once; `## X x2` again plays it twice (6). This is what the parser already did; now written down and tested. |
 | Written bar numbers | Machine output gains `written` on each played bar (A.7), the bar's number as written, so a host can speak a printed score's measure numbers (issue #70: a correction editor for a score read). No change to what any chart means. |
 
 ## Open questions

@@ -176,6 +176,8 @@ export function printLine(l: Line, beats: (number | undefined)[] = []): string {
 			return `${l.role}: ${l.text}`;
 		case "bars":
 			return joinPieces(barPieces(l, beats));
+		case "break":
+			return "---";
 		default:
 			return l.text;
 	}
