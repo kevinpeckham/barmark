@@ -169,3 +169,44 @@ describe("readSyllable", () => {
 		expect(readSyllable("/-")).toBeNull();
 	});
 });
+
+describe("a syllable ends only at a space, _, |, { or a straight quote", () => {
+	/** The chart parses cleanly and prints back unchanged, up to its columns. */
+	const round = (chart: string) => {
+		expect(errors(chart)).toEqual([]);
+		const squeeze = (t: string) => t.replace(/ +/g, " ").replace(/^ /gm, "");
+		expect(squeeze(printChart(chart))).toBe(squeeze(chart));
+	};
+	test("curly quotes are characters of a syllable", () => {
+		expect(slotsOf("{C4}:“Ho- {D4}:ly” {E4}:„a“ {F4}:‘b’")).toMatchObject([
+			{ syllable: { parts: ["“Ho"], continues: true } },
+			{ syllable: { parts: ["ly”"] } },
+			{ syllable: { parts: ["„a“"] } },
+			{ syllable: { parts: ["‘b’"] } },
+		]);
+		round("part: V = Voice\n| {C4}:“Ho- {D4}:ly” |\n");
+	});
+	test("a bracket in a syllable is no meter", () => {
+		expect(slotsOf("{C4}:[x] {D4}:[2/4]x")).toMatchObject([
+			{ syllable: { parts: ["[x]"] } },
+			{ syllable: { parts: ["[2/4]x"] } },
+		]);
+		round("part: V = Voice\n| {C4}:[x] |\n");
+	});
+	test("a straight quote still ends a syllable and opens words", () => {
+		const [bar] = parseChart('part: V = Voice\nV | {C4}:la"soft" {D4} |\n').bars;
+		expect(bar?.slots[0]).toMatchObject({ syllable: { parts: ["la"] } });
+		expect(bar?.words?.[0]?.text).toBe("soft");
+	});
+	test("curly quotes outside a syllable are still words", () => {
+		expect(parseChart("| C “soft” G |\n").bars[0]?.words?.[0]?.text).toBe("soft");
+	});
+	test("a one-bar meter at a cell's start still reads", () => {
+		const chart = "part: V = Voice\n| [1/4] {C4}:la | {D4}:da |\n";
+		round(chart);
+		expect(parseChart(chart).bars[0]?.meter).toEqual({ n: 1, d: 4 });
+	});
+	test("a lyric row keeps curly quotes and brackets as syllables", () => {
+		round("part: V = Voice\n| {C4}:la | {D4}:da |\nlyrics 2: | “Ho- ly” | [x] |\n");
+	});
+});

@@ -21,6 +21,9 @@ Releases follow the process in [RELEASING.md](RELEASING.md).
   copies a bar's notes without their syllables. A syllable on a chord
   name, a voicing, `/`, `--`, `N.C.` or `?`, an empty one, or `:/-` (a
   hold can't begin or continue a word) is an error.
+  A syllable ends only at a space, `_`, `|`, `{` or a straight quote, so
+  curly quotes and brackets are characters of it (`{C4}:“Ho-`,
+  `{C4}:[x]`): they open no words and no one-bar meter.
 - Lyric rows (grammar 7.7): `lyrics:` or `lyrics N:` (verse N) then a bar
   line writes syllables on the beats, its bars divided as a chord row's
   (`/` holds, `_` splits a slot, `--` is a breath). A row covers the bar

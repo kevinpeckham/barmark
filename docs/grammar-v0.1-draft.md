@@ -480,8 +480,10 @@ time: 3/4
 ```
 
 - **The syllable** runs from the colon to the next space, `_`, `|`, `{`
-  or quote (the quote: Claude's recommendation), and may hold any other
-  character: `don't`, `o'er`, `¿qué?`, `yeah...`. A `{` straight after a
+  or straight quote `"` (the quote: Claude's recommendation), and may hold
+  any other character: `don't`, `o'er`, `¿qué?`, `yeah...`, and curly
+  quotes and brackets, `“Ho-`, `ly”`, `[x]` (Claude's recommendation):
+  inside a syllable they open no words and no one-bar meter. A `{` straight after a
   syllable is an **error**; a space goes before the next note (Claude's
   recommendation). A dot directly after the brace is the
   rhythm's (2.2), so a dotted note with a syllable is `{C4}.:maz-`; a dot
@@ -1033,8 +1035,10 @@ lyrics: | I_got roll-_in' on_the / | beat_and -- I_keep it_up |
   is a breath, where nothing is sung. **Every other token is a
   syllable**, read as on a note (4.3): a trailing `-` continues the word
   and `~` joins elided syllables (`the~end`). An empty bar, an empty
-  syllable (`a__b`, `a~`) and `/-` are **errors**; so is a quote or a
-  brace, since a row holds syllables only (Claude's recommendation). The
+  syllable (`a__b`, `a~`) and `/-` are **errors**; so is a straight
+  quote `"` or a brace, since a row holds syllables only (Claude's
+  recommendation). Curly quotes and brackets are characters of a
+  syllable (`“Ho- ly”`, `[x]`; Claude's recommendation). The
   verse number is MusicXML's `<lyric number="N">`; 0, or a number past
   9007199254740991 (which would not print back as written), is an
   **error**.
@@ -1325,6 +1329,7 @@ human to say whether the band was silent, and the structure line.
 | Lyric rows | Decided by Kevin (2026-11-06): `lyrics:` then a bar line writes syllables on the beats, its bars divided as a chord row's (7.7): `/` holds, `_` splits a slot, `--` is a breath, and a syllable reads as on a note (trailing `-`, `~`), so rap and spoken word are placed by beat with no melody. `lyrics N:` numbers verse N. `lyrics:` followed by anything else stays the `lyricist:` near miss (7.5). Before, a `lyrics:` line was text with that warning. |
 | What a lyric row covers | Claude's recommendation (2026-11-06): the bar line just above it, or in a chart of several parts the system above it, with the same bar count (an error otherwise); under a replay heading, the replayed section's written lines (or systems) in order, one row per line, each verse's rows starting again at the first line. A row with no bar line above it is an error, and a row ends the system it follows (7.7). |
 | A lyric row writes no structure | Claude's recommendation (2026-11-06): every token but `/`, `--` and `_` is a syllable, `Fine`, `x2`, `@A` and `%` included; repeat marks, endings, marks, directions, fermatas, one-bar meters and words are the bar line's, and a fermata, mark or direction has no cell in the row. A quote or a brace in a row is an error, as a row holds syllables only (7.7). |
+| Curly quotes and brackets in a syllable | Claude's recommendation (2026-11-06, Task 8 review): a syllable ends only at a space, `_`, `\|`, `{` or a straight quote `"`, so a curly quote (`“ ” „ ‘ ’`) or a `[` inside one is a character of it: `{C4}:“Ho-`, `{C4}:[x]` and a row's `“Ho- ly”` read as written. Outside a syllable curly quotes still enclose words (2.6), and only a `[n/d]` at a cell's start is a meter. Found importing lyrics: ordinary quoted words read as unclosed words or a misplaced meter. Before, those charts were errors, so no chart that read changes meaning. |
 | Lines between endings | Decided by Kevin (2026-11-06): a `---` between endings keeps the repeat, as text and credit lines do (5.1), since `---` ends a system and means nothing else; a lyric row under an ending does too (following from it; Claude's recommendation), as it only writes words on its ending's bars. Before, either ended the repeat, with false errors. |
 | A lyric row's canonical form | Claude's recommendation (2026-11-06): its slots as written, never reduced; under its bar line or system, labels padded and pipes lined up, the wider of a column's cells setting its width, so a long syllable widens the bar line's cell too, and an unlabelled bar line is indented to the row's pipes, as the design's example writes it. A row under a replay heading prints single-spaced (8). |
 | Verses | Decided by Kevin (2026-11-06): syllables on notes are verse 1 and `lyrics N:` is verse N. Numbered rows stack verses anywhere: outside a repeat they don't change the play order, and inside one verse N is sung on pass N. By section, rows under a replay heading give the replay its words, and a replay without them sings the words it was written with (7.7). Before, verses were text lines. |

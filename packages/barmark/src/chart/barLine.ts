@@ -206,6 +206,33 @@ const isDirectionCell = (p: string) => {
 
 type Problem = { problem: string; token: string; suggestion?: string };
 
+/** Where a syllable ends (grammar 4.3): a space, `_`, `|`, `{` or a straight quote. */
+const SYLLABLE_END = /[\s_|{"]/;
+
+/**
+ * Which of a cell's characters belong to a syllable: those after the colon
+ * that follows a note set's brace (and a rhythm's dot), up to its end. In a
+ * syllable a curly quote or a `[` is a character like any other.
+ */
+function inSyllables(chars: string[]): boolean[] {
+	const out: boolean[] = [];
+	let sung = false;
+	chars.forEach((ch, i) => {
+		if (sung && SYLLABLE_END.test(ch)) sung = false;
+		out.push(sung);
+		const before = chars[i - 1] === "." ? chars[i - 2] : chars[i - 1];
+		if (!sung && ch === ":" && before === "}") sung = true;
+	});
+	return out;
+}
+
+/** A cell's text with its syllables blanked, to look for what only the rest of it holds. */
+const outsideSyllables = (cell: string) => {
+	const chars = [...cell];
+	const sung = inSyllables(chars);
+	return chars.map((ch, i) => (sung[i] ? " " : ch)).join("");
+};
+
 /**
  * Quoted words out of a cell (grammar 2.6): the cell with each one blanked,
  * and where each goes, before the slot it precedes.
@@ -214,8 +241,9 @@ function readWords(cell: string): { bare: string; words: Words[] } | Problem {
 	const words: Words[] = [];
 	let bare = "";
 	let open: number | null = null;
+	const sung = inSyllables([...cell]);
 	for (const [i, ch] of [...cell].entries()) {
-		if (!QUOTES.has(ch)) {
+		if (!QUOTES.has(ch) || (sung[i] && open === null)) {
 			if (open === null) bare += ch;
 			continue;
 		}
@@ -591,7 +619,8 @@ export function parseBarLine(
 		const read = readWords(after);
 		if ("problem" in read) return report(read);
 		const { bare, words } = read;
-		if (bare.includes("[")) return error("a [n/d] meter must start its cell", rest);
+		if (outsideSyllables(bare).includes("["))
+			return error("a [n/d] meter must start its cell", rest);
 		const alone = standalone(bare, meter, words);
 		if (alone) return "cell" in alone ? alone.cell : report(alone);
 		return slotsCell(bare, meter, words, raw.trim());
