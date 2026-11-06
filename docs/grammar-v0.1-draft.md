@@ -1082,18 +1082,25 @@ lyrics: | I_got roll-_in' on_the / | beat_and -- I_keep it_up |
   an unnumbered row among numbered ones, and a verse written twice are
   **errors**, and the row sings nothing. A replay's rows replace the
   words, so they may lie under notes with syllables.
-- **Who sings.** The first part with `instrument: voice` (7.3), else the
-  first part with syllables on its notes, sings the chart's syllables and
-  rows. It sings on the first of its lines (7.6, in score order) whose
-  notes carry syllables, else the first with notes: in a lead sheet, the
-  melody line. A chart that declares no part sings its own notes'
-  syllables. With no one singing, a row's words are the chart's, sung
-  or spoken over the band, on no melody. Another part's extract leaves
-  the singer's rows out.
+- **Who sings.** Syllables on a part's notes are that part's: in a choir
+  chart each part sings its own verse 1. The lyric rows belong to the
+  singer: the first part with `instrument: voice` (7.3), else the first
+  part with syllables on its notes. Each part sings on the first of its
+  lines (7.6, in score order) whose notes carry syllables, else the
+  first with notes: in a lead sheet, the melody line under the bare
+  chord line. A chart that declares no part sings its own notes'
+  syllables. With no one singing, a row's words are the chart's, sung or
+  spoken over the band, on no melody. Only the singer's syllables make a
+  row over them verse 2 or later; another part's extract has its own
+  syllables and leaves the singer's rows out.
 - **Against the melody**, each of a row's syllables lands on the note
   that starts at its beat. One where the singing line starts no note is a
   **warning**, since MusicXML hangs a syllable on a note. So is a `:/`
   with no syllable sung before it, in play order, to hold.
+- **Verses the passes miss.** A numbered verse no pass sings (`lyrics 3:`
+  under bars played `x2`) is a **warning** on its row, and so is a pass
+  that sings nothing where other passes sing (pass 3 of an `x3` over two
+  verses), on the bar line.
 - **A row ends the system** it follows, as any line but a labelled bar
   line does (7.4).
 - `lyrics:` followed by anything but a bar line is text, and warns as a
@@ -1223,7 +1230,7 @@ keeps what cannot reduce:
 | warning | a text line that looks like an old-style label (`Chorus:`, `[Chorus]`), an old bare chord line, a bar line written with escaped pipes (`D \\| A \\|`), a misnamed directive (`meter:`, `bpm:`) or a misnamed credit (`author:`, `words:`), with a suggested fix |
 | warning | a credit with a directive after its value on the line (`composer: A, key: G`) |
 | warning | a bar line after a word that is not a declared part label (`Bass \| E \|`), or after a chord, its leading `\|` left off (`G \| C \|`, suggesting `\| G \| C \|`) |
-| warning | a lyric row's syllable where the singing line starts no note; a `:/` with no syllable sung before it in play order (7.7) |
+| warning | a lyric row's syllable where the singing line starts no note; a `:/` with no syllable sung before it in play order; a numbered verse no pass sings; a repeat's pass that sings nothing where other passes sing (7.7) |
 | warning | a chart with text but no bar line at all (reported once, at the first text line), so a chart in another format never reads as empty |
 
 Every message gives the line number and quotes the offending token.
@@ -1313,6 +1320,8 @@ human to say whether the band was silent, and the structure line.
 | Verses | Decided by Kevin (2026-11-06): syllables on notes are verse 1 and `lyrics N:` is verse N. Numbered rows stack verses anywhere: outside a repeat they don't change the play order, and inside one verse N is sung on pass N. By section, rows under a replay heading give the replay its words, and a replay without them sings the words it was written with (7.7). Before, verses were text lines. |
 | Verses in play order | Claude's recommendation (2026-11-06): an unnumbered row is verse 1; a pass is the innermost repeat's, an ending's pass included; bars with a single verse sing it on every pass, and bars with several sing none on a pass with no verse of its number; an open repeat sings every verse; a jump's pass back is no pass, so its repeats sing pass 1's words; a replay's rows replace the words line by line (7.7). |
 | Every syllable written once | Claude's recommendation (2026-11-06): over the same bars, `lyrics 1:` or an unnumbered row under notes with syllables, an unnumbered row among numbered ones, and a verse written twice are errors, and the row sings nothing; a replay's rows may lie under notes with syllables, since they replace the words (7.7). |
+| Each part's syllables are its own | Claude's recommendation (2026-11-06, after review): syllables on a part's notes are that part's verse 1, so a choir chart's parts each sing their own words, and only the singer's syllables make a row over them verse 2 or later; lyric rows stay the singer's (7.7). |
+| Verses the passes miss | Claude's recommendation (2026-11-06, after review): a numbered verse that no pass sings, and a repeat's pass that sings nothing where other passes sing, warn (7.7), so a verse lost to a pass count is never silent. |
 | Who sings, and against what | Claude's recommendation (2026-11-06): the first part with `instrument: voice`, else the first with syllables on its notes, sings on its first line with syllables, else its first with notes (a lead sheet's melody line); with no singer a row's words are the chart's. A row's syllable where the singing line starts no note warns, as MusicXML hangs syllables on notes, and so does a `:/` with nothing sung before it in play order. Another part's extract leaves the singer's rows out (7.7). |
 | Written bar numbers | Machine output gains `written` on each played bar (A.7), the bar's number as written, so a host can speak a printed score's measure numbers (issue #70: a correction editor for a score read). No change to what any chart means. |
 
@@ -1471,8 +1480,8 @@ Each slot parses to one record:
 | `part` | on the parse: the chart's one part, its `name`, `label`, `instrument` and `clef` (each absent when not written), or empty when it names none or several (deprecated: use `parts`) |
 | `credits` | on the parse: `composer`, `lyricist`, `arranger` and `copyright`, each a list of the credit lines' values in written order, empty when none is written |
 | `parts` | on the parse: every declared part in score order; on a played bar of a multi-part chart, one entry per part (its `line`, `slots` and `words`), or empty where that part is tacet |
-| `lyrics` | on a played bar: one entry per verse it sings (7.7), with its `verse`, the `part` singing (absent when no part sings) and its `syllables`, each with `at` (its onset in whole notes from the bar's start), the `syllable` and `note` (true when a note of the singing line starts there); absent when none |
-| `sings` | on the declared part that sings (7.7): the line whose notes carry its syllables, `""` for its bare line; absent when it writes no notes |
+| `lyrics` | on a played bar: one entry per verse and part it sings (7.7), in verse order then score order, with its `verse`, the `part` singing (absent when no part sings) and its `syllables`, each with `at` (its onset in whole notes from the bar's start), the `syllable` and `note` (true when a note of the singing line starts there); absent when none |
+| `sings` | on each declared part that sings (7.7): the line whose notes carry its syllables, `""` for its bare line; absent when it writes no notes |
 | `tacet` | on a played bar of a multi-part chart: true when the first part is tacet there (its slots then read `N.C.`) |
 | `source` | the symbol as written |
 

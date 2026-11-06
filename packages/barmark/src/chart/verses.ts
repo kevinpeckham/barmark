@@ -52,27 +52,47 @@ function singingLine(part: DeclaredPart, own: BarsLine[]): string | undefined {
 }
 
 /**
- * Whose words a chart's are (grammar 7.7): the first part with `instrument:
- * voice`, else the first part with syllables on its notes; in a chart with
- * no parts, the chart itself when its notes carry syllables. Null when no
- * one sings: a lyric row's words are then the chart's, sung over the band.
+ * Who sings a chart (grammar 7.7). `owner` sings its lyric rows: the first
+ * part with `instrument: voice`, else the first part with syllables on its
+ * notes; in a chart with no parts, the chart itself when its notes carry
+ * syllables; null when no one sings, so a row's words are the chart's.
+ * `all` is every part that sings, in score order: the owner and each part
+ * with syllables on its notes, which are its own (a choir's parts).
  */
-export function singerOf(lines: Line[], parts: DeclaredPart[]): Singer | null {
+function singersOf(lines: Line[], parts: DeclaredPart[]): { owner: Singer | null; all: Singer[] } {
 	const bars = lines.filter((l): l is BarsLine => l.kind === "bars");
-	if (!parts.length) return bars.some(hasSyllables) ? { part: null, sings: "" } : null;
+	if (!parts.length) {
+		const owner = bars.some(hasSyllables) ? { part: null, sings: "" } : null;
+		return { owner, all: owner ? [owner] : [] };
+	}
 	const alone = parts.length === 1;
-	const part =
-		parts.find((p) => p.instrument === "voice") ??
-		parts.find((p) => linesOf(p, bars, alone).some(hasSyllables));
-	if (!part) return null;
-	const sings = singingLine(part, linesOf(part, bars, alone));
-	return { part, ...(part.label && { label: part.label }), ...(sings !== undefined && { sings }) };
+	const sung = (p: DeclaredPart) => linesOf(p, bars, alone).some(hasSyllables);
+	const first = parts.find((p) => p.instrument === "voice") ?? parts.find(sung);
+	const all = parts
+		.filter((p) => p === first || sung(p))
+		.map((part): Singer => {
+			const sings = singingLine(part, linesOf(part, bars, alone));
+			return {
+				part,
+				...(part.label && { label: part.label }),
+				...(sings !== undefined && { sings }),
+			};
+		});
+	return { owner: all.find((x) => x.part === first) ?? null, all };
 }
 
-/** The parts as the parse reports them: the singer's with the line it sings on. */
-export function withSings(parts: DeclaredPart[], singer: Singer | null): DeclaredPart[] {
-	const sings = singer?.sings;
-	return parts.map((p) => (p === singer?.part && sings !== undefined ? { ...p, sings } : p));
+/** The bar lines of what a singer sings on: its part's, or with no part every one. */
+function singerLines(singer: Singer | null, bars: BarsLine[], parts: number): BarsLine[] {
+	if (!singer) return [];
+	return singer.part ? linesOf(singer.part, bars, parts === 1) : bars;
+}
+
+/** The parts as the parse reports them: each that sings with the line it sings on. */
+export function withSings(parts: DeclaredPart[], singers: Singer[]): DeclaredPart[] {
+	return parts.map((p) => {
+		const sings = singers.find((x) => x.part === p)?.sings;
+		return sings === undefined ? p : { ...p, sings };
+	});
 }
 
 /** Rows by what they cover: the replay heading they are written under ("" for none) and a covered line. */
@@ -129,15 +149,21 @@ function rowProblem(
  * or a verse written twice over the same bars. A row with an error, or a
  * bar count other than its line's, sings nothing. Never throws.
  */
-export function versesOf(lines: Line[]): { rows: Rows; diagnostics: ChartDiagnostic[] } {
+function versesOf(
+	lines: Line[],
+	owner: Singer | null,
+	parts: number,
+): { rows: Rows; diagnostics: ChartDiagnostic[] } {
 	const diagnostics: ChartDiagnostic[] = [];
 	const rows: Rows = new Map();
-	const bars = new Map(
-		lines.filter((l): l is BarsLine => l.kind === "bars").map((l) => [l.line, l]),
-	);
+	const all = lines.filter((l): l is BarsLine => l.kind === "bars");
+	const bars = new Map(all.map((l) => [l.line, l]));
+	// Only the owner's syllables are the rows' verse 1; another part's are its own.
+	const owners = new Set(singerLines(owner, all, parts).map((l) => l.line));
 	for (const group of groupsOf(lines)) {
 		const covered = (group.rows[0]?.covers ?? []).flatMap((n) => bars.get(n) ?? []);
-		for (const row of singingRows(group, covered, diagnostics))
+		const sungOnNotes = covered.some((l) => owners.has(l.line) && hasSyllables(l));
+		for (const row of singingRows(group, sungOnNotes, diagnostics))
 			for (const l of covered)
 				if (l.cells.filter(isBar).length === row.cells.length) {
 					const key = rowKey(group.replay, l.line);
@@ -148,12 +174,8 @@ export function versesOf(lines: Line[]): { rows: Rows; diagnostics: ChartDiagnos
 }
 
 /** A group's rows that sing, each other with its error. */
-function singingRows(
-	group: Group,
-	covered: BarsLine[],
-	diagnostics: ChartDiagnostic[],
-): LyricsLine[] {
-	const sungOnNotes = group.replay === null && covered.some(hasSyllables);
+function singingRows(group: Group, notes: boolean, diagnostics: ChartDiagnostic[]): LyricsLine[] {
+	const sungOnNotes = group.replay === null && notes;
 	const seen = new Map<number, number>();
 	return group.rows.filter((row) => {
 		const problem = rowProblem(row, group, sungOnNotes, seen);
@@ -188,7 +210,7 @@ function onBeats(cell: LyricSlot[], bar: PlayedBar, onsets: number[]): PlayedSyl
 }
 
 /** The verses a pass sings: outside a repeat every verse; on pass N verse N, or a lone verse on every pass. */
-function forPass(verses: PlayedLyrics[], pass: number | null): PlayedLyrics[] {
+function forPass<T extends { verse: number }>(verses: T[], pass: number | null): T[] {
 	if (pass === null) return verses;
 	const own = verses.filter((v) => v.verse === pass);
 	return own.length ? own : verses.length === 1 ? verses : [];
@@ -197,61 +219,145 @@ function forPass(verses: PlayedLyrics[], pass: number | null): PlayedLyrics[] {
 const textOf = (s: PlayedSyllable) =>
 	s.syllable.kind === "sung" ? s.syllable.parts.join("~") : "/";
 
+/** "1 and 2", "1, 2 and 3". */
+const listOf = (ns: number[]) =>
+	ns.length < 2 ? `${ns[0] ?? ""}` : `${ns.slice(0, -1).join(", ")} and ${ns.at(-1)}`;
+
+/** A verse a bar could sing, and the row that writes it (null for its notes' syllables). */
+type Candidate = { verse: number; row: LyricsLine | null; lyrics: PlayedLyrics };
+
+/** A warning reported once per line and message. */
+function warner(diagnostics: ChartDiagnostic[]) {
+	const warned = new Set<string>();
+	return (line: number, message: string, token: string) => {
+		if (warned.has(`${line}\u0000${message}`)) return;
+		warned.add(`${line}\u0000${message}`);
+		diagnostics.push({ line, severity: "warning", message, token });
+	};
+}
+
 /**
  * The words each played bar sings (grammar 4.3, 7.7), for `expand` to
  * attach as it plays the line that sings: the syllables on its notes
  * (verse 1) and the rows over it, or under a replay heading with rows for
  * the line, that replay's rows alone; on a repeat's pass N, verse N. The
  * singer's melody is checked as it plays: a row's syllable where no note
- * starts, and a `:/` with nothing sung before it to hold, warn.
+ * starts, a `:/` with nothing sung before it to hold, and a pass that
+ * sings nothing where other passes sing, warn. `finish`, after playing,
+ * warns of each numbered row never sung.
  */
-export function singing(
+function singing(
 	rows: Rows,
 	who: Singer | null,
-): { sing: Sing; diagnostics: ChartDiagnostic[] } {
+): { sing: Sing; diagnostics: ChartDiagnostic[]; finish: () => void } {
 	const diagnostics: ChartDiagnostic[] = [];
-	const warned = new Set<string>();
-	const warn = (line: number, message: string, token: string) => {
-		if (warned.has(`${line}\u0000${message}`)) return;
-		warned.add(`${line}\u0000${message}`);
-		diagnostics.push({ line, severity: "warning", message, token });
-	};
+	const warn = warner(diagnostics);
 	const melody = who?.sings !== undefined;
 	const part = who?.label === undefined ? {} : { part: who.label };
+	const sung = new Set<LyricsLine>();
 	let heard = false;
+	/** A row's verse in a bar, its syllables on the beats. */
+	const fromRow = (
+		row: LyricsLine,
+		bar: PlayedBar,
+		from: BarSource,
+		onsets: number[],
+	): Candidate => {
+		const syllables = onBeats(row.cells[from.bar] ?? [], bar, onsets);
+		const missed = melody ? syllables.find((s) => !s.note) : undefined;
+		if (missed)
+			warn(row.line, `"${textOf(missed)}" falls where the voice starts no note`, textOf(missed));
+		const verse = row.verse ?? 1;
+		return { verse, row, lyrics: { verse, ...part, syllables } };
+	};
 	/** The bar's verses before a pass picks: its notes' and its rows'. */
-	const verses = (bar: PlayedBar, from: BarSource): { verses: PlayedLyrics[]; notes: boolean } => {
+	const candidates = (bar: PlayedBar, from: BarSource): Candidate[] => {
 		const replayed = from.replay === null ? undefined : rows.get(rowKey(from.replay, from.line));
 		const own = replayed ?? rows.get(rowKey(null, from.line)) ?? [];
 		const onsets = melody ? noteOnsets(bar) : [];
-		const out: PlayedLyrics[] = own.map((row) => {
-			const syllables = onBeats(row.cells[from.bar] ?? [], bar, onsets);
-			const missed = melody ? syllables.find((s) => !s.note) : undefined;
-			if (missed)
-				warn(row.line, `"${textOf(missed)}" falls where the voice starts no note`, textOf(missed));
-			return { verse: row.verse ?? 1, ...part, syllables };
-		});
+		const out = own.map((row) => fromRow(row, bar, from, onsets));
 		const notes = replayed || !who ? [] : onNotes(bar);
-		if (notes.length) out.unshift({ verse: 1, ...part, syllables: notes });
-		return { verses: out.sort((a, b) => a.verse - b.verse), notes: notes.length > 0 };
+		if (notes.length)
+			out.unshift({ verse: 1, row: null, lyrics: { verse: 1, ...part, syllables: notes } });
+		return out.sort((a, b) => a.verse - b.verse);
 	};
 	/** A `:/` holds the syllable sung before it, in play order. */
-	const hold = (bar: PlayedBar, sung: PlayedLyrics | undefined) => {
-		for (const s of sung?.syllables ?? []) {
+	const hold = (bar: PlayedBar, notes: Candidate | undefined) => {
+		for (const s of notes?.lyrics.syllables ?? []) {
 			if (s.syllable.kind === "sung") heard = true;
 			else if (!heard)
 				warn(bar.line, ":/ holds the syllable before it, and none is sung before it", ":/");
 		}
 	};
+	/** On a pass that sings none of a bar's several verses, say so. */
+	const silent = (all: Candidate[], from: BarSource) =>
+		warn(
+			from.line,
+			`pass ${from.pass} of this repeat sings nothing: its bars have verses ${listOf(all.map((c) => c.verse))}`,
+			"lyrics",
+		);
 	const sing: Sing = (bar, from) => {
-		const read = verses(bar, from);
-		const chosen = forPass(read.verses, from.pass);
-		if (read.notes)
-			hold(
-				bar,
-				chosen.find((v) => v.verse === 1),
-			);
-		return chosen.length ? chosen : undefined;
+		const all = candidates(bar, from);
+		const chosen = forPass(all, from.pass);
+		if (all.length && !chosen.length) silent(all, from);
+		hold(
+			bar,
+			chosen.find((c) => c.row === null),
+		);
+		for (const c of chosen) if (c.row) sung.add(c.row);
+		return chosen.length ? chosen.map((c) => c.lyrics) : undefined;
 	};
-	return { sing, diagnostics };
+	const finish = () => {
+		const unsung = new Set(
+			[...rows.values()].flat().filter((r) => r.verse !== null && !sung.has(r)),
+		);
+		for (const r of unsung)
+			warn(
+				r.line,
+				`verse ${r.verse} is never sung: no pass of its repeat is pass ${r.verse}`,
+				"lyrics",
+			);
+	};
+	return { sing, diagnostics, finish };
+}
+
+/** One voice that sings (grammar 7.7): its singer, null for the chart's words when no part sings, and its words. */
+export type Voice = { singer: Singer | null } & ReturnType<typeof singing>;
+
+/**
+ * Every voice of a chart: each part that sings, the owner with the lyric
+ * rows; or, when no part sings, the chart's words alone. `diagnostics`
+ * are the rows' errors, `all` the parts that sing.
+ */
+export function voicesOf(
+	lines: Line[],
+	parts: DeclaredPart[],
+): { voices: Voice[]; all: Singer[]; owner: Singer | null; diagnostics: ChartDiagnostic[] } {
+	const { owner, all } = singersOf(lines, parts);
+	const verses = versesOf(lines, owner, parts.length);
+	const singers = owner ? all : [null];
+	const voices = singers.map((singer) => ({
+		singer,
+		...singing(singer === owner ? verses.rows : new Map(), singer),
+	}));
+	return { voices, all, owner, diagnostics: verses.diagnostics };
+}
+
+/** The voices an extract of a part, or of one of its lines, sings: its own, and the chart's words when no part sings. */
+export function voicesIn(voices: Voice[], part: DeclaredPart, lineName?: string): Voice[] {
+	return voices.filter(({ singer }) => {
+		if (!singer) return true;
+		if (singer.part !== part) return false;
+		const line = singer.sings ?? part.lines?.[0] ?? "";
+		return lineName === undefined || same(lineName, line);
+	});
+}
+
+/** Several voices' words on one line (verse order, then the voices' order), or none. */
+export function together(sings: Sing[]): Sing | undefined {
+	if (sings.length < 2) return sings[0];
+	return (bar, from) => {
+		const all = sings.flatMap((sing) => sing(bar, from) ?? []);
+		return all.length ? all.sort((a, b) => a.verse - b.verse) : undefined;
+	};
 }

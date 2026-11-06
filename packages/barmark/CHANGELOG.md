@@ -46,6 +46,12 @@ Releases follow the process in [RELEASING.md](RELEASING.md).
   where the singing line starts no note, and a `:/` with nothing sung
   before it, warn. Another part's extract (`extractPart`, `printPart`)
   leaves the singer's rows out.
+  Syllables on a part's notes are that part's, so a choir chart's bars
+  carry one `PlayedLyrics` per part and verse (verse order, then score
+  order), each part's `DeclaredPart.sings` set; lyric rows stay the
+  singer's, and only the singer's syllables clash with a row over them.
+  A numbered verse that no pass sings, and a repeat's pass that sings
+  nothing where other passes sing, warn.
 
 ### Changed
 

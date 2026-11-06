@@ -192,9 +192,9 @@ describe("verses in play order (spec sections 3 and 4)", () => {
 		expect(sung(extractPart(chart, "V", "")?.bars ?? [])).toEqual(sung(p.bars));
 		expect(extractPart(chart, "V", "Alt")?.bars.some((b) => b.lyrics)).toBe(false);
 	});
-	test("the lyrics belong to the first voice part, else the first part with syllables", () => {
+	test("lyric rows belong to the first voice part, else the first part with syllables", () => {
 		const voices =
-			"part: G = Guitar\npart: A = Alto, instrument: voice\npart: B = Bari, instrument: voice\nG | C |\nA | {E4}:la |\nB | {C3}:lo |\n";
+			"part: G = Guitar\npart: A = Alto, instrument: voice\npart: B = Bari, instrument: voice\nG | C |\nA | {E4} |\nB | {C3} |\nlyrics: | la |\n";
 		const p = parseChart(voices);
 		expect(p.bars[0]?.lyrics).toEqual([
 			{
@@ -206,8 +206,53 @@ describe("verses in play order (spec sections 3 and 4)", () => {
 			},
 		]);
 		expect(p.parts.map((x) => x.sings)).toEqual([undefined, "", undefined]);
-		const syllables = "part: G = Guitar\npart: S = Singer\nG | C |\nS | {E4}:la |\n";
-		expect(parseChart(syllables).bars[0]?.lyrics?.[0]?.part).toBe("S");
+		const syllables =
+			"part: G = Guitar\npart: S = Singer\npart: P = Piano\nG | C |\nS | {E4}:la |\nP | {C4} |\nlyrics 2: | lo |\n";
+		expect(parseChart(syllables).bars[0]?.lyrics?.map((v) => `${v.part} ${v.verse}`)).toEqual([
+			"S 1",
+			"S 2",
+		]);
+	});
+	test("only the singer's syllables clash with a lyric row", () => {
+		const chart =
+			"part: V = Voice, instrument: voice\npart: P = Piano\nV | {C4} |\nP | {C4}:la |\nlyrics: | x |\n";
+		const p = parseChart(chart);
+		expect(p.diagnostics).toEqual([]);
+		expect(sung(p.bars)).toEqual([["1: x", "1: la"]]);
+		expect(p.bars[0]?.lyrics?.map((v) => v.part)).toEqual(["V", "P"]);
+	});
+	test("syllables on each part's notes are that part's: a choir", () => {
+		const choir = ["S", "A", "T", "B"]
+			.map((x) => `part: ${x} = ${x}, instrument: voice\n`)
+			.join("");
+		const chart = `${choir}S | {G4}:glo- |\nA | {D4}:glo- |\nT | {B3}:ri- |\nB | {G2}:a |\nlyrics 2: | ho |\n`;
+		const p = parseChart(chart);
+		expect(p.diagnostics).toEqual([]);
+		expect(p.bars[0]?.lyrics?.map((v) => `${v.part} ${v.verse}`)).toEqual([
+			"S 1",
+			"A 1",
+			"T 1",
+			"B 1",
+			"S 2",
+		]);
+		expect(sung(p.bars)).toEqual([["1: glo", "1: glo", "1: ri", "1: a", "2: ho"]]);
+		expect(p.parts.map((x) => x.sings)).toEqual(["", "", "", ""]);
+		const alto = extractPart(chart, "A");
+		expect(alto?.bars[0]?.lyrics?.map((v) => `${v.part} ${v.verse}`)).toEqual(["A 1"]);
+		expect(alto?.lines.some((l) => l.kind === "lyrics")).toBe(false);
+	});
+	test("a numbered verse that is never sung warns", () => {
+		const chart = "| C | D | x2\nlyrics 1: | a | b |\nlyrics 2: | c | d |\nlyrics 3: | e | f |\n";
+		expect(warnings(chart)).toMatchObject([
+			{ line: 4, message: "verse 3 is never sung: no pass of its repeat is pass 3" },
+		]);
+	});
+	test("a pass with no verse, where other passes have one, warns", () => {
+		const chart = "| C | D | x3\nlyrics 1: | a | b |\nlyrics 2: | c | d |\n";
+		expect(warnings(chart)).toMatchObject([
+			{ line: 1, message: "pass 3 of this repeat sings nothing: its bars have verses 1 and 2" },
+		]);
+		expect(sung(parseChart(chart).bars).slice(4)).toEqual([[], []]);
 	});
 	test("a chart with no voice part keeps a lyric row's words, with no part", () => {
 		const chart =
