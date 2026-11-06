@@ -119,9 +119,65 @@ function breathes(cell: string): string {
 	return slots.every((slot) => slot === "--") ? "--" : slots.join(" ");
 }
 
+/** A cell's slots spread `by` times as many: each member a slot of its own (`a_b` by 2 is `a b`), or held (`/`) over the new ones; null where a slot can't be spread evenly. */
+function spread(cell: string, by: number): string[] | null {
+	const out: string[] = [];
+	for (const slot of cell.split(" ")) {
+		const members = slot.split("_");
+		const g = members.length;
+		if (by % g === 0) for (const m of members) out.push(m, ...Array<string>(by / g - 1).fill("/"));
+		else if (g % by === 0)
+			for (let i = 0; i < g; i += g / by) out.push(members.slice(i, i + g / by).join("_"));
+		else return null;
+	}
+	return out;
+}
+
+/**
+ * A row's cells on one grid, as a chart writes a row: a bar that needs
+ * fewer slots than the finest bar (for its beats) is spread to as many,
+ * its syllables held over the new slots (`fear` is `fear / /` beside
+ * `grace / that`). Only where that says nothing new: never over a new
+ * note (a hold there would sing on it) and never after a breath.
+ */
+function oneGrid(v: Verses, cells: string[], bars: RowBar[]): string[] {
+	const beats = bars.map(({ measure }) => v.words.beats[measure] ?? 4);
+	const slots = cells.map((c) => c.split(" ").length);
+	// The finest bar's slots a beat, as a fraction n/d.
+	let [n, d] = [0, 1];
+	cells.forEach((c, i) => {
+		const b = beats[i] ?? 4;
+		if (!c.includes("--") && c !== "/" && (slots[i] ?? 1) * d > n * b) [n, d] = [slots[i] ?? 1, b];
+	});
+	return cells.map((cell, i) => {
+		const want = ((beats[i] ?? 4) * n) / d;
+		const k = slots[i] ?? 1;
+		if (cell.includes("--") || cell === "/" || !Number.isInteger(want) || want <= k || want % k)
+			return cell;
+		const out = spread(cell, want / k);
+		const measure = bars[i]?.measure ?? -1;
+		const onsets = new Set(
+			(v.words.bars[measure] ?? []).map((e) => e.at.n / e.at.d / (v.words.lengths[measure] ?? 4)),
+		);
+		const before = new Set(startsAt(cell));
+		const free = startsAt(out?.join(" ") ?? "").every((at) => before.has(at) || !onsets.has(at));
+		return out && free ? out.join(" ") : cell;
+	});
+}
+
+/** Where a cell's slots and members start, as shares of the bar. */
+function startsAt(cell: string): number[] {
+	const slots = cell.split(" ");
+	return slots.flatMap((slot, i) => {
+		const members = slot.split("_");
+		return members.map((_, j) => (i * members.length + j) / (slots.length * members.length));
+	});
+}
+
 /** A row: its label, then the verse's cell in each of these bars. */
 function row(v: Verses, verse: number, label: string, bars: RowBar[]): string {
-	const written = bars.map(({ measure }) => v.words.rows.get(verse)?.[measure] ?? "--");
+	const read = bars.map(({ measure }) => v.words.rows.get(verse)?.[measure] ?? "--");
+	const written = oneGrid(v, read, bars);
 	const cells = v.words.onNotes ? settled(written, bars, verse, v.holds) : written;
 	return `${label} | ${cells.join(" | ")} |`;
 }

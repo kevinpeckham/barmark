@@ -35,6 +35,10 @@ package uses [semantic versioning](https://semver.org/).
   after a breath (a repeat written out in played order) and nothing is
   held, the row writes `--`, and a bar that only breathes is one `--`. A
   syllable of hyphens alone is no syllable, so it never reads as a breath.
+  A lyric row writes its bars on one grid, as many slots a beat as its
+  finest bar, so a held syllable keeps its holds (`fear / /` beside
+  `grace / that`), except where a hold would sing on a new note or
+  follow a breath.
 
 - **Export: lyrics** (barmark's grammar 4.3 and 7.7). A syllable on a
   note is a `<lyric number="1">` on it, with `syllabic` (single, begin,

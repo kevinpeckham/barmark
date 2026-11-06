@@ -365,7 +365,10 @@ test("a long first bar before a shorter meter is a time change, not a pickup", (
 	const ms = measuresOf(
 		xml`${measure(1, base(1) + note("C", 4, 4))}${measure(2, t(3) + note("G", 4, 3))}`,
 	);
-	expect(ms.map((m) => m.time)).toEqual([{ n: 4, d: 4 }, { n: 3, d: 4 }]);
+	expect(ms.map((m) => m.time)).toEqual([
+		{ n: 4, d: 4 },
+		{ n: 3, d: 4 },
+	]);
 	expect(ms.map((m) => m.oneBar)).toEqual([null, null]);
 });
 

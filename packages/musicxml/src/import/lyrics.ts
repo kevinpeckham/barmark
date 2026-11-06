@@ -4,6 +4,7 @@
  * a line's words bar by bar, from which its later verses' lyric rows are
  * placed on the beats.
  */
+import { beatsOf } from "barmark";
 import { type Frac, frac, times } from "../rhythm.js";
 import type { Bar } from "./cells.js";
 import { placeBar } from "./grid.js";
@@ -26,6 +27,8 @@ export type Words = {
 	bars: SungEvent[][];
 	/** Each measure's length in quarters: an onset's place in its bar is what the self-check compares. */
 	lengths: number[];
+	/** Each measure's beats (grammar 2.1), which a row's slots are counted against. */
+	beats: number[];
 	verses: number[];
 	onNotes: boolean;
 	rows: Map<number, string[]>;
@@ -140,6 +143,7 @@ export function wordsOf(bars: SungEvent[][], shared: Bar[], held: boolean[]): Wo
 	return {
 		bars,
 		lengths,
+		beats: shared.map((bar) => beatsOf(bar.meter)),
 		verses,
 		onNotes: held.length > 0,
 		rows: new Map(verses.map((v) => [v, cells(v)])),

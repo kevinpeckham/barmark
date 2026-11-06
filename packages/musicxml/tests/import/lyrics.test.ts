@@ -164,7 +164,7 @@ test("a section played again with new words is a replay with a lyric row", () =>
 	const xml = score([voice([...verse("one", "two"), ...verse("three", "four")])]);
 	const result = sound(importMusicXml(xml));
 	expect(result.text).toBe(
-		`${VOX}\n## Verse\nVox     | C                 | G       |\nVox.Mel | {C4}:one {D4}:two | {E4}:oh |\n\n## Verse\nlyrics: | three four | oh |\n`,
+		`${VOX}\n## Verse\nVox     | C                 | G       |\nVox.Mel | {C4}:one {D4}:two | {E4}:oh |\n\n## Verse\nlyrics: | three four | oh / |\n`,
 	);
 	const sung = parseChart(result.text).bars.map((b) =>
 		(b.lyrics ?? []).flatMap((l) =>
@@ -288,19 +288,33 @@ describe("barmark → MusicXML → barmark", () => {
 time: 3/4
 Vox       | G                           | G / G7                | C                     | G          |
 Vox.Mel   | {G4}:maz- / {B4}:ing_{G4}:/ | {B4}:grace / {A4}:how | {G4}:sweet / {E4}:the | {D4}:sound |
-lyrics 2: | grace / that                | taught / my           | heart / to            | fear       |
+lyrics 2: | grace / that                | taught / my           | heart / to            | fear / /   |
 `;
 		// Verse 2 sings nothing new on the melisma's second note: its row says nothing there.
+		// `fear` is held on the row's grid, a slot a beat, as its other bars are.
 		const result = sound(importMusicXml(xmlOf(chart)));
 		expect(result.text).toBe(chart);
 		expect(result.diagnostics).toEqual([]);
+	});
+
+	test("a row writes its bars on one grid, so a held last syllable keeps its holds", () => {
+		const chart = "        | C       | G       |\nlyrics: | one two | three / |\n";
+		expect(sound(importMusicXml(xmlOf(chart))).text).toBe(chart);
+	});
+
+	test("a row's bar isn't spread where a new note it doesn't sing would be held", () => {
+		const chart = `${VOX}Vox       | C                               | G                     |
+Vox.Mel   | {C4}:a {D4}:b {E4}:c {F4}:d     | {G4}:e {A4} {B4} {C5} |
+lyrics 2: | w x y z                         | v                     |
+`;
+		expect(sound(importMusicXml(xmlOf(chart))).text).toBe(printChart(chart));
 	});
 
 	test("verses on a repeat's passes come back as a numbered row", () => {
 		const chart = `part: V = Voice, instrument: voice
 V         | C                 | G          | x2
 V.Mel     | {C4}:one {D4}:two | {E4}:three | x2
-lyrics 2: | uno dos           | tres       |
+lyrics 2: | uno dos           | tres /     |
 `;
 		expect(sound(importMusicXml(xmlOf(chart))).text).toBe(chart);
 	});
@@ -452,7 +466,7 @@ describe("a row's holds mean what barmark reads (grammar 7.7)", () => {
 		const result = sound(importMusicXml(xml));
 		expect(result.text).toBe(`${VOX}Vox       | C      | F             |
 Vox.Mel   | {C4}:a | {D4}:b {E4}:c |
-lyrics 2: | hold   | / y           |
+lyrics 2: | hold / | / y           |
 
 ## Chorus
 Vox       | G      | F             |
@@ -476,7 +490,7 @@ lyrics 2: | --     | z      |
 			]),
 		]);
 		const result = sound(importMusicXml(xml));
-		expect(result.text).toContain("lyrics 2: | hold   | / / / /            |");
+		expect(result.text).toContain("lyrics 2: | hold / / / | / / / /            |");
 		expect(result.text).toContain("lyrics 2: | --     | --                 |");
 	});
 
