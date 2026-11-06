@@ -1,22 +1,24 @@
 /**
  * The imported chart as canonical barmark text: the title, credits and
  * `part:` lines, then each section's systems (one tutti line where the
- * parts agree), lyrics as text lines under each system's rows, and replays
- * where a section comes back unchanged. The importer parses what it wrote:
+ * parts agree), later verses as lyric rows under each system's rows, and
+ * replays where a section comes back with the same notes (and its rows,
+ * when its words are new). The importer parses what it wrote:
  * an error there is an importer bug, reported as one.
  */
 import { type ChartParse, parseChart, printParsed } from "barmark";
 import { metersOf, settleEndings } from "./endings.js";
 import type { Losses } from "./losses.js";
-import { importLyrics, lyricLines, verseText } from "./lyrics.js";
+import type { Words } from "./lyrics.js";
 import type { ImportedPart } from "./parts.js";
-import type { ReadMeasure, ReadScore } from "./read.js";
+import type { ReadScore } from "./read.js";
 import { replaysOf, type Section, sectionsOf, wholeRepeat } from "./replays.js";
 import { allLines, forget, type Last, playingOf, rowsOf, type Source } from "./rows.js";
-import { mismatches, reportBugs } from "./selfcheck.js";
+import { mismatches, reportBugs, verseMismatches } from "./selfcheck.js";
 import type { Structure } from "./structure.js";
 import { type System, systemsOf } from "./systems.js";
 import { creditLines, headingLine, partLine, textLine, titleLine } from "./text.js";
+import { meantAt, replayRows, rowsUnder, type Verses, versesOf } from "./verses.js";
 
 /** Labels told apart: each label two parts share is numbered (`Gtr1`, `Gtr2`), skipping labels already taken. */
 export function numbered(labels: string[]): string[] {
@@ -31,9 +33,6 @@ export function numbered(labels: string[]): string[] {
 	});
 }
 
-/** Where lyrics are read: the measures of the part that has them, its line, and whether verses are numbered. */
-type LyricSource = { measures: ReadMeasure[]; line: number; numbered: boolean };
-
 /** Bars `from` up to `to` (exclusive): a system or a section. */
 type Span = { from: number; to: number };
 
@@ -41,29 +40,26 @@ type Span = { from: number; to: number };
 type Writer = {
 	src: Source;
 	header: string[];
-	lyrics: LyricSource | null;
+	verses: Verses | null;
 	last: Last;
 	/** Each bar written so far, in written order, as its index in `src.bars`: what the self-check plays back. */
 	written: number[];
+	/** What each written bar (its index in `src.bars`) means to sing, every pass and replay of it together. */
+	meant: Map<number, Set<string>>;
 };
 
-/** How many bars after a system are read for the end of a word it leaves open: far past any sung word, and a bound on a file whose words never end. */
-const FOLLOWING = 64;
+/** The measures of bars `s` (indices in `src.bars`). */
+const measuresIn = (w: Writer, s: Span) => w.src.bars.slice(s.from, s.to).map((b) => b.index);
 
-/** The lyric text lines for a system's (or a replayed section's) bars, one per verse. */
-function lyricsUnder(w: Writer, s: Span): string[] {
-	const { lyrics, src } = w;
-	if (!lyrics) return [];
-	const own = src.bars.slice(s.from, s.to).flatMap((b) => lyrics.measures[b.index] ?? []);
-	// The bars after the system, read lazily: only as far as a word it leaves open needs.
-	function* following() {
-		for (let i = s.to; i < Math.min(src.bars.length, s.to + FOLLOWING); i++) {
-			const m = lyrics?.measures[src.bars[i]?.index ?? -1];
-			if (m) yield m;
-		}
-	}
-	const verses = lyricLines(own, lyrics.line, following());
-	return verseText(verses, lyrics.numbered).flatMap((t) => textLine(t, w.header) ?? []);
+/** A part's label as the chart names it to the parse: "" when it declares no parts. */
+const labelFor = (w: Writer) => (p: number | null) =>
+	w.header.length > 0 && p !== null ? (w.src.labels[p] ?? "") : "";
+
+/** Notes what measure `measure` sings as written bar `bar`'s (its index in `src.bars`). */
+function mean(w: Writer, bar: number, measure: number): void {
+	const set = w.meant.get(bar) ?? new Set<string>();
+	w.meant.set(bar, set);
+	for (const k of meantAt(w.src.parts, w.verses, measure, labelFor(w))) set.add(k);
 }
 
 /** A section's heading, with `x N` when the section repeats whole; null when the name can't be written as one. */
@@ -94,6 +90,13 @@ type Plan = { replay: boolean; times: string | null };
 function sectionStarts(sections: Section[], bars: number): number[] {
 	const out = Array<number>(bars).fill(0);
 	for (const s of sections) for (let i = s.from; i < s.to; i++) out[i] = s.from;
+	return out;
+}
+
+/** Each replay's section written out: a replay of a replay replays the same bars. */
+function rootsOf(replays: Map<number, number>): Map<number, number> {
+	const out = new Map<number, number>();
+	for (const [from, of] of replays) out.set(from, out.get(of) ?? of);
 	return out;
 }
 
@@ -149,16 +152,32 @@ function systemLines(
 	for (let i = s.from; i < s.to; i++) {
 		w.src.previous[i] = w.written[w.written.length - 1] ?? null;
 		w.written.push(i);
+		mean(w, i, w.src.bars[i]?.index ?? i);
 	}
 	const rows = rowsOf(w.src, s, w.last, plan.times !== null);
-	const lyrics = lyricsUnder(w, s);
+	const lyrics = rowsUnder(w.verses, measuresIn(w, s));
 	const lines = [...lead, ...(lead.length === 0 ? separator(previous, s) : []), ...rows, ...lyrics];
 	return { lines, open: lyrics.length === 0 ? keysOf(s) : null };
 }
 
-/** The body: each system; a replayed section as its heading and its own lyrics. */
+/**
+ * A replayed section's rows, when it sings new words: one per line its
+ * section (the one written out, `root`) is written in. Its bars sing as
+ * the root's bars do, so what they sing is meant there.
+ */
+function replayed(w: Writer, section: Section, root: Section, systems: System[]): string[] {
+	const lines = systems
+		.filter((x) => x.from >= root.from && x.to <= root.to)
+		.map((x) => measuresIn(w, x));
+	for (let k = 0; k < section.to - section.from; k++)
+		mean(w, root.from + k, w.src.bars[section.from + k]?.index ?? 0);
+	return replayRows(w.verses, measuresIn(w, section), measuresIn(w, root), lines);
+}
+
+/** The body: each system; a replayed section as its heading, and its rows when it sings new words. */
 function body(w: Writer, systems: System[], sections: Section[]): string[] {
 	const planned = plans(w, systems, sections);
+	const roots = rootsOf(replaysOf(w.src, sections));
 	const starts = sectionStarts(sections, w.src.bars.length);
 	const byStart = new Map(sections.map((x) => [x.from, x]));
 	const sectionOf = (i: number) => byStart.get(starts[i] ?? 0) as Section;
@@ -177,7 +196,12 @@ function body(w: Writer, systems: System[], sections: Section[]): string[] {
 		previous = null;
 		// The bars after a replay follow what it played, not the bar written before it.
 		forget(w.last);
-		return [...before(w, s, plan.times), ...textOf(w, section), ...lyricsUnder(w, section)];
+		const root = byStart.get(roots.get(section.from) ?? section.from) ?? section;
+		return [
+			...before(w, s, plan.times),
+			...textOf(w, section),
+			...replayed(w, section, root, systems),
+		];
 	});
 }
 
@@ -186,14 +210,20 @@ function check(parsed: ChartParse, w: Writer, losses: Losses): void {
 	const errors = parsed.diagnostics
 		.filter((d) => d.severity === "error")
 		.map((d) => `${d.message} (line ${d.line})`);
-	reportBugs(errors.length > 0 ? errors : mismatches(parsed, w.src, w.written), losses);
+	const bugs =
+		errors.length > 0
+			? errors
+			: [
+					...mismatches(parsed, w.src, w.written),
+					...verseMismatches(parsed, w.written, w.meant, (i) => w.src.bars[i]?.measure ?? ""),
+				];
+	reportBugs(bugs, losses);
 }
 
-/** Where the lyrics come from, if any part has them. */
-function lyricSource(score: ReadScore, losses: Losses): Writer["lyrics"] {
-	const found = importLyrics(score.parts, losses);
-	const measures = found ? score.parts[found.part]?.measures : undefined;
-	return found && measures ? { measures, line: found.line, numbered: found.numbered } : null;
+/** The singer's line, whose syllables a replay may change with its rows (`"part.line"`); null when the rows are a lyric staff's or no one's. */
+function newWords(parts: ImportedPart[], verses: Verses | null): string | null {
+	const line = verses?.owner == null ? undefined : parts[verses.owner]?.sings?.line;
+	return verses?.from === 2 && line !== undefined ? `${verses.owner}.${line}` : null;
 }
 
 /** The imported chart, canonical (`printChart(text) === text`); errors in it are reported to `losses`. */
@@ -202,10 +232,24 @@ export function writeChart(
 	parts: ImportedPart[],
 	structure: Structure,
 	losses: Losses,
+	staff: Words | null = null,
 ): string {
 	const bars = settleEndings(structure.bars, losses);
+	// Played in order, endings no pass takes can leave nothing at all.
+	if (bars.length === 0) {
+		losses.note({ severity: "error", message: "nothing to import: no bar plays" });
+		return "";
+	}
 	const labels = numbered(parts.map((p) => p.label));
-	const src: Source = { parts, labels, bars, meters: metersOf(bars), previous: [] };
+	const verses = versesOf(parts, staff, losses);
+	const src: Source = {
+		parts,
+		labels,
+		bars,
+		meters: metersOf(bars),
+		previous: [],
+		newWords: newWords(parts, verses),
+	};
 	const systems =
 		parts.length === 0
 			? []
@@ -221,9 +265,10 @@ export function writeChart(
 	const w: Writer = {
 		src,
 		header,
-		lyrics: lyricSource(score, losses),
+		verses,
 		last: allLines(src),
 		written: [],
+		meant: new Map(),
 	};
 	const lines = [
 		...titleLine(score.title),

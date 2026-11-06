@@ -6,7 +6,7 @@
  * written before the heading, where they change the replay. A section
  * repeated whole is `x N` on its heading.
  */
-import { ownCell, type Source, timesText } from "./rows.js";
+import { ownCell, type Source, timesText, unsung } from "./rows.js";
 
 /** A section: its heading, and bars `from` up to `to` (exclusive). */
 export type Section = { name: string | null; from: number; to: number };
@@ -27,11 +27,17 @@ function barKey(src: Source, i: number, first: boolean): string {
 	if (!bar) return "";
 	// Text lines, like lyrics, are a section's own: a replay writes them under its heading.
 	const { index: _i, measure: _m, heading: _h, textLines: _t, directives, ...shown } = bar;
-	const cells = src.parts.map((part, p) => part.lines.map((_, l) => ownCell(src, p, l, i)));
+	// The singer's syllables may differ: a replay's lyric rows sing new words on the same notes.
+	const cells = src.parts.map((part, p) =>
+		part.lines.map((_, l) => {
+			const own = ownCell(src, p, l, i);
+			return own && `${p}.${l}` === src.newWords ? { ...own, slots: unsung(own.slots) } : own;
+		}),
+	);
 	return JSON.stringify({ ...shown, directives: first ? null : directives, cells });
 }
 
-/** Whether two sections play alike; their lyrics may differ (a replay keeps its own as text lines). */
+/** Whether two sections play alike; the singer's words may differ (a replay's lyric rows sing its own). */
 function alike(src: Source, a: Section, b: Section): boolean {
 	if (a.to - a.from !== b.to - b.from) return false;
 	for (let k = 0; k < a.to - a.from; k++)
@@ -58,16 +64,16 @@ export function wholeRepeat(src: Source, s: Section): string | null {
 /** Names match in any case, whitespace collapsed (grammar 6). */
 const nameKey = (name: string) => name.replace(/\s+/g, " ").trim().toLowerCase();
 
-/** The first bars of the sections written as replays. */
-export function replaysOf(src: Source, sections: Section[]): Set<number> {
-	const out = new Set<number>();
+/** The first bars of the sections written as replays, each to the first bar of the section it replays. */
+export function replaysOf(src: Source, sections: Section[]): Map<number, number> {
+	const out = new Map<number, number>();
 	// The most recent section of each name so far.
 	const latest = new Map<string, Section>();
 	for (const s of sections) {
 		if (s.name === null) continue;
 		const name = nameKey(s.name);
 		const earlier = latest.get(name);
-		if (earlier && alike(src, earlier, s)) out.add(s.from);
+		if (earlier && alike(src, earlier, s)) out.set(s.from, earlier.from);
 		latest.set(name, s);
 	}
 	return out;

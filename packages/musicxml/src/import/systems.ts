@@ -168,7 +168,10 @@ function readOrder(systems: System[], p: number): number[] {
  */
 function pinOrder(systems: System[], p: number, count: number): System[] {
 	const order = readOrder(systems, p);
-	if (order.every((l, k) => k === 0 || l > (order[k - 1] ?? 0))) return systems;
+	// A reader takes the first line written by name as the part's first, which
+	// a tutti line plays: it must be the part's first line.
+	const first = order[0] === undefined || order[0] === 0;
+	if (first && order.every((l, k) => k === 0 || l > (order[k - 1] ?? 0))) return systems;
 	const at = systems.findIndex((s) => linesIn(s, p).some((l) => l > 0));
 	return systems.map((s, i) => {
 		if (i !== at) return s;

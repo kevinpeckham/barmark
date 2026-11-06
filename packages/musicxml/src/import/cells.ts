@@ -46,7 +46,7 @@ function semitone(p: Pitch): number {
 }
 
 /** Pitches as a note set, low to high with octaves, the first marked root as `!` (grammar 4, 4.1). */
-function noteSet(pitches: Pitch[]): string {
+export function noteSet(pitches: Pitch[]): string {
 	const seen = new Set<string>();
 	const unique = pitches.filter((p) => {
 		const key = `${p.name}${p.octave}`;

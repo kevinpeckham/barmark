@@ -4,10 +4,12 @@
  * then the structure, and writes the chart; it never throws.
  */
 import { type ImportDiagnostic, Losses, measuresText } from "./losses.js";
-import { importPart } from "./parts.js";
+import type { Words } from "./lyrics.js";
+import { barsOf, importPart, linesOf } from "./parts.js";
 import { type ReadPart, type ReadScore, readScore, reportMeters } from "./read.js";
 import { readStructure } from "./structure.js";
 import { readXml } from "./tree.js";
+import { staffWords } from "./voice.js";
 import { writeChart } from "./write.js";
 
 export type ImportOptions = {
@@ -70,9 +72,15 @@ function leftOut(parts: ReadPart[], losses: Losses): void {
 	});
 }
 
-/** The parts to import: the one `--part` names, else all; null when there is nothing to import. */
+/** The words of a lyric row's staff (`<?barmark lyrics?>`), which comes in as lyric rows, not a part. */
+function staffOf(score: ReadScore): Words | null {
+	const staff = score.parts.find((p) => p.lyricStaff);
+	return staff ? staffWords(linesOf(staff)[0] ?? [], barsOf(staff)) : null;
+}
+
+/** The parts to import: the one `--part` names, else all but a lyric staff; null when there is nothing to import. */
 function partsOf(score: ReadScore, options: ImportOptions, losses: Losses): ReadPart[] | null {
-	if (options.part === undefined) return score.parts;
+	if (options.part === undefined) return score.parts.filter((p) => !p.lyricStaff);
 	const part = chosen(score, options.part, losses);
 	if (part && !hasNotes(part) && !part.measures.some((m) => m.harmonies.length > 0)) {
 		losses.note({ severity: "error", message: `${part.name} has no chord symbols or notes` });
@@ -112,7 +120,8 @@ function run(xml: string, options: ImportOptions, losses: Losses): string {
 	// alone; the score's structure (headings, tempo, repeats) from every part.
 	const scoped = forced ? { ...score, parts: chosenParts } : score;
 	const words = forced ? new Set(chosenParts) : undefined;
-	return writeChart(scoped, parts, readStructure(score, losses, words), losses);
+	const staff = forced ? null : staffOf(score);
+	return writeChart(scoped, parts, readStructure(score, losses, words), losses, staff);
 }
 
 /**

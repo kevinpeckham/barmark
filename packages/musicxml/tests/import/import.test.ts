@@ -48,6 +48,20 @@ const errorOf = (r: ImportResult) => {
 };
 
 describe("errors, never throws", () => {
+	test("endings that no pass plays give an error, not an empty chart", () => {
+		const second = '<barline location="left"><ending number="2" type="start"/></barline>';
+		const xml = score([
+			{
+				id: "P1",
+				name: "Guitar",
+				measures:
+					measure(1, second + time44 + harmony("C") + note("C", 4, 4)) +
+					measure(2, harmony("G") + note("G", 4, 4)),
+			},
+		]);
+		expect(errorOf(importMusicXml(xml))).toBe("nothing to import: no bar plays");
+	});
+
 	test("bad XML is an error, not a throw", () => {
 		const r = importMusicXml("<a>");
 		expect(errorOf(r)).toBe("not well-formed XML");

@@ -148,15 +148,44 @@ test("lyric number need not be numeric", () => {
 		)}`,
 	);
 	expect(m?.lines[0]?.[0]?.lyrics).toEqual([
-		{ verse: 1, syllabic: "begin", text: "la", elision: false },
-		{ verse: 2, syllabic: "single", text: "do", elision: false },
+		{ verse: 1, syllabic: "begin", parts: ["la"], extend: false },
+		{ verse: 2, syllabic: "single", parts: ["do"], extend: false },
 	]);
 	expect(m?.lines[0]?.[1]?.lyrics).toEqual([
-		{ verse: 1, syllabic: "end", text: "la", elision: false },
+		{ verse: 1, syllabic: "end", parts: ["la"], extend: false },
 	]);
 });
 
-test("a lyric with an elision joins its texts", () => {
+test("a whole-number lyric number is its verse, and an extend alone is a held syllable", () => {
+	const [m] = measuresOf(
+		xml`${measure(
+			1,
+			base(1) +
+				note(
+					"C",
+					4,
+					2,
+					'<lyric number="3"><syllabic>single</syllabic><text>la</text><extend/></lyric>',
+				) +
+				note("D", 4, 2, '<lyric number="3"><extend/></lyric>'),
+		)}`,
+	);
+	expect(m?.lines[0]?.[0]?.lyrics).toEqual([
+		{ verse: 3, syllabic: "single", parts: ["la"], extend: true },
+	]);
+	expect(m?.lines[0]?.[1]?.lyrics).toEqual([
+		{ verse: 3, syllabic: "single", parts: [], extend: true },
+	]);
+});
+
+test("MuseScore's elision glyph splits a syllable as <elision> does", () => {
+	const [m] = measuresOf(
+		xml`${measure(1, `${base(1)}${note("C", 4, 4, "<lyric><text>a\uE551b</text></lyric>")}`)}`,
+	);
+	expect(m?.lines[0]?.[0]?.lyrics?.[0]?.parts).toEqual(["a", "b"]);
+});
+
+test("a lyric with an elision keeps its syllables apart", () => {
 	const [m] = measuresOf(
 		xml`${measure(
 			1,
@@ -164,7 +193,7 @@ test("a lyric with an elision joins its texts", () => {
 		)}`,
 	);
 	expect(m?.lines[0]?.[0]?.lyrics).toEqual([
-		{ verse: 1, syllabic: "single", text: "a b", elision: true },
+		{ verse: 1, syllabic: "single", parts: ["a", "b"], extend: false },
 	]);
 });
 

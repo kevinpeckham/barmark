@@ -7,9 +7,11 @@ import { INSTRUMENTS, type InstrumentName, instrumentInfo, MAX_LINES, type Meter
 import { type Bar, type LineRead, readLine, type Unread } from "./cells.js";
 import { harmonyOf } from "./chords.js";
 import type { Losses } from "./losses.js";
+import type { Words } from "./lyrics.js";
 import { melodyBars } from "./melody.js";
 import { type Line, mergeStaves } from "./merge.js";
 import { LEFT_OUT, type LeftOut, ON_NOTES, type ReadPart } from "./read.js";
+import { readSinging, type Sung } from "./voice.js";
 
 /** One line's cell text per measure, `null` where the line rests the whole bar. */
 export type LineBars = { name: string | null; bars: (string | null)[] };
@@ -24,6 +26,8 @@ export type ImportedPart = {
 	hasChords: boolean;
 	/** Each `?` on the first line with the program's own text, to write as words. */
 	unread: Unread[];
+	/** The words a part sings, and the index in `lines` of the line whose notes carry them; null when it sings none. */
+	sings: { line: number; words: Words } | null;
 };
 
 const DEFAULT_METER: Meter = { n: 4, d: 4 };
@@ -41,7 +45,7 @@ const UNREAD = "chord symbols barmark can't read, written as ? with their text a
 const UNREAD_BARE = "chord symbols barmark can't read, written as ?";
 
 /** Each measure's length, its own meter (a one-bar meter, else the running one) and its chords. */
-function barsOf(part: ReadPart): Bar[] {
+export function barsOf(part: ReadPart): Bar[] {
 	let running = DEFAULT_METER;
 	return part.measures.map((m) => {
 		running = m.time ?? running;
@@ -55,7 +59,7 @@ function barsOf(part: ReadPart): Bar[] {
 }
 
 /** The part's lines; a two-staff part whose staves split one line (as the export writes a bare keyboard line) is that one line. */
-function linesOf(part: ReadPart): Line[] {
+export function linesOf(part: ReadPart): Line[] {
 	const count = Math.max(1, ...part.measures.map((m) => m.lines.length));
 	const lines = Array.from({ length: count }, (_, i) => part.measures.map((m) => m.lines[i] ?? []));
 	const [upper = [], lower = []] = lines;
@@ -143,11 +147,9 @@ function reportWhy(d: Decided, part: ReadPart, losses: Losses): void {
 			losses.add("melody", WHY.melody, part.name, part.measures[i]?.number);
 }
 
-function report(d: Decided, part: ReadPart, hasChords: boolean, losses: Losses): void {
-	reportWhy(d, part, losses);
-	reportLines(d, part.name, losses);
-	reportMarks(part, d.why === null || !hasChords, losses);
-	for (const u of d.reads[0]?.unread ?? [])
+/** The chord symbols written as `?`. */
+function reportUnread(unread: Unread[], part: ReadPart, losses: Losses): void {
+	for (const u of unread)
 		losses.add(
 			u.text === "" ? "unreadBare" : "unread",
 			u.text === "" ? UNREAD_BARE : UNREAD,
@@ -156,8 +158,15 @@ function report(d: Decided, part: ReadPart, hasChords: boolean, losses: Losses):
 		);
 }
 
-function reportLines(d: Decided, part: string, losses: Losses): void {
-	for (const r of d.reads) {
+function report(d: Decided, part: ReadPart, hasChords: boolean, losses: Losses): void {
+	reportWhy(d, part, losses);
+	reportLines(d.reads, part.name, losses);
+	reportMarks(part, d.why === null || !hasChords, losses);
+	reportUnread(d.reads[0]?.unread ?? [], part, losses);
+}
+
+function reportLines(reads: LineRead[], part: string, losses: Losses): void {
+	for (const r of reads) {
 		for (const m of r.moved)
 			losses.add("moved", "chord symbols moved to the nearest beat", part, m);
 		for (const m of r.offGrid) losses.add("unplaced", UNPLACED, part, m);
@@ -196,6 +205,58 @@ function instrumentOf(part: ReadPart): InstrumentName | null {
 	return (byName ?? INSTRUMENTS.find((i) => i.program === part.midiProgram))?.name ?? null;
 }
 
+const SNAPPED = "a rhythm barmark can't write, snapped to the nearest it can";
+const DROPPED = "more than four lines with the harmony; only the line that sings kept";
+
+/** Whether a part sings (the voice-and-lyrics design, section 7): it has lyrics, or a voice's sound. */
+const singsAt = (part: ReadPart) =>
+	part.sound?.startsWith("voice.") === true ||
+	part.measures.some((m) => m.lines.some((l) => l.some((a) => a.lyrics.length > 0)));
+
+/** A singing part's melody lines that play (the line that sings always, with no harmony), named: under the harmony on one staff, the line that sings `Mel`; else as other lines are. */
+function voiceLines(sung: Sung, staves: number): { lines: LineBars[]; sings: number | null } {
+	const hasChords = sung.harmony !== null;
+	const playing = sung.voices
+		.map((bars, index) => ({ bars, index }))
+		.filter(
+			({ bars, index }) => bars.some((c) => c !== null) || (!hasChords && index === sung.sings),
+		);
+	const nameOf = (index: number) => {
+		if (playing.length === 1) return hasChords ? "Mel" : null;
+		if (staves === 2) return TWO_STAVES[index] ?? null;
+		return hasChords && index === sung.sings ? "Mel" : `${index + 1}`;
+	};
+	const lines = playing.map(({ bars, index }) => ({ name: nameOf(index), bars }));
+	const at = playing.findIndex(({ index }) => index === sung.sings);
+	return { lines, sings: at < 0 ? null : at };
+}
+
+/** A part that sings: its harmony on its bare line, its melody under it, and what was lost. */
+function importSinging(part: ReadPart, hasChords: boolean, losses: Losses): ImportedPart {
+	const sung = readSinging(linesOf(part), barsOf(part), hasChords);
+	const harmony = sung.harmony;
+	const voices = voiceLines(sung, part.staves);
+	const first = harmony ? [{ name: null, bars: harmony.cells }] : [];
+	reportLines(harmony ? [harmony] : [], part.name, losses);
+	for (const m of sung.snapped) losses.add("snapped", SNAPPED, part.name, m);
+	if (sung.dropped) losses.add("dropped", DROPPED, part.name);
+	reportMarks(part, true, losses);
+	const unread = harmony?.unread ?? [];
+	reportUnread(unread, part, losses);
+	const sings =
+		voices.sings === null ? null : { line: voices.sings + first.length, words: sung.words };
+	return {
+		name: part.name,
+		label: labelOf(part.name, part.abbreviation),
+		instrument: instrumentOf(part),
+		lines: [...first, ...voices.lines],
+		lyrics: part.measures,
+		hasChords,
+		unread: unread.filter((u) => u.text !== ""),
+		sings,
+	};
+}
+
 /**
  * A part as barmark lines, or null for a part of notes alone that neither
  * barmark wrote nor `--part` named. Barmark's own files are read
@@ -210,6 +271,7 @@ export function importPart(
 	losses: Losses,
 ): ImportedPart | null {
 	const hasChords = part.measures.some((m) => m.harmonies.length > 0);
+	if (singsAt(part)) return importSinging(part, hasChords, losses);
 	if (!hasChords && !from.barmark && !from.forced) return null;
 	const decided = decide(part, from, hasChords);
 	report(decided, part, hasChords, losses);
@@ -221,5 +283,6 @@ export function importPart(
 		lyrics: part.measures,
 		hasChords,
 		unread: (decided.reads[0]?.unread ?? []).filter((u) => u.text !== ""),
+		sings: null,
 	};
 }

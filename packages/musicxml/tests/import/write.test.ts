@@ -130,7 +130,7 @@ describe("replays", () => {
 		);
 	});
 
-	test("a replay with new lyrics keeps its words", () => {
+	test("a replay sings its words: the same with no row, new ones in a lyric row", () => {
 		const chorus = (words: [string, string]): LeadBar[] => [
 			{ chord: "C", heading: "Chorus", lyric: words[0] },
 			{ chord: "G", lyric: words[1] },
@@ -139,13 +139,13 @@ describe("replays", () => {
 		const same = sound(
 			importXml(leadSheet([...chorus(["la", "la"]), ...verse, ...chorus(["la", "la"])])),
 		);
-		expect(same).toBe("## Chorus\n| C | G |\nla la\n\n## Verse\n| D |\noh\n\n## Chorus\nla la\n");
+		const head =
+			"part: V = Voice\n\n## Chorus\nV     | C       | G       |\nV.Mel | {C5}:la | {C5}:la |\n\n## Verse\nV     | D       |\nV.Mel | {C5}:oh |\n\n## Chorus\n";
+		expect(same).toBe(head);
 		const sungAnew = sound(
 			importXml(leadSheet([...chorus(["la", "la"]), ...verse, ...chorus(["na", "na"])])),
 		);
-		expect(sungAnew).toBe(
-			"## Chorus\n| C | G |\nla la\n\n## Verse\n| D |\noh\n\n## Chorus\nna na\n",
-		);
+		expect(sungAnew).toBe(`${head}lyrics: | na | na |\n`);
 		expect(parseChart(sungAnew).bars.map((b) => b.section)).toEqual([
 			"Chorus",
 			"Chorus",
@@ -398,11 +398,13 @@ describe("the output is canonical and parses without errors", () => {
 	});
 });
 
-test("lyrics go under each system's rows", () => {
+test("a melody's syllables go on its notes, system by system", () => {
 	const bars = ["C", "D", "E", "F", "G"].map(
 		(chord, i): LeadBar => ({ chord, lyric: "abcde".charAt(i) }),
 	);
-	expect(sound(importXml(leadSheet(bars)))).toBe("| C | D | E | F |\na b c d\n| G |\ne\n");
+	expect(sound(importXml(leadSheet(bars)))).toBe(
+		"part: V = Voice\nV     | C      | D      | E      | F      |\nV.Mel | {C5}:a | {C5}:b | {C5}:c | {C5}:d |\nV     | G      |\nV.Mel | {C5}:e |\n",
+	);
 });
 
 describe("directives inside a run of endings", () => {

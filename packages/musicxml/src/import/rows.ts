@@ -19,6 +19,8 @@ export type Source = {
 	meters: Meter[];
 	/** The bar written just before each bar, null for none, as the writer writes them (a replay writes no bars); unset, the bar before. */
 	previous: (number | null)[];
+	/** The singer's line (`"part.line"`), whose syllables a replay's lyric rows replace; null or absent for none. */
+	newWords?: string | null;
 };
 
 type Placed = { text: string; at: number };
@@ -65,9 +67,9 @@ function lastAttackBefore(
 		if (known !== undefined && m + 1 < index) return known;
 		const cell = cells[m];
 		if (cell === null || cell === undefined) return null;
-		// A slot's members, a note set's spaces inside it.
-		const attacks = (cell.match(/[^\s_{]*\{[^}]*\}\.?|[^\s_]+/g) ?? [])
-			.map((t) => t.replace(/(?<!N\.C)\.$/, ""))
+		// A slot's members, a note set's spaces inside it; the attack again, not its syllable.
+		const attacks = (cell.match(/[^\s_{]*\{[^}]*\}\.?(?::[^\s_]*)?|[^\s_]+/g) ?? [])
+			.map((t) => t.replace(/(?<=\}\.?):.*$/, "").replace(/(?<!N\.C)\.$/, ""))
 			.filter((t) => t !== "/");
 		const last = attacks[attacks.length - 1];
 		if (last !== undefined) return last;
@@ -184,6 +186,12 @@ const meterText = (m: Meter | null) => (m ? `${m.n}/${m.d}` : "");
 const speaksFor = (src: Source, key: string | null) =>
 	key === null ? src.parts.map((_, p) => `${p}.0`) : [key];
 
+/** Whether a cell sings: a syllable after a note set's brace (`{G4}:maz-`, `{C4}.:la`). */
+const sung = (slots: string) => /\}\.?:/.test(slots);
+
+/** A cell without its syllables: the notes alone. */
+export const unsung = (slots: string) => slots.replace(/(\}\.?):[^\s_]*/g, "$1");
+
 /** Whether a cell holds a `?`. */
 const unknown = (slots: string) => slots.split(/[ _]/).some((t) => t.replace(/\.$/, "") === "?");
 
@@ -205,8 +213,10 @@ function cellText(src: Source, key: string | null, i: number, first: boolean, la
 	const bar = src.bars[i] as BarInfo;
 	const own = cellFor(src, key, i);
 	const words = first ? bar.words : [];
-	// A bar that only holds stays `/`: shorter than `%`, and how charts write it.
-	const plain = words.length === 0 && own.unread.length === 0 && own.slots !== "/";
+	// A bar that only holds stays `/`: shorter than `%`, and how charts write it;
+	// `%` doesn't copy syllables (grammar 4.3).
+	const plain =
+		words.length === 0 && own.unread.length === 0 && own.slots !== "/" && !sung(own.slots);
 	if (plain && simile(src, speaksFor(src, key), own.slots, i, last)) return "%";
 	const beats = beatsOf(src.meters[i] ?? { n: 4, d: 4 });
 	const meter = bar.meter ? `[${meterText(bar.meter)}] ` : "";
