@@ -320,6 +320,13 @@ lyrics 2: | w x y z                         | v                     |
 		expect(sound(importMusicXml(xmlOf(chart))).text).toBe(printChart(chart));
 	});
 
+	test("a melody bar that repeats the notes before it, unsung, is %", () => {
+		const chart = `${VOX}Vox     | C                               | % | G        |
+Vox.Mel | {C4}:la {D4}:la {E4}:la {F4}:la | % | {G4}:end |
+`;
+		expect(sound(importMusicXml(xmlOf(chart))).text).toBe(chart);
+	});
+
 	test("verses on a repeat's passes come back as a numbered row", () => {
 		const chart = `part: V = Voice, instrument: voice
 V         | C                 | G          | x2

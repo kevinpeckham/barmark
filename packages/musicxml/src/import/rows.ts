@@ -195,7 +195,7 @@ export const unsung = (slots: string) => slots.replace(/(\}\.?):[^\s_]*/g, "$1")
 /** Whether a cell holds a `?`. */
 const unknown = (slots: string) => slots.split(/[ _]/).some((t) => t.replace(/\.$/, "") === "?");
 
-/** Whether bar `i` repeats what each of these lines just played, in the same meter. */
+/** Whether bar `i` repeats what each of these lines just played, in the same meter; `%` copies notes, not their syllables (grammar 4.3). */
 function simile(src: Source, keys: string[], slots: string, i: number, last: Last): boolean {
 	const bar = src.bars[i] as BarInfo;
 	// `%` can't carry a one-bar meter, which every line writes (grammar 7.4);
@@ -204,7 +204,7 @@ function simile(src: Source, keys: string[], slots: string, i: number, last: Las
 	const meter = meterText(bar.meter);
 	return keys.every((k) => {
 		const before = last.get(k);
-		return before?.slots === slots && before.meter === meter;
+		return before != null && unsung(before.slots) === slots && before.meter === meter;
 	});
 }
 
