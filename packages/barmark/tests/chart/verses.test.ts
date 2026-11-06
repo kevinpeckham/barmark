@@ -258,6 +258,17 @@ describe("verses in play order (spec sections 3 and 4)", () => {
 		expect(parseChart(repeat).diagnostics).toEqual([]);
 		expect(sung(parseChart(repeat).bars)).toEqual([["1: a", "2: x"], ["1: b"], ["2: /"]]);
 	});
+	test("a / starting a later system's row in a repeat holds on pass 2, and pass 1 doesn't warn", () => {
+		for (const chart of [
+			"|: {C4}:a {D4}:b |\nlyrics 2: | x y |\n| {E4}:c {F4}:d :|\nlyrics 2: | / z |\n",
+			"|: {C4}:a {D4}:b |\nlyrics 2: | x y |\n| {E4}:c {F4}:d |\nlyrics 2: | / z |\n| {G4}:e {A4}:f :|\nlyrics 2: | / w |\n",
+		]) {
+			const p = parseChart(chart);
+			expect(p.diagnostics).toEqual([]);
+			const pass2 = sung(p.bars).slice(p.bars.length / 2);
+			expect(pass2.slice(1).every((v) => v[0]?.startsWith("2: / "))).toBe(true);
+		}
+	});
 	test("a row that starts with / holds nothing, and warns as :/ does", () => {
 		const chart = "| {C4}:a {D4}:b |\nlyrics 2: | / x |\n";
 		expect(warnings(chart)).toMatchObject([

@@ -272,7 +272,14 @@ const versesNamed = (ns: number[]) => {
 };
 
 /** A verse a bar could sing, and the row that writes it (null for its notes' syllables). */
-type Candidate = { verse: number; row: LyricsLine | null; lyrics: PlayedLyrics; ends?: Held };
+type Candidate = {
+	verse: number;
+	row: LyricsLine | null;
+	lyrics: PlayedLyrics;
+	/** What the row's cell leaves held, and whether a `/` in it over a new note had nothing to hold. */
+	ends?: Held;
+	orphan?: boolean;
+};
 
 const HOLDS_NOTHING = ":/ holds the syllable before it, and none is sung before it";
 
@@ -320,11 +327,16 @@ function singing(
 		const held = own === "start" ? (ends.get(verse) ?? "start") : own;
 		const cell = onBeats(row.cells[from.bar] ?? [], bar, onsets, held);
 		const syllables = cell.syllables;
-		if (cell.orphan) warn(row.line, HOLDS_NOTHING, "/");
 		const missed = melody ? syllables.find((s) => !s.note) : undefined;
 		if (missed)
 			warn(row.line, `"${textOf(missed)}" falls where the voice starts no note`, textOf(missed));
-		return { verse, row, lyrics: { verse, ...part, syllables }, ends: cell.ends };
+		return {
+			verse,
+			row,
+			lyrics: { verse, ...part, syllables },
+			ends: cell.ends,
+			orphan: cell.orphan,
+		};
 	};
 	/** The bar's verses before a pass picks: its notes' and its rows'. */
 	const candidates = (bar: PlayedBar, from: BarSource): Candidate[] => {
@@ -360,6 +372,13 @@ function singing(
 		const sungHere = chosen.includes(own) || notes.get(key)?.sung === true;
 		notes.set(key, { line: bar.line, sung: sungHere });
 	};
+	/** A row's verse as a pass sings it: the row is sung, leaves its state held, and warns of a hold with nothing to hold. */
+	const sungRow = ({ row, verse, ends: left, orphan }: Candidate) => {
+		if (!row) return;
+		sung.add(row);
+		if (left) ends.set(verse, left);
+		if (orphan) warn(row.line, HOLDS_NOTHING, "/");
+	};
 	const sing: Sing = (bar, from) => {
 		const all = candidates(bar, from);
 		const chosen = forPass(all, from.pass);
@@ -369,8 +388,7 @@ function singing(
 			bar,
 			chosen.find((c) => c.row === null),
 		);
-		for (const c of chosen) if (c.row) sung.add(c.row);
-		for (const c of chosen) if (c.ends) ends.set(c.verse, c.ends);
+		for (const c of chosen) sungRow(c);
 		return chosen.length ? chosen.map((c) => c.lyrics) : undefined;
 	};
 	const finish = () => {
