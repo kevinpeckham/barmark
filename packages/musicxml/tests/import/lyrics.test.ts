@@ -273,8 +273,10 @@ describe("choirs", () => {
 		expect(result.diagnostics).toEqual([
 			{
 				severity: "warning",
-				message: "verses 2 and later in Alto left out; the lyric rows are Soprano's",
+				message: "verses 2 and later in Alto left out (the lyric rows are Soprano's) in measure 1",
 				part: "Alto",
+				measure: "1",
+				measures: ["1"],
 			},
 		]);
 	});
@@ -301,5 +303,130 @@ V.Mel     | {C4}:one {D4}:two | {E4}:three | x2
 lyrics 2: | uno dos           | tres       |
 `;
 		expect(sound(importMusicXml(xmlOf(chart))).text).toBe(chart);
+	});
+});
+
+describe("ordinary lyric text", () => {
+	const sungAs = (texts: string[]) => {
+		const notes = texts.map((t, i) =>
+			n(["C4", "D4", "E4", "F4"][i] ?? "C4", 2, lyric(t) + lyric(t, "single", 2)),
+		);
+		return sound(importMusicXml(score([voice([chord("C") + notes.join("")])]))).text;
+	};
+	test("curly quotes are characters of a syllable, on the notes and in the rows", () => {
+		const text = sungAs(["“Ho", "ly”", "„a“", "‘b’"]);
+		expect(text).toContain("{C4}:“Ho {D4}:ly” {E4}:„a“ {F4}:‘b’");
+		expect(text).toContain("“Ho ly” „a“ ‘b’");
+	});
+	test("a straight quote comes in as a curly one", () => {
+		const text = sungAs(['"q"', "la", "da", "do"]);
+		expect(text).toContain("{C4}:”q”");
+		expect(text).toContain("”q” la da do");
+	});
+	test("brackets are characters of a syllable, not a meter", () => {
+		const text = sungAs(["[x]", "[2/4]x", "da", "do"]);
+		expect(text).toContain("{C4}:[x] {D4}:[2/4]x");
+		expect(text).toContain("[x] [2/4]x da do");
+	});
+});
+
+describe("lyrics the import can't place are named, never dropped silently", () => {
+	const loss = (r: ImportResult, start: string) =>
+		r.diagnostics.find((d) => d.message.startsWith(start));
+
+	test("a second voice's lyrics in a one-staff choir part", () => {
+		const back = "<backup><duration>8</duration></backup>";
+		const v2 = (pitch: string, eighths: number, inner = "") =>
+			n(pitch, eighths, inner).replace("<voice>1</voice>", "<voice>2</voice>");
+		const xml = score([
+			{
+				name: "Choir",
+				sound: "voice.choir",
+				measures: [
+					n("E5", 4, lyric("sop")) +
+						n("F5", 4, lyric("rano")) +
+						back +
+						v2("C5", 4, lyric("al")) +
+						v2("D5", 4, lyric("to")),
+					n("E5", 8, lyric("la")) + back + v2("C5", 8),
+				],
+			},
+		]);
+		const result = sound(importMusicXml(xml));
+		expect(loss(result, "lyrics in Choir left out")).toEqual({
+			severity: "warning",
+			message: "lyrics in Choir left out (only the line that sings carries syllables) in measure 1",
+			part: "Choir",
+			measure: "1",
+			measures: ["1"],
+		});
+	});
+
+	test("lyrics on slash notes", () => {
+		const slash = (eighths: number, inner = "") =>
+			n("B4", eighths, inner).replace(
+				"<voice>1</voice>",
+				"<voice>1</voice><notehead>slash</notehead>",
+			);
+		const xml = score([
+			voice([
+				chord("C") + n("C4", 8, lyric("sing")),
+				chord("G") + slash(4, lyric("yo")) + slash(4),
+			]),
+		]);
+		const result = sound(importMusicXml(xml));
+		expect(loss(result, "lyrics in Voice left out")?.measures).toEqual(["2"]);
+	});
+
+	test("verse 2 alone, with no verse 1 or voice part to sing it", () => {
+		const xml = score([
+			{
+				name: "Piano",
+				measures: [
+					chord("C") +
+						n("C4", 4, lyric("one", "single", 2)) +
+						n("D4", 4, lyric("two", "single", 2)),
+				],
+			},
+		]);
+		const result = sound(importMusicXml(xml));
+		expect(result.diagnostics).toContainEqual({
+			severity: "warning",
+			message:
+				"verses 2 and later in Piano left out (no part sings verse 1 or is a voice to sing them) in measure 1",
+			part: "Piano",
+			measure: "1",
+			measures: ["1"],
+		});
+	});
+});
+
+describe("more stacked verses than a repeat has passes", () => {
+	test("every verse is kept as a row, the play count as the file says, and barmark's warning passed on", () => {
+		const three = (a: string, b: string, c: string) =>
+			lyric(a) + lyric(b, "single", 2) + lyric(c, "single", 3);
+		const xml = score([
+			voice([
+				'<barline location="left"><repeat direction="forward"/></barline>' +
+					chord("C") +
+					n("C4", 4, three("one", "two", "three")) +
+					n("D4", 4, three("a", "b", "c")),
+				chord("G") +
+					n("E4", 4, three("x", "y", "z")) +
+					n("F4", 4) +
+					'<barline location="right"><repeat direction="backward"/></barline>',
+			]),
+		]);
+		const result = sound(importMusicXml(xml));
+		expect(result.text).toBe(
+			`${VOX}Vox       | C               | G           | x2
+Vox.Mel   | {C4}:one {D4}:a | {E4}:x {F4} | x2
+lyrics 2: | two b           | y           |
+lyrics 3: | three c         | z           |
+`,
+		);
+		expect(result.diagnostics.map((d) => d.message)).toEqual([
+			"verse 3 is never sung: no pass of its repeat is pass 3",
+		]);
 	});
 });

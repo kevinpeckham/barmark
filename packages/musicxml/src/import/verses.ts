@@ -34,6 +34,18 @@ function ownerOf(parts: ImportedPart[]): number | null {
 
 const hasWords = (p: ImportedPart) => (p.sings?.words.verses.length ?? 0) > 0;
 
+/** Reports a part's verses 2 and later, which no row holds, in the measures they're sung in. */
+function laterLeftOut(p: ImportedPart, singer: ImportedPart | undefined, losses: Losses): void {
+	const why = singer
+		? `the lyric rows are ${singer.name}'s`
+		: "no part sings verse 1 or is a voice to sing them";
+	const message = `verses 2 and later in ${p.name} left out (${why})`;
+	p.sings?.words.bars.forEach((events, m) => {
+		if (events.some((e) => [...e.tokens.keys()].some((v) => v > 1)))
+			losses.add("verses", message, p.name, p.lyrics[m]?.number);
+	});
+}
+
 /** Whose rows the chart writes, reporting the verses no row can hold (another part's later verses, a lyric staff beside parts that sing). */
 export function versesOf(
 	parts: ImportedPart[],
@@ -43,9 +55,7 @@ export function versesOf(
 	const owner = ownerOf(parts);
 	const singer = owner === null ? undefined : parts[owner];
 	parts.forEach((p, i) => {
-		if (i === owner || !p.sings?.words.verses.some((v) => v > 1)) return;
-		const whose = singer ? `; the lyric rows are ${singer.name}'s` : "";
-		losses.add("verses", `verses 2 and later in ${p.name} left out${whose}`, p.name);
+		if (i !== owner) laterLeftOut(p, singer, losses);
 	});
 	if (staff && staff.verses.length > 0) {
 		if (!parts.some(hasWords))

@@ -351,3 +351,12 @@ Each goes into the draft's decisions log with the date.
     The import's system writer pins line order whenever the first line
     read by name isn't the part's first line (a property-test seed
     played a tutti line as the wrong line).
+16. Lyrics the import can't place are a loss naming the part and the
+    measures (Task 8 review ruling): lyrics on a line other than the one
+    that sings, on a rest, slash or tie, or lost as a rhythm is placed;
+    later verses of a part whose rows no one sings say why ("the lyric
+    rows are X's", or "no part sings verse 1 or is a voice to sing
+    them"). A repeat with more stacked verses than passes keeps every
+    verse as a row and its play count; barmark's "verse N is never sung"
+    is passed on, and the self-check compares a verse only where some
+    pass sings it.

@@ -146,10 +146,26 @@ const playedKey = (part: string, verse: number, s: PlayedSyllable, length: numbe
 const missing = (a: Set<string>, b: Set<string>) =>
 	[...a].filter((k) => !b.has(k)).map((k) => k.split("|").slice(0, 4).join(" "));
 
+/** barmark's warning for a numbered row no pass of its repeat sings. */
+export const NEVER_SUNG = /^verse (\d+) is never sung/;
+
+/**
+ * What a bar means to sing, less the verses no pass of it sings: inside a
+ * repeat verse N is pass N (grammar 7.7), so a bar played `passes` times
+ * leaves out a verse past them that it doesn't play (barmark warns of it).
+ */
+function sungOf(want: Set<string>, have: Set<string>, passes: number): Set<string> {
+	const verse = (key: string) => key.split("|")[1] ?? "";
+	const played = new Set([...have].map(verse));
+	const sung = (k: string) => passes < 2 || Number(verse(k)) <= passes || played.has(verse(k));
+	return new Set([...want].filter(sung));
+}
+
 /**
  * Where the written chart sings other syllables than the importer meant:
  * `meant` holds what each written bar (its index in the importer's bars)
  * means to sing, every pass and replay of it together, as `sungKey`s.
+ * A verse past a repeat's passes is compared only where it is sung.
  */
 export function verseMismatches(
 	parse: ChartParse,
@@ -158,9 +174,11 @@ export function verseMismatches(
 	measureOf: (bar: number) => string,
 ): string[] {
 	const got = new Map<number, Set<string>>();
+	const passes = new Map<number, number>();
 	for (const bar of parse.bars) {
 		const i = written[bar.written - 1];
 		if (i === undefined) continue;
+		passes.set(i, (passes.get(i) ?? 0) + 1);
 		const set = got.get(i) ?? new Set<string>();
 		got.set(i, set);
 		for (const l of bar.lyrics ?? [])
@@ -168,7 +186,8 @@ export function verseMismatches(
 				set.add(playedKey(l.part ?? "", l.verse, s, bar.meter.n / bar.meter.d));
 	}
 	return [...new Set([...meant.keys(), ...got.keys()])].flatMap((i) => {
-		const [want, have] = [meant.get(i) ?? new Set<string>(), got.get(i) ?? new Set<string>()];
+		const have = got.get(i) ?? new Set<string>();
+		const want = sungOf(meant.get(i) ?? new Set<string>(), have, passes.get(i) ?? 0);
 		const [lost, extra] = [missing(want, have), missing(have, want)];
 		if (lost.length === 0 && extra.length === 0) return [];
 		const list = (keys: string[]) => (keys.length > 0 ? keys.join(", ") : "nothing");

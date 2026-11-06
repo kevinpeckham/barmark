@@ -25,6 +25,12 @@ package uses [semantic versioning](https://semver.org/).
   verse's syllables as the chart plays them. Endings that no pass plays
   are now an error rather than an empty chart. Barmark → MusicXML →
   barmark gives a lead sheet back as written.
+  Lyrics the import can't place (on a line that doesn't sing, on slash
+  notes, a part's later verses with no one to sing them) are a warning
+  naming the part and the measures, never dropped silently. A repeat with
+  more stacked verses than passes keeps every verse as a `lyrics N:` row
+  and its play count, passing on barmark's "verse N is never sung".
+  Lyrics with curly quotes or brackets (`“Ho-`, `[x]`) import cleanly.
 
 - **Export: lyrics** (barmark's grammar 4.3 and 7.7). A syllable on a
   note is a `<lyric number="1">` on it, with `syllabic` (single, begin,

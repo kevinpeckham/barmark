@@ -207,6 +207,8 @@ function instrumentOf(part: ReadPart): InstrumentName | null {
 
 const SNAPPED = "a rhythm barmark can't write, snapped to the nearest it can";
 const DROPPED = "more than four lines with the harmony; only the line that sings kept";
+const UNPLACED_WORDS = (part: string) =>
+	`lyrics in ${part} left out (only the line that sings carries syllables)`;
 
 /** Whether a part sings (the voice-and-lyrics design, section 7): it has lyrics, or a voice's sound. */
 const singsAt = (part: ReadPart) =>
@@ -231,6 +233,20 @@ function voiceLines(sung: Sung, staves: number): { lines: LineBars[]; sings: num
 	return { lines, sings: at < 0 ? null : at };
 }
 
+/** The indexes of a part's measures that carry lyrics. */
+const lyricBars = (part: ReadPart) =>
+	part.measures.flatMap((m, i) =>
+		m.lines.some((l) => l.some((a) => a.lyrics.length > 0)) ? [i] : [],
+	);
+
+/** What singing lost: rhythms snapped, lines past four, and lyrics no note carries (every bar's, with no line to sing them). */
+function reportSung(part: ReadPart, sung: Sung, silent: boolean, losses: Losses): void {
+	for (const m of sung.snapped) losses.add("snapped", SNAPPED, part.name, m);
+	if (sung.dropped) losses.add("dropped", DROPPED, part.name);
+	for (const i of silent ? lyricBars(part) : sung.unplaced)
+		losses.add("words", UNPLACED_WORDS(part.name), part.name, part.measures[i]?.number);
+}
+
 /** A part that sings: its harmony on its bare line, its melody under it, and what was lost. */
 function importSinging(part: ReadPart, hasChords: boolean, losses: Losses): ImportedPart {
 	const sung = readSinging(linesOf(part), barsOf(part), hasChords);
@@ -238,8 +254,7 @@ function importSinging(part: ReadPart, hasChords: boolean, losses: Losses): Impo
 	const voices = voiceLines(sung, part.staves);
 	const first = harmony ? [{ name: null, bars: harmony.cells }] : [];
 	reportLines(harmony ? [harmony] : [], part.name, losses);
-	for (const m of sung.snapped) losses.add("snapped", SNAPPED, part.name, m);
-	if (sung.dropped) losses.add("dropped", DROPPED, part.name);
+	reportSung(part, sung, voices.sings === null, losses);
 	reportMarks(part, true, losses);
 	const unread = harmony?.unread ?? [];
 	reportUnread(unread, part, losses);

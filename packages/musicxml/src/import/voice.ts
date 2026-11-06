@@ -131,7 +131,31 @@ export type Sung = {
 	snapped: string[];
 	/** Lines left out past barmark's four. */
 	dropped: boolean;
+	/** The indexes of the bars with lyrics no note of the line that sings carries. */
+	unplaced: number[];
 };
+
+/** Whether an attack carries words (not only an extend held on from before). */
+const worded = (a: Attack) => a.lyrics.some((l) => l.parts.some((p) => p.trim() !== ""));
+
+/** Words a bar's onsets carry: those with a syllable of their own, not a `/` held on. */
+const carried = (events: SungEvent[]) =>
+	events.filter((e) => [...e.tokens.values()].some((t) => t !== "/")).length;
+
+/**
+ * The bars with lyrics the melody can't carry: on a line that doesn't sing,
+ * on a rest, slash or tie of the line that does, or lost as its rhythm was
+ * placed.
+ */
+function unplacedIn(lines: Line[], singing: number, own: VoiceRead, bars: Bar[]): number[] {
+	return bars.flatMap((_, i) => {
+		const other = lines.some((l, k) => k !== singing && (l[i] ?? []).some(worded));
+		const mine = (lines[singing]?.[i] ?? []).filter(worded);
+		const off = mine.some((a) => !newNote(a));
+		const lost = mine.filter(newNote).length > carried(own.sung[i] ?? []);
+		return other || off || lost ? [i] : [];
+	});
+}
 
 /**
  * A part that sings, read: up to four lines in all (the harmony's line
@@ -158,6 +182,7 @@ export function readSinging(lines: Line[], bars: Bar[], hasChords: boolean): Sun
 			voices.some((v) => v.snapped.includes(bar.number)) ? [bar.number] : [],
 		),
 		dropped,
+		unplaced: unplacedIn(lines, singing, own, bars),
 	};
 }
 

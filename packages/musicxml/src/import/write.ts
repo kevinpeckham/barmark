@@ -14,7 +14,7 @@ import type { ImportedPart } from "./parts.js";
 import type { ReadScore } from "./read.js";
 import { replaysOf, type Section, sectionsOf, wholeRepeat } from "./replays.js";
 import { allLines, forget, type Last, playingOf, rowsOf, type Source } from "./rows.js";
-import { mismatches, reportBugs, verseMismatches } from "./selfcheck.js";
+import { mismatches, NEVER_SUNG, reportBugs, verseMismatches } from "./selfcheck.js";
 import type { Structure } from "./structure.js";
 import { type System, systemsOf } from "./systems.js";
 import { creditLines, headingLine, partLine, textLine, titleLine } from "./text.js";
@@ -218,6 +218,9 @@ function check(parsed: ChartParse, w: Writer, losses: Losses): void {
 					...verseMismatches(parsed, w.written, w.meant, (i) => w.src.bars[i]?.measure ?? ""),
 				];
 	reportBugs(bugs, losses);
+	// More stacked verses than a repeat has passes: every row is kept, and barmark says which aren't sung.
+	for (const d of parsed.diagnostics)
+		if (NEVER_SUNG.test(d.message)) losses.note({ severity: "warning", message: d.message });
 }
 
 /** The singer's line, whose syllables a replay may change with its rows (`"part.line"`); null when the rows are a lyric staff's or no one's. */
