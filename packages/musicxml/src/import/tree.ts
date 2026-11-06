@@ -26,10 +26,16 @@ const parser = new XMLParser({
 		maxEntitySize: 10_000,
 		maxEntityCount: 100,
 		maxExpansionDepth: 10,
-		maxTotalExpansions: 1000,
+		// The library counts every entity it replaces, `&amp;` and `&apos;`
+		// included, so a long score's punctuation alone passes 1000; the
+		// expanded length, depth and entity count still stop billion laughs.
+		maxTotalExpansions: 10_000_000,
 		maxExpandedLength: MAX_EXPANDED,
 	},
 	maxNestedTags: MAX_DEPTH,
+	// Numeric character references (`&#233;`, `&#x266d;`); control
+	// characters they name are dropped after decoding, as any other.
+	htmlEntities: true,
 	ignorePiTags: false,
 	parseTagValue: false,
 	trimValues: false,

@@ -65,6 +65,23 @@ showed the rule needed refining.
 
 ## Performance and robustness
 
+### fast-xml-parser counts `&amp;` against the entity cap, and leaves `&#233;` alone (2026-11-06, MusicXML import)
+
+- **The symptom.** A score with more than 1,000 `&amp;`, `&apos;` or
+  `&lt;` (a long lyric sheet, a part named "Bass & Drums" in every
+  measure's words) was refused as "not well-formed XML"; and `&#233;`
+  came through as the literal text `&#233;` in titles, lyrics and part
+  names.
+- **The cause.** `processEntities.maxTotalExpansions`, set to 1,000 as a
+  billion-laughs bound, counts every replacement, the five predefined
+  entities included, not only the DOCTYPE's own. Numeric character
+  references are decoded only with `htmlEntities: true`.
+- **The fix.** `tree.ts` raises `maxTotalExpansions` to 10,000,000 and
+  keeps the bounds that stop billion laughs (expanded length 100,000,
+  depth 10, 100 entities); it sets `htmlEntities: true`, and the control
+  characters are still stripped after decoding, so `&#27;` can't reach
+  a terminal. Tested with 5,000 `&apos;` beside the billion-laughs test.
+
 ### A repeat inside a repeat exports as two backward repeats, which no program plays as barmark does (2026-11-05, MusicXML import)
 
 - **The symptom.** `|: D | x2` then `| A :|` plays six bars in barmark
