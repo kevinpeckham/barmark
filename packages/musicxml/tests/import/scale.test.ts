@@ -50,6 +50,7 @@ test("5,000 measures each with a time signature barmark can't write import well 
 			severity: "warning",
 			message: "a time signature barmark can't write (7/3); kept 4/4 in 5000 measures: 1, 2, 3, …",
 			measure: "1",
+			measures: Array.from({ length: 5000 }, (_, i) => String(i + 1)),
 		},
 	]);
 	// And it grows with the file: ten times the measures, not a hundred times the time.
@@ -90,4 +91,27 @@ test("a score with a heading, an ending and a jump on many bars imports in about
 	);
 	const { ms } = timed(xml);
 	expect(ms).toBeLessThan(1500);
+});
+
+/** A one-measure score whose measure number and part name are as long as the file makes them, with a dynamic to report. */
+function longNames(number: string, name: string): string {
+	const dynamic =
+		'<direction placement="below"><direction-type><dynamics><p/></dynamics></direction-type></direction>';
+	return `<?xml version="1.0"?><score-partwise version="4.0"><part-list><score-part id="P1"><part-name>${name}</part-name></score-part></part-list><part id="P1"><measure number="${number}"><attributes><divisions>1</divisions></attributes>${dynamic}${harmony}${slash}</measure></part></score-partwise>`;
+}
+
+test("a 100,000-digit measure number and a 10,000-character part name import fast, cut short", () => {
+	const r = timed(longNames("7".repeat(100_000), "B".repeat(10_000)));
+	expect(r.ms).toBeLessThan(500);
+	const [d] = r.diagnostics;
+	expect(d?.measure).toBe(`${"7".repeat(63)}…`);
+	expect(d?.part).toBe(`${"B".repeat(199)}…`);
+	expect(d?.measures).toEqual([`${"7".repeat(63)}…`]);
+	expect(JSON.stringify(r.diagnostics).length).toBeLessThan(1000);
+});
+
+test("a grouped loss carries the measures it names", () => {
+	const r = timed(badTimes(5));
+	const [d] = r.diagnostics.filter((x) => x.message.includes("time signature"));
+	expect(d?.measures).toEqual(["1", "2", "3", "4", "5"]);
 });

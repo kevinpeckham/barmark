@@ -440,9 +440,17 @@ function readBarline(b: XNode, raw: RawMeasure): void {
 	readEnding(b, raw);
 }
 
+/** The longest measure number and part name kept: the file's text, shown in messages and charts. */
+const MEASURE_CHARS = 64;
+const NAME_CHARS = 200;
+
+/** `text`, cut to `max` characters with "…" when longer. */
+const cut = (text: string, max: number) =>
+	[...text].length <= max ? text : `${[...text].slice(0, max - 1).join("")}…`;
+
 const blankMeasure = (node: XNode): RawMeasure => ({
-	number: node.attrs.number ?? "",
-	written: node.attrs.text ?? null,
+	number: cut(node.attrs.number ?? "", MEASURE_CHARS),
+	written: node.attrs.text === undefined ? null : cut(node.attrs.text, MEASURE_CHARS),
 	length: ZERO,
 	implicit: node.attrs.implicit === "yes",
 	time: null,
@@ -614,7 +622,7 @@ function readPart(node: XNode, meta: Meta): ReadPart {
 }
 
 const noMeta = (id: string): Meta => ({
-	name: id,
+	name: cut(id, NAME_CHARS),
 	abbreviation: null,
 	instrumentName: null,
 	midiProgram: null,
@@ -625,8 +633,8 @@ function partMeta(list: XNode | undefined): Map<string, Meta> {
 	for (const sp of children(list ?? ({ children: [] } as unknown as XNode), "score-part")) {
 		const program = textOf(child(sp, "midi-instrument"), "midi-program");
 		out.set(sp.attrs.id ?? "", {
-			name: textOf(sp, "part-name") || (sp.attrs.id ?? ""),
-			abbreviation: textOf(sp, "part-abbreviation") || null,
+			name: cut(textOf(sp, "part-name") || (sp.attrs.id ?? ""), NAME_CHARS),
+			abbreviation: cut(textOf(sp, "part-abbreviation"), NAME_CHARS) || null,
 			instrumentName: textOf(child(sp, "score-instrument"), "instrument-name") || null,
 			midiProgram: program === "" ? null : num(program),
 		});

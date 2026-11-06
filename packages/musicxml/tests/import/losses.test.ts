@@ -10,6 +10,7 @@ test("one diagnostic per kind and part, three measures shown", () => {
 			severity: "warning",
 			part: "Lead",
 			measure: "1",
+			measures: ["1", "2", "3", "4"],
 			message: "notes read as a melody and left out in 4 measures: 1, 2, 3, …",
 		},
 	]);
@@ -20,8 +21,8 @@ test("a single measure is named plainly, parts are kept apart, notes pass throug
 	l.add("x", "lost", "B", "5");
 	l.note({ severity: "error", message: "bad" });
 	expect(l.list()).toEqual([
-		{ severity: "warning", part: "A", measure: "2", message: "lost in measure 2" },
-		{ severity: "warning", part: "B", measure: "5", message: "lost in measure 5" },
+		{ severity: "warning", part: "A", measure: "2", measures: ["2"], message: "lost in measure 2" },
+		{ severity: "warning", part: "B", measure: "5", measures: ["5"], message: "lost in measure 5" },
 		{ severity: "error", message: "bad" },
 	]);
 });

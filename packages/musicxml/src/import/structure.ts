@@ -191,6 +191,7 @@ function chordWords(measures: string[], losses: Losses): void {
 		severity: "warning",
 		message: `text that looks like chord symbols in ${measuresText(measures)}; the program exported them as text`,
 		measure: first,
+		measures,
 	});
 }
 

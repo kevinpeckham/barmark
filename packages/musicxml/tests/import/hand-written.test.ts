@@ -76,6 +76,7 @@ test("six guitars: a meter barmark can't write is reported once for the score", 
 			severity: "warning",
 			message: "a time signature barmark can't write (7/3); kept 4/4 in measure 1",
 			measure: "1",
+			measures: ["1"],
 		},
 	]);
 });
@@ -98,11 +99,13 @@ test("score-wide losses come once, with no part; a part left out reports none", 
 			severity: "warning",
 			message: "a short bar's length can't be written as a meter; read as a full bar in measure 0",
 			measure: "0",
+			measures: ["0"],
 		},
 		{
 			severity: "warning",
 			message: "a time signature barmark can't write (7/3); kept 4/4 in measure 1",
 			measure: "1",
+			measures: ["1"],
 		},
 	]);
 });
@@ -116,12 +119,14 @@ test("a chord symbol placed outside its bar moves to the nearest beat inside it"
 			message: "notes read as a melody and left out in 4 measures: 1, 3, 4, …",
 			part: "Lead",
 			measure: "1",
+			measures: ["1", "3", "4", "7"],
 		},
 		{
 			severity: "warning",
 			message: "chord symbols moved to the nearest beat in 3 measures: 3, 4, 5",
 			part: "Lead",
 			measure: "3",
+			measures: ["3", "4", "5"],
 		},
 	]);
 });

@@ -19,10 +19,15 @@ package uses [semantic versioning](https://semver.org/).
   or section), endings and jumps, fermatas, lyrics as text lines,
   replayed sections, parts (merged into tutti lines where they agree),
   and a chord part's voicings, note sets and part lines. It returns
-  `{ text, diagnostics }` and never throws: each kind of loss is one
-  warning per part with a count and the first measures (a loss of the
-  whole score, such as a meter, is reported once, with no part), and a
-  file that gives nothing (bad XML, `score-timewise`, no chord symbols in another
+  `{ text, diagnostics }` and never throws. A diagnostic is `{ severity,
+  message, part?, measure?, measures? }`: `measure` is the first measure
+  it is about (the file's `number`), and `measures`, when present, every
+  measure its message names, so a program needn't read the message.
+  Measure numbers longer than 64 characters and part names longer than
+  200 are cut with "…". Each kind of loss is one warning per part with
+  a count and the first measures (a loss of the whole score, such as a
+  meter, is reported once, with no part), and a file that gives nothing
+  (bad XML, `score-timewise`, no chord symbols in another
   program's file) returns empty text and an error. A file with no chord
   symbols names the parts that hold notes (and any words that look like
   chord symbols), and `part` (a part's name, abbreviation or id,

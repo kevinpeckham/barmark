@@ -101,6 +101,22 @@ showed the rule needed refining.
   large files, timed as the best of two warmed-up runs, and checks that
   ten times the measures doesn't take a hundred times as long.
 
+### Don't parse your own rendered messages; the file's text is in them (2026-11-06, CLI import)
+
+- **The symptom.** `barmark import` took 13 s on a file whose one
+  measure number was 100,000 digits long, and printed a 100,000-character
+  line.
+- **The cause.** To avoid printing "measure N" twice, the CLI searched
+  each message with `/\d+ measures: /`. Measure numbers and part names
+  come from the file and are copied into messages, so a long run of
+  digits without the suffix made that search quadratic. The reader also
+  kept those names at whatever length the file gave.
+- **The fix.** `ImportDiagnostic` carries `measures` (every measure its
+  message names), and the CLI prints "measure N" only when it is absent,
+  never reading the message. The reader cuts measure numbers to 64
+  characters and part names to 200 (`read.ts`). Tested in
+  `packages/cli/tests/import.test.ts` and `tests/import/scale.test.ts`.
+
 ### A repeat inside a repeat exports as two backward repeats, which no program plays as barmark does (2026-11-05, MusicXML import)
 
 - **The symptom.** `|: D | x2` then `| A :|` plays six bars in barmark

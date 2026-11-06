@@ -14,7 +14,8 @@ package uses [semantic versioning](https://semver.org/).
   case and punctuation) imports one part alone, its notes as note sets.
   What the chart can't carry over goes to stderr as `file: measure N
   (Part): severity: message`, as `check` prints its findings, the measure
-  left out when the message names its measures. Exits 0 when a chart came out, even with warnings, and
+  left out when the diagnostic lists its measures (the message is never
+  searched). Exits 0 when a chart came out, even with warnings, and
   1 when none did or the `.mxl` is bad. The standalone binary includes it.
 
 ## [0.5.1] - 2026-11-05

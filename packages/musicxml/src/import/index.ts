@@ -53,7 +53,10 @@ function noChords(score: ReadScore, losses: Losses): void {
 		severity: "error",
 		message: `no chord symbols; ${words}these parts have notes: ${named.join(", ")}. Import one as note sets with --part`,
 	};
-	if (measures[0] !== undefined) error.measure = measures[0];
+	if (measures[0] !== undefined) {
+		error.measure = measures[0];
+		error.measures = measures;
+	}
 	losses.note(error);
 }
 

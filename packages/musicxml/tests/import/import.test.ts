@@ -85,6 +85,7 @@ describe("errors, never throws", () => {
 				message:
 					"no chord symbols; text that looks like chord symbols in 3 measures: 1, 2, 3 (the program exported them as text); these parts have notes: Lead. Import one as note sets with --part",
 				measure: "1",
+				measures: ["1", "2", "3"],
 			},
 		]);
 	});

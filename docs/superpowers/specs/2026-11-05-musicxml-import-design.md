@@ -26,8 +26,12 @@ package.
   `@barmark/musicxml` returns `{ text, diagnostics }`: a barmark chart in
   canonical form (as `barmark format` prints it), and what was dropped,
   approximated or left as `?`. A diagnostic is `{ severity: "error" |
-  "warning", message, part?, measure? }`, `measure` being the file's
-  measure `number` attribute.
+  "warning", message, part?, measure?, measures? }`, `measure` being the
+  file's measure `number` attribute; a diagnostic whose message names
+  its measures ("in 12 measures: 1, 2, 3, …") lists them all in
+  `measures`, so a reader (the CLI) never searches the message. Measure
+  numbers are kept to 64 characters and part names to 200, longer ones
+  cut with "…" (changed while building, for Kevin to confirm).
 - `readMxl(bytes: Uint8Array): Promise<string>` unpacks a compressed
   `.mxl` file to its MusicXML, with no dependency (the platform's
   `DecompressionStream("deflate-raw")`, in Node 20.12+, Bun and browsers).
@@ -36,7 +40,7 @@ package.
   `--out` and output: the chart to standard output or the file,
   diagnostics on standard error as `file: measure N (Part): severity:
   message`, as `check` prints them (the measure left out when the
-  message already lists its measures).
+  diagnostic has `measures`, which its message lists).
   Exit 1 when the import produced nothing (an error), else 0.
 - **The chart always parses without errors, and plays as the file
   does.** The importer parses and plays its own output, comparing every

@@ -59,8 +59,8 @@ with errors is not exported. A chart with no title takes its file name.
 `import` reads a MusicXML score (`.musicxml`, `.xml` or compressed `.mxl`)
 as a chart. What the chart can't carry over is listed on stderr, one line
 each, as `check` prints its findings: `song.mxl: measure 12 (Piano):
-warning: message` (the measure left out when the message names its
-measures). `--part <name>` (a
+warning: message` (the measure left out when the message lists the
+measures itself). `--part <name>` (a
 part's name, abbreviation or id, ignoring case and punctuation) imports
 one part alone, its notes as note sets. It exits 0 when a chart came out,
 even with warnings, and 1 when none did or the `.mxl` is bad. It does not

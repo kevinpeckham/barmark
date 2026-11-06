@@ -82,17 +82,37 @@ describe("barmark import", () => {
 			"f.mxl: error: not a score",
 		);
 	});
-	test("a message that names its measures isn't prefixed with the first again", () => {
+	test("a diagnostic that lists its measures isn't prefixed with the first again", () => {
 		const d = { severity: "warning" as const, measure: "3", part: "Gtr" };
-		expect(importLine("f.mxl", { ...d, message: "notes left out in measure 3" })).toBe(
-			"f.mxl: (Gtr): warning: notes left out in measure 3",
+		expect(
+			importLine("f.mxl", { ...d, measures: ["3"], message: "notes left out in measure 3" }),
+		).toBe("f.mxl: (Gtr): warning: notes left out in measure 3");
+		// The message is never searched: without `measures`, the measure is printed.
+		expect(importLine("f.mxl", { ...d, message: "notes left out in 4 measures: 3, 5" })).toBe(
+			"f.mxl: measure 3 (Gtr): warning: notes left out in 4 measures: 3, 5",
 		);
-		expect(importLine("f.mxl", { ...d, message: "notes left out in 4 measures: 3, 5, 7, 9" })).toBe(
-			"f.mxl: (Gtr): warning: notes left out in 4 measures: 3, 5, 7, 9",
+	});
+	test("a 100,000-digit measure number prints a bounded line, fast", async () => {
+		const xml = score(SONG).replace(
+			'<measure number="1"',
+			`<measure number="${"9".repeat(100_000)}"`,
 		);
-		expect(importLine("f.mxl", { ...d, message: "notes left out in measure 30" })).toBe(
-			"f.mxl: measure 3 (Gtr): warning: notes left out in measure 30",
-		);
+		const dynamic =
+			'<direction placement="below"><direction-type><dynamics><p/></dynamics></direction-type></direction>';
+		const io = folder({ "l.musicxml": xml.replace("<harmony", `${dynamic}<harmony`) });
+		const start = performance.now();
+		expect(await importCommand(["l.musicxml"], io)).toBe(0);
+		expect(performance.now() - start).toBeLessThan(1000);
+		const lines = io.err().split("\n").filter(Boolean);
+		expect(lines.length).toBeGreaterThan(0);
+		for (const line of lines) expect(line.length).toBeLessThan(400);
+	});
+	test("a long run of digits in a message is printed as it is, fast", () => {
+		const message = `x ${"1".repeat(100_000)}`;
+		const start = performance.now();
+		const line = importLine("f.mxl", { severity: "warning", measure: "1", message });
+		expect(performance.now() - start).toBeLessThan(50);
+		expect(line).toBe(`f.mxl: measure 1: warning: ${message}`);
 	});
 	test("control characters never reach stderr raw", () => {
 		const d = {

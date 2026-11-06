@@ -25,11 +25,12 @@ function sound(r: ImportResult): ImportResult {
 	return r;
 }
 
-const warning = (message: string, part?: string, measure?: string): ImportDiagnostic => ({
+/** A warning; one in measures names them all, the first as `measure`. */
+const warning = (message: string, part?: string, measures?: string[]): ImportDiagnostic => ({
 	severity: "warning",
 	message,
 	...(part === undefined ? {} : { part }),
-	...(measure === undefined ? {} : { measure }),
+	...(measures === undefined ? {} : { measure: measures[0], measures }),
 });
 
 const MELODY = "notes read as a melody and left out";
@@ -39,24 +40,24 @@ const FILES: [string, ImportDiagnostic[]][] = [
 	[
 		"lead-sheet",
 		[
-			warning(`${MELODY} in 4 measures: 3, 4, 5, …`, "Voice", "3"),
+			warning(`${MELODY} in 4 measures: 3, 4, 5, …`, "Voice", ["3", "4", "5", "6"]),
 			warning(
 				"chord symbols barmark can't read, written as ? with their text as words in measure 5",
 				"Voice",
-				"5",
+				["5"],
 			),
 			warning("lyrics written as text lines; their placement by beat isn't kept", "Voice"),
 		],
 	],
 	[
 		"comping-guitar",
-		[warning("accents and articulations left out in measure 4", "Electric Guitar", "4")],
+		[warning("accents and articulations left out in measure 4", "Electric Guitar", ["4"])],
 	],
 	[
 		"piano",
 		[
-			warning(`${MELODY} in 4 measures: 1, 2, 3, …`, "Piano", "1"),
-			warning("dynamics left out in measure 1", "Piano", "1"),
+			warning(`${MELODY} in 4 measures: 1, 2, 3, …`, "Piano", ["1", "2", "3", "4"]),
+			warning("dynamics left out in measure 1", "Piano", ["1"]),
 		],
 	],
 	[

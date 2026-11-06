@@ -384,6 +384,7 @@ describe("chord symbols written as text", () => {
 				message:
 					"text that looks like chord symbols in 12 measures: 1, 2, 3, …; the program exported them as text",
 				measure: "1",
+				measures: Array.from({ length: 12 }, (_, i) => String(i + 1)),
 			},
 		]);
 	});
