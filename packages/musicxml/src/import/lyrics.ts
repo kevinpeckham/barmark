@@ -64,19 +64,44 @@ function wordsOf(syllables: Syllable[], own: number): string[] {
 	return words;
 }
 
+/** The verses whose last syllable in a system leaves a word open. */
+const openVerses = (own: Map<number, Syllable[]>) =>
+	new Set(
+		[...own]
+			.filter(([, s]) => ["begin", "middle"].includes(s.at(-1)?.syllabic ?? ""))
+			.map(([v]) => v),
+	);
+
+/** Takes a syllable that may finish an open word: kept while its verse is open, which an end or a new word closes. */
+function take(out: Map<number, Syllable[]>, open: Set<number>, s: Syllable) {
+	if (!open.has(s.verse)) return;
+	out.set(s.verse, [...(out.get(s.verse) ?? []), s]);
+	if (s.syllabic !== "middle") open.delete(s.verse);
+}
+
+/** The syllables after a system that finish its open words, read only as far as each verse needs. */
+function finishing(following: Iterable<ReadMeasure>, line: number, open: Set<number>) {
+	const out = new Map<number, Syllable[]>();
+	for (const m of following) {
+		if (open.size === 0) break;
+		for (const s of (m.lines[line] ?? []).flatMap(sungAt)) take(out, open, s);
+	}
+	return out;
+}
+
 /**
  * Verse number to the words sung on `line` in `measures` (one system).
  * A word split across the system's end belongs to the system where it starts: its later
- * syllables are read from `following` (the measures after the system) and skipped
- * at the start of the next system.
+ * syllables are read from `following` (the measures after the system, read lazily and
+ * only until each open word closes) and skipped at the start of the next system.
  */
 export function lyricLines(
 	measures: ReadMeasure[],
 	line: number,
-	following: ReadMeasure[] = [],
+	following: Iterable<ReadMeasure> = [],
 ): Map<number, string[]> {
 	const own = syllablesByVerse(measures, line);
-	const later = syllablesByVerse(following, line);
+	const later = finishing(following, line, openVerses(own));
 	const out = new Map<number, string[]>();
 	for (const verse of [...own.keys()].sort((a, b) => a - b)) {
 		const mine = own.get(verse) ?? [];
