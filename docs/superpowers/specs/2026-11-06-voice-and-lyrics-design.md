@@ -369,3 +369,17 @@ Each goes into the draft's decisions log with the date.
     slot or bar of breaths alone is one `--`, and the self-check leaves
     out those holds for the written bar whose row says so. A lyric of
     hyphens alone is no syllable.
+18. The round trips' canonical choices (Task 9): a lyric row writes its
+    bars on one grid, as many slots a beat as its finest bar, a syllable
+    held over the new slots (`fear / /` beside `grace / that`), except
+    where a new slot would start on a note (a hold there sings) or follow
+    a breath; a system whose rows sing verse 1 alone writes `lyrics:`,
+    except in an ending of a chart that numbers its verses; an unsung
+    melody bar playing the bar before's notes is `%`; a lyric staff's
+    rows keep the chart's `part:` lines, so they stay the voice part's;
+    a short first measure in its own `<time>` before the full meter is a
+    `[n/d]` pickup (barmark's export writes one so; MuseScore marks it
+    `implicit`), and a pickup is a fifth bar on its system. Kept from
+    before: `time: 4/4` is never written, one part plays as a tutti line,
+    `instrument:` is written, `|: … :|` around a whole line is `x2`, and a
+    push (`<`) comes back as the tie it sounds as.
