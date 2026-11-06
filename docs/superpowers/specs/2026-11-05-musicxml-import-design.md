@@ -326,6 +326,13 @@ bars, the grammar's recommended phrasing. A new system starts at every
 heading, repeat mark, ending, direction, `...`, text line and directive,
 and wherever the parts' agreement changes (tutti to labelled, or a part
 starting or stopping).
+Two labelled systems with nothing between them would join into one
+(grammar 7.4), so where the second's first row names a part the first
+didn't write, a cue goes between them as a text line: who stops
+(`Gtr tacet`), else who starts (`Gtr enters`). (Added while building,
+2026-11-06: the grammar has no silent separator; for Kevin to confirm.)
+The importer plays the chart back and compares every part's line with
+what it meant to write; a difference is an "importer bug" error.
 
 ## Testing
 

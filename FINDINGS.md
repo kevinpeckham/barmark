@@ -125,6 +125,32 @@ order, not just the written marks.
 
 ## Design
 
+### Two labelled systems in a row join into one, and still parse cleanly (2026-11-06, MusicXML import)
+
+- **The symptom.** Trading fours (the guitar's four bars, then the
+  piano's) imported as `G | A | B | C | D |` over `P | E | F | G | A |`:
+  both parts playing bars 1 to 4 together, bars 5 to 8 gone. A part
+  entering after four bars came back playing the first four. The chart
+  parsed without an error, so the importer's self-check (parse, look for
+  errors) passed it.
+- **The cause.** Grammar 7.4 joins consecutive labelled lines into one
+  system until a label repeats; blank lines don't separate them. A
+  system whose first row (in score order) names a part the system before
+  didn't write joins that system.
+- **The fix.** Where nothing else (a heading, a directive, text, lyrics)
+  stands between two labelled systems and the second would join the
+  first, the importer writes a cue as a text line between them, naming
+  who stops (`G tacet`) or, when nobody stops, who starts (`G enters`).
+  Text lines have no musical meaning (grammar 1), so this is the writable
+  form that changes nothing that plays; the other options (a resting
+  part's line of `--` or `N.C.`, or a restated directive) each change
+  the music or the score's marks. The grammar has no silent system
+  separator: a question for Kevin. And the guard: `writeChart` now plays
+  the chart back (`selfcheck.ts`) and compares every part's line, bar by
+  bar in play order, with the cells it meant to write; any difference is
+  an "importer bug" error. A property test (`tests/import/property.test.ts`)
+  runs random multi-part scores through it.
+
 ### Jumps written only as words don't reach the played order (2026-11-05, MusicXML import)
 
 - **The symptom.** A score whose "D.C. al Fine" or "To Coda" is plain
