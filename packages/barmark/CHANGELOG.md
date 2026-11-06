@@ -82,7 +82,9 @@ Releases follow the process in [RELEASING.md](RELEASING.md).
   counts toward the four lines. Named lines written straight after their
   part's bare line used to start a new system and now join it; put `---`
   between them to keep them apart. A bare line after its part's named
-  lines still starts a new system.
+  lines still starts a new system. A bare line that is a fifth line
+  (an error) is dropped and none of the part's lines plays it: its four
+  named lines play, the first of them first.
 
 ## [0.16.0] - 2026-11-04
 

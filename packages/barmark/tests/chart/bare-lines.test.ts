@@ -60,6 +60,18 @@ describe("a bare line beside its part's named lines (grammar 7.6, amended 2026-1
 		const text = `part: Pno = Piano\nPno | G |\n${["A", "B", "C", "D"].map((n) => `Pno.${n} | {G4} |`).join("\n")}\n`;
 		expect(errors(text).map((d) => d.message)).toContain("a part has at most four lines");
 	});
+	test("a bare line dropped as a fifth line is never played: its four named lines are", () => {
+		const text =
+			"part: V = Vox\nV | C |\nV.A | {C4}:x |\nV.B | {C4}:y |\nV.C | {C4}:z |\nV.D | {C4}:w |\n";
+		const p = parseChart(text);
+		expect(errors(text)).toMatchObject([{ line: 2, message: "a part has at most four lines" }]);
+		expect(p.parts[0]?.lines).toEqual(["A", "B", "C", "D"]);
+		expect(p.parts[0]?.sings).toBe("A");
+		expect(names(text)).toEqual([["A:3", "B:4", "C:5", "D:6"]]);
+		const a = extractPart(text, "V", "A");
+		expect(a?.bars[0]?.slots).toMatchObject([{ kind: "chord", chord: { canonical: "{C4}" } }]);
+		expect(a?.bars[0]?.lyrics?.[0]?.syllables[0]?.syllable).toMatchObject({ parts: ["x"] });
+	});
 	test("a part that never writes them together reads as before", () => {
 		const text = "part: Pno = Piano\nPno.RH | {G4} |\nPno.LH | {G2} |\n---\nPno | G |\n";
 		const p = parseChart(text);
