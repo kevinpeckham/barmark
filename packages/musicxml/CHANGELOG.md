@@ -8,32 +8,32 @@ package uses [semantic versioning](https://semver.org/).
 
 ### Added
 
-- **Import drops control characters** from everything it reads from a
-  file (text, attributes, archive entry names), so a score can't put
-  escape sequences into a chart or a message.
-- **`decodeXmlBytes(bytes)`** turns a MusicXML file's bytes into text
-  (UTF-8, or UTF-16 with a byte-order mark), as `readMxl` does inside an
-  archive.
 - **Import:** `importMusicXml(xml, { part? })` reads a MusicXML 4.0
   `score-partwise` file (MuseScore, Dorico, Sibelius, Finale, or this
   package's own export) back into a canonical barmark chart: the title
   and credits (typed page credits when the file names no creators),
   chord symbols (by meaning, then display text, else `?` with the
-  original kept as words), keys, meters and one-bar meters, tempo,
-  rit. and accel., the feel, headings, rehearsal marks, words and text
-  lines, repeats, endings and jumps, fermatas, lyrics as text lines,
-  parts (merged into tutti lines where they agree), and a chord part's
-  voicings, note sets and part lines. It returns `{ text, diagnostics }`
-  and never throws: each kind of loss is one warning per part with a
-  count and the first measures, and a file that gives nothing (bad XML,
-  `score-timewise`, no chord symbols in another program's file) returns
-  empty text and an error. A file with no chord symbols names the parts
-  that hold notes (and any words that look like chord symbols), and
-  `part` imports one of them as note sets; chord symbols a program
+  original kept as words and a warning), keys (modes as written),
+  meters and one-bar meters, tempo, rit. and accel., the feel, headings,
+  rehearsal marks, words and text lines, repeats (`x N` on a whole line
+  or section), endings and jumps, fermatas, lyrics as text lines,
+  replayed sections, parts (merged into tutti lines where they agree),
+  and a chord part's voicings, note sets and part lines. It returns
+  `{ text, diagnostics }` and never throws: each kind of loss is one
+  warning per part with a count and the first measures, and a file that
+  gives nothing (bad XML, `score-timewise`, no chord symbols in another
+  program's file) returns empty text and an error. A file with no chord
+  symbols names the parts that hold notes (and any words that look like
+  chord symbols), and `part` (a part's name, abbreviation or id, any
+  case) imports one of them as note sets; beside parts with chords, the
+  parts of notes alone are named in one warning. Chord symbols a program
   exported as plain words stay words, with one warning (a lone root
   letter, a common section label, counts only beside fuller symbols).
-  The XML is read with fixed bounds: at most 100 elements deep, entities
-  expanding to at most 100,000 characters, no external entities.
+  Control characters in the file are dropped, so a score can't put
+  escape sequences into a chart or a message. The XML is read with
+  fixed bounds: at most 100 elements deep, entities expanding to at most
+  100,000 characters, no external entities. Tested on MuseScore 4 files
+  as well as the export's own.
 - **`readMxl(bytes)`** unpacks a compressed `.mxl` to its MusicXML text
   with no dependency (`DecompressionStream("deflate-raw")`: Node 20.12
   or later, Bun, browsers), following `META-INF/container.xml`, else the
@@ -42,9 +42,13 @@ package uses [semantic versioning](https://semver.org/).
   entries, at most 64 MiB unpacked per entry (checked while inflating),
   every offset checked, ZIP64 and encrypted entries refused. A bad
   archive rejects with an `Error` naming the problem.
-- **A note set's marked root survives:** the root of `{D3 E3! G3 B3}` (and of a
-  voicing) is written as a `<?barmark root?>` processing instruction on its
-  `<note>`. Other programs ignore it; nothing sounds or looks different.
+- **`decodeXmlBytes(bytes)`** turns a MusicXML file's bytes into text
+  (UTF-8, or UTF-16 with a byte-order mark), as `readMxl` does inside an
+  archive.
+- **A note set's marked root survives:** the root of `{D3 E3! G3 B3}`
+  (and of a voicing) is written as a `<?barmark root?>` processing
+  instruction on its `<note>`, and read back as `!`. Other programs
+  ignore it; nothing sounds or looks different.
 
 ### Documentation
 

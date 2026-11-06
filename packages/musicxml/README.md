@@ -37,11 +37,14 @@ const { text: chart, diagnostics } = importMusicXml(xml); // or { part: "Piano" 
 chart: chord symbols, credits, keys, meters, tempo, sections, repeats,
 endings and jumps, words, lyrics as text lines under each row, parts,
 and the voicings, note sets and part lines of parts whose notes act as
-chords (a melody is left out, its chords kept). It never throws: what
-couldn't come over is in `diagnostics`, one warning per kind and part,
-and a file that gives nothing returns empty `text` and an error. A file
-with no chord symbols names the parts that have notes; `part` imports
-one of them as note sets. `readMxl` unpacks a compressed `.mxl` (it
+chords (a melody is left out, its chords kept). A chord symbol barmark
+can't name (a Tristan chord) comes in as `?`, its original kept as words
+on the bar. It never throws: what couldn't come over is in
+`diagnostics`, one warning per kind and part, and a file that gives
+nothing returns empty `text` and an error. A file with no chord symbols
+names the parts that have notes; `part` (a part's name, abbreviation or
+id, in any case) imports one of them as note sets. The tests read real
+MuseScore 4 files as well as the export's own. `readMxl` unpacks a compressed `.mxl` (it
 needs `DecompressionStream("deflate-raw")`: Node 20.12 or later, Bun or
 a browser) and rejects a damaged or oversized archive with an `Error`.
 
@@ -56,7 +59,7 @@ part, "Chart"), at concert pitch except where an instrument transposes:
 - **Note sets and voicings** (`{C E G}`, `Cmaj7{E3 G3 B3}`) are real
   notes; a part whose notes sit low gets a bass clef. A marked root
   (`E3!`) is kept as a `<?barmark root?>` processing instruction on its
-  note, which other programs ignore.
+  note, which other programs ignore and the import reads back as `!`.
 - **Instruments:** a part's `instrument:` gives its clef, staves and
   playback sound; a transposing one (trumpet in B♭, alto and tenor sax)
   is written at its pitch with a `<transpose>`. `clef:` fixes a clef,
@@ -101,7 +104,8 @@ things its own way:
   printed as words ("×3"), since Dorico ignores the count in the file.
 
 Not yet: lyrics placed as `<lyric>` syllables (barmark doesn't place them
-by beat), MusicXML import, and MIDI.
+by beat, so the import reads them as text lines and the export writes
+them as words), and MIDI.
 
 ## License
 

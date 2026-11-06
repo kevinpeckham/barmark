@@ -80,10 +80,20 @@ Fallow, CI, Swamp), the grammar, `examples/`, the scripts and FINDINGS.md.
   - `tests/`: `bun test` (linkedom for markup); `browser/`: Playwright
     suite (`bun run test:browser`) with its own page server
 - `packages/musicxml/`: `@barmark/musicxml`, MusicXML 4.0 export
-  (`exportMusicXml`); its tests validate against the vendored XSD with
-  `xmllint` (`libxml2-utils`), which `bun test` therefore needs
+  (`exportMusicXml`) and import (`importMusicXml`, `readMxl`); its tests
+  validate against the vendored XSD with `xmllint` (`libxml2-utils`),
+  which `bun test` therefore needs
+  - `src/import/`: the import, one module per stage: read the XML
+    (`tree.ts`) and the score (`read.ts`), chord symbols (`chords.ts`),
+    the slot grid (`grid.ts`), each part's lines (`parts.ts`), lyrics,
+    marks and structure, then the chart (`write.ts`); `mxl.ts` unpacks
+    `.mxl`
+  - `tests/fixtures/import/`: MuseScore files we wrote (`.mscx`), the
+    `.musicxml`/`.mxl` MuseScore made of them and each expected
+    `.chart.md`; `bun scripts/musescore-fixtures.ts` regenerates them on
+    the VM only (`~/.local/bin/mscore`), never in CI
 - `packages/cli/`: `@barmark/cli`, the `barmark` command (`check`,
-  `format`, `part`, `render`, `transpose`, `export`), a thin layer over the
+  `format`, `part`, `render`, `transpose`, `export`, `import`), a thin layer over the
   libraries,
   pinned to them exactly
   - each command is `(args, io) => Promise<number>` with injected I/O

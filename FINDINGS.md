@@ -65,6 +65,23 @@ showed the rule needed refining.
 
 ## Performance and robustness
 
+### A repeat inside a repeat exports as two backward repeats, which no program plays as barmark does (2026-11-05, MusicXML import)
+
+- **The symptom.** `|: D | x2` then `| A :|` plays six bars in barmark
+  (D D A, twice). Exported and imported again, it plays four (D D A A);
+  MuseScore 4.7 plays the exported file as five (D D A D A).
+- **The cause.** An export bug, found by the import: `@barmark/musicxml`
+  writes the line's `x2` as a backward repeat on bar 1 and the outer
+  `:|` as another on bar 2, with the one forward repeat on bar 1. MusicXML
+  repeats don't nest, so the second backward repeat is ambiguous: the
+  importer (`src/import/order.ts`, as notation programs commonly do)
+  sends it back to the bar after the last finished repeat, MuseScore to
+  bar 1 for one more pass.
+- **The fix.** Not yet made. The export should write a repeated section
+  that holds a repeat of its own in play order, as it already does for
+  repeated sections (`inPlayOrder` in `src/measures.ts`). Until then, a
+  nested repeat isn't safe to export.
+
 ### An unanchored `\s*x\s*…$` regex is quadratic on long whitespace (2026-10-31, chart parser)
 
 `/\s*x\s*(\d+|\.\.\.|…)\s*$/` found repeat tails, and on a line of 100 KB
@@ -106,6 +123,23 @@ When converting to a format that keeps written order, test the played
 order, not just the written marks.
 
 ## Design
+
+### Jumps written only as words don't reach the played order (2026-11-05, MusicXML import)
+
+- **The symptom.** A score whose "D.C. al Fine" or "To Coda" is plain
+  words, with no `<sound dacapo>` or `<sound tocoda>`, imports with its
+  direction cells, but if its repeats can't be paired and the score is
+  written out in played order instead, the jump isn't taken: the
+  written-out chart plays the bars once, in written order.
+- **The cause.** The played order (`playedOrder` in
+  `packages/musicxml/src/import/order.ts`) follows what a program plays,
+  the `<sound>` attributes; words name a jump only for a reader, and are
+  read as direction cells later (`marks.ts`).
+- **The fix.** None yet: it only matters for a file that both writes its
+  jumps as words and has repeats barmark can't write. The written-out
+  chart's warning says it was written out; the jump's cell is still on
+  its bar. If such files turn up, `playedOrder` could take the jump the
+  words name.
 
 ### A chart can't write a directive inside, or between, endings (2026-11-05, MusicXML import)
 
@@ -223,6 +257,26 @@ when two rules each define "first", test a chart that tells them apart,
 and round-trip it through `format`.
 
 ## Tooling
+
+### MuseScore's AppImage needs `xvfb-run`; it ignores `QT_QPA_PLATFORM=offscreen` (2026-11-05, MusicXML import)
+
+- **The symptom.** `mscore -o out.musicxml in.mscx` on the bench VM, with
+  no display, aborted ("no Qt platform plugin could be initialized")
+  even with `QT_QPA_PLATFORM=offscreen`, though `offscreen` is among the
+  plugins it lists.
+- **The cause.** MuseScore 4 picks its Qt platform itself and still
+  tries `xcb`, which needs a display (and `libxcb-cursor0`).
+- **The fix.** `~/.local/bin/mscore` runs the AppImage under `xvfb-run
+  -a`. It still prints Qt warnings, and its exit code isn't trustworthy,
+  so `scripts/musescore-fixtures.ts` judges a conversion by the file it
+  wrote. The script runs only on the VM; CI reads the checked-in files.
+- **Also from writing `.mscx` by hand:** a note is a MIDI `pitch` plus a
+  `tpc` (its spelling on the line of fifths: F 13, C 14, … D♯ 23), at
+  concert pitch even on a transposing instrument. A wrong `tpc` respells
+  the note without complaint (a D♯ written as C♯ came out of MuseScore
+  as C♯, and the import rightly dropped the voicing it was in). MuseScore
+  4's `.mxl` names its rootfile `score.xml`, so `readMxl` must follow
+  `META-INF/container.xml` rather than look for a `.musicxml` name.
 
 ### TypeScript 7's `tsc` won't run on Node 20.6, though the CLI it builds does (2026-11-02, @barmark/cli)
 
