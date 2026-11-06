@@ -8,11 +8,11 @@ import {
 	parseChart,
 } from "barmark";
 import { clefPlan } from "./clefs.js";
-import { applyHolds, applyPushes, eventsOf, joinHolds } from "./events.js";
+import { applyHolds, applyPushes, eventsOf, joinHolds, type MeasureEvents } from "./events.js";
 import { type Instrument, instrumentOf } from "./instruments.js";
 import { fifthsOf, measureXml } from "./measure-xml.js";
 import { writtenMeasures } from "./measures.js";
-import { rhythmic, slashed } from "./notes.js";
+import { rhythmic, slashed, soundOf } from "./notes.js";
 import { applyPedals } from "./pedal.js";
 import { barLength, beatLength, divisionsFor } from "./rhythm.js";
 import { VERSION } from "./version.js";
@@ -47,17 +47,35 @@ function identificationXml(credits: Credits): string {
  * One exported part: what it is called, and the chart as that part plays
  * it, one parse per line when it writes lines (barmark's grammar 7.6).
  */
-type PartSource = { part: DeclaredPart | null; parses: [ChartParse, ...ChartParse[]] };
+type PartSource = {
+	part: DeclaredPart | null;
+	parses: [ChartParse, ...ChartParse[]];
+	/** The bare line written beside the named ones, extracted alone. */
+	bare?: ChartParse;
+};
 
-/** A part's lines, each extracted alone; empty when it writes none. */
+/** Some of a part's lines, each extracted alone. */
+const extractLines = (part: DeclaredPart | null, text: string, names: string[]): ChartParse[] =>
+	names.flatMap((name) => extractPart(text, part?.label ?? "", name) ?? []);
+
+/** A part's named lines, each extracted alone; empty when it writes none. */
 const linesOf = (part: DeclaredPart | null, text: string): ChartParse[] =>
-	(part?.lines ?? []).flatMap((name) => extractPart(text, part?.label ?? "", name) ?? []);
+	extractLines(
+		part,
+		text,
+		(part?.lines ?? []).filter((name) => name !== ""),
+	);
+
+/** The bare line a part writes beside its named lines, if it does. */
+const bareOf = (part: DeclaredPart | null, text: string): ChartParse | undefined =>
+	part?.lines?.includes("") ? extractLines(part, text, [""])[0] : undefined;
 
 /** Each part as single-part parses: several parts through extractPart, one chart as it is. */
 function partsOf(parse: ChartParse, text: string): PartSource[] {
 	const whole = (part: DeclaredPart | null, own: ChartParse): PartSource => {
 		const [first, ...rest] = linesOf(part, text);
-		return { part, parses: first ? [first, ...rest] : [own] };
+		const bare = first ? bareOf(part, text) : undefined;
+		return { part, parses: first ? [first, ...rest] : [own], ...(bare ? { bare } : {}) };
 	};
 	if (parse.parts.length < 2) return [whole(parse.parts[0] ?? null, parse)];
 	return parse.parts.map((part) => whole(part, extractPart(text, part.label ?? "") ?? parse));
@@ -98,13 +116,45 @@ function streamOf(parse: ChartParse) {
 	return { measures, rhythmicBars, bars: joinHolds(held, rhythmicBars) };
 }
 
+type Stream = ReturnType<typeof streamOf>;
+
+const silent = (bar: MeasureEvents | undefined) =>
+	!bar || bar.events.every((e) => soundOf(e).kind === "rest");
+
+/**
+ * Where a part's bare line plays in each bar (grammar 7.6): in a bar its
+ * named lines rest, in the first line's place; in a bar they play, beside
+ * them (`beside`); nowhere in a bar it rests, which then exports as if the
+ * part wrote no bare line.
+ */
+function bareAlone(
+	bars: MeasureEvents[],
+	rhythmicBars: boolean[],
+	named: Stream[],
+	bare: Stream | null,
+) {
+	const beside: (MeasureEvents | undefined)[] = [];
+	if (!bare) return { bars, rhythmicBars, beside };
+	const alone = bars.map((_, i) => !silent(bare.bars[i]) && named.every((s) => silent(s.bars[i])));
+	bars.forEach((_, i) => {
+		beside[i] = alone[i] || silent(bare.bars[i]) ? undefined : bare.bars[i];
+	});
+	return {
+		bars: bars.map((bar, i) => (alone[i] ? (bare.bars[i] ?? bar) : bar)),
+		rhythmicBars: rhythmicBars.map((r, i) => (alone[i] ? (bare.rhythmicBars[i] ?? r) : r)),
+		beside,
+	};
+}
+
 function partXml(source: PartSource, i: number): string {
 	const [lead, ...others] = source.parses;
 	const first = streamOf(lead);
 	const streams = [first, ...others.map(streamOf)];
 	const lined = (source.part?.lines?.length ?? 0) > 0;
-	const { measures, rhythmicBars } = first;
-	const bars = applyPedals(first.bars, (i) => streams.every((s) => s.bars[i]?.measure.tacet));
+	const { measures } = first;
+	const bare = source.bare ? streamOf(source.bare) : null;
+	const pedalled = applyPedals(first.bars, (i) => streams.every((s) => s.bars[i]?.measure.tacet));
+	const { bars, rhythmicBars, beside } = bareAlone(pedalled, first.rhythmicBars, streams, bare);
 	const slashedBars = bars.map(slashed);
 	const instrument = instrumentOf(source.part);
 	const keys = measures.flatMap((m) => (m.key ? [fifthsOf(m.key)] : []));
@@ -113,7 +163,7 @@ function partXml(source: PartSource, i: number): string {
 	const clefs = fixed ? bars.map(() => fixed) : clefPlan(bars);
 	const divisions = divisionsFor(
 		streams.flatMap((s) =>
-			s.bars.flatMap((b) => [
+			[...s.bars, ...(bare?.bars ?? [])].flatMap((b) => [
 				barLength(b.measure.meter),
 				beatLength(b.measure.meter),
 				...b.events.map((e) => e.length),
@@ -135,6 +185,7 @@ function partXml(source: PartSource, i: number): string {
 			...(lined
 				? { lines: [bar.events, ...streams.slice(1).map((s) => s.bars[index]?.events ?? [])] }
 				: {}),
+			...(beside[index] ? { bare: beside[index] } : {}),
 		}),
 	);
 	return el("part", { id: `P${i + 1}` }, xml);

@@ -9,9 +9,15 @@ package uses [semantic versioning](https://semver.org/).
 ### Changed
 
 - **Export:** a part's bare line with its named lines written after it
-  (`Vox` over `Vox.Mel`, barmark's amended grammar 7.6) is its first voice,
-  played with them in the same measures. Needs the next `barmark`
-  release.
+  (`Vox` over `Vox.Mel`, barmark's amended grammar 7.6) plays with them in
+  the same measures. One that writes no notes (chords, `/`, `N.C.`,
+  words) is `<harmony>` and its words over the first named line, each
+  before the note it falls on (an `<offset>` where none does), with no
+  voice of its own: a lead sheet is one voice with chord symbols, a
+  piano's hands stay on their staves. One with note sets or voicings is
+  the next voice on the upper staff, after the named lines. Where the
+  part writes only its bare line, it plays in the first line's place;
+  systems without it export as before. Needs the next `barmark` release.
 - **Import:** where one labelled system would otherwise run into the
   next (a part stops or enters), a `---` line keeps them apart, instead
   of a text line such as `Gtr tacet` or `Pno enters`. Needs `barmark`

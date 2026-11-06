@@ -90,4 +90,13 @@ describe("a bare line beside its part's named lines (grammar 7.6, amended 2026-1
 		const text = `${VOX}part: Gtr = Guitar\nVox.Mel | {G4} |\nGtr | G |\nVox | G |\n`;
 		expect(systems(text)).toEqual([0, 0, 1]);
 	});
+	test("once beside its named lines, the bare line is its own line everywhere: % after a bare-only system has nothing to copy", () => {
+		const pno = "part: Pno = Piano, instrument: piano\n";
+		const later = "---\nPno | D |\n---\nPno.RH | % |\nPno.LH | {C2} |\n";
+		expect(errors(`${pno}Pno | C |\nPno.RH | {E4} |\nPno.LH | {C2} |\n${later}`)).toMatchObject([
+			{ line: 8, message: "Pno.RH was tacet in the bar before; % has nothing to copy" },
+		]);
+		// A part that never writes its bare line beside them plays it as its first line.
+		expect(errors(`${pno}Pno.RH | {E4} |\nPno.LH | {C2} |\n${later}`)).toEqual([]);
+	});
 });

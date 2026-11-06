@@ -310,7 +310,9 @@ function extractOf(
  * its own bars, and `N.C.` marked `tacet` where it rests. With `lineName`,
  * one of the part's lines alone (grammar 7.6), as a converter writes each
  * line: the part's first line also plays its bare and tutti lines, and a
- * line rests where it isn't written. Null when the chart declares no part
+ * line rests where it isn't written. A part that writes its bare line
+ * beside its named lines makes it a line of its own (`lineName` `""`), and
+ * the named lines no longer play it. Null when the chart declares no part
  * with that label, or the part no line of that name. Never throws.
  */
 export function extractPart(text: string, label: string, lineName?: string): ChartParse | null {

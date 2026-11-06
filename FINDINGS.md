@@ -212,6 +212,15 @@ order, not just the written marks.
   silently changed `Pno.RH`/`Pno.LH` then `Pno` from one after the other
   to together; only a bare line written first joins now. A spec example
   belongs in a test as soon as the spec is approved.
+- **The same gap in the export.** MusicXML's `voicesFor` placed lines by
+  index, so the new `""` line took voice 1 on the upper staff: the lead
+  sheet came out as a slash voice with the melody as voice 2, stems
+  down, and a piano's chord line pushed its right hand onto the lower
+  staff, in every system, even those without the bare line. A bare line
+  beside named lines is now `<harmony>` over the first named line, or
+  the next upper-staff voice when it writes notes (`bare.ts`,
+  `bareAlone` in `score.ts`). A new line kind needs checking in every
+  place that numbers lines, not just where it is read.
 
 ### Timing alone can't tell comping from a melody; pitch motion can (2026-11-06, MusicXML import)
 
