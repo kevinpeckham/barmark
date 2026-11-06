@@ -28,9 +28,18 @@ import { creditsText } from "./credits.js";
 import { escapeHtml } from "./escape.js";
 import { fontFaceCss } from "./font.js";
 import { isTacet as isTacetCell, layoutChart } from "./model.js";
-import { speakBar } from "./speech.js";
+import { speakBar, speakVerses } from "./speech.js";
 import { FIT_STEPS, MIN_BAR, stylesheet } from "./styles.js";
-import type { BlockItem, CellModel, ChartModel, SectionBlock } from "./types.js";
+import type { BlockItem, CellModel, ChartModel, SectionBlock, Verse } from "./types.js";
+import {
+	lyricRowsHtml,
+	pitchHtml,
+	type SungBar,
+	sungBar,
+	sungSlotHtml,
+	verseNumbersHtml,
+	verseWidth,
+} from "./verses-html.js";
 
 export type RenderOptions = {
 	theme?: "auto" | "light" | "dark";
@@ -56,8 +65,15 @@ type Row = Extract<BlockItem, { kind: "row" }>;
 type Settings = { barNumbers: boolean; gutter: boolean; numerals: Numerals | null };
 /** A system's row: the part it draws, and whether it is the system's first. */
 type PartRow = { label: string; name: string; first: boolean };
-/** A chord drawn as a numeral: the style, and the key of its bar. */
-type View = { style: Numerals; key: Key } | null;
+/**
+ * How a bar's slots draw: chords as numerals (the style, and the key of its
+ * bar); on a singing line, note sets as pitch names over the syllables sung.
+ */
+type View = {
+	numeral: { style: Numerals; key: Key } | null;
+	pitches: boolean;
+	sung: SungBar | null;
+};
 
 export function renderChart(text: string, options: RenderOptions = {}): string {
 	return `${fontStyle(options)}<barmark-chart${elementAttributes(options)}><template shadowrootmode="open">${shadowContent(text, options)}</template></barmark-chart>`;
@@ -181,11 +197,14 @@ function blockHtml(block: SectionBlock, settings: Settings): string {
  */
 function fitWidth(block: SectionBlock): number {
 	const widths: number[] = [];
+	const widen = (bars: number[]) => {
+		for (const [i, w] of bars.entries()) widths[i] = Math.max(widths[i] ?? 0, w);
+	};
 	for (const item of block.items) {
-		if (item.kind !== "row") continue;
-		item.cells.forEach((cell, i) => {
-			widths[i] = Math.max(widths[i] ?? 0, cellWidth(cell));
-		});
+		if (item.kind === "row") widen(item.cells.map(cellWidth));
+		const verses =
+			item.kind === "row" ? (item.verses ?? []) : item.kind === "lyrics" ? item.verses : [];
+		for (const v of verses) widen(v.cells.map(verseWidth));
 	}
 	const total = 5 + widths.reduce((a, b) => a + b, 0);
 	return FIT_STEPS.find((step) => step >= total) ?? FIT_STEPS.at(-1) ?? 0;
@@ -239,6 +258,8 @@ function itemHtml(item: BlockItem, columns: number, settings: Settings): string 
 			return rowHtml(item, columns, settings);
 		case "system":
 			return systemHtml(item, columns, settings);
+		case "lyrics":
+			return lyricRowsHtml(item.verses, item.barNumber, columns, settings.gutter);
 		case "text":
 			return `<p class="bm-text${item.note ? " bm-note" : ""}" part="text">${escapeHtml(item.text)}</p>`;
 		case "directive":
@@ -285,15 +306,30 @@ function gutterHtml(row: Row, settings: Settings, part?: PartRow): string {
 function rowCells(row: Row, numerals: Numerals | null, ending: string): string[] {
 	let n = row.barNumber;
 	const firstTacet = row.cells.findIndex(isTacetCell);
+	const firstBar = row.cells.findIndex((c) => c.kind === "slots");
 	return row.cells.map((cell, i) => {
 		const marks = repeatMarks(row, i) + (i === 0 ? ending : "");
+		const sung: Sung = {
+			pitches: row.sings === true,
+			words: sungOn(row.verses ?? [], i),
+			bar: sungBar(row.verses, i),
+			first: i === firstBar,
+		};
 		const html = isTacetCell(cell)
 			? tacetHtml(cell, n, marks, i === firstTacet)
-			: cellHtml(cell, n, marks, numerals);
+			: cellHtml(cell, n, marks, numerals, sung);
 		if (n !== null && cell.kind === "slots") n++;
 		return html;
 	});
 }
+
+/** The words sung on a row's cell, as a screen reader hears them after the bar's notes. */
+const sungOn = (verses: Verse[], i: number) =>
+	speakVerses(
+		verses.map((v) => ({ verse: v.verse, syllables: v.cells[i]?.flat() ?? [] })),
+		verses.length > 1,
+		"sung",
+	);
 
 const sr = (text: string) => (text ? `<span class="bm-sr">${text}</span>` : "");
 
@@ -301,6 +337,7 @@ const sr = (text: string) => (text ? `<span class="bm-sr">${text}</span>` : "");
 function rowClasses(row: Row, part: PartRow | undefined): string {
 	const classes = ["bm-row"];
 	if (part) classes.push("bm-part-row");
+	if (row.sings) classes.push("bm-sings");
 	if (row.cells.some(isTacetCell)) classes.push("bm-tacet");
 	if (row.ending) classes.push("bm-ending");
 	return classes.join(" ");
@@ -351,19 +388,29 @@ function rowRepeatHtml(row: Row): string {
 	return repeatHtml(row.repeat).trim();
 }
 
+/**
+ * A singing line's bar: its note sets as pitch names, its syllables under
+ * them, the verse numbers when it is the row's first bar, and its words as
+ * a screen reader hears them.
+ */
+type Sung = { pitches: boolean; words: string; bar: SungBar | null; first: boolean };
+
 function cellHtml(
 	cell: CellModel,
 	barNumber: number | null,
 	marks: string,
 	numerals: Numerals | null,
+	sung: Sung,
 ): string {
-	const view: View =
+	const numeral =
 		numerals && cell.kind === "slots" && cell.key ? { style: numerals, key: cell.key } : null;
-	const spoken = `<span class="bm-sr">${escapeHtml(speakBar(barNumber, cell, view !== null))}</span>`;
+	const said = [speakBar(barNumber, cell, numeral !== null), sung.words].filter(Boolean);
+	const spoken = `<span class="bm-sr">${escapeHtml(said.join(", "))}</span>`;
 	if (cell.kind !== "slots") return betweenBarsHtml(cell, spoken, marks);
 	const change = cell.tempoChange ? ` data-tempo-change="${cell.tempoChange}"` : "";
-	const [body, end] = barBody(cell, view);
-	return `<div class="bm-bar" part="bar"${cell.cut ? " data-cut" : ""}${change}${marks}>${spoken}<span class="bm-bar-body" aria-hidden="true">${body}</span>${end}</div>`;
+	const [body, end] = barBody(cell, { numeral, pitches: sung.pitches, sung: sung.bar });
+	const numbers = sung.first ? verseNumbersHtml(sung.bar) : "";
+	return `<div class="bm-bar" part="bar"${cell.cut ? " data-cut" : ""}${change}${marks}>${spoken}${numbers}<span class="bm-bar-body" aria-hidden="true">${body}</span>${end}</div>`;
 }
 
 /** What a bar shows: its meter, its slots (or `%`), and "cut"; then the words after its last slot. */
@@ -455,6 +502,12 @@ const dataOf = (marks: ReturnType<typeof marksOf>) =>
 
 /** A slot with its push mark before it, its accent or hit above it and its pedal mark below. */
 function slotHtml(slot: Slot, view: View): string {
+	const html = markedSlotHtml(slot, view);
+	// On a singing line each note, a group's members each, has its syllables under it.
+	return view.sung && slot.kind !== "group" ? sungSlotHtml(html, view.sung) : html;
+}
+
+function markedSlotHtml(slot: Slot, view: View): string {
 	const body = unmarkedSlotHtml(slot, view);
 	const marks = marksOf(slot);
 	const { push, articulation, pedal } = marks;
@@ -502,10 +555,12 @@ function unmarkedSlotHtml(slot: Slot, view: View): string {
 }
 
 function chordHtml(record: ChordRecord, view: View): string {
+	if (record.kind === "notes" && view.pitches) return pitchHtml(record);
 	if (record.kind === "notes" || !record.parts) return notesHtml(record);
-	const numeral = view ? typesetNumeral(record.parts, view.key, view.style) : null;
-	if (!numeral) return piecesHtml(typesetChord(record.parts), "");
-	return piecesHtml(numeral, ` data-numeral="${view?.style}"`);
+	const { numeral } = view;
+	const pieces = numeral ? typesetNumeral(record.parts, numeral.key, numeral.style) : null;
+	if (!pieces) return piecesHtml(typesetChord(record.parts), "");
+	return piecesHtml(pieces, ` data-numeral="${numeral?.style}"`);
 }
 
 function piecesHtml(p: ChordPieces, attributes: string): string {

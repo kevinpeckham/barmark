@@ -194,6 +194,25 @@ order, not just the written marks.
 
 ## Design
 
+### Syllables drawn as rows of their own drifted off their notes (2026-11-06, @barmark/render)
+
+- **The symptom.** The first draft drew each verse as a row under the
+  melody row, its slots built like the melody's. In Chromium, bar 2 of
+  Amazing Grace put "ing" 13px right of its B (`render.pw.ts`, "lyrics").
+- **The cause.** A bar's slots are `flex: 1 1 0` with `min-width:
+  max-content`, so they share a bar equally only when it has room to
+  spare. A bar column is exactly as wide as its widest row's content, so
+  the row that sets the width has no slack: each slot keeps its own
+  content's width, and the pitch row and a verse row, with different
+  contents, split the same width differently.
+- **The fix.** Each note of a singing line is a column (`.bm-sung`): the
+  pitch name, then one line per verse, so a syllable is under its note
+  however the bar is laid out or wrapped. The singing bar's body is a
+  grid of `1fr` columns, which sizes every column to the widest one:
+  slots are spaced by beat, and the chord row above, sharing the bar
+  column, gets the slack to space its chords the same way. Only a lyric
+  row on no melody is still a row of its own, spaced by beat.
+
 ### The spec's lead sheet read as two systems with no diagnostic (2026-11-06, barmark)
 
 - **The symptom.** The voice-and-lyrics spec's Amazing Grace, a bare

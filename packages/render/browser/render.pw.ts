@@ -232,6 +232,63 @@ test.describe("piano marks", () => {
 	});
 });
 
+test.describe("lyrics", () => {
+	test("a voice line's syllables sit under its pitch names, verse under verse", async ({
+		page,
+	}) => {
+		await page.goto("/chart?chart=lead");
+		await page.evaluate(() => document.fonts.ready);
+		const placed = await inChart(page, (root) => {
+			const box = (e: Element | null | undefined) => e?.getBoundingClientRect() ?? new DOMRect();
+			const melody = root.querySelector(".bm-sings") as Element;
+			// Each note's column: its pitch name, then each verse's syllable, stacked and left-aligned.
+			const columns = [...melody.querySelectorAll(".bm-sung")].map((c) => {
+				const note = box(c.querySelector(".bm-sung-note"));
+				const lines = [...c.querySelectorAll(".bm-under")].map(box);
+				return {
+					under: lines.every(
+						(l, i) => l.top >= (i ? (lines[i - 1]?.bottom ?? 0) : note.bottom) - 1,
+					),
+					aligned: lines.every((l) => Math.abs(l.left - note.left) <= 1),
+				};
+			});
+			// Each verse's number on its verse's line, left of the first bar line.
+			const bar = box(melody.querySelector(".bm-bar"));
+			const numbers = [...melody.querySelectorAll(".bm-verse")].map((n, i) => {
+				const line = box(melody.querySelectorAll(`.bm-under[data-verse="${i + 1}"]`)[0]);
+				const b = box(n);
+				return (
+					b.right <= bar.left &&
+					Math.abs((b.top + b.bottom) / 2 - (line.top + line.bottom) / 2) <= 3
+				);
+			});
+			// No syllable runs into the next one on its line.
+			const clear = [1, 2].every((v) => {
+				const words = [...melody.querySelectorAll(`.bm-under[data-verse="${v}"] .bm-syllable`)].map(
+					box,
+				);
+				return words.every((w, i) => i === 0 || (words[i - 1]?.right ?? 0) <= w.left);
+			});
+			return {
+				columns: columns.length,
+				under: columns.every((c) => c.under),
+				aligned: columns.every((c) => c.aligned),
+				numbers,
+				clear,
+				extender: box(root.querySelector(".bm-extender")).width > 4,
+			};
+		});
+		expect(placed).toEqual({
+			columns: 14,
+			under: true,
+			aligned: true,
+			numbers: [true, true],
+			clear: true,
+			extender: true,
+		});
+	});
+});
+
 test.describe("accessibility", () => {
 	test("a screen reader hears sections and bars as music", async ({ page }) => {
 		await page.goto("/chart");

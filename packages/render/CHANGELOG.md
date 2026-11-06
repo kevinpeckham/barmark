@@ -6,6 +6,19 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- **Voice lines and lyrics** (barmark's grammar 4.3, 7.7): the line a part
+  sings on draws its notes as pitch names, spaced by beat, with each
+  verse's syllables under them: hyphens within a word, an extender for a
+  held syllable (`:/`), verses numbered when there are several. A lyric
+  row on no melody draws as its own row, spaced by beat. A screen reader
+  hears each bar's words after its notes. The model's rows gain `sings`
+  and `verses`, and a `lyrics` item; `--barmark-lyrics` colours the words,
+  and `::part(lyrics)` styles a lyric row. A `lyrics:` line followed by a
+  bar line, which drew as a line of text, now draws its words on the
+  beats. Needs the next `barmark` release.
+
 ### Changed
 
 - A `---` break draws nothing, and a text line written with a leading `\`
