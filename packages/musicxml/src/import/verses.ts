@@ -19,8 +19,6 @@ export type Verses = {
 	words: Words;
 	from: number;
 	owner: number | null;
-	/** `lyrics N:` rather than `lyrics:`. */
-	numbered: boolean;
 	/** The rows' holds as written, by `holdKey`: those barmark sings, and those it can't (written `--`). */
 	holds: { kept: Set<string>; dropped: Set<string> };
 };
@@ -74,13 +72,12 @@ export function versesOf(
 				words: staff,
 				from: 1,
 				owner,
-				numbered: staff.verses.some((v) => v > 1),
 				holds: newHolds(),
 			};
 		losses.add("staff", STAFF_LEFT_OUT);
 	}
 	const words = singer?.sings?.words;
-	return words ? { words, from: 2, owner, numbered: true, holds: newHolds() } : null;
+	return words ? { words, from: 2, owner, holds: newHolds() } : null;
 }
 
 /**
@@ -184,14 +181,24 @@ function row(v: Verses, verse: number, label: string, bars: RowBar[]): string {
 
 const labelOf = (verse: number, numbered: boolean) => (numbered ? `lyrics ${verse}:` : "lyrics:");
 
-/** The rows under a system: each later verse its bars sing (from verse 1 for a lyric staff). */
+/** The rows under a system: each later verse its bars sing (from verse 1 for a lyric staff), numbered when one is past verse 1 (verse 1 alone is `lyrics:`). */
 export function rowsUnder(v: Verses | null, bars: RowBar[]): string[] {
 	if (!v) return [];
 	return v.words.verses
 		.filter(
 			(verse) => verse >= v.from && bars.some(({ measure }) => sings(v.words.bars[measure], verse)),
 		)
-		.map((verse) => row(v, verse, labelOf(verse, v.numbered), bars));
+		.map((verse, _, sung) =>
+			row(
+				v,
+				verse,
+				labelOf(
+					verse,
+					sung.some((n) => n !== 1),
+				),
+				bars,
+			),
+		);
 }
 
 /** A bar's words as one key: every verse's tokens at their onsets. */

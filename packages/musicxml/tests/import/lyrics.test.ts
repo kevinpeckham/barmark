@@ -192,6 +192,16 @@ describe("the lyric staff", () => {
 		expect(result.diagnostics).toEqual([]);
 	});
 
+	test("a system that sings only verse 1 writes lyrics:, though another numbers its verses", () => {
+		const chart = `          | C         | G       | x2
+lyrics 1: | one two   | three / |
+lyrics 2: | four five | six /   |
+        | F       | C       |
+lyrics: | sev- en | eight / |
+`;
+		expect(sound(importMusicXml(xmlOf(chart))).text).toBe(chart);
+	});
+
 	test("after MuseScore (no marker, pitched B4 slashes) it is still a lyric row", () => {
 		const xml = xmlOf(CHART)
 			.replace("<?barmark lyrics?>", "")
