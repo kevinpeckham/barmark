@@ -93,9 +93,8 @@ Fallow, CI, Swamp), the grammar, `examples/`, the scripts and FINDINGS.md.
     `.chart.md`; `bun scripts/musescore-fixtures.ts` regenerates them on
     the VM only (`~/.local/bin/mscore`), never in CI
 - `packages/cli/`: `@barmark/cli`, the `barmark` command (`check`,
-  `format`, `part`, `render`, `transpose`, `export`, `import`), a thin layer over the
-  libraries,
-  pinned to them exactly
+  `format`, `part`, `render`, `transpose`, `export`, `import`), a thin
+  layer over the libraries, pinned to them exactly
   - each command is `(args, io) => Promise<number>` with injected I/O
     (`src/io.ts`); `cli.ts` is the Node bin, `binary.ts` the standalone
     binary (`bun scripts/compile.ts <target> <out>`, font and versions

@@ -86,7 +86,7 @@ package.
 | `work-title` (else `movement-title`) | `# Title` |
 | `creator` composer, lyricist, arranger; `rights` | credit lines (7.5); typed page `<credit>`s when there are no `creator`s |
 | `<harmony>` | a chord symbol ("Reading a chord symbol"); `kind` `none` is `N.C.` |
-| `<key>` | `key:` (modes read as written, not as their relative major or minor: barmark has all seven) |
+| `<key>` | `key:` (modes read as written, not as their relative major or minor: barmark has all seven) (changed while building, 2026-11-05: the design said another mode came in as its relative major or minor, with a warning; for Kevin to confirm) |
 | `<time>` | `time:`; a change for one bar that changes back is 2.4's one-bar meter |
 | `<sound tempo>` or a `<metronome>` | `tempo:`; rit. and accel. words as 7.2's gradual changes |
 | `<swing>` (MusicXML 4.0) | `feel:` |
@@ -134,7 +134,7 @@ In order, the first that gives a chord barmark's grammar accepts
    text only (`<kind text="7alt">other</kind>`). It reads what the
    program printed; it isn't a guess.
 3. **Otherwise `?`,** which always warns, with the original written as
-   words on the bar ("C(♭9♯11)") and a warning. This covers qualities outside
+   words on the bar ("C(♭9♯11)"). This covers qualities outside
    Appendix A (`Tristan`, `Neapolitan`), degrees barmark can't spell,
    and a `<function>` (roman numeral) with no root.
 
@@ -287,7 +287,9 @@ Decided system by system, as the grammar reads several parts (7.4)
 - **Resting parts.** A part that rests through a system (no chords, no
   notes) is left out of it, which the grammar reads as tacet. Because an
   unlabelled line makes every part play (7.4), a resting part stops the
-  others merging there: they write labelled lines. A part with chord symbols in some
+  others merging there: they write labelled lines. (Changed while
+  building, 2026-11-05: grammar 7.4 reads an unlabelled line as every
+  part playing; for Kevin to confirm.) A part with chord symbols in some
   sections only (a guitar's solo) rests elsewhere.
 - **One part throughout** (a lead sheet, or parts that always agree)
   gives a chart with no `part:` lines, unless part lines need a label.
@@ -434,3 +436,23 @@ songs bump; per RELEASING.md.
 7. The `<?barmark root?>` marker goes inside the root note's `<note>`.
 8. `.mxl` needs no new dependency; XML parsing adds one.
 9. No grammar changes; gaps found go to Kevin as a list.
+
+Found while building (2026-11-05), for Kevin to check:
+
+10. **A resting part stops a tutti line** (see "Parts"). The design
+    said a resting part doesn't stop the others merging, but grammar 7.4
+    reads an unlabelled line as every part playing, so merging would
+    make the resting part play.
+11. **Modes are read as written** (the `<key>` row): barmark has all
+    seven, so a Dorian key stays Dorian instead of becoming its relative
+    major or minor with a warning.
+12. **A melody in thirds reads as voicings.** A part that writes
+    slashes somewhere (a slash intro) and whose melody is two-note
+    attacks on the changes passes the chord-part test, so its melody
+    comes in as voicings and note sets, contrary to the non-goal "a
+    melody never becomes a run of note sets". Telling it apart needs a
+    new melody rule; Kevin's call.
+13. **The text-line escape is a grammar question.** A text line that
+    would read as something else (`| la |`, `key: G`) is written with a
+    leading backslash, which barmark keeps as text; the grammar has no
+    escape of its own. Should it?

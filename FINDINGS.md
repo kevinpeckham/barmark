@@ -74,13 +74,14 @@ showed the rule needed refining.
   writes the line's `x2` as a backward repeat on bar 1 and the outer
   `:|` as another on bar 2, with the one forward repeat on bar 1. MusicXML
   repeats don't nest, so the second backward repeat is ambiguous: the
-  importer (`src/import/order.ts`, as notation programs commonly do)
-  sends it back to the bar after the last finished repeat, MuseScore to
-  bar 1 for one more pass.
+  importer (`packages/musicxml/src/import/order.ts`, as notation
+  programs commonly do) sends it back to the bar after the last finished
+  repeat, MuseScore to bar 1 for one more pass.
 - **The fix.** Not yet made. The export should write a repeated section
   that holds a repeat of its own in play order, as it already does for
-  repeated sections (`inPlayOrder` in `src/measures.ts`). Until then, a
-  nested repeat isn't safe to export.
+  repeated sections (`inPlayOrder` in
+  `packages/musicxml/src/measures.ts`). Until then, a nested repeat
+  isn't safe to export.
 
 ### An unanchored `\s*x\s*…$` regex is quadratic on long whitespace (2026-10-31, chart parser)
 
