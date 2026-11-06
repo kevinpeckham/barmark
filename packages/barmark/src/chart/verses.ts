@@ -335,10 +335,20 @@ function singing(
 			`pass ${from.pass} of this repeat sings nothing: its bars have verses ${listOf(all.map((c) => c.verse))}`,
 			"lyrics",
 		);
+	/** Each written bar's notes' syllables, by their line, and whether a pass sang them. */
+	const notes = new Map<string, { line: number; sung: boolean }>();
+	const noteNotes = (bar: PlayedBar, from: BarSource, all: Candidate[], chosen: Candidate[]) => {
+		const own = all.find((c) => c.row === null);
+		if (!own) return;
+		const key = `${from.line}:${from.bar}`;
+		const sungHere = chosen.includes(own) || notes.get(key)?.sung === true;
+		notes.set(key, { line: bar.line, sung: sungHere });
+	};
 	const sing: Sing = (bar, from) => {
 		const all = candidates(bar, from);
 		const chosen = forPass(all, from.pass);
 		if (all.length && !chosen.length) silent(all, from);
+		noteNotes(bar, from, all, chosen);
 		hold(
 			bar,
 			chosen.find((c) => c.row === null),
@@ -347,6 +357,8 @@ function singing(
 		return chosen.length ? chosen.map((c) => c.lyrics) : undefined;
 	};
 	const finish = () => {
+		for (const n of notes.values())
+			if (!n.sung) warn(n.line, "verse 1 is never sung: no pass of its repeat is pass 1", "lyrics");
 		const unsung = new Set(
 			[...rows.values()].flat().filter((r) => r.verse !== null && !sung.has(r)),
 		);

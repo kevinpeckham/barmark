@@ -53,8 +53,9 @@ Releases follow the process in [RELEASING.md](RELEASING.md).
   carry one `PlayedLyrics` per part and verse (verse order, then score
   order), each part's `DeclaredPart.sings` set; lyric rows stay the
   singer's, and only the singer's syllables clash with a row over them.
-  A numbered verse that no pass sings, and a repeat's pass that sings
-  nothing where other passes sing, warn.
+  A numbered verse that no pass sings, a repeat's pass that sings
+  nothing where other passes sing, and syllables on notes that no pass
+  sings (verse 1 on a second ending), warn.
   A row's `/` where the singing line starts a new note is a held syllable
   there (`{ kind: "held" }`, `note: true`), as `:/` on the notes is: a
   melisma the converters extend and the renderer draws.

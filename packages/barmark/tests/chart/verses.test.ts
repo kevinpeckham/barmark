@@ -287,6 +287,13 @@ describe("verses in play order (spec sections 3 and 4)", () => {
 			{ line: 4, message: "verse 3 is never sung: no pass of its repeat is pass 3" },
 		]);
 	});
+	test("syllables on notes that no pass sings warn, on the notes' line", () => {
+		const chart = `${VOICE}V |: {C4}:a |\nlyrics 2: | b |\nV |1 {E4}:c :|\nV |2 {A4}:done |\nlyrics 2: | two |\n`;
+		expect(warnings(chart)).toMatchObject([
+			{ line: 5, message: "verse 1 is never sung: no pass of its repeat is pass 1" },
+		]);
+		expect(warnings(`${VOICE}V |: {C4}:a :|\nlyrics 2: | b |\n`)).toEqual([]);
+	});
 	test("a pass with no verse, where other passes have one, warns", () => {
 		const chart = "| C | D | x3\nlyrics 1: | a | b |\nlyrics 2: | c | d |\n";
 		expect(warnings(chart)).toMatchObject([

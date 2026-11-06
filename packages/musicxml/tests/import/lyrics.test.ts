@@ -402,6 +402,9 @@ describe("a melisma ends at our held note's extend", () => {
 		const result = sound(importMusicXml(xmlOf(chart)));
 		// The second ending plays on pass 2 alone, so its verse 1 `lo` is never
 		// sung (barmark warns) and doesn't go out: the rest comes back as written.
+		expect(exportMusicXml(chart).diagnostics).toMatchObject([
+			{ line: 4, message: "verse 1 is never sung: no pass of its repeat is pass 1" },
+		]);
 		expect(result.text).toBe(
 			"          |: {C4}:la {D4}:li |\nlyrics 2: | ho /            |\n|1 {E4}:lu :|\n          |2 {F4} |\nlyrics 2: | hum  |\n",
 		);
