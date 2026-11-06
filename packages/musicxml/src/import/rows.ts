@@ -145,11 +145,15 @@ const meterText = (m: Meter | null) => (m ? `${m.n}/${m.d}` : "");
 const speaksFor = (src: Source, key: string | null) =>
 	key === null ? src.parts.map((_, p) => `${p}.0`) : [key];
 
+/** Whether a cell holds a `?`. */
+const unknown = (slots: string) => slots.split(/[ _]/).some((t) => t.replace(/\.$/, "") === "?");
+
 /** Whether bar `i` repeats what each of these lines just played, in the same meter. */
 function simile(src: Source, keys: string[], slots: string, i: number, last: Last): boolean {
 	const bar = src.bars[i] as BarInfo;
-	// `%` can't carry a one-bar meter, which every line writes (grammar 7.4).
-	if (bar.directives?.includes("time:") || bar.meter !== null) return false;
+	// `%` can't carry a one-bar meter, which every line writes (grammar 7.4);
+	// and two unknown bars aren't known to match, so `?` is never copied.
+	if (bar.directives?.includes("time:") || bar.meter !== null || unknown(slots)) return false;
 	const meter = meterText(bar.meter);
 	return keys.every((k) => {
 		const before = last.get(k);

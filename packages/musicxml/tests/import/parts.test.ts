@@ -514,6 +514,20 @@ test("an unreadable chord is ? and keeps its original", () => {
 	);
 });
 
+test("a chord symbol with no root and no text is ?, still with a warning", () => {
+	const r = importXml(
+		scoreXml(
+			{ software: BARMARK },
+			measure(
+				1,
+				time44() + harmony("C") + slashes(2) + "<harmony><kind>major</kind></harmony>" + slashes(2),
+			),
+		),
+	);
+	expect(bars(r)).toEqual(["C ?"]);
+	expect(r.messages).toEqual(["chord symbols barmark can't read, written as ? in measure 1"]);
+});
+
 test("a chord off the grid moves to the nearest beat, with a warning", () => {
 	const r = importXml(
 		scoreXml(

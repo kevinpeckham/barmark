@@ -285,8 +285,9 @@ test("an unreadable chord: ? with its original as words", () => {
 	expect(text).toBe('| C "DTristan" ? |\n');
 });
 
-test("the export's ? comes back as ?", () => {
-	expect(roundTrip("| C | ? | % |")).toBe("| C | ? | % |\n");
+test("the export's ? comes back as ?, and never as % after a ?: two unknown bars aren't known to match", () => {
+	expect(roundTrip("| C | ? | % |")).toBe("| C | ? | ? |\n");
+	expect(roundTrip("| C | ? / / / | ? |")).toBe("| C | ? | ? |\n");
 });
 
 test("duplicate labels are numbered", () => {

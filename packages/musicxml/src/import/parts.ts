@@ -37,6 +37,7 @@ const WHY = {
 
 const UNPLACED = "a bar barmark's grid can't hold; written as ?";
 const UNREAD = "chord symbols barmark can't read, written as ? with their text as words";
+const UNREAD_BARE = "chord symbols barmark can't read, written as ?";
 
 /** Each measure's length, its own meter (a one-bar meter, else the running one) and its chords. */
 function barsOf(part: ReadPart): Bar[] {
@@ -120,7 +121,12 @@ function report(d: Decided, part: ReadPart, hasChords: boolean, losses: Losses):
 	reportLines(d, part.name, losses);
 	reportMarks(part, d.why === null || !hasChords, losses);
 	for (const u of d.reads[0]?.unread ?? [])
-		losses.add("unread", UNREAD, part.name, part.measures[u.measure]?.number);
+		losses.add(
+			u.text === "" ? "unreadBare" : "unread",
+			u.text === "" ? UNREAD_BARE : UNREAD,
+			part.name,
+			part.measures[u.measure]?.number,
+		);
 }
 
 function reportLines(d: Decided, part: string, losses: Losses): void {
@@ -186,6 +192,6 @@ export function importPart(
 		lines: named(decided, part.staves),
 		lyrics: part.measures,
 		hasChords,
-		unread: decided.reads[0]?.unread ?? [],
+		unread: (decided.reads[0]?.unread ?? []).filter((u) => u.text !== ""),
 	};
 }

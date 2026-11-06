@@ -10,7 +10,7 @@ export type Chord = { at: Frac; slot: string; original: string | null };
 /** A measure as all of a part's lines share it: its length, its own meter and its chords. */
 export type Bar = { number: string; length: Frac; meter: Meter; chords: Chord[] };
 
-/** An unreadable chord's place (measure index, slot index) and the program's own text. */
+/** An unreadable chord's place (measure index, slot index) and the program's own text, empty when it has none. */
 export type Unread = { measure: number; at: number; text: string };
 
 /** One line read bar by bar: its cells, and what didn't come through (by measure number). */
@@ -126,9 +126,10 @@ function unreadIn(cell: string, chords: Chord[], measure: number): Unread[] {
 	const out: Unread[] = [];
 	cell.split(" ").forEach((slot, at) => {
 		for (const member of slot.split("_")) {
-			if (member.replace(/\.$/, "") !== "?") continue;
-			const text = originals.shift();
-			if (text) out.push({ measure, at, text });
+			// A `?` for a bar the grid can't hold matches no chord; its own loss says so.
+			if (member.replace(/\.$/, "") !== "?" || originals.length === 0) continue;
+			// A `?` with no text of the program's own is still reported, with no words.
+			out.push({ measure, at, text: originals.shift() ?? "" });
 		}
 	});
 	return out;
