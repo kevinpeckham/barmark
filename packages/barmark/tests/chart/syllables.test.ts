@@ -1,8 +1,11 @@
 import { describe, expect, test } from "bun:test";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { parseChart } from "../../src/chart/parse.js";
 import { printChart } from "../../src/chart/print.js";
 import { readSyllable } from "../../src/chart/syllable.js";
 import { transposeChart } from "../../src/chart/transpose.js";
+import { ROOT } from "./fixtures.js";
 
 const slotsOf = (cell: string) =>
 	parseChart(`part: V = Voice\nV | ${cell} |\n`).bars[0]?.slots ?? [];
@@ -74,6 +77,20 @@ describe("syllables on notes (grammar 4.3)", () => {
 			const [e] = errors(`part: V = Voice\nV | ${cell} |\n`);
 			expect(e, cell).toMatchObject({ line: 2, severity: "error" });
 		}
+	});
+	test("a hold can't begin or continue a word: :/- is an error", () => {
+		const [e] = errors("part: V = Voice\nV | {C4}:la_{D4}:/- |\n");
+		expect(e).toMatchObject({ line: 2, severity: "error", token: "{D4}:/-" });
+		expect(e?.message).toContain("hold");
+	});
+	test("grammar 4.3's example reads with no diagnostics", () => {
+		const spec = readFileSync(join(ROOT, "docs/grammar-v0.1-draft.md"), "utf8");
+		const section = /### 4\.3 Syllables\n([\s\S]*?)\n## 5\./.exec(spec)?.[1] ?? "";
+		const block = /```\n([\s\S]*?)\n```/.exec(section)?.[1];
+		expect(block).toBeDefined();
+		const p = parseChart(block ?? "");
+		expect(p.diagnostics).toEqual([]);
+		expect(p.bars.length).toBe(2);
 	});
 	test("a syllable ends at a brace", () => {
 		expect(errors("| {C4}:la{D4} |\n").length).toBeGreaterThan(0);
@@ -147,5 +164,8 @@ describe("readSyllable", () => {
 	});
 	test("an empty syllable, or an empty side of ~, is null", () => {
 		for (const t of ["", "-", "~end", "the~", "a~~b"]) expect(readSyllable(t), t).toBeNull();
+	});
+	test("a hold with a hyphen is null: a hold can't begin or continue a word", () => {
+		expect(readSyllable("/-")).toBeNull();
 	});
 });

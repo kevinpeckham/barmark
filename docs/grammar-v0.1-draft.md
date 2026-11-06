@@ -474,13 +474,15 @@ number is an extension (`C7`, `C13`), so it can't also be an octave.
 A syllable sung on a note follows its note set after a colon:
 
 ```
+time: 3/4
 | {G4}:maz- / {B4}:ing_{G4}:/ | {B4}:grace / {A4}:how |
 ```
 
 - **The syllable** runs from the colon to the next space, `_`, `|`, `{`
-  or quote, and may hold any other character: `don't`, `o'er`, `¿qué?`,
-  `yeah...`. A `{` straight after a syllable is an **error**; a space
-  goes before the next note. A dot directly after the brace is the
+  or quote (the quote: Claude's recommendation), and may hold any other
+  character: `don't`, `o'er`, `¿qué?`, `yeah...`. A `{` straight after a
+  syllable is an **error**; a space goes before the next note (Claude's
+  recommendation). A dot directly after the brace is the
   rhythm's (2.2), so a dotted note with a syllable is `{C4}.:maz-`; a dot
   after the colon is the syllable's.
 - **A trailing `-`** says the word continues: `{G4}:maz-` then
@@ -489,7 +491,9 @@ A syllable sung on a note follows its note set after a colon:
 - **A note with no syllable is unsung**: an "ooh", a vocalise, a lick on
   the voice staff. **`:/` holds the syllable before it** over a new note,
   a melisma: `{B4}:ing_{G4}:/` (MusicXML's `<extend>`). A `/` slot (a tie)
-  holds its syllable without a mark.
+  holds its syllable without a mark. A hold can't begin or continue a
+  word, so `:/-` is an **error**; a `:/` with no syllable before it to hold
+  reads here, and is checked in play order.
 - **`~` joins two syllables on one note**, an elision: `{C4}:the~end`
   (MusicXML's `<elision>`).
 - A note set of two or more notes takes one syllable (a choir's divisi
@@ -501,7 +505,7 @@ A syllable sung on a note follows its note set after a colon:
 - A syllable goes **only on a note set**. On a chord name, a voicing
   (`Cmaj7{E3 G3}:la`; write the notes alone), `/`, `--`, `N.C.` or `?` it
   is an **error**, and so is an empty syllable (`{C4}:`, or `~` with
-  nothing on one side).
+  nothing on one side) and `:/-`.
 
 ## 5. Repeats
 
@@ -1186,7 +1190,8 @@ human to say whether the band was silent, and the structure line.
 | `---` ends a system | Decided by Kevin (2026-11-06): a line of only `---` (three or more hyphens) ends a labelled system and means nothing else (1, 7.4), so a converter can end a system where labels alone would join the next one to it. Rejected: cue lines ("X tacet", "X enters"). |
 | A leading backslash | Decided by Kevin (2026-11-06): a line starting with `\` is text, and the backslash is not shown (1). The escaped-pipes warning (9) stays when the rest of the line still has `\|`. Before, a line starting with `\` was text with the backslash kept. |
 | A bare replay of `## X x2` | Decided by Kevin (2026-11-06): it plays once; `## X x2` again plays it twice (6). This is what the parser already did; now written down and tested. |
-| Syllables on notes | Decided by Kevin (2026-11-06): a syllable follows its note set after a colon, `{G4}:maz-` (4.3); a trailing `-` continues the word, and it runs to a space, `_`, `\|`, `{` or a quote, holding any other character. Only a note set takes one: on a chord name, a voicing, `/`, `--`, `N.C.` or `?` it is an error. A dot after the brace is the rhythm's (`{C4}.:maz-`). Before, a colon in a slot was an error, so no chart that read changes meaning. |
+| Syllables on notes | Decided by Kevin (2026-11-06): a syllable follows its note set after a colon, `{G4}:maz-` (4.3); a trailing `-` continues the word, and it runs to a space, `_`, `\|` or `{`, holding any other character. Only a note set takes one: on a chord name, a voicing, `/`, `--`, `N.C.` or `?` it is an error. A dot after the brace is the rhythm's (`{C4}.:maz-`). A hold can't begin or continue a word, so `:/-` is an error. Before, a colon in a slot was an error, so no chart that read changes meaning. |
+| A quote and a brace after a syllable | Claude's recommendation (2026-11-06): a quote also ends a syllable, as it ends any slot (the words read apart, 2.6), and a `{` straight after a syllable is an error, since a note with no space before it has no reading (4.3). |
 | Unsung notes and held syllables | Decided by Kevin (2026-11-06): a note with no syllable is unsung (MusicXML writes no `<lyric>`); `:/` holds the syllable before it over a new note, a melisma (`<extend>`), and a tie holds it without a mark (4.3). |
 | Elisions, and `%` on a voice line | Decided by Kevin (2026-11-06, Claude's recommendation): `~` joins two syllables on one note (`{C4}:the~end`, MusicXML's `<elision>`), and `%` copies a bar's notes, not its syllables, as it doesn't copy words (4.3). |
 | Written bar numbers | Machine output gains `written` on each played bar (A.7), the bar's number as written, so a host can speak a printed score's measure numbers (issue #70: a correction editor for a score read). No change to what any chart means. |

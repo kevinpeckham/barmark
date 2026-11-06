@@ -367,11 +367,15 @@ function sungOn(slot: SimpleSlot, written: string): SimpleSlot | { problem: stri
 		return { problem: "a syllable ends at {; put a space before the next note" };
 	const syllable = readSyllable(written);
 	if (syllable) return { ...slot, syllable };
-	return {
-		problem: written.includes("~")
-			? "~ joins two syllables; write one on each side"
-			: "an empty syllable; write one after the colon, or leave the note unsung",
-	};
+	return { problem: unreadSyllable(written) };
+}
+
+/** Why a syllable token reads as no syllable. */
+function unreadSyllable(written: string): string {
+	if (written === "/-") return "a hold can't begin or continue a word; write :/ alone";
+	return written.includes("~")
+		? "~ joins two syllables; write one on each side"
+		: "an empty syllable; write one after the colon, or leave the note unsung";
 }
 
 /** Whether a voicing's note is one of the chord's, by pitch class. */

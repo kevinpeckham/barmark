@@ -19,7 +19,8 @@ Releases follow the process in [RELEASING.md](RELEASING.md).
   note takes its dot before the colon (`{C4}.:maz-`). The slot gains
   `syllable` (the new `Syllable` type); the printer writes it back, and `%`
   copies a bar's notes without their syllables. A syllable on a chord
-  name, a voicing, `/`, `--`, `N.C.` or `?`, or an empty one, is an error.
+  name, a voicing, `/`, `--`, `N.C.` or `?`, an empty one, or `:/-` (a
+  hold can't begin or continue a word) is an error.
 
 ### Changed
 

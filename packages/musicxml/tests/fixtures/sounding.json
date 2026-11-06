@@ -1685,33 +1685,33 @@
 			]
 		}
 	},
-	"grammar block cbd95b85": {
+	"grammar block dc627670": {
 		"P1": {
 			"notes": [
 				{
 					"pitch": 67,
 					"at": "0/1",
-					"length": "8/3"
+					"length": "2/1"
 				},
 				{
 					"pitch": 71,
-					"at": "8/3",
-					"length": "2/3"
+					"at": "2/1",
+					"length": "1/2"
 				},
 				{
 					"pitch": 67,
-					"at": "10/3",
-					"length": "2/3"
+					"at": "5/2",
+					"length": "1/2"
 				},
 				{
 					"pitch": 71,
-					"at": "4/1",
-					"length": "8/3"
+					"at": "3/1",
+					"length": "2/1"
 				},
 				{
 					"pitch": 69,
-					"at": "20/3",
-					"length": "4/3"
+					"at": "5/1",
+					"length": "1/1"
 				}
 			],
 			"harmonies": []
