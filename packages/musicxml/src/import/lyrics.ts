@@ -64,18 +64,22 @@ function wordsOf(syllables: Syllable[], own: number): string[] {
 	return words;
 }
 
-/** The verses whose last syllable in a system leaves a word open. */
+/** The verses whose last syllable in a system leaves open a word begun in it (a word begun earlier was written there). */
 const openVerses = (own: Map<number, Syllable[]>) =>
 	new Set(
 		[...own]
-			.filter(([, s]) => ["begin", "middle"].includes(s.at(-1)?.syllabic ?? ""))
+			.filter(
+				([, s]) => s.some(startsWord) && ["begin", "middle"].includes(s.at(-1)?.syllabic ?? ""),
+			)
 			.map(([v]) => v),
 	);
 
 /** Takes a syllable that may finish an open word: kept while its verse is open, which an end or a new word closes. */
 function take(out: Map<number, Syllable[]>, open: Set<number>, s: Syllable) {
 	if (!open.has(s.verse)) return;
-	out.set(s.verse, [...(out.get(s.verse) ?? []), s]);
+	const verse = out.get(s.verse);
+	if (verse) verse.push(s);
+	else out.set(s.verse, [s]);
 	if (s.syllabic !== "middle") open.delete(s.verse);
 }
 

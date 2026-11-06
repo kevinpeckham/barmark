@@ -116,3 +116,18 @@ test("a grouped loss carries the measures it names", () => {
 	const [d] = r.diagnostics.filter((x) => x.message.includes("time signature"));
 	expect(d?.measures).toEqual(["1", "2", "3", "4", "5"]);
 });
+
+/** A lead sheet whose every syllable continues a word that never ends: each system leaves one open. */
+const neverClosed = (count: number) =>
+	score(
+		count,
+		(i) =>
+			`${i === 0 ? "<attributes><divisions>1</divisions><time><beats>4</beats><beat-type>4</beat-type></time></attributes>" : ""}${harmony}<note><pitch><step>C</step><octave>5</octave></pitch><duration>4</duration><voice>1</voice><lyric number="1"><syllabic>${i === 0 ? "begin" : "middle"}</syllabic><text>la</text></lyric></note>`,
+	);
+
+test("a word that never ends doesn't make each system read to the end of the piece", () => {
+	const big = timed(neverClosed(4000));
+	expect(big.text).not.toBe("");
+	expect(big.ms).toBeLessThan(5000);
+	expect(big.ms / timed(neverClosed(400)).ms).toBeLessThan(25);
+});
