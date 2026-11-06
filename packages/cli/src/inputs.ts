@@ -44,6 +44,16 @@ function readText(full: string, shown: string): string {
 	}
 }
 
+/** A file's raw bytes, with the same complaints as a chart that can't be read. */
+export function readBytes(path: string, io: Io): Buffer {
+	const [full] = filesFor(path, io, false);
+	try {
+		return readFileSync(full as string);
+	} catch {
+		throw new UsageError(`cannot read ${path}`);
+	}
+}
+
 export async function readCharts(
 	paths: string[],
 	io: Io,

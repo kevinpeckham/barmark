@@ -1,0 +1,322 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  A band score written by hand for barmark's MusicXML import tests:
+  guitar and piano comp in slashes, agreeing in the intro and differing
+  in the verse (Morning Song's shape), over a bass line with no chord
+  symbols.
+  Copyright (c) 2026 Kevin Peckham. MIT licence, as the repository.
+  scripts/musescore-fixtures.ts converts it with MuseScore 4.
+-->
+<museScore version="4.70">
+  <Score>
+    <Division>480</Division>
+    <metaTag name="workTitle">Morning Band</metaTag>
+    <Part id="1">
+      <Staff id="1"/>
+      <trackName>Electric Guitar</trackName>
+      <Instrument id="electric-guitar">
+        <longName>Electric Guitar</longName>
+        <shortName>El. Gtr.</shortName>
+        <transposeDiatonic>-7</transposeDiatonic>
+        <transposeChromatic>-12</transposeChromatic>
+        <instrumentId>pluck.guitar.electric</instrumentId>
+        <clef>G8vb</clef>
+        <Channel><program value="27"/></Channel>
+      </Instrument>
+    </Part>
+    <Part id="2">
+      <Staff id="2">
+        <bracket type="1" span="2" col="1" visible="1"/>
+        <barLineSpan>1</barLineSpan>
+      </Staff>
+      <Staff id="3"/>
+      <trackName>Piano</trackName>
+      <Instrument id="piano">
+        <longName>Piano</longName>
+        <shortName>Pno.</shortName>
+        <instrumentId>keyboard.piano</instrumentId>
+        <clef staff="2">F</clef>
+      </Instrument>
+    </Part>
+    <Part id="3">
+      <Staff id="4"/>
+      <trackName>Electric Bass</trackName>
+      <Instrument id="electric-bass">
+        <longName>Electric Bass</longName>
+        <shortName>El. B.</shortName>
+        <transposeDiatonic>-7</transposeDiatonic>
+        <transposeChromatic>-12</transposeChromatic>
+        <instrumentId>pluck.bass.electric</instrumentId>
+        <clef>F8vb</clef>
+        <Channel><program value="33"/></Channel>
+      </Instrument>
+    </Part>
+    <Staff id="1">
+      <VBox>
+        <height>10</height>
+        <Text><style>title</style><text>Morning Band</text></Text>
+      </VBox>
+      <!-- 1 G -->
+      <Measure>
+        <voice>
+          <KeySig><concertKey>1</concertKey></KeySig>
+          <TimeSig><sigN>4</sigN><sigD>4</sigD></TimeSig>
+          <Tempo><tempo>1.6</tempo><followText>1</followText><text><sym>metNoteQuarterUp</sym> = 96</text></Tempo>
+          <StaffText><text><b>Intro</b></text></StaffText>
+          <Harmony><harmonyInfo><name></name><root>15</root></harmonyInfo></Harmony>
+          <Chord><durationType>quarter</durationType><Note><pitch>59</pitch><tpc>19</tpc><head>slash</head><fixed>1</fixed><fixedLine>4</fixedLine><play>0</play></Note></Chord>
+          <Chord><durationType>quarter</durationType><Note><pitch>59</pitch><tpc>19</tpc><head>slash</head><fixed>1</fixed><fixedLine>4</fixedLine><play>0</play></Note></Chord>
+          <Chord><durationType>quarter</durationType><Note><pitch>59</pitch><tpc>19</tpc><head>slash</head><fixed>1</fixed><fixedLine>4</fixedLine><play>0</play></Note></Chord>
+          <Chord><durationType>quarter</durationType><Note><pitch>59</pitch><tpc>19</tpc><head>slash</head><fixed>1</fixed><fixedLine>4</fixedLine><play>0</play></Note></Chord>
+        </voice>
+      </Measure>
+      <!-- 2 C -->
+      <Measure>
+        <voice>
+          <Harmony><harmonyInfo><name></name><root>14</root></harmonyInfo></Harmony>
+          <Chord><durationType>quarter</durationType><Note><pitch>59</pitch><tpc>19</tpc><head>slash</head><fixed>1</fixed><fixedLine>4</fixedLine><play>0</play></Note></Chord>
+          <Chord><durationType>quarter</durationType><Note><pitch>59</pitch><tpc>19</tpc><head>slash</head><fixed>1</fixed><fixedLine>4</fixedLine><play>0</play></Note></Chord>
+          <Chord><durationType>quarter</durationType><Note><pitch>59</pitch><tpc>19</tpc><head>slash</head><fixed>1</fixed><fixedLine>4</fixedLine><play>0</play></Note></Chord>
+          <Chord><durationType>quarter</durationType><Note><pitch>59</pitch><tpc>19</tpc><head>slash</head><fixed>1</fixed><fixedLine>4</fixedLine><play>0</play></Note></Chord>
+        </voice>
+      </Measure>
+      <!-- 3 G -->
+      <Measure>
+        <voice>
+          <Harmony><harmonyInfo><name></name><root>15</root></harmonyInfo></Harmony>
+          <Chord><durationType>quarter</durationType><Note><pitch>59</pitch><tpc>19</tpc><head>slash</head><fixed>1</fixed><fixedLine>4</fixedLine><play>0</play></Note></Chord>
+          <Chord><durationType>quarter</durationType><Note><pitch>59</pitch><tpc>19</tpc><head>slash</head><fixed>1</fixed><fixedLine>4</fixedLine><play>0</play></Note></Chord>
+          <Chord><durationType>quarter</durationType><Note><pitch>59</pitch><tpc>19</tpc><head>slash</head><fixed>1</fixed><fixedLine>4</fixedLine><play>0</play></Note></Chord>
+          <Chord><durationType>quarter</durationType><Note><pitch>59</pitch><tpc>19</tpc><head>slash</head><fixed>1</fixed><fixedLine>4</fixedLine><play>0</play></Note></Chord>
+        </voice>
+      </Measure>
+      <!-- 4 D -->
+      <Measure>
+        <voice>
+          <Harmony><harmonyInfo><name></name><root>16</root></harmonyInfo></Harmony>
+          <Chord><durationType>quarter</durationType><Note><pitch>59</pitch><tpc>19</tpc><head>slash</head><fixed>1</fixed><fixedLine>4</fixedLine><play>0</play></Note></Chord>
+          <Chord><durationType>quarter</durationType><Note><pitch>59</pitch><tpc>19</tpc><head>slash</head><fixed>1</fixed><fixedLine>4</fixedLine><play>0</play></Note></Chord>
+          <Chord><durationType>quarter</durationType><Note><pitch>59</pitch><tpc>19</tpc><head>slash</head><fixed>1</fixed><fixedLine>4</fixedLine><play>0</play></Note></Chord>
+          <Chord><durationType>quarter</durationType><Note><pitch>59</pitch><tpc>19</tpc><head>slash</head><fixed>1</fixed><fixedLine>4</fixedLine><play>0</play></Note></Chord>
+        </voice>
+      </Measure>
+      <!-- 5 G -->
+      <Measure>
+        <voice>
+          <StaffText><text><b>Verse</b></text></StaffText>
+          <Harmony><harmonyInfo><name></name><root>15</root></harmonyInfo></Harmony>
+          <Chord><durationType>quarter</durationType><Note><pitch>59</pitch><tpc>19</tpc><head>slash</head><fixed>1</fixed><fixedLine>4</fixedLine><play>0</play></Note></Chord>
+          <Chord><durationType>quarter</durationType><Note><pitch>59</pitch><tpc>19</tpc><head>slash</head><fixed>1</fixed><fixedLine>4</fixedLine><play>0</play></Note></Chord>
+          <Chord><durationType>quarter</durationType><Note><pitch>59</pitch><tpc>19</tpc><head>slash</head><fixed>1</fixed><fixedLine>4</fixedLine><play>0</play></Note></Chord>
+          <Chord><durationType>quarter</durationType><Note><pitch>59</pitch><tpc>19</tpc><head>slash</head><fixed>1</fixed><fixedLine>4</fixedLine><play>0</play></Note></Chord>
+        </voice>
+      </Measure>
+      <!-- 6 C -->
+      <Measure>
+        <voice>
+          <Harmony><harmonyInfo><name></name><root>14</root></harmonyInfo></Harmony>
+          <Chord><durationType>quarter</durationType><Note><pitch>59</pitch><tpc>19</tpc><head>slash</head><fixed>1</fixed><fixedLine>4</fixedLine><play>0</play></Note></Chord>
+          <Chord><durationType>quarter</durationType><Note><pitch>59</pitch><tpc>19</tpc><head>slash</head><fixed>1</fixed><fixedLine>4</fixedLine><play>0</play></Note></Chord>
+          <Chord><durationType>quarter</durationType><Note><pitch>59</pitch><tpc>19</tpc><head>slash</head><fixed>1</fixed><fixedLine>4</fixedLine><play>0</play></Note></Chord>
+          <Chord><durationType>quarter</durationType><Note><pitch>59</pitch><tpc>19</tpc><head>slash</head><fixed>1</fixed><fixedLine>4</fixedLine><play>0</play></Note></Chord>
+        </voice>
+      </Measure>
+      <!-- 7 G -->
+      <Measure>
+        <voice>
+          <Harmony><harmonyInfo><name></name><root>15</root></harmonyInfo></Harmony>
+          <Chord><durationType>quarter</durationType><Note><pitch>59</pitch><tpc>19</tpc><head>slash</head><fixed>1</fixed><fixedLine>4</fixedLine><play>0</play></Note></Chord>
+          <Chord><durationType>quarter</durationType><Note><pitch>59</pitch><tpc>19</tpc><head>slash</head><fixed>1</fixed><fixedLine>4</fixedLine><play>0</play></Note></Chord>
+          <Chord><durationType>quarter</durationType><Note><pitch>59</pitch><tpc>19</tpc><head>slash</head><fixed>1</fixed><fixedLine>4</fixedLine><play>0</play></Note></Chord>
+          <Chord><durationType>quarter</durationType><Note><pitch>59</pitch><tpc>19</tpc><head>slash</head><fixed>1</fixed><fixedLine>4</fixedLine><play>0</play></Note></Chord>
+        </voice>
+      </Measure>
+      <!-- 8 D -->
+      <Measure>
+        <voice>
+          <Harmony><harmonyInfo><name></name><root>16</root></harmonyInfo></Harmony>
+          <Chord><durationType>quarter</durationType><Note><pitch>59</pitch><tpc>19</tpc><head>slash</head><fixed>1</fixed><fixedLine>4</fixedLine><play>0</play></Note></Chord>
+          <Chord><durationType>quarter</durationType><Note><pitch>59</pitch><tpc>19</tpc><head>slash</head><fixed>1</fixed><fixedLine>4</fixedLine><play>0</play></Note></Chord>
+          <Chord><durationType>quarter</durationType><Note><pitch>59</pitch><tpc>19</tpc><head>slash</head><fixed>1</fixed><fixedLine>4</fixedLine><play>0</play></Note></Chord>
+          <Chord><durationType>quarter</durationType><Note><pitch>59</pitch><tpc>19</tpc><head>slash</head><fixed>1</fixed><fixedLine>4</fixedLine><play>0</play></Note></Chord>
+          <BarLine><subtype>end</subtype></BarLine>
+        </voice>
+      </Measure>
+    </Staff>
+    <Staff id="2">
+      <!-- 1 G -->
+      <Measure>
+        <voice>
+          <KeySig><concertKey>1</concertKey></KeySig>
+          <TimeSig><sigN>4</sigN><sigD>4</sigD></TimeSig>
+          <Harmony><harmonyInfo><name></name><root>15</root></harmonyInfo></Harmony>
+          <Chord><durationType>quarter</durationType><Note><pitch>71</pitch><tpc>19</tpc><head>slash</head><fixed>1</fixed><fixedLine>4</fixedLine><play>0</play></Note></Chord>
+          <Chord><durationType>quarter</durationType><Note><pitch>71</pitch><tpc>19</tpc><head>slash</head><fixed>1</fixed><fixedLine>4</fixedLine><play>0</play></Note></Chord>
+          <Chord><durationType>quarter</durationType><Note><pitch>71</pitch><tpc>19</tpc><head>slash</head><fixed>1</fixed><fixedLine>4</fixedLine><play>0</play></Note></Chord>
+          <Chord><durationType>quarter</durationType><Note><pitch>71</pitch><tpc>19</tpc><head>slash</head><fixed>1</fixed><fixedLine>4</fixedLine><play>0</play></Note></Chord>
+        </voice>
+      </Measure>
+      <!-- 2 C -->
+      <Measure>
+        <voice>
+          <Harmony><harmonyInfo><name></name><root>14</root></harmonyInfo></Harmony>
+          <Chord><durationType>quarter</durationType><Note><pitch>71</pitch><tpc>19</tpc><head>slash</head><fixed>1</fixed><fixedLine>4</fixedLine><play>0</play></Note></Chord>
+          <Chord><durationType>quarter</durationType><Note><pitch>71</pitch><tpc>19</tpc><head>slash</head><fixed>1</fixed><fixedLine>4</fixedLine><play>0</play></Note></Chord>
+          <Chord><durationType>quarter</durationType><Note><pitch>71</pitch><tpc>19</tpc><head>slash</head><fixed>1</fixed><fixedLine>4</fixedLine><play>0</play></Note></Chord>
+          <Chord><durationType>quarter</durationType><Note><pitch>71</pitch><tpc>19</tpc><head>slash</head><fixed>1</fixed><fixedLine>4</fixedLine><play>0</play></Note></Chord>
+        </voice>
+      </Measure>
+      <!-- 3 G -->
+      <Measure>
+        <voice>
+          <Harmony><harmonyInfo><name></name><root>15</root></harmonyInfo></Harmony>
+          <Chord><durationType>quarter</durationType><Note><pitch>71</pitch><tpc>19</tpc><head>slash</head><fixed>1</fixed><fixedLine>4</fixedLine><play>0</play></Note></Chord>
+          <Chord><durationType>quarter</durationType><Note><pitch>71</pitch><tpc>19</tpc><head>slash</head><fixed>1</fixed><fixedLine>4</fixedLine><play>0</play></Note></Chord>
+          <Chord><durationType>quarter</durationType><Note><pitch>71</pitch><tpc>19</tpc><head>slash</head><fixed>1</fixed><fixedLine>4</fixedLine><play>0</play></Note></Chord>
+          <Chord><durationType>quarter</durationType><Note><pitch>71</pitch><tpc>19</tpc><head>slash</head><fixed>1</fixed><fixedLine>4</fixedLine><play>0</play></Note></Chord>
+        </voice>
+      </Measure>
+      <!-- 4 D -->
+      <Measure>
+        <voice>
+          <Harmony><harmonyInfo><name></name><root>16</root></harmonyInfo></Harmony>
+          <Chord><durationType>quarter</durationType><Note><pitch>71</pitch><tpc>19</tpc><head>slash</head><fixed>1</fixed><fixedLine>4</fixedLine><play>0</play></Note></Chord>
+          <Chord><durationType>quarter</durationType><Note><pitch>71</pitch><tpc>19</tpc><head>slash</head><fixed>1</fixed><fixedLine>4</fixedLine><play>0</play></Note></Chord>
+          <Chord><durationType>quarter</durationType><Note><pitch>71</pitch><tpc>19</tpc><head>slash</head><fixed>1</fixed><fixedLine>4</fixedLine><play>0</play></Note></Chord>
+          <Chord><durationType>quarter</durationType><Note><pitch>71</pitch><tpc>19</tpc><head>slash</head><fixed>1</fixed><fixedLine>4</fixedLine><play>0</play></Note></Chord>
+        </voice>
+      </Measure>
+      <!-- 5 G/B -->
+      <Measure>
+        <voice>
+          <Harmony><harmonyInfo><name></name><root>15</root><bass>19</bass></harmonyInfo></Harmony>
+          <Chord><durationType>quarter</durationType><Note><pitch>71</pitch><tpc>19</tpc><head>slash</head><fixed>1</fixed><fixedLine>4</fixedLine><play>0</play></Note></Chord>
+          <Chord><durationType>quarter</durationType><Note><pitch>71</pitch><tpc>19</tpc><head>slash</head><fixed>1</fixed><fixedLine>4</fixedLine><play>0</play></Note></Chord>
+          <Chord><durationType>quarter</durationType><Note><pitch>71</pitch><tpc>19</tpc><head>slash</head><fixed>1</fixed><fixedLine>4</fixedLine><play>0</play></Note></Chord>
+          <Chord><durationType>quarter</durationType><Note><pitch>71</pitch><tpc>19</tpc><head>slash</head><fixed>1</fixed><fixedLine>4</fixedLine><play>0</play></Note></Chord>
+        </voice>
+      </Measure>
+      <!-- 6 C -->
+      <Measure>
+        <voice>
+          <Harmony><harmonyInfo><name></name><root>14</root></harmonyInfo></Harmony>
+          <Chord><durationType>quarter</durationType><Note><pitch>71</pitch><tpc>19</tpc><head>slash</head><fixed>1</fixed><fixedLine>4</fixedLine><play>0</play></Note></Chord>
+          <Chord><durationType>quarter</durationType><Note><pitch>71</pitch><tpc>19</tpc><head>slash</head><fixed>1</fixed><fixedLine>4</fixedLine><play>0</play></Note></Chord>
+          <Chord><durationType>quarter</durationType><Note><pitch>71</pitch><tpc>19</tpc><head>slash</head><fixed>1</fixed><fixedLine>4</fixedLine><play>0</play></Note></Chord>
+          <Chord><durationType>quarter</durationType><Note><pitch>71</pitch><tpc>19</tpc><head>slash</head><fixed>1</fixed><fixedLine>4</fixedLine><play>0</play></Note></Chord>
+        </voice>
+      </Measure>
+      <!-- 7 Em -->
+      <Measure>
+        <voice>
+          <Harmony><harmonyInfo><name>m</name><root>18</root></harmonyInfo></Harmony>
+          <Chord><durationType>quarter</durationType><Note><pitch>71</pitch><tpc>19</tpc><head>slash</head><fixed>1</fixed><fixedLine>4</fixedLine><play>0</play></Note></Chord>
+          <Chord><durationType>quarter</durationType><Note><pitch>71</pitch><tpc>19</tpc><head>slash</head><fixed>1</fixed><fixedLine>4</fixedLine><play>0</play></Note></Chord>
+          <Chord><durationType>quarter</durationType><Note><pitch>71</pitch><tpc>19</tpc><head>slash</head><fixed>1</fixed><fixedLine>4</fixedLine><play>0</play></Note></Chord>
+          <Chord><durationType>quarter</durationType><Note><pitch>71</pitch><tpc>19</tpc><head>slash</head><fixed>1</fixed><fixedLine>4</fixedLine><play>0</play></Note></Chord>
+        </voice>
+      </Measure>
+      <!-- 8 D -->
+      <Measure>
+        <voice>
+          <Harmony><harmonyInfo><name></name><root>16</root></harmonyInfo></Harmony>
+          <Chord><durationType>quarter</durationType><Note><pitch>71</pitch><tpc>19</tpc><head>slash</head><fixed>1</fixed><fixedLine>4</fixedLine><play>0</play></Note></Chord>
+          <Chord><durationType>quarter</durationType><Note><pitch>71</pitch><tpc>19</tpc><head>slash</head><fixed>1</fixed><fixedLine>4</fixedLine><play>0</play></Note></Chord>
+          <Chord><durationType>quarter</durationType><Note><pitch>71</pitch><tpc>19</tpc><head>slash</head><fixed>1</fixed><fixedLine>4</fixedLine><play>0</play></Note></Chord>
+          <Chord><durationType>quarter</durationType><Note><pitch>71</pitch><tpc>19</tpc><head>slash</head><fixed>1</fixed><fixedLine>4</fixedLine><play>0</play></Note></Chord>
+          <BarLine><subtype>end</subtype></BarLine>
+        </voice>
+      </Measure>
+    </Staff>
+    <Staff id="3">
+      <Measure>
+        <voice>
+          <KeySig><concertKey>1</concertKey></KeySig>
+          <TimeSig><sigN>4</sigN><sigD>4</sigD></TimeSig>
+          <Rest><durationType>measure</durationType><duration>4/4</duration></Rest>
+        </voice>
+      </Measure>
+      <Measure>
+        <voice>
+          <Rest><durationType>measure</durationType><duration>4/4</duration></Rest>
+        </voice>
+      </Measure>
+      <Measure>
+        <voice>
+          <Rest><durationType>measure</durationType><duration>4/4</duration></Rest>
+        </voice>
+      </Measure>
+      <Measure>
+        <voice>
+          <Rest><durationType>measure</durationType><duration>4/4</duration></Rest>
+        </voice>
+      </Measure>
+      <Measure>
+        <voice>
+          <Rest><durationType>measure</durationType><duration>4/4</duration></Rest>
+        </voice>
+      </Measure>
+      <Measure>
+        <voice>
+          <Rest><durationType>measure</durationType><duration>4/4</duration></Rest>
+        </voice>
+      </Measure>
+      <Measure>
+        <voice>
+          <Rest><durationType>measure</durationType><duration>4/4</duration></Rest>
+        </voice>
+      </Measure>
+      <Measure>
+        <voice>
+          <Rest><durationType>measure</durationType><duration>4/4</duration></Rest>
+          <BarLine><subtype>end</subtype></BarLine>
+        </voice>
+      </Measure>
+    </Staff>
+    <Staff id="4">
+      <Measure>
+        <voice>
+          <KeySig><concertKey>1</concertKey></KeySig>
+          <TimeSig><sigN>4</sigN><sigD>4</sigD></TimeSig>
+          <Chord><durationType>whole</durationType><Note><pitch>31</pitch><tpc>15</tpc></Note></Chord>
+        </voice>
+      </Measure>
+      <Measure>
+        <voice>
+          <Chord><durationType>whole</durationType><Note><pitch>36</pitch><tpc>14</tpc></Note></Chord>
+        </voice>
+      </Measure>
+      <Measure>
+        <voice>
+          <Chord><durationType>whole</durationType><Note><pitch>31</pitch><tpc>15</tpc></Note></Chord>
+        </voice>
+      </Measure>
+      <Measure>
+        <voice>
+          <Chord><durationType>whole</durationType><Note><pitch>38</pitch><tpc>16</tpc></Note></Chord>
+        </voice>
+      </Measure>
+      <Measure>
+        <voice>
+          <Chord><durationType>whole</durationType><Note><pitch>35</pitch><tpc>19</tpc></Note></Chord>
+        </voice>
+      </Measure>
+      <Measure>
+        <voice>
+          <Chord><durationType>whole</durationType><Note><pitch>36</pitch><tpc>14</tpc></Note></Chord>
+        </voice>
+      </Measure>
+      <Measure>
+        <voice>
+          <Chord><durationType>whole</durationType><Note><pitch>40</pitch><tpc>18</tpc></Note></Chord>
+        </voice>
+      </Measure>
+      <Measure>
+        <voice>
+          <Chord><durationType>whole</durationType><Note><pitch>38</pitch><tpc>16</tpc></Note></Chord>
+          <BarLine><subtype>end</subtype></BarLine>
+        </voice>
+      </Measure>
+    </Staff>
+  </Score>
+</museScore>

@@ -65,6 +65,76 @@ showed the rule needed refining.
 
 ## Performance and robustness
 
+### fast-xml-parser counts `&amp;` against the entity cap, and leaves `&#233;` alone (2026-11-06, MusicXML import)
+
+- **The symptom.** A score with more than 1,000 `&amp;`, `&apos;` or
+  `&lt;` (a long lyric sheet, a part named "Bass & Drums" in every
+  measure's words) was refused as "not well-formed XML"; and `&#233;`
+  came through as the literal text `&#233;` in titles, lyrics and part
+  names.
+- **The cause.** `processEntities.maxTotalExpansions`, set to 1,000 as a
+  billion-laughs bound, counts every replacement, the five predefined
+  entities included, not only the DOCTYPE's own. Numeric character
+  references are decoded only with `htmlEntities: true`.
+- **The fix.** `tree.ts` raises `maxTotalExpansions` to 10,000,000 and
+  keeps the bounds that stop billion laughs (expanded length 100,000,
+  depth 10, 100 entities); it sets `htmlEntities: true`, and the control
+  characters are still stripped after decoding, so `&#27;` can't reach
+  a terminal. Tested with 5,000 `&apos;` beside the billion-laughs test.
+
+### A search inside a loop over measures turns a hostile file into a slow one (2026-11-06, MusicXML import)
+
+- **The symptom.** 5,000 measures each with an unwritable time signature
+  took 2.2 s to import; one measure of 3,000 notes on two staves with 200
+  chord symbols at odd offsets took 8.9 s.
+- **The cause.** Lookups written as `findIndex`, `find`, `filter` or
+  `includes` inside loops and sort comparators: the meter losses sorted
+  by finding each measure's index twice per comparison, snapping chords
+  searched the kept onsets for each chord and then tried every count of
+  snapped chords, and merging staves searched the upper staff for each
+  low note. Each is fine on a real score and quadratic (or worse) on a
+  file built to be large.
+- **The fix.** Each such lookup is a `Map` or `Set` keyed by index or by
+  onset (fractions are in lowest terms, so `n/d` is a key), or a binary
+  search over a sorted list; at most 16 snap counts are tried before
+  every chord snaps (`grid.ts`). `tests/import/scale.test.ts` holds the
+  large files, timed as the best of two warmed-up runs, and checks that
+  ten times the measures doesn't take a hundred times as long.
+
+### Don't parse your own rendered messages; the file's text is in them (2026-11-06, CLI import)
+
+- **The symptom.** `barmark import` took 13 s on a file whose one
+  measure number was 100,000 digits long, and printed a 100,000-character
+  line.
+- **The cause.** To avoid printing "measure N" twice, the CLI searched
+  each message with `/\d+ measures: /`. Measure numbers and part names
+  come from the file and are copied into messages, so a long run of
+  digits without the suffix made that search quadratic. The reader also
+  kept those names at whatever length the file gave.
+- **The fix.** `ImportDiagnostic` carries `measures` (every measure its
+  message names), and the CLI prints "measure N" only when it is absent,
+  never reading the message. The reader cuts measure numbers to 64
+  characters and part names to 200 (`read.ts`). Tested in
+  `packages/cli/tests/import.test.ts` and `tests/import/scale.test.ts`.
+
+### A repeat inside a repeat exports as two backward repeats, which no program plays as barmark does (2026-11-05, MusicXML import)
+
+- **The symptom.** `|: D | x2` then `| A :|` plays six bars in barmark
+  (D D A, twice). Exported and imported again, it plays four (D D A A);
+  MuseScore 4.7 plays the exported file as five (D D A D A).
+- **The cause.** An export bug, found by the import: `@barmark/musicxml`
+  writes the line's `x2` as a backward repeat on bar 1 and the outer
+  `:|` as another on bar 2, with the one forward repeat on bar 1. MusicXML
+  repeats don't nest, so the second backward repeat is ambiguous: the
+  importer (`packages/musicxml/src/import/order.ts`, as notation
+  programs commonly do) sends it back to the bar after the last finished
+  repeat, MuseScore to bar 1 for one more pass.
+- **The fix.** Not yet made. The export should write a repeated section
+  that holds a repeat of its own in play order, as it already does for
+  repeated sections (`inPlayOrder` in
+  `packages/musicxml/src/measures.ts`). Until then, a nested repeat
+  isn't safe to export.
+
 ### An unanchored `\s*x\s*…$` regex is quadratic on long whitespace (2026-10-31, chart parser)
 
 `/\s*x\s*(\d+|\.\.\.|…)\s*$/` found repeat tails, and on a line of 100 KB
@@ -106,6 +176,80 @@ When converting to a format that keeps written order, test the played
 order, not just the written marks.
 
 ## Design
+
+### Two labelled systems in a row join into one, and still parse cleanly (2026-11-06, MusicXML import)
+
+- **The symptom.** Trading fours (the guitar's four bars, then the
+  piano's) imported as `G | A | B | C | D |` over `P | E | F | G | A |`:
+  both parts playing bars 1 to 4 together, bars 5 to 8 gone. A part
+  entering after four bars came back playing the first four. The chart
+  parsed without an error, so the importer's self-check (parse, look for
+  errors) passed it.
+- **The cause.** Grammar 7.4 joins consecutive labelled lines into one
+  system until a label repeats; blank lines don't separate them. A
+  system whose first row (in score order) names a part the system before
+  didn't write joins that system.
+- **The fix.** Where nothing else (a heading, a directive, text, lyrics)
+  stands between two labelled systems and the second would join the
+  first, the importer writes a cue as a text line between them, naming
+  who stops (`G tacet`) or, when nobody stops, who starts (`G enters`).
+  Text lines have no musical meaning (grammar 1), so this is the writable
+  form that changes nothing that plays; the other options (a resting
+  part's line of `--` or `N.C.`, or a restated directive) each change
+  the music or the score's marks. The grammar has no silent system
+  separator: a question for Kevin. And the guard: `writeChart` now plays
+  the chart back (`selfcheck.ts`) and compares every part's line, bar by
+  bar in play order, with the cells it meant to write; any difference is
+  an "importer bug" error. A property test (`tests/import/property.test.ts`)
+  runs random multi-part scores through it. Its first run found three
+  more charts that didn't read back as written: a bar written in played
+  order (after a jump) starting with `/`, holding a bar that no longer
+  comes before it (now the held chord is written again); `%` copying a
+  bar with a one-bar meter, which every line of a system must write; and
+  a part whose first system of two lines left out its first line, so the
+  reader took another line as the one carrying the harmony (grammar 7.6
+  orders lines by that system; now it writes all of them there). The
+  reviewer's fuzz then found one more: after a section written as a
+  replay, each part's next bar restates the chord it held, but the
+  parts had been merged into one tutti line before the writer knew a
+  replay came first, so both played the first part's chord. Parts are
+  now tutti only if they also agree with every leading hold restated
+  (`playingOf` in `rows.ts`).
+
+### Jumps written only as words don't reach the played order (2026-11-05, MusicXML import)
+
+- **The symptom.** A score whose "D.C. al Fine" or "To Coda" is plain
+  words, with no `<sound dacapo>` or `<sound tocoda>`, imports with its
+  direction cells, but if its repeats can't be paired and the score is
+  written out in played order instead, the jump isn't taken: the
+  written-out chart plays the bars once, in written order.
+- **The cause.** The played order (`playedOrder` in
+  `packages/musicxml/src/import/order.ts`) follows what a program plays,
+  the `<sound>` attributes; words name a jump only for a reader, and are
+  read as direction cells later (`marks.ts`).
+- **The fix.** None yet: it only matters for a file that both writes its
+  jumps as words and has repeats barmark can't write. The written-out
+  chart's warning says it was written out; the jump's cell is still on
+  its bar. If such files turn up, `playedOrder` could take the jump the
+  words name.
+
+### A chart can't write a directive inside, or between, endings (2026-11-05, MusicXML import)
+
+- **The symptom.** An imported score with a meter or tempo change in a
+  second ending had nowhere to put its `time:` or `tempo:` line: an
+  ending is one bar line, and only text and credits may come between
+  endings (grammar 5.1), so the line made the chart an error.
+- **The cause.** The grammar ties directives to whole lines; scores
+  change meter and tempo anywhere.
+- **The fix.** The importer (`packages/musicxml/src/import/endings.ts`)
+  writes a meter change there as one-bar meters (`[3/4]`) and moves any
+  other directive to the bar after the endings, with a warning. A grammar
+  gap for Kevin, like the next: a text line that would read as something
+  else (`| la |`, `key: G`) has no escape, so the importer prefixes a
+  backslash, which barmark keeps as text (`text.ts`), only when the line
+  would not read as text at all; a text line that merely warns
+  (`Chorus:`) stays as written. Whether barmark should have its own text
+  escape is a grammar question for Kevin.
 
 ### A new grammar section breaks the site before its parser is on npm (2026-11-04, sustain pedal)
 
@@ -205,6 +349,46 @@ when two rules each define "first", test a chart that tells them apart,
 and round-trip it through `format`.
 
 ## Tooling
+
+### Dorico's MusicXML export can't be driven without a dialog, so Dorico import fixtures are exported by hand (2026-11-06, MusicXML import)
+
+- **The symptom.** The import plan's Dorico spike wanted mac-bench to open
+  a file in Dorico and send `File.Export?FilterID=…` over Remote Control.
+  The command list Dorico Elements 6.2 reports (mac-bench's
+  `tests/recordings/spike1.log`) gives `File.Export` an optional
+  `FilterID` but lists no filter IDs, and no command names a file to
+  export to.
+- **The cause.** Dorico already ignores the `File` parameter of
+  `File.Save` and opens the Save dialog (mac-bench FINDINGS). An export
+  that can't be given a path will do the same. A dialog left open on the
+  unattended cloud Mac blocks Remote Control, and with it every mac-bench
+  job, until someone dismisses it by screen sharing. So the spike was not
+  run live.
+- **The fix.** Dorico's MusicXML files for the import tests are exported
+  by hand, once: open each `packages/musicxml/tests/fixtures/import/*.musicxml`
+  in Dorico and choose File > Export > MusicXML. They are checked in as
+  `dorico-*.musicxml` with expected charts. Revisit if a Dorico release
+  documents export filter IDs and a destination parameter.
+
+### MuseScore's AppImage needs `xvfb-run`; it ignores `QT_QPA_PLATFORM=offscreen` (2026-11-05, MusicXML import)
+
+- **The symptom.** `mscore -o out.musicxml in.mscx` on the bench VM, with
+  no display, aborted ("no Qt platform plugin could be initialized")
+  even with `QT_QPA_PLATFORM=offscreen`, though `offscreen` is among the
+  plugins it lists.
+- **The cause.** MuseScore 4 picks its Qt platform itself and still
+  tries `xcb`, which needs a display (and `libxcb-cursor0`).
+- **The fix.** `~/.local/bin/mscore` runs the AppImage under `xvfb-run
+  -a`. It still prints Qt warnings, and its exit code isn't trustworthy,
+  so `scripts/musescore-fixtures.ts` judges a conversion by the file it
+  wrote. The script runs only on the VM; CI reads the checked-in files.
+- **Also from writing `.mscx` by hand:** a note is a MIDI `pitch` plus a
+  `tpc` (its spelling on the line of fifths: F 13, C 14, … D♯ 23), at
+  concert pitch even on a transposing instrument. A wrong `tpc` respells
+  the note without complaint (a D♯ written as C♯ came out of MuseScore
+  as C♯, and the import rightly dropped the voicing it was in). MuseScore
+  4's `.mxl` names its rootfile `score.xml`, so `readMxl` must follow
+  `META-INF/container.xml` rather than look for a `.musicxml` name.
 
 ### TypeScript 7's `tsc` won't run on Node 20.6, though the CLI it builds does (2026-11-02, @barmark/cli)
 
@@ -654,3 +838,24 @@ screenshots and logs land in `.playwright-mcp/` at the repository root,
 untracked: the CLI 0.2.2 gate failed on them after a preview check. They
 are now listed in `.git/info/exclude` on the bench VM (`git status`
 doesn't count excluded files); they are never committed.
+
+### The musicxml build has no DOM types, so `readMxl` types the platform itself (2026-11-05, musicxml)
+
+`readMxl` passed `bun run check` and every test, then failed the package
+build that the CLI's Node test runs: `tsconfig.build.json` sets `lib` to
+`ESNext` alone, with no DOM or Node types, so `DecompressionStream` and
+`TextDecoder` don't exist there, though Bun, Node and browsers all have
+them (the root `tsconfig.json` sees Bun's types). `mxl.ts` now declares
+the slice of the platform it uses (`Platform`, read off `globalThis`),
+which also lets it see a missing `DecompressionStream` and say "reading
+.mxl needs Node 20.12 or later". Run `bun run --filter '*' build` (or the
+whole `bun test`) after adding a platform API to `src/`.
+
+### The round trip's yardstick reuses barmark's `timeline` rather than copying it (2026-11-05, musicxml)
+
+The import's round-trip test needed the barmark package's `timeline`
+(each attack's exact place in its bar), and the plan said to copy it.
+Fallow's duplication check failed the copy at once. barmark's
+`tests/chart/fixtures.ts` now exports `timeline`, and
+`packages/musicxml/tests/import/played.ts` imports it across packages:
+one yardstick for both round trips.

@@ -3,6 +3,7 @@ import { check } from "./check.js";
 import { exportCommand } from "./export.js";
 import { format } from "./format.js";
 import { COMMAND_HELP, HELP } from "./help.js";
+import { importCommand } from "./import.js";
 import { type Io, UsageError } from "./io.js";
 import { part } from "./part.js";
 import { render } from "./render.js";
@@ -15,6 +16,7 @@ export const COMMANDS: Record<string, Command> = {
 	check,
 	export: exportCommand,
 	format,
+	import: importCommand,
 	part,
 	render,
 	transpose,

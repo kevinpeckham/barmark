@@ -54,7 +54,7 @@ export type MeasureContext = {
 
 const LETTER_FIFTHS: Record<string, number> = { F: -1, C: 0, G: 1, D: 2, A: 3, E: 4, B: 5 };
 /** How far each mode's key signature sits from its tonic's major one, in fifths. */
-const MODE_FIFTHS: Record<Key["mode"], number> = {
+export const MODE_FIFTHS: Record<Key["mode"], number> = {
 	major: 0,
 	ionian: 0,
 	lydian: 1,

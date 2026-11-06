@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  A lead sheet written by hand for barmark's MusicXML import tests:
+  a slash intro, then a melody whose notes start on every chord change,
+  two verses of lyrics, and an F Tristan chord barmark can't name.
+  Copyright (c) 2026 Kevin Peckham. MIT licence, as the repository.
+  scripts/musescore-fixtures.ts converts it with MuseScore 4.
+-->
+<museScore version="4.70">
+  <Score>
+    <Division>480</Division>
+    <metaTag name="workTitle">Two Verses</metaTag>
+    <metaTag name="composer">Kevin Peckham</metaTag>
+    <Part id="1">
+      <Staff id="1"/>
+      <trackName>Voice</trackName>
+      <Instrument id="voice">
+        <longName>Voice</longName>
+        <shortName>Vo.</shortName>
+        <instrumentId>voice.vocals</instrumentId>
+      </Instrument>
+    </Part>
+    <Staff id="1">
+      <VBox>
+        <height>10</height>
+        <Text><style>title</style><text>Two Verses</text></Text>
+        <Text><style>composer</style><text>Kevin Peckham</text></Text>
+      </VBox>
+      <!-- 1 Intro: slashes -->
+      <Measure>
+        <voice>
+          <KeySig><concertKey>-1</concertKey></KeySig>
+          <TimeSig><sigN>4</sigN><sigD>4</sigD></TimeSig>
+          <Tempo><tempo>1.666667</tempo><followText>1</followText><text><sym>metNoteQuarterUp</sym> = 100</text></Tempo>
+          <StaffText><text><b>Intro</b></text></StaffText>
+          <Harmony><harmonyInfo><name>maj7</name><root>13</root></harmonyInfo></Harmony>
+          <Chord><durationType>quarter</durationType><Note><pitch>70</pitch><tpc>12</tpc><head>slash</head><fixed>1</fixed><fixedLine>4</fixedLine><play>0</play></Note></Chord>
+          <Chord><durationType>quarter</durationType><Note><pitch>70</pitch><tpc>12</tpc><head>slash</head><fixed>1</fixed><fixedLine>4</fixedLine><play>0</play></Note></Chord>
+          <Chord><durationType>quarter</durationType><Note><pitch>70</pitch><tpc>12</tpc><head>slash</head><fixed>1</fixed><fixedLine>4</fixedLine><play>0</play></Note></Chord>
+          <Chord><durationType>quarter</durationType><Note><pitch>70</pitch><tpc>12</tpc><head>slash</head><fixed>1</fixed><fixedLine>4</fixedLine><play>0</play></Note></Chord>
+        </voice>
+      </Measure>
+      <!-- 2 -->
+      <Measure>
+        <voice>
+          <Harmony><harmonyInfo><name>7</name><root>14</root></harmonyInfo></Harmony>
+          <Chord><durationType>quarter</durationType><Note><pitch>70</pitch><tpc>12</tpc><head>slash</head><fixed>1</fixed><fixedLine>4</fixedLine><play>0</play></Note></Chord>
+          <Chord><durationType>quarter</durationType><Note><pitch>70</pitch><tpc>12</tpc><head>slash</head><fixed>1</fixed><fixedLine>4</fixedLine><play>0</play></Note></Chord>
+          <Chord><durationType>quarter</durationType><Note><pitch>70</pitch><tpc>12</tpc><head>slash</head><fixed>1</fixed><fixedLine>4</fixedLine><play>0</play></Note></Chord>
+          <Chord><durationType>quarter</durationType><Note><pitch>70</pitch><tpc>12</tpc><head>slash</head><fixed>1</fixed><fixedLine>4</fixedLine><play>0</play></Note></Chord>
+        </voice>
+      </Measure>
+      <!-- 3 Verse: Fmaj7, A4 C5 -->
+      <Measure>
+        <voice>
+          <StaffText><text><b>Verse</b></text></StaffText>
+          <Harmony><harmonyInfo><name>maj7</name><root>13</root></harmonyInfo></Harmony>
+          <Chord>
+            <durationType>half</durationType>
+            <Lyrics><syllabic>begin</syllabic><text>Hap</text></Lyrics>
+            <Lyrics><no>1</no><syllabic>begin</syllabic><text>Whis</text></Lyrics>
+            <Note><pitch>69</pitch><tpc>17</tpc></Note>
+          </Chord>
+          <Chord>
+            <durationType>half</durationType>
+            <Lyrics><syllabic>end</syllabic><text>py</text></Lyrics>
+            <Lyrics><no>1</no><syllabic>end</syllabic><text>per</text></Lyrics>
+            <Note><pitch>72</pitch><tpc>14</tpc></Note>
+          </Chord>
+        </voice>
+      </Measure>
+      <!-- 4 Gm7 C7: Bb4 G4 -->
+      <Measure>
+        <voice>
+          <Harmony><harmonyInfo><name>m7</name><root>15</root></harmonyInfo></Harmony>
+          <Chord>
+            <durationType>half</durationType>
+            <Lyrics><syllabic>begin</syllabic><text>morn</text></Lyrics>
+            <Lyrics><no>1</no><syllabic>begin</syllabic><text>eve</text></Lyrics>
+            <Note><pitch>70</pitch><tpc>12</tpc></Note>
+          </Chord>
+          <Harmony><harmonyInfo><name>7</name><root>14</root></harmonyInfo></Harmony>
+          <Chord>
+            <durationType>half</durationType>
+            <Lyrics><syllabic>end</syllabic><text>ing,</text></Lyrics>
+            <Lyrics><no>1</no><syllabic>end</syllabic><text>ning,</text></Lyrics>
+            <Note><pitch>67</pitch><tpc>15</tpc></Note>
+          </Chord>
+        </voice>
+      </Measure>
+      <!-- 5 F Tristan (F B D# G#): G#4 -->
+      <Measure>
+        <voice>
+          <Harmony><harmonyInfo><name>Tristan</name><root>13</root></harmonyInfo></Harmony>
+          <Chord>
+            <durationType>whole</durationType>
+            <Lyrics><text>sing</text></Lyrics>
+            <Lyrics><no>1</no><text>fall</text></Lyrics>
+            <Note><pitch>68</pitch><tpc>22</tpc></Note>
+          </Chord>
+        </voice>
+      </Measure>
+      <!-- 6 F: A4 F4 -->
+      <Measure>
+        <voice>
+          <Harmony><harmonyInfo><name></name><root>13</root></harmonyInfo></Harmony>
+          <Chord>
+            <durationType>half</durationType>
+            <Lyrics><syllabic>begin</syllabic><text>a</text></Lyrics>
+            <Lyrics><no>1</no><text>to</text></Lyrics>
+            <Note><pitch>69</pitch><tpc>17</tpc></Note>
+          </Chord>
+          <Chord>
+            <durationType>half</durationType>
+            <Lyrics><syllabic>end</syllabic><text>long.</text></Lyrics>
+            <Lyrics><no>1</no><text>sleep.</text></Lyrics>
+            <Note><pitch>65</pitch><tpc>13</tpc></Note>
+          </Chord>
+          <BarLine><subtype>end</subtype></BarLine>
+        </voice>
+      </Measure>
+    </Staff>
+  </Score>
+</museScore>

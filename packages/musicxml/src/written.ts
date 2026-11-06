@@ -18,7 +18,7 @@ export function writtenPitch(p: Pitch, by: WrittenInterval): Pitch {
 	const step = STEPS[steps % 7] ?? "C";
 	const octave = Math.floor(steps / 7);
 	const natural = semitones({ step, alter: 0, octave });
-	return { step, alter: semitones(p) + by.chromatic - natural, octave };
+	return { ...p, step, alter: semitones(p) + by.chromatic - natural, octave };
 }
 
 /** A note name (`Bb`, `F#`) written `by` above: for chord roots and slash basses. */

@@ -26,23 +26,34 @@ package.
   `@barmark/musicxml` returns `{ text, diagnostics }`: a barmark chart in
   canonical form (as `barmark format` prints it), and what was dropped,
   approximated or left as `?`. A diagnostic is `{ severity: "error" |
-  "warning", message, part?, measure? }`, `measure` being the file's
-  measure `number` attribute.
+  "warning", message, part?, measure?, measures? }`, `measure` being the
+  file's measure `number` attribute; a diagnostic whose message names
+  its measures ("in 12 measures: 1, 2, 3, …") lists them all in
+  `measures`, so a reader (the CLI) never searches the message. Measure
+  numbers are kept to 64 characters and part names to 200, longer ones
+  cut with "…" (changed while building, for Kevin to confirm).
 - `readMxl(bytes: Uint8Array): Promise<string>` unpacks a compressed
   `.mxl` file to its MusicXML, with no dependency (the platform's
-  `DecompressionStream("deflate-raw")`, in Node 20.6+, Bun and browsers).
+  `DecompressionStream("deflate-raw")`, in Node 20.12+, Bun and browsers).
 - `barmark import <file.musicxml|file.mxl> [--out file.chart.md]
   [--part name]` in `@barmark/cli`, following `export`'s conventions for
   `--out` and output: the chart to standard output or the file,
-  diagnostics on standard error as `file: measure N (Part): message`.
+  diagnostics on standard error as `file: measure N (Part): severity:
+  message`, as `check` prints them (the measure left out when the
+  diagnostic has `measures`, which its message lists).
   Exit 1 when the import produced nothing (an error), else 0.
-- **The chart always parses without errors.** The importer parses its
-  own output; an error there is an importer bug, reported as an error
-  diagnostic (and every test asserts there are none).
+- **The chart always parses without errors, and plays as the file
+  does.** The importer parses and plays its own output, comparing every
+  part's line with what it meant to write; an error or a difference is
+  an importer bug, reported as an error diagnostic (the first three,
+  then how many more), and every test asserts there are none.
 - **Round trip:** every fixture chart within scope (see "Testing"),
   exported and imported, plays the same as the original.
 - **Never throws.** Bad XML, an unsupported structure or a file with
   nothing to import gives an empty `text` and an error diagnostic.
+  Control characters in the file (text, attributes, archive entry names)
+  are dropped, so a score can't put escape sequences into a chart or a
+  message.
 - **The export marks a note set's root** (see "The marked root"), so
   `!` survives a round trip.
 
@@ -74,7 +85,9 @@ package.
 - Output that doesn't parse, or that barmark would reformat.
 - A wall of diagnostics: each kind of loss is reported once per part,
   with a count and the first few measures ("notes read as a melody and
-  left out in 64 measures: 1, 2, 3, …").
+  left out in 64 measures: 1, 2, 3, …"). A loss of the whole score (a
+  meter barmark can't write) is reported once, with no part; a part left
+  out reports none.
 
 ## What it reads
 
@@ -83,7 +96,7 @@ package.
 | `work-title` (else `movement-title`) | `# Title` |
 | `creator` composer, lyricist, arranger; `rights` | credit lines (7.5); typed page `<credit>`s when there are no `creator`s |
 | `<harmony>` | a chord symbol ("Reading a chord symbol"); `kind` `none` is `N.C.` |
-| `<key>` | `key:` (major and minor; another mode as its relative major or minor, with a warning) |
+| `<key>` | `key:` (modes read as written, not as their relative major or minor: barmark has all seven) (changed while building, 2026-11-05: the design said another mode came in as its relative major or minor, with a warning; for Kevin to confirm) |
 | `<time>` | `time:`; a change for one bar that changes back is 2.4's one-bar meter |
 | `<sound tempo>` or a `<metronome>` | `tempo:`; rit. and accel. words as 7.2's gradual changes |
 | `<swing>` (MusicXML 4.0) | `feel:` |
@@ -91,7 +104,7 @@ package.
 | segno, coda, `<sound>` `dalsegno`/`dacapo`/`tocoda`/`fine`, words matching 5.2's table | direction cells |
 | `<rehearsal>` of letters or digits | `@A` |
 | bold `<words>` above, at a bar's start | `## Heading` |
-| `<words>` below the staff | a text line before that bar's row (lyrics, `###` notes) |
+| `<words>` below the staff | a text line before that bar's row (lyrics, `###` notes); a line that would read as something else (`\| la \|`, `key: G`) starts with a backslash, which barmark keeps as text |
 | other `<words>` | words on the bar (2.6) |
 | `<lyric>` syllables | text lines under each row, one per verse ("Lyrics") |
 | a fermata at a bar's end (on the bar line or its last note) | `...` after the bar |
@@ -148,7 +161,11 @@ Chord symbols exported as plain text (older Sibelius and Finale files
 write `<words>Cmaj7</words>`) stay words on their bar, which is honest
 about where they were placed, with one diagnostic: "text that looks like
 chord symbols in 12 measures; the program exported them as text".
-"Looks like" means the whole text parses as a barmark chord symbol.
+"Looks like" means the whole text parses as a barmark chord symbol (a
+lone root letter counts only beside fuller symbols, so section labels
+don't). A file whose chord symbols are only such words has no
+`<harmony>`, so it is still refused, without guessing: the error names
+the words as well as the parts with notes.
 
 ### Lyrics
 
@@ -173,7 +190,7 @@ step.
 - **One diagnostic** says what's lost: "lyrics written as text lines;
   their placement by beat isn't kept".
 - A section that comes back as a replay (see "Sections and repeats")
-  keeps its own lyrics as text lines under its heading, as a verse 2
+  keeps its own lyrics and other text lines under its heading, as a verse 2
   with new words is written in barmark (6: a section of lyrics only
   replays the changes). A section is a replay only if its chords match;
   its words may differ.
@@ -200,13 +217,24 @@ as notes with no `<harmony>`. A note set is therefore indistinguishable,
 bar by bar, from a melody under a held chord, so the importer decides
 per part:
 
-- **A chord part** reads its notes: every chord's span holds slash notes
-  (a plain chord) or one attack of notes held to the span's end (a
-  voicing), and every attack lands exactly on the grid. Attacks with no
-  `<harmony>` are note sets.
+- **A chord part** reads its notes (Claude's call 1, as refined while
+  planning): a `<harmony>` over slash notes is a chord, over notes
+  attacked at its onset a voicing; notes attacked with no `<harmony>`
+  are a note set; slash notes after an attack hold it; a rest is `--`.
+  Every part of a file `@barmark/musicxml` wrote is read this way. In
+  another program's file a part is a chord part only when it writes
+  slash noteheads somewhere, its first line attacks no single notes
+  (a note set needs two or more pitches), and every note lands exactly
+  on the grid; slashes are rhythm only and never count against the
+  grid. A two-staff part whose second staff only doubles the first's
+  rhythm (or sounds under its rests), as the export splits one line by
+  pitch, is one line.
 - **Any other part with chords is a melody part:** its chords are read
   and its notes left out, with one diagnostic. A lead sheet is the usual
-  case.
+  case. The melody's rests never end a chord: once a chord has sounded, a
+  bar with no chord holds it, as lead sheets write chords only on change;
+  only a chord part's own line (slashes, comping) rests. (Changed while
+  building, 2026-11-06; for Kevin to confirm.)
 - **A part with notes and no chords** (a bass line) is read as note sets
   when `@barmark/musicxml` wrote the file (its `<encoding><software>`),
   or when it is named with `--part`; otherwise it is listed in one
@@ -270,8 +298,11 @@ Decided system by system, as the grammar reads several parts (7.4)
   part carrying voicings, note sets or part lines in a system is never
   merged there, since merging would drop its notes.
 - **Resting parts.** A part that rests through a system (no chords, no
-  notes) is left out of it, which the grammar reads as tacet, and
-  doesn't stop the others merging. A part with chord symbols in some
+  notes) is left out of it, which the grammar reads as tacet. Because an
+  unlabelled line makes every part play (7.4), a resting part stops the
+  others merging there: they write labelled lines. (Changed while
+  building, 2026-11-05: grammar 7.4 reads an unlabelled line as every
+  part playing; for Kevin to confirm.) A part with chord symbols in some
   sections only (a guitar's solo) rests elsewhere.
 - **One part throughout** (a lead sheet, or parts that always agree)
   gives a chart with no `part:` lines, unless part lines need a label.
@@ -281,8 +312,11 @@ Decided system by system, as the grammar reads several parts (7.4)
   letters, numbered to tell duplicates apart; `instrument:` when the
   part's `<instrument-name>` (or MIDI program) is one barmark knows, so
   clefs and transposition survive the way back out.
-- **`--part name`** imports one part alone (name or abbreviation, any
-  case), with its notes as note sets when it has no chords.
+- **`--part name`** imports one part alone (its name, abbreviation or
+  id, ignoring case and punctuation), with its notes as note sets when
+  it has no chords. Words on the bars, text lines and lyrics come from
+  that part alone; headings, tempo, repeats and jumps are the score's,
+  read from every part.
 
 ### Sections and repeats
 
@@ -290,10 +324,15 @@ Decided system by system, as the grammar reads several parts (7.4)
   lines) match an earlier section of the same name exactly is written
   as a replay (an empty heading, 6), as charts write it; the export
   writes replays out in full, so this restores how the chart read.
-- Repeats pair within a section (5). A file whose repeats, endings or
-  jumps can't be written that way (a repeat crossing a heading, endings
-  without a repeat, two codas) is written out in played order instead,
-  with a warning, so it still plays the same.
+- Repeats pair within a section (5). A repeat with no endings that
+  spans exactly one line is written `x N` on that line (`| C | G | x2`),
+  and one that spans a whole section `x N` on its heading (`## Chorus
+  x2`).
+- A file whose repeats or endings can't be written that way (a repeat
+  crossing a heading, endings without a repeat) is written out in played
+  order instead, with a warning, so it still plays the same. A jump or
+  direction barmark can't place (a stray Fine, a To Coda with no coda)
+  is dropped with a warning naming it, keeping the repeats.
 
 ### Systems
 
@@ -302,6 +341,13 @@ bars, the grammar's recommended phrasing. A new system starts at every
 heading, repeat mark, ending, direction, `...`, text line and directive,
 and wherever the parts' agreement changes (tutti to labelled, or a part
 starting or stopping).
+Two labelled systems with nothing between them would join into one
+(grammar 7.4), so where the second's first row names a part the first
+didn't write, a cue goes between them as a text line: who stops
+(`Gtr tacet`), else who starts (`Gtr enters`). (Added while building,
+2026-11-06: the grammar has no silent separator; for Kevin to confirm.)
+The importer plays the chart back and compares every part's line with
+what it meant to write; a difference is an "importer bug" error.
 
 ## Testing
 
@@ -381,10 +427,20 @@ songs bump; per RELEASING.md.
 
 ## Claude's calls (for Kevin to check)
 
-1. A part's notes are read only when it is a chord part (every chord's
-   span is slashes or one held attack, every note exactly on the grid);
-   otherwise its chords alone. Parts of notes alone come in only from
-   barmark's files or with `--part`.
+1. A part's notes are read only when it is a chord part; otherwise its
+   chords alone. The span rule first written here ("every chord's span
+   is slashes or one held attack") can't be applied when a span ends in
+   a note set, and a melody whose notes start on every change looks like
+   voicings, so (ruled while planning, 2026-11-05): barmark's own files
+   are read structurally (`<harmony>` over slashes a chord, over notes
+   attacked with it a voicing, notes with no `<harmony>` a note set);
+   another program's part is read that way only when it writes slash
+   noteheads somewhere, its first line has no single-pitch attacks, and
+   every note is exactly on the grid (slashes never count against it).
+   Any other part with chords is a melody part. A two-staff part whose
+   lower staff only doubles the upper's rhythm, or sounds under its
+   rests, is one line. Parts of notes alone come in only from barmark's
+   files or with `--part`; otherwise one warning names them.
 1a. Lyrics: one text line per verse per system, "1."/"2." prefixes when
    there are several verses, from the first part that has lyrics; a
    replayed section keeps its own words.
@@ -402,3 +458,23 @@ songs bump; per RELEASING.md.
 7. The `<?barmark root?>` marker goes inside the root note's `<note>`.
 8. `.mxl` needs no new dependency; XML parsing adds one.
 9. No grammar changes; gaps found go to Kevin as a list.
+
+Found while building (2026-11-05), for Kevin to check:
+
+10. **A resting part stops a tutti line** (see "Parts"). The design
+    said a resting part doesn't stop the others merging, but grammar 7.4
+    reads an unlabelled line as every part playing, so merging would
+    make the resting part play.
+11. **Modes are read as written** (the `<key>` row): barmark has all
+    seven, so a Dorian key stays Dorian instead of becoming its relative
+    major or minor with a warning.
+12. **A melody in thirds reads as voicings.** A part that writes
+    slashes somewhere (a slash intro) and whose melody is two-note
+    attacks on the changes passes the chord-part test, so its melody
+    comes in as voicings and note sets, contrary to the non-goal "a
+    melody never becomes a run of note sets". Telling it apart needs a
+    new melody rule; Kevin's call.
+13. **The text-line escape is a grammar question.** A text line that
+    would read as something else (`| la |`, `key: G`) is written with a
+    leading backslash, which barmark keeps as text; the grammar has no
+    escape of its own. Should it?

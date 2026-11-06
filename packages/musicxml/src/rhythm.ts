@@ -14,6 +14,10 @@ export function frac(n: number, d = 1): Frac {
 export const times = (a: Frac, b: Frac) => frac(a.n * b.n, a.d * b.d);
 export const plus = (a: Frac, b: Frac) => frac(a.n * b.d + b.n * a.d, a.d * b.d);
 export const minus = (a: Frac, b: Frac) => frac(a.n * b.d - b.n * a.d, a.d * b.d);
+export const div = (a: Frac, b: Frac) => frac(a.n * b.d, a.d * b.n);
+export const ZERO: Frac = { n: 0, d: 1 };
+/** -1, 0 or 1 as `a` is less than, equal to or greater than `b`. */
+export const cmp = (a: Frac, b: Frac): -1 | 0 | 1 => Math.sign(a.n * b.d - b.n * a.d) as -1 | 0 | 1;
 const atMost = (a: Frac, b: Frac) => a.n * b.d <= b.n * a.d;
 const before = (a: Frac, b: Frac) => !atMost(b, a);
 

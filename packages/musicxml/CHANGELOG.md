@@ -6,6 +6,69 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- **Import:** `importMusicXml(xml, { part? })` reads a MusicXML
+  `score-partwise` file (MuseScore, Dorico, Sibelius, Finale, or this
+  package's own export) back into a canonical barmark chart: the title
+  and credits (typed page credits when the file names no creators),
+  chord symbols (by meaning, then display text, else `?` with the
+  original kept as words, with a warning), keys (modes as written),
+  meters and one-bar meters, tempo, rit. and accel., the feel, headings,
+  rehearsal marks, words and text lines, repeats (`x N` on a whole line
+  or section), endings and jumps, fermatas, lyrics as text lines,
+  replayed sections, parts (merged into tutti lines where they agree),
+  and a chord part's voicings, note sets and part lines. Where one
+  labelled system would otherwise run into the next (a part stops or
+  enters), a text line such as `Gtr tacet` or `Pno enters` keeps them
+  apart, since the grammar joins consecutive labelled lines. It returns
+  `{ text, diagnostics }` and never throws. A diagnostic is `{ severity,
+  message, part?, measure?, measures? }`: `measure` is the first measure
+  it is about (the file's `number`), and `measures`, when present, every
+  measure its message names, so a program needn't read the message.
+  Measure numbers longer than 64 characters and part names longer than
+  200 are cut with "…". Each kind of loss is one warning per part with
+  a count and the first measures (a loss of the whole score, such as a
+  meter, is reported once, with no part), and a file that gives nothing
+  (bad XML, `score-timewise`, no chord symbols in another
+  program's file) returns empty text and an error. A file with no chord
+  symbols names the parts that hold notes (and any words that look like
+  chord symbols), and `part` (a part's name, abbreviation or id,
+  ignoring case and punctuation) imports one of them as note sets;
+  beside parts with chords, the parts of notes alone are named in one
+  warning. Marks barmark can't write (dynamics and hairpins, slurs and
+  ornaments, grace notes, chord diagrams, a capo, pedal, accents,
+  fermatas within a bar) are one warning each; those on the notes alone
+  aren't reported for a part whose notes are left out anyway.
+  `<other-direction>` text is read as words. Chord symbols marked
+  `print-object="no"` (hidden in the program's score) are imported like
+  any other: they are still the file's harmony. Chord symbols a program
+  exported as plain words stay words, with one warning (a lone root
+  letter, a common section label, counts only beside fuller symbols).
+  Control characters in the file are dropped, so a score can't put
+  escape sequences into a chart or a message; numeric character
+  references (`&#233;`, `&#x266d;`) are decoded first. The XML is read
+  with fixed bounds: at most 100 elements deep, entities expanding to at
+  most 100,000 characters, no external entities. The chart it writes is
+  parsed and played back against what it meant to write; any difference
+  is an `importer bug` error (the first three, then a count). Tested on
+  MuseScore 4 files as well as the export's own.
+- **`readMxl(bytes)`** unpacks a compressed `.mxl` to its MusicXML text
+  with no dependency (`DecompressionStream("deflate-raw")`: Node 20.12
+  or later, Bun, browsers), following `META-INF/container.xml`, else the
+  first `.musicxml` or `.xml`. It reads UTF-8, or UTF-16 with a
+  byte-order mark. It treats the archive as untrusted: at most 1000
+  entries, at most 64 MiB unpacked per entry (checked while inflating),
+  every offset checked, ZIP64 and encrypted entries refused. A bad
+  archive rejects with an `Error` naming the problem.
+- **`decodeXmlBytes(bytes)`** turns a MusicXML file's bytes into text
+  (UTF-8, or UTF-16 with a byte-order mark), as `readMxl` does inside an
+  archive.
+- **A note set's marked root survives:** the root of `{D3 E3! G3 B3}`
+  (and of a voicing) is written as a `<?barmark root?>` processing
+  instruction on its `<note>`, and read back as `!`. Other programs
+  ignore it; nothing sounds or looks different.
+
 ### Documentation
 
 - **README: "In Dorico"** notes what Dorico's MusicXML import does with

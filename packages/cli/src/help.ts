@@ -6,6 +6,7 @@ Commands:
   check <paths…>       Report each chart's errors and warnings
   export <file>        Write a chart as MusicXML (--musicxml)
   format <paths…>      Print or rewrite charts in standard form
+  import <file>        Read a MusicXML score as a chart
   part <label> <file>  Print one part of a chart of several
   render <file>        Write a chart as a standalone HTML page
   transpose <file>     Print a chart in another key
@@ -61,6 +62,16 @@ A standalone HTML page of the chart, with the Edwin font embedded.
   --part <label>           Draw only this part
   --diagnostics            List the chart's problems below it
   --font-url <url>         Link the font instead of embedding it
+`,
+	import: `Usage: barmark import <file> [options]
+
+A MusicXML score (.musicxml, .xml or compressed .mxl; from MuseScore, Dorico, Sibelius, Finale…) as a chart.
+Chord symbols become chords; what the chart can't carry over goes to
+stderr as file: measure N (Part): message. Exits 0 when a chart came out,
+even with warnings; 1 when none did or the .mxl is bad. Does not read stdin.
+
+  --out <file>             Write to a file instead of stdout
+  --part <name>            Import one part alone, its notes as note sets
 `,
 	part: `Usage: barmark part <label> <file> [options]
 
