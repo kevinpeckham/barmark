@@ -58,23 +58,39 @@ function syllableOf(l: Lyric): string | null {
 }
 
 /**
- * The tokens a new note sings, verse by verse; `holding` says which verses
- * hold a syllable over the notes after it, and is kept up to date. A
- * syllable with an extend, or one that continues its word, holds over the
- * unsung notes after it: MuseScore keeps an extend only on a word's last
- * syllable, and draws a held first syllable as hyphens over the notes.
+ * Which verses hold a syllable over the notes after it (`on`), and which
+ * have written a held note's own lyric (an `<extend>` alone, or a stop):
+ * from then on that verse's holds are written, not guessed.
  */
-export function tokensAt(lyrics: Lyric[], holding: Map<number, boolean>): Map<number, string> {
+export type Holds = { on: Map<number, boolean>; written: Set<number> };
+
+export const newHolds = (): Holds => ({ on: new Map(), written: new Set() });
+
+/**
+ * The tokens a new note sings, verse by verse, keeping `holds` up to date.
+ * A held note's own lyric (ours, or an extend's stop) sings `/` and ends
+ * the hold there. A syllable with an extend holds over the unsung notes
+ * after it until then. Until a verse writes a held note's lyric, one that
+ * continues its word holds too: MuseScore keeps an extend only on a
+ * word's last syllable, and draws a held first syllable as hyphens over
+ * the notes.
+ */
+export function tokensAt(lyrics: Lyric[], holds: Holds): Map<number, string> {
 	const out = new Map<number, string>();
 	const byVerse = new Map<number, Lyric>();
 	for (const l of lyrics) if (!byVerse.has(l.verse)) byVerse.set(l.verse, l);
-	for (const verse of new Set([...holding.keys(), ...byVerse.keys()])) {
+	for (const verse of new Set([...holds.on.keys(), ...byVerse.keys()])) {
 		const l = byVerse.get(verse);
 		const token = l ? syllableOf(l) : null;
-		if (l && token !== null) {
+		if (l && l.parts.length === 0) {
+			out.set(verse, "/");
+			holds.on.set(verse, false);
+			holds.written.add(verse);
+		} else if (l && token !== null) {
 			out.set(verse, token);
-			holding.set(verse, l.extend || l.syllabic === "begin" || l.syllabic === "middle");
-		} else if (holding.get(verse)) out.set(verse, "/");
+			const continues = l.syllabic === "begin" || l.syllabic === "middle";
+			holds.on.set(verse, l.extend || (continues && !holds.written.has(verse)));
+		} else if (holds.on.get(verse)) out.set(verse, "/");
 	}
 	return out;
 }

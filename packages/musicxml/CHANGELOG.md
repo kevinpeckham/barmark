@@ -46,6 +46,13 @@ package uses [semantic versioning](https://semver.org/).
   the notes of the bar before it, unsung, is `%` (which copies notes, not
   syllables). A lyric staff's rows stay the voice part's: the chart
   keeps its `part:` lines even where every part plays one tutti line.
+  A melisma ends at the held note that carries its own `<lyric>` (our
+  `<extend/>` alone, or an extend's `type="stop"`): the unsung note or
+  breath after it stays unsung, and a melisma before a repeat's endings
+  no longer holds into the first. A word's first or middle syllable holds
+  over unsung notes, as MuseScore writes a melisma, only until its verse
+  writes such a held note. A lyric row's start holds nothing (as barmark
+  reads it), so a hold the file carries into a new row is written `--`.
 
 - **Export: lyrics** (barmark's grammar 4.3 and 7.7). A syllable on a
   note is a `<lyric number="1">` on it, with `syllabic` (single, begin,

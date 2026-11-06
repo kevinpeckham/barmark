@@ -143,6 +143,22 @@ describe("held syllables", () => {
 		]);
 		expect(sound(importMusicXml(xml)).text).toContain("Vox.Mel | {C4}:glo- {D4}:/ {E4}:ri {F4} |");
 	});
+
+	test("a verse's melisma held into a new section's row is a breath there: a row's start holds nothing", () => {
+		const heading = (text: string) =>
+			`<direction placement="above"><direction-type><words font-weight="bold">${text}</words></direction-type></direction>`;
+		const xml = score([
+			voice([
+				heading("A") +
+					n("C4", 4, lyric("a") + lyric("x", "single", 2, "<extend/>")) +
+					n("D4", 4, lyric("b")),
+				heading("B") + n("E4", 4, lyric("c")) + n("F4", 4, lyric("d") + lyric("y", "single", 2)),
+			]),
+		]);
+		const result = sound(importMusicXml(xml));
+		expect(result.text).toContain("lyrics 2: | -- y");
+		expect(parseChart(result.text).diagnostics).toEqual([]);
+	});
 });
 
 test("an elision comes back as ~", () => {
@@ -359,6 +375,50 @@ V.Mel     | {C4}:one {D4}:two | {E4}:three | x2
 lyrics 2: | uno dos           | tres /     |
 `;
 		expect(sound(importMusicXml(xmlOf(chart))).text).toBe(chart);
+	});
+});
+
+describe("a melisma ends at our held note's extend", () => {
+	test("a row's melisma ends at its held note: the breath after it stays a breath", () => {
+		// 4/4 is the default meter: the import doesn't write it.
+		const chart = "time: 4/4\n| {C4}:la {D4}:li | {E4}:lu |\nlyrics 2: | ho / | -- |\n";
+		const result = sound(importMusicXml(xmlOf(chart)));
+		expect(result.text).toBe(
+			"          | {C4}:la {D4}:li | {E4}:lu |\nlyrics 2: | ho /            | --      |\n",
+		);
+		expect(result.diagnostics).toEqual([]);
+	});
+
+	test("a held note's melisma ends there: the unsung note after it stays unsung", () => {
+		const chart = "| {C4}:la {D4}:/ {E4} {F4}:lo |\n";
+		const result = sound(importMusicXml(xmlOf(`time: 4/4\n${chart}`)));
+		expect(result.text).toBe(chart);
+		expect(result.diagnostics).toEqual([]);
+	});
+
+	test("a melisma before a repeat's endings doesn't hold into the first ending", () => {
+		const chart =
+			"|: {C4}:la {D4}:li |\nlyrics 2: | ho / |\n|1 {E4}:lu :|\n|2 {F4}:lo |\nlyrics 2: | hum |\n";
+		const result = sound(importMusicXml(xmlOf(chart)));
+		// The second ending plays on pass 2 alone, so its verse 1 `lo` is never
+		// sung (barmark warns) and doesn't go out: the rest comes back as written.
+		expect(result.text).toBe(
+			"          |: {C4}:la {D4}:li |\nlyrics 2: | ho /            |\n|1 {E4}:lu :|\n          |2 {F4} |\nlyrics 2: | hum  |\n",
+		);
+		expect(result.diagnostics).toEqual([]);
+	});
+
+	test("an extend stop ends the hold at its note", () => {
+		const xml = score([
+			voice([
+				chord("C") +
+					n("C4", 2, lyric("ah", "single", 1, '<extend type="start"/>')) +
+					n("D4", 2) +
+					n("E4", 2, '<lyric number="1"><extend type="stop"/></lyric>') +
+					n("F4", 2),
+			]),
+		]);
+		expect(sound(importMusicXml(xml)).text).toContain("Vox.Mel | {C4}:ah {D4}:/ {E4}:/ {F4} |");
 	});
 });
 

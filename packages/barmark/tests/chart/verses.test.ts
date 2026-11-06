@@ -209,6 +209,17 @@ describe("verses in play order (spec sections 3 and 4)", () => {
 		]);
 		expect(warnings(`${VOICE}V | {C4}:la | {D4}:/ |\n`)).toEqual([]);
 	});
+	test("a row that starts with / holds nothing, and warns as :/ does", () => {
+		const chart = "| {C4}:a {D4}:b |\nlyrics 2: | / x |\n";
+		expect(warnings(chart)).toMatchObject([
+			{
+				line: 2,
+				message: ":/ holds the syllable before it, and none is sung before it",
+				token: "/",
+			},
+		]);
+		expect(sung(parseChart(chart).bars)).toEqual([["1: a b", "2: x"]]);
+	});
 	test("a bare line that sings, beside a named line", () => {
 		const chart = `${VOICE}V | {G4}:la | {E4}:lo |\nV.Alt | {D4} | {C4} |\nlyrics 2: | a | b |\n`;
 		const p = parseChart(chart);

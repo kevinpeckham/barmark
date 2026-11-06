@@ -58,6 +58,9 @@ Releases follow the process in [RELEASING.md](RELEASING.md).
   A row's `/` where the singing line starts a new note is a held syllable
   there (`{ kind: "held" }`, `note: true`), as `:/` on the notes is: a
   melisma the converters extend and the renderer draws.
+  A row's start holds nothing: a `/` there over a new note sings nothing
+  and warns as a `:/` with nothing sung before it does (so the export
+  writes no `<extend/>` with nothing before it).
 
 ### Changed
 

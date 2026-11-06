@@ -203,39 +203,46 @@ const noteOnsets = (bar: PlayedBar): number[] =>
 
 const HELD: Syllable = { kind: "held" };
 
+/** What a row holds as a cell begins: a syllable, nothing after a breath, or nothing yet (its start). */
+type Held = "sung" | "breath" | "start";
+
 /**
  * A row's cell as played: each syllable at its beat, on a note when one
  * starts there; a `/` holding a syllable over a new note of the melody is
- * held there, as `:/` is (4.3). Over a tie, after a breath or where no
- * note starts, a `/` sings nothing. `sounding`: a syllable is held as the
- * cell begins.
+ * held there, as `:/` is (4.3). Over a tie, after a breath, at the row's
+ * start or where no note starts, a `/` sings nothing; `orphan` says a `/`
+ * over a new note found nothing before it in the row to hold.
  */
 function onBeats(
 	cell: LyricSlot[],
 	bar: PlayedBar,
 	onsets: number[],
-	sounding: boolean,
-): PlayedSyllable[] {
-	let holding = sounding;
-	return slotTimes(cell, bar.meter).flatMap(({ slot, at }): PlayedSyllable[] => {
+	held: Held,
+): { syllables: PlayedSyllable[]; orphan: boolean } {
+	let state = held;
+	let orphan = false;
+	const syllables = slotTimes(cell, bar.meter).flatMap(({ slot, at }): PlayedSyllable[] => {
 		const note = onsets.some((o) => near(o, at));
 		if (slot.kind === "syllable") {
-			holding = true;
+			state = "sung";
 			return [{ at, syllable: slot.syllable, note }];
 		}
-		if (slot.kind === "breath") holding = false;
-		return slot.kind === "hold" && holding && note ? [{ at, syllable: HELD, note }] : [];
+		if (slot.kind === "breath") state = "breath";
+		else if (state === "start" && note) orphan = true;
+		return slot.kind === "hold" && state === "sung" && note ? [{ at, syllable: HELD, note }] : [];
 	});
+	return { syllables, orphan };
 }
 
-/** Whether a row holds a syllable as its cell `i` begins: its last syllable or breath before, a syllable (or none, at its start). */
-function soundingAt(row: LyricsLine, i: number): boolean {
+/** What a row holds as its cell `i` begins: its last syllable or breath before, or nothing at its start. */
+function heldAt(row: LyricsLine, i: number): Held {
 	const before = row.cells
 		.slice(0, i)
 		.flat()
 		.flatMap((s) => (s.kind === "group" ? s.members : [s]))
 		.filter((s) => s.kind !== "hold");
-	return before.at(-1)?.kind !== "breath";
+	const last = before.at(-1);
+	return last === undefined ? "start" : last.kind === "breath" ? "breath" : "sung";
 }
 
 /** The verses a pass sings: outside a repeat every verse; on pass N verse N, or a lone verse on every pass. */
@@ -254,6 +261,8 @@ const listOf = (ns: number[]) =>
 
 /** A verse a bar could sing, and the row that writes it (null for its notes' syllables). */
 type Candidate = { verse: number; row: LyricsLine | null; lyrics: PlayedLyrics };
+
+const HOLDS_NOTHING = ":/ holds the syllable before it, and none is sung before it";
 
 /** A warning reported once per line and message. */
 function warner(diagnostics: ChartDiagnostic[]) {
@@ -292,7 +301,9 @@ function singing(
 		from: BarSource,
 		onsets: number[],
 	): Candidate => {
-		const syllables = onBeats(row.cells[from.bar] ?? [], bar, onsets, soundingAt(row, from.bar));
+		const cell = onBeats(row.cells[from.bar] ?? [], bar, onsets, heldAt(row, from.bar));
+		const syllables = cell.syllables;
+		if (cell.orphan) warn(row.line, HOLDS_NOTHING, "/");
 		const missed = melody ? syllables.find((s) => !s.note) : undefined;
 		if (missed)
 			warn(row.line, `"${textOf(missed)}" falls where the voice starts no note`, textOf(missed));
@@ -314,8 +325,7 @@ function singing(
 	const hold = (bar: PlayedBar, notes: Candidate | undefined) => {
 		for (const s of notes?.lyrics.syllables ?? []) {
 			if (s.syllable.kind === "sung") heard = true;
-			else if (!heard)
-				warn(bar.line, ":/ holds the syllable before it, and none is sung before it", ":/");
+			else if (!heard) warn(bar.line, HOLDS_NOTHING, ":/");
 		}
 	};
 	/** On a pass that sings none of a bar's several verses, say so. */

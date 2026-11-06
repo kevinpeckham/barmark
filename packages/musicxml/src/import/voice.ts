@@ -9,7 +9,7 @@ import { beatsOf, MAX_LINES } from "barmark";
 import { cmp, type Frac, ZERO } from "../rhythm.js";
 import { type Bar, type LineRead, noteSet, readLine } from "./cells.js";
 import { placeBar } from "./grid.js";
-import { type SungEvent, tokensAt, type Words, wordsOf } from "./lyrics.js";
+import { type Holds, newHolds, type SungEvent, tokensAt, type Words, wordsOf } from "./lyrics.js";
 import type { Line } from "./merge.js";
 import type { Attack } from "./read.js";
 import { snapOnsets } from "./snap.js";
@@ -27,7 +27,7 @@ const newNote = (a: Attack) => a.kind === "notes" && !a.tieIn && a.pitches.lengt
  * with verse 1's syllable when it sings, a rest (or a slash, rhythm alone)
  * as `--` once, a tie's continuation as nothing (a hold).
  */
-function attacksOf(attacks: Attack[], holding: Map<number, boolean>, sing: boolean): Placed[] {
+function attacksOf(attacks: Attack[], holding: Holds, sing: boolean): Placed[] {
 	const out: Placed[] = [];
 	for (const a of attacks) {
 		if (newNote(a)) {
@@ -36,7 +36,7 @@ function attacksOf(attacks: Attack[], holding: Map<number, boolean>, sing: boole
 			const symbol = first === undefined ? noteSet(a.pitches) : `${noteSet(a.pitches)}:${first}`;
 			out.push({ at: a.at, symbol, sung: { at: a.at, tokens, otherwise: "--" } });
 		} else if (a.kind !== "notes") {
-			holding.clear();
+			holding.on.clear();
 			if (out.at(-1)?.symbol !== "--") out.push({ at: a.at, symbol: "--", sung: null });
 		}
 	}
@@ -62,13 +62,7 @@ function placed(events: Placed[], bar: Bar): { cell: string; sung: SungEvent[]; 
 }
 
 /** One bar of a melody: its cell (null when it plays no note), its words, whether it snapped, and whether it ends sounding. */
-function voiceBar(
-	attacks: Attack[],
-	bar: Bar,
-	sounding: boolean,
-	holding: Map<number, boolean>,
-	sing: boolean,
-) {
+function voiceBar(attacks: Attack[], bar: Bar, sounding: boolean, holding: Holds, sing: boolean) {
 	const events = attacksOf(attacks, holding, sing);
 	if (!attacks.some((a) => a.kind === "notes"))
 		return { cell: null, sung: [], snapped: false, ends: false };
@@ -85,7 +79,7 @@ function voiceBar(
  */
 function readVoice(bars: Attack[][], shared: Bar[], sing: boolean): VoiceRead {
 	const out: VoiceRead = { cells: [], sung: [], snapped: [] };
-	const holding = new Map<number, boolean>();
+	const holding = newHolds();
 	let sounding = false;
 	shared.forEach((bar, i) => {
 		const read = voiceBar(bars[i] ?? [], bar, sounding, holding, sing);
@@ -194,7 +188,7 @@ export function readSinging(lines: Line[], bars: Bar[], hasChords: boolean): Sun
 
 /** A lyric staff's words: each slash's syllables, a slash with none holding on, a rest a breath. */
 export function staffWords(line: Line, bars: Bar[]): Words {
-	const holding = new Map<number, boolean>();
+	const holding = newHolds();
 	const onsets = bars.map((_, i) =>
 		(line[i] ?? []).flatMap((a): SungEvent[] => {
 			if (a.kind === "rest") return [{ at: a.at, tokens: new Map(), otherwise: "--" }];

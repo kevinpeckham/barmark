@@ -82,13 +82,13 @@ export function versesOf(
 
 /**
  * A row's cells with each `/` read as barmark reads it (grammar 7.7): it
- * holds a syllable only while one is held, from the row's start or its
- * last syllable, and a breath ends that. A `/` with nothing to hold (the
+ * holds a syllable only after one of the row's own, until a breath: at
+ * the row's start it holds nothing. A `/` with nothing to hold (the
  * file held a syllable sung in another order than the chart plays) is
  * written `--`, which it means; the holds are noted for the self-check.
  */
 function settled(cells: string[], bars: RowBar[], verse: number, holds: Verses["holds"]) {
-	let holding = true;
+	let holding = false;
 	return cells
 		.map((cell, c) => {
 			const slots = cell.split(" ");
