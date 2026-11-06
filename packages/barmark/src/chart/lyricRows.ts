@@ -65,6 +65,14 @@ function readCells(
 	return { cells, diagnostics };
 }
 
+/** Why a verse number can't be read, or null: from 1 up to the largest safe integer, so it prints back as written. */
+const verseProblem = (verse: number) => {
+	if (verse === 0) return "a verse is numbered from 1";
+	return verse > Number.MAX_SAFE_INTEGER
+		? `a verse number goes up to ${Number.MAX_SAFE_INTEGER}`
+		: null;
+};
+
 /**
  * A lyric row (grammar 7.7), not yet attached to the bars it covers. Null
  * when the line isn't one, or when it has an error.
@@ -76,13 +84,9 @@ export function readLyricRow(
 	const m = LYRIC_ROW.exec(text);
 	if (!m) return { row: null, diagnostics: [] };
 	const verse = m[1] === undefined ? null : Number(m[1]);
-	if (verse === 0)
-		return {
-			row: null,
-			diagnostics: [
-				{ line, severity: "error", message: "a verse is numbered from 1", token: text },
-			],
-		};
+	const problem = verse === null ? null : verseProblem(verse);
+	if (problem)
+		return { row: null, diagnostics: [{ line, severity: "error", message: problem, token: text }] };
 	const { cells, diagnostics } = readCells(m[2] ?? "", line);
 	const failed = diagnostics.some((d) => d.severity === "error");
 	return { row: failed ? null : { kind: "lyrics", line, verse, cells, covers: [] }, diagnostics };

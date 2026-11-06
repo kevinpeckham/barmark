@@ -557,7 +557,7 @@ This plays `C F G C G G7`, then `C F G C G C`.
   range `|1-3`, or a list `|1,3`. The ending is that one bar line. A long
   ending is a long line.
 - Endings follow the bars of a `|: … :|` repeat, one after another; only
-  text and credit lines may come between them. Every ending but the last closes with
+  text, credit, lyric-row (7.7) and `---` lines may come between them. Every ending but the last closes with
   `:|`, which goes back to `|:`. The last does not: it plays and moves on.
 - The repeat plays as many passes as its highest ending number. Each pass
   plays the bars from `|:` to the first ending, then that pass's ending:
@@ -1020,7 +1020,9 @@ lyrics: | I_got roll-_in' on_the / | beat_and -- I_keep it_up |
   and `~` joins elided syllables (`the~end`). An empty bar, an empty
   syllable (`a__b`, `a~`) and `/-` are **errors**; so is a quote or a
   brace, since a row holds syllables only (Claude's recommendation). The
-  verse number is MusicXML's `<lyric number="N">`.
+  verse number is MusicXML's `<lyric number="N">`; 0, or a number past
+  9007199254740991 (which would not print back as written), is an
+  **error**.
 - **No structure.** A row writes no repeat marks, endings, rehearsal
   marks, directions, fermatas, one-bar meters, `%`, `...` or words:
   those are the bar line's, and in a row `Fine`, `x2`, `@A` and `%` are
@@ -1162,7 +1164,7 @@ keeps what cannot reduce:
 | error | `part:` with no name or no label before `=`, after the first bar, or sharing its line with another directive |
 | error | a credit with no value (`composer:`) |
 | error | a part without a label in a chart of several, two parts with one label, a label starting with `\|`, `#`, `@` or a digit, no space between a label and its `\|` |
-| error | a lyric row with no bar line above it, a bar count other than what it covers, no line left to cover under a replay heading, an empty bar, an empty syllable, `/-`, a quote or a brace, or verse 0 (7.7) |
+| error | a lyric row with no bar line above it, a bar count other than what it covers, no line left to cover under a replay heading, an empty bar, an empty syllable, `/-`, a quote or a brace, or verse 0 or past 9007199254740991 (7.7) |
 | error | lines of a system with different bar counts or different structure (7.4); `%` or a leading `/` after the part was tacet; parts playing one bar in different meters (a `%` copying a one-bar meter) |
 | error | invalid directive value (`time: 4/3`, `tempo: fast`, `rit. to fast`, `feel: lazy`, `feel: swing 80%`, `feel: swing 58`, `feel: straight 55%`) |
 | error | `[n/d]` not at the start of a cell, or with an invalid meter |
@@ -1261,6 +1263,7 @@ human to say whether the band was silent, and the structure line.
 | Lyric rows | Decided by Kevin (2026-11-06): `lyrics:` then a bar line writes syllables on the beats, its bars divided as a chord row's (7.7): `/` holds, `_` splits a slot, `--` is a breath, and a syllable reads as on a note (trailing `-`, `~`), so rap and spoken word are placed by beat with no melody. `lyrics N:` numbers verse N. `lyrics:` followed by anything else stays the `lyricist:` near miss (7.5). Before, a `lyrics:` line was text with that warning. |
 | What a lyric row covers | Claude's recommendation (2026-11-06): the bar line just above it, or in a chart of several parts the system above it, with the same bar count (an error otherwise); under a replay heading, the replayed section's written lines (or systems) in order, one row per line, each verse's rows starting again at the first line. A row with no bar line above it is an error, and a row ends the system it follows (7.7). |
 | A lyric row writes no structure | Claude's recommendation (2026-11-06): every token but `/`, `--` and `_` is a syllable, `Fine`, `x2`, `@A` and `%` included; repeat marks, endings, marks, directions, fermatas, one-bar meters and words are the bar line's, and a fermata, mark or direction has no cell in the row. A quote or a brace in a row is an error, as a row holds syllables only (7.7). |
+| Lines between endings | Decided by Kevin (2026-11-06): a `---` between endings keeps the repeat, as text and credit lines do (5.1), since `---` ends a system and means nothing else; a lyric row under an ending does too, as it only writes words on its ending's bars. Before, either ended the repeat, with false errors. |
 | A lyric row's canonical form | Claude's recommendation (2026-11-06): its slots as written, never reduced; under its bar line or system, labels padded and pipes lined up, the wider of a column's cells setting its width, so a long syllable widens the bar line's cell too, and an unlabelled bar line is indented to the row's pipes, as the design's example writes it. A row under a replay heading prints single-spaced (8). |
 | Written bar numbers | Machine output gains `written` on each played bar (A.7), the bar's number as written, so a host can speak a printed score's measure numbers (issue #70: a correction editor for a score read). No change to what any chart means. |
 

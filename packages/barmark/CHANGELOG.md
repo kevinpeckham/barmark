@@ -30,7 +30,8 @@ Releases follow the process in [RELEASING.md](RELEASING.md).
   `covers`, the source lines of the bar lines it covers. The printer lines
   a row up under its bars, the wider cell of each column setting its
   width. A row with no bar line above it, a wrong bar count, an empty bar
-  or syllable, or a quote or brace is an error.
+  or syllable, a quote or brace, or a verse number of 0 or past
+  `Number.MAX_SAFE_INTEGER` is an error.
 
 ### Changed
 
@@ -38,6 +39,9 @@ Releases follow the process in [RELEASING.md](RELEASING.md).
   backslash, marked `escaped: true`; the printer writes the backslash back.
   The escaped-pipes warning still applies to the rest of the line, and a
   chart whose only text is escaped no longer warns that it has no bar lines.
+- A `---` line between endings no longer ends the repeat (grammar 5.1);
+  like text and credit lines, it may sit between them, and so may a lyric
+  row under an ending.
 - `lyrics:` followed by a bar line is now a lyric row, not text with a
   warning to write `lyricist:`; followed by anything else it still warns.
 

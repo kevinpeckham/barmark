@@ -219,3 +219,22 @@ describe("printing lyric rows (grammar 7.7, section 8)", () => {
 		);
 	});
 });
+
+describe("lyric rows and breaks between endings (review fixes)", () => {
+	const written = (chart: string) => parseChart(chart).bars.map((b) => b.written);
+	test("a lyric row under each ending keeps the repeat", () => {
+		const chart = "|: C | D |\n|1 G | G7 :|\nlyrics: | c | d |\n|2 C | C |\nlyrics: | e | f |\n";
+		expect(parseChart(chart).diagnostics).toEqual([]);
+		expect(written(chart)).toEqual([1, 2, 3, 4, 1, 2, 5, 6]);
+	});
+	test("--- between endings keeps the repeat", () => {
+		const chart = "|: C | D |\n|1 G | G7 :|\n---\n|2 C | C |\n";
+		expect(parseChart(chart).diagnostics).toEqual([]);
+		expect(written(chart)).toEqual([1, 2, 3, 4, 1, 2, 5, 6]);
+	});
+	test("a verse number past the largest safe integer is an error", () => {
+		expect(errors("| C |\nlyrics 99999999999999999999999: | la |\n")).toMatchObject([
+			{ line: 2, message: "a verse number goes up to 9007199254740991" },
+		]);
+	});
+});
