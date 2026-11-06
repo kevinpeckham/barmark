@@ -144,7 +144,7 @@ describe("held syllables", () => {
 		expect(sound(importMusicXml(xml)).text).toContain("Vox.Mel | {C4}:glo- {D4}:/ {E4}:ri {F4} |");
 	});
 
-	test("a verse's melisma held into a new section's row is a breath there: a row's start holds nothing", () => {
+	test("a verse's melisma held into a new section's row holds on there", () => {
 		const heading = (text: string) =>
 			`<direction placement="above"><direction-type><words font-weight="bold">${text}</words></direction-type></direction>`;
 		const xml = score([
@@ -153,6 +153,19 @@ describe("held syllables", () => {
 					n("C4", 4, lyric("a") + lyric("x", "single", 2, "<extend/>")) +
 					n("D4", 4, lyric("b")),
 				heading("B") + n("E4", 4, lyric("c")) + n("F4", 4, lyric("d") + lyric("y", "single", 2)),
+			]),
+		]);
+		const result = sound(importMusicXml(xml));
+		expect(result.text).toContain("lyrics 2: | x /");
+		expect(result.text).toContain("lyrics 2: | / y");
+		expect(parseChart(result.text).diagnostics).toEqual([]);
+	});
+
+	test("a held note before its verse sings anything holds nothing: the row writes --", () => {
+		const xml = score([
+			voice([
+				n("C4", 4, `${lyric("a")}<lyric number="2"><extend type="stop"/></lyric>`) +
+					n("D4", 4, lyric("b") + lyric("y", "single", 2)),
 			]),
 		]);
 		const result = sound(importMusicXml(xml));
@@ -411,6 +424,21 @@ describe("a melisma ends at our held note's extend", () => {
 		expect(result.text).toBe(
 			"          | {C4}:la {D4}:li | {E4}:lu |\nlyrics 2: | ho /            | --      |\n",
 		);
+		expect(result.diagnostics).toEqual([]);
+	});
+
+	test("a verse 2 melisma held across two systems comes back as written", () => {
+		const chart = `${VOX}Vox       | C                 |
+Vox.Mel   | {C4}:a {D4}:b     |
+lyrics 2: | x y               |
+
+## B
+Vox       | G                 |
+Vox.Mel   | {E4}:c {F4}:d     |
+lyrics 2: | / z               |
+`;
+		const result = sound(importMusicXml(xmlOf(chart)));
+		expect(result.text).toBe(printChart(chart));
 		expect(result.diagnostics).toEqual([]);
 	});
 

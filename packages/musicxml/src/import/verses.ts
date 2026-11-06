@@ -19,18 +19,48 @@ export type Verses = {
 	words: Words;
 	from: number;
 	owner: number | null;
-	/** The rows' holds as written, by `holdKey`: those barmark sings, and those it can't (written `--`). */
-	holds: { kept: Set<string>; dropped: Set<string> };
+	/**
+	 * The rows' holds as written, by `holdKey`: those barmark sings, and
+	 * those it can't (written `--`); and each verse's last row: whether it
+	 * ended holding a syllable, which a row starting with `/` holds on, and
+	 * its last bar.
+	 */
+	holds: { kept: Set<string>; dropped: Set<string>; ends: Map<number, RowEnd> };
 };
 
-const newHolds = () => ({ kept: new Set<string>(), dropped: new Set<string>() });
+/** Where a verse's last row ended: holding a syllable or not, at which bar, and whether that bar plays plainly. */
+type RowEnd = { holding: boolean; bar: number; plain: boolean };
+
+const newHolds = () => ({
+	kept: new Set<string>(),
+	dropped: new Set<string>(),
+	ends: new Map<number, RowEnd>(),
+});
+
+/**
+ * What a row starts holding: what its verse's row before it left held,
+ * when barmark is sure to have sung that row just before this one (the
+ * bar before, both playing plainly); else nothing, and a hold the file
+ * carries in is written `--`, which barmark then reads as it means.
+ */
+function carried(bars: RowBar[], verse: number, holds: Verses["holds"]): boolean {
+	const end = holds.ends.get(verse);
+	const first = bars[0];
+	if (!end?.holding || !first || !end.plain) return false;
+	return end.bar + 1 === first.bar && bars.every((b) => b.plain === true);
+}
 
 /** A row's hold as the self-check knows it: the written bar it lies under, its verse and its onset as a share of the bar. */
 const holdKey = (bar: number, verse: number, share: number) =>
 	`${bar}|${verse}|${Math.round(share * 1e6)}`;
 
 /** The bars a row lies under: each one's measure, and the written bar (its index in the writer's bars) it lies under. */
-export type RowBar = { measure: number; bar: number };
+/**
+ * A bar a row covers: its measure, its place among the bars, and whether
+ * it plays plainly, once each time it is reached (no repeat or ending),
+ * so a verse's rows there are sung on every pass.
+ */
+export type RowBar = { measure: number; bar: number; plain?: boolean };
 
 const STAFF_LEFT_OUT = "the lyric staff's words left out: a part sings words of its own";
 
@@ -82,14 +112,15 @@ export function versesOf(
 
 /**
  * A row's cells with each `/` read as barmark reads it (grammar 7.7): it
- * holds a syllable only after one of the row's own, until a breath: at
- * the row's start it holds nothing. A `/` with nothing to hold (the
- * file held a syllable sung in another order than the chart plays) is
- * written `--`, which it means; the holds are noted for the self-check.
+ * holds a syllable only after one of its verse's, until a breath. A row
+ * starts holding what its verse's row before it left held when that is
+ * sure (`carried`), else nothing. A `/` with nothing to hold (the file held a
+ * syllable sung in another order than the chart plays) is written `--`,
+ * which it means; the holds are noted for the self-check.
  */
 function settled(cells: string[], bars: RowBar[], verse: number, holds: Verses["holds"]) {
-	let holding = false;
-	return cells
+	let holding = carried(bars, verse, holds);
+	const out = cells
 		.map((cell, c) => {
 			const slots = cell.split(" ");
 			return slots
@@ -108,6 +139,9 @@ function settled(cells: string[], bars: RowBar[], verse: number, holds: Verses["
 				.join(" ");
 		})
 		.map(breathes);
+	const last = bars.at(-1);
+	if (last) holds.ends.set(verse, { holding, bar: last.bar, plain: last.plain === true });
+	return out;
 }
 
 /** A cell, or a slot of it, that only breathes, written as one breath. */

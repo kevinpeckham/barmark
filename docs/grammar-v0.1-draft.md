@@ -1112,9 +1112,12 @@ lyrics: | I_got roll-_in' on_the / | beat_and -- I_keep it_up |
   with no syllable sung before it, in play order, to hold. A row's `/`
   where the singing line starts a new note holds the syllable before it
   over that note, as `:/` does (4.3, a melisma); over a tie, after a
-  breath, or where no note starts, it only holds. A row's start holds
-  nothing (Claude's recommendation): a `/` there sings nothing, and over a
-  new note warns as a `:/` with nothing before it does.
+  breath, or where no note starts, it only holds. A row starting with `/`
+  holds on what its verse last sang, in play order, as a word held across
+  a line break: unless the verse breathed (`--`) since. Before its verse
+  has sung anything there is nothing to hold (decided by Kevin): the `/`
+  sings nothing, and over a new note warns as a `:/` with nothing before
+  it does.
 - **Verses the passes miss.** A numbered verse no pass sings (`lyrics 3:`
   under bars played `x2`) is a **warning** on its row, and so is a pass
   that sings nothing where other passes sing (pass 3 of an `x3` over two
@@ -1344,7 +1347,7 @@ human to say whether the band was silent, and the structure line.
 | Every syllable written once | Claude's recommendation (2026-11-06): over the same bars, `lyrics 1:` or an unnumbered row under notes with syllables, an unnumbered row among numbered ones, and a verse written twice are errors, and the row sings nothing; a replay's rows may lie under notes with syllables, since they replace the words (7.7). |
 | Each part's syllables are its own | Claude's recommendation (2026-11-06, after review): syllables on a part's notes are that part's verse 1, so a choir chart's parts each sing their own words, and only the singer's syllables make a row over them verse 2 or later; lyric rows stay the singer's (7.7). |
 | Verses the passes miss | Claude's recommendation (2026-11-06, after review): a numbered verse that no pass sings, and a repeat's pass that sings nothing where other passes sing, warn (7.7), so a verse lost to a pass count is never silent. |
-| A row's start, and notes no pass sings | Claude's recommendation (2026-11-06, final review): a lyric row's start holds nothing, so a `/` there over a new note sings nothing and warns as a `:/` with nothing before it does (a held syllable there had nothing to hold, and MusicXML an `<extend>` with no start); and syllables on notes that no pass sings (verse 1 on a second ending) warn on their bar line, as a numbered verse no pass sings does (7.7), so no syllable is lost silently. |
+| A row's start, and notes no pass sings | Decided by Kevin (2026-11-06, final review): a lyric row starting with `/` holds its verse's last syllable, in play order, when the verse hasn't breathed since, so a verse holds a word across a line break; before the verse has sung anything it sings nothing and warns as a `:/` with nothing before it does (a held syllable there had nothing to hold, and MusicXML an `<extend>` with no start). Claude's recommendation: syllables on notes that no pass sings (verse 1 on a second ending) warn on their bar line, as a numbered verse no pass sings does (7.7), so no syllable is lost silently. |
 | A row's hold over a new note | Decided by Kevin (2026-11-06, Task 7 review): a lyric row's `/` where the singing line starts a new note is the held syllable `:/` would write there (4.3, 7.7), so a row's melisma gets MusicXML's `<extend>` and the renderer's extender line; over a tie, after a breath or where no note starts it sings nothing. Before, a row's hold wrote no extension. |
 | Who sings, and against what | Claude's recommendation (2026-11-06): the first part with `instrument: voice`, else the first with syllables on its notes, sings on its first line with syllables, else its first with notes (a lead sheet's melody line); with no singer a row's words are the chart's. A row's syllable where the singing line starts no note warns, as MusicXML hangs syllables on notes, and so does a `:/` with nothing sung before it in play order. Another part's extract leaves the singer's rows out (7.7). |
 | Written bar numbers | Machine output gains `written` on each played bar (A.7), the bar's number as written, so a host can speak a printed score's measure numbers (issue #70: a correction editor for a score read). No change to what any chart means. |

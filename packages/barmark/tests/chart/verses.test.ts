@@ -239,6 +239,25 @@ describe("verses in play order (spec sections 3 and 4)", () => {
 		]);
 		expect(warnings(`${VOICE}V | {C4}:la | {D4}:/ |\n`)).toEqual([]);
 	});
+	test("a row that starts with / holds its verse's syllable from the system before, unless it breathed", () => {
+		const held = "| {C4}:a {D4}:b |\nlyrics 2: | x y |\n| {E4}:c {F4}:d |\nlyrics 2: | / z |\n";
+		expect(parseChart(held).diagnostics).toEqual([]);
+		expect(sung(parseChart(held).bars)).toEqual([
+			["1: a b", "2: x y"],
+			["1: c d", "2: / z"],
+		]);
+		const breathed =
+			"| {C4}:a {D4}:b |\nlyrics 2: | x -- |\n| {E4}:c {F4}:d |\nlyrics 2: | / z |\n";
+		expect(parseChart(breathed).diagnostics).toEqual([]);
+		expect(sung(parseChart(breathed).bars)).toEqual([
+			["1: a b", "2: x"],
+			["1: c d", "2: z"],
+		]);
+		// In play order: pass 2 sings verse 2, whose last syllable is the x before the repeat.
+		const repeat = "| {C4}:a |\nlyrics 2: | x |\n|: {D4}:b :|\nlyrics 2: | / |\n";
+		expect(parseChart(repeat).diagnostics).toEqual([]);
+		expect(sung(parseChart(repeat).bars)).toEqual([["1: a", "2: x"], ["1: b"], ["2: /"]]);
+	});
 	test("a row that starts with / holds nothing, and warns as :/ does", () => {
 		const chart = "| {C4}:a {D4}:b |\nlyrics 2: | / x |\n";
 		expect(warnings(chart)).toMatchObject([

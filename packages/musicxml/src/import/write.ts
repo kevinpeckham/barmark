@@ -61,7 +61,11 @@ function mean(w: Writer, bar: number, as: number): void {
 }
 
 /** Written bar `i` as its rows see it: its measure, and itself. */
-const rowBar = (w: Writer, i: number): RowBar => ({ measure: w.src.bars[i]?.index ?? i, bar: i });
+const rowBar = (w: Writer, i: number): RowBar => {
+	const b = w.src.bars[i];
+	const plain = !!b && !b.opens && b.closes === null && b.ending === null;
+	return { measure: b?.index ?? i, bar: i, plain };
+};
 
 /** The bars `s` as rows see them. */
 const rowBars = (w: Writer, s: Span) =>

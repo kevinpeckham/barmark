@@ -1062,5 +1062,8 @@ was read as holding, so the export wrote an `<extend/>` with no start.
 **Fix:** a held note's own lyric (ours, or an extend's `stop`) sings `/`
 and ends the hold; the begin/middle guess applies only until a verse
 writes such a lyric (`tokensAt` and `Holds` in `import/lyrics.ts`). A
-row's start holds nothing (`heldAt` in barmark's `chart/verses.ts`), and
-the import's `settled` (`import/verses.ts`) mirrors it.
+row starting with `/` holds what its verse last left held in play order
+(`ends` in barmark's `chart/verses.ts`), and nothing before the verse has
+sung; the import's `settled` (`import/verses.ts`) carries the same state
+from row to row. A first cut made every row's start hold nothing, which
+broke a word held across a line break, an ordinary lead-sheet shape.

@@ -69,7 +69,9 @@ line is a lyric row, and a text line's leading `\` is no longer shown.
   A row's `/` where the singing line starts a new note is a held syllable
   there (`{ kind: "held" }`, `note: true`), as `:/` on the notes is: a
   melisma the converters extend and the renderer draws.
-  A row's start holds nothing: a `/` there over a new note sings nothing
+  A row starting with `/` holds on what its verse last sang, in play
+  order, unless the verse breathed since, so a verse holds a word across
+  a line break. Before its verse has sung anything the `/` sings nothing
   and warns as a `:/` with nothing sung before it does (so the export
   writes no `<extend/>` with nothing before it).
 

@@ -203,22 +203,23 @@ const noteOnsets = (bar: PlayedBar): number[] =>
 
 const HELD: Syllable = { kind: "held" };
 
-/** What a row holds as a cell begins: a syllable, nothing after a breath, or nothing yet (its start). */
+/** What a row holds as a cell begins: a syllable, nothing after a breath, or nothing yet (its verse has sung nothing). */
 type Held = "sung" | "breath" | "start";
 
 /**
  * A row's cell as played: each syllable at its beat, on a note when one
  * starts there; a `/` holding a syllable over a new note of the melody is
- * held there, as `:/` is (4.3). Over a tie, after a breath, at the row's
- * start or where no note starts, a `/` sings nothing; `orphan` says a `/`
- * over a new note found nothing before it in the row to hold.
+ * held there, as `:/` is (4.3). Over a tie, after a breath, before its
+ * verse has sung anything, or where no note starts, a `/` sings nothing;
+ * `orphan` says a `/` over a new note found nothing to hold. `ends` is
+ * what the cell leaves held.
  */
 function onBeats(
 	cell: LyricSlot[],
 	bar: PlayedBar,
 	onsets: number[],
 	held: Held,
-): { syllables: PlayedSyllable[]; orphan: boolean } {
+): { syllables: PlayedSyllable[]; orphan: boolean; ends: Held } {
 	let state = held;
 	let orphan = false;
 	const syllables = slotTimes(cell, bar.meter).flatMap(({ slot, at }): PlayedSyllable[] => {
@@ -231,10 +232,10 @@ function onBeats(
 		else if (state === "start" && note) orphan = true;
 		return slot.kind === "hold" && state === "sung" && note ? [{ at, syllable: HELD, note }] : [];
 	});
-	return { syllables, orphan };
+	return { syllables, orphan, ends: state };
 }
 
-/** What a row holds as its cell `i` begins: its last syllable or breath before, or nothing at its start. */
+/** What a row holds as its cell `i` begins from its own cells: its last syllable or breath before, or "start" with none. */
 function heldAt(row: LyricsLine, i: number): Held {
 	const before = row.cells
 		.slice(0, i)
@@ -271,7 +272,7 @@ const versesNamed = (ns: number[]) => {
 };
 
 /** A verse a bar could sing, and the row that writes it (null for its notes' syllables). */
-type Candidate = { verse: number; row: LyricsLine | null; lyrics: PlayedLyrics };
+type Candidate = { verse: number; row: LyricsLine | null; lyrics: PlayedLyrics; ends?: Held };
 
 const HOLDS_NOTHING = ":/ holds the syllable before it, and none is sung before it";
 
@@ -304,6 +305,8 @@ function singing(
 	const melody = who?.sings !== undefined;
 	const part = who?.label === undefined ? {} : { part: who.label };
 	const sung = new Set<LyricsLine>();
+	/** What each verse's rows left held, in play order: a row starting with `/` holds on from it. */
+	const ends = new Map<number, Held>();
 	let heard = false;
 	/** A row's verse in a bar, its syllables on the beats. */
 	const fromRow = (
@@ -312,14 +315,16 @@ function singing(
 		from: BarSource,
 		onsets: number[],
 	): Candidate => {
-		const cell = onBeats(row.cells[from.bar] ?? [], bar, onsets, heldAt(row, from.bar));
+		const verse = row.verse ?? 1;
+		const own = heldAt(row, from.bar);
+		const held = own === "start" ? (ends.get(verse) ?? "start") : own;
+		const cell = onBeats(row.cells[from.bar] ?? [], bar, onsets, held);
 		const syllables = cell.syllables;
 		if (cell.orphan) warn(row.line, HOLDS_NOTHING, "/");
 		const missed = melody ? syllables.find((s) => !s.note) : undefined;
 		if (missed)
 			warn(row.line, `"${textOf(missed)}" falls where the voice starts no note`, textOf(missed));
-		const verse = row.verse ?? 1;
-		return { verse, row, lyrics: { verse, ...part, syllables } };
+		return { verse, row, lyrics: { verse, ...part, syllables }, ends: cell.ends };
 	};
 	/** The bar's verses before a pass picks: its notes' and its rows'. */
 	const candidates = (bar: PlayedBar, from: BarSource): Candidate[] => {
@@ -365,6 +370,7 @@ function singing(
 			chosen.find((c) => c.row === null),
 		);
 		for (const c of chosen) if (c.row) sung.add(c.row);
+		for (const c of chosen) if (c.ends) ends.set(c.verse, c.ends);
 		return chosen.length ? chosen.map((c) => c.lyrics) : undefined;
 	};
 	const finish = () => {
