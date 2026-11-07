@@ -141,6 +141,9 @@ runs, and `verify:package cli` fails on anything else.
     request `chore(site): use <npm name> X.Y.Z` (`site/package.json` and
     `site/bun.lock`). Until it merges, CI's `site-versions` check is red
     on purpose; it is not required, so other pull requests still merge.
+    After a `barmark` bump, check `site/bun.lock` holds one barmark:
+    `grep '/barmark": \["barmark@' site/bun.lock` prints nothing, or
+    delete the nested entries it finds and `bun install` again (FINDINGS).
 13. **Release the CLI** (after a `barmark` or `@barmark/render` release;
     a `@barmark/sync` release needs no CLI release and no `songs` bump,
     since the CLI does not use it):

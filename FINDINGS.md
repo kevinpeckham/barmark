@@ -558,6 +558,33 @@ and round-trip it through `format`.
 
 ## Tooling
 
+### Raising an exact pin left Bun's nested copies of the old version (2026-11-07, site bump)
+
+- **The symptom.** barmark.dev's bump to `barmark` 0.19.1 left `bun.lock`
+  with `@barmark/render/barmark` and `@barmark/sync/barmark` entries at
+  0.19.0, so the site would have shipped two barmarks, although render
+  and sync both ask for `^0.19.0`.
+- **The cause.** `bun install` after editing an exact pin in
+  `package.json` resolves the new version for the site and keeps the
+  dependents' existing resolution beside it rather than deduplicating.
+- **The fix.** Delete the nested `…/barmark` entries from `site/bun.lock`
+  and run `bun install` again; check with
+  `grep '/barmark": \["barmark@' site/bun.lock` (no lines) after every
+  site bump. RELEASING.md step 12.
+
+### Dorico's .mxl has no mimetype entry (2026-11-07, .mxl fixtures)
+
+- **The symptom.** None: `readMxl` read all five of Dorico 6.2's `.mxl`
+  exports. They are worth keeping because they differ from MuseScore's
+  and from the archives our tests build: no `mimetype` entry at all, and
+  in some the score (`<title> - Full score - 01 <flow>.xml`) comes before
+  `META-INF/container.xml`.
+- **The fix.** None needed; `dorico-*.mxl` and MuseScore's `*.mxl` for
+  every fixture are checked in, each tested to read as its `.musicxml`
+  (`programs.test.ts`). Made by mac-bench's `dorico --export mxl` and
+  `scripts/musescore-fixtures.ts`.
+
+
 ### What Dorico 6.2 changes when it round-trips MusicXML (2026-11-07, MusicXML import)
 
 - **The symptom.** Dorico Elements 6.2.31 opened the five MuseScore
