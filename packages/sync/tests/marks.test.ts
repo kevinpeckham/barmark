@@ -413,7 +413,7 @@ describe("changes", () => {
 		expect(r.chart).toContain("## Bridge\nkey: D\n| C |");
 	});
 
-	test("a run across a key change keeps the spelling of its start", () => {
+	test("a run across a key change is cut there, each piece spelled in its own key", () => {
 		const report = createReport();
 		const input = readInput(
 			{
@@ -430,7 +430,31 @@ describe("changes", () => {
 			simile: true,
 			barsPerLine: 4,
 		});
-		expect(text).toContain("| A# / / / | / / / / |\nkey: D\n| / / / / | / / / / |");
+		expect(text).toContain("| A# / / / | / / / / |\nkey: D\n| Bb / / / | / / / / |");
+	});
+
+	const modulating = (runs: ReturnType<typeof run>[]) =>
+		chartFromDetections({
+			grid: { bars: [0, 2, 4, 6] },
+			meter: "4/4",
+			key: "G",
+			changes: [{ kind: "key", start: 4, value: "Db" }],
+			chords: { runs },
+		}).chart;
+
+	test("a chord edge just before the change keeps the old vote, and the next bar is spelled anew", () => {
+		const chart = modulating([run(0, 3.95, "D:maj"), run(3.95, 6, "F#:maj")]);
+		expect(chart).toBe("key: G, time: 4/4, tempo: 120\n| D | / |\nkey: Db\n| Gb |\n");
+	});
+
+	test("a chord held across the change is restated in the new spelling", () => {
+		const chart = modulating([run(0, 3, "D:maj"), run(3, 6, "F#:maj")]);
+		expect(chart).toBe("key: G, time: 4/4, tempo: 120\n| D | / F# |\nkey: Db\n| Gb |\n");
+	});
+
+	test("a chord held across a change that does not respell it stays a hold", () => {
+		const chart = modulating([run(0, 6, "A:maj")]);
+		expect(chart).toBe("key: G, time: 4/4, tempo: 120\n| A | / |\nkey: Db\n| / |\n");
 	});
 
 	test("a run after a key change is spelled in the new key", () => {

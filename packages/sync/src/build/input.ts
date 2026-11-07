@@ -111,17 +111,20 @@ function readTempo(d: Record<string, unknown>, report: Report): StartTempo {
 
 const shifted = <T>(m: Map<number, T>) => new Map([...m].map(([b, v]) => [b + 1, v] as const));
 
-/** The key in force at a time: the starting key, then each key change from its bar's start. */
+/** The key in force at a time, and the times the key changes (sorted): the starting key, then each key change from its bar's start. */
 function keyFollowing(
 	key: Key | null,
 	bars: BarSpan[],
 	changes: Map<number, BarChange>,
-): (t: Seconds) => Key | null {
+): { keyAt: (t: Seconds) => Key | null; turnTimes: Seconds[] } {
 	const turns = [...changes]
 		.filter(([, c]) => c.key)
 		.sort(([a], [b]) => a - b)
 		.map(([b, c]) => ({ at: (bars[b] as BarSpan).start, key: c.key as Key }));
-	return (t) => turns.findLast((x) => x.at <= t)?.key ?? key;
+	return {
+		keyAt: (t) => turns.findLast((x) => x.at <= t)?.key ?? key,
+		turnTimes: turns.map((x) => x.at),
+	};
 }
 
 /** The starting tempo, derived from the grid when omitted; checks every tempo against the grid. */
@@ -191,7 +194,7 @@ export function readInput(d: unknown, report: Report): Input | null {
 	applyMeters(bars, meter, r.changes);
 	const tempo = settleTempo(t, r, bars, report);
 	const sections = readSections(d.sections, bars, report);
-	const keyAt = keyFollowing(r.starting.key, bars, r.changes);
+	const keys = keyFollowing(r.starting.key, bars, r.changes);
 	const pickup = readPickup(d.pickup, bars, report);
 	if (pickup) {
 		bars.unshift(pickup);
@@ -215,7 +218,7 @@ export function readInput(d: unknown, report: Report): Input | null {
 		tempo,
 		changes: pickup ? shifted(r.changes) : r.changes,
 		sections: pickup ? shifted(sections.names) : sections.names,
-		runs: symbolRuns(d.chords, keyAt, report),
+		runs: symbolRuns(d.chords, keys, report),
 		confidence,
 	};
 }

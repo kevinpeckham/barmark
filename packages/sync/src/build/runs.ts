@@ -93,7 +93,40 @@ function frameOf(chords: Record<string, unknown>): number | null {
 
 type Reader = { items: Item[]; invalid: number; unknown: Set<string> };
 
-function addRun(
+/** The key in force at a time, and the times (sorted) at which a key change starts. */
+export type Keys = { keyAt: (t: Seconds) => Key | null; turnTimes: Seconds[] };
+
+/** The first index in `sorted` of a time greater than `t`. */
+function firstAfter(sorted: Seconds[], t: Seconds): number {
+	let lo = 0;
+	let hi = sorted.length;
+	while (lo < hi) {
+		const mid = (lo + hi) >> 1;
+		if ((sorted[mid] as number) <= t) lo = mid + 1;
+		else hi = mid;
+	}
+	return lo;
+}
+
+/** A run cut at every key change inside it, so each piece is spelled in the key in force at its own start. */
+function addRun(r: Raw & { confidence?: number }, keys: Keys, to: Reader, report: Report) {
+	const cuts: Seconds[] = [];
+	for (let i = firstAfter(keys.turnTimes, r.start); i < keys.turnTimes.length; i++) {
+		const t = keys.turnTimes[i] as number;
+		if (t >= r.end) break;
+		cuts.push(t);
+	}
+	const edges = [r.start, ...cuts, r.end];
+	for (let k = 0; k < edges.length - 1; k++)
+		addPiece(
+			{ ...r, start: edges[k] as number, end: edges[k + 1] as number },
+			keys.keyAt,
+			to,
+			report,
+		);
+}
+
+function addPiece(
 	r: Raw & { confidence?: number },
 	keyAt: (t: Seconds) => Key | null,
 	to: Reader,
@@ -117,11 +150,7 @@ function addRun(
  * dropped with a warning each (ten, then a count), labels respelled for the
  * key in force at the run's start, overlaps settled.
  */
-export function symbolRuns(
-	chords: unknown,
-	keyAt: (t: Seconds) => Key | null,
-	report: Report,
-): SymbolRun[] {
+export function symbolRuns(chords: unknown, keys: Keys, report: Report): SymbolRun[] {
 	if (!isRecord(chords) || !Array.isArray(chords.runs)) {
 		report.warning("run-invalid", "There are no chord runs to read", { path: "chords.runs" });
 		return [];
@@ -136,7 +165,7 @@ export function symbolRuns(
 	const to: Reader = { items: [], invalid: 0, unknown: new Set() };
 	for (const [i, v] of (chords.runs as unknown[]).entries()) {
 		const run = readRun(v, frame, i);
-		if (run) addRun(run, keyAt, to, report);
+		if (run) addRun(run, keys, to, report);
 		else if (to.invalid++ < INVALID_NAMED)
 			report.warning("run-invalid", `Chord run ${i} is not a usable run; dropped`, {
 				path: `chords.runs[${i}]`,

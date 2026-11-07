@@ -9,6 +9,20 @@ not here.
 
 ## Testing
 
+### Spelling by a chord's start picked the old key (2026-11-07, @barmark/sync)
+
+- **The symptom.** The round trip of `| G | D |` then `key: Db` then `| Gb | Db |`
+  passed exactly, but with a little timing jitter it came back `F#`
+  for `Gb`.
+- **The cause.** Chord edges jitter. The builder spelled a run in the key in
+  force where the run starts; an edge a few tens of milliseconds early
+  started the run in the old key, and that spelling covered the whole run.
+- **The fix.** `symbolRuns` (`packages/sync/src/build/runs.ts`) cuts a run at
+  every key change inside it and spells each piece in the key at its own
+  start, so the sliver before the bar loses its vote and the rest is
+  spelled in the new key. Found because the yardstick's key-change chart
+  was spelling-sensitive and its jitter variant ran.
+
 ### A path import never reads `exports` (2026-11-07, @barmark/sync)
 
 - **The symptom.** `verify:package` imports a package's built

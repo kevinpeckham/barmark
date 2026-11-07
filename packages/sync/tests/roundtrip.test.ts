@@ -38,10 +38,7 @@ describe("generator-form charts", () => {
 			expect(r.chart).toBe(chart);
 			expect(r.diagnostics.filter((d) => d.severity !== "info")).toEqual([]);
 		});
-		// A run is spelled in the key in force where it starts, so a chord edge that jitters a little
-		// before a key change is spelled in the old key (F# for Gb): a known limit, reported, not tested away.
-		const spellingSensitive = name === "spelling follows a key change";
-		test.skipIf(spellingSensitive)(`${name}: jitter and drift change nothing`, () => {
+		test(`${name}: jitter and drift change nothing`, () => {
 			for (let seed = 1; seed <= 50; seed++)
 				expect(build(chart, { jitter: 0.2, drift: 0.03, seed }).chart).toBe(chart);
 		});

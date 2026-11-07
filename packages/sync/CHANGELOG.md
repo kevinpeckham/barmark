@@ -18,7 +18,7 @@ package uses [semantic versioning](https://semver.org/).
   `title`; `sections`, snapped to the nearest bar, written out in full,
   with repeat and elision marks stripped from their names; `key`, `meter`
   and `tempo` `changes`, snapped to bars and written as directive lines
-  (a run is spelled in the key in force where it starts); a `tempo`,
+  (a run that crosses a key change is cut at it, and each piece is spelled in the key in force where it starts; a chord held across a respelling is written again after the `key:` line); a `tempo`,
   given or derived from the grid, with a `tempo-grid-disagree` warning
   when it is far from the grid's; and a `pickup`, written as a one-bar
   meter bar on the first line and counted as bar 1 of the timing map.

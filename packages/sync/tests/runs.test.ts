@@ -34,14 +34,22 @@ describe("symbols", () => {
 
 	test("a symbol run reads as given", () => {
 		const report = createReport();
-		const runs = symbolRuns({ runs: [{ start: 0, end: 2, symbol: "Am7" }] }, () => null, report);
+		const runs = symbolRuns(
+			{ runs: [{ start: 0, end: 2, symbol: "Am7" }] },
+			{ keyAt: () => null, turnTimes: [] },
+			report,
+		);
 		expect(runs).toEqual([{ start: 0, end: 2, symbol: "Am7" }]);
 		expect(report.list).toEqual([]);
 	});
 
 	test("an unreadable symbol is ? with label-unknown", () => {
 		const report = createReport();
-		const runs = symbolRuns({ runs: [{ start: 0, end: 2, symbol: "C D" }] }, () => null, report);
+		const runs = symbolRuns(
+			{ runs: [{ start: 0, end: 2, symbol: "C D" }] },
+			{ keyAt: () => null, turnTimes: [] },
+			report,
+		);
 		expect(runs[0]?.symbol).toBe("?");
 		expect(report.list.map((d) => d.code)).toEqual(["label-unknown"]);
 	});
@@ -49,7 +57,7 @@ describe("symbols", () => {
 
 const read = (chords: unknown, k = null as ReturnType<typeof key> | null) => {
 	const report = createReport();
-	return { runs: symbolRuns(chords, () => k, report), list: report.list };
+	return { runs: symbolRuns(chords, { keyAt: () => k, turnTimes: [] }, report), list: report.list };
 };
 
 describe("symbolRuns", () => {
