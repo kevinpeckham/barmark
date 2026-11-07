@@ -6,6 +6,15 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.15.1] - 2026-11-07
+
+### Fixed
+
+- **Long charts lay out quickly again.** In 0.15.0 a chart with no
+  `part:` lines asked, for each of its lines, whether any bar of the chart
+  sings, so a 2,000-line chart took about three times as long as in
+  0.14.0. The answer is now worked out once a chart.
+
 ## [0.15.0] - 2026-11-07
 
 Needs `barmark` 0.17.0.
@@ -375,7 +384,8 @@ that needs no script or as the `<barmark-chart>` web component. Requires
   zoom without sideways scrolling, the element renders and re-renders, and
   a screen reader hears "bar 9: D". Run them with `bun run test:browser`.
 
-[Unreleased]: https://github.com/kevinpeckham/barmark/compare/render-v0.15.0...HEAD
+[Unreleased]: https://github.com/kevinpeckham/barmark/compare/render-v0.15.1...HEAD
+[0.15.1]: https://github.com/kevinpeckham/barmark/compare/render-v0.15.0...render-v0.15.1
 [0.15.0]: https://github.com/kevinpeckham/barmark/compare/render-v0.14.0...render-v0.15.0
 [0.14.0]: https://github.com/kevinpeckham/barmark/compare/render-v0.13.0...render-v0.14.0
 [0.13.0]: https://github.com/kevinpeckham/barmark/compare/render-v0.12.0...render-v0.13.0

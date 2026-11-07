@@ -1102,3 +1102,18 @@ only its bars' verses (`versesOver` in `import/verses.ts`). `holds.on`
 holds only the verses holding now. `PartState.taken` grows as verses are
 numbered. The same 4,000 measures import in about 2 s, and
 `scale.test.ts` checks the ratio against 400.
+
+### Only the site's speed test caught a quadratic layout (2026-11-07, render)
+
+**Symptom:** bumping barmark.dev to `@barmark/render` 0.15.0, the site's
+"a 2,000-line paste renders quickly" test took 959 ms against its 500 ms
+bound. `layoutChart` took about 1 s, against 0.3 s in 0.14.0.
+**Cause:** `singerOf` (`render/src/verses.ts`), new in 0.15.0, asked
+"does any bar of this chart sing on notes?" for each line of a chart
+with no `part:` lines, reading every bar each time. The package had no
+speed test of its own; the site's runs the published package, so it
+noticed only after the release.
+**Fix:** the answer is worked out once a parse (`singsOnNotes`, a
+`WeakMap`). `render/tests/scale.test.ts` now holds the layout to linear
+time (ten times the lines, at most 25 times as long), and 0.15.1
+shipped the fix.
