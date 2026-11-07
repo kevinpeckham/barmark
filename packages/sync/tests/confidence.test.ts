@@ -101,6 +101,33 @@ describe("slots and bars", () => {
 	});
 });
 
+describe("never above 1", () => {
+	test("runs of one chord split at awkward times stay within 0..1", () => {
+		let seed = 12345;
+		const next = () => {
+			seed = (seed * 1103515245 + 12345) % 2147483648;
+			return seed / 2147483648;
+		};
+		const grid = [0.3296, 1.8211, 5.2866];
+		for (let trial = 0; trial < 200; trial++) {
+			const cuts = Array.from({ length: 23 }, () => 0.3296 + next() * (5.2866 - 0.3296)).sort(
+				(a, b) => a - b,
+			);
+			const edges = [0.3296, ...cuts, 5.2866];
+			const runs = edges.slice(0, -1).map((t, i) => run(t, edges[i + 1] as number, "C"));
+			const r = chartFromDetections({
+				grid: { bars: grid },
+				meter: "3/4",
+				chords: { runs },
+			});
+			for (const bar of r.confidence?.bars ?? []) {
+				expect(bar.confidence).toBeLessThanOrEqual(1);
+				for (const c of bar.slots) expect(c).toBeLessThanOrEqual(1);
+			}
+		}
+	});
+});
+
 describe("key, meter, tempo and sections", () => {
 	const runs = [run(0, 4, "C")];
 	test("from their wrappers", () => {
