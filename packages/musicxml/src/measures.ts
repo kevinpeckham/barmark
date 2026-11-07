@@ -2,7 +2,8 @@
  * The measures a part writes, in written order, with the marks that make a
  * notation program play them in the chart's play order: repeats, endings
  * and jumps where MusicXML says the same thing, and bars written out where
- * it can't (a replay, or a repeated section holding repeats of its own).
+ * it can't (a replay, or a repeat holding a repeat of its own: MusicXML's
+ * repeats don't nest).
  */
 import type {
 	Cell,
@@ -133,6 +134,8 @@ type Walk = {
 	/** The first measure of the replay being walked, which takes its section's text lines. */
 	replay: number | null;
 	section: { from: number; repeat: Repeat; line: number } | null;
+	/** The `|: … :|` being walked: its first measure, and whether a line inside it repeats too. */
+	bracket: { from: number; nested: boolean } | null;
 };
 
 function add(w: Walk, m: Measure): void {
@@ -148,6 +151,25 @@ function add(w: Walk, m: Measure): void {
 }
 
 const occurrenceAt = (w: Walk, line: number) => w.parse.sections.find((o) => o.line === line);
+
+/**
+ * The measures from `from` on, written again as these bars play, with no
+ * repeat marks: the first keeps its heading, lead text and Segno or Coda.
+ */
+function rewrite(w: Walk, from: number, bars: PlayedBar[]): void {
+	const first = w.out[from];
+	const pending = w.pending;
+	w.out.length = from;
+	w.pending = {
+		...nothing(),
+		heading: first?.marks.heading ?? null,
+		start: first?.marks.start ?? [],
+		lead: first?.lead ?? [],
+	};
+	for (const b of bars) add(w, measureOf(b, w.fermatas));
+	w.pending = pending;
+	w.flattened = true;
+}
 
 /** An occurrence's bars as played, one measure each. */
 function playedOut(w: Walk, o: SectionOccurrence): void {
@@ -245,6 +267,45 @@ function lineMarks(w: Walk, line: BarsLine, from: number, lines: Line[], i: numb
 	}
 }
 
+/**
+ * A `|: … :|`'s first pass to its last, from its first measure: through the
+ * `times`-th play of its last measure, so a repeat around it doesn't count.
+ */
+function bracketPlays(w: Walk, from: number, times: number): PlayedBar[] {
+	const first = w.out[from]?.played;
+	const last = w.out.at(-1)?.shown;
+	if (first === null || first === undefined) return [];
+	const bars = w.parse.bars;
+	let seen = 0;
+	let end = first - 1;
+	while (end < bars.length - 1 && !(bars[end]?.written === last && ++seen === times)) end++;
+	return bars.slice(first - 1, end + 1);
+}
+
+/** The passes a `|: … :|` closed by this line plays: its endings' last pass plays once, an open repeat's one pass. */
+const closingPasses = (line: BarsLine) =>
+	line.ending ? 1 : line.repeat === "open" ? 1 : (line.repeat ?? 2);
+
+/** The `|: … :|`'s last line: its last ending, or its `:|` with no endings after it. */
+const endsBracket = (line: BarsLine, lines: Line[], next: number) =>
+	line.ending ? !line.closes : line.closes && passes(lines, next) === 0;
+
+/**
+ * A `|: … :|` holding a bar line's `x N`, written out in play order once
+ * its last line (its last ending's) is walked: MusicXML's repeats don't
+ * nest, so no program plays the two backward repeats as barmark does.
+ */
+function bracketLine(w: Walk, line: BarsLine, from: number, lines: Line[], next: number): void {
+	if (line.opens) w.bracket = { from, nested: false };
+	const b = w.bracket;
+	if (!b) return;
+	if (!line.closes && line.repeat !== null) b.nested = true;
+	if (!endsBracket(line, lines, next)) return;
+	w.bracket = null;
+	const bars = b.nested ? bracketPlays(w, b.from, closingPasses(line)) : [];
+	if (bars.length) rewrite(w, b.from, bars);
+}
+
 const repeats = (m: Measure) =>
 	m.marks.repeatStart || m.marks.repeatEnd !== null || m.marks.ending !== null;
 
@@ -256,13 +317,8 @@ function closeSection(w: Walk): void {
 	const inside = w.out.slice(s.from);
 	const o = occurrenceAt(w, s.line);
 	if (inside.some(repeats) && o) {
-		const heading = inside[0]?.marks.heading ?? null;
-		w.out.length = s.from;
-		w.pending.heading = heading;
-		// Text before the chart's first heading goes with it.
-		w.pending.lead = inside[0]?.lead ?? [];
-		w.flattened = true;
-		playedOut(w, o);
+		if (o.firstBar !== null && o.lastBar !== null)
+			rewrite(w, s.from, w.parse.bars.slice(o.firstBar - 1, o.lastBar));
 		return;
 	}
 	(inside[0] as Measure).marks.repeatStart = true;
@@ -324,6 +380,7 @@ export function writtenMeasures(parse: ChartParse): Measure[] {
 		pending: nothing(),
 		replay: null,
 		section: null,
+		bracket: null,
 	};
 	parse.lines.forEach((line, i) => {
 		if (line.kind === "section") sectionLine(w, line);
@@ -333,6 +390,7 @@ export function writtenMeasures(parse: ChartParse): Measure[] {
 		const from = w.out.length;
 		for (const cell of line.cells) cellIn(w, cell);
 		lineMarks(w, line, from, parse.lines, i + 1);
+		bracketLine(w, line, from, parse.lines, i + 1);
 	});
 	closeText(w);
 	const out = w.flattened && hasJump(parse) ? inPlayOrder(w) : w.out;

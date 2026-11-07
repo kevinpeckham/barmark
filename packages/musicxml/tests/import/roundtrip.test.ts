@@ -3,7 +3,7 @@ import { describe, expect, test } from "bun:test";
 import { readdirSync, readFileSync } from "node:fs";
 import { parseChart, printChart } from "barmark";
 import { exportMusicXml, importMusicXml } from "../../src/index.js";
-import { corpus } from "../charts.js";
+import { corpus, NESTED } from "../charts.js";
 import { played, texts, usesRhythmFigures } from "./played.js";
 
 const inScope = corpus().filter(([, t]) => !usesRhythmFigures(parseChart(t)));
@@ -119,4 +119,8 @@ test.todo("a replay heading's own text after it stays there", () => {
 	const text =
 		"## Chorus\n| D | G |\n\n## Verse\n| G | C |\n\n## Chorus x2\nfoot\n\n## Outro\n| G |\n";
 	expect(texts(roundTrip(text))).toEqual(texts(text));
+});
+
+test.each(NESTED)("a repeat inside a repeat plays the same after export and import: %p", (text) => {
+	expect(played(roundTrip(text))).toEqual(played(text));
 });

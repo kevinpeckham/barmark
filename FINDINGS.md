@@ -247,11 +247,15 @@ showed the rule needed refining.
   importer (`packages/musicxml/src/import/order.ts`, as notation
   programs commonly do) sends it back to the bar after the last finished
   repeat, MuseScore to bar 1 for one more pass.
-- **The fix.** Not yet made. The export should write a repeated section
-  that holds a repeat of its own in play order, as it already does for
-  repeated sections (`inPlayOrder` in
-  `packages/musicxml/src/measures.ts`). Until then, a nested repeat
-  isn't safe to export.
+- **The fix.** The export writes a `|: … :|` that holds a bar line's
+  `x N` (endings included) in play order, with no repeat marks, as it
+  already did for a repeated section holding repeats (`bracketLine` and
+  `rewrite` in `packages/musicxml/src/measures.ts`); a `## X x2` around
+  it keeps its repeat bar lines, and a jump through it writes the whole
+  chart in play order (`inPlayOrder`). Every nesting the grammar allows
+  is covered by `NESTED` in `packages/musicxml/tests/charts.ts`, played
+  by the export's test player (`order.test.ts`) and round-tripped
+  (`roundtrip.test.ts`). Repeats with none inside keep their marks.
 
 ### An unanchored `\s*x\s*…$` regex is quadratic on long whitespace (2026-10-31, chart parser)
 

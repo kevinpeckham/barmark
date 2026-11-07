@@ -6,6 +6,16 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+
+- **A repeat inside a repeat exports in play order.** `|: D | x2` then
+  `| A :|` plays D D A twice, but the export wrote the line's `x2` and
+  the outer `:|` as two backward repeats, which MusicXML can't nest: the
+  import played it as four bars, MuseScore as five. A `|: … :|` that
+  holds a bar line's `x N` (its endings included) is now written out as
+  it plays, as a repeated section holding repeats already was; repeats
+  with none inside keep their repeat bar lines.
+
 ## [0.6.3] - 2026-11-07
 
 ### Changed

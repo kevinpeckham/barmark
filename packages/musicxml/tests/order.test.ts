@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { extractPart } from "barmark";
 import { MORNING_SONG } from "../../barmark/tests/chart/morning-song.js";
+import { NESTED } from "./charts.js";
 import { measures, xmlOf } from "./helpers.js";
 import { expected, expectedBars, play } from "./play.js";
 
@@ -114,5 +115,19 @@ describe("play order", () => {
 		if (!piano) throw new Error("no piano");
 		expect(play(xml, "P2")).toEqual(expectedBars(piano.bars));
 		expect(play(xml, "P2").harmony).toContain("G/B");
+	});
+});
+
+describe("a repeat inside a repeat is written out in play order", () => {
+	test.each(NESTED)("%p plays as barmark plays it", (text) => {
+		plays(text);
+	});
+	test("a repeat with none inside keeps its repeat bar lines", () => {
+		const xml = plays("|: D | x2\n| A :|\n|: E | F :|");
+		const ms = measures(xml);
+		expect(ms).toHaveLength(8);
+		expect(xml.match(/<repeat direction="backward"/g)).toHaveLength(1);
+		expect(ms[6]).toContain('<repeat direction="forward"/>');
+		expect(ms[7]).toContain('<repeat direction="backward" times="2"/>');
 	});
 });
