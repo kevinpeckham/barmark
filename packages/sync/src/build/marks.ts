@@ -1,4 +1,12 @@
-import { beatsOf, conventionalKey, type Key, keyFromText, type Meter, parseMeter } from "barmark";
+import {
+	beatsOf,
+	conventionalKey,
+	type Key,
+	keyFromText,
+	type Meter,
+	parseChart,
+	parseMeter,
+} from "barmark";
 import type { Seconds } from "../timing/index.js";
 import type { BarChange } from "./input.js";
 import type { Report } from "./report.js";
@@ -40,30 +48,47 @@ export function cleanTitle(t: unknown): string | null {
 	return tidy(t) || null;
 }
 
-/** A trailing repeat or elision mark would be read as one by the chart reader. */
-const MARKS = /\s*(?:x\s*\d+|x\s*\.\.\.|->|→)\s*$/i;
+/** A trailing repeat or elision mark: `x N`, `x ...` (`×` and `…` too), `->` or `→`. */
+const MARKS = /(?:^|\s+)[xX×]\s*(?:\d+|\.\.\.|…)\s*$|\s*(?:->|→)\s*$/;
+
+/** Whether `## name` reads back as one plain section: no diagnostics, no repeat, no replay, no elision. */
+function readsPlain(name: string): boolean {
+	const p = parseChart(`## ${name}\n| C |\n`);
+	const head = p.lines.find((l) => l.kind === "section");
+	return (
+		p.diagnostics.length === 0 &&
+		p.sections.length === 1 &&
+		p.sections[0]?.replayOf === null &&
+		p.bars.length === 1 &&
+		head?.kind === "section" &&
+		head.repeat === null &&
+		!head.elided
+	);
+}
 
 /**
- * A heading name: tidied, with trailing marks stripped (`section-marks-stripped`);
- * null, with `section-unnamed`, when nothing is left.
+ * A heading name that reads back as a plain section: tidied, trailing and
+ * interior marks removed (`section-marks-stripped`), and, should the reader
+ * still see a mark or a typo of one (`(x2)`, `2x`), words dropped from the end
+ * until it does not. Null, with `section-unnamed`, when nothing is left.
  */
 export function sectionName(name: unknown, report: Report, path: string): string | null {
-	let text = typeof name === "string" ? tidy(name) : "";
-	let stripped = false;
-	for (let next = text.replace(MARKS, ""); next !== text; next = text.replace(MARKS, "")) {
+	const original = typeof name === "string" ? tidy(name) : "";
+	let text = original;
+	for (let next = text.replace(MARKS, ""); next !== text; next = text.replace(MARKS, ""))
 		text = next;
-		stripped = true;
-	}
+	text = text.replace(/\s*(?:->|→)\s*/g, " - ").trim();
+	while (text !== "" && !readsPlain(text)) text = text.replace(/\s*\S+$/, "");
 	if (text === "") {
 		report.warning("section-unnamed", "A section has no name once its marks are removed; dropped", {
 			path,
 		});
 		return null;
 	}
-	if (stripped)
+	if (text !== original)
 		report.warning(
 			"section-marks-stripped",
-			`The repeat or elision mark was removed from the section name "${text}"`,
+			`The section name "${original}" was changed to "${text}" so it reads as a plain heading`,
 			{ path },
 		);
 	return text;
@@ -118,9 +143,10 @@ function settle<T>(
 		const k = clashKey(p);
 		const loser = kept.get(k);
 		if (loser)
-			report.warning(code, `Two entries land on bar ${p.bar + 1}; the later one is kept`, {
+			report.warning(code, "Two entries land on one bar; the later one is kept", {
 				path: path(loser.i),
 				at: loser.start,
+				bar: p.bar + 1,
 			});
 		kept.set(k, p);
 	}
@@ -255,7 +281,7 @@ export function readChanges(
 	return out;
 }
 
-/** Bars from `from` up to `to` (exclusive), their meters set from the changes in order. */
+/** Sets each bar's meter and beats: the starting meter, then each meter change from its bar on. */
 export function applyMeters(bars: BarSpan[], start: Meter, changes: Map<number, BarChange>): void {
 	let meter = start;
 	for (const [b, bar] of bars.entries()) {

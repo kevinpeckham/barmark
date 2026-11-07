@@ -111,6 +111,21 @@ describe("sections", () => {
 		expect(codes(r)).toContain("section-collision");
 	});
 
+	test("a collision names the bar as the chart numbers it, pickup included", () => {
+		const r = chartFromDetections({
+			grid: { bars: [1, 3, 5, 7] },
+			meter: "4/4",
+			pickup: { start: 0.5 },
+			chords: { runs: [run(0.5, 7)] },
+			sections: [
+				{ name: "A", start: 3.1 },
+				{ name: "B", start: 2.9 },
+			],
+		});
+		const d = r.diagnostics.find((x) => x.code === "section-collision");
+		expect(d?.bar).toBe(3);
+	});
+
 	test("a section at the grid's end is after-last-bar", () => {
 		const r = build({ sections: [{ name: "End", start: 7.9 }] });
 		expect(r.chart).not.toContain("##");
@@ -149,6 +164,72 @@ describe("sections", () => {
 			expect(at).toBeGreaterThan(0);
 			expect(lines[at + 1]).toStartWith("| C G");
 		}
+	});
+});
+
+describe("section names read back as plain sections", () => {
+	const names = [
+		"Chorus x2",
+		"Chorus ×2",
+		"Chorus × 2",
+		"Chorus X  2",
+		"Chorus × ...",
+		"Chorus x …",
+		"Chorus x…",
+		"Chorus x ...",
+		"Chorus ->",
+		"Chorus →",
+		"Chorus x2 ->",
+		"Chorus x2 x2",
+		"Chorus (x2)",
+		"Chorus 2x",
+		"Chorus (×2)",
+		"Intro -> Verse",
+		"A → B",
+		"A->B",
+		"## Verse",
+		"Verse\r",
+		"Verse\r\n| C |",
+		"Ünï ★ 歌 x2",
+		"Box2",
+		"x",
+		"×",
+		"…",
+		"(x2)",
+		"2x",
+		"Verse\u2028x2",
+		"  x  3  ",
+		"\u200bx2",
+		"Chorus ×…",
+	];
+	test("each name gives one heading, the grid's bars and a clean parse", () => {
+		for (const name of names) {
+			for (const start of [0, 4]) {
+				const r = build({ sections: [{ name, start }] });
+				const p = parseChart(r.chart);
+				const heads = p.lines.filter((l) => l.kind === "section");
+				const unnamed = r.diagnostics.some((d) => d.code === "section-unnamed");
+				expect([name, heads.length]).toEqual([name, unnamed ? 0 : 1]);
+				expect([name, p.bars.length]).toEqual([name, 4]);
+				expect([name, p.diagnostics.map((d) => d.message)]).toEqual([name, []]);
+				for (const h of heads) expect(h).toMatchObject({ repeat: null, elided: false });
+				expect(r.timing?.chart.bars).toBe(4);
+			}
+		}
+	});
+
+	test("specific spellings", () => {
+		const one = (name: string) => {
+			const report = createReport();
+			return [sectionName(name, report, "sections[0]"), report.list.map((d) => d.code)] as const;
+		};
+		expect(one("Chorus ×2")).toEqual(["Chorus", ["section-marks-stripped"]]);
+		expect(one("Chorus x…")).toEqual(["Chorus", ["section-marks-stripped"]]);
+		expect(one("Chorus × ...")).toEqual(["Chorus", ["section-marks-stripped"]]);
+		expect(one("Intro -> Verse")).toEqual(["Intro - Verse", ["section-marks-stripped"]]);
+		expect(one("A → B")).toEqual(["A - B", ["section-marks-stripped"]]);
+		expect(one("Chorus (x2)")).toEqual(["Chorus", ["section-marks-stripped"]]);
+		expect(one("Box2")).toEqual(["Box2", []]);
 	});
 });
 
@@ -214,6 +295,13 @@ describe("tempo", () => {
 	test("no time line when the meter is assumed, even with a tempo", () => {
 		const r = chartFromDetections({ grid: { bars: GRID }, chords: { runs: [] } });
 		expect(r.chart.startsWith("tempo: 120\n")).toBe(true);
+	});
+
+	test("a tempo change far from the grid warns at its path", () => {
+		const r = build({ tempo: 120, changes: [{ kind: "tempo", start: 6, value: 60 }] });
+		const d = r.diagnostics.filter((x) => x.code === "tempo-grid-disagree");
+		expect(d.map((x) => x.path)).toEqual(["changes[0]"]);
+		expect(r.chart).toContain("tempo: 60");
 	});
 
 	test("tempo: null drops only the starting line; changes still write", () => {
