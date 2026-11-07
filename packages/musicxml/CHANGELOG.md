@@ -6,6 +6,12 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- The npm description and the README's opening now name the import
+  (MusicXML and `.mxl` to a chart) beside the export, with `mxl`,
+  `import` and `export` keywords.
+
 ## [0.6.2] - 2026-11-07
 
 ### Changed
