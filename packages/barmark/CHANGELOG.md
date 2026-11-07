@@ -9,6 +9,18 @@ Releases follow the process in [RELEASING.md](RELEASING.md).
 
 ## [Unreleased]
 
+### Fixed
+
+- **A chord's unaltered interval is `alter: 0`, never `-0`,** so a parse
+  written to JSON and read back is the same object, as the README now
+  promises.
+
+### Technical
+
+- **The README documents the parse result**: what is written and what is
+  played, and why to store a chart's text and treat a stored parse as a
+  cache. A test holds every example chart's parse to a JSON round trip.
+
 ## [0.17.0] - 2026-11-07
 
 A grammar change: syllables on notes (4.3), lyric rows and verses in play
