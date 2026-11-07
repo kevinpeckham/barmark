@@ -579,7 +579,16 @@ export const ROWS: GuideRow[] = [
 		category: "notes",
 		meaning:
 			"A colon after a note set sings a syllable on it: a trailing - continues the word, :/ holds the syllable over the next note, ~ joins elided syllables.",
-		terms: ["lyrics", "syllable", "melody", "lead sheet", "melisma", "elision", "sung", "words on notes"],
+		terms: [
+			"lyrics",
+			"syllable",
+			"melody",
+			"lead sheet",
+			"melisma",
+			"elision",
+			"sung",
+			"words on notes",
+		],
 		example:
 			"part: Vox = Voice, instrument: voice\ntime: 3/4\nVox     | G                           | C          / G          |\nVox.Mel | {G4}:maz- / {B4}:ing_{G4}:/ | {B4}:grace / {A4}:how   |",
 		ref: "§4.3",
@@ -1071,7 +1080,8 @@ export const ROWS: GuideRow[] = [
 		meaning:
 			"A lyric row puts words on the beats of the bars above it, one cell per bar: a trailing - continues a word, / holds the syllable, -- breathes.",
 		terms: ["lyrics", "words", "lyric line", "syllables", "verse", "sung", "hyphen"],
-		example: "time: 3/4\n| G           | C          / G     |\nlyrics:   | A- / maz-   | ing / grace       |",
+		example:
+			"time: 3/4\n| G           | C          / G     |\nlyrics:   | A- / maz-   | ing / grace       |",
 		ref: "§7.7",
 		expect: { bars: 2 },
 	},
@@ -1082,7 +1092,8 @@ export const ROWS: GuideRow[] = [
 		meaning:
 			"Numbered rows stack verses under the same bars; inside a repeat, verse N is sung on pass N.",
 		terms: ["verse 2", "second verse", "stacked verses", "verse numbers", "repeat with new words"],
-		example: "|: G | C | G | D :|\nlyrics 1: | Hap- | py | birth- | day |\nlyrics 2: | Hap- | py | new | year |",
+		example:
+			"|: G | C | G | D :|\nlyrics 1: | Hap- | py | birth- | day |\nlyrics 2: | Hap- | py | new | year |",
 		ref: "§7.7",
 		expect: { bars: 8 },
 	},
@@ -1100,7 +1111,8 @@ export const ROWS: GuideRow[] = [
 		id: "escape",
 		syntax: "\\| text",
 		category: "text",
-		meaning: "A leading backslash makes a line text, even if it looks like bars or a directive; the backslash isn't shown.",
+		meaning:
+			"A leading backslash makes a line text, even if it looks like bars or a directive; the backslash isn't shown.",
 		terms: ["escape", "backslash", "literal", "not a bar line"],
 		example: "| D | A |\n\\| this line is text, not bars |",
 		ref: "§1",
