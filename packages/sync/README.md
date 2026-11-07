@@ -41,7 +41,7 @@ const { chart, timing, diagnostics } = chartFromDetections({
 		],
 	},
 });
-// chart: "time: 4/4\n| C | / | G | Am |\n"
+// chart: "time: 4/4, tempo: 120\n| C | / | G | Am |\n"
 // timing: bar 1 at 0 s, bar 2 at 2 s ... ends at 8 s, source "detected"
 ```
 
@@ -50,6 +50,14 @@ covered; a slot that repeats the one before is `/`, and a repeated
 multi-chord bar is `%` (`simile: false` writes it out). `barsPerLine`
 sets bars per line (default 4). Problems come back in `diagnostics`; an
 unusable grid gives an empty chart and a `null` timing map.
+
+Beyond the grid and the chords, the input can carry a `title`, `sections`
+(`{ name, start }`, each snapped to the nearest bar and written out in
+full), `changes` (`key`, `meter` and `tempo` mid-chart, written as
+directive lines before their bar), a `tempo` (counting the meter's beat;
+omitted, it is taken from the grid, and `null` writes none; one far from
+the grid's warns with `tempo-grid-disagree`) and a `pickup: { start }`
+for the bar before bar 1. The timing map counts a pickup as bar 1.
 
 ## The timing map
 

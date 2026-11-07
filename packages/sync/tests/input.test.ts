@@ -95,9 +95,9 @@ describe("the key", () => {
 		}
 	});
 
-	test("the title, tempo, changes and sections are left to later", () => {
+	test("with no title, tempo, changes or sections given, the tempo is the grid's", () => {
 		const { input } = read({ key: { value: "D", confidence: 2 } });
-		expect(input).toMatchObject({ title: null, tempo: null });
+		expect(input).toMatchObject({ title: null, tempo: 120 });
 		expect(input?.changes.size).toBe(0);
 		expect(input?.sections.size).toBe(0);
 		expect(input?.confidence.key).toBe(1);

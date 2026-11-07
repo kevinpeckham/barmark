@@ -1,9 +1,19 @@
 import { beatsOf, conventionalKey, type Key, keyFromText, type Meter, parseMeter } from "barmark";
 import type { Seconds } from "../timing/index.js";
+import {
+	applyMeters,
+	checkTempos,
+	cleanTitle,
+	gridTempo,
+	isTempo,
+	readChanges,
+	readPickup,
+	readSections,
+} from "./marks.js";
 import type { Report } from "./report.js";
 import { type BarSpan, type SymbolRun, symbolRuns } from "./runs.js";
 
-/** A change at a bar: any of a key, a meter and a tempo (read in a later task). */
+/** A change at a bar: any of a key, a meter and a tempo. */
 export type BarChange = { key?: Key; meter?: Meter; tempo?: number };
 
 /** What the detections say, read and repaired; the maps are keyed by index into `bars`. */
@@ -81,9 +91,70 @@ function readKey(d: Record<string, unknown>, report: Report) {
 	return { key, confidence: got.confidence };
 }
 
+type StartTempo = { value: number | null; derive: boolean; confidence?: number };
+
+/** The tempo as given, derived (omitted), absent (null) or dropped (unreadable, with a warning). */
+function readTempo(d: Record<string, unknown>, report: Report): StartTempo {
+	if (d.tempo === undefined) return { value: null, derive: true };
+	if (d.tempo === null) return { value: null, derive: false };
+	const got = detected(d.tempo, isTempo);
+	if (!got) {
+		report.warning("tempo-unreadable", "The tempo is not a number from 1 to 999; none written", {
+			path: "tempo",
+		});
+		return { value: null, derive: false };
+	}
+	return got.confidence === undefined
+		? { value: got.value, derive: false }
+		: { value: got.value, derive: false, confidence: got.confidence };
+}
+
+const shifted = <T>(m: Map<number, T>) => new Map([...m].map(([b, v]) => [b + 1, v] as const));
+
+/** The key in force at a time: the starting key, then each key change from its bar's start. */
+function keyFollowing(
+	key: Key | null,
+	bars: BarSpan[],
+	changes: Map<number, BarChange>,
+): (t: Seconds) => Key | null {
+	const turns = [...changes]
+		.filter(([, c]) => c.key)
+		.sort(([a], [b]) => a - b)
+		.map(([b, c]) => ({ at: (bars[b] as BarSpan).start, key: c.key as Key }));
+	return (t) => turns.findLast((x) => x.at <= t)?.key ?? key;
+}
+
+/** The starting tempo, derived from the grid when omitted; checks every tempo against the grid. */
+function settleTempo(
+	start: StartTempo,
+	r: ReturnType<typeof readChanges>,
+	bars: BarSpan[],
+	report: Report,
+): number | null {
+	const tempos = [...r.tempos];
+	let tempo = r.starting.tempo;
+	if (!r.tempoReplaced && tempo !== null) tempos.push({ bar: 0, value: tempo, path: "tempo" });
+	if (!r.tempoReplaced && start.derive) {
+		const until = tempos.map((t) => t.bar).sort((a, b) => a - b)[0] ?? bars.length;
+		const derived = Math.round(gridTempo(bars.slice(0, until)));
+		if (isTempo(derived)) tempo = derived;
+		else
+			report.warning(
+				"tempo-unreadable",
+				`The grid's tempo (${derived}) is outside 1 to 999; none written`,
+				{
+					path: "grid.bars",
+				},
+			);
+	}
+	checkTempos(tempos, bars, report);
+	return tempo;
+}
+
 /**
- * The detections read into an `Input`: grid, meter, key, then chord runs, in
- * that order. Null when the grid is unusable (an error is reported).
+ * The detections read into an `Input`: grid, meter, key, tempo, changes,
+ * sections and pickup, then chord runs, in that order. Null when the grid is
+ * unusable (an error is reported).
  */
 export function readInput(d: unknown, report: Report): Input | null {
 	const grid = isRecord(d) ? readStarts(d.grid) : null;
@@ -103,27 +174,42 @@ export function readInput(d: unknown, report: Report): Input | null {
 		);
 	const m = readMeter(d, report);
 	const k = readKey(d, report);
-	const beats = beatsOf(m.meter);
 	const bars: BarSpan[] = grid.starts.slice(0, -1).map((start, i) => ({
 		start,
 		end: grid.starts[i + 1] as Seconds,
 		meter: m.meter,
-		beats,
+		beats: beatsOf(m.meter),
 	}));
-	const key = k?.key ?? null;
-	const confidence: Input["confidence"] = { sections: new Map() };
+	const t = readTempo(d, report);
+	const r = readChanges(
+		d.changes,
+		bars,
+		{ key: k?.key ?? null, meter: m.written ? m.meter : null, tempo: t.value },
+		report,
+	);
+	const meter = r.starting.meter ?? m.meter;
+	applyMeters(bars, meter, r.changes);
+	const tempo = settleTempo(t, r, bars, report);
+	const sections = readSections(d.sections, bars, report);
+	const keyAt = keyFollowing(r.starting.key, bars, r.changes);
+	const pickup = readPickup(d.pickup, bars, report);
+	if (pickup) bars.unshift(pickup);
+	const confidence: Input["confidence"] = {
+		sections: pickup ? shifted(sections.confidence) : sections.confidence,
+	};
 	if (k?.confidence !== undefined) confidence.key = k.confidence;
 	if (m.confidence !== undefined) confidence.meter = m.confidence;
+	if (t.confidence !== undefined) confidence.tempo = t.confidence;
 	return {
-		title: null,
+		title: cleanTitle(d.title),
 		bars,
-		key,
-		meter: m.meter,
-		meterWritten: m.written,
-		tempo: null,
-		changes: new Map(),
-		sections: new Map(),
-		runs: symbolRuns(d.chords, () => key, report),
+		key: r.starting.key,
+		meter,
+		meterWritten: r.starting.meter !== null,
+		tempo,
+		changes: pickup ? shifted(r.changes) : r.changes,
+		sections: pickup ? shifted(sections.names) : sections.names,
+		runs: symbolRuns(d.chords, keyAt, report),
 		confidence,
 	};
 }

@@ -1,5 +1,5 @@
-import { printKey } from "barmark";
-import type { Input } from "./input.js";
+import { type Key, type Meter, printKey } from "barmark";
+import type { BarChange, Input } from "./input.js";
 import type { BarSpan } from "./runs.js";
 
 export type WriteOptions = { simile: boolean; barsPerLine: number };
@@ -7,14 +7,16 @@ export type WriteOptions = { simile: boolean; barsPerLine: number };
 const sameMeter = (a: BarSpan, b: BarSpan) =>
 	a.meter.n === b.meter.n && a.meter.d === b.meter.d && a.beats === b.beats;
 
-/** The starting directives on one line, or null when there are none. */
-function directives(input: Input): string | null {
+/** Directives on one line, in the order key, time, tempo; null when there are none. */
+function directiveLine(key: Key | null, meter: Meter | null, tempo: number | null): string | null {
 	const parts: string[] = [];
-	if (input.key) parts.push(`key: ${printKey(input.key)}`);
-	if (input.meterWritten) parts.push(`time: ${input.meter.n}/${input.meter.d}`);
-	if (input.tempo !== null) parts.push(`tempo: ${input.tempo}`);
+	if (key) parts.push(`key: ${printKey(key)}`);
+	if (meter) parts.push(`time: ${meter.n}/${meter.d}`);
+	if (tempo !== null) parts.push(`tempo: ${tempo}`);
 	return parts.length > 0 ? parts.join(", ") : null;
 }
+
+const changeLine = (c: BarChange) => directiveLine(c.key ?? null, c.meter ?? null, c.tempo ?? null);
 
 /** One bar's slots with holds as `/`; the first slot of the chart and of a section is named. */
 function held(input: Input, symbols: string[][], b: number): string[] {
@@ -45,19 +47,56 @@ function repeats(input: Input, cells: string[][], b: number): boolean {
 	return here[0] !== "/" && here.length === prev.length && here.every((s, k) => s === prev[k]);
 }
 
+/** A pickup bar names its own one-bar meter in front of its first slot. */
+function cellOf(input: Input, slots: string[], b: number): string {
+	const bar = input.bars[b] as BarSpan;
+	const text = slots.join(" ");
+	return bar.pickup ? `[${bar.meter.n}/${bar.meter.d}] ${text}` : text;
+}
+
 /**
  * The chart text before printing: holds (6.3.5), then `%` (6.3.6), then the
- * layout: the directives line, then the bars `barsPerLine` to a line.
+ * layout: the title, the starting directives, then the bars `barsPerLine` to
+ * a line. A heading or a directive line starts a new line, the heading first;
+ * a pickup is an extra bar on the first line, and a section on the first
+ * grid bar is written before it.
  */
 export function writeChart(input: Input, symbols: string[][], options: WriteOptions): string {
 	const slots = symbols.map((_, b) => held(input, symbols, b));
 	const cells = slots.map((c, b) =>
-		options.simile && repeats(input, slots, b) ? "%" : c.join(" "),
+		options.simile && repeats(input, slots, b) ? "%" : cellOf(input, c, b),
 	);
 	const lines: string[] = [];
-	const head = directives(input);
+	if (input.title !== null) lines.push(`# ${input.title}`);
+	const head = directiveLine(input.key, input.meterWritten ? input.meter : null, input.tempo);
 	if (head !== null) lines.push(head);
-	for (let i = 0; i < cells.length; i += options.barsPerLine)
-		lines.push(`| ${cells.slice(i, i + options.barsPerLine).join(" | ")} |`);
+	const pickup = input.bars[0]?.pickup === true;
+	let row: string[] = [];
+	let counted = 0;
+	const flush = () => {
+		if (row.length > 0) lines.push(`| ${row.join(" | ")} |`);
+		row = [];
+		counted = 0;
+	};
+	const heading = (b: number) => {
+		const name = input.sections.get(b);
+		if (name === undefined) return;
+		flush();
+		lines.push(`## ${name}`);
+	};
+	if (pickup) heading(1);
+	for (const [b, cell] of cells.entries()) {
+		if (!(pickup && b <= 1)) heading(b);
+		const change = input.changes.get(b);
+		const line = change ? changeLine(change) : null;
+		if (line !== null) {
+			flush();
+			lines.push(line);
+		}
+		if (counted === options.barsPerLine) flush();
+		row.push(cell);
+		if (!(pickup && b === 0)) counted++;
+	}
+	flush();
 	return `${lines.join("\n")}\n`;
 }

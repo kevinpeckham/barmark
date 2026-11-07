@@ -12,22 +12,22 @@ const make = (
 
 describe("holds", () => {
 	test("holds across bar lines; the first slot is named", () => {
-		expect(make([0, 2, 4], [C(0, 4)]).chart).toBe("time: 4/4\n| C | / |\n");
+		expect(make([0, 2, 4], [C(0, 4)]).chart).toBe("time: 4/4, tempo: 120\n| C | / |\n");
 		const r = make([0, 2, 4], [{ start: 0, end: 0.1, label: "C:maj" }]);
-		expect(r.chart).toBe("time: 4/4\n| ? | / |\n");
+		expect(r.chart).toBe("time: 4/4, tempo: 120\n| ? | / |\n");
 	});
 
 	test("N.C. and ? hold too", () => {
-		expect(make([0, 2, 4], [C(0, 4, "N")]).chart).toBe("time: 4/4\n| N.C. | / |\n");
+		expect(make([0, 2, 4], [C(0, 4, "N")]).chart).toBe("time: 4/4, tempo: 120\n| N.C. | / |\n");
 	});
 });
 
 describe("simile", () => {
 	const runs = [0, 2, 4].flatMap((t) => [C(t, t + 1), C(t + 1, t + 2, "G:maj")]);
 	test("% for a repeated multi-chord bar", () => {
-		expect(make([0, 2, 4, 6], runs).chart).toBe("time: 4/4\n| C G | % | % |\n");
+		expect(make([0, 2, 4, 6], runs).chart).toBe("time: 4/4, tempo: 120\n| C G | % | % |\n");
 		expect(make([0, 2, 4, 6], runs, { simile: false }).chart).toBe(
-			"time: 4/4\n| C G | C G | C G |\n",
+			"time: 4/4, tempo: 120\n| C G | C G | C G |\n",
 		);
 	});
 });
@@ -35,7 +35,7 @@ describe("simile", () => {
 describe("simile on held cells", () => {
 	test("a bar that only matches the raw symbols is not %", () => {
 		const r = make([0, 2, 4, 6], [C(0, 3), C(3, 4, "G:maj"), C(4, 5), C(5, 6, "G:maj")]);
-		expect(r.chart).toBe("time: 4/4\n| C | / G | C G |\n");
+		expect(r.chart).toBe("time: 4/4, tempo: 120\n| C | / G | C G |\n");
 		expect(parseChart(r.chart).bars.map((b) => b.slots.length)).toEqual([1, 2, 2]);
 	});
 });
@@ -51,7 +51,7 @@ describe("directives", () => {
 		});
 	test("key and meter share a line, comma separated", () => {
 		const r = withKey({});
-		expect(r.chart).toBe("key: C, time: 4/4\n| C | / |\n");
+		expect(r.chart).toBe("key: C, time: 4/4, tempo: 120\n| C | / |\n");
 		expect(parseChart(r.chart).diagnostics.filter((d) => d.severity === "error")).toEqual([]);
 	});
 });
@@ -146,6 +146,6 @@ describe("junk", () => {
 			changes: [{ kind: "key", start: 0, value: "C major", confidence: 0.8 }],
 		});
 		expect(r.diagnostics.map((d) => d.code).sort()).toEqual(["meter-assumed", "outside-bars"]);
-		expect(r.chart).toBe("| C | / | G | / |\n");
+		expect(r.chart).toBe("key: C, tempo: 120\n| C | / | G | / |\n");
 	});
 });
