@@ -624,6 +624,28 @@ describe("typed page credits", () => {
 		});
 	});
 
+	test("Dorico's placeholders for empty project info are left out", () => {
+		const placeholders =
+			credit("composer", "Project Composer") +
+			credit("lyricist", "Project Lyricist") +
+			credit("arranger", "Project Arranger") +
+			credit("rights", "Project Copyright");
+		const dorico =
+			"<identification><encoding><software>Dorico 6.2.31.6349</software></encoding></identification>";
+		const none = { composer: [], lyricist: [], arranger: [], copyright: [] };
+		expect(read(page(placeholders, dorico)).score?.credits).toEqual(none);
+		const titled = read(
+			page(placeholders, `<work><work-title>Project Title</work-title></work>${dorico}`),
+		).score;
+		expect(titled?.title).toBeNull();
+		// Another program's file, or a real name in Dorico's, keeps them.
+		expect(read(page(placeholders)).score?.credits.composer).toEqual(["Project Composer"]);
+		expect(
+			read(page(credit("composer", "Ann Lee") + credit("rights", "Project Copyright"), dorico))
+				.score?.credits,
+		).toEqual({ ...none, composer: ["Ann Lee"] });
+	});
+
 	test("ignored when the file names creators; rights keep <rights>", () => {
 		const { score } = read(
 			page(

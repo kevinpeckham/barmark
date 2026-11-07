@@ -23,6 +23,11 @@ package uses [semantic versioning](https://semver.org/).
   Instrumental, perhaps numbered or lettered (`Verse 2`, `Chorus B`), in
   any case. `Coda` stays the coda sign's direction; bold words are
   headings as before, and barmark's own files are read as before.
+- **Dorico's placeholder project info is left out.** Dorico fills empty
+  project info with greyed `Project Composer` and `Project Copyright`
+  page credits, which came in as `composer:` and `copyright:` lines. In a
+  file whose `<software>` is Dorico, those, `Project Lyricist`,
+  `Project Arranger` and a `Project Title` title are dropped.
 - **A half-diminished chord imports as `m7(b5)`, not `dim(7)`.** Dorico
   writes `<kind text="m7">half-diminished</kind>` with no `<degree>`; the
   shown `m7` isn't the chord, so its meaning names it, and `barmark`'s
