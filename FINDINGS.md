@@ -558,6 +558,44 @@ and round-trip it through `format`.
 
 ## Tooling
 
+### What Dorico 6.2 changes when it round-trips MusicXML (2026-11-07, MusicXML import)
+
+- **The symptom.** Dorico Elements 6.2.31 opened the five MuseScore
+  import fixtures and exported each again (mac-bench, Full score layout);
+  all five imported differently from MuseScore's charts. Some of the
+  difference is Dorico's data, some was the importer reading Dorico's
+  way of writing the same thing.
+- **The cause, Dorico's data** (kept in the expected charts as Dorico
+  wrote it):
+  - Chord symbols are global in Dorico, so the band's piano chords
+    (`G/B`, `Em`) became the guitar's (`G`, `G`); with the same chords
+    the two parts merge into one bare line.
+  - The lead sheet's `Tristan` chord, which MuseScore kept as text and
+    the import wrote `"FTristan" ?`, is gone: Dorico dropped it, so the
+    bar holds the chord before (`/`).
+  - The hymn's `'Twas` came back with a typographic apostrophe
+    (`‘Twas`, U+2018).
+- **The cause, how Dorico writes things** (fixed in the import):
+  - Half-diminished is `<kind text="m7" parentheses-degrees="yes">half-diminished</kind>`
+    with no `<degree>`, so the shown `m7` isn't the chord; its meaning
+    went through `harteToBarmark("F#:(1,b3,b5,b7)")`, which picked
+    `dim(7)` (alphabetical first of the equal names) over `m7(b5)`.
+  - Section names are system text with no `font-weight`, so the
+    bold-words heading rule missed `Intro` and `Verse`.
+  - Empty project info is written as greyed page credits `Project
+    Composer`, `Project Lyricist` and `Project Copyright`.
+  - A comping bar's slashes are voice 2 and its voicing voice 1, each
+    silent (a `<forward>`) where the other plays, so the import gave two
+    lines.
+- **The fix.** `harteToBarmark` prefers a Harte shorthand's name on a
+  tie (`packages/barmark/src/chords/harte.ts`); plain words naming a
+  section are a heading in another program's file
+  (`packages/musicxml/src/import/marks.ts`); Dorico's placeholders are
+  dropped (`read.ts`); a voice of slashes in another voice's gaps folds
+  into it (`merge.ts`, `foldRhythm`). The files and their charts are
+  `packages/musicxml/tests/fixtures/import/dorico-*`, tested in
+  `tests/import/programs.test.ts`.
+
 ### Dorico's MusicXML export can't be driven without a dialog, so Dorico import fixtures are exported by hand (2026-11-06, MusicXML import)
 
 - **The symptom.** The import plan's Dorico spike wanted mac-bench to open

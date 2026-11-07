@@ -1,8 +1,13 @@
 /**
- * Real files from another program: scores we wrote in MuseScore 4
+ * Real files from other programs: scores we wrote in MuseScore 4
  * (tests/fixtures/import/*.mscx), converted by MuseScore itself
- * (scripts/musescore-fixtures.ts, run on the VM only). Each expected chart
- * was written by reading the score, not by pasting the importer's output.
+ * (scripts/musescore-fixtures.ts, run on the VM only); and those
+ * MuseScore `.musicxml` files opened and exported (Full score layout) by
+ * Dorico Elements 6.2.31 (`dorico-*.musicxml`), through mac-bench
+ * (`kevinpeckham/mac-bench`), 2026-11-07. Each expected chart was written
+ * by reading the score, not by pasting the importer's output. What Dorico
+ * changes on the way (FINDINGS.md, "What Dorico 6.2 changes when it
+ * round-trips MusicXML") is in its charts as Dorico wrote it.
  */
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
@@ -88,5 +93,41 @@ describe("MuseScore 4", () => {
 			"# Morning Band\nkey: G, tempo: 96\n\n## Intro\n| {G1} | {C2} | {G1} | {D2} |\n\n## Verse\n| {B1} | {C2} | {E2} | {D2} |\n",
 		);
 		expect(r.diagnostics).toEqual([]);
+	});
+});
+
+/** Each Dorico file, and the diagnostics its import gives. */
+const DORICO: [string, ImportDiagnostic[]][] = [
+	["hymn", []],
+	// Dorico drops the Tristan chord MuseScore kept as text, so nothing is unread.
+	["lead-sheet", []],
+	[
+		"comping-guitar",
+		[warning("accents and articulations left out in measure 4", "Electric Guitar", ["4"])],
+	],
+	[
+		"piano",
+		[
+			warning(`${MELODY} in 4 measures: 1, 2, 3, …`, "Piano", ["1", "2", "3", "4"]),
+			warning("dynamics left out in measure 1", "Piano", ["1"]),
+		],
+	],
+	[
+		"band",
+		[
+			warning(
+				"no chord symbols in these parts, left out: Electric Bass. Import one as note sets with --part",
+			),
+		],
+	],
+];
+
+describe("Dorico 6", () => {
+	test.each(DORICO)("%s imports to its chart", (name, diagnostics) => {
+		const xml = text(`dorico-${name}.musicxml`);
+		expect(xml).toContain("<software>Dorico 6.");
+		const r = sound(importMusicXml(xml));
+		expect(r.text).toBe(text(`dorico-${name}.chart.md`));
+		expect(r.diagnostics).toEqual(diagnostics);
 	});
 });
