@@ -106,6 +106,16 @@ describe("the timing map", () => {
 		expect(r.timing && "recording" in r.timing).toBe(false);
 	});
 
+	test("a negative duration is left out, so the map still checks", () => {
+		const r = chartFromDetections({
+			grid: { bars: [0, 2] },
+			chords: { runs: [C(0, 2)] },
+			recording: { id: "r", duration: -1 },
+		});
+		expect(r.timing?.recording).toEqual({ id: "r" });
+		expect(checkTimingMap(r.timing as never, { text: r.chart }).diagnostics).toEqual([]);
+	});
+
 	test("an unusable grid", () => {
 		const r = chartFromDetections({ grid: { bars: [1] }, chords: { runs: [] } });
 		expect(r.chart).toBe("");

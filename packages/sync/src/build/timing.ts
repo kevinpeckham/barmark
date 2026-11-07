@@ -4,12 +4,16 @@ import type { Input } from "./input.js";
 
 const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null;
 
-/** The recording as given, keeping only an id that is a string and a duration that is finite. */
+/** The recording as given, keeping only an id that is a string and a duration that is finite and not negative. */
 function recordingOf(recording: unknown): TimingMap["recording"] | null {
 	if (!isRecord(recording)) return null;
 	const copy: NonNullable<TimingMap["recording"]> = {};
 	if (typeof recording.id === "string") copy.id = recording.id;
-	if (typeof recording.duration === "number" && Number.isFinite(recording.duration))
+	if (
+		typeof recording.duration === "number" &&
+		Number.isFinite(recording.duration) &&
+		recording.duration >= 0
+	)
 		copy.duration = recording.duration;
 	return Object.keys(copy).length > 0 ? copy : null;
 }
