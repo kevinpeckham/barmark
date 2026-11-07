@@ -9,6 +9,18 @@ not here.
 
 ## Testing
 
+### A repeat mark on a bar line with no bar had no measure to go on (2026-11-07, @barmark/musicxml)
+
+- **The symptom.** `| Gm |`, `|: % |`, `| ... :|` plays Gm Gm Gm; the
+  export played two bars. `|: Segno |` then `| C :|` went back to the
+  chart's start.
+- **The cause.** `lineMarks` in `packages/musicxml/src/measures.ts` puts
+  `|:` on a line's first measure and `:|` on its last, and returned when
+  the line wrote none: a line of directions or `...` alone.
+- **The fix.** `barlessMarks`: such a line's `:|` closes the repeat on
+  the measure before it, its `|:` waits (`Pending.opens`) for the next
+  measure. Found by the round trip's property test.
+
 ### Hand-picked jump charts all round-tripped; random ones didn't (2026-11-07, @barmark/musicxml)
 
 - **The symptom.** A review of PR #174 reported that "a D.C. chart's

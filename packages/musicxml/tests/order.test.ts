@@ -117,6 +117,11 @@ describe("play order", () => {
 		plays("## A x2\n|: C :|\n## A ->\n## B\n| D | D.C. |");
 		plays("## A\n| C |\n## A x2 ->\n## B\n| D | D.C. |");
 	});
+	test("|: or :| on a bar line with no bar: on the bar after it, or before it", () => {
+		plays("| Gm |\n|: % |\n| ... :|");
+		plays("|: C | D |\n| ... :|\n| E |");
+		plays("| A |\n|: Segno |\n| C :|\n| D | D.S. |");
+	});
 	test("a jump after a repeat's last bar, outside it: after its passes", () => {
 		// MuseScore takes a jump on a measure that ends a repeat on its first pass.
 		for (const text of [

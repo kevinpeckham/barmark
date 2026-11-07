@@ -113,6 +113,8 @@ type Pending = {
 	text: Measure["text"];
 	/** Text before a heading with no bar before it to close. */
 	lead: Measure["text"];
+	/** A `|:` on a bar line with no bar: the next measure opens the repeat. */
+	opens?: true;
 };
 
 const nothing = (): Pending => ({ heading: null, rehearsal: null, start: [], text: [], lead: [] });
@@ -144,6 +146,7 @@ function add(w: Walk, m: Measure): void {
 	m.marks.heading = w.pending.heading;
 	m.marks.rehearsal = w.pending.rehearsal ?? m.marks.rehearsal;
 	m.marks.start = w.pending.start;
+	if (w.pending.opens) m.marks.repeatStart = true;
 	m.lead = w.pending.lead;
 	const own = m.played === null ? undefined : w.texts.get(m.played);
 	m.text = own ? [...own, ...w.pending.text] : w.pending.text;
@@ -295,9 +298,17 @@ function endingMarks(line: BarsLine, first: Measure, last: Measure): void {
 	};
 }
 
+/** A bar line with no bar (directions, `...`): its `|:` opens the next measure, its `:|` closes the last. */
+function barlessMarks(w: Walk, line: BarsLine): void {
+	if (line.opens) w.pending.opens = true;
+	const last = w.out.at(-1);
+	if (line.closes && last && !line.ending) last.marks.repeatEnd = line.repeat ?? 2;
+}
+
 function lineMarks(w: Walk, line: BarsLine, from: number, lines: Line[], i: number): void {
 	const first = w.out[from];
 	const last = w.out[w.out.length - 1];
+	if (from === w.out.length) barlessMarks(w, line);
 	if (!first || !last) return;
 	if (line.opens) first.marks.repeatStart = true;
 	endingMarks(line, first, last);
