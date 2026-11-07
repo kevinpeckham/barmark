@@ -28,6 +28,14 @@ package uses [semantic versioning](https://semver.org/).
   page credits, which came in as `composer:` and `copyright:` lines. In a
   file whose `<software>` is Dorico, those, `Project Lyricist`,
   `Project Arranger` and a `Project Title` title are dropped.
+- **A comping part's slashes in a voice of their own stay its rhythm.**
+  Dorico writes a guitar's slashes in voice 2 and a voiced bar in voice 1,
+  each silent (a `<forward>`) where the other plays, and the import gave
+  two lines (`ElGtr.1`, `ElGtr.2`). On one staff, a voice of slashes and
+  rests alone that sounds only where the other voice says nothing is now
+  read as that voice's rhythm, on one line:
+  `| F#m7(b5) / B7{B2 D#3 A3 B3 F#4} -- |`. Slashes that sound with the
+  other voice's notes or rests still make a line of their own.
 - **A half-diminished chord imports as `m7(b5)`, not `dim(7)`.** Dorico
   writes `<kind text="m7">half-diminished</kind>` with no `<degree>`; the
   shown `m7` isn't the chord, so its meaning names it, and `barmark`'s

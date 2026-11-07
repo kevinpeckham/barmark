@@ -101,3 +101,32 @@ export function mergeStaves(upper: Line, lower: Line): Line | null {
 	});
 	return fits ? upper.map((bar, i) => mergeBar(bar, lower[i] ?? [])) : null;
 }
+
+/** Whether two attacks sound at once. */
+const overlap = (a: Attack, b: Attack) => cmp(a.at, end(b)) < 0 && cmp(b.at, end(a)) < 0;
+
+/** A line of rhythm alone: slashes and rests, at least one slash, no words. */
+const rhythmOnly = (line: Line) =>
+	line.some((bar) => bar.some((a) => a.kind === "slash")) &&
+	line.every((bar) => bar.every((a) => a.kind !== "notes" && a.lyrics.length === 0));
+
+/** `rhythm`'s attacks in `line`'s gaps, or null when one sounds with its notes or rests. */
+function fold(line: Line, rhythm: Line): Line | null {
+	const fits = rhythm.every((bar, i) =>
+		bar.every((a) => !(line[i] ?? []).some((b) => overlap(a, b))),
+	);
+	if (!fits) return null;
+	return line.map((bar, i) => [...bar, ...(rhythm[i] ?? [])].sort((x, y) => cmp(x.at, y.at)));
+}
+
+/**
+ * Two voices that are one line: one of slashes and rests alone, written
+ * where the other says nothing (a `<forward>`), as Dorico writes a comping
+ * part's slashes in one voice and a voiced bar in another. The two as one
+ * line, or null when either is more than that.
+ */
+export function foldRhythm(first: Line, second: Line): Line | null {
+	if (rhythmOnly(second)) return fold(first, second);
+	if (rhythmOnly(first)) return fold(second, first);
+	return null;
+}

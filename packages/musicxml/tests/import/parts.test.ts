@@ -1,4 +1,4 @@
-import { expect, test } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import { Losses } from "../../src/import/losses.js";
 import { type ImportedPart, importPart } from "../../src/import/parts.js";
 import { readScore } from "../../src/import/read.js";
@@ -579,4 +579,64 @@ test("label and instrument", () => {
 test("lyrics are the part's measures", () => {
 	const r = importChart("| C |");
 	expect(r.part?.lyrics).toHaveLength(1);
+});
+
+describe("a voice of slashes alone in another voice's gaps", () => {
+	const forward = (duration: number) => `<forward><duration>${duration}</duration></forward>`;
+	const gMajor: [string, number][] = [
+		["G", 3],
+		["B", 3],
+		["D", 4],
+	];
+	/** Dorico's comping bar: voice 1 silent (a <forward>) for the slashes, which are voice 2. */
+	const doricoBar = (second: string) =>
+		harmony("A", "minor") +
+		forward(2) +
+		chordOf(1, gMajor, voice(1)) +
+		backup(1) +
+		harmony("G") +
+		forward(1) +
+		rest(1, voice(1)) +
+		backup(4) +
+		second;
+
+	test("is the part's rhythm, on its one line (Dorico)", () => {
+		const r = importXml(
+			scoreXml(
+				{ software: "Dorico 6.2.31.6349" },
+				measure(1, time44() + harmony("C") + slash(1, voice(1)).repeat(4)) +
+					measure(2, doricoBar(slash(1, voice(2)).repeat(2) + forward(2))),
+			),
+		);
+		expect(r.part?.lines).toHaveLength(1);
+		expect(bars(r)).toEqual(["C", "Am / G{G3 B3 D4} --"]);
+	});
+
+	test("is the part's rhythm when the slashes are voice 2 throughout and voice 1 plays one bar", () => {
+		const bar2 =
+			harmony("A", "minor") +
+			slash(1, voice(2)).repeat(2) +
+			harmony("G") +
+			chordOf(1, gMajor, voice(1)) +
+			rest(1, voice(1));
+		const r = importXml(
+			scoreXml(
+				{ software: "Dorico 6.2.31.6349" },
+				measure(1, time44() + harmony("C") + slash(1, voice(2)).repeat(4)) + measure(2, bar2),
+			),
+		);
+		expect(r.part?.lines).toHaveLength(1);
+		expect(bars(r)).toEqual(["C", "Am / G{G3 B3 D4} --"]);
+	});
+
+	test("slashes sounding with the other voice's notes or rests stay a line of their own", () => {
+		const r = importXml(
+			scoreXml(
+				{ software: "Dorico 6.2.31.6349" },
+				measure(1, time44() + harmony("C") + slash(1, voice(1)).repeat(4)) +
+					measure(2, doricoBar(slash(1, voice(2)).repeat(4))),
+			),
+		);
+		expect(r.part?.lines).toHaveLength(2);
+	});
 });
