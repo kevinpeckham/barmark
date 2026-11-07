@@ -9,6 +9,22 @@ not here.
 
 ## Testing
 
+### A jump on a repeat's last measure is taken on its first pass (2026-11-07, @barmark/musicxml)
+
+- **The symptom.** `|: A | B :|` then `| D.C. |` and `|: A | B | D.C. :|`
+  exported to the same file: the D.C. on measure 2, beside its backward
+  repeat. barmark plays the first A B A B A B, the second A B A B.
+- **The cause.** MusicXML has one place for both. MuseScore 4.7 takes
+  the jump on the first pass (checked by exporting each chart to MIDI
+  with `mscore -o` and counting the notes: the first played four bars,
+  the second, with a C after it, five), as the import's `playedOrder`
+  and the tests' player already did.
+- **The fix.** A jump cell after a measure that already closes a repeat
+  (on a later bar line) makes `directionCell` in
+  `packages/musicxml/src/measures.ts` send the chart out in play order;
+  a jump inside the repeat keeps its marks, which mean what barmark
+  means. Found by the round trip's property test.
+
 ### A replay written out carries neither its repeats nor its directions (2026-11-07, @barmark/musicxml)
 
 - **The symptom.** `## A` then `| Am | x3`, a replay `## A`, then a

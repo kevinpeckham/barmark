@@ -112,6 +112,18 @@ describe("play order", () => {
 		// The Fine after the bar an elision cuts.
 		plays("## A\n| C | D | Fine |\n## B\n| Segno | E |\n## A ->\n## C\n| F | D.S. al Fine |");
 	});
+	test("a jump after a repeat's last bar, outside it: after its passes", () => {
+		// MuseScore takes a jump on a measure that ends a repeat on its first pass.
+		for (const text of [
+			"|: A | B :|\n| D.C. |",
+			"| A | x3\n| D.C. | C |",
+			"## A x2\n| A | B |\n## B\n| D.C. al Fine | C | Fine |",
+			"|: A | B |\n|1 C :|\n|2 D |\n| Segno | E | x2\n| D.S. |",
+		])
+			expect(plays(text)).not.toMatch(/dacapo|dalsegno/);
+		// Inside the repeat it is taken on the first pass: as written.
+		expect(plays("|: A | B | D.C. :|\n| C |")).toContain('<sound dacapo="yes"/>');
+	});
 	test("a fermata cell is a fermata on the bar line before it", () => {
 		const xml = plays("| C | G | ... |");
 		expect(measures(xml)[1]).toMatch(/<barline location="right"><fermata\/><\/barline>/);

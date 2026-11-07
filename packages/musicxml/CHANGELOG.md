@@ -22,6 +22,14 @@ package uses [semantic versioning](https://semver.org/).
   replay's measures don't carry, was never reached. Such a chart is now
   exported in play order, as one whose repeated section is written out
   already was.
+- **A jump written after a repeat plays after its passes.** `|: A | B :|`
+  then `| D.C. |` went out with the D.C. on the repeat's last measure,
+  where MuseScore 4.7 (and the import) take it on the first pass: the
+  file played A B, then the D.C., where barmark plays the repeat first.
+  MusicXML can't say "after the passes" there, so such a chart is now
+  exported in play order. A jump written inside the repeat
+  (`|: A | B | D.C. :|`), which barmark takes on the first pass, keeps
+  its marks.
 
 ## [0.6.3] - 2026-11-07
 

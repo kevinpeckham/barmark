@@ -235,11 +235,16 @@ function cellIn(w: Walk, cell: Cell): void {
 	if (cell.kind === "slots" || cell.kind === "simile") add(w, writtenBar(w, cell));
 	else if (cell.kind === "rehearsal") w.pending.rehearsal = cell.label;
 	else if (cell.kind === "fermata" && last) last.marks.fermata = true;
-	else if (cell.kind === "direction") {
-		const before = cell.direction.kind === "segno" || cell.direction.kind === "coda";
-		if (before) w.pending.start.push(cell.direction);
-		else last?.marks.end.push(cell.direction);
-	}
+	else if (cell.kind === "direction") directionCell(w, cell.direction, last);
+}
+
+/** Segno and Coda wait for the next measure; the others go on the last. */
+function directionCell(w: Walk, d: Direction, last: Measure | undefined): void {
+	if (d.kind === "segno" || d.kind === "coda") w.pending.start.push(d);
+	else last?.marks.end.push(d);
+	// A jump on a bar line after a repeat's is taken after its passes, but
+	// MuseScore takes a jump on a repeat's last measure on its first.
+	if (d.kind === "jump" && last && last.marks.repeatEnd !== null) w.flattened = true;
 }
 
 /** Lines that may stand between a repeat's endings (barmark's `repeats.ts`). */
