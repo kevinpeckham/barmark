@@ -53,3 +53,16 @@ export const corpus = (): [string, string][] => [
 	pianoLines,
 	...grammarCharts(),
 ];
+
+/** Charts with a repeat inside a repeat, which MusicXML's repeats can't nest (FINDINGS, 2026-11-05). */
+export const NESTED = [
+	"# T\n\n## A\n|: D | x2\n| A :|\n",
+	"|: C |\n| D | x2\n| A :| x3\n| E |",
+	"|: C |\n| D | x2\n|1 E :|\n|2 F |\n| G |",
+	"## A x2\n|: D | x2\n| A :|\n## B\n| G |",
+	"## A\n|: D | x2\n| A :|\n## B\n| E |\n## A\n## C\n| G |",
+	"## A\n| C | Fine |\n|: D | x2\n| A :|\n| E | D.C. al Fine |",
+	"|: D | x ...\n| A :|\n| G |",
+	"|: A | x2\n| ... :|\n| G |",
+	"|: A | x2\n| B | x3\n| ... :|\n| G |",
+];

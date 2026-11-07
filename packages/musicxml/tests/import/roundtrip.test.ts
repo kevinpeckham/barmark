@@ -3,7 +3,7 @@ import { describe, expect, test } from "bun:test";
 import { readdirSync, readFileSync } from "node:fs";
 import { parseChart, printChart } from "barmark";
 import { exportMusicXml, importMusicXml } from "../../src/index.js";
-import { corpus } from "../charts.js";
+import { corpus, NESTED } from "../charts.js";
 import { played, texts, usesRhythmFigures } from "./played.js";
 
 const inScope = corpus().filter(([, t]) => !usesRhythmFigures(parseChart(t)));
@@ -119,4 +119,53 @@ test.todo("a replay heading's own text after it stays there", () => {
 	const text =
 		"## Chorus\n| D | G |\n\n## Verse\n| G | C |\n\n## Chorus x2\nfoot\n\n## Outro\n| G |\n";
 	expect(texts(roundTrip(text))).toEqual(texts(text));
+});
+
+test.each(NESTED)("a repeat inside a repeat plays the same after export and import: %p", (text) => {
+	expect(played(roundTrip(text))).toEqual(played(text));
+});
+
+test.each([
+	[
+		"after bars no pass plays",
+		"## A x2\n|: C | D :|\n## B\n| E | Fine |\n| F | D.C. al Fine |\nmid\n| G |\nwatch\n",
+	],
+	[
+		"under a replay no pass plays",
+		"## A\n| C | Fine |\n|: D | E :|\n| D.C. al Fine |\n## A\nwatch\n",
+	],
+	[
+		"before later text, after bars no pass plays",
+		"|: C | To Coda | F :|\n| D.C. al Coda |\n### unplayed\n| Am |\n\n## Coda\n| Coda | C |\n### end\n",
+	],
+	[
+		"before later text, imported in played order",
+		"| Am | To Coda |\n| D.C. al Coda |\n\n## Verse x2\n| E7 |\n| G7 | x3\nplay softly\n\n## Coda\n| Coda | Em |\n### end\n",
+	],
+	[
+		"in a section no pass plays, imported in played order",
+		"| Am | To Coda |\n| D.C. al Coda |\n\n## Verse x2\n| E7 |\n| G7 | x3\nplay softly\n\n## Coda\n| Coda | Em |\n",
+	],
+	[
+		"under a replay, after a repeat holding one with the jump inside it",
+		"## Intro\n|: G7 | x2\n| Em | Segno |\n| D.S. |\n| Em | Am :|\n\n## Intro\nwatch\n",
+	],
+	["among a repeated section's bars", "## V x2\n| E7 | Fine | D.C. al Fine | x3\nwatch\n| E7 |\n"],
+	[
+		"after a repeat holding one, through a jump",
+		"|: E7 | To Coda | x2\n| G7 | D.C. al Coda | E7 :|\n### hits\n| Coda | Dm |\n",
+	],
+])("a chart written in play order keeps its text lines %s", (_name, text) => {
+	expect(texts(roundTrip(text)).map((t) => t.text)).toEqual(texts(text).map((t) => t.text));
+});
+
+test.each([
+	["after the last bar", "| C |\nhi\nhi\n"],
+	["before the first bar", "hi\nhi\n| C |\n"],
+	[
+		"among bars, two parts",
+		"part: A = Alpha\npart: B = Beta\nA | C |\nB | D |\nhi\nhi\nA | E |\nB | F |\n",
+	],
+])("a text line written twice comes back twice: %s", (_name, text) => {
+	expect(roundTrip(text)).toBe(text);
 });

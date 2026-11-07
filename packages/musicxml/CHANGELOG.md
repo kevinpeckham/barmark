@@ -6,6 +6,51 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+
+- **A repeat inside a repeat exports in play order.** `|: D | x2` then
+  `| A :|` plays D D A twice, but the export wrote the line's `x2` and
+  the outer `:|` as two backward repeats, which MusicXML can't nest: the
+  import played it as four bars, MuseScore as five. A `|: … :|` that
+  holds a bar line's `x N` (its endings included) is now written out as
+  it plays, as a repeated section holding repeats already was; repeats
+  with none inside keep their repeat bar lines.
+- **A jump through a replay that repeats, or that holds the Fine or To
+  Coda, plays as barmark plays it.** A replay is written out as it plays,
+  so after a D.C. or D.S. its written-out passes played again where
+  barmark plays every repeat once, and its Fine or To Coda, which a
+  replay's measures don't carry, was never reached. Such a chart is now
+  exported in play order, as one whose repeated section is written out
+  already was. So is one with a replay that repeats at all: after the
+  jump it plays one pass, and its `->` cuts from that pass.
+- **A jump written after a repeat plays after its passes.** `|: A | B :|`
+  then `| D.C. |` went out with the D.C. on the repeat's last measure,
+  where MuseScore 4.7 (and the import) take it on the first pass: the
+  file played A B, then the D.C., where barmark plays the repeat first.
+  MusicXML can't say "after the passes" there, so such a chart is now
+  exported in play order. A jump written inside the repeat
+  (`|: A | B | D.C. :|`), which barmark takes on the first pass, keeps
+  its marks.
+  Known limit, for every chart written in play order (by the export or
+  the import's fallback): bars before the first heading that a jump plays
+  again come back under the heading before them, since barmark can't
+  write the unnamed section mid-chart. They play the same bars.
+- **`|:` and `:|` on a bar line with no bar export.** A bar line of
+  directions or `...` alone (`| ... :|`, `|: Segno |`) lost its repeat
+  mark, so the file played the repeat from the wrong bar or not at all.
+  The `:|` now closes the repeat on the bar before it, the `|:` opens it
+  on the bar after.
+- **Text lines of bars no pass plays survive the round trip.** A chart
+  written in play order (by the export, or by the import's fallback) left
+  out the bars after a Fine or To Coda that never play, and the text
+  lines among them or after them went too. They now come after the bar
+  played last before them in written order, so text written later stays
+  later.
+- **A text line written twice imports twice.** The import read each
+  text line once, to read once the lines the export writes in every
+  part, so two lines alike in a row came back as one. It now keeps as
+  many as one part writes.
+
 ## [0.6.3] - 2026-11-07
 
 ### Changed

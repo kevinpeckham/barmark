@@ -66,6 +66,25 @@ function once<T>(items: T[], key: (t: T) => string = String): T[] {
 	});
 }
 
+/**
+ * The parts' text lines as the score's: the export writes them in every
+ * part, so each line once, but as many times as one part writes it (a line
+ * written twice comes back twice).
+ */
+function shared(lists: string[][]): string[] {
+	const out: string[] = [];
+	for (const list of lists) {
+		const have = new Map<string, number>();
+		for (const t of out) have.set(t, (have.get(t) ?? 0) + 1);
+		for (const t of list) {
+			const n = have.get(t) ?? 0;
+			if (n > 0) have.set(t, n - 1);
+			else out.push(t);
+		}
+	}
+	return out;
+}
+
 const first = <T>(items: (T | null)[]): T | null => items.find((t) => t !== null) ?? null;
 
 /** The parts' marks at one measure as the score's. */
@@ -131,7 +150,7 @@ function barInfo(
 	const { heading, rehearsal, extra } = namesOf(marks, read.number, c);
 	// The export writes text lines in every part, the heading in the top part alone.
 	// Known limit: the same text before and after a heading collapses to the one before.
-	const leadLines = once(marks.flatMap((m) => m.leadLines));
+	const leadLines = shared(marks.map((m) => m.leadLines));
 	const lead = new Set(leadLines);
 	const words = marks.flatMap((m) => m.words.map((w) => ({ text: w.text, at: beatOf(w.at, own) })));
 	return {
@@ -140,9 +159,9 @@ function barInfo(
 		meter: read.oneBar,
 		heading,
 		rehearsal,
-		textLines: once([...extra, ...marks.flatMap((m) => m.textLines)]).filter((t) => !lead.has(t)),
+		textLines: shared([extra, ...marks.map((m) => m.textLines)]).filter((t) => !lead.has(t)),
 		leadLines,
-		footLines: once(marks.flatMap((m) => m.footLines)),
+		footLines: shared(marks.map((m) => m.footLines)),
 		words: once(words, (w) => `${w.at}|${w.text}`),
 		question: marks.some((m) => m.question),
 		...cellsOf(marks, c.jumps),
@@ -268,9 +287,28 @@ export function readStructure(score: ReadScore, losses: Losses, words?: Set<Read
 	const order = playedOrder(longest, losses) ?? written;
 	if (order !== written) losses.note({ severity: "warning", message: WRITTEN_OUT });
 	const played = directiveLines(states, order);
-	return {
-		bars: order.map((i, k) => flattened(bars[i] as BarInfo, played[k] ?? null)),
-		writtenOut: true,
-		chordWords: chordy,
-	};
+	const out = order.map((i, k) => flattened(bars[i] as BarInfo, played[k] ?? null));
+	hangUnplayed(bars, order, out);
+	return { bars: out, writtenOut: true, chordWords: chordy };
+}
+
+/**
+ * The text lines of the bars the played order never reaches, kept: after
+ * the first play of the reached bar written last before each, in written
+ * order, or before the first bar when none is.
+ */
+function hangUnplayed(bars: BarInfo[], order: number[], out: BarInfo[]): void {
+	const firstPlay = new Map<number, number>();
+	order.forEach((i, k) => {
+		if (!firstPlay.has(i)) firstPlay.set(i, k);
+	});
+	let anchor: BarInfo | undefined;
+	const lead: string[] = [];
+	for (const b of bars) {
+		const k = firstPlay.get(b.index);
+		if (k !== undefined) anchor = out[k];
+		else (anchor?.footLines ?? lead).push(...b.leadLines, ...b.textLines, ...b.footLines);
+	}
+	const first = out[0];
+	if (first) first.textLines = [...lead, ...first.textLines];
 }

@@ -2,7 +2,8 @@
  * The measures a part writes, in written order, with the marks that make a
  * notation program play them in the chart's play order: repeats, endings
  * and jumps where MusicXML says the same thing, and bars written out where
- * it can't (a replay, or a repeated section holding repeats of its own).
+ * it can't (a replay, or a repeat holding a repeat of its own: MusicXML's
+ * repeats don't nest).
  */
 import type {
 	Cell,
@@ -112,9 +113,18 @@ type Pending = {
 	text: Measure["text"];
 	/** Text before a heading with no bar before it to close. */
 	lead: Measure["text"];
+	/** A `|:` on a bar line with no bar: the next measure opens the repeat. */
+	opens?: true;
 };
 
 const nothing = (): Pending => ({ heading: null, rehearsal: null, start: [], text: [], lead: [] });
+
+/**
+ * The `|: … :|` being walked: its first measure, whether a line inside it
+ * repeats too, the bars one pass of its body plays, the bars its endings
+ * play over all passes, and its highest ending.
+ */
+type Bracket = { from: number; nested: boolean; body: number; endings: number; passes: number };
 
 type Walk = {
 	parse: ChartParse;
@@ -126,19 +136,24 @@ type Walk = {
 	texts: Map<number, Measure["text"]>;
 	/** Each played bar's text lines after it, likewise. */
 	feet: Map<number, Measure["text"]>;
-	/** Some section's passes were written out. */
+	/** Some passes were written out, or a replay holds a Fine or To Coda: a jump needs the chart in play order. */
 	flattened: boolean;
 	/** Marks waiting for the next measure. */
 	pending: Pending;
 	/** The first measure of the replay being walked, which takes its section's text lines. */
 	replay: number | null;
 	section: { from: number; repeat: Repeat; line: number } | null;
+	/** The `|: … :|` being walked: its first measure, and whether a line inside it repeats too. */
+	bracket: Bracket | null;
+	/** Text lines of bars no pass plays, by the played bar written last before them (0 for none): they go after it. */
+	orphans: Map<number, Measure["text"]>;
 };
 
 function add(w: Walk, m: Measure): void {
 	m.marks.heading = w.pending.heading;
 	m.marks.rehearsal = w.pending.rehearsal ?? m.marks.rehearsal;
 	m.marks.start = w.pending.start;
+	if (w.pending.opens) m.marks.repeatStart = true;
 	m.lead = w.pending.lead;
 	const own = m.played === null ? undefined : w.texts.get(m.played);
 	m.text = own ? [...own, ...w.pending.text] : w.pending.text;
@@ -149,10 +164,75 @@ function add(w: Walk, m: Measure): void {
 
 const occurrenceAt = (w: Walk, line: number) => w.parse.sections.find((o) => o.line === line);
 
+/**
+ * Hangs the text lines of the measures in `ms` that no pass plays on the
+ * played measure written last before each (in `before`, or in `ms`), in
+ * written order.
+ */
+function hangUnplayed(w: Walk, ms: Measure[], before: Measure[]): void {
+	let anchor = before.findLast((m) => m.played !== null)?.played ?? 0;
+	for (const m of ms) {
+		if (m.played !== null) anchor = m.played;
+		else w.orphans.set(anchor, [...(w.orphans.get(anchor) ?? []), ...m.text, ...m.foot]);
+	}
+}
+
+/**
+ * The measures from `from` on, written again as these bars play, with no
+ * repeat marks: the first keeps its heading, lead text and Segno or Coda.
+ */
+function rewrite(w: Walk, from: number, bars: PlayedBar[]): void {
+	const first = w.out[from];
+	const pending = w.pending;
+	hangUnplayed(w, w.out.slice(from), w.out.slice(0, from));
+	w.out.length = from;
+	w.pending = {
+		...nothing(),
+		heading: first?.marks.heading ?? null,
+		start: first?.marks.start ?? [],
+		lead: first?.lead ?? [],
+	};
+	for (const b of bars) add(w, measureOf(b, w.fermatas));
+	w.pending = pending;
+	w.flattened = true;
+}
+
+const stops = (d: Direction) => d.kind === "fine" || d.kind === "to coda";
+
+const repeatsLine = (l: Line) =>
+	(l.kind === "bars" && (l.opens || l.closes || l.repeat !== null || l.ending !== null)) ||
+	(l.kind === "section" && l.repeat !== null);
+
+/** Whether a replay repeats: its heading's `x N`, or a repeat in the section it replays. */
+function replayRepeats(w: Walk, o: SectionOccurrence): boolean {
+	const lines = w.parse.lines;
+	const own = lines.find((l) => l.kind === "section" && l.line === o.line);
+	const from = lines.findIndex((l) => l.kind === "section" && l.line === o.replayOf);
+	const next = lines.findIndex((l, i) => i > from && l.kind === "section");
+	const body = lines.slice(from + 1, next < 0 ? undefined : next);
+	return (own !== undefined && repeatsLine(own)) || body.some(repeatsLine);
+}
+
+/**
+ * A replay a jump can't pass through as written: one that repeats (its
+ * passes are written out, and barmark plays them once after the jump, with
+ * its elision cutting from that one pass), or whose bars, the one its
+ * elision cuts included, are followed by a Fine or To Coda (its measures
+ * carry no directions).
+ */
+function needsPlayOrder(w: Walk, o: SectionOccurrence, bars: PlayedBar[]): boolean {
+	if (replayRepeats(w, o)) return true;
+	const written = new Set(bars.map((b) => b.written));
+	if (o.elided) written.add(Math.max(...written) + 1);
+	return w.out.some((m) => written.has(m.shown) && m.marks.end.some(stops));
+}
+
 /** An occurrence's bars as played, one measure each. */
 function playedOut(w: Walk, o: SectionOccurrence): void {
 	if (o.firstBar === null || o.lastBar === null) return;
-	for (const b of w.parse.bars.slice(o.firstBar - 1, o.lastBar)) add(w, measureOf(b, w.fermatas));
+	const bars = w.parse.bars.slice(o.firstBar - 1, o.lastBar);
+	if (needsPlayOrder(w, o, bars)) w.flattened = true;
+	for (const b of bars) add(w, measureOf(b, w.fermatas));
 }
 
 type Running = Pick<Measure, "meter" | "key" | "tempo" | "feel" | "swingPercent">;
@@ -196,11 +276,16 @@ function cellIn(w: Walk, cell: Cell): void {
 	if (cell.kind === "slots" || cell.kind === "simile") add(w, writtenBar(w, cell));
 	else if (cell.kind === "rehearsal") w.pending.rehearsal = cell.label;
 	else if (cell.kind === "fermata" && last) last.marks.fermata = true;
-	else if (cell.kind === "direction") {
-		const before = cell.direction.kind === "segno" || cell.direction.kind === "coda";
-		if (before) w.pending.start.push(cell.direction);
-		else last?.marks.end.push(cell.direction);
-	}
+	else if (cell.kind === "direction") directionCell(w, cell.direction, last);
+}
+
+/** Segno and Coda wait for the next measure; the others go on the last. */
+function directionCell(w: Walk, d: Direction, last: Measure | undefined): void {
+	if (d.kind === "segno" || d.kind === "coda") w.pending.start.push(d);
+	else last?.marks.end.push(d);
+	// A jump on a bar line after a repeat's is taken after its passes, but
+	// MuseScore takes a jump on a repeat's last measure on its first.
+	if (d.kind === "jump" && last && last.marks.repeatEnd !== null) w.flattened = true;
 }
 
 /** Lines that may stand between a repeat's endings (barmark's `repeats.ts`). */
@@ -229,9 +314,17 @@ function endingMarks(line: BarsLine, first: Measure, last: Measure): void {
 	};
 }
 
+/** A bar line with no bar (directions, `...`): its `|:` opens the next measure, its `:|` closes the last. */
+function barlessMarks(w: Walk, line: BarsLine): void {
+	if (line.opens) w.pending.opens = true;
+	const last = w.out.at(-1);
+	if (line.closes && last && !line.ending) last.marks.repeatEnd = line.repeat ?? 2;
+}
+
 function lineMarks(w: Walk, line: BarsLine, from: number, lines: Line[], i: number): void {
 	const first = w.out[from];
 	const last = w.out[w.out.length - 1];
+	if (from === w.out.length) barlessMarks(w, line);
 	if (!first || !last) return;
 	if (line.opens) first.marks.repeatStart = true;
 	endingMarks(line, first, last);
@@ -245,6 +338,62 @@ function lineMarks(w: Walk, line: BarsLine, from: number, lines: Line[], i: numb
 	}
 }
 
+/** The played bars of the section occurrence that plays bar `p` first, from `p` on. */
+function occurrenceFrom(w: Walk, p: number): PlayedBar[] {
+	const o = w.parse.sections.find(
+		(s) => s.firstBar !== null && s.firstBar <= p && p <= (s.lastBar ?? 0),
+	);
+	return w.parse.bars.slice(p - 1, o?.lastBar ?? undefined);
+}
+
+/**
+ * A `|: … :|`'s bars as played, from its first measure: `count` of them,
+ * no further than its own bars and its section's occurrence (a jump
+ * inside it leaves them).
+ */
+function bracketPlays(w: Walk, from: number, count: number): PlayedBar[] {
+	const first = w.out[from];
+	const last = w.out.at(-1);
+	if (!first || first.played === null || !last) return [];
+	const inside = (b: PlayedBar) => b.written >= first.shown && b.written <= last.shown;
+	const bars = occurrenceFrom(w, first.played).slice(0, count);
+	const out = bars.findIndex((b) => !inside(b));
+	return out < 0 ? bars : bars.slice(0, out);
+}
+
+/** The passes a `:|` plays: its `x N`, two, or one for an open repeat (its one pass is played). */
+const closingPasses = (line: BarsLine) => (line.repeat === "open" ? 1 : (line.repeat ?? 2));
+
+/** Counts a line's bars into the bracket: a body line's as often as its own `x N` plays it, an ending's once per pass it takes. */
+function countLine(b: Bracket, line: BarsLine, bars: number): void {
+	if (line.ending) {
+		b.endings += bars * line.ending.length;
+		b.passes = Math.max(b.passes, ...line.ending);
+	} else b.body += bars * (line.closes || typeof line.repeat !== "number" ? 1 : line.repeat);
+}
+
+/** The `|: … :|`'s last line: its last ending, or its `:|` with no endings after it. */
+const endsBracket = (line: BarsLine, lines: Line[], next: number) =>
+	line.ending ? !line.closes : line.closes && passes(lines, next) === 0;
+
+/**
+ * A `|: … :|` holding a bar line's `x N`, written out in play order once
+ * its last line (its last ending's) is walked: MusicXML's repeats don't
+ * nest, so no program plays the two backward repeats as barmark does.
+ */
+function bracketLine(w: Walk, line: BarsLine, from: number, lines: Line[], next: number): void {
+	if (line.opens) w.bracket = { from, nested: false, body: 0, endings: 0, passes: 0 };
+	const b = w.bracket;
+	if (!b) return;
+	if (!line.closes && line.repeat !== null) b.nested = true;
+	countLine(b, line, w.out.length - from);
+	if (!endsBracket(line, lines, next)) return;
+	w.bracket = null;
+	const passes = line.ending ? b.passes : closingPasses(line);
+	const bars = b.nested ? bracketPlays(w, b.from, passes * b.body + b.endings) : [];
+	if (bars.length) rewrite(w, b.from, bars);
+}
+
 const repeats = (m: Measure) =>
 	m.marks.repeatStart || m.marks.repeatEnd !== null || m.marks.ending !== null;
 
@@ -256,13 +405,8 @@ function closeSection(w: Walk): void {
 	const inside = w.out.slice(s.from);
 	const o = occurrenceAt(w, s.line);
 	if (inside.some(repeats) && o) {
-		const heading = inside[0]?.marks.heading ?? null;
-		w.out.length = s.from;
-		w.pending.heading = heading;
-		// Text before the chart's first heading goes with it.
-		w.pending.lead = inside[0]?.lead ?? [];
-		w.flattened = true;
-		playedOut(w, o);
+		if (o.firstBar !== null && o.lastBar !== null)
+			rewrite(w, s.from, w.parse.bars.slice(o.firstBar - 1, o.lastBar));
 		return;
 	}
 	(inside[0] as Measure).marks.repeatStart = true;
@@ -324,6 +468,8 @@ export function writtenMeasures(parse: ChartParse): Measure[] {
 		pending: nothing(),
 		replay: null,
 		section: null,
+		bracket: null,
+		orphans: new Map(),
 	};
 	parse.lines.forEach((line, i) => {
 		if (line.kind === "section") sectionLine(w, line);
@@ -333,6 +479,7 @@ export function writtenMeasures(parse: ChartParse): Measure[] {
 		const from = w.out.length;
 		for (const cell of line.cells) cellIn(w, cell);
 		lineMarks(w, line, from, parse.lines, i + 1);
+		bracketLine(w, line, from, parse.lines, i + 1);
 	});
 	closeText(w);
 	const out = w.flattened && hasJump(parse) ? inPlayOrder(w) : w.out;
@@ -351,17 +498,22 @@ const hasJump = (parse: ChartParse) =>
  * The whole chart in play order, with no repeats or jumps: what a chart
  * needs when a jump passes through passes written out, since a written bar
  * can't play once after the jump and twice before it. Headings, rehearsal
- * marks, fermatas and text lines stay.
+ * marks, fermatas and text lines stay; the text lines of bars no pass
+ * plays go after the played bar written before them.
  */
 function inPlayOrder(w: Walk): Measure[] {
+	hangUnplayed(w, w.out, []);
 	const headings = new Map<number, string>();
 	for (const o of w.parse.sections) if (o.firstBar !== null) headings.set(o.firstBar, o.name);
-	return w.parse.bars.map((b, i) => {
+	const out = w.parse.bars.map((b, i) => {
 		const m = measureOf(b, w.fermatas);
 		m.marks.heading = headings.get(b.index) ?? null;
 		m.text = w.texts.get(b.index) ?? [];
-		m.foot = w.feet.get(b.index) ?? [];
+		m.foot = [...(w.feet.get(b.index) ?? []), ...(w.orphans.get(b.index) ?? [])];
 		if (i === 0) m.lead = w.out[0]?.lead ?? [];
 		return m;
 	});
+	const head = out[0];
+	if (head) head.text = [...(w.orphans.get(0) ?? []), ...head.text];
+	return out;
 }

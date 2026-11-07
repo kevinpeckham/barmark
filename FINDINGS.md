@@ -9,6 +9,122 @@ not here.
 
 ## Testing
 
+### A repeat mark on a bar line with no bar had no measure to go on (2026-11-07, @barmark/musicxml)
+
+- **The symptom.** `| Gm |`, `|: % |`, `| ... :|` plays Gm Gm Gm; the
+  export played two bars. `|: Segno |` then `| C :|` went back to the
+  chart's start.
+- **The cause.** `lineMarks` in `packages/musicxml/src/measures.ts` puts
+  `|:` on a line's first measure and `:|` on its last, and returned when
+  the line wrote none: a line of directions or `...` alone.
+- **The fix.** `barlessMarks`: such a line's `:|` closes the repeat on
+  the measure before it, its `|:` waits (`Pending.opens`) for the next
+  measure. Found by the round trip's property test.
+
+### Hand-picked jump charts all round-tripped; random ones didn't (2026-11-07, @barmark/musicxml)
+
+- **The symptom.** A review of PR #174 reported that "a D.C. chart's
+  round trip drops its last bar", with no example. Nine hand-written
+  jump charts (D.C., D.S., al Fine, al Coda, after repeats, mid-line,
+  with replays) all came back playing the same.
+- **The cause.** The bugs were in combinations nobody writes by hand: a
+  jump back through a replay that repeats or holds the Fine, a jump on
+  its own bar line after a `:|`, a `:|` on a bar line with no bar, text
+  among bars that never play, a text line written twice. The dropped
+  last bar itself never turned up in about 5,800 random charts (seeds 1
+  to 9000). Two shapes still fail. A replay with `->` that the Fine or
+  To Coda ends after the jump (seeds 1827, 3674): barmark cuts the bar
+  before the Fine and plays none of it, a grammar question (does the cut
+  take the replay's last written bar or its last played one?), kept as
+  a `test.todo`. And seed 6404: the import, falling back to played order
+  (it can't hold an unplayed `## Chorus x2` after a To Coda), writes the
+  D.S.'s return into the section before it, losing its heading; the
+  same happens on main.
+  A known limit of any chart written in play order: bars before the
+  first heading (the unnamed section) that a jump plays again can't be
+  named again, since barmark writes no heading for it mid-chart, so
+  `| C | G |`, `## Verse`, `|: Am | F :|`, `| D.C. |` comes back with
+  the return's C G under `## Verse`. The generator starts one chart in
+  five with such bars, and those are compared without their sections
+  (a `test.todo` keeps the case).
+- **The fix.** `packages/musicxml/tests/import/jumps-property.test.ts`
+  round-trips 300 seeded charts from `jump-charts.ts` (one jump with its
+  signs, repeats, endings, `x N` on lines and headings, replays,
+  elisions, `%`, a closing `...`, text lines, two parts) and asks that
+  each plays the same, keeps every text line in order and prints
+  canonically, and that the tests' player (`tests/play.ts`) plays the
+  export as barmark plays the chart: two readers. The player missed
+  self-closing `<measure/>`s (a bar no pass plays, with nothing in it)
+  until this check met one. Where a text line lands among bars written out isn't
+  asked: writing passes out puts more bars before it. Shrink a failure
+  by deleting lines and cells while it still fails.
+
+### Reading a mark once per score also reads a repeated line once (2026-11-07, MusicXML import)
+
+- **The symptom.** `| C |` then `hi` twice imported with one `hi`.
+- **The cause.** The export writes text lines in every part, so the
+  import read each text once (`once` in
+  `packages/musicxml/src/import/structure.ts`), which also collapsed a
+  line one part writes twice.
+- **The fix.** `shared` keeps each line as many times as one part writes
+  it. Found by the round trip's property test, whose generator wrote the
+  same line twice by chance. Dedupe across sources, not within one.
+
+### Writing bars out in play order drops the text of bars that never play (2026-11-07, @barmark/musicxml)
+
+- **The symptom.** `| E | Fine |`, `| F | D.C. al Fine |`, then `mid`,
+  `| G |` and `watch`, in a chart the export writes in play order: both
+  text lines were gone after the round trip.
+- **The cause.** Play order has no place for a bar no pass plays (here
+  G, after the Fine), and the text lines went with their bar: in the
+  export's `inPlayOrder` and `rewrite`, and in the import's written-out
+  fallback (`readStructure`). And `bracketPlays` ran past its repeat when
+  a jump inside it sent play elsewhere, taking a replay's bars and their
+  text with it.
+- **The fix.** Both sides hang the text of unplayed bars on the foot of
+  the played bar written last before them, at its first play
+  (`hangUnplayed` in `packages/musicxml/src/measures.ts` and
+  `packages/musicxml/src/import/structure.ts`). Putting it after the
+  chart's last bar, the first try, moved it past text written later (a
+  Coda's): the property test's codas now carry a text line. And
+  `bracketPlays` stops at its own bars and its section's occurrence.
+  Found by the round trip's property test, which asks that every text
+  line come back, in order.
+
+### A jump on a repeat's last measure is taken on its first pass (2026-11-07, @barmark/musicxml)
+
+- **The symptom.** `|: A | B :|` then `| D.C. |` and `|: A | B | D.C. :|`
+  exported to the same file: the D.C. on measure 2, beside its backward
+  repeat. barmark plays the first A B A B A B, the second A B A B.
+- **The cause.** MusicXML has one place for both. MuseScore 4.7 takes
+  the jump on the first pass (checked by exporting each chart to MIDI
+  with `mscore -o` and counting the notes: the first played four bars,
+  the second, with a C after it, five), as the import's `playedOrder`
+  and the tests' player already did.
+- **The fix.** A jump cell after a measure that already closes a repeat
+  (on a later bar line) makes `directionCell` in
+  `packages/musicxml/src/measures.ts` send the chart out in play order;
+  a jump inside the repeat keeps its marks, which mean what barmark
+  means. Found by the round trip's property test.
+
+### A replay written out carries neither its repeats nor its directions (2026-11-07, @barmark/musicxml)
+
+- **The symptom.** `## A` then `| Am | x3`, a replay `## A`, then a
+  D.C.: barmark plays the replay's `x3` once after the jump (grammar
+  5.2), but the exported file played it three times. A replay holding
+  the Fine (`D.S. al Fine` back through it) played on past the Fine.
+- **The cause.** The export writes a replay as the bars it plays, with
+  no repeat marks or directions: right the first time through, but a
+  jump back through it plays the written-out passes again, and never
+  meets the Fine or To Coda its section holds.
+- **The fix.** `playedOut` in `packages/musicxml/src/measures.ts` marks
+  a replay that repeats (its heading's `x N`, or a repeat in the section
+  it replays: after the jump it plays one pass, and an elision cuts from
+  that pass), or whose bars (the one its elision cuts included) are
+  followed by a Fine or To Coda, and a chart with a jump then goes out in
+  play order (`inPlayOrder`). Found by the round
+  trip's property test (`tests/import/jumps-property.test.ts`).
+
 ### Spelling by a chord's start picked the old key (2026-11-07, @barmark/sync)
 
 - **The symptom.** The round trip of `| G | D |` then `key: Db` then `| Gb | Db |`
@@ -247,11 +363,18 @@ showed the rule needed refining.
   importer (`packages/musicxml/src/import/order.ts`, as notation
   programs commonly do) sends it back to the bar after the last finished
   repeat, MuseScore to bar 1 for one more pass.
-- **The fix.** Not yet made. The export should write a repeated section
-  that holds a repeat of its own in play order, as it already does for
-  repeated sections (`inPlayOrder` in
-  `packages/musicxml/src/measures.ts`). Until then, a nested repeat
-  isn't safe to export.
+- **The fix.** The export writes a `|: … :|` that holds a bar line's
+  `x N` (endings included) in play order, with no repeat marks, as it
+  already did for a repeated section holding repeats (`bracketLine` and
+  `rewrite` in `packages/musicxml/src/measures.ts`), as many bars as its
+  lines play (`countLine`: each body line times its own `x N`, each
+  ending once per pass it takes), not counted by plays of its last bar,
+  which a `| ... :|` makes the inner line's; a `## X x2` around
+  it keeps its repeat bar lines, and a jump through it writes the whole
+  chart in play order (`inPlayOrder`). Every nesting the grammar allows
+  is covered by `NESTED` in `packages/musicxml/tests/charts.ts`, played
+  by the export's test player (`order.test.ts`) and round-tripped
+  (`roundtrip.test.ts`). Repeats with none inside keep their marks.
 
 ### An unanchored `\s*x\s*…$` regex is quadratic on long whitespace (2026-10-31, chart parser)
 

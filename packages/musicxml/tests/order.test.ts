@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { extractPart } from "barmark";
 import { MORNING_SONG } from "../../barmark/tests/chart/morning-song.js";
+import { NESTED } from "./charts.js";
 import { measures, xmlOf } from "./helpers.js";
 import { expected, expectedBars, play } from "./play.js";
 
@@ -98,6 +99,41 @@ describe("play order", () => {
 		expect(xml).toContain('<sound fine="yes"/>');
 		expect(xml).toContain('<sound dacapo="yes"/>');
 	});
+	test("a replay that repeats, then a jump through it: every repeat plays once after the jump", () => {
+		plays("## A\n| G |\n## A x2\n## B\n|: C | D.C. |\n| F | E :|");
+		plays("## A\n| Am | x3\n| G |\n## A\n## B\n| F | D.C. |\n## C\n| G |");
+		plays("## A\n| C | Segno | E |\n## A x2\n## B\n| C | D.S. | G |");
+	});
+	test("a replay holding the Fine or To Coda, after the jump", () => {
+		plays("## A\n| C | Fine | D |\n## B\n| Segno | E |\n## A\n## C\n| F | D.S. al Fine |");
+		plays(
+			"## A\n| C | To Coda | D |\n## B\n| Segno | E |\n## A\n## C\n| F | D.S. al Coda |\n## Coda\n| Coda | G |",
+		);
+		// The Fine after the bar an elision cuts.
+		plays("## A\n| C | D | Fine |\n## B\n| Segno | E |\n## A ->\n## C\n| F | D.S. al Fine |");
+	});
+	test("an elided replay of a section that repeats, then a jump through it", () => {
+		plays("## Intro\n| G7 | x2\n## Intro ->\n## Chorus\n| D.C. |");
+		plays("## A x2\n|: C :|\n## A ->\n## B\n| D | D.C. |");
+		plays("## A\n| C |\n## A x2 ->\n## B\n| D | D.C. |");
+	});
+	test("|: or :| on a bar line with no bar: on the bar after it, or before it", () => {
+		plays("| Gm |\n|: % |\n| ... :|");
+		plays("|: C | D |\n| ... :|\n| E |");
+		plays("| A |\n|: Segno |\n| C :|\n| D | D.S. |");
+	});
+	test("a jump after a repeat's last bar, outside it: after its passes", () => {
+		// MuseScore takes a jump on a measure that ends a repeat on its first pass.
+		for (const text of [
+			"|: A | B :|\n| D.C. |",
+			"| A | x3\n| D.C. | C |",
+			"## A x2\n| A | B |\n## B\n| D.C. al Fine | C | Fine |",
+			"|: A | B |\n|1 C :|\n|2 D |\n| Segno | E | x2\n| D.S. |",
+		])
+			expect(plays(text)).not.toMatch(/dacapo|dalsegno/);
+		// Inside the repeat it is taken on the first pass: as written.
+		expect(plays("|: A | B | D.C. :|\n| C |")).toContain('<sound dacapo="yes"/>');
+	});
 	test("a fermata cell is a fermata on the bar line before it", () => {
 		const xml = plays("| C | G | ... |");
 		expect(measures(xml)[1]).toMatch(/<barline location="right"><fermata\/><\/barline>/);
@@ -114,5 +150,19 @@ describe("play order", () => {
 		if (!piano) throw new Error("no piano");
 		expect(play(xml, "P2")).toEqual(expectedBars(piano.bars));
 		expect(play(xml, "P2").harmony).toContain("G/B");
+	});
+});
+
+describe("a repeat inside a repeat is written out in play order", () => {
+	test.each(NESTED)("%p plays as barmark plays it", (text) => {
+		plays(text);
+	});
+	test("a repeat with none inside keeps its repeat bar lines", () => {
+		const xml = plays("|: D | x2\n| A :|\n|: E | F :|");
+		const ms = measures(xml);
+		expect(ms).toHaveLength(8);
+		expect(xml.match(/<repeat direction="backward"/g)).toHaveLength(1);
+		expect(ms[6]).toContain('<repeat direction="forward"/>');
+		expect(ms[7]).toContain('<repeat direction="backward" times="2"/>');
 	});
 });
