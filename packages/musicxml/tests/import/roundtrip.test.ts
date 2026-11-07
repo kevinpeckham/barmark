@@ -124,3 +124,29 @@ test.todo("a replay heading's own text after it stays there", () => {
 test.each(NESTED)("a repeat inside a repeat plays the same after export and import: %p", (text) => {
 	expect(played(roundTrip(text))).toEqual(played(text));
 });
+
+test.each([
+	[
+		"after bars no pass plays",
+		"## A x2\n|: C | D :|\n## B\n| E | Fine |\n| F | D.C. al Fine |\nmid\n| G |\nwatch\n",
+	],
+	[
+		"under a replay no pass plays",
+		"## A\n| C | Fine |\n|: D | E :|\n| D.C. al Fine |\n## A\nwatch\n",
+	],
+	[
+		"in a section no pass plays, imported in played order",
+		"| Am | To Coda |\n| D.C. al Coda |\n\n## Verse x2\n| E7 |\n| G7 | x3\nplay softly\n\n## Coda\n| Coda | Em |\n",
+	],
+	[
+		"under a replay, after a repeat holding one with the jump inside it",
+		"## Intro\n|: G7 | x2\n| Em | Segno |\n| D.S. |\n| Em | Am :|\n\n## Intro\nwatch\n",
+	],
+	["among a repeated section's bars", "## V x2\n| E7 | Fine | D.C. al Fine | x3\nwatch\n| E7 |\n"],
+	[
+		"after a repeat holding one, through a jump",
+		"|: E7 | To Coda | x2\n| G7 | D.C. al Coda | E7 :|\n### hits\n| Coda | Dm |\n",
+	],
+])("a chart written in play order keeps its text lines %s", (_name, text) => {
+	expect(texts(roundTrip(text)).map((t) => t.text)).toEqual(texts(text).map((t) => t.text));
+});

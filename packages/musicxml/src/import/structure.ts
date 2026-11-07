@@ -268,9 +268,15 @@ export function readStructure(score: ReadScore, losses: Losses, words?: Set<Read
 	const order = playedOrder(longest, losses) ?? written;
 	if (order !== written) losses.note({ severity: "warning", message: WRITTEN_OUT });
 	const played = directiveLines(states, order);
-	return {
-		bars: order.map((i, k) => flattened(bars[i] as BarInfo, played[k] ?? null)),
-		writtenOut: true,
-		chordWords: chordy,
-	};
+	const out = order.map((i, k) => flattened(bars[i] as BarInfo, played[k] ?? null));
+	out.at(-1)?.footLines.push(...unplayedText(bars, order));
+	return { bars: out, writtenOut: true, chordWords: chordy };
+}
+
+/** The text lines of the bars the played order never reaches: kept, after the last bar. */
+function unplayedText(bars: BarInfo[], order: number[]): string[] {
+	const reached = new Set(order);
+	return bars
+		.filter((b) => !reached.has(b.index))
+		.flatMap((b) => [...b.leadLines, ...b.textLines, ...b.footLines]);
 }

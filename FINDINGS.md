@@ -9,6 +9,24 @@ not here.
 
 ## Testing
 
+### Writing bars out in play order drops the text of bars that never play (2026-11-07, @barmark/musicxml)
+
+- **The symptom.** `| E | Fine |`, `| F | D.C. al Fine |`, then `mid`,
+  `| G |` and `watch`, in a chart the export writes in play order: both
+  text lines were gone after the round trip.
+- **The cause.** Play order has no place for a bar no pass plays (here
+  G, after the Fine), and the text lines went with their bar: in the
+  export's `inPlayOrder` and `rewrite`, and in the import's written-out
+  fallback (`readStructure`). And `bracketPlays` ran past its repeat when
+  a jump inside it sent play elsewhere, taking a replay's bars and their
+  text with it.
+- **The fix.** Both sides put the text of unplayed bars after the last
+  bar (`unplayedText` in `packages/musicxml/src/measures.ts` and
+  `packages/musicxml/src/import/structure.ts`), and `bracketPlays` stops
+  at its own bars and its section's occurrence. Found by the round
+  trip's property test, which asks that every text line come back, in
+  order.
+
 ### A jump on a repeat's last measure is taken on its first pass (2026-11-07, @barmark/musicxml)
 
 - **The symptom.** `|: A | B :|` then `| D.C. |` and `|: A | B | D.C. :|`

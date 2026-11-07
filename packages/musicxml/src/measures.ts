@@ -136,6 +136,8 @@ type Walk = {
 	section: { from: number; repeat: Repeat; line: number } | null;
 	/** The `|: … :|` being walked: its first measure, and whether a line inside it repeats too. */
 	bracket: { from: number; nested: boolean } | null;
+	/** Text lines of bars no pass plays, written out of the measures: they go after the last bar. */
+	orphans: Measure["text"];
 };
 
 function add(w: Walk, m: Measure): void {
@@ -152,6 +154,10 @@ function add(w: Walk, m: Measure): void {
 
 const occurrenceAt = (w: Walk, line: number) => w.parse.sections.find((o) => o.line === line);
 
+/** The text lines of the measures no pass plays. */
+const unplayedText = (ms: Measure[]) =>
+	ms.filter((m) => m.played === null).flatMap((m) => [...m.text, ...m.foot]);
+
 /**
  * The measures from `from` on, written again as these bars play, with no
  * repeat marks: the first keeps its heading, lead text and Segno or Coda.
@@ -159,6 +165,7 @@ const occurrenceAt = (w: Walk, line: number) => w.parse.sections.find((o) => o.l
 function rewrite(w: Walk, from: number, bars: PlayedBar[]): void {
 	const first = w.out[from];
 	const pending = w.pending;
+	w.orphans.push(...unplayedText(w.out.slice(from)));
 	w.out.length = from;
 	w.pending = {
 		...nothing(),
@@ -289,19 +296,33 @@ function lineMarks(w: Walk, line: BarsLine, from: number, lines: Line[], i: numb
 	}
 }
 
+/** The played bars of the section occurrence that plays bar `p` first, from `p` on. */
+function occurrenceFrom(w: Walk, p: number): PlayedBar[] {
+	const o = w.parse.sections.find(
+		(s) => s.firstBar !== null && s.firstBar <= p && p <= (s.lastBar ?? 0),
+	);
+	return w.parse.bars.slice(p - 1, o?.lastBar ?? undefined);
+}
+
 /**
  * A `|: … :|`'s first pass to its last, from its first measure: through the
- * `times`-th play of its last measure, so a repeat around it doesn't count.
+ * `times`-th play of its last measure, so a repeat around it doesn't count,
+ * and no further than its own bars and its section's occurrence (a jump
+ * inside it leaves them).
  */
 function bracketPlays(w: Walk, from: number, times: number): PlayedBar[] {
-	const first = w.out[from]?.played;
-	const last = w.out.at(-1)?.shown;
-	if (first === null || first === undefined) return [];
-	const bars = w.parse.bars;
+	const first = w.out[from];
+	const last = w.out.at(-1);
+	if (!first || first.played === null || !last) return [];
+	const inside = (b: PlayedBar) => b.written >= first.shown && b.written <= last.shown;
+	const out: PlayedBar[] = [];
 	let seen = 0;
-	let end = first - 1;
-	while (end < bars.length - 1 && !(bars[end]?.written === last && ++seen === times)) end++;
-	return bars.slice(first - 1, end + 1);
+	for (const b of occurrenceFrom(w, first.played)) {
+		if (!inside(b) || seen === times) break;
+		out.push(b);
+		if (b.written === last.shown) seen++;
+	}
+	return out;
 }
 
 /** The passes a `|: … :|` closed by this line plays: its endings' last pass plays once, an open repeat's one pass. */
@@ -403,6 +424,7 @@ export function writtenMeasures(parse: ChartParse): Measure[] {
 		replay: null,
 		section: null,
 		bracket: null,
+		orphans: [],
 	};
 	parse.lines.forEach((line, i) => {
 		if (line.kind === "section") sectionLine(w, line);
@@ -431,12 +453,13 @@ const hasJump = (parse: ChartParse) =>
  * The whole chart in play order, with no repeats or jumps: what a chart
  * needs when a jump passes through passes written out, since a written bar
  * can't play once after the jump and twice before it. Headings, rehearsal
- * marks, fermatas and text lines stay.
+ * marks, fermatas and text lines stay; the text lines of bars no pass
+ * plays go after the last bar.
  */
 function inPlayOrder(w: Walk): Measure[] {
 	const headings = new Map<number, string>();
 	for (const o of w.parse.sections) if (o.firstBar !== null) headings.set(o.firstBar, o.name);
-	return w.parse.bars.map((b, i) => {
+	const out = w.parse.bars.map((b, i) => {
 		const m = measureOf(b, w.fermatas);
 		m.marks.heading = headings.get(b.index) ?? null;
 		m.text = w.texts.get(b.index) ?? [];
@@ -444,4 +467,6 @@ function inPlayOrder(w: Walk): Measure[] {
 		if (i === 0) m.lead = w.out[0]?.lead ?? [];
 		return m;
 	});
+	out.at(-1)?.foot.push(...w.orphans, ...unplayedText(w.out));
+	return out;
 }

@@ -30,6 +30,11 @@ package uses [semantic versioning](https://semver.org/).
   exported in play order. A jump written inside the repeat
   (`|: A | B | D.C. :|`), which barmark takes on the first pass, keeps
   its marks.
+- **Text lines of bars no pass plays survive the round trip.** A chart
+  written in play order (by the export, or by the import's fallback) left
+  out the bars after a Fine or To Coda that never play, and the text
+  lines among them or after them went too. They now come after the last
+  bar.
 
 ## [0.6.3] - 2026-11-07
 
