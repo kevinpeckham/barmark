@@ -31,10 +31,18 @@ function counted<T>(items: T[], count: { reads: number }): T[] {
 }
 
 /**
- * The work of one build: reads of the input arrays, plus calls to `Math.min`
- * and `Math.max`, which every pass over the runs makes per run it looks at.
- * Counting work rather than time makes a quadratic rescan fail by orders of
- * magnitude and never because the machine was busy.
+ * The work of one build, as two counts: reads of the input's `bars` and
+ * `runs` array elements, and calls to `Math.min` and `Math.max`, which the
+ * overlap arithmetic over the builder's own runs makes once per run it looks
+ * at. A rescan from the start whose overlap is written without
+ * `Math.min`/`Math.max` (ternaries, say) is NOT seen: the builder's runs are
+ * its own copies, out of any Proxy's reach. Counting work rather than time
+ * makes a rescan that is seen fail by orders of magnitude and never because
+ * the machine was busy.
+ *
+ * `Math.min` and `Math.max` are replaced globally for the length of the
+ * build and restored in `finally`, so the tests in this file must not run
+ * concurrently.
  */
 function workOf(bars: number, frames: number): { input: number; math: number } {
 	const d = detections(bars, frames);
@@ -61,10 +69,14 @@ function workOf(bars: number, frames: number): { input: number; math: number } {
 	return { input: count.reads, math };
 }
 
+/** Per run, the large build may do at most 1.5 times the small one's work; a count of none stays none. */
+const perRun = (large: number, small: number) =>
+	expect(large / 50_000).toBeLessThanOrEqual((small / 5000) * 1.5);
+
 test("the build does work linear in the runs and bars", () => {
 	const small = workOf(100, 5000);
 	const large = workOf(1000, 50_000);
-	// Per run, the large build may do at most 1.5 times the small one's work (a rescan from the start does ~100 times).
-	expect(large.input / 50_000).toBeLessThan((small.input / 5000) * 1.5);
-	expect(large.math / 50_000).toBeLessThan((small.math / 5000) * 1.5);
+	// A rescan from the start does about 100 times the work per run.
+	perRun(large.input, small.input);
+	perRun(large.math, small.math);
 });

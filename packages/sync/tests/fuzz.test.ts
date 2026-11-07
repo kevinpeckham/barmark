@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { type ChartParse, parseChart, printChart } from "barmark";
+import { type ChartParse, type Line, parseChart, printChart } from "barmark";
 import { chartFromDetections } from "../src/build/build.js";
 import type { BuildResult } from "../src/build/types.js";
 import { checkTimingMap, type TimingMap } from "../src/timing/index.js";
@@ -10,6 +10,30 @@ const CASES = 700;
 
 type Built = { r: BuildResult; parse: ChartParse };
 type Check = (b: Built) => string | null;
+
+const isDirectiveOfNote = (line: Line) =>
+	line.kind === "directive" && !!(line.set.key || line.set.time || line.set.tempo);
+const firstBarCell = (line: Line) =>
+	line.kind === "bars"
+		? line.cells.find((c) => c.kind === "slots" || c.kind === "simile")
+		: undefined;
+
+/** A bar after a key, meter or tempo line is never written `%`. */
+function percentAfterDirective(parse: ChartParse): string | null {
+	let changed = false;
+	for (const line of parse.lines) {
+		if (line.kind === "bars") {
+			if (changed && firstBarCell(line)?.kind === "simile")
+				return `a % follows a directive on line ${line.line}`;
+			changed = false;
+		} else changed ||= isDirectiveOfNote(line);
+	}
+	return null;
+}
+
+/** Whether slot `k` of played bar `i` is written `?`. */
+const isUnknown = (parse: ChartParse, i: number, k: number) =>
+	parse.bars[i]?.slots[k]?.kind === "unknown";
 
 const CHECKS: Check[] = [
 	({ parse }) =>
@@ -24,7 +48,17 @@ const CHECKS: Check[] = [
 		return held ? `the first slot of "${held.name}" is a hold` : null;
 	},
 	({ parse }) => (parse.sections.some((s) => s.firstBar === null) ? "a heading has no bar" : null),
+	({ parse }) => percentAfterDirective(parse),
 	({ r }) => (r.timing && r.confidence ? null : "a record is missing"),
+	({ r, parse }) => {
+		const c = r.confidence;
+		const bad = c?.bars.some(
+			(bar, i) =>
+				bar.slots.some((v, k) => !(v >= 0 && v <= 1) || (v > 0 && isUnknown(parse, i, k))) ||
+				!(bar.confidence >= 0 && bar.confidence <= 1),
+		);
+		return bad ? "a confidence is outside 0..1, or a ? slot has some" : null;
+	},
 	({ r }) => {
 		const found = checkTimingMap(r.timing as TimingMap, { text: r.chart }).diagnostics[0];
 		return found ? `the timing map is flagged: ${found.message}` : null;

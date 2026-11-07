@@ -47,6 +47,14 @@ const NAMES = [
 ];
 const TITLES = ["Song", "", "A | B", "line\nbreak", "# hash", "  spaced  ", 4];
 
+/** Fisher-Yates, driven by `r`. */
+function shuffle<T>(r: Rand, xs: T[]) {
+	for (let i = xs.length - 1; i > 0; i--) {
+		const j = int(r, i + 1);
+		[xs[i], xs[j]] = [xs[j] as T, xs[i] as T];
+	}
+}
+
 /** Bar starts: sorted most of the time, with duplicates, gaps, NaN and shuffles mixed in. */
 function gridOf(r: Rand): number[] {
 	const count = int(r, 16);
@@ -59,7 +67,7 @@ function gridOf(r: Rand): number[] {
 	}
 	if (r() < 0.15) bars[int(r, bars.length)] = pick(r, BAD_TIMES) as number;
 	if (r() < 0.15) bars.reverse();
-	if (r() < 0.1) bars.sort(() => r() - 0.5);
+	if (r() < 0.1) shuffle(r, bars);
 	return bars;
 }
 
@@ -86,6 +94,20 @@ function runOf(r: Rand, lo: number, span: number, unit: number): Run {
 	}
 	if (r() < 0.2) run.confidence = pick(r, [0.5, 2, -1, Number.NaN, "x"]);
 	return run;
+}
+
+/** The same two chords in every bar of the grid, so that bars repeat and `%` is in play. */
+function patternRuns(bars: number[]): { runs: Run[] } {
+	const sorted = bars.filter((x) => Number.isFinite(x)).sort((a, b) => a - b);
+	const runs = sorted.slice(0, -1).flatMap((start, i) => {
+		const end = sorted[i + 1] as number;
+		const mid = (start + end) / 2;
+		return [
+			{ start, end: mid, label: "C:maj" },
+			{ start: mid, end, label: "G:maj" },
+		];
+	});
+	return { runs };
 }
 
 function runsOf(r: Rand, lo: number, hi: number): { runs: Run[]; frameSec?: number } {
@@ -139,7 +161,10 @@ export function fuzzDetections(r: Rand): Detections {
 	const finite = bars.filter((x) => Number.isFinite(x));
 	const lo = finite.length ? Math.min(...finite) : 0;
 	const hi = finite.length ? Math.max(...finite) : 10;
-	const d: Record<string, unknown> = { grid: { bars }, chords: runsOf(r, lo, hi) };
+	const d: Record<string, unknown> = {
+		grid: { bars },
+		chords: r() < 0.3 ? patternRuns(bars) : runsOf(r, lo, hi),
+	};
 	if (r() < 0.05) d.grid = pick(r, [null, {}, { bars: "x" }, { bars: [1] }]);
 	if (r() < 0.05) d.chords = pick(r, [null, {}, { runs: "x" }]);
 	return { ...d, ...directivesOf(r), ...marksOf(r, lo, hi) } as unknown as Detections;
