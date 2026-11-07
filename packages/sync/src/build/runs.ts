@@ -123,10 +123,14 @@ const spell = (r: { kind: "label" | "symbol"; text: string }, key: Key | null) =
 function addRun(r: Raw & { confidence?: number }, keys: Keys, to: Reader, report: Report) {
 	if (spell(r, keys.keyAt(r.start)) === null && !to.unknown.has(r.text)) {
 		to.unknown.add(r.text);
-		report.warning("label-unknown", `The ${r.kind} "${r.text}" is not understood; written as ?`, {
-			path: `chords.runs[${r.at}]`,
-			at: r.start,
-		});
+		report.warning(
+			"label-unknown",
+			`The ${r.kind} "${r.text.slice(0, 40)}" is not understood; written as ?`,
+			{
+				path: `chords.runs[${r.at}]`,
+				at: r.start,
+			},
+		);
 	}
 	const item: Item = { start: r.start, end: r.end, text: r.text, kind: r.kind, order: r.at };
 	if (r.confidence !== undefined) item.confidence = r.confidence;

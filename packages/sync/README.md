@@ -80,6 +80,15 @@ A few things the builder settles for you:
 - Chords outside the grid are dropped (`outside-bars`, which ignores unknown time); the builder never
   guesses at bars the grid doesn't have.
 
+### Limits
+
+A label or symbol over 64 characters, or a note set of more than 16
+notes, is not read: it is written `?` with `label-unknown`. Section names
+are cut to 200 characters, and a build checks at most 2,000 names that
+need a parse (names of plain letters need none); past that, such names
+are dropped with `section-unnamed`. They keep the work and the chart
+linear in the input.
+
 ### Diagnostics
 
 Every problem is a `BuildDiagnostic` `{ severity, code, message, path?,

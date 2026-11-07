@@ -4,8 +4,8 @@ import {
 	type Key,
 	keyFromText,
 	type Meter,
-	parseChart,
 	parseMeter,
+	readDocument,
 } from "barmark";
 import type { Seconds } from "../timing/index.js";
 import type { BarChange } from "./input.js";
@@ -48,23 +48,41 @@ export function cleanTitle(t: unknown): string | null {
 	return tidy(t) || null;
 }
 
+/** `text` without trailing repeat and elision marks, however many. */
+function stripMarks(text: string): string {
+	let out = text;
+	for (let next = out.replace(MARKS, ""); next !== out; next = out.replace(MARKS, "")) out = next;
+	return out;
+}
+
 /** A trailing repeat or elision mark: `x N`, `x ...` (`×` and `…` too), `->` or `→`. */
 const MARKS = /(?:^|\s+)[xX×]\s*(?:\d+|\.\.\.|…)\s*$|\s*(?:->|→)\s*$/;
 
-/** Whether `## name` reads back as one plain section: no diagnostics, no repeat, no replay, no elision. */
+/**
+ * Whether `## name` reads back as one plain section: one heading without a
+ * repeat or an elision, one bar line of one cell, no diagnostics. It reads the
+ * document only (`readDocument`), never expanding a repeat into bars, so the
+ * work is the name's length whatever mark it hides.
+ */
 function readsPlain(name: string): boolean {
-	const p = parseChart(`## ${name}\n| C |\n`);
-	const head = p.lines.find((l) => l.kind === "section");
+	const doc = readDocument(`## ${name}\n| C |\n`);
+	const [head, bars, ...rest] = doc.lines;
 	return (
-		p.diagnostics.length === 0 &&
-		p.sections.length === 1 &&
-		p.sections[0]?.replayOf === null &&
-		p.bars.length === 1 &&
+		doc.diagnostics.length === 0 &&
+		rest.length === 0 &&
 		head?.kind === "section" &&
 		head.repeat === null &&
-		!head.elided
+		!head.elided &&
+		bars?.kind === "bars" &&
+		bars.cells.length === 1
 	);
 }
+
+/**
+ * Names of letters and spaces only, with no lone `x`, always read as plain,
+ * so an ordinary song never pays for a parse.
+ */
+const isLetters = (s: string) => /^\p{L}[\p{L} ]*$/u.test(s) && !/(?:^| )[xX×](?: |$)/.test(s);
 
 /** A section name is cut to this many characters, at a word boundary, before it is read. */
 const MAX_NAME = 200;
@@ -81,13 +99,24 @@ const cutName = (s: string) =>
  * until it does not. A name over 200 characters is cut at a word boundary
  * first (also `section-marks-stripped`). Null, with `section-unnamed`, when nothing is left.
  */
-export function sectionName(name: unknown, report: Report, path: string): string | null {
+export function sectionName(
+	name: unknown,
+	report: Report,
+	path: string,
+	budget: { left: number } = { left: Number.POSITIVE_INFINITY },
+): string | null {
 	const original = typeof name === "string" ? tidy(name) : "";
 	let text = cutName(original);
-	for (let next = text.replace(MARKS, ""); next !== text; next = text.replace(MARKS, ""))
-		text = next;
+	text = stripMarks(text);
 	text = text.replace(/\s*(?:->|→)\s*/g, " - ").trim();
-	while (text !== "" && !readsPlain(text)) text = text.replace(/\s*\S+$/, "");
+	while (text !== "" && !(isLetters(text) || (budget.left-- > 0 && readsPlain(text))))
+		text = stripMarks(text.replace(/\s*\S+$/, ""));
+	if (text === "" && budget.left < 0) {
+		report.warning("section-unnamed", "Too many section names needed repair; this one is dropped", {
+			path,
+		});
+		return null;
+	}
 	if (text === "") {
 		report.warning("section-unnamed", "A section has no name once its marks are removed; dropped", {
 			path,
@@ -97,7 +126,7 @@ export function sectionName(name: unknown, report: Report, path: string): string
 	if (text !== original)
 		report.warning(
 			"section-marks-stripped",
-			`The section name "${original}" was changed to "${text}" so it reads as a plain heading`,
+			`The section name "${cutName(original)}" was changed to "${text}" so it reads as a plain heading`,
 			{ path },
 		);
 	return text;
@@ -178,9 +207,11 @@ export function readSections(
 	const confidence = new Map<number, number>();
 	if (!Array.isArray(raw)) return { names, confidence };
 	const path = (i: number) => `sections[${i}]`;
+	/** Names that need a parse to check or repair, per build: enough for any real song. */
+	const budget = { left: 2000 };
 	const items: { i: number; start: number; value: { name: string; confidence?: number } }[] = [];
 	for (const [i, v] of raw.entries()) {
-		const name = sectionName(isRecord(v) ? v.name : undefined, report, path(i));
+		const name = sectionName(isRecord(v) ? v.name : undefined, report, path(i), budget);
 		if (name === null) continue;
 		const start = (v as Record<string, unknown>).start;
 		if (!isTime(start)) {

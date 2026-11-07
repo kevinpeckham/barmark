@@ -163,6 +163,26 @@ showed the rule needed refining.
 
 ## Performance and robustness
 
+### Two DoS shapes the review's probes didn't build (2026-11-07, @barmark/sync)
+
+- **The symptom.** Vercel's review found two: 300 sections named
+  `Verse x9999 (x2)` took 5.7 s (1,000 took 16 s), and a 14 KB input of one
+  2,000-note run with short overlays over 200 bars built a 1.2 MB chart
+  (about 83 times the input) in 3.5 s.
+- **The cause.** (1) `sectionName` checked each repaired name with
+  `parseChart`, which expands a hidden `x9999` into thousands of bars, and
+  dropping a typo like `(x2)` exposed a repeat the one-time mark strip had
+  missed. (2) A symbol had no size limit, so a long note set resumed after
+  every overlay was written in full at each attack.
+- **The fix.** `readsPlain` reads the document only (`readDocument`, no
+  expansion) and marks are stripped again after each dropped word;
+  names of plain letters skip the parse, and a build parses at most 2,000
+  names (`packages/sync/src/build/marks.ts`). Symbols over 64 characters or 16
+  notes are `?` (`packages/sync/src/build/spell.ts`), which bounds the chart
+  at a fixed factor of the slots with no extra budget. The counts and
+  sizes are pinned in `scale.test.ts`; a timing ratio alone would not have
+  seen the first.
+
 ### fast-xml-parser counts `&amp;` against the entity cap, and leaves `&#233;` alone (2026-11-06, MusicXML import)
 
 - **The symptom.** A score with more than 1,000 `&amp;`, `&apos;` or

@@ -193,3 +193,29 @@ describe("a bar with an unknown slot is never a %", () => {
 		expect(chart).toContain("%");
 	});
 });
+
+describe("symbol limits", () => {
+	const one = (symbol: string) =>
+		chartFromDetections({
+			grid: { bars: [0, 2] },
+			meter: "4/4",
+			tempo: 120,
+			chords: { runs: [{ start: 0, end: 2, symbol }] },
+		});
+	const PITCHES = "C3 D3 E3 F3 G3 A3 B3 C4 D4 E4 F4 G4 A4 B4 C5 D5 E5".split(" ");
+	const notes = (n: number) => `{${PITCHES.slice(0, n).join(" ")}}`;
+
+	test("a note set of 16 is read, one of 17 is ?", () => {
+		expect(one(notes(16)).chart).toContain("{");
+		const r = one(notes(17));
+		expect(r.chart).toContain("| ? |");
+		expect(r.diagnostics.map((d) => d.code)).toContain("label-unknown");
+	});
+
+	test("a symbol over 64 characters is ?, and the diagnostic does not echo it whole", () => {
+		const r = one(`{${PITCHES.join(" ")} ${PITCHES.slice(0, 8).join(" ")}}`);
+		expect(r.chart).toContain("| ? |");
+		const r2 = one(`${"C".repeat(5000)}`);
+		expect(r2.diagnostics.every((d) => d.message.length < 200)).toBe(true);
+	});
+});

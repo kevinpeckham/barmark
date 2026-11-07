@@ -11,6 +11,17 @@ function remember<T>(cache: Map<string, T>, key: string, make: () => T): T {
 	return value;
 }
 
+/**
+ * A label or symbol longer than this is not read (it becomes `?`, with
+ * `label-unknown`). The longest real chord, a Harte label with a bass or a
+ * note set with octaves, is well under 40 characters; 64 leaves room. Without
+ * a cap, one long note-set run resumed across thousands of bars is written in
+ * full at every attack: a 14 KB input gave a 1.2 MB chart.
+ */
+export const MAX_SYMBOL_LENGTH = 64;
+/** A note set of more notes than this is not read: a piano has ten fingers, a voicing rarely more than eight. */
+export const MAX_NOTES = 16;
+
 const SHARPS = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
 const FLATS = ["C", "Db", "D", "Eb", "E", "F", "Gb", "G", "Ab", "A", "Bb", "B"];
 const LETTER: Record<string, number> = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
@@ -47,6 +58,7 @@ const labels = new Map<string, string | null>();
  * `N` is `N.C.`, `X` is `?`, null when the label cannot be read.
  */
 export function labelSymbol(label: string, key: Key | null): string | null {
+	if (label.length > MAX_SYMBOL_LENGTH) return null;
 	return remember(labels, `${key ? printKey(key) : ""}\u0000${label}`, () =>
 		labelUncached(label, key),
 	);
@@ -76,5 +88,9 @@ const slots = new Map<string, string | null>();
  * note set, `N.C.` or `?`; null for anything else, or anything with an error.
  */
 export function slotSymbol(symbol: string): string | null {
+	if (symbol.length > MAX_SYMBOL_LENGTH) return null;
+	const inside = /\{([^}]*)\}/.exec(symbol)?.[1];
+	if (inside !== undefined && inside.split(/[\s,]+/).filter(Boolean).length > MAX_NOTES)
+		return null;
 	return remember(slots, symbol, () => slotUncached(symbol));
 }
