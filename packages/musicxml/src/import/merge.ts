@@ -4,7 +4,7 @@
  * of the same span, or inside an upper rest (the export joins the upper
  * staff's rests, so one rest can cover several low notes).
  */
-import { cmp, minus, plus } from "../rhythm.js";
+import { cmp, type Frac, minus, plus, ZERO } from "../rhythm.js";
 import type { Attack } from "./read.js";
 
 /** A line's attacks, measure by measure. */
@@ -102,21 +102,62 @@ export function mergeStaves(upper: Line, lower: Line): Line | null {
 	return fits ? upper.map((bar, i) => mergeBar(bar, lower[i] ?? [])) : null;
 }
 
-/** Whether two attacks sound at once. */
-const overlap = (a: Attack, b: Attack) => cmp(a.at, end(b)) < 0 && cmp(b.at, end(a)) < 0;
-
 /** A line of rhythm alone: slashes and rests, at least one slash, no words. */
 const rhythmOnly = (line: Line) =>
 	line.some((bar) => bar.some((a) => a.kind === "slash")) &&
 	line.every((bar) => bar.every((a) => a.kind !== "notes" && a.lyrics.length === 0));
 
+const byOnset = (bar: Attack[]) => [...bar].sort((x, y) => cmp(x.at, y.at));
+
+/** The latest end of `ends` so far and `a`'s, or as it was when `a` sounds for no time. */
+const later = (ends: Frac | null, a: Attack) =>
+	cmp(a.length, ZERO) <= 0 || (ends !== null && cmp(ends, end(a)) >= 0) ? ends : end(a);
+
+/** Whether `a` starts while something already started still sounds (`ends`, the latest end so far). */
+const sounding = (ends: Frac | null, a: Attack) =>
+	cmp(a.length, ZERO) > 0 && ends !== null && cmp(ends, a.at) > 0;
+
+/**
+ * Two bars' attacks merged by onset (the first bar's first on a tie), or
+ * null when one of each sounds at once. One sweep over both sorted bars:
+ * `<backup>` can reorder or overlap a voice's own attacks, so each side
+ * keeps the latest end it has reached.
+ */
+function sweep(line: Attack[], rhythm: Attack[]): Attack[] | null {
+	const xs = byOnset(line);
+	const ys = byOnset(rhythm);
+	const out: Attack[] = [];
+	let xEnds: Frac | null = null;
+	let yEnds: Frac | null = null;
+	let i = 0;
+	let j = 0;
+	while (i < xs.length || j < ys.length) {
+		const x = xs[i];
+		const y = ys[j];
+		const takeX = y === undefined || (x !== undefined && cmp(x.at, y.at) <= 0);
+		const a = (takeX ? x : y) as Attack;
+		if (sounding(takeX ? yEnds : xEnds, a)) return null;
+		if (takeX) {
+			xEnds = later(xEnds, a);
+			i++;
+		} else {
+			yEnds = later(yEnds, a);
+			j++;
+		}
+		out.push(a);
+	}
+	return out;
+}
+
 /** `rhythm`'s attacks in `line`'s gaps, or null when one sounds with its notes or rests. */
 function fold(line: Line, rhythm: Line): Line | null {
-	const fits = rhythm.every((bar, i) =>
-		bar.every((a) => !(line[i] ?? []).some((b) => overlap(a, b))),
-	);
-	if (!fits) return null;
-	return line.map((bar, i) => [...bar, ...(rhythm[i] ?? [])].sort((x, y) => cmp(x.at, y.at)));
+	const out: Line = [];
+	for (let i = 0; i < line.length; i++) {
+		const bar = sweep(line[i] ?? [], rhythm[i] ?? []);
+		if (bar === null) return null;
+		out.push(bar);
+	}
+	return out;
 }
 
 /**

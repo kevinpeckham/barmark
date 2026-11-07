@@ -1,7 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import { Losses } from "../../src/import/losses.js";
+import { foldRhythm } from "../../src/import/merge.js";
 import { type ImportedPart, importPart } from "../../src/import/parts.js";
-import { readScore } from "../../src/import/read.js";
+import { type Attack, readScore } from "../../src/import/read.js";
 import { parseXml } from "../../src/import/tree.js";
 import { exportMusicXml } from "../../src/index.js";
 import { attributes, measure, note, rest } from "./helpers.js";
@@ -638,5 +639,38 @@ describe("a voice of slashes alone in another voice's gaps", () => {
 			),
 		);
 		expect(r.part?.lines).toHaveLength(2);
+	});
+});
+
+describe("foldRhythm", () => {
+	const attack = (kind: Attack["kind"], at: number, length: number): Attack => ({
+		at: { n: at, d: 1 },
+		length: { n: length, d: 1 },
+		kind,
+		pitches: kind === "notes" ? [{ name: "E", octave: 4, root: false }] : [],
+		tieIn: false,
+		tieOut: false,
+		fermata: false,
+		lyrics: [],
+	});
+
+	test("a slash under a long note a <backup> wrote before a shorter one overlaps it", () => {
+		// Voice 1: a whole note, then (backed up) a quarter on beat 2; the slash on beat 3 sounds with the whole note.
+		const first = [[attack("notes", 0, 4), attack("notes", 1, 1)]];
+		expect(foldRhythm(first, [[attack("slash", 2, 1)]])).toBeNull();
+	});
+
+	test("slashes in the gaps come in by onset, the other voice first on a tie", () => {
+		const zero = attack("slash", 2, 0);
+		const folded = foldRhythm(
+			[[attack("notes", 2, 1)]],
+			[[attack("slash", 3, 1), attack("slash", 0, 2), zero]],
+		);
+		expect(folded?.[0]?.map((a) => [a.kind, a.at.n])).toEqual([
+			["slash", 0],
+			["notes", 2],
+			["slash", 2],
+			["slash", 3],
+		]);
 	});
 });
