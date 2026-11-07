@@ -95,6 +95,8 @@ function sections(g: Gen): Section[] {
 				text,
 			});
 	}
+	// Bars before the first heading: the unnamed section (grammar 6).
+	if (g.rnd() < 0.2) out.unshift({ heading: "", rows: rows(g), text: new Map() });
 	return out;
 }
 
@@ -157,7 +159,7 @@ const other = (c: string) => OTHER[c] ?? c;
 function write(ss: Section[], parts: number): string {
 	const head = parts === 2 ? "part: A = Alpha\npart: B = Beta\n\n" : "";
 	const lines = ss.map((s) => {
-		const out = [`## ${s.heading}`];
+		const out = s.heading ? [`## ${s.heading}`] : [];
 		if (s.text.has(-1)) out.push(s.text.get(-1) as string);
 		s.rows.forEach((r, j) => {
 			if (parts === 2) out.push(`A ${line(r, same)}`, `B ${line(r, other)}`);

@@ -40,6 +40,13 @@ not here.
   (it can't hold an unplayed `## Chorus x2` after a To Coda), writes the
   D.S.'s return into the section before it, losing its heading; the
   same happens on main.
+  A known limit of any chart written in play order: bars before the
+  first heading (the unnamed section) that a jump plays again can't be
+  named again, since barmark writes no heading for it mid-chart, so
+  `| C | G |`, `## Verse`, `|: Am | F :|`, `| D.C. |` comes back with
+  the return's C G under `## Verse`. The generator starts one chart in
+  five with such bars, and those are compared without their sections
+  (a `test.todo` keeps the case).
 - **The fix.** `packages/musicxml/tests/import/jumps-property.test.ts`
   round-trips 300 seeded charts from `jump-charts.ts` (one jump with its
   signs, repeats, endings, `x N` on lines and headings, replays,
