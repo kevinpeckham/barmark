@@ -11,8 +11,8 @@
         "barmark": "0.19.1",
       },
       "devDependencies": {
-        "@barmark/cli": "0.6.5",
-        "@barmark/musicxml": "0.6.3",
+        "@barmark/cli": "0.6.6",
+        "@barmark/musicxml": "0.6.4",
         "@barmark/sync": "0.1.0",
         "@fontsource/noto-mono": "5.3.0",
         "@fontsource/noto-sans": "5.3.0",
@@ -40,9 +40,9 @@
 
     "@antfu/install-pkg": ["@antfu/install-pkg@2.1.0", "", { "dependencies": { "package-manager-detector": "^1.8.0", "tinyexec": "^1.3.1" } }, "sha512-sdg9NxU3zR4Mnawfbc/x6GB5Wf17WYud5qOuEuxXjaKpYpMkISSJEjItGebXJ2bQ4DIcly4NYH23mtkGJjvKUw=="],
 
-    "@barmark/cli": ["@barmark/cli@0.6.5", "", { "dependencies": { "@barmark/musicxml": "0.6.3", "@barmark/render": "0.16.2", "barmark": "0.19.1" }, "bin": { "barmark": "dist/cli.js" } }, "sha512-FGatj2Uuz7tFE0rpm+7+3UsyqDKn7iHrbgdizO8ntcR2c3TzZJ8JRQ2ObaNZxnLETqZqKOzivVKMZAO0gLESbg=="],
+    "@barmark/cli": ["@barmark/cli@0.6.6", "", { "dependencies": { "@barmark/musicxml": "0.6.4", "@barmark/render": "0.16.2", "barmark": "0.19.1" }, "bin": { "barmark": "dist/cli.js" } }, "sha512-hLmSO/hmFlcfVcX076QoVCEc7F8vVJNOzcsMH8gmgIXnpxTeUDsJGbXzZlICWHb5EQuVXB0HpAtamlTd7hxJuw=="],
 
-    "@barmark/musicxml": ["@barmark/musicxml@0.6.3", "", { "dependencies": { "barmark": "^0.19.1", "fast-xml-parser": "5.12.0" } }, "sha512-OfvAfFwmxW+HQ2T2kebk8nxbNduSzz9PN+xw+JPNq1uO8tVf5APr2LPkRcwEbDZeQUDz8iIRTFnyLWUB6gJ7XA=="],
+    "@barmark/musicxml": ["@barmark/musicxml@0.6.4", "", { "dependencies": { "barmark": "^0.19.1", "fast-xml-parser": "5.12.0" } }, "sha512-7l68eBl+4cul6IXCnnaFCW4lnkbkaTwQVD/LwARIHyE50I1+HzKVzfDk37RmhuXQpZbsEnCrjkvCgL3FKCFy2Q=="],
 
     "@barmark/render": ["@barmark/render@0.16.2", "", { "dependencies": { "barmark": "^0.19.0" } }, "sha512-4sv+j0unb9ptV/Vpj2KHDjiKK/7iaoayeZ15BfZe5KEF5uRggsRIKxnGsyeOgnTPfPNeWScu/HY5SEnJDbVx1w=="],
 
@@ -493,8 +493,6 @@
     "yallist": ["yallist@5.0.0", "", {}, "sha512-YgvUTfwqyc7UXVMrB+SImsVYSmTS8X/tSrtdNZMImM+n7+QTriRXyXim0mBrTXNeqzVF0KWGgHPeiyViFFrNDw=="],
 
     "zimmerframe": ["zimmerframe@1.1.5", "", {}, "sha512-msJxIvYDYcoNL+PJsu+7qmpDWsYmAxTY+2TNYXXF0hzBzBk0BMecOqDOG/EckUoKCuKwObfbugIl8QpqHDXeFA=="],
-
-
 
     "@types/node/undici-types": ["undici-types@8.9.0", "", {}, "sha512-KTDyRTYX8sWmKXAikPHHSyc63CRPETMctyjKFupcC6OBLXT3xsN0e9aF7m+mIXutFWpUXuedtowG7iLOzp0kQg=="],
 
