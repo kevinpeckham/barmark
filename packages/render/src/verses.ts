@@ -36,7 +36,7 @@ const keyOf = (v: PlayedLyrics) => v.part ?? "";
  */
 export function singerOf(l: BarsLine, parse: ChartParse): string | null {
 	const { parts } = parse;
-	if (!parts.length) return l.part === undefined && parse.bars.some(onNotes) ? "" : null;
+	if (!parts.length) return l.part === undefined && singsOnNotes(parse) ? "" : null;
 	const p =
 		l.part === undefined
 			? parts.length === 1
@@ -51,6 +51,16 @@ export function singerOf(l: BarsLine, parse: ChartParse): string | null {
 
 /** Whether a chart with no parts sings: its verse 1 sits on notes. */
 const onNotes = (b: PlayedBar) => (b.lyrics ?? []).some((v) => v.syllables.some((s) => s.note));
+
+/** `onNotes` over the chart, worked out once a parse: asked for each line, it would read every bar each time. */
+const sang = new WeakMap<ChartParse, boolean>();
+function singsOnNotes(parse: ChartParse): boolean {
+	const known = sang.get(parse);
+	if (known !== undefined) return known;
+	const sings = parse.bars.some(onNotes);
+	sang.set(parse, sings);
+	return sings;
+}
 
 /**
  * What lands on each cell a row draws: its bar as played, with the verses
