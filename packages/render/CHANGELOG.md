@@ -6,6 +6,18 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- **Chord typesetting for other drawers** (issue #151): `typesetChord`,
+  `glyphs`, `typesetNumeral`, `NUMERALS` and the `ChordPieces` type are
+  exported, so a PDF or canvas drawer sets a chord as the page does (root
+  and quality on the baseline, the extension raised, the bass after a
+  slash, ♯ and ♭ glyphs) without copying the rules.
+- **`SectionBlock.bars`:** the most bars any row of the block has, beside
+  `columns`, which also counts fermata, direction and rehearsal cells. A
+  drawer that gives those narrow cells their own width divides the row by
+  `bars`.
+
 ## [0.15.1] - 2026-11-07
 
 ### Fixed

@@ -261,6 +261,15 @@ const widthOf = (i: BlockItem) =>
 			? Math.max(0, ...i.rows.map((p) => (p.row.kind === "row" ? p.row.cells.length : 0)))
 			: 0;
 
+/** How many bars an item's widest row has: its `slots` cells, not its fermatas, directions or rehearsal marks. */
+const barsIn = (cells: CellModel[]) => cells.filter((c) => c.kind === "slots").length;
+const barsOf = (i: BlockItem) =>
+	i.kind === "row"
+		? barsIn(i.cells)
+		: i.kind === "system"
+			? Math.max(0, ...i.rows.map((p) => (p.row.kind === "row" ? barsIn(p.row.cells) : 0)))
+			: 0;
+
 function blockOf(
 	h: SectionLine | null,
 	occurrence: SectionOccurrence | undefined,
@@ -272,6 +281,7 @@ function blockOf(
 		form: occurrence?.form ?? null,
 		rehearsal: null,
 		columns: Math.max(0, ...items.map(widthOf)),
+		bars: Math.max(0, ...items.map(barsOf)),
 		items,
 	};
 }
