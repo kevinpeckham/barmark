@@ -127,7 +127,7 @@ type Walk = {
 	texts: Map<number, Measure["text"]>;
 	/** Each played bar's text lines after it, likewise. */
 	feet: Map<number, Measure["text"]>;
-	/** Some section's passes were written out. */
+	/** Some passes were written out, or a replay holds a Fine or To Coda: a jump needs the chart in play order. */
 	flattened: boolean;
 	/** Marks waiting for the next measure. */
 	pending: Pending;
@@ -171,10 +171,27 @@ function rewrite(w: Walk, from: number, bars: PlayedBar[]): void {
 	w.flattened = true;
 }
 
+const stops = (d: Direction) => d.kind === "fine" || d.kind === "to coda";
+
+/**
+ * A replay a jump can't pass through as written: one that plays a bar
+ * twice (its passes written out, which barmark plays once after the
+ * jump), or whose bars, the one its elision cuts included, are followed by
+ * a Fine or To Coda (its measures carry no directions).
+ */
+function needsPlayOrder(w: Walk, o: SectionOccurrence, bars: PlayedBar[]): boolean {
+	const written = new Set(bars.map((b) => b.written));
+	if (written.size < bars.length) return true;
+	if (o.elided) written.add(Math.max(...written) + 1);
+	return w.out.some((m) => written.has(m.shown) && m.marks.end.some(stops));
+}
+
 /** An occurrence's bars as played, one measure each. */
 function playedOut(w: Walk, o: SectionOccurrence): void {
 	if (o.firstBar === null || o.lastBar === null) return;
-	for (const b of w.parse.bars.slice(o.firstBar - 1, o.lastBar)) add(w, measureOf(b, w.fermatas));
+	const bars = w.parse.bars.slice(o.firstBar - 1, o.lastBar);
+	if (needsPlayOrder(w, o, bars)) w.flattened = true;
+	for (const b of bars) add(w, measureOf(b, w.fermatas));
 }
 
 type Running = Pick<Measure, "meter" | "key" | "tempo" | "feel" | "swingPercent">;

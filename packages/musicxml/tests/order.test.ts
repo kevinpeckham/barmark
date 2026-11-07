@@ -99,6 +99,19 @@ describe("play order", () => {
 		expect(xml).toContain('<sound fine="yes"/>');
 		expect(xml).toContain('<sound dacapo="yes"/>');
 	});
+	test("a replay that repeats, then a jump through it: every repeat plays once after the jump", () => {
+		plays("## A\n| G |\n## A x2\n## B\n|: C | D.C. |\n| F | E :|");
+		plays("## A\n| Am | x3\n| G |\n## A\n## B\n| F | D.C. |\n## C\n| G |");
+		plays("## A\n| C | Segno | E |\n## A x2\n## B\n| C | D.S. | G |");
+	});
+	test("a replay holding the Fine or To Coda, after the jump", () => {
+		plays("## A\n| C | Fine | D |\n## B\n| Segno | E |\n## A\n## C\n| F | D.S. al Fine |");
+		plays(
+			"## A\n| C | To Coda | D |\n## B\n| Segno | E |\n## A\n## C\n| F | D.S. al Coda |\n## Coda\n| Coda | G |",
+		);
+		// The Fine after the bar an elision cuts.
+		plays("## A\n| C | D | Fine |\n## B\n| Segno | E |\n## A ->\n## C\n| F | D.S. al Fine |");
+	});
 	test("a fermata cell is a fermata on the bar line before it", () => {
 		const xml = plays("| C | G | ... |");
 		expect(measures(xml)[1]).toMatch(/<barline location="right"><fermata\/><\/barline>/);

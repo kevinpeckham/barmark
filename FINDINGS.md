@@ -9,6 +9,22 @@ not here.
 
 ## Testing
 
+### A replay written out carries neither its repeats nor its directions (2026-11-07, @barmark/musicxml)
+
+- **The symptom.** `## A` then `| Am | x3`, a replay `## A`, then a
+  D.C.: barmark plays the replay's `x3` once after the jump (grammar
+  5.2), but the exported file played it three times. A replay holding
+  the Fine (`D.S. al Fine` back through it) played on past the Fine.
+- **The cause.** The export writes a replay as the bars it plays, with
+  no repeat marks or directions: right the first time through, but a
+  jump back through it plays the written-out passes again, and never
+  meets the Fine or To Coda its section holds.
+- **The fix.** `playedOut` in `packages/musicxml/src/measures.ts` marks
+  a replay that plays a bar twice, or whose bars (the one its elision
+  cuts included) are followed by a Fine or To Coda, and a chart with a
+  jump then goes out in play order (`inPlayOrder`). Found by the round
+  trip's property test (`tests/import/jumps-property.test.ts`).
+
 ### Spelling by a chord's start picked the old key (2026-11-07, @barmark/sync)
 
 - **The symptom.** The round trip of `| G | D |` then `key: Db` then `| Gb | Db |`

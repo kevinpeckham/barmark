@@ -15,6 +15,13 @@ package uses [semantic versioning](https://semver.org/).
   holds a bar line's `x N` (its endings included) is now written out as
   it plays, as a repeated section holding repeats already was; repeats
   with none inside keep their repeat bar lines.
+- **A jump through a replay that repeats, or that holds the Fine or To
+  Coda, plays as barmark plays it.** A replay is written out as it plays,
+  so after a D.C. or D.S. its written-out passes played again where
+  barmark plays every repeat once, and its Fine or To Coda, which a
+  replay's measures don't carry, was never reached. Such a chart is now
+  exported in play order, as one whose repeated section is written out
+  already was.
 
 ## [0.6.3] - 2026-11-07
 
