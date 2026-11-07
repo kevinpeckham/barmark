@@ -13,6 +13,8 @@ const GENERATED = {
 		"key: C, time: 3/4, tempo: 90\n\n## Verse\n| C | G | Am | F |\n\n## Chorus\n| F | G | C | / |\n",
 	"compound meter with a key change":
 		"key: G, time: 6/8, tempo: 100\n| G | C | D | G |\nkey: A\n| A | D | E | A |\n",
+	"a chord held across a section boundary":
+		"time: 4/4, tempo: 120\n\n## Verse\n| C | / G |\n\n## Chorus\n| G | C |\n",
 	"a repeated bar": "time: 4/4, tempo: 120\n| C G | % |\n",
 };
 

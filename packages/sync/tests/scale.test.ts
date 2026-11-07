@@ -20,21 +20,51 @@ function detections(bars: number, frames: number) {
 	};
 }
 
-/** The best of three runs, after a warm-up, so a busy machine's pause isn't counted. */
-function timed(bars: number, frames: number): number {
-	Bun.gc(true);
-	const d = detections(bars, frames);
-	chartFromDetections(detections(4, 40));
-	let ms = Number.POSITIVE_INFINITY;
-	for (let run = 0; run < 3; run++) {
-		const start = performance.now();
-		chartFromDetections(d);
-		ms = Math.min(ms, performance.now() - start);
-	}
-	return ms;
+/** An array whose numeric-index reads are added to `count.reads`. */
+function counted<T>(items: T[], count: { reads: number }): T[] {
+	return new Proxy(items, {
+		get(target, key, receiver) {
+			if (typeof key === "string" && /^\d+$/.test(key)) count.reads++;
+			return Reflect.get(target, key, receiver);
+		},
+	});
 }
 
-test("the build is linear", () => {
-	// Ten times the bars and runs may cost at most 20 times as long; a quadratic path costs 100.
-	expect(timed(1000, 50_000) / timed(100, 5000)).toBeLessThan(20);
-}, 30_000);
+/**
+ * The work of one build: reads of the input arrays, plus calls to `Math.min`
+ * and `Math.max`, which every pass over the runs makes per run it looks at.
+ * Counting work rather than time makes a quadratic rescan fail by orders of
+ * magnitude and never because the machine was busy.
+ */
+function workOf(bars: number, frames: number): { input: number; math: number } {
+	const d = detections(bars, frames);
+	const count = { reads: 0 };
+	d.grid.bars = counted(d.grid.bars, count);
+	d.chords.runs = counted(d.chords.runs, count);
+	const { min, max } = Math;
+	let math = 0;
+	Math.min = (...xs: number[]) => {
+		math++;
+		return min(...xs);
+	};
+	Math.max = (...xs: number[]) => {
+		math++;
+		return max(...xs);
+	};
+	try {
+		const r = chartFromDetections(d);
+		expect(r.chart).not.toBe("");
+	} finally {
+		Math.min = min;
+		Math.max = max;
+	}
+	return { input: count.reads, math };
+}
+
+test("the build does work linear in the runs and bars", () => {
+	const small = workOf(100, 5000);
+	const large = workOf(1000, 50_000);
+	// Per run, the large build may do at most 1.5 times the small one's work (a rescan from the start does ~100 times).
+	expect(large.input / 50_000).toBeLessThan((small.input / 5000) * 1.5);
+	expect(large.math / 50_000).toBeLessThan((small.math / 5000) * 1.5);
+});
