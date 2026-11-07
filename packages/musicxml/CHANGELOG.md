@@ -6,6 +6,8 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.6.4] - 2026-11-07
+
 ### Fixed
 
 - **A repeat inside a repeat exports in play order.** `|: D | x2` then
@@ -491,7 +493,8 @@ and each grammar example's sounding notes and chord symbols.
 - **Errors:** a chart with errors, or with no bars, returns its
   diagnostics and no XML; characters XML can't hold are left out.
 
-[Unreleased]: https://github.com/kevinpeckham/barmark/compare/musicxml-v0.6.3...HEAD
+[Unreleased]: https://github.com/kevinpeckham/barmark/compare/musicxml-v0.6.4...HEAD
+[0.6.4]: https://github.com/kevinpeckham/barmark/compare/musicxml-v0.6.3...musicxml-v0.6.4
 [0.6.3]: https://github.com/kevinpeckham/barmark/compare/musicxml-v0.6.2...musicxml-v0.6.3
 [0.6.2]: https://github.com/kevinpeckham/barmark/compare/musicxml-v0.6.1...musicxml-v0.6.2
 [0.6.1]: https://github.com/kevinpeckham/barmark/compare/musicxml-v0.6.0...musicxml-v0.6.1
