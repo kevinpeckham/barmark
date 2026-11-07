@@ -533,7 +533,7 @@ Examples use grid `[0,2,4,6,8]` and 4/4 unless they say otherwise.
 
 Separate follow-ups, not in this plan:
 
-1. **Release `barmark` as a minor** (0.18.0) with the four exports, and `@barmark/render` as a patch "Requires `barmark` 0.18.0" (RELEASING.md). Then do the CLI release and the `songs` bump (steps 13–14). `@barmark/sync` needs the new `barmark` on npm first: `verify:release sync` fails until it is.
+1. **Release `barmark` as a minor** (0.19.0) with the four exports, and `@barmark/render` as a patch (0.16.2) "Requires `barmark` 0.19.0" (RELEASING.md). Then do the CLI release and the `songs` bump (steps 13–14). `@barmark/sync` needs the new `barmark` on npm first: `verify:release sync` fails until it is.
 2. **The first npm publish of `@barmark/sync`** needs Kevin's one-time setup (RELEASING.md "A new package's first release"):
    - a placeholder 0.0.0;
    - the trusted publisher;

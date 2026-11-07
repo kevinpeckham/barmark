@@ -6,6 +6,8 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+Requires `barmark` 0.19.0 (its key and spelling exports: `keyFromText`, `conventionalKey`, `printKey`, `spellPitch`).
+
 ### Added
 
 - **`chartFromDetections`**: a chord chart, and the timing map that places

@@ -80,6 +80,18 @@ describe("sections", () => {
 		expect(r.chart.split("\n").filter((l) => l.startsWith("| "))).toHaveLength(2);
 	});
 
+	test("a huge hostile name is cut and built in well under a second", () => {
+		for (const word of ["(x2)", "2x", "x2"]) {
+			const huge = Array(10_000).fill(word).join(" ");
+			const report = createReport();
+			const t0 = performance.now();
+			const name = sectionName(`Verse ${huge}`, report, "sections[0]");
+			expect(performance.now() - t0).toBeLessThan(1000);
+			expect(name === null || name.length <= 200).toBe(true);
+			expect(report.list.map((d) => d.code)).toHaveLength(1);
+		}
+	});
+
 	test("repeat and elision marks are stripped", () => {
 		const report = createReport();
 		const names = ["Chorus x2", "Chorus X 2", "Outro x ...", "Bridge ->", "Coda →"];

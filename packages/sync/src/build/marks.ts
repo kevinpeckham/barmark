@@ -66,15 +66,24 @@ function readsPlain(name: string): boolean {
 	);
 }
 
+/** A section name is cut to this many characters, at a word boundary, before it is read. */
+const MAX_NAME = 200;
+
+const cutName = (s: string) =>
+	s.length <= MAX_NAME
+		? s
+		: s.slice(0, MAX_NAME).replace(s[MAX_NAME] === " " ? /\s+$/ : /\s+\S*$/, "");
+
 /**
  * A heading name that reads back as a plain section: tidied, trailing and
  * interior marks removed (`section-marks-stripped`), and, should the reader
  * still see a mark or a typo of one (`(x2)`, `2x`), words dropped from the end
- * until it does not. Null, with `section-unnamed`, when nothing is left.
+ * until it does not. A name over 200 characters is cut at a word boundary
+ * first (also `section-marks-stripped`). Null, with `section-unnamed`, when nothing is left.
  */
 export function sectionName(name: unknown, report: Report, path: string): string | null {
 	const original = typeof name === "string" ? tidy(name) : "";
-	let text = original;
+	let text = cutName(original);
 	for (let next = text.replace(MARKS, ""); next !== text; next = text.replace(MARKS, ""))
 		text = next;
 	text = text.replace(/\s*(?:->|→)\s*/g, " - ").trim();

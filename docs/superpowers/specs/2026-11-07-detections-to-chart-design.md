@@ -427,7 +427,9 @@ no confidences today, so for SS the record is agreement only.
   know leaves it out.
 - **Tempo**, in grammar 2.1's beat. A given tempo is written as given,
   decimals included (`tempo: 87.5`). Omitted, it is 60 ÷ the grid's
-  median beat length, rounded to a whole bpm. A given tempo more than
+  folded median beat length, rounded to a whole bpm: a bar under 0.6× the
+  plain median counts as half a bar, one over 1.6× as two, before the median
+  is taken (real grids carry many half-length bars). A given tempo more than
   15% from the grid's (over the bars where it is in force) is still
   written, warning `tempo-grid-disagree`: it is usually in the wrong unit
   (section 9, step 6). Outside 1–999: dropped, `tempo-unreadable`.

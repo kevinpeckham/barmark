@@ -10,6 +10,8 @@ recording, with a checker for it and the two lookups a player needs.
 npm install @barmark/sync
 ```
 
+It requires `barmark` 0.19.0 or later (its key and spelling exports).
+
 ```ts
 import { barAt, checkTimingMap, secondsAtBar } from "@barmark/sync/timing";
 
@@ -55,8 +57,10 @@ unusable grid gives an empty chart and a `null` timing map.
 Beyond the grid and the chords, the input can carry a `title`, `sections`
 (`{ name, start }`, each snapped to the nearest bar and written out in
 full), `changes` (`key`, `meter` and `tempo` mid-chart, written as
-directive lines before their bar), a `tempo` (counting the meter's beat;
-omitted, it is taken from the grid, and `null` writes none; one far from
+directive lines before their bar), a `tempo` (beats per minute in grammar 2.1's
+beat: the bottom number in simple meters, the dotted quarter in compound
+ones, so 6/8 at 120 eighths a minute is `tempo: 40`; a tempo `change` counts
+the same beat; omitted, it is taken from the grid, and `null` writes none; one far from
 the grid's warns with `tempo-grid-disagree`) and a `pickup: { start }`
 for the bar before bar 1. The timing map counts a pickup as bar 1.
 
