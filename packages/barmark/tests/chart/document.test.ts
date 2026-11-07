@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { readDocument } from "../../src/chart/document.js";
+import { printChart } from "../../src/chart/print.js";
 import type { Line } from "../../src/chart/types.js";
 import { AT_A_GLANCE } from "./fixtures.js";
 
@@ -82,6 +83,21 @@ describe("text-line warnings for old formats", () => {
 	test("meter: and groove:", () => {
 		expect(suggestionFor("meter: 3/4")).toBe("time: 3/4");
 		expect(suggestionFor("groove: swing")).toBe("feel: swing");
+	});
+	test("title: suggests a # title (Kevin's ruling, 2026-11-07)", () => {
+		const doc = readDocument("title: Lead Sheet Test\n| G |");
+		expect(doc.lines[0]).toEqual({ kind: "text", line: 1, text: "title: Lead Sheet Test" });
+		expect(doc.diagnostics).toEqual([
+			{
+				line: 1,
+				severity: "warning",
+				message: "not a directive; a title is a # heading",
+				token: "title: Lead Sheet Test",
+				suggestion: "# Lead Sheet Test",
+			},
+		]);
+		expect(suggestionFor("Title: Song")).toBe("# Song");
+		expect(printChart("title: Lead Sheet Test\n| G |")).toBe("title: Lead Sheet Test\n| G |\n");
 	});
 	test("prose is left alone", () =>
 		expect(readDocument("| D |\nWatch for the cutoff").diagnostics).toEqual([]));

@@ -689,8 +689,9 @@ key: D, time: 4/4, tempo: 145, feel: swing
   ask for it.
 - The four names are a closed set with no aliases. A text line starting
   with a near miss (`meter:`, `bpm:`, `groove:`) gets a warning suggesting
-  the right name. `part:` (7.3) and the credits (7.5) are lines of their
-  own, not one of these.
+  the right name, and `title: X` one suggesting the title `# X` (1): a
+  chart's title is its `#` line, not a directive. `part:` (7.3) and the
+  credits (7.5) are lines of their own, not one of these.
 
 ### 7.1 Feel
 
@@ -1250,7 +1251,7 @@ keeps what cannot reduce:
 | warning | `x N` with N > 8 |
 | warning | note set with octaves out of ascending order; repeated note without octaves |
 | warning | a natural tone in parentheses that the chord already has (`C7(7)`) |
-| warning | a text line that looks like an old-style label (`Chorus:`, `[Chorus]`), an old bare chord line, a bar line written with escaped pipes (`D \\| A \\|`), a misnamed directive (`meter:`, `bpm:`) or a misnamed credit (`author:`, `words:`), with a suggested fix |
+| warning | a text line that looks like an old-style label (`Chorus:`, `[Chorus]`), an old bare chord line, a bar line written with escaped pipes (`D \\| A \\|`), a misnamed directive (`meter:`, `bpm:`), `title:` (suggesting the `#` title) or a misnamed credit (`author:`, `words:`), with a suggested fix |
 | warning | a credit with a directive after its value on the line (`composer: A, key: G`) |
 | warning | a bar line after a word that is not a declared part label (`Bass \| E \|`), or after a chord, its leading `\|` left off (`G \| C \|`, suggesting `\| G \| C \|`) |
 | warning | a lyric row's syllable where the singing line starts no note; a `:/` with no syllable sung before it in play order; a numbered verse no pass sings; a repeat's pass that sings nothing where other passes sing (7.7) |
@@ -1351,6 +1352,7 @@ human to say whether the band was silent, and the structure line.
 | A row's hold over a new note | Decided by Kevin (2026-11-06, Task 7 review): a lyric row's `/` where the singing line starts a new note is the held syllable `:/` would write there (4.3, 7.7), so a row's melisma gets MusicXML's `<extend>` and the renderer's extender line; over a tie, after a breath or where no note starts it sings nothing. Before, a row's hold wrote no extension. |
 | Who sings, and against what | Claude's recommendation (2026-11-06): the first part with `instrument: voice`, else the first with syllables on its notes, sings on its first line with syllables, else its first with notes (a lead sheet's melody line); with no singer a row's words are the chart's. A row's syllable where the singing line starts no note warns, as MusicXML hangs syllables on notes, and so does a `:/` with nothing sung before it in play order. Another part's extract leaves the singer's rows out (7.7). |
 | Written bar numbers | Machine output gains `written` on each played bar (A.7), the bar's number as written, so a host can speak a printed score's measure numbers (issue #70: a correction editor for a score read). No change to what any chart means. |
+| `title:` | Kevin's ruling (2026-11-07, issue #173): `title: X` is a text line with a warning suggesting `# X`, as `meter:` suggests `time:` (7). No new syntax: a chart's title stays its `#` line, there is no `subtitle:`, and the printer prints the line as written. A converter doesn't read it as a title either; MusicXML carries it as text like any other line. |
 
 ## Open questions
 

@@ -9,6 +9,12 @@ Releases follow the process in [RELEASING.md](RELEASING.md).
 
 ## [Unreleased]
 
+### Changed
+
+- **`title: X` warns as a near miss, suggesting `# X`** (Kevin's ruling,
+  2026-11-07, issue #173), as `meter:` suggests `time:`. A chart's title
+  is its `#` line; the `title:` line stays text and prints as written.
+
 ## [0.17.1] - 2026-11-07
 
 A parse is plain data that owns its objects, and the README says what it
