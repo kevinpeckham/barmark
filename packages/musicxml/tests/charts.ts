@@ -63,4 +63,6 @@ export const NESTED = [
 	"## A\n|: D | x2\n| A :|\n## B\n| E |\n## A\n## C\n| G |",
 	"## A\n| C | Fine |\n|: D | x2\n| A :|\n| E | D.C. al Fine |",
 	"|: D | x ...\n| A :|\n| G |",
+	"|: A | x2\n| ... :|\n| G |",
+	"|: A | x2\n| B | x3\n| ... :|\n| G |",
 ];

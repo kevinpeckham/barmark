@@ -119,6 +119,13 @@ type Pending = {
 
 const nothing = (): Pending => ({ heading: null, rehearsal: null, start: [], text: [], lead: [] });
 
+/**
+ * The `|: … :|` being walked: its first measure, whether a line inside it
+ * repeats too, the bars one pass of its body plays, the bars its endings
+ * play over all passes, and its highest ending.
+ */
+type Bracket = { from: number; nested: boolean; body: number; endings: number; passes: number };
+
 type Walk = {
 	parse: ChartParse;
 	out: Measure[];
@@ -137,7 +144,7 @@ type Walk = {
 	replay: number | null;
 	section: { from: number; repeat: Repeat; line: number } | null;
 	/** The `|: … :|` being walked: its first measure, and whether a line inside it repeats too. */
-	bracket: { from: number; nested: boolean } | null;
+	bracket: Bracket | null;
 	/** Text lines of bars no pass plays, written out of the measures: they go after the last bar. */
 	orphans: Measure["text"];
 };
@@ -331,29 +338,30 @@ function occurrenceFrom(w: Walk, p: number): PlayedBar[] {
 }
 
 /**
- * A `|: … :|`'s first pass to its last, from its first measure: through the
- * `times`-th play of its last measure, so a repeat around it doesn't count,
- * and no further than its own bars and its section's occurrence (a jump
+ * A `|: … :|`'s bars as played, from its first measure: `count` of them,
+ * no further than its own bars and its section's occurrence (a jump
  * inside it leaves them).
  */
-function bracketPlays(w: Walk, from: number, times: number): PlayedBar[] {
+function bracketPlays(w: Walk, from: number, count: number): PlayedBar[] {
 	const first = w.out[from];
 	const last = w.out.at(-1);
 	if (!first || first.played === null || !last) return [];
 	const inside = (b: PlayedBar) => b.written >= first.shown && b.written <= last.shown;
-	const out: PlayedBar[] = [];
-	let seen = 0;
-	for (const b of occurrenceFrom(w, first.played)) {
-		if (!inside(b) || seen === times) break;
-		out.push(b);
-		if (b.written === last.shown) seen++;
-	}
-	return out;
+	const bars = occurrenceFrom(w, first.played).slice(0, count);
+	const out = bars.findIndex((b) => !inside(b));
+	return out < 0 ? bars : bars.slice(0, out);
 }
 
-/** The passes a `|: … :|` closed by this line plays: its endings' last pass plays once, an open repeat's one pass. */
-const closingPasses = (line: BarsLine) =>
-	line.ending ? 1 : line.repeat === "open" ? 1 : (line.repeat ?? 2);
+/** The passes a `:|` plays: its `x N`, two, or one for an open repeat (its one pass is played). */
+const closingPasses = (line: BarsLine) => (line.repeat === "open" ? 1 : (line.repeat ?? 2));
+
+/** Counts a line's bars into the bracket: a body line's as often as its own `x N` plays it, an ending's once per pass it takes. */
+function countLine(b: Bracket, line: BarsLine, bars: number): void {
+	if (line.ending) {
+		b.endings += bars * line.ending.length;
+		b.passes = Math.max(b.passes, ...line.ending);
+	} else b.body += bars * (line.closes || typeof line.repeat !== "number" ? 1 : line.repeat);
+}
 
 /** The `|: … :|`'s last line: its last ending, or its `:|` with no endings after it. */
 const endsBracket = (line: BarsLine, lines: Line[], next: number) =>
@@ -365,13 +373,15 @@ const endsBracket = (line: BarsLine, lines: Line[], next: number) =>
  * nest, so no program plays the two backward repeats as barmark does.
  */
 function bracketLine(w: Walk, line: BarsLine, from: number, lines: Line[], next: number): void {
-	if (line.opens) w.bracket = { from, nested: false };
+	if (line.opens) w.bracket = { from, nested: false, body: 0, endings: 0, passes: 0 };
 	const b = w.bracket;
 	if (!b) return;
 	if (!line.closes && line.repeat !== null) b.nested = true;
+	countLine(b, line, w.out.length - from);
 	if (!endsBracket(line, lines, next)) return;
 	w.bracket = null;
-	const bars = b.nested ? bracketPlays(w, b.from, closingPasses(line)) : [];
+	const passes = line.ending ? b.passes : closingPasses(line);
+	const bars = b.nested ? bracketPlays(w, b.from, passes * b.body + b.endings) : [];
 	if (bars.length) rewrite(w, b.from, bars);
 }
 

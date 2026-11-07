@@ -353,7 +353,10 @@ showed the rule needed refining.
 - **The fix.** The export writes a `|: … :|` that holds a bar line's
   `x N` (endings included) in play order, with no repeat marks, as it
   already did for a repeated section holding repeats (`bracketLine` and
-  `rewrite` in `packages/musicxml/src/measures.ts`); a `## X x2` around
+  `rewrite` in `packages/musicxml/src/measures.ts`), as many bars as its
+  lines play (`countLine`: each body line times its own `x N`, each
+  ending once per pass it takes), not counted by plays of its last bar,
+  which a `| ... :|` makes the inner line's; a `## X x2` around
   it keeps its repeat bar lines, and a jump through it writes the whole
   chart in play order (`inPlayOrder`). Every nesting the grammar allows
   is covered by `NESTED` in `packages/musicxml/tests/charts.ts`, played
