@@ -180,15 +180,30 @@ function rewrite(w: Walk, from: number, bars: PlayedBar[]): void {
 
 const stops = (d: Direction) => d.kind === "fine" || d.kind === "to coda";
 
+const repeatsLine = (l: Line) =>
+	(l.kind === "bars" && (l.opens || l.closes || l.repeat !== null || l.ending !== null)) ||
+	(l.kind === "section" && l.repeat !== null);
+
+/** Whether a replay repeats: its heading's `x N`, or a repeat in the section it replays. */
+function replayRepeats(w: Walk, o: SectionOccurrence): boolean {
+	const lines = w.parse.lines;
+	const own = lines.find((l) => l.kind === "section" && l.line === o.line);
+	const from = lines.findIndex((l) => l.kind === "section" && l.line === o.replayOf);
+	const next = lines.findIndex((l, i) => i > from && l.kind === "section");
+	const body = lines.slice(from + 1, next < 0 ? undefined : next);
+	return (own !== undefined && repeatsLine(own)) || body.some(repeatsLine);
+}
+
 /**
- * A replay a jump can't pass through as written: one that plays a bar
- * twice (its passes written out, which barmark plays once after the
- * jump), or whose bars, the one its elision cuts included, are followed by
- * a Fine or To Coda (its measures carry no directions).
+ * A replay a jump can't pass through as written: one that repeats (its
+ * passes are written out, and barmark plays them once after the jump, with
+ * its elision cutting from that one pass), or whose bars, the one its
+ * elision cuts included, are followed by a Fine or To Coda (its measures
+ * carry no directions).
  */
 function needsPlayOrder(w: Walk, o: SectionOccurrence, bars: PlayedBar[]): boolean {
+	if (replayRepeats(w, o)) return true;
 	const written = new Set(bars.map((b) => b.written));
-	if (written.size < bars.length) return true;
 	if (o.elided) written.add(Math.max(...written) + 1);
 	return w.out.some((m) => written.has(m.shown) && m.marks.end.some(stops));
 }

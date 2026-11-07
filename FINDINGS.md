@@ -88,9 +88,11 @@ not here.
   jump back through it plays the written-out passes again, and never
   meets the Fine or To Coda its section holds.
 - **The fix.** `playedOut` in `packages/musicxml/src/measures.ts` marks
-  a replay that plays a bar twice, or whose bars (the one its elision
-  cuts included) are followed by a Fine or To Coda, and a chart with a
-  jump then goes out in play order (`inPlayOrder`). Found by the round
+  a replay that repeats (its heading's `x N`, or a repeat in the section
+  it replays: after the jump it plays one pass, and an elision cuts from
+  that pass), or whose bars (the one its elision cuts included) are
+  followed by a Fine or To Coda, and a chart with a jump then goes out in
+  play order (`inPlayOrder`). Found by the round
   trip's property test (`tests/import/jumps-property.test.ts`).
 
 ### Spelling by a chord's start picked the old key (2026-11-07, @barmark/sync)

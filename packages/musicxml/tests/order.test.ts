@@ -112,6 +112,11 @@ describe("play order", () => {
 		// The Fine after the bar an elision cuts.
 		plays("## A\n| C | D | Fine |\n## B\n| Segno | E |\n## A ->\n## C\n| F | D.S. al Fine |");
 	});
+	test("an elided replay of a section that repeats, then a jump through it", () => {
+		plays("## Intro\n| G7 | x2\n## Intro ->\n## Chorus\n| D.C. |");
+		plays("## A x2\n|: C :|\n## A ->\n## B\n| D | D.C. |");
+		plays("## A\n| C |\n## A x2 ->\n## B\n| D | D.C. |");
+	});
 	test("a jump after a repeat's last bar, outside it: after its passes", () => {
 		// MuseScore takes a jump on a measure that ends a repeat on its first pass.
 		for (const text of [

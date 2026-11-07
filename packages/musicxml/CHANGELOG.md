@@ -21,7 +21,8 @@ package uses [semantic versioning](https://semver.org/).
   barmark plays every repeat once, and its Fine or To Coda, which a
   replay's measures don't carry, was never reached. Such a chart is now
   exported in play order, as one whose repeated section is written out
-  already was.
+  already was. So is one with a replay that repeats at all: after the
+  jump it plays one pass, and its `->` cuts from that pass.
 - **A jump written after a repeat plays after its passes.** `|: A | B :|`
   then `| D.C. |` went out with the D.C. on the repeat's last measure,
   where MuseScore 4.7 (and the import) take it on the first pass: the
