@@ -622,7 +622,11 @@ and round-trip it through `format`.
   bold, not italic), above the staff at the bar's start, on the score's
   first part, in a file barmark didn't write, and name a section from the
   list in `packages/musicxml/src/import/marks.ts` (`SECTION`, a trailing
-  `:` or `.` left out) are a heading. Dorico's placeholders are dropped
+  `:` or `.` left out) are a heading. `Coda` is not in the list (Kevin,
+  2026-11-07): plain "Coda" is where a To Coda or al Coda jump lands, and
+  reading it as a heading would change the play order; a missed heading
+  only leaves the word over the bar. Bold `Coda` is a heading as before.
+  Revisit only for a real file that needs it. Dorico's placeholders are dropped
   (`read.ts`). A voice of slashes and rests whose slashes sound only
   where the other voice is silent folds into it (`merge.ts`,
   `foldRhythm`), a rest with the other voice's sound in it read as a gap.
