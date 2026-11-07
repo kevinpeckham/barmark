@@ -1117,3 +1117,10 @@ noticed only after the release.
 `WeakMap`). `render/tests/scale.test.ts` now holds the layout to linear
 time (ten times the lines, at most 25 times as long), and 0.15.1
 shipped the fix.
+**Then:** that test's bound hid three more scans of the same kind (each
+bar line filtering every played bar to find its own), because parsing,
+which is linear, was most of the time it measured. A review found them by
+profiling 8,000 lines. 0.16.0 indexes the bars by line once; the test
+also times a chart with parts and lyric rows, where the scans cost most,
+and both bounds are now 20. A ratio test only sees a quadratic term as
+large as the linear work around it: profile the long case too.

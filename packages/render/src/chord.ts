@@ -22,6 +22,7 @@ export function glyphs(text: string): string {
 	return ACCIDENTALS.reduce((t, [re, g]) => t.replace(re, g), text);
 }
 
+/** A chord as the page sets it: root and quality on the baseline, extension, sus and added tones raised, the bass after the slash, accidentals as glyphs. */
 export function typesetChord(parts: ChordParts): ChordPieces {
 	const tones = parts.tones.length ? `(${parts.tones.join(",")})` : "";
 	return {

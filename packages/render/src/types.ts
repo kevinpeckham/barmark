@@ -40,7 +40,7 @@ export type SectionBlock = {
 	rehearsal: string | null;
 	/** The widest row's cell count: fermata, direction and rehearsal cells included. */
 	columns: number;
-	/** The most bars any row has: its `slots` cells alone, for a drawer that gives the narrow cells their own width. */
+	/** The most bars any row has: its `slots` cells alone, for a drawer that gives the narrow cells their own width. 0 when no row has a bar. */
 	bars: number;
 	items: BlockItem[];
 };

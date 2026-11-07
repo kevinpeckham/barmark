@@ -18,6 +18,13 @@ package uses [semantic versioning](https://semver.org/).
   drawer that gives those narrow cells their own width divides the row by
   `bars`.
 
+### Fixed
+
+- **Long charts lay out in linear time.** Each bar line still read every
+  played bar of the chart to find its own, three times over; a chart's
+  bars are now indexed by line once. A 2,000-system lead sheet with a
+  guitar and a verse 2 row lays out in about a third of the time.
+
 ## [0.15.1] - 2026-11-07
 
 ### Fixed
