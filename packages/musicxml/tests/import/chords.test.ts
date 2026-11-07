@@ -1,8 +1,9 @@
 import { describe, expect, test } from "bun:test";
-import { parseChord } from "barmark";
+import { parseChord, parseHarte } from "barmark";
 import { readHarmony, type Transpose } from "../../src/import/chords.js";
 import { child, children, parseXml, textOf, type XNode } from "../../src/import/tree.js";
 import { exportMusicXml } from "../../src/index.js";
+import { KINDS } from "../../src/kinds.js";
 import { corpus } from "../charts.js";
 import { harmonyText } from "../play.js";
 
@@ -78,6 +79,23 @@ describe("readHarmony", () => {
 			CONCERT,
 		);
 		expect(r).toEqual({ slot: "F#m7(b5)", original: null });
+	});
+	test("a kind's Harte shorthand spells exactly its intervals, and the ones barmark names have one", () => {
+		const key = (ivs: { degree: number; alter: number }[]) =>
+			ivs
+				.map((i) => `${i.alter}:${i.degree}`)
+				.sort()
+				.join();
+		for (const k of KINDS) {
+			if (!k.harte) continue;
+			const h = parseHarte(`C:${k.harte}`);
+			if (!h || h === "N" || h === "X") throw new Error(`${k.harte} unreadable`);
+			expect(key(h.intervals)).toBe(key(k.intervals ?? []));
+		}
+		const named = KINDS.filter((k) => k.harte).map((k) => k.kind);
+		expect(named).toContain("half-diminished");
+		expect(named).toContain("major-minor");
+		expect(named).toContain("diminished-seventh");
 	});
 	test("display text when the kind is other", () => {
 		const r = readHarmony(harmony(`${root("C")}<kind text="7alt">other</kind>`), CONCERT);

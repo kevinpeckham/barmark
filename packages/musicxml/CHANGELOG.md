@@ -38,9 +38,11 @@ package uses [semantic versioning](https://semver.org/).
   other voice's notes or rests still make a line of their own.
 - **A half-diminished chord imports as `m7(b5)`, not `dim(7)`.** Dorico
   writes `<kind text="m7">half-diminished</kind>` with no `<degree>`; the
-  shown `m7` isn't the chord, so its meaning names it, and `barmark`'s
-  `harteToBarmark` now gives that meaning the grammar's name for `ø`
-  (needs the next `barmark` release).
+  shown `m7` isn't the chord, so its meaning names it. A kind with a
+  Harte shorthand of exactly its notes and no `<degree>`
+  (half-diminished, diminished-seventh, major-minor and the like) is now
+  named by that shorthand (`hdim7` is `m7(b5)`, the grammar's name for
+  `ø`), not by its interval list.
 
 ## [0.6.2] - 2026-11-07
 
