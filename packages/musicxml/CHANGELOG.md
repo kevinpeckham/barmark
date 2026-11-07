@@ -14,6 +14,15 @@ package uses [semantic versioning](https://semver.org/).
 
 ### Fixed
 
+- **Dorico's section names import as headings.** The import took only
+  bold words above a bar's start as a heading; Dorico writes system text
+  with no `font-weight`, so `Intro` and `Verse` came in as quoted words.
+  In another program's file, plain (not italic) words above a bar's start
+  are a heading too when they name a section: Intro, Verse, Pre-Chorus,
+  Chorus, Bridge, Solo, Interlude, Break, Tag, Outro, Ending, Refrain or
+  Instrumental, perhaps numbered or lettered (`Verse 2`, `Chorus B`), in
+  any case. `Coda` stays the coda sign's direction; bold words are
+  headings as before, and barmark's own files are read as before.
 - **A half-diminished chord imports as `m7(b5)`, not `dim(7)`.** Dorico
   writes `<kind text="m7">half-diminished</kind>` with no `<degree>`; the
   shown `m7` isn't the chord, so its meaning names it, and `barmark`'s
