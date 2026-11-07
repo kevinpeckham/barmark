@@ -6,6 +6,8 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.6.3] - 2026-11-07
+
 ### Changed
 
 - The npm description and the README's opening now name the import
@@ -444,7 +446,8 @@ and each grammar example's sounding notes and chord symbols.
 - **Errors:** a chart with errors, or with no bars, returns its
   diagnostics and no XML; characters XML can't hold are left out.
 
-[Unreleased]: https://github.com/kevinpeckham/barmark/compare/musicxml-v0.6.2...HEAD
+[Unreleased]: https://github.com/kevinpeckham/barmark/compare/musicxml-v0.6.3...HEAD
+[0.6.3]: https://github.com/kevinpeckham/barmark/compare/musicxml-v0.6.2...musicxml-v0.6.3
 [0.6.2]: https://github.com/kevinpeckham/barmark/compare/musicxml-v0.6.1...musicxml-v0.6.2
 [0.6.1]: https://github.com/kevinpeckham/barmark/compare/musicxml-v0.6.0...musicxml-v0.6.1
 [0.6.0]: https://github.com/kevinpeckham/barmark/compare/musicxml-v0.5.0...musicxml-v0.6.0
