@@ -6,10 +6,6 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
-## [0.1.0] - 2026-11-07
-
-Needs `barmark` 0.17.1.
-
 ### Added
 
 - **The timing map** (`@barmark/sync/timing`): the `TimingMap` format,

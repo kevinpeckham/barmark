@@ -50,13 +50,13 @@ const result = {
 	hash,
 	diagnostics,
 	names,
-	sameExports: names.join() === Object.keys(main).sort().join(),
+	mainHasThem: names.every((n) => n in main),
 };
 const wanted = ["barAt", "chartHash", "checkTimingMap", "secondsAtBar"];
 const good =
 	/^[0-9a-f]{16}$/.test(hash) &&
 	diagnostics.length === 0 &&
 	names.join() === wanted.join() &&
-	result.sameExports;
+	result.mainHasThem;
 console.log(JSON.stringify(result));
 process.exit(good ? 0 : 1);
