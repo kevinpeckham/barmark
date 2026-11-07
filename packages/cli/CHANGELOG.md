@@ -6,6 +6,15 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.6.1] - 2026-11-07
+
+### Changed
+
+- **Uses** barmark 0.17.0, @barmark/render 0.15.0 and @barmark/musicxml
+  0.6.0: voice parts and lyrics. `check` and `format` read syllables on
+  notes and lyric rows, `render` draws them, `export --musicxml` writes
+  `<lyric>` verses and `import` brings melodies and verses back.
+
 ## [0.6.0] - 2026-11-06
 
 ### Added
@@ -179,7 +188,8 @@ The first release of the `barmark` command. Uses `barmark` 0.8.0 and
 - **The `barmark` command:** `check`, `format`, `render` and `transpose`
   for `.chart.md` files, on npm and as standalone binaries.
 
-[Unreleased]: https://github.com/kevinpeckham/barmark/compare/cli-v0.6.0...HEAD
+[Unreleased]: https://github.com/kevinpeckham/barmark/compare/cli-v0.6.1...HEAD
+[0.6.1]: https://github.com/kevinpeckham/barmark/compare/cli-v0.6.0...cli-v0.6.1
 [0.6.0]: https://github.com/kevinpeckham/barmark/compare/cli-v0.5.1...cli-v0.6.0
 [0.5.1]: https://github.com/kevinpeckham/barmark/compare/cli-v0.5.0...cli-v0.5.1
 [0.5.0]: https://github.com/kevinpeckham/barmark/compare/cli-v0.4.0...cli-v0.5.0
