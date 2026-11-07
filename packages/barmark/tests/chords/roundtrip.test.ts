@@ -26,6 +26,14 @@ describe("harteToBarmark", () => {
 		expect(out).toContain("B ");
 	});
 	test("an unreadable label is null", () => expect(harteToBarmark("Q:maj")).toBeNull());
+	test("an interval list a shorthand spells takes that shorthand's name", () => {
+		// m7(b5) and dim(7) spell the same notes; the grammar names ø m7(b5), as C:hdim7 does.
+		expect(harteToBarmark("F#:(1,b3,b5,b7)")).toBe(harteToBarmark("F#:hdim7"));
+		expect(harteToBarmark("F#:(1,b3,b5,b7)")).toBe("F#m7(b5)");
+		expect(harteToBarmark("C:(1,b3,b5,bb7)")).toBe("Cdim7");
+		expect(harteToBarmark("C:(1,b3,5,7)")).toBe("Cmmaj7");
+		expect(harteToBarmark("C:(1,b3,b5,b7)/b3")).toBe("Cm7(b5)/Eb");
+	});
 });
 
 /** The spelled notes a Harte label names, bass included. */

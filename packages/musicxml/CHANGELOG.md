@@ -12,6 +12,14 @@ package uses [semantic versioning](https://semver.org/).
   (MusicXML and `.mxl` to a chart) beside the export, with `mxl`,
   `import` and `export` keywords.
 
+### Fixed
+
+- **A half-diminished chord imports as `m7(b5)`, not `dim(7)`.** Dorico
+  writes `<kind text="m7">half-diminished</kind>` with no `<degree>`; the
+  shown `m7` isn't the chord, so its meaning names it, and `barmark`'s
+  `harteToBarmark` now gives that meaning the grammar's name for `ø`
+  (needs the next `barmark` release).
+
 ## [0.6.2] - 2026-11-07
 
 ### Changed

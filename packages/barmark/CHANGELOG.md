@@ -9,6 +9,15 @@ Releases follow the process in [RELEASING.md](RELEASING.md).
 
 ## [Unreleased]
 
+### Fixed
+
+- **`harteToBarmark` names an interval list as its shorthand does.**
+  `C:(1,b3,b5,b7)` gave `Cdim(7)`, the alphabetical first of the names
+  spelling those notes, while `C:hdim7` gave `Cm7(b5)`, the grammar's
+  spelling of `ø`. When several names spell the notes equally well, the
+  one a Harte shorthand means now wins, so both give `Cm7(b5)`. Only the
+  half-diminished seventh was named differently.
+
 ## [0.19.0] - 2026-11-07
 
 ### Added

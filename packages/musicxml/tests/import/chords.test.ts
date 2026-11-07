@@ -58,6 +58,9 @@ describe("readHarmony", () => {
 		["minor-seventh", "", "D", "Dm7"],
 		["dominant", degree(9, -1, "add"), "G", "G7(b9)"],
 		["diminished-seventh", "", "C", "Cdim7"],
+		["half-diminished", "", "C", "Cm7(b5)"],
+		["major-minor", "", "C", "Cmmaj7"],
+		["augmented-seventh", "", "C", "Caug7"],
 	])("meaning: %s", (kind, degrees, step, slot) => {
 		const r = readHarmony(harmony(`${root(step)}<kind>${kind}</kind>${degrees}`), CONCERT);
 		expect(r).toEqual({ slot: canonical(slot), original: null });
@@ -68,6 +71,13 @@ describe("readHarmony", () => {
 			CONCERT,
 		);
 		expect(r.slot).toBe("Cmaj7");
+	});
+	test("Dorico's half-diminished, shown as m7 with its b5 left to the kind, is m7(b5)", () => {
+		const r = readHarmony(
+			harmony(`${root("F", 1)}<kind text="m7" parentheses-degrees="yes">half-diminished</kind>`),
+			CONCERT,
+		);
+		expect(r).toEqual({ slot: "F#m7(b5)", original: null });
 	});
 	test("display text when the kind is other", () => {
 		const r = readHarmony(harmony(`${root("C")}<kind text="7alt">other</kind>`), CONCERT);

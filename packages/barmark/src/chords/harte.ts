@@ -6,7 +6,7 @@ import {
 	transpose,
 } from "./intervals.js";
 import { printSuffix } from "./print.js";
-import { enumerateSuffixes, intervalSetKey } from "./suffixes.js";
+import { enumerateSuffixes, intervalSetKey, type Suffix } from "./suffixes.js";
 import type { ChordRecord, Interval } from "./types.js";
 import {
 	byDegree,
@@ -95,6 +95,36 @@ const INTENDED: Record<string, Shape> = {
 const intendedShape = (name: string): Shape | undefined =>
 	Object.hasOwn(INTENDED, name) ? INTENDED[name] : undefined;
 
+let shorthandNames: Map<string, string> | null = null;
+
+/**
+ * Each shorthand's suffix by the notes it means: an interval list spelling a
+ * shorthand's notes takes its name (`C:(1,b3,b5,b7)` is `Cm7(b5)`, as `C:hdim7`
+ * is, not the `Cdim(7)` that spells the same notes).
+ */
+function shorthandFor(intervals: Interval[]): string | undefined {
+	if (!shorthandNames) {
+		shorthandNames = new Map();
+		for (const s of Object.values(INTENDED)) {
+			const key = intervalSetKey(chordIntervals({ ...s, root: "C", bass: null }, "").intervals);
+			if (!shorthandNames.has(key)) shorthandNames.set(key, printSuffix(s));
+		}
+	}
+	return shorthandNames.get(intervalSetKey(intervals));
+}
+
+/** The candidate naming most degrees as written; on a tie, a shorthand's name, else the first. */
+function bestSuffix(
+	candidates: Suffix[],
+	exact: (c: Suffix) => number,
+	intervals: Interval[],
+): string | undefined {
+	const most = Math.max(...candidates.map(exact));
+	const tied = candidates.filter((c) => exact(c) === most);
+	const shorthand = shorthandFor(intervals);
+	return (tied.find((c) => c.suffix === shorthand) ?? tied[0])?.suffix;
+}
+
 const HARTE = /^([A-G][#b]*)(?::([^(/]*)(?:\(([^)]*)\))?)?(?:\/([#b]*\d+))?$/;
 
 /** A Harte label's root, intervals (shorthand at its intended meaning, list applied) and bass. */
@@ -140,12 +170,12 @@ export function harteToBarmark(label: string): string | null {
 	const direct = directShape ? printSuffix(directShape) : undefined;
 	const candidates = rootSounds ? enumerateSuffixes().get(intervalSetKey(h.intervals)) : undefined;
 	// Same notes, several names (A11 and A9sus4 under the eleventh rule): take the
-	// one naming most degrees as the label wrote them, then the shortest.
+	// one naming most degrees as the label wrote them, then a shorthand's name,
+	// then the shortest.
 	const written = new Set(h.intervals.map(formatInterval));
 	const exact = (c: { intervals: Interval[] }) =>
 		c.intervals.filter((i) => written.has(formatInterval(i))).length;
-	const suffix =
-		direct ?? candidates?.reduce((best, c) => (exact(c) > exact(best) ? c : best)).suffix;
+	const suffix = direct ?? (candidates && bestSuffix(candidates, exact, h.intervals));
 	if (suffix !== undefined && SINGLE_ACCIDENTAL.test(h.bass)) {
 		return `${h.root}${suffix}${h.bass === h.root ? "" : `/${h.bass}`}`;
 	}
