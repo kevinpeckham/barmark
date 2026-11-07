@@ -9,6 +9,8 @@ Releases follow the process in [RELEASING.md](RELEASING.md).
 
 ## [Unreleased]
 
+## [0.18.0] - 2026-11-07
+
 ### Fixed
 
 - **A cell of many quoted words parses in linear time.** Each word
@@ -563,7 +565,8 @@ The first working release: the reference parser and printer for the
 
 - **A placeholder package that holds the `barmark` name** while the spec and parser are written.
 
-[Unreleased]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.17.1...HEAD
+[Unreleased]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.18.0...HEAD
+[0.18.0]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.17.1...barmark-v0.18.0
 [0.17.1]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.17.0...barmark-v0.17.1
 [0.17.0]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.16.0...barmark-v0.17.0
 [0.16.0]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.15.0...barmark-v0.16.0
