@@ -96,9 +96,17 @@ Fallow, CI, Swamp), the grammar, `examples/`, the scripts and FINDINGS.md.
   timing map (`chartHash`, `checkTimingMap`, `barAt`, `secondsAtBar`) is
   also the `@barmark/sync/timing` subpath, so a map-only reader gets no
   builder code
+  - `src/build/`: the builder, `chartFromDetections`, one module per
+    stage: read and bound the input (`input.ts`, `spell.ts`), settle
+    overlapping runs and cut them at key changes (`runs.ts`), vote a
+    symbol per slot (`vote.ts`), titles, sections, changes and tempo
+    (`marks.ts`), write the chart (`write.ts`), then its timing map and
+    confidence record (`timing.ts`, `confidence.ts`)
   - `src/timing/`: `types.ts`, `hash.ts` (FNV-1a 64 of the printed chart),
     `check.ts` (hand-written validation), `lookup.ts`
-  - `tests/`: `bun test`
+  - `tests/`: `bun test`; `tests/fixtures/` holds real ChordMini output on
+    two songs (numbers and labels only), which `bun
+    scripts/detection-fixtures.ts` regenerates on the VM only, never in CI
 - `packages/cli/`: `@barmark/cli`, the `barmark` command (`check`,
   `format`, `part`, `render`, `transpose`, `export`, `import`), a thin
   layer over the libraries, pinned to them exactly

@@ -24,6 +24,10 @@ key: D, time: 4/4, tempo: 145
   (chords, repeats, parts, melodies and lyrics) and imports a MusicXML or
   `.mxl` file back into a chart, so charts move to and from MuseScore,
   Dorico, Sibelius and Finale.
+- **[`@barmark/sync`](packages/sync/)** syncs a chart with a recording:
+  it builds a chart from a chord detector's output (bar grid, chord runs,
+  key, meter, sections) and a timing map that says when each played bar
+  starts, with a checker and the lookups a player needs.
 - **[`@barmark/cli`](packages/cli/)**: the `barmark` command, to check,
   format, render and transpose `.chart.md` files, and to `import` a
   MusicXML file or `export --musicxml` a chart, in a terminal or in CI.
