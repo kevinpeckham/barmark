@@ -6,6 +6,14 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.6.4] - 2026-11-07
+
+### Changed
+
+- **Uses** barmark 0.19.0, @barmark/render 0.16.2 and @barmark/musicxml
+  0.6.2. No change to any command: barmark 0.19.0 adds key and spelling
+  exports for `@barmark/sync`.
+
 ## [0.6.3] - 2026-11-07
 
 ### Changed
@@ -204,7 +212,8 @@ The first release of the `barmark` command. Uses `barmark` 0.8.0 and
 - **The `barmark` command:** `check`, `format`, `render` and `transpose`
   for `.chart.md` files, on npm and as standalone binaries.
 
-[Unreleased]: https://github.com/kevinpeckham/barmark/compare/cli-v0.6.3...HEAD
+[Unreleased]: https://github.com/kevinpeckham/barmark/compare/cli-v0.6.4...HEAD
+[0.6.4]: https://github.com/kevinpeckham/barmark/compare/cli-v0.6.3...cli-v0.6.4
 [0.6.3]: https://github.com/kevinpeckham/barmark/compare/cli-v0.6.2...cli-v0.6.3
 [0.6.2]: https://github.com/kevinpeckham/barmark/compare/cli-v0.6.1...cli-v0.6.2
 [0.6.1]: https://github.com/kevinpeckham/barmark/compare/cli-v0.6.0...cli-v0.6.1
