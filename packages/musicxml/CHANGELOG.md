@@ -32,10 +32,12 @@ package uses [semantic versioning](https://semver.org/).
   Dorico writes a guitar's slashes in voice 2 and a voiced bar in voice 1,
   each silent (a `<forward>`) where the other plays, and the import gave
   two lines (`ElGtr.1`, `ElGtr.2`). On one staff, a voice of slashes and
-  rests alone that sounds only where the other voice says nothing is now
-  read as that voice's rhythm, on one line:
-  `| F#m7(b5) / B7{B2 D#3 A3 B3 F#4} -- |`. Slashes that sound with the
-  other voice's notes or rests still make a line of their own.
+  rests alone whose slashes sound only where the other voice is silent (a
+  `<forward>` or a rest) is now read as that voice's rhythm, on one line:
+  `| F#m7(b5) / B7{B2 D#3 A3 B3 F#4} -- |`. A rest with the other voice's
+  notes or slashes in it is a gap and is dropped, so MuseScore's shape,
+  explicit rests in both voices, folds too. Slashes that sound with the
+  other voice's notes still make a line of their own.
 - **A half-diminished chord imports as `m7(b5)`, not `dim(7)`.** Dorico
   writes `<kind text="m7">half-diminished</kind>` with no `<degree>`; the
   shown `m7` isn't the chord, so its meaning names it. A kind with a

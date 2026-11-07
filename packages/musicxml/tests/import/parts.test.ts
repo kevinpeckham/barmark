@@ -630,12 +630,37 @@ describe("a voice of slashes alone in another voice's gaps", () => {
 		expect(bars(r)).toEqual(["C", "Am / G{G3 B3 D4} --"]);
 	});
 
-	test("slashes sounding with the other voice's notes or rests stay a line of their own", () => {
+	test("explicit rests in both voices, each where the other plays, fold to one line (MuseScore's shape)", () => {
+		const twoVoices =
+			harmony("A", "minor") +
+			rest(2, voice(1)) +
+			harmony("G") +
+			chordOf(2, gMajor, voice(1)) +
+			backup(4) +
+			slash(1, voice(2)).repeat(2) +
+			rest(2, voice(2));
+		const oneVoice = harmony("A", "minor") + slash(1).repeat(2) + harmony("G") + chordOf(2, gMajor);
+		const head = measure(1, time44() + harmony("C") + slash(1, voice(1)).repeat(4));
+		const folded = importXml(
+			scoreXml({ software: "MuseScore 4.4.2" }, head + measure(2, twoVoices)),
+		);
+		const single = importXml(
+			scoreXml({ software: "MuseScore 4.4.2" }, head + measure(2, oneVoice)),
+		);
+		expect(folded.part?.lines).toHaveLength(1);
+		expect(bars(folded)).toEqual(bars(single));
+		expect(bars(folded)?.[1]).toContain("G{G3 B3 D4}");
+	});
+
+	test("slashes sounding with the other voice's notes stay a line of their own", () => {
 		const r = importXml(
 			scoreXml(
 				{ software: "Dorico 6.2.31.6349" },
 				measure(1, time44() + harmony("C") + slash(1, voice(1)).repeat(4)) +
-					measure(2, doricoBar(slash(1, voice(2)).repeat(4))),
+					measure(
+						2,
+						doricoBar(slash(1, voice(2)).repeat(3) + "<forward><duration>1</duration></forward>"),
+					),
 			),
 		);
 		expect(r.part?.lines).toHaveLength(2);
@@ -671,6 +696,38 @@ describe("foldRhythm", () => {
 			["notes", 2],
 			["slash", 2],
 			["slash", 3],
+		]);
+	});
+
+	test("a rest the other voice's notes or slashes cover is a gap; rests over the same silence are one", () => {
+		const folded = foldRhythm(
+			[[attack("rest", 0, 2), attack("notes", 2, 1), attack("rest", 3, 1)]],
+			[[attack("slash", 0, 1), attack("slash", 1, 1), attack("rest", 2, 2)]],
+		);
+		expect(folded?.[0]?.map((a) => [a.kind, a.at.n, a.length.n])).toEqual([
+			["slash", 0, 1],
+			["slash", 1, 1],
+			["notes", 2, 1],
+			["rest", 3, 1],
+		]);
+		// Voice 1's rest under the slash on beat 4 is dropped; voice 2's rest on beat 3 stays.
+		const partly = foldRhythm(
+			[[attack("notes", 0, 2), attack("rest", 2, 2)]],
+			[[attack("rest", 0, 1), attack("rest", 2, 1), attack("slash", 3, 1)]],
+		);
+		expect(partly?.[0]?.map((a) => [a.kind, a.at.n, a.length.n])).toEqual([
+			["notes", 0, 2],
+			["rest", 2, 1],
+			["slash", 3, 1],
+		]);
+		const both = foldRhythm(
+			[[attack("notes", 0, 1), attack("rest", 2, 2)]],
+			[[attack("slash", 1, 1), attack("rest", 2, 2)]],
+		);
+		expect(both?.[0]?.map((a) => [a.kind, a.at.n, a.length.n])).toEqual([
+			["notes", 0, 1],
+			["slash", 1, 1],
+			["rest", 2, 2],
 		]);
 	});
 });

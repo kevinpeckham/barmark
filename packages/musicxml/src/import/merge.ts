@@ -118,14 +118,12 @@ const sounding = (ends: Frac | null, a: Attack) =>
 	cmp(a.length, ZERO) > 0 && ends !== null && cmp(ends, a.at) > 0;
 
 /**
- * Two bars' attacks merged by onset (the first bar's first on a tie), or
- * null when one of each sounds at once. One sweep over both sorted bars:
- * `<backup>` can reorder or overlap a voice's own attacks, so each side
- * keeps the latest end it has reached.
+ * Two voices' sounds (notes and slashes, each sorted by onset) merged by
+ * onset, the first voice's first on a tie, or null when one of each sounds
+ * at once. One sweep: `<backup>` can reorder or overlap a voice's own
+ * attacks, so each side keeps the latest end it has reached.
  */
-function sweep(line: Attack[], rhythm: Attack[]): Attack[] | null {
-	const xs = byOnset(line);
-	const ys = byOnset(rhythm);
+function sweep(xs: Attack[], ys: Attack[]): Attack[] | null {
 	const out: Attack[] = [];
 	let xEnds: Frac | null = null;
 	let yEnds: Frac | null = null;
@@ -149,11 +147,77 @@ function sweep(line: Attack[], rhythm: Attack[]): Attack[] | null {
 	return out;
 }
 
-/** `rhythm`'s attacks in `line`'s gaps, or null when one sounds with its notes or rests. */
+/** Sounds sorted by onset, and the latest end among each prefix, to ask in log time whether a span has sound. */
+type Sounds = { sorted: Attack[]; ends: (Frac | null)[] };
+
+function soundsOf(sorted: Attack[]): Sounds {
+	const ends: (Frac | null)[] = [];
+	let latest: Frac | null = null;
+	for (const a of sorted) {
+		latest = later(latest, a);
+		ends.push(latest);
+	}
+	return { sorted, ends };
+}
+
+/** Whether a rest has a sound of `other` in it: one starting before the rest ends that ends after it starts. */
+function covered(rest: Attack, other: Sounds): boolean {
+	if (cmp(rest.length, ZERO) <= 0) return false;
+	let lo = 0;
+	let hi = other.sorted.length;
+	while (lo < hi) {
+		const mid = (lo + hi) >> 1;
+		if (cmp((other.sorted[mid] as Attack).at, end(rest)) < 0) lo = mid + 1;
+		else hi = mid;
+	}
+	const latest = other.ends[lo - 1];
+	return latest !== undefined && latest !== null && cmp(latest, rest.at) > 0;
+}
+
+/** Sounds and rests merged by onset (sounds first on a tie), rests over the same silence as one. */
+function withRests(sounds: Attack[], rests: Attack[]): Attack[] {
+	const out: Attack[] = [];
+	let j = 0;
+	const push = (a: Attack) => {
+		const last = out.at(-1);
+		if (a.kind === "rest" && last?.kind === "rest" && cmp(end(last), a.at) > 0) {
+			if (cmp(end(a), end(last)) > 0)
+				out[out.length - 1] = { ...last, length: minus(end(a), last.at) };
+		} else out.push(a);
+	};
+	for (const a of sounds) {
+		while (j < rests.length && cmp((rests[j] as Attack).at, a.at) < 0) push(rests[j++] as Attack);
+		push(a);
+	}
+	while (j < rests.length) push(rests[j++] as Attack);
+	return out;
+}
+
+/**
+ * Two voices' bars as one, or null when their sounds overlap. A rest with
+ * the other voice's sound in it is a gap, not silence, and is dropped.
+ */
+function foldBar(line: Attack[], rhythm: Attack[]): Attack[] | null {
+	const xs = byOnset(line);
+	const ys = byOnset(rhythm);
+	const xSounds = xs.filter((a) => a.kind !== "rest");
+	const ySounds = ys.filter((a) => a.kind !== "rest");
+	const sounds = sweep(xSounds, ySounds);
+	if (sounds === null) return null;
+	const xOver = soundsOf(xSounds);
+	const yOver = soundsOf(ySounds);
+	const rests = [
+		...xs.filter((a) => a.kind === "rest" && !covered(a, yOver)),
+		...ys.filter((a) => a.kind === "rest" && !covered(a, xOver)),
+	];
+	return withRests(sounds, byOnset(rests));
+}
+
+/** `rhythm`'s attacks in `line`'s gaps, or null when a slash sounds with a note or slash of the other. */
 function fold(line: Line, rhythm: Line): Line | null {
 	const out: Line = [];
 	for (let i = 0; i < line.length; i++) {
-		const bar = sweep(line[i] ?? [], rhythm[i] ?? []);
+		const bar = foldBar(line[i] ?? [], rhythm[i] ?? []);
 		if (bar === null) return null;
 		out.push(bar);
 	}
@@ -161,10 +225,11 @@ function fold(line: Line, rhythm: Line): Line | null {
 }
 
 /**
- * Two voices that are one line: one of slashes and rests alone, written
- * where the other says nothing (a `<forward>`), as Dorico writes a comping
- * part's slashes in one voice and a voiced bar in another. The two as one
- * line, or null when either is more than that.
+ * Two voices that are one line: one of slashes and rests alone, its
+ * slashes where the other voice is silent (a `<forward>` or a rest), as
+ * Dorico and MuseScore write a comping part's slashes in one voice and a
+ * voiced bar in another. The two as one line, or null when either is more
+ * than that.
  */
 export function foldRhythm(first: Line, second: Line): Line | null {
 	if (rhythmOnly(second)) return fold(first, second);
