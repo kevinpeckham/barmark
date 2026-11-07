@@ -9,6 +9,8 @@ Releases follow the process in [RELEASING.md](RELEASING.md).
 
 ## [Unreleased]
 
+## [0.19.1] - 2026-11-07
+
 ### Fixed
 
 - **`harteToBarmark` names an interval list as its shorthand does.**
