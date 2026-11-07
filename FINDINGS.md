@@ -9,6 +9,29 @@ not here.
 
 ## Testing
 
+### Hand-picked jump charts all round-tripped; random ones didn't (2026-11-07, @barmark/musicxml)
+
+- **The symptom.** A review of PR #174 reported that "a D.C. chart's
+  round trip drops its last bar", with no example. Nine hand-written
+  jump charts (D.C., D.S., al Fine, al Coda, after repeats, mid-line,
+  with replays) all came back playing the same.
+- **The cause.** The bugs were in combinations nobody writes by hand: a
+  jump back through a replay that repeats or holds the Fine, a jump on
+  its own bar line after a `:|`, text among bars that never play, a text
+  line written twice. The dropped last bar itself never turned up in
+  about 9,000 random charts; the nearest is a replay with `->` that the
+  Fine ends after the jump, where barmark plays none of it (a grammar
+  question: does the cut take the replay's last written bar or its last
+  played one?), kept as a `test.todo`.
+- **The fix.** `packages/musicxml/tests/import/jumps-property.test.ts`
+  round-trips 300 seeded charts from `jump-charts.ts` (one jump with its
+  signs, repeats, endings, `x N` on lines and headings, replays,
+  elisions, `%`, a closing `...`, text lines, two parts) and asks that
+  each plays the same, keeps every text line in order and prints
+  canonically. Where a text line lands among bars written out isn't
+  asked: writing passes out puts more bars before it. Shrink a failure
+  by deleting lines and cells while it still fails.
+
 ### Reading a mark once per score also reads a repeated line once (2026-11-07, MusicXML import)
 
 - **The symptom.** `| C |` then `hi` twice imported with one `hi`.
