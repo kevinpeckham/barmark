@@ -8,6 +8,7 @@ import {
 	INSTALL_MUSICXML,
 	INSTALL_PARSER,
 	INSTALL_RENDER,
+	INSTALL_SYNC,
 	LIVE_EDITOR,
 	SAMPLE_CHART,
 	USE_CLI,
@@ -15,10 +16,11 @@ import {
 	USE_MUSICXML,
 	USE_PARSER,
 	USE_RENDER,
+	USE_SYNC,
 } from "#lib/start.js";
 
 const description =
-	"Write a Barmark chart, read it with the parser, draw it with @barmark/render or the <barmark-chart> web component, convert it to and from MusicXML with @barmark/musicxml, and check charts from the terminal with @barmark/cli.";
+	"Write a Barmark chart, read it with the parser, draw it with @barmark/render or the <barmark-chart> web component, convert it to and from MusicXML with @barmark/musicxml, check charts from the terminal with @barmark/cli, and sync a chart with a recording with @barmark/sync.";
 const step = "font-serif text-xl text-ink";
 const link = "underline decoration-accent/60 underline-offset-3 hover-text-accent";
 const code = "font-mono text-accent";
@@ -41,9 +43,10 @@ const code = "font-mono text-accent";
 			A Barmark chart is a plain-text file. Two packages read and draw it:
 			<code class={code}>barmark</code>, the parser, and <code class={code}>@barmark/render</code>, which
 			draws the bar grid as HTML or as a web component. <code class={code}>@barmark/musicxml</code> converts
-			charts to and from MusicXML. All three are ESM, with TypeScript types, and run in Node 20 or
-			later, Bun, Deno and the browser. <code class={code}>@barmark/cli</code> puts them in the
-			terminal, for checking charts without writing any code.
+			charts to and from MusicXML, and <code class={code}>@barmark/sync</code> syncs a chart with a
+			recording. All four are ESM, with TypeScript types, and run in Node 20 or later, Bun, Deno and
+			the browser. <code class={code}>@barmark/cli</code> puts them in the terminal, for checking
+			charts without writing any code.
 		</p>
 	</div>
 
@@ -149,6 +152,24 @@ const code = "font-mono text-accent";
 			Every command and flag is in the <a href={LINKS.cliReadme} class={link}>CLI's README</a>, and
 			<a href={LINKS.songs} class={link}>kevinpeckham/songs</a> is a repository of charts checked this
 			way.
+		</p>
+	</section>
+
+	<section class="flex flex-col gap-4 min-w-0">
+		<h2 id="sync" class="{step} scroll-mt-6">7. Sync a chart with a recording</h2>
+		<p class="max-w-prose opacity-80">
+			<code class={code}>@barmark/sync</code> is for audio tools. <code class={code}>chartFromDetections</code>
+			takes what a chord detector hears in a recording, its bar starts and chord runs in seconds, and
+			writes a chart from it, with the title, sections, key, meter and tempo it is given. Beside the
+			chart it returns a timing map, which says when each played bar starts, so a player can show the
+			bar that is sounding or jump to a bar. It never throws; what it changed or couldn't use comes
+			back as a diagnostic.
+		</p>
+		<Code title="Terminal" code={INSTALL_SYNC} />
+		<Code title="sync.ts" code={USE_SYNC} />
+		<p class="text-sm opacity-80">
+			The input it reads, the timing map's format and every diagnostic are in the
+			<a href={LINKS.syncReadme} class={link}>sync package's README</a>.
 		</p>
 	</section>
 </main>
