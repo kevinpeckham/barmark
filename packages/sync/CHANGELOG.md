@@ -8,5 +8,10 @@ package uses [semantic versioning](https://semver.org/).
 
 ### Added
 
+- **`chartFromDetections`**: a chord chart, and the timing map that places
+  it in the recording, from a detector's bar grid and chord runs. It votes
+  one symbol per slot, writes holds as `/` and repeated multi-chord bars
+  as `%`, lays the bars out `barsPerLine` to a line, and never throws:
+  problems come back as diagnostics.
 - **The timing map** (`@barmark/sync/timing`): the `TimingMap` format,
   `chartHash`, `checkTimingMap`, `barAt` and `secondsAtBar`.

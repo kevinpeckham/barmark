@@ -1,7 +1,7 @@
 /**
- * Import @barmark/sync as Node sees it and use its timing map: hash a real
- * chart, check a one-entry map against it, and import the `./timing`
- * subpath. Plain Node, so it runs against the local build
+ * Import @barmark/sync as Node sees it and use it: hash a real chart, check
+ * a one-entry map against it, import the `./timing` subpath, and build a
+ * four-bar chart whose timing map checks clean. Plain Node, so it runs against the local build
  * (scripts/verify-package.ts) and against the copy installed from npm
  * (.github/workflows/release.yml, confirm).
  *
@@ -45,18 +45,43 @@ const map = {
 	end: count,
 };
 const diagnostics = timing.checkTimingMap(map, { text: chart }).diagnostics;
+// The builder: four bars from a grid and three chord runs, parsed back cleanly,
+// with a timing map that checks clean against the chart it wrote.
+const built = main.chartFromDetections({
+	grid: { bars: [0, 2, 4, 6, 8] },
+	meter: "4/4",
+	chords: {
+		runs: [
+			{ start: 0, end: 4, label: "C:maj" },
+			{ start: 4, end: 6, label: "G:maj" },
+			{ start: 6, end: 8, label: "A:min" },
+		],
+	},
+});
+const builtParse = parseChart(built.chart);
+const builtErrors = builtParse.diagnostics.filter((d) => d.severity === "error").length;
+const builtChecks = built.timing
+	? timing.checkTimingMap(built.timing, { text: built.chart }).diagnostics
+	: [{ message: "no timing map" }];
+const builtGood =
+	builtErrors === 0 &&
+	builtParse.bars.length === 4 &&
+	builtChecks.length === 0 &&
+	built.diagnostics.length === 0;
 const names = Object.keys(timing).sort();
 const result = {
 	hash,
 	diagnostics,
 	names,
 	mainHasThem: names.every((n) => n in main),
+	built: builtGood,
 };
 const wanted = ["barAt", "chartHash", "checkTimingMap", "secondsAtBar"];
 const good =
 	/^[0-9a-f]{16}$/.test(hash) &&
 	diagnostics.length === 0 &&
 	names.join() === wanted.join() &&
-	result.mainHasThem;
+	result.mainHasThem &&
+	builtGood;
 console.log(JSON.stringify(result));
 process.exit(good ? 0 : 1);

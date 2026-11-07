@@ -22,6 +22,35 @@ if (map) {
 `@barmark/sync/timing` is the same code as the package's main entry; it
 is there so a reader that only follows a map imports nothing else.
 
+## Build a chart
+
+`chartFromDetections` turns a detector's bar grid and chord runs into a
+chart and a timing map for it.
+
+```ts
+import { chartFromDetections } from "@barmark/sync";
+
+const { chart, timing, diagnostics } = chartFromDetections({
+	grid: { bars: [0, 2, 4, 6, 8] }, // bar starts in seconds, one more than bars
+	meter: "4/4",
+	chords: {
+		runs: [
+			{ start: 0, end: 4, label: "C:maj" },
+			{ start: 4, end: 6, label: "G:maj" },
+			{ start: 6, end: 8, label: "A:min" },
+		],
+	},
+});
+// chart: "time: 4/4\n| C | / | G | Am |\n"
+// timing: bar 1 at 0 s, bar 2 at 2 s ... ends at 8 s, source "detected"
+```
+
+Each slot takes the chord that covers most of it, `?` where under half is
+covered; a slot that repeats the one before is `/`, and a repeated
+multi-chord bar is `%` (`simile: false` writes it out). `barsPerLine`
+sets bars per line (default 4). Problems come back in `diagnostics`; an
+unusable grid gives an empty chart and a `null` timing map.
+
 ## The timing map
 
 ```ts
