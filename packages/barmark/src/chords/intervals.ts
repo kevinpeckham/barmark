@@ -12,7 +12,10 @@ export function parseInterval(s: string): Interval | null {
 	const m = /^(b*|#*)([1-9]|1[0-3])$/.exec(s);
 	if (!m) return null;
 	const acc = m[1] ?? "";
-	return { degree: Number(m[2]), alter: acc.startsWith("#") ? acc.length : -acc.length };
+	return {
+		degree: Number(m[2]),
+		alter: acc.startsWith("#") ? acc.length : acc.length === 0 ? 0 : -acc.length,
+	};
 }
 
 export function formatInterval(i: Interval): string {

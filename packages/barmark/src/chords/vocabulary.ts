@@ -125,7 +125,9 @@ export function chordIntervals(
 			warnings.push({ message: `${symbol} already contains ${tone}`, token: tone });
 		} else s.push(i);
 	}
-	return { intervals: s.sort(byDegree), warnings, alteredOpen: parts.extension === "7alt" };
+	// Copies: the qualities' intervals are shared constants, and a parse must own its objects.
+	const intervals = s.sort(byDegree).map((i) => ({ ...i }));
+	return { intervals, warnings, alteredOpen: parts.extension === "7alt" };
 }
 
 /**

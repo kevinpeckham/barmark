@@ -167,6 +167,53 @@ Verses come out in play order: inside a repeat, verse N is pass N.
   convert both ways. Every label in the McGill Billboard and Isophonics
   Beatles datasets converts to barmark with exactly the same notes.
 
+### The parse result, and storing charts
+
+`parseChart` returns plain data: no classes, Maps or functions, so
+`JSON.stringify` and `JSON.parse` give an equal object back. Inside one
+parse, objects are shared (a bar in `bars` is the same object as in
+`events`, and a `%` bar shares its slots), so treat a parse as read-only;
+`structuredClone(chart)` gives a copy to change. Two parses never share
+an object. It has two kinds of field:
+
+- **The chart as written:** `title`, `parts`, `credits` and `lines`, one
+  entry per source line in order (the title, a bar line, a heading, a
+  directive, a `part:` line, a credit, a lyric row, text, a break, or an
+  invalid bar line kept as written), each with its line number.
+- **The chart as played**, worked out from the written lines:
+  - `events` is play order with fermatas and an open repeat kept as
+    events.
+  - `bars` is the same flattened to one `PlayedBar` per measure played,
+    repeats, endings, jumps and replays spelled out. A bar's `index` counts
+    in play order; `written` is the number a band reads on the page, the
+    same on every pass. Each bar carries its slots, section, key, meter,
+    tempo, feel and, when sung, each verse's syllables (`lyrics`).
+  - `sections` is each section as played, with its first and last bar and
+    `form` (which distinct section it is; replays share their section's
+    number).
+- **`diagnostics`:** every error and warning, with its line. `parseChart`
+  never throws; a chart with errors still parses what it can.
+
+The parse is tens to hundreds of times the size of the text, a few
+kilobytes for each bar played: a 700-byte song whose repeats and replays
+play out parses to about 170 KB of JSON. Its shape follows this
+package's minor versions: 0.17.0, for example, added the `break` and
+`lyrics` line kinds. So:
+
+- **Store the text.** It is the stable format: the grammar defines it,
+  `printChart` gives it one canonical spelling, and re-parsing an old
+  chart with a newer barmark gives the current shape.
+- **Treat a stored parse as a cache**, tagged with the barmark version
+  that made it, and parse again when the version changes.
+- **To check a chart before storing it**, parse it and look for
+  diagnostics with `severity: "error"`; store `printChart(text)` to keep
+  one spelling of each chart.
+- **Times in a recording** belong beside the chart, not in it: key them
+  by `PlayedBar.index`, which names the same bar however the chart is
+  reformatted or its repeats are spelled (`|: :|` or `x2`), until the
+  music itself changes. An open repeat (`x ...`) plays its bars once in
+  `bars`, so its later passes have no index of their own.
+
 ## Develop
 
 ```
