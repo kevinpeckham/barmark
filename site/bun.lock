@@ -13,6 +13,7 @@
       "devDependencies": {
         "@barmark/cli": "0.6.4",
         "@barmark/musicxml": "0.6.2",
+        "@barmark/sync": "0.1.0",
         "@fontsource/noto-mono": "5.3.0",
         "@fontsource/noto-sans": "5.3.0",
         "@fontsource/noto-serif": "5.3.0",
@@ -44,6 +45,8 @@
     "@barmark/musicxml": ["@barmark/musicxml@0.6.2", "", { "dependencies": { "barmark": "^0.19.0", "fast-xml-parser": "5.12.0" } }, "sha512-JNBdj2esyfMo4WF2uxJeu7olfFJ/C94hWiFTJ5U1kEeoA4CONJwH3gOhQrMCTyrZUWzOIPraXzEu5m4fpqy/iw=="],
 
     "@barmark/render": ["@barmark/render@0.16.2", "", { "dependencies": { "barmark": "^0.19.0" } }, "sha512-4sv+j0unb9ptV/Vpj2KHDjiKK/7iaoayeZ15BfZe5KEF5uRggsRIKxnGsyeOgnTPfPNeWScu/HY5SEnJDbVx1w=="],
+
+    "@barmark/sync": ["@barmark/sync@0.1.0", "", { "dependencies": { "barmark": "^0.19.0" } }, "sha512-L82z+r9yO5glXQ1B6Eacbdc1Qk3l6kwyJgOBv892Y7XyE5S1WAWzch7efqYQHHdYlvkOrzL5fwgw9dWHQanW2A=="],
 
     "@fontsource/noto-mono": ["@fontsource/noto-mono@5.3.0", "", {}, "sha512-QZieY3OyKEImCXg3HRiF6p6/H0GXX94uEb53ayLyQgCTB20LdkvsyJIgigo6lAGmVw3WEs40DdG5KTqpxfwgGg=="],
 

@@ -97,9 +97,12 @@ onMount(() => {
 					which bars, in which sections, in what key, meter and tempo, and in what order the song plays.
 				</p>
 				<p>
-					It is also three npm packages: <code class={code}>barmark</code> reads and writes charts,
-					<code class={code}>@barmark/render</code> draws them as a clean bar grid on any web page, and
-					<code class={code}>@barmark/cli</code> does both from the terminal.
+					It is also five npm packages: <code class={code}>barmark</code> reads and writes charts,
+					<code class={code}>@barmark/render</code> draws them as a clean bar grid on any web page,
+					<code class={code}>@barmark/musicxml</code> converts them to and from MusicXML,
+					<code class={code}>@barmark/sync</code> builds a chart from a recording's detected chords and
+					says when each bar plays, and <code class={code}>@barmark/cli</code> does the rest from the
+					terminal.
 				</p>
 			</section>
 
@@ -128,7 +131,9 @@ onMount(() => {
 					<a href={LINKS.stemShovel} class={link}>Stem Shovel</a> is an open-source, web-based
 					collaboration tool for musicians, songwriters, bands and producers. Its chart reader lines up a
 					band's chord chart with the recording, so it can find each section in the audio. Barmark is that
-					reader's rules, written down and published on their own.
+					reader's rules, written down and published on their own, and
+					<a href={LINKS.syncReadme} class={link}><code class={code}>@barmark/sync</code></a> is the
+					part that ties a chart to the recording.
 				</p>
 			</section>
 
@@ -196,7 +201,7 @@ onMount(() => {
 					</li>
 					<li>
 						Music research and audio tools that align chords with recordings, where every bar has to be
-						accounted for.
+						accounted for: <code class={code}>@barmark/sync</code> writes the chart and the bar times.
 					</li>
 				</ul>
 			</section>

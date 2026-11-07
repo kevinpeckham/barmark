@@ -3,9 +3,17 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { exportMusicXml, importMusicXml } from "@barmark/musicxml";
+import { barAt, chartFromDetections, secondsAtBar } from "@barmark/sync";
 import { parseChart, printChart, transposeChart } from "barmark";
 import { LINKS } from "../src/lib/site.ts";
-import { CLI_CI, SAMPLE_CHART, USE_CLI, USE_MUSICXML } from "../src/lib/start.ts";
+import {
+	CLI_CI,
+	SAMPLE_CHART,
+	SYNC_DETECTIONS,
+	USE_CLI,
+	USE_MUSICXML,
+	USE_SYNC,
+} from "../src/lib/start.ts";
 import { build, page, site } from "./built.ts";
 
 beforeAll(build, 120_000);
@@ -35,6 +43,24 @@ describe("the MusicXML code Get Started shows", () => {
 		expect(imported.text).toStartWith("# Example Song\nkey: D, tempo: 145\n\n## Verse\n");
 		expect(USE_MUSICXML).toContain('"# Example Song\\nkey: D, tempo: 145\\n\\n## Verse\\n…"');
 		expect(imported.diagnostics.filter((d) => d.severity === "error")).toEqual([]);
+	});
+});
+
+describe("the sync code Get Started shows", () => {
+	test("builds the chart and timing map the page says", () => {
+		const { chart, timing, diagnostics } = chartFromDetections(SYNC_DETECTIONS);
+		expect(diagnostics).toEqual([]);
+		for (const r of SYNC_DETECTIONS.chords.runs)
+			expect(USE_SYNC).toContain(`{ start: ${r.start}, end: ${r.end}, label: "${r.label}" }`);
+		expect(chart).toBe("# Example Song\ntime: 4/4, tempo: 120\n\n## Verse\n| D | / | A | Bm |\n");
+		expect(USE_SYNC).toContain(
+			'chart; // "# Example Song\\ntime: 4/4, tempo: 120\\n\\n## Verse\\n| D | / | A | Bm |\\n"',
+		);
+		if (!timing) throw new Error("no timing map");
+		expect(secondsAtBar(timing, 3)).toBe(4);
+		expect(USE_SYNC).toContain("secondsAtBar(timing, 3); // 4");
+		expect(barAt(timing, 5)).toEqual({ entry: 2, bar: 3, fraction: 0.5 });
+		expect(USE_SYNC).toContain("barAt(timing, 5); // { entry: 2, bar: 3, fraction: 0.5 }");
 	});
 });
 
@@ -105,12 +131,15 @@ describe("Get Started, prerendered", () => {
 			"4. Or use the web component",
 			"5. Convert to and from MusicXML",
 			"6. Check charts from the terminal",
+			"7. Sync a chart with a recording",
 		]);
 		const page = text(doc().querySelector("main")) ?? "";
 		for (const line of [
 			"npm install barmark",
 			"npm install @barmark/render",
 			"npm install @barmark/musicxml",
+			"npm install @barmark/sync",
+			"chartFromDetections(",
 			"exportMusicXml(",
 			"importMusicXml(",
 			'import "@barmark/render/element";',
@@ -150,9 +179,16 @@ describe("the FAQ, prerendered", () => {
 		const contents = [...doc().querySelectorAll("main nav a")].map((a) => a.getAttribute("href"));
 		expect(contents).toEqual(ids.map((id) => `#${id}`));
 	});
-	test("names the three packages, and answers how to check charts without code", () => {
+	test("names the five packages, and answers how to check charts without code", () => {
 		const what = text(doc().querySelector("#what")?.parentElement) ?? "";
-		for (const name of ["barmark", "@barmark/render", "@barmark/cli"]) expect(what).toContain(name);
+		for (const name of [
+			"barmark",
+			"@barmark/render",
+			"@barmark/musicxml",
+			"@barmark/sync",
+			"@barmark/cli",
+		])
+			expect(what).toContain(name);
 		const cli = doc().querySelector("#cli")?.parentElement;
 		expect(text(cli)).toContain("npx @barmark/cli check");
 		const hrefs = [...(cli?.querySelectorAll("a") ?? [])].map((a) => a.getAttribute("href"));
@@ -162,6 +198,7 @@ describe("the FAQ, prerendered", () => {
 	test("links to Stem Shovel, the code and the licence", () => {
 		const hrefs = [...doc().querySelectorAll("main a")].map((a) => a.getAttribute("href"));
 		expect(hrefs).toContain(LINKS.stemShovel);
+		expect(hrefs).toContain(LINKS.syncReadme);
 		expect(hrefs).toContain(LINKS.github);
 		expect(hrefs).toContain(LINKS.license);
 	});

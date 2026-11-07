@@ -70,6 +70,48 @@ const imported = importMusicXml(xml);
 imported.text; // "# Example Song\\nkey: D, tempo: 145\\n\\n## Verse\\n…"
 imported.diagnostics; // what didn't come over, one warning per kind`;
 
+export const INSTALL_SYNC = "npm install @barmark/sync";
+
+/** The detections the sync sample builds from; a test checks USE_SYNC shows these and its results. */
+export const SYNC_DETECTIONS = {
+	title: "Example Song",
+	grid: { bars: [0, 2, 4, 6, 8] },
+	meter: "4/4",
+	sections: [{ name: "Verse", start: 0 }],
+	chords: {
+		runs: [
+			{ start: 0, end: 4, label: "D:maj" },
+			{ start: 4, end: 6, label: "A:maj" },
+			{ start: 6, end: 8, label: "B:min" },
+		],
+	},
+};
+
+export const USE_SYNC = `import { barAt, chartFromDetections, secondsAtBar } from "@barmark/sync";
+
+// A chord detector's output: bar starts and chord runs, in seconds
+const { chart, timing, diagnostics } = chartFromDetections({
+	title: "Example Song",
+	grid: { bars: [0, 2, 4, 6, 8] },
+	meter: "4/4",
+	sections: [{ name: "Verse", start: 0 }],
+	chords: {
+		runs: [
+			{ start: 0, end: 4, label: "D:maj" },
+			{ start: 4, end: 6, label: "A:maj" },
+			{ start: 6, end: 8, label: "B:min" },
+		],
+	},
+});
+chart; // "# Example Song\\ntime: 4/4, tempo: 120\\n\\n## Verse\\n| D | / | A | Bm |\\n"
+
+// The timing map places each played bar in the recording (null if the grid is unusable)
+if (timing) {
+	secondsAtBar(timing, 3); // 4
+	barAt(timing, 5); // { entry: 2, bar: 3, fraction: 0.5 }
+}
+diagnostics; // what the builder changed or couldn't use, each with a code`;
+
 export const USE_CLI = `npx @barmark/cli check songs          # every .chart.md in songs/, problems by line
 npx @barmark/cli format --write songs # rewrite them in standard form
 npx @barmark/cli transpose example-song.chart.md --to E

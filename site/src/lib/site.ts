@@ -11,6 +11,7 @@ export const LINKS = {
 	renderReadme: "https://github.com/kevinpeckham/barmark/tree/main/packages/render#readme",
 	cliReadme: "https://github.com/kevinpeckham/barmark/tree/main/packages/cli#readme",
 	musicxmlReadme: "https://github.com/kevinpeckham/barmark/tree/main/packages/musicxml#readme",
+	syncReadme: "https://github.com/kevinpeckham/barmark/tree/main/packages/sync#readme",
 	cliReleases: "https://github.com/kevinpeckham/barmark/releases?q=cli-v",
 	songs: "https://github.com/kevinpeckham/songs",
 	parserReadme: "https://github.com/kevinpeckham/barmark/tree/main/packages/barmark#readme",
