@@ -6,6 +6,8 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.6.3] - 2026-11-07
+
 ### Changed
 
 - The npm description and the README's opening now name the import
