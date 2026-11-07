@@ -6,6 +6,15 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.6.6] - 2026-11-07
+
+### Changed
+
+- **Uses** @barmark/musicxml 0.6.4. `barmark export` writes a repeat
+  inside a repeat, and a jump through a repeating replay or right after
+  a `:|`, in play order, so `barmark import` and notation programs play
+  them as barmark does; text on bars no pass plays is kept.
+
 ## [0.6.5] - 2026-11-07
 
 ### Changed
@@ -222,7 +231,8 @@ The first release of the `barmark` command. Uses `barmark` 0.8.0 and
 - **The `barmark` command:** `check`, `format`, `render` and `transpose`
   for `.chart.md` files, on npm and as standalone binaries.
 
-[Unreleased]: https://github.com/kevinpeckham/barmark/compare/cli-v0.6.5...HEAD
+[Unreleased]: https://github.com/kevinpeckham/barmark/compare/cli-v0.6.6...HEAD
+[0.6.6]: https://github.com/kevinpeckham/barmark/compare/cli-v0.6.5...cli-v0.6.6
 [0.6.5]: https://github.com/kevinpeckham/barmark/compare/cli-v0.6.4...cli-v0.6.5
 [0.6.4]: https://github.com/kevinpeckham/barmark/compare/cli-v0.6.3...cli-v0.6.4
 [0.6.3]: https://github.com/kevinpeckham/barmark/compare/cli-v0.6.2...cli-v0.6.3
