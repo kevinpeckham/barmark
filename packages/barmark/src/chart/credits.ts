@@ -52,7 +52,9 @@ export function nearCredit(text: string, line: number): ChartDiagnostic | null {
 	// `lyrics:` then a bar line is a lyric row (7.7); escaped, it is text, and no near miss.
 	if (LYRIC_ROW.test(text)) return null;
 	const m = /^([^\s:]+)\s*:\s*(.*)$/.exec(text);
-	const role = m?.[1] ? NEAR_CREDITS[m[1].toLowerCase()] : undefined;
+	const word = m?.[1]?.toLowerCase() ?? "";
+	// Own keys only: `constructor:` is not a credit's near miss.
+	const role = Object.hasOwn(NEAR_CREDITS, word) ? NEAR_CREDITS[word] : undefined;
 	if (!m || !role) return null;
 	return {
 		line,

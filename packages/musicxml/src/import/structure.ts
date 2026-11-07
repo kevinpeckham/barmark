@@ -25,7 +25,12 @@ export type BarInfo = {
 	rehearsal: string | null;
 	/** A directive line before the bar, such as `"key: G, tempo: 120"`. */
 	directives: string | null;
+	/** Text lines before the bar, after its heading. */
 	textLines: string[];
+	/** Text lines before the bar's heading (and its directives). */
+	leadLines: string[];
+	/** Text lines after the bar: at its section's foot, or the chart's end. */
+	footLines: string[];
 	/** Words on the bar; `at` is the beat they fall in, from 0, the bar's beat count for its end. */
 	words: { text: string; at: number }[];
 	/** The bar carries the export's `?` words alone: an unknown bar (Task 8 writes `?`). */
@@ -124,6 +129,10 @@ function barInfo(
 	const read = measures.find((m) => m !== undefined) as ReadMeasure;
 	const own = read.oneBar ?? meter;
 	const { heading, rehearsal, extra } = namesOf(marks, read.number, c);
+	// The export writes text lines in every part, the heading in the top part alone.
+	// Known limit: the same text before and after a heading collapses to the one before.
+	const leadLines = once(marks.flatMap((m) => m.leadLines));
+	const lead = new Set(leadLines);
 	const words = marks.flatMap((m) => m.words.map((w) => ({ text: w.text, at: beatOf(w.at, own) })));
 	return {
 		index: i,
@@ -131,7 +140,9 @@ function barInfo(
 		meter: read.oneBar,
 		heading,
 		rehearsal,
-		textLines: once([...extra, ...marks.flatMap((m) => m.textLines)]),
+		textLines: once([...extra, ...marks.flatMap((m) => m.textLines)]).filter((t) => !lead.has(t)),
+		leadLines,
+		footLines: once(marks.flatMap((m) => m.footLines)),
 		words: once(words, (w) => `${w.at}|${w.text}`),
 		question: marks.some((m) => m.question),
 		...cellsOf(marks, c.jumps),
@@ -148,6 +159,8 @@ const flattened = (bar: BarInfo, directives: string | null): BarInfo => ({
 	before: [],
 	after: bar.after.filter((t) => t === "..."),
 	textLines: [...bar.textLines],
+	leadLines: [...bar.leadLines],
+	footLines: [...bar.footLines],
 	words: bar.words.map((w) => ({ ...w })),
 });
 
@@ -196,7 +209,13 @@ function chordWords(measures: string[], losses: Losses): void {
 }
 
 /** A part's marks without its words and text lines: a part `--part` didn't choose. */
-const wordless = (m: MeasureMarks): MeasureMarks => ({ ...m, words: [], textLines: [] });
+const wordless = (m: MeasureMarks): MeasureMarks => ({
+	...m,
+	words: [],
+	textLines: [],
+	leadLines: [],
+	footLines: [],
+});
 
 /**
  * The score's structure bar by bar, in written order, or in played order

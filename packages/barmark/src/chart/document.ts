@@ -170,9 +170,8 @@ function oldFormat(text: string, line: number): ChartDiagnostic | null {
 		return warn("a section label; barmark headings start with ##", `## ${label[1].trim()}`);
 	const credit = nearCredit(text, line);
 	if (credit) return credit;
-	const near = /^(\w+)\s*:\s*(.*)$/.exec(text);
-	const name = near?.[1] ? NEAR_DIRECTIVES[near[1].toLowerCase()] : undefined;
-	if (near && name) return warn(`not a directive; did you mean ${name}:?`, `${name}: ${near[2]}`);
+	const directive = nearDirective(text);
+	if (directive) return warn(directive.message, directive.suggestion);
 	const undeclared = undeclaredLabel(text, line);
 	if (undeclared) return undeclared;
 	const unescaped = escapedBarLine(text);
@@ -181,6 +180,19 @@ function oldFormat(text: string, line: number): ChartDiagnostic | null {
 	if (words.length >= 2 && words.every((w) => parseChord(w).ok))
 		return warn("chords outside a bar line are text", `| ${words.join(" | ")} |`);
 	return null;
+}
+
+/** A misnamed directive (`meter:`), or `title:` for the `#` title (Kevin's ruling, 2026-11-07). */
+function nearDirective(text: string): { message: string; suggestion: string } | null {
+	const near = /^(\w+)\s*:\s*(.*)$/.exec(text);
+	const [, word = "", value = ""] = near ?? [];
+	const lower = word.toLowerCase();
+	if (lower === "title" && value)
+		return { message: "not a directive; the title is the # line", suggestion: `# ${value}` };
+	// Own keys only: `constructor:` is not a directive's near miss.
+	const name = Object.hasOwn(NEAR_DIRECTIVES, lower) ? NEAR_DIRECTIVES[lower] : undefined;
+	if (!near || !name) return null;
+	return { message: `not a directive; did you mean ${name}:?`, suggestion: `${name}: ${value}` };
 }
 
 /** `D \| A \|` (an editor's escaping) as the bar line it would be, if it reads cleanly. */

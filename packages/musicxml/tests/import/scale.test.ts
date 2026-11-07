@@ -1,5 +1,10 @@
 /** Untrusted files with many measures: nothing in the import may grow faster than the file. */
 import { expect, test } from "bun:test";
+import { Losses } from "../../src/import/losses.js";
+import { readMarks } from "../../src/import/marks.js";
+import { readScore } from "../../src/import/read.js";
+import { readStructure } from "../../src/import/structure.js";
+import { parseXml } from "../../src/import/tree.js";
 import { type ImportDiagnostic, importMusicXml } from "../../src/index.js";
 
 // The bounds below are best-of-two timings; each test's 30 s timeout only keeps a loaded machine from cutting a run short.
@@ -175,6 +180,105 @@ test(
 		expect(big.text).not.toBe("");
 		expect(big.ms).toBeLessThan(5000);
 		expect(big.ms / timed(verseAMeasure(400)).ms).toBeLessThan(25);
+	},
+	TIMEOUT,
+);
+
+/** One chord-bearing measure of the export's own file with `n` text lines under the staff at beat 0, then its heading. */
+const wordsAtStart = (n: number, same: boolean) =>
+	score(
+		1,
+		() => {
+			let words = "";
+			for (let i = 0; i < n; i++)
+				words += `<direction placement="below"><direction-type><words>${same ? "w" : `w${i}`}</words></direction-type></direction>`;
+			return `<attributes><divisions>1</divisions></attributes>${words}<direction placement="above"><direction-type><words font-weight="bold">Verse</words></direction-type></direction>${harmony}${slash}`;
+		},
+		"@barmark/musicxml 0.6.0",
+	);
+
+test("placing a measure's text lines reads its marks a fixed number of times each", () => {
+	const n = 2000;
+	const root = parseXml(wordsAtStart(n, false));
+	const m = root ? readScore(root, new Losses())?.parts[0]?.measures[0] : undefined;
+	if (!m) throw new Error("no measure");
+	let reads = 0;
+	m.marks = new Proxy(m.marks, {
+		get(target, key, receiver) {
+			if (typeof key === "string" && /^\d+$/.test(key)) reads++;
+			return Reflect.get(target, key, receiver);
+		},
+	});
+	const out = readMarks(m, "Gtr", new Losses(), true);
+	expect(out.leadLines).toHaveLength(n);
+	expect(out.headings).toEqual(["Verse"]);
+	// A scan of the marks per text line would read them about n²/2 times.
+	expect(reads).toBeLessThan(10 * (n + 1));
+});
+
+test("reading many words above the staff reads the measure's marks a fixed number of times each", () => {
+	const n = 2000;
+	let words = "";
+	for (let i = 0; i < n; i++)
+		words += `<direction placement="above"><direction-type><words>w${i}</words></direction-type></direction>`;
+	const root = parseXml(
+		score(1, () => `<attributes><divisions>1</divisions></attributes>${words}${harmony}${slash}`),
+	);
+	const m = root ? readScore(root, new Losses())?.parts[0]?.measures[0] : undefined;
+	if (!m) throw new Error("no measure");
+	let reads = 0;
+	m.marks = new Proxy(m.marks, {
+		get(target, key, receiver) {
+			if (typeof key === "string" && /^\d+$/.test(key)) reads++;
+			return Reflect.get(target, key, receiver);
+		},
+	});
+	const out = readMarks(m, "Gtr", new Losses(), false);
+	expect(out.words).toHaveLength(n);
+	// A look for a <swing> per word would read the marks about n² times.
+	expect(reads).toBeLessThan(10 * (n + 1));
+});
+
+/** One measure of the export's own file: `n` text lines ahead of its heading and `n` after it. */
+const aroundHeading = (n: number) => {
+	const line = (text: string) =>
+		`<direction placement="below"><direction-type><words>${text}</words></direction-type></direction>`;
+	let before = "";
+	let after = "";
+	for (let i = 0; i < n; i++) {
+		before += line(`a${i}`);
+		after += line(`b${i}`);
+	}
+	const heading = `<direction placement="above"><direction-type><words font-weight="bold">Verse</words></direction-type></direction>`;
+	return score(
+		1,
+		() =>
+			`<attributes><divisions>1</divisions></attributes>${before}${heading}${after}${harmony}${slash}`,
+		"@barmark/musicxml 0.6.0",
+	);
+};
+
+test(
+	"text lines on both sides of a heading are told apart in linear time",
+	() => {
+		const structure = (n: number) => {
+			const root = parseXml(aroundHeading(n));
+			const read = root ? readScore(root, new Losses()) : null;
+			if (!read) throw new Error("no score");
+			let best = Number.POSITIVE_INFINITY;
+			let lines = 0;
+			for (let run = 0; run < 3; run++) {
+				const start = performance.now();
+				const bar = readStructure(read, new Losses()).bars[0];
+				best = Math.min(best, performance.now() - start);
+				lines = (bar?.leadLines.length ?? 0) + (bar?.textLines.length ?? 0);
+			}
+			expect(lines).toBe(2 * n);
+			return best;
+		};
+		structure(2000);
+		// Allocation makes ten times the lines up to about 30 times as long; comparing every pair made it over 200.
+		expect(structure(40_000) / structure(4000)).toBeLessThan(100);
 	},
 	TIMEOUT,
 );

@@ -239,30 +239,52 @@ const outsideSyllables = (cell: string) => {
  */
 function readWords(cell: string): { bare: string; words: Words[] } | Problem {
 	const words: Words[] = [];
-	let bare = "";
+	const chars = [...cell];
+	const sung = inSyllables(chars);
+	const bare = tokenCounter();
 	let open: number | null = null;
-	const sung = inSyllables([...cell]);
-	for (const [i, ch] of [...cell].entries()) {
+	for (const [i, ch] of chars.entries()) {
 		if (!QUOTES.has(ch) || (sung[i] && open === null)) {
-			if (open === null) bare += ch;
+			if (open === null) bare.add(ch);
 			continue;
 		}
 		if (open === null) {
 			open = i;
 			continue;
 		}
-		const text = [...cell]
+		const text = chars
 			.slice(open + 1, i)
 			.join("")
 			.trim();
 		if (!text) return { problem: "empty words between quotes", token: '""' };
-		words.push({ text, at: tokens(bare).length });
-		bare += " ";
+		words.push({ text, at: bare.count() });
+		bare.add(" ");
 		open = null;
 	}
 	if (open !== null)
-		return { problem: "words need a closing quote", token: [...cell].slice(open).join("") };
-	return { bare, words };
+		return { problem: "words need a closing quote", token: chars.slice(open).join("") };
+	return { bare: bare.text(), words };
+}
+
+/** Text built a character at a time that knows how many `tokens` it holds, without splitting it again. */
+function tokenCounter() {
+	const parts: string[] = [];
+	let done = 0;
+	let current = false;
+	let depth = 0;
+	return {
+		add(ch: string) {
+			parts.push(ch);
+			if (ch === "{") depth++;
+			if (ch === "}") depth = Math.max(0, depth - 1);
+			if (/\s/.test(ch) && depth === 0) {
+				if (current) done++;
+				current = false;
+			} else current = true;
+		},
+		count: () => done + (current ? 1 : 0),
+		text: () => parts.join(""),
+	};
 }
 
 /** A leading `[n/d]` and the rest of the cell; `bad` is a bracket that is no time signature. */

@@ -177,6 +177,8 @@ const bareMeasure = (m: Measure): Measure => ({
 	key: null,
 	words: [],
 	text: [],
+	lead: [],
+	foot: [],
 	tacet: false,
 });
 

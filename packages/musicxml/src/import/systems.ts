@@ -25,7 +25,15 @@ const continuesEnding = (bars: BarInfo[], i: number) =>
 	bars[i - 1]?.closes === null;
 
 /** Whether a row must end after bar `i`. */
-const endsRow = (b: BarInfo) => b.closes !== null || b.after.length > 0;
+const endsRow = (b: BarInfo) => b.closes !== null || b.after.length > 0 || b.footLines.length > 0;
+
+/** Whether a line comes before the bar: its heading, directives or text, or a cell before it. */
+const linesBefore = (b: BarInfo) =>
+	b.heading !== null ||
+	b.directives !== null ||
+	b.before.length > 0 ||
+	b.textLines.length > 0 ||
+	b.leadLines.length > 0;
 
 /** Whether a row must start at bar `i`. */
 function startsRow(bars: BarInfo[], i: number): boolean {
@@ -33,15 +41,7 @@ function startsRow(bars: BarInfo[], i: number): boolean {
 	const prev = bars[i - 1];
 	if (!prev) return true;
 	if (continuesEnding(bars, i)) return false;
-	return (
-		b.heading !== null ||
-		b.opens ||
-		b.before.length > 0 ||
-		b.directives !== null ||
-		b.textLines.length > 0 ||
-		!sameEnding(b.ending, prev.ending) ||
-		endsRow(prev)
-	);
+	return b.opens || linesBefore(b) || !sameEnding(b.ending, prev.ending) || endsRow(prev);
 }
 
 /** Runs of bars no system may cross, as [from, to) pairs. */

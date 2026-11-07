@@ -6,6 +6,24 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+
+- **Text lines keep their place through export and import** (issue
+  #173). Text before the first heading (such as a `title:` line) came
+  back inside the first section, text at a section's foot came back in
+  the next section, and text after the last bar came back mid-line, before
+  that bar. The export now writes text before a heading ahead of the
+  heading's direction, and text at a section's foot or after the last bar
+  below that bar, after its notes; the import reads words below the staff
+  written before a bold heading as text before it (in the export's own
+  files; another program's direction order isn't read as placement), and
+  words below after a measure's notes as text after its bar. Text at the foot of a section
+  whose passes are written out no longer moves to the section's first bar.
+- **Many words in one measure import in linear time.** Words above the
+  staff each looked through the whole measure for a `<swing>`, so a file
+  with 50,000 words in a bar took minutes; a measure's swing, and the
+  text lines ahead of its heading, are now worked out once.
+
 ## [0.6.0] - 2026-11-07
 
 Needs `barmark` 0.17.0.

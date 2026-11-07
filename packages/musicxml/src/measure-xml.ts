@@ -393,9 +393,9 @@ function scoreStartXml(m: Measure, ctx: MeasureContext): string {
 	].join("");
 }
 
-/** Before the notes: the score's marks (top part only), then the part's own text lines. */
+/** Before the notes: text before the heading, the score's marks (top part only), then the part's own text lines. */
 const startXml = (m: Measure, ctx: MeasureContext) =>
-	(ctx.score ? scoreStartXml(m, ctx) : "") + textXml(m.text);
+	textXml(m.lead) + (ctx.score ? scoreStartXml(m, ctx) : "") + textXml(m.text);
 
 /** A repeat's words: an open one's, or a count above 2, which Dorico won't read from `times`. */
 function repeatWords(end: Marks["repeatEnd"]): string {
@@ -460,6 +460,7 @@ export function measureXml(bar: MeasureEvents, ctx: MeasureContext): string {
 		body,
 		bar.lift === "end" ? pedalXml("stop", ctx.staves === 2 ? 2 : null) : "",
 		endXml(m.marks, ctx.score),
+		textXml(m.foot),
 		rightBarlineXml(m.marks),
 	]);
 }

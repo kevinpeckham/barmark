@@ -9,6 +9,26 @@ not here.
 
 ## Testing
 
+### A round trip that compares only what plays can't see text move (2026-11-07, @barmark/musicxml)
+
+- **The symptom.** Issue #173: a `title:` line before the first heading
+  came back inside the first section, a section's closing text came back
+  in the next section, and text after the last bar split the last bar
+  line, all with the corpus round-trip test green.
+- **The cause.** `tests/import/roundtrip.test.ts` compared `played()`:
+  bars, meters, sections and timelines. Text lines play nothing, so
+  where they landed was invisible to it. Underneath, the export gave
+  every text line to the next measure, before its notes, and wrote the
+  heading first, so text before and after a heading made the same XML.
+- **The fix.** The round trip also compares `texts()`
+  (`tests/import/played.ts`): each text line with its section and the
+  bars written before it. It caught one more, in the examples:
+  Shenandoah's opening line. The export now writes text before a
+  heading ahead of it and closing text after a bar's notes
+  (`closeText` in `packages/musicxml/src/measures.ts`); the import reads
+  them back by their order and position (`textPlace` in
+  `src/import/marks.ts`).
+
 ### A hold worked out in file order is wrong in played order (2026-11-06, @barmark/musicxml)
 
 - **The symptom.** Random lyric scores (the Task 8 reviewer's lyric
@@ -1124,3 +1144,28 @@ profiling 8,000 lines. 0.16.0 indexes the bars by line once; the test
 also times a chart with parts and lyric rows, where the scans cost most,
 and both bounds are now 20. A ratio test only sees a quadratic term as
 large as the linear work around it: profile the long case too.
+
+### A quadratic scan no timing test could see (2026-11-07)
+
+**Symptom:** Vercel's security review of #174 flagged the MusicXML
+import: placing each text line under the staff looked the line up in
+its measure's marks (`indexOf`), so a file with many words in one
+measure cost n²/2 comparisons.
+**Cause:** a ratio test (ten times the words, at most 25 times as
+long) passed before the fix. The engine runs `indexOf` so fast that
+at 250,000 words the scan was 8 of 14 seconds, still under the bound.
+**Fix:** the marks before the heading are gathered once per measure
+(`readMarks`, `ahead`). `musicxml/tests/import/scale.test.ts` counts
+the work instead of timing it: it wraps the marks in a `Proxy`, counts
+element reads, and fails at n²/2 (2,007,003 reads for 2,000 lines;
+under 10 per mark now). Where a quadratic term is cheap per step,
+count the steps.
+**Then:** a review profiling the same file found two more per-word
+scans the finding didn't name: words above the staff looked for a
+`<swing>` in the whole measure (`marks.ts`, now `Context.swing`), and
+text after a heading was compared with every line before it
+(`structure.ts`, now a `Set`). Worst was the barmark parser:
+`readWords` re-read the whole cell and re-split what came before each
+quoted word, and the import's self-check parses what it writes. The
+security report named one site; the class was "per word, look at all
+the words". Search for the class, not the line.

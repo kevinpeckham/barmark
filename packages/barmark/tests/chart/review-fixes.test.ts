@@ -55,3 +55,20 @@ describe("% repeats the previous bar exactly", () => {
 		expect(parseChart("| [3/4] G | % | % |").bars.map((b) => b.meter.n)).toEqual([3, 3, 3]);
 	});
 });
+
+describe("many quoted words in one cell parse in linear time", () => {
+	const cell = (n: number) => `| C ${Array.from({ length: n }, (_, i) => `"w${i}"`).join(" ")} |`;
+	// Best of three after a warm-up; the small size is big enough that timer noise doesn't set the ratio.
+	const best = (text: string) => Math.min(fast(text), fast(text), fast(text));
+	test("ten times the words, nowhere near a hundred times as long", () => {
+		best(cell(4000));
+		const ratio = best(cell(40_000)) / best(cell(4000));
+		expect(ratio).toBeLessThan(25);
+	}, 30_000);
+	test("the words still read, each before its slot", () => {
+		expect(parseChart('| "a" C "b" G |').bars[0]?.words).toEqual([
+			{ text: "a", at: 0 },
+			{ text: "b", at: 1 },
+		]);
+	});
+});
