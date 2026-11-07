@@ -53,9 +53,13 @@ const atStart = (mark: Mark) => cmp(mark.at, ZERO) === 0;
 const isHeading = (mark: Mark) =>
 	mark.kind === "words" && mark.placement !== "below" && mark.bold && atStart(mark);
 
-/** A text line's place: before the heading, after the notes, or before the notes. */
+/**
+ * A text line's place: before the heading, after the notes, or before the
+ * notes. Only the export's own files say "before the heading" by writing
+ * the line first; another program's direction order means nothing.
+ */
 function textPlace(mark: Mark, c: Context): "leadLines" | "footLines" | "textLines" {
-	if (atStart(mark) && c.m.marks.indexOf(mark) < c.heading) return "leadLines";
+	if (c.own && atStart(mark) && c.m.marks.indexOf(mark) < c.heading) return "leadLines";
 	const end = cmp(c.m.length, ZERO) > 0 && cmp(mark.at, c.m.length) >= 0;
 	return end ? "footLines" : "textLines";
 }

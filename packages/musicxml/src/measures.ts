@@ -259,6 +259,8 @@ function closeSection(w: Walk): void {
 		const heading = inside[0]?.marks.heading ?? null;
 		w.out.length = s.from;
 		w.pending.heading = heading;
+		// Text before the chart's first heading goes with it.
+		w.pending.lead = inside[0]?.lead ?? [];
 		w.flattened = true;
 		playedOut(w, o);
 		return;

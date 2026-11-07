@@ -15,8 +15,9 @@ package uses [semantic versioning](https://semver.org/).
   that bar. The export now writes text before a heading ahead of the
   heading's direction, and text at a section's foot or after the last bar
   below that bar, after its notes; the import reads words below the staff
-  written before a bold heading as text before it, and words below after
-  a measure's notes as text after its bar. Text at the foot of a section
+  written before a bold heading as text before it (in the export's own
+  files; another program's direction order isn't read as placement), and
+  words below after a measure's notes as text after its bar. Text at the foot of a section
   whose passes are written out no longer moves to the section's first bar.
 
 ## [0.6.0] - 2026-11-07

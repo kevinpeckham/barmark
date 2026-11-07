@@ -130,6 +130,7 @@ function barInfo(
 	const own = read.oneBar ?? meter;
 	const { heading, rehearsal, extra } = namesOf(marks, read.number, c);
 	// The export writes text lines in every part, the heading in the top part alone.
+	// Known limit: the same text before and after a heading collapses to the one before.
 	const leadLines = once(marks.flatMap((m) => m.leadLines));
 	const words = marks.flatMap((m) => m.words.map((w) => ({ text: w.text, at: beatOf(w.at, own) })));
 	return {

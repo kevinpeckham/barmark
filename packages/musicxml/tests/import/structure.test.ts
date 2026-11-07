@@ -43,15 +43,15 @@ describe("what it reads", () => {
 		expect(pick(bars, "words")).toEqual([[], []]);
 	});
 
-	test("words below before the heading come before it; words below after the notes close the bar", () => {
+	test("in another program's file words below before the heading still follow it; words below after the notes close the bar", () => {
 		const bold = words("Verse", ' font-weight="bold"');
 		const below = (text: string) => words(text, "", "below");
 		const { bars } = structureOf(
 			xml`${measure(1, start() + below("first") + bold + below("then") + whole + below("last"))}`,
 		);
 		expect(bars[0]?.heading).toBe("Verse");
-		expect(bars[0]?.leadLines).toEqual(["first"]);
-		expect(bars[0]?.textLines).toEqual(["then"]);
+		expect(bars[0]?.leadLines).toEqual([]);
+		expect(bars[0]?.textLines).toEqual(["first", "then"]);
 		expect(bars[0]?.footLines).toEqual(["last"]);
 	});
 
