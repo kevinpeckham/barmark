@@ -186,12 +186,11 @@ function oldFormat(text: string, line: number): ChartDiagnostic | null {
 function nearDirective(text: string): { message: string; suggestion: string } | null {
 	const near = /^(\w+)\s*:\s*(.*)$/.exec(text);
 	const [, word = "", value = ""] = near ?? [];
-	if (word.toLowerCase() === "title" && value)
-		return { message: "not a directive; a title is a # heading", suggestion: `# ${value}` };
+	const lower = word.toLowerCase();
+	if (lower === "title" && value)
+		return { message: "not a directive; the title is the # line", suggestion: `# ${value}` };
 	// Own keys only: `constructor:` is not a directive's near miss.
-	const name = Object.hasOwn(NEAR_DIRECTIVES, word.toLowerCase())
-		? NEAR_DIRECTIVES[word.toLowerCase()]
-		: undefined;
+	const name = Object.hasOwn(NEAR_DIRECTIVES, lower) ? NEAR_DIRECTIVES[lower] : undefined;
 	if (!near || !name) return null;
 	return { message: `not a directive; did you mean ${name}:?`, suggestion: `${name}: ${value}` };
 }

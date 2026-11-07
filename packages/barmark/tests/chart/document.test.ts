@@ -91,7 +91,7 @@ describe("text-line warnings for old formats", () => {
 			{
 				line: 1,
 				severity: "warning",
-				message: "not a directive; a title is a # heading",
+				message: "not a directive; the title is the # line",
 				token: "title: Lead Sheet Test",
 				suggestion: "# Lead Sheet Test",
 			},
