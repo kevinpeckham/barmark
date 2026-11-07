@@ -615,6 +615,13 @@ and round-trip it through `format`.
   in Dorico and choose File > Export > MusicXML. They are checked in as
   `dorico-*.musicxml` with expected charts. Revisit if a Dorico release
   documents export filter IDs and a destination parameter.
+- **Superseded (2026-11-07).** mac-bench now answers the dialog itself:
+  it opens File > Export > MusicXML… from Dorico's menu and fills in the
+  dialog and its folder picker through macOS Accessibility (a small
+  helper app, `MacBenchAX`, granted Accessibility for Dorico alone), so
+  the export runs unattended (`mac-bench dorico --export musicxml|mxl`;
+  mac-bench FINDINGS). The `dorico-*` fixtures were made that way, not
+  by hand; see "What Dorico 6.2 changes when it round-trips MusicXML".
 
 ### MuseScore keeps a melisma only on its syllable, and writes an elision as a glyph (2026-11-06, voice and lyrics)
 
