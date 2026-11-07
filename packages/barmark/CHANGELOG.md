@@ -9,6 +9,18 @@ Releases follow the process in [RELEASING.md](RELEASING.md).
 
 ## [Unreleased]
 
+### Added
+
+- **`keyFromText`, `conventionalKey`, `printKey` and `spellPitch`.** Read a key
+  as people and detectors write it (`F♯ minor`, `Bb Maj`), spell it with the
+  fewest accidentals, print it as `key:` does, and spell any pitch class in a
+  key.
+
+### Technical
+
+- `transposeChart`'s keyless spelling and its key-signature helpers now live in
+  `src/chart/keys.ts`, shared with `spellPitch`; behaviour is unchanged.
+
 ## [0.17.1] - 2026-11-07
 
 A parse is plain data that owns its objects, and the README says what it

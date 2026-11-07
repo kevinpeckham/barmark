@@ -14,6 +14,7 @@ export {
 	instrumentInfo,
 	type WrittenInterval,
 } from "./instruments.js";
+export { conventionalKey, keyFromText, printKey, spellPitch } from "./keys.js";
 export { MAX_LINES } from "./lines.js";
 export { extractPart, parseChart } from "./parse.js";
 export { projectPart } from "./parts.js";

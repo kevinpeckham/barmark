@@ -36,15 +36,19 @@ declarations included and no runtime dependencies.
 
 ```ts
 import {
+	conventionalKey,
 	degreeOf,
 	extractPart,
 	harteToBarmark,
+	keyFromText,
 	parseChart,
 	parseChord,
 	printChart,
+	printKey,
 	printParsed,
 	printPart,
 	projectPart,
+	spellPitch,
 	transposeChart,
 } from "barmark";
 
@@ -61,6 +65,11 @@ printParsed(text, chart); // the same, from a parse you already have
 
 transposeChart("key: D\n| D | A | Bm | G |", { to: "Eb" }).text; // "key: Eb\n| Eb | Bb | Cm | Ab |\n"
 transposeChart(text, { semitones: -2 }); // { text, diagnostics }
+
+keyFromText("F♯ minor"); // { tonic: "F#", mode: "minor" }; null when it isn't a key
+conventionalKey({ tonic: "Ab", mode: "minor" }); // { tonic: "G#", mode: "minor" }: the spelling with fewest accidentals
+printKey({ tonic: "F#", mode: "minor" }); // "F#m", as `key:` writes it
+spellPitch(10, { tonic: "D", mode: "major" }); // "Bb": a pitch class (0 = C) spelled in a key; null key uses C C# D Eb ...
 
 degreeOf("C", { tonic: "D", mode: "major" }); // { degree: 7, alter: -1 }: C is b7 in D
 
