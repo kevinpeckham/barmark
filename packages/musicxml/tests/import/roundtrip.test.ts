@@ -135,6 +135,14 @@ test.each([
 		"## A\n| C | Fine |\n|: D | E :|\n| D.C. al Fine |\n## A\nwatch\n",
 	],
 	[
+		"before later text, after bars no pass plays",
+		"|: C | To Coda | F :|\n| D.C. al Coda |\n### unplayed\n| Am |\n\n## Coda\n| Coda | C |\n### end\n",
+	],
+	[
+		"before later text, imported in played order",
+		"| Am | To Coda |\n| D.C. al Coda |\n\n## Verse x2\n| E7 |\n| G7 | x3\nplay softly\n\n## Coda\n| Coda | Em |\n### end\n",
+	],
+	[
 		"in a section no pass plays, imported in played order",
 		"| Am | To Coda |\n| D.C. al Coda |\n\n## Verse x2\n| E7 |\n| G7 | x3\nplay softly\n\n## Coda\n| Coda | Em |\n",
 	],

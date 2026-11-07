@@ -145,8 +145,8 @@ type Walk = {
 	section: { from: number; repeat: Repeat; line: number } | null;
 	/** The `|: … :|` being walked: its first measure, and whether a line inside it repeats too. */
 	bracket: Bracket | null;
-	/** Text lines of bars no pass plays, written out of the measures: they go after the last bar. */
-	orphans: Measure["text"];
+	/** Text lines of bars no pass plays, by the played bar written last before them (0 for none): they go after it. */
+	orphans: Map<number, Measure["text"]>;
 };
 
 function add(w: Walk, m: Measure): void {
@@ -164,9 +164,18 @@ function add(w: Walk, m: Measure): void {
 
 const occurrenceAt = (w: Walk, line: number) => w.parse.sections.find((o) => o.line === line);
 
-/** The text lines of the measures no pass plays. */
-const unplayedText = (ms: Measure[]) =>
-	ms.filter((m) => m.played === null).flatMap((m) => [...m.text, ...m.foot]);
+/**
+ * Hangs the text lines of the measures in `ms` that no pass plays on the
+ * played measure written last before each (in `before`, or in `ms`), in
+ * written order.
+ */
+function hangUnplayed(w: Walk, ms: Measure[], before: Measure[]): void {
+	let anchor = before.findLast((m) => m.played !== null)?.played ?? 0;
+	for (const m of ms) {
+		if (m.played !== null) anchor = m.played;
+		else w.orphans.set(anchor, [...(w.orphans.get(anchor) ?? []), ...m.text, ...m.foot]);
+	}
+}
 
 /**
  * The measures from `from` on, written again as these bars play, with no
@@ -175,7 +184,7 @@ const unplayedText = (ms: Measure[]) =>
 function rewrite(w: Walk, from: number, bars: PlayedBar[]): void {
 	const first = w.out[from];
 	const pending = w.pending;
-	w.orphans.push(...unplayedText(w.out.slice(from)));
+	hangUnplayed(w, w.out.slice(from), w.out.slice(0, from));
 	w.out.length = from;
 	w.pending = {
 		...nothing(),
@@ -460,7 +469,7 @@ export function writtenMeasures(parse: ChartParse): Measure[] {
 		replay: null,
 		section: null,
 		bracket: null,
-		orphans: [],
+		orphans: new Map(),
 	};
 	parse.lines.forEach((line, i) => {
 		if (line.kind === "section") sectionLine(w, line);
@@ -490,19 +499,21 @@ const hasJump = (parse: ChartParse) =>
  * needs when a jump passes through passes written out, since a written bar
  * can't play once after the jump and twice before it. Headings, rehearsal
  * marks, fermatas and text lines stay; the text lines of bars no pass
- * plays go after the last bar.
+ * plays go after the played bar written before them.
  */
 function inPlayOrder(w: Walk): Measure[] {
+	hangUnplayed(w, w.out, []);
 	const headings = new Map<number, string>();
 	for (const o of w.parse.sections) if (o.firstBar !== null) headings.set(o.firstBar, o.name);
 	const out = w.parse.bars.map((b, i) => {
 		const m = measureOf(b, w.fermatas);
 		m.marks.heading = headings.get(b.index) ?? null;
 		m.text = w.texts.get(b.index) ?? [];
-		m.foot = w.feet.get(b.index) ?? [];
+		m.foot = [...(w.feet.get(b.index) ?? []), ...(w.orphans.get(b.index) ?? [])];
 		if (i === 0) m.lead = w.out[0]?.lead ?? [];
 		return m;
 	});
-	out.at(-1)?.foot.push(...w.orphans, ...unplayedText(w.out));
+	const head = out[0];
+	if (head) head.text = [...(w.orphans.get(0) ?? []), ...head.text];
 	return out;
 }

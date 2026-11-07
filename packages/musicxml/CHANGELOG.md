@@ -39,8 +39,9 @@ package uses [semantic versioning](https://semver.org/).
 - **Text lines of bars no pass plays survive the round trip.** A chart
   written in play order (by the export, or by the import's fallback) left
   out the bars after a Fine or To Coda that never play, and the text
-  lines among them or after them went too. They now come after the last
-  bar.
+  lines among them or after them went too. They now come after the bar
+  played last before them in written order, so text written later stays
+  later.
 - **A text line written twice imports twice.** The import read each
   text line once, to read once the lines the export writes in every
   part, so two lines alike in a row came back as one. It now keeps as

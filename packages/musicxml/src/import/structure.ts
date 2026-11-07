@@ -288,14 +288,27 @@ export function readStructure(score: ReadScore, losses: Losses, words?: Set<Read
 	if (order !== written) losses.note({ severity: "warning", message: WRITTEN_OUT });
 	const played = directiveLines(states, order);
 	const out = order.map((i, k) => flattened(bars[i] as BarInfo, played[k] ?? null));
-	out.at(-1)?.footLines.push(...unplayedText(bars, order));
+	hangUnplayed(bars, order, out);
 	return { bars: out, writtenOut: true, chordWords: chordy };
 }
 
-/** The text lines of the bars the played order never reaches: kept, after the last bar. */
-function unplayedText(bars: BarInfo[], order: number[]): string[] {
-	const reached = new Set(order);
-	return bars
-		.filter((b) => !reached.has(b.index))
-		.flatMap((b) => [...b.leadLines, ...b.textLines, ...b.footLines]);
+/**
+ * The text lines of the bars the played order never reaches, kept: after
+ * the first play of the reached bar written last before each, in written
+ * order, or before the first bar when none is.
+ */
+function hangUnplayed(bars: BarInfo[], order: number[], out: BarInfo[]): void {
+	const firstPlay = new Map<number, number>();
+	order.forEach((i, k) => {
+		if (!firstPlay.has(i)) firstPlay.set(i, k);
+	});
+	let anchor: BarInfo | undefined;
+	const lead: string[] = [];
+	for (const b of bars) {
+		const k = firstPlay.get(b.index);
+		if (k !== undefined) anchor = out[k];
+		else (anchor?.footLines ?? lead).push(...b.leadLines, ...b.textLines, ...b.footLines);
+	}
+	const first = out[0];
+	if (first) first.textLines = [...lead, ...first.textLines];
 }

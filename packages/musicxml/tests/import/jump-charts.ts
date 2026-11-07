@@ -108,7 +108,9 @@ function jump(g: Gen, ss: Section[]): void {
 	if (kind.endsWith("al Coda")) {
 		const coda = row(g);
 		(coda.bars[0] as Bar).before.push("Coda");
-		ss.push({ heading: "Coda", rows: [coda], text: new Map() });
+		// Text after the coda: text from bars no pass plays must stay before it.
+		const text = new Map(g.rnd() < 0.5 ? [[0, "### end"] as const] : []);
+		ss.push({ heading: "Coda", rows: [coda], text });
 	}
 	if (body.length === 0) return;
 	const at = g.int(Math.floor(body.length / 2), body.length - 1);

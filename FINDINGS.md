@@ -71,12 +71,15 @@ not here.
   fallback (`readStructure`). And `bracketPlays` ran past its repeat when
   a jump inside it sent play elsewhere, taking a replay's bars and their
   text with it.
-- **The fix.** Both sides put the text of unplayed bars after the last
-  bar (`unplayedText` in `packages/musicxml/src/measures.ts` and
-  `packages/musicxml/src/import/structure.ts`), and `bracketPlays` stops
-  at its own bars and its section's occurrence. Found by the round
-  trip's property test, which asks that every text line come back, in
-  order.
+- **The fix.** Both sides hang the text of unplayed bars on the foot of
+  the played bar written last before them, at its first play
+  (`hangUnplayed` in `packages/musicxml/src/measures.ts` and
+  `packages/musicxml/src/import/structure.ts`). Putting it after the
+  chart's last bar, the first try, moved it past text written later (a
+  Coda's): the property test's codas now carry a text line. And
+  `bracketPlays` stops at its own bars and its section's occurrence.
+  Found by the round trip's property test, which asks that every text
+  line come back, in order.
 
 ### A jump on a repeat's last measure is taken on its first pass (2026-11-07, @barmark/musicxml)
 
