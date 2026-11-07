@@ -6,6 +6,16 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.6.5] - 2026-11-07
+
+### Changed
+
+- **Uses** barmark 0.19.1, @barmark/render 0.16.2 and @barmark/musicxml
+  0.6.3. `barmark import` now reads Dorico's files as it reads
+  MuseScore's: section names in plain text become headings, Dorico's
+  placeholder credits are left out, a guitar's slashes in a voice of
+  their own stay on its line, and a half-diminished chord is `m7(b5)`.
+
 ## [0.6.4] - 2026-11-07
 
 ### Changed
@@ -212,7 +222,8 @@ The first release of the `barmark` command. Uses `barmark` 0.8.0 and
 - **The `barmark` command:** `check`, `format`, `render` and `transpose`
   for `.chart.md` files, on npm and as standalone binaries.
 
-[Unreleased]: https://github.com/kevinpeckham/barmark/compare/cli-v0.6.4...HEAD
+[Unreleased]: https://github.com/kevinpeckham/barmark/compare/cli-v0.6.5...HEAD
+[0.6.5]: https://github.com/kevinpeckham/barmark/compare/cli-v0.6.4...cli-v0.6.5
 [0.6.4]: https://github.com/kevinpeckham/barmark/compare/cli-v0.6.3...cli-v0.6.4
 [0.6.3]: https://github.com/kevinpeckham/barmark/compare/cli-v0.6.2...cli-v0.6.3
 [0.6.2]: https://github.com/kevinpeckham/barmark/compare/cli-v0.6.1...cli-v0.6.2
