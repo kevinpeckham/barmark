@@ -6,6 +6,13 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.6.2] - 2026-11-07
+
+### Changed
+
+- **Requires `barmark` 0.19.0**, whose minor release a caret range
+  would not reach. No export or import change.
+
 ## [0.6.1] - 2026-11-07
 
 ### Changed
@@ -395,7 +402,8 @@ and each grammar example's sounding notes and chord symbols.
 - **Errors:** a chart with errors, or with no bars, returns its
   diagnostics and no XML; characters XML can't hold are left out.
 
-[Unreleased]: https://github.com/kevinpeckham/barmark/compare/musicxml-v0.6.1...HEAD
+[Unreleased]: https://github.com/kevinpeckham/barmark/compare/musicxml-v0.6.2...HEAD
+[0.6.2]: https://github.com/kevinpeckham/barmark/compare/musicxml-v0.6.1...musicxml-v0.6.2
 [0.6.1]: https://github.com/kevinpeckham/barmark/compare/musicxml-v0.6.0...musicxml-v0.6.1
 [0.6.0]: https://github.com/kevinpeckham/barmark/compare/musicxml-v0.5.0...musicxml-v0.6.0
 [0.5.0]: https://github.com/kevinpeckham/barmark/compare/musicxml-v0.4.1...musicxml-v0.5.0
