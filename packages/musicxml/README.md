@@ -3,6 +3,8 @@
 Export [barmark](https://barmark.dev) chord charts to MusicXML 4.0, so a
 chart opens in MuseScore, Dorico, Sibelius or Finale with the same bars,
 chords, repeats, sections and parts, and plays in the chart's play order.
+And import the other way: a MusicXML or compressed `.mxl` score from any of
+them comes back as a chart (`importMusicXml`, `readMxl`; see [Import](#import)).
 
 ```sh
 npm install @barmark/musicxml
