@@ -590,7 +590,8 @@ The first working release: the reference parser and printer for the
 
 - **A placeholder package that holds the `barmark` name** while the spec and parser are written.
 
-[Unreleased]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.19.0...HEAD
+[Unreleased]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.19.1...HEAD
+[0.19.1]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.19.0...barmark-v0.19.1
 [0.19.0]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.18.0...barmark-v0.19.0
 [0.18.0]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.17.1...barmark-v0.18.0
 [0.17.1]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.17.0...barmark-v0.17.1
