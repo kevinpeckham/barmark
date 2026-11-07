@@ -416,6 +416,8 @@ describe("directives inside a run of endings", () => {
 		rehearsal: null,
 		directives: null,
 		textLines: [],
+		leadLines: [],
+		footLines: [],
 		words: [],
 		question: false,
 		before: [],

@@ -111,11 +111,17 @@ function before(w: Writer, s: System, times: string | null): string[] {
 	return [...(directives ? [directives] : []), ...(heading ? [heading] : [])];
 }
 
-/** Every text line the system's bars carry, before its rows (an ending may hold some mid-line). */
-function textOf(w: Writer, s: Span): string[] {
+type TextLines = "textLines" | "leadLines" | "footLines";
+
+/**
+ * Every text line of a kind the bars `s` carry: before their heading
+ * (`leadLines`), before their rows (`textLines`; an ending may hold some
+ * mid-line) or after them (`footLines`).
+ */
+function textOf(w: Writer, s: Span, kind: TextLines = "textLines"): string[] {
 	return w.src.bars
 		.slice(s.from, s.to)
-		.flatMap((b) => b.textLines.flatMap((t) => textLine(t, w.header) ?? []));
+		.flatMap((b) => b[kind].flatMap((t) => textLine(t, w.header) ?? []));
 }
 
 /** How a section is written: as a replay (its heading and lyrics alone), and `x N` when it repeats whole over several systems. */
@@ -183,7 +189,11 @@ function systemLines(
 	first: boolean,
 	previous: string[] | null,
 ): { lines: string[]; open: string[] | null } {
-	const lead = [...before(w, s, first ? plan.times : null), ...textOf(w, s)];
+	const lead = [
+		...textOf(w, s, "leadLines"),
+		...before(w, s, first ? plan.times : null),
+		...textOf(w, s),
+	];
 	for (let i = s.from; i < s.to; i++) {
 		w.src.previous[i] = w.written[w.written.length - 1] ?? null;
 		w.written.push(i);
@@ -191,8 +201,15 @@ function systemLines(
 	}
 	const rows = rowsOf(w.src, s, w.last, plan.times !== null);
 	const lyrics = rowsUnder(w.verses, rowBars(w, s), w.src.bars[s.from]?.ending != null);
-	const lines = [...lead, ...(lead.length === 0 ? separator(previous, s) : []), ...rows, ...lyrics];
-	return { lines, open: lyrics.length === 0 ? keysOf(s) : null };
+	const foot = textOf(w, s, "footLines");
+	const lines = [
+		...lead,
+		...(lead.length === 0 ? separator(previous, s) : []),
+		...rows,
+		...lyrics,
+		...foot,
+	];
+	return { lines, open: lyrics.length === 0 && foot.length === 0 ? keysOf(s) : null };
 }
 
 /**
@@ -235,9 +252,11 @@ function body(w: Writer, systems: System[], sections: Section[]): string[] {
 		forget(w.last);
 		const root = byStart.get(roots.get(section.from) ?? section.from) ?? section;
 		return [
+			...textOf(w, section, "leadLines"),
 			...before(w, s, plan.times),
 			...textOf(w, section),
 			...replayed(w, section, root, systems),
+			...textOf(w, section, "footLines"),
 		];
 	});
 }

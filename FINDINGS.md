@@ -9,6 +9,26 @@ not here.
 
 ## Testing
 
+### A round trip that compares only what plays can't see text move (2026-11-07, @barmark/musicxml)
+
+- **The symptom.** Issue #173: a `title:` line before the first heading
+  came back inside the first section, a section's closing text came back
+  in the next section, and text after the last bar split the last bar
+  line, all with the corpus round-trip test green.
+- **The cause.** `tests/import/roundtrip.test.ts` compared `played()`:
+  bars, meters, sections and timelines. Text lines play nothing, so
+  where they landed was invisible to it. Underneath, the export gave
+  every text line to the next measure, before its notes, and wrote the
+  heading first, so text before and after a heading made the same XML.
+- **The fix.** The round trip also compares `texts()`
+  (`tests/import/played.ts`): each text line with its section and the
+  bars written before it. It caught one more, in the examples:
+  Shenandoah's opening line. The export now writes text before a
+  heading ahead of it and closing text after a bar's notes
+  (`closeText` in `packages/musicxml/src/measures.ts`); the import reads
+  them back by their order and position (`textPlace` in
+  `src/import/marks.ts`).
+
 ### A hold worked out in file order is wrong in played order (2026-11-06, @barmark/musicxml)
 
 - **The symptom.** Random lyric scores (the Task 8 reviewer's lyric

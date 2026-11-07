@@ -50,8 +50,12 @@ export type Measure = {
 	tempoChange: PlayedBar["tempoChange"];
 	feel: Feel;
 	swingPercent?: number;
-	/** Text lines written before the measure (lyrics, `###` notes, prose). */
+	/** Text lines written before the measure (lyrics, `###` notes, prose), after its heading. */
 	text: { text: string; note: boolean }[];
+	/** Text lines written before its heading: the chart's text before the first heading. */
+	lead: Measure["text"];
+	/** Text lines written after the measure: at a section's foot, or after the chart's last bar. */
+	foot: Measure["text"];
 	/** The syllables it sings (grammar 4.3, 7.7): every pass's verses, in verse order. */
 	lyrics: Sung[];
 	marks: Marks;
@@ -95,6 +99,8 @@ const measureOf = (b: PlayedBar, fermatas: Set<number>): Measure => ({
 	feel: b.feel,
 	...(b.swingPercent === undefined ? {} : { swingPercent: b.swingPercent }),
 	text: [],
+	lead: [],
+	foot: [],
 	lyrics: [],
 	marks: { ...blank(), rehearsal: b.rehearsal ?? null, fermata: fermatas.has(b.index) },
 });
@@ -104,9 +110,11 @@ type Pending = {
 	rehearsal: string | null;
 	start: Direction[];
 	text: Measure["text"];
+	/** Text before a heading with no bar before it to close. */
+	lead: Measure["text"];
 };
 
-const nothing = (): Pending => ({ heading: null, rehearsal: null, start: [], text: [] });
+const nothing = (): Pending => ({ heading: null, rehearsal: null, start: [], text: [], lead: [] });
 
 type Walk = {
 	parse: ChartParse;
@@ -116,6 +124,8 @@ type Walk = {
 	fermatas: Set<number>;
 	/** Each played bar's text lines, so a bar written out again keeps them. */
 	texts: Map<number, Measure["text"]>;
+	/** Each played bar's text lines after it, likewise. */
+	feet: Map<number, Measure["text"]>;
 	/** Some section's passes were written out. */
 	flattened: boolean;
 	/** Marks waiting for the next measure. */
@@ -129,6 +139,7 @@ function add(w: Walk, m: Measure): void {
 	m.marks.heading = w.pending.heading;
 	m.marks.rehearsal = w.pending.rehearsal ?? m.marks.rehearsal;
 	m.marks.start = w.pending.start;
+	m.lead = w.pending.lead;
 	const own = m.played === null ? undefined : w.texts.get(m.played);
 	m.text = own ? [...own, ...w.pending.text] : w.pending.text;
 	if (m.played !== null && !own) w.texts.set(m.played, m.text);
@@ -166,6 +177,8 @@ function unplayed(w: Walk, cell: Extract<Cell, { kind: "slots" | "simile" }>): M
 		tacet: false,
 		tempoChange: null,
 		text: [],
+		lead: [],
+		foot: [],
 		lyrics: [],
 		marks: blank(),
 	};
@@ -254,8 +267,27 @@ function closeSection(w: Walk): void {
 	(inside[inside.length - 1] as Measure).marks.repeatEnd = s.repeat;
 }
 
-function sectionLine(w: Walk, line: Extract<Line, { kind: "section" }>): void {
+/**
+ * Text waiting for a bar when a heading or the chart's end comes: after the
+ * last bar written, at its section's foot, or before the heading when no bar
+ * came before it. Taken before a section is closed, whose passes written out
+ * would give it to their first bar.
+ */
+function closeText(w: Walk): void {
+	const text = w.pending.text;
+	w.pending.text = [];
 	closeSection(w);
+	const last = w.out[w.out.length - 1];
+	if (!last) {
+		w.pending.lead.push(...text);
+		return;
+	}
+	last.foot.push(...text);
+	if (last.played !== null) w.feet.set(last.played, last.foot);
+}
+
+function sectionLine(w: Walk, line: Extract<Line, { kind: "section" }>): void {
+	closeText(w);
 	const o = occurrenceAt(w, line.line);
 	w.pending.heading = line.name;
 	w.replay = null;
@@ -285,6 +317,7 @@ export function writtenMeasures(parse: ChartParse): Measure[] {
 		firstPlay,
 		fermatas: fermataBars(parse.events),
 		texts: new Map(),
+		feet: new Map(),
 		flattened: false,
 		pending: nothing(),
 		replay: null,
@@ -299,8 +332,7 @@ export function writtenMeasures(parse: ChartParse): Measure[] {
 		for (const cell of line.cells) cellIn(w, cell);
 		lineMarks(w, line, from, parse.lines, i + 1);
 	});
-	closeSection(w);
-	w.out[w.out.length - 1]?.text.push(...w.pending.text);
+	closeText(w);
 	const out = w.flattened && hasJump(parse) ? inPlayOrder(w) : w.out;
 	withLyrics(parse, out);
 	return out;
@@ -322,10 +354,12 @@ const hasJump = (parse: ChartParse) =>
 function inPlayOrder(w: Walk): Measure[] {
 	const headings = new Map<number, string>();
 	for (const o of w.parse.sections) if (o.firstBar !== null) headings.set(o.firstBar, o.name);
-	return w.parse.bars.map((b) => {
+	return w.parse.bars.map((b, i) => {
 		const m = measureOf(b, w.fermatas);
 		m.marks.heading = headings.get(b.index) ?? null;
 		m.text = w.texts.get(b.index) ?? [];
+		m.foot = w.feet.get(b.index) ?? [];
+		if (i === 0) m.lead = w.out[0]?.lead ?? [];
 		return m;
 	});
 }

@@ -26,7 +26,16 @@ function barKey(src: Source, i: number, first: boolean): string {
 	const bar = src.bars[i];
 	if (!bar) return "";
 	// Text lines, like lyrics, are a section's own: a replay writes them under its heading.
-	const { index: _i, measure: _m, heading: _h, textLines: _t, directives, ...shown } = bar;
+	const {
+		index: _i,
+		measure: _m,
+		heading: _h,
+		textLines: _t,
+		leadLines: _l,
+		footLines: _f,
+		directives,
+		...shown
+	} = bar;
 	// The singer's syllables may differ: a replay's lyric rows sing new words on the same notes.
 	const cells = src.parts.map((part, p) =>
 		part.lines.map((_, l) => {
