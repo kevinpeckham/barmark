@@ -1,8 +1,9 @@
 import { expect, test } from "bun:test";
 import { type ChartParse, type Line, parseChart, printChart } from "barmark";
 import { chartFromDetections } from "../src/build/build.js";
-import type { BuildResult } from "../src/build/types.js";
+import type { BuildResult, Detections } from "../src/build/types.js";
 import { checkTimingMap, type TimingMap } from "../src/timing/index.js";
+import { soundingByBeat } from "./helpers/fromChart.js";
 import { fuzzDetections, mulberry32 } from "./helpers/fuzz.js";
 
 /** Each case builds, parses, prints and checks; 2,000 of them took ~7 s, over the suite's budget, so 700 (about 2.5 s). */
@@ -132,4 +133,48 @@ test("chords outside the bars are cut, and a beat or more lost is reported", () 
 		expect({ seed, chart: r.chart.includes("F#m7") }).toEqual({ seed, chart: false });
 		expect({ seed, warned }).toEqual({ seed, warned: expected });
 	}
+});
+
+/** The chords sounding on each beat and every slot's confidence, whatever way the chart spells them. */
+function hearing(d: Detections) {
+	const r = chartFromDetections(d);
+	return {
+		sounding: r.chart === "" ? [] : soundingByBeat(parseChart(r.chart)),
+		confidence: r.confidence?.bars.map((b) => b.slots),
+	};
+}
+
+/** Eight bars of 2 s and a few long, overlapping runs of four chords, some with a confidence. */
+function overlapping(seed: number): Detections {
+	const rand = mulberry32(seed);
+	const labels = ["C:maj", "A:maj", "F:maj", "G:maj"];
+	const runs = Array.from({ length: 2 + Math.floor(rand() * 6) }, () => {
+		const start = Math.floor(rand() * 28) / 2;
+		return {
+			start,
+			end: start + 0.5 + Math.floor(rand() * 20) / 2,
+			label: labels[Math.floor(rand() * 4)] as string,
+			...(rand() < 0.4 ? { confidence: Math.floor(rand() * 10) / 10 } : {}),
+		};
+	});
+	return {
+		grid: { bars: [0, 2, 4, 6, 8, 10, 12, 14, 16] },
+		meter: "4/4",
+		key: "C major",
+		chords: { runs },
+	};
+}
+
+test("a key change that respells nothing never changes what sounds", () => {
+	const failures: number[] = [];
+	for (let seed = 1; seed <= 300; seed++) {
+		const bare = overlapping(seed);
+		const bar = 1 + (seed % 7);
+		const turned = {
+			...bare,
+			changes: [{ kind: "key" as const, start: bar * 2, value: "G major" }],
+		};
+		if (JSON.stringify(hearing(turned)) !== JSON.stringify(hearing(bare))) failures.push(seed);
+	}
+	expect(failures).toEqual([]);
 });

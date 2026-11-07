@@ -41,7 +41,15 @@ function readRun(v: unknown, frame: number, at: number): (Raw & { confidence?: n
 	return confidence === undefined ? run : { ...run, confidence };
 }
 
-type Item = SymbolRun & { order: number };
+/** A run as read: what it says, not yet spelled. `order` is its place in the input. */
+type Item = {
+	start: Seconds;
+	end: Seconds;
+	text: string;
+	kind: "label" | "symbol";
+	order: number;
+	confidence?: number;
+};
 
 /**
  * The later-starting run wins while it sounds, and an earlier run that
@@ -49,12 +57,12 @@ type Item = SymbolRun & { order: number };
  * later in input order. Returns the runs sorted and apart, and how many
  * overlapped an earlier one.
  */
-function sweep(items: Item[]): { runs: SymbolRun[]; overlapped: number } {
+function sweep(items: Item[]): { runs: Omit<Item, "order">[]; overlapped: number } {
 	// The winner of equal starts sorts last: shortest first, then earliest in input.
 	const sorted = [...items].sort(
 		(a, b) => a.start - b.start || a.end - a.start - (b.end - b.start) || a.order - b.order,
 	);
-	const out: SymbolRun[] = [];
+	const out: Omit<Item, "order">[] = [];
 	const stack: Item[] = [];
 	let at = sorted[0]?.start ?? 0;
 	let latestEnd = Number.NEGATIVE_INFINITY;
@@ -97,7 +105,7 @@ type Reader = { items: Item[]; invalid: number; unknown: Set<string> };
 export type Keys = { keyAt: (t: Seconds) => Key | null; turnTimes: Seconds[] };
 
 /** The first index in `sorted` of a time greater than `t`. */
-function firstAfter(sorted: Seconds[], t: Seconds): number {
+export function firstAfter(sorted: Seconds[], t: Seconds): number {
 	let lo = 0;
 	let hi = sorted.length;
 	while (lo < hi) {
@@ -108,41 +116,48 @@ function firstAfter(sorted: Seconds[], t: Seconds): number {
 	return lo;
 }
 
-/** A run cut at every key change inside it, so each piece is spelled in the key in force at its own start. */
-function addRun(r: Raw & { confidence?: number }, keys: Keys, to: Reader, report: Report) {
-	const cuts: Seconds[] = [];
-	for (let i = firstAfter(keys.turnTimes, r.start); i < keys.turnTimes.length; i++) {
-		const t = keys.turnTimes[i] as number;
-		if (t >= r.end) break;
-		cuts.push(t);
-	}
-	const edges = [r.start, ...cuts, r.end];
-	for (let k = 0; k < edges.length - 1; k++)
-		addPiece(
-			{ ...r, start: edges[k] as number, end: edges[k + 1] as number },
-			keys.keyAt,
-			to,
-			report,
-		);
-}
+const spell = (r: { kind: "label" | "symbol"; text: string }, key: Key | null) =>
+	r.kind === "label" ? labelSymbol(r.text, key) : slotSymbol(r.text);
 
-function addPiece(
-	r: Raw & { confidence?: number },
-	keyAt: (t: Seconds) => Key | null,
-	to: Reader,
-	report: Report,
-) {
-	const symbol = r.kind === "label" ? labelSymbol(r.text, keyAt(r.start)) : slotSymbol(r.text);
-	if (symbol === null && !to.unknown.has(r.text)) {
+/** Reads one valid run; an unreadable label or symbol is named once, as it is met. */
+function addRun(r: Raw & { confidence?: number }, keys: Keys, to: Reader, report: Report) {
+	if (spell(r, keys.keyAt(r.start)) === null && !to.unknown.has(r.text)) {
 		to.unknown.add(r.text);
 		report.warning("label-unknown", `The ${r.kind} "${r.text}" is not understood; written as ?`, {
 			path: `chords.runs[${r.at}]`,
 			at: r.start,
 		});
 	}
-	const item: Item = { start: r.start, end: r.end, symbol: symbol ?? "?", order: r.at };
+	const item: Item = { start: r.start, end: r.end, text: r.text, kind: r.kind, order: r.at };
 	if (r.confidence !== undefined) item.confidence = r.confidence;
 	to.items.push(item);
+}
+
+/**
+ * The settled runs, each cut at every key change inside it and each piece
+ * spelled in the key in force at its own start. Cutting after the overlaps
+ * are settled keeps a change that respells nothing from changing which
+ * chord wins.
+ */
+function spelled(settled: Omit<Item, "order">[], keys: Keys): SymbolRun[] {
+	return settled.flatMap((r) => {
+		const edges = [r.start];
+		for (let i = firstAfter(keys.turnTimes, r.start); i < keys.turnTimes.length; i++) {
+			const t = keys.turnTimes[i] as number;
+			if (t >= r.end) break;
+			edges.push(t);
+		}
+		edges.push(r.end);
+		return edges.slice(0, -1).map((start, k): SymbolRun => {
+			const piece: SymbolRun = {
+				start,
+				end: edges[k + 1] as number,
+				symbol: spell(r, keys.keyAt(start)) ?? "?",
+			};
+			if (r.confidence !== undefined) piece.confidence = r.confidence;
+			return piece;
+		});
+	});
 }
 
 /**
@@ -182,7 +197,7 @@ export function symbolRuns(chords: unknown, keys: Keys, report: Report): SymbolR
 			`${overlapped} ${overlapped === 1 ? "run overlaps" : "runs overlap"} an earlier one; the later onset wins`,
 			{ path: "chords.runs" },
 		);
-	return runs;
+	return spelled(runs, keys);
 }
 
 const rounded = (s: Seconds) => Number(s.toFixed(3));

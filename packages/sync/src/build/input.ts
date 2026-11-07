@@ -11,7 +11,7 @@ import {
 	readSections,
 } from "./marks.js";
 import type { Report } from "./report.js";
-import { type BarSpan, type SymbolRun, symbolRuns } from "./runs.js";
+import { type BarSpan, firstAfter, type SymbolRun, symbolRuns } from "./runs.js";
 
 /** A change at a bar: any of a key, a meter and a tempo. */
 export type BarChange = { key?: Key; meter?: Meter; tempo?: number };
@@ -121,9 +121,10 @@ function keyFollowing(
 		.filter(([, c]) => c.key)
 		.sort(([a], [b]) => a - b)
 		.map(([b, c]) => ({ at: (bars[b] as BarSpan).start, key: c.key as Key }));
+	const turnTimes = turns.map((x) => x.at);
 	return {
-		keyAt: (t) => turns.findLast((x) => x.at <= t)?.key ?? key,
-		turnTimes: turns.map((x) => x.at),
+		keyAt: (t) => turns[firstAfter(turnTimes, t) - 1]?.key ?? key,
+		turnTimes,
 	};
 }
 

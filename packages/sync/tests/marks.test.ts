@@ -457,6 +457,38 @@ describe("changes", () => {
 		expect(chart).toBe("key: G, time: 4/4, tempo: 120\n| A | / |\nkey: Db\n| / |\n");
 	});
 
+	describe("a key change that respells nothing", () => {
+		const detect = (changes: unknown[]) =>
+			chartFromDetections({
+				grid: { bars: [0, 2, 4, 6, 8] },
+				meter: "4/4",
+				key: "G",
+				changes,
+				chords: { runs: [run(1, 8, "C:maj"), { ...run(3.5, 7, "A:maj"), confidence: 0.5 }] },
+			} as never);
+		const turn = [{ kind: "key", start: 4, value: "D" }];
+
+		test("does not change which chord wins", () => {
+			expect(detect([]).chart).toBe("key: G, time: 4/4, tempo: 120\n| ? C | / / / A | / | / C |\n");
+			expect(detect(turn).chart).toBe(
+				"key: G, time: 4/4, tempo: 120\n| ? C | / / / A |\nkey: D\n| / | / C |\n",
+			);
+		});
+
+		test("counts the overlap once", () => {
+			const overlaps = (r: ReturnType<typeof detect>) =>
+				r.diagnostics.filter((d) => d.code === "run-overlap").map((d) => d.message);
+			expect(overlaps(detect(turn))).toEqual(overlaps(detect([])));
+		});
+
+		test("a piece keeps its run's confidence", () => {
+			const slots = (r: ReturnType<typeof detect>) => r.confidence?.bars.map((b) => b.slots);
+			expect(slots(detect(turn))).toEqual(slots(detect([])));
+			// A:maj, confidence 0.5, covers the last slot of bar 2 and the first of bar 3.
+			expect(slots(detect(turn))?.[1]?.at(-1)).toBe(0.5);
+		});
+	});
+
 	test("a run after a key change is spelled in the new key", () => {
 		const r = build({ key: "E", changes: [{ kind: "key", start: 4, value: "D" }] }, [
 			run(4, 6, "A#:maj"),
