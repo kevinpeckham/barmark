@@ -19,6 +19,7 @@ import type {
 	Slot,
 	Words,
 } from "barmark";
+import { type Sung, withLyrics } from "./lyrics.js";
 
 export type Marks = {
 	repeatStart: boolean;
@@ -51,6 +52,8 @@ export type Measure = {
 	swingPercent?: number;
 	/** Text lines written before the measure (lyrics, `###` notes, prose). */
 	text: { text: string; note: boolean }[];
+	/** The syllables it sings (grammar 4.3, 7.7): every pass's verses, in verse order. */
+	lyrics: Sung[];
 	marks: Marks;
 };
 
@@ -92,6 +95,7 @@ const measureOf = (b: PlayedBar, fermatas: Set<number>): Measure => ({
 	feel: b.feel,
 	...(b.swingPercent === undefined ? {} : { swingPercent: b.swingPercent }),
 	text: [],
+	lyrics: [],
 	marks: { ...blank(), rehearsal: b.rehearsal ?? null, fermata: fermatas.has(b.index) },
 });
 
@@ -162,6 +166,7 @@ function unplayed(w: Walk, cell: Extract<Cell, { kind: "slots" | "simile" }>): M
 		tacet: false,
 		tempoChange: null,
 		text: [],
+		lyrics: [],
 		marks: blank(),
 	};
 }
@@ -185,11 +190,14 @@ function cellIn(w: Walk, cell: Cell): void {
 	}
 }
 
+/** Lines that may stand between a repeat's endings (barmark's `repeats.ts`). */
+const BETWEEN_ENDINGS = new Set<Line["kind"]>(["text", "credit", "lyrics", "break"]);
+
 /** The passes a repeat closed by this ending plays: the highest number of its endings. */
 function passes(lines: Line[], i: number): number {
 	let max = 0;
 	for (const l of lines.slice(i)) {
-		if (l.kind === "text" || l.kind === "credit") continue;
+		if (BETWEEN_ENDINGS.has(l.kind)) continue;
 		if (l.kind !== "bars" || !l.ending) break;
 		max = Math.max(max, ...l.ending);
 	}
@@ -293,7 +301,9 @@ export function writtenMeasures(parse: ChartParse): Measure[] {
 	});
 	closeSection(w);
 	w.out[w.out.length - 1]?.text.push(...w.pending.text);
-	return w.flattened && hasJump(parse) ? inPlayOrder(w) : w.out;
+	const out = w.flattened && hasJump(parse) ? inPlayOrder(w) : w.out;
+	withLyrics(parse, out);
+	return out;
 }
 
 const hasJump = (parse: ChartParse) =>

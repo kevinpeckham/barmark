@@ -14,13 +14,19 @@ key: D, time: 4/4, tempo: 145
 ```
 
 - **The grammar:** [docs/grammar-v0.1-draft.md](docs/grammar-v0.1-draft.md)
-  (draft v0.1). [examples/](examples/) has a full chart.
+  (draft v0.1). [examples/](examples/) has full charts, among them a
+  lead sheet with a voice part and two verses (`shenandoah.chart.md`).
 - **[`barmark`](packages/barmark/)** on npm: the parser, the canonical
   printer and Harte-label conversion.
 - **[`@barmark/render`](packages/render/)** renders a chart
   as a clean bar grid, as HTML or as a `<barmark-chart>` web component.
+- **[`@barmark/musicxml`](packages/musicxml/)** exports a chart to MusicXML
+  (chords, repeats, parts, melodies and lyrics) and imports a MusicXML or
+  `.mxl` file back into a chart, so charts move to and from MuseScore,
+  Dorico, Sibelius and Finale.
 - **[`@barmark/cli`](packages/cli/)**: the `barmark` command, to check,
-  format, render and transpose `.chart.md` files in a terminal or in CI.
+  format, render and transpose `.chart.md` files, and to `import` a
+  MusicXML file or `export --musicxml` a chart, in a terminal or in CI.
 - **[barmark.dev](https://www.barmark.dev)** ([site/](site/)): try it live, and
   the syntax guide.
 

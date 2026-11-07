@@ -40,13 +40,11 @@ const FILES: [string, ImportDiagnostic[]][] = [
 	[
 		"lead-sheet",
 		[
-			warning(`${MELODY} in 4 measures: 3, 4, 5, …`, "Voice", ["3", "4", "5", "6"]),
 			warning(
 				"chord symbols barmark can't read, written as ? with their text as words in measure 5",
 				"Voice",
 				["5"],
 			),
-			warning("lyrics written as text lines; their placement by beat isn't kept", "Voice"),
 		],
 	],
 	[

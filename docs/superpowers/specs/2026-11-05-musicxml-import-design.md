@@ -106,7 +106,7 @@ package.
 | bold `<words>` above, at a bar's start | `## Heading` |
 | `<words>` below the staff | a text line before that bar's row (lyrics, `###` notes); a line that would read as something else (`\| la \|`, `key: G`) starts with a backslash, which barmark keeps as text |
 | other `<words>` | words on the bar (2.6) |
-| `<lyric>` syllables | text lines under each row, one per verse ("Lyrics") |
+| `<lyric>` syllables | a singing part's melody with verse 1's syllables, later verses as `lyrics N:` rows (2026-11-06-voice-and-lyrics-design, 8) |
 | a fermata at a bar's end (on the bar line or its last note) | `...` after the bar |
 | rests | `--` (silence) |
 | notes with a `<harmony>`, attacked together and lasting its span | a voicing, `Cmaj7{E3 G3 B3}` ("Notes") |
@@ -169,6 +169,10 @@ the words as well as the parts with notes.
 
 ### Lyrics
 
+Superseded (2026-11-06) by the voice-and-lyrics design, section 8:
+lyrics now come in as syllables on a singing part's notes and as lyric
+rows. What follows is the text-line step it replaced.
+
 Kevin's decision (2026-11-05): import first, with lyrics as text lines,
 barmark's lyric today (free text between rows); structured lyric lines
 (BRIEF.md item 5, a grammar change) follow as their own project,
@@ -228,7 +232,18 @@ per part:
   on the grid; slashes are rhythm only and never count against the
   grid. A two-staff part whose second staff only doubles the first's
   rhythm (or sounds under its rests), as the export splits one line by
-  pitch, is one line.
+  pitch, is one line. Bar by bar, a chord part's first line reads as
+  voicings only where its attacks land on chord changes or slash beats
+  (Kevin, 2026-11-06, call 12); a bar whose attacks don't is a melody's,
+  and writes its chords alone, named in the melody warning. An attack
+  off the changes and beats makes its bar a melody's only when it moves
+  (its pitches differ from the voicing sounding in that line, which a
+  chord change clears) and isn't a push (an attack an eighth or
+  sixteenth before a change in its bar, holding into it, or one tied
+  over the bar line into a chord on the next downbeat): a re-strike
+  (a Charleston, stabs, eighth-note comping) is comping. (Claude's
+  calls, for Kevin to confirm.) A part whose every bar of notes is a
+  melody's is a melody part.
 - **Any other part with chords is a melody part:** its chords are read
   and its notes left out, with one diagnostic. A lead sheet is the usual
   case. The melody's rests never end a chord: once a chord has sounded, a
@@ -343,9 +358,11 @@ and wherever the parts' agreement changes (tutti to labelled, or a part
 starting or stopping).
 Two labelled systems with nothing between them would join into one
 (grammar 7.4), so where the second's first row names a part the first
-didn't write, a cue goes between them as a text line: who stops
-(`Gtr tacet`), else who starts (`Gtr enters`). (Added while building,
-2026-11-06: the grammar has no silent separator; for Kevin to confirm.)
+didn't write, a `---` line goes between them, which ends a labelled
+system and means nothing else. (Added while building, 2026-11-06, as a
+cue text line, `Gtr tacet` or `Gtr enters`, since the grammar had no
+silent separator; Kevin added `---` to the grammar the same day, and
+the importer writes it instead of the cue.)
 The importer plays the chart back and compares every part's line with
 what it meant to write; a difference is an "importer bug" error.
 
@@ -436,7 +453,8 @@ songs bump; per RELEASING.md.
    attacked with it a voicing, notes with no `<harmony>` a note set);
    another program's part is read that way only when it writes slash
    noteheads somewhere, its first line has no single-pitch attacks, and
-   every note is exactly on the grid (slashes never count against it).
+   every note is exactly on the grid; then a bar whose attacks miss the
+   changes and slash beats is a melody's, its chords alone (see 12) (slashes never count against it).
    Any other part with chords is a melody part. A two-staff part whose
    lower staff only doubles the upper's rhythm, or sounds under its
    rests, is one line. Parts of notes alone come in only from barmark's
@@ -473,7 +491,24 @@ Found while building (2026-11-05), for Kevin to check:
     attacks on the changes passes the chord-part test, so its melody
     comes in as voicings and note sets, contrary to the non-goal "a
     melody never becomes a run of note sets". Telling it apart needs a
-    new melody rule; Kevin's call.
+    new melody rule; Kevin's call. **Ruled (Kevin, 2026-11-06, spec
+    2026-11-06-voice-and-lyrics-design 8.5):** "a bar's notes read as
+    voicings only where its attacks land on chord changes or slash
+    beats." Applied per bar: a melody bar in a chord part writes its
+    chords alone and the warning names it; the other bars keep their
+    voicings and note sets. **Claude's calls, for Kevin to confirm**
+    (found when the rule as first built dropped all syncopated
+    comping): an attack off the changes and beats counts only when it
+    moves, its pitches differing from the voicing sounding in that line
+    (a chord change clears it), so a re-strike (a Charleston, stabs,
+    eighth-note or 6/8 comping) stays comping; a push (an eighth or
+    sixteenth before a change in its bar, holding into it, or tied over
+    the bar line into a chord on the next downbeat) is comping; and a
+    part whose every bar of notes is a melody's takes the whole-part
+    melody path, as before. A melody doubled in thirds moves between
+    the beats, so it is left out with the melody warning. The cost if
+    wrong: a comp whose inner voice moves off the beat reads as melody
+    in that bar alone.
 13. **The text-line escape is a grammar question.** A text line that
     would read as something else (`| la |`, `key: G`) is written with a
     leading backslash, which barmark keeps as text; the grammar has no

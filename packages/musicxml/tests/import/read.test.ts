@@ -148,15 +148,44 @@ test("lyric number need not be numeric", () => {
 		)}`,
 	);
 	expect(m?.lines[0]?.[0]?.lyrics).toEqual([
-		{ verse: 1, syllabic: "begin", text: "la", elision: false },
-		{ verse: 2, syllabic: "single", text: "do", elision: false },
+		{ verse: 1, syllabic: "begin", parts: ["la"], extend: false },
+		{ verse: 2, syllabic: "single", parts: ["do"], extend: false },
 	]);
 	expect(m?.lines[0]?.[1]?.lyrics).toEqual([
-		{ verse: 1, syllabic: "end", text: "la", elision: false },
+		{ verse: 1, syllabic: "end", parts: ["la"], extend: false },
 	]);
 });
 
-test("a lyric with an elision joins its texts", () => {
+test("a whole-number lyric number is its verse, and an extend alone is a held syllable", () => {
+	const [m] = measuresOf(
+		xml`${measure(
+			1,
+			base(1) +
+				note(
+					"C",
+					4,
+					2,
+					'<lyric number="3"><syllabic>single</syllabic><text>la</text><extend/></lyric>',
+				) +
+				note("D", 4, 2, '<lyric number="3"><extend/></lyric>'),
+		)}`,
+	);
+	expect(m?.lines[0]?.[0]?.lyrics).toEqual([
+		{ verse: 3, syllabic: "single", parts: ["la"], extend: true },
+	]);
+	expect(m?.lines[0]?.[1]?.lyrics).toEqual([
+		{ verse: 3, syllabic: "single", parts: [], extend: true },
+	]);
+});
+
+test("MuseScore's elision glyph splits a syllable as <elision> does", () => {
+	const [m] = measuresOf(
+		xml`${measure(1, `${base(1)}${note("C", 4, 4, "<lyric><text>a\uE551b</text></lyric>")}`)}`,
+	);
+	expect(m?.lines[0]?.[0]?.lyrics?.[0]?.parts).toEqual(["a", "b"]);
+});
+
+test("a lyric with an elision keeps its syllables apart", () => {
 	const [m] = measuresOf(
 		xml`${measure(
 			1,
@@ -164,7 +193,7 @@ test("a lyric with an elision joins its texts", () => {
 		)}`,
 	);
 	expect(m?.lines[0]?.[0]?.lyrics).toEqual([
-		{ verse: 1, syllabic: "single", text: "a b", elision: true },
+		{ verse: 1, syllabic: "single", parts: ["a", "b"], extend: false },
 	]);
 });
 
@@ -318,6 +347,30 @@ test.each([
 		expect(diagnostics).toEqual([]);
 	},
 );
+
+test("a short first bar in its own meter, then the full meter, is a pickup (barmark's export)", () => {
+	const t = (n: number) =>
+		`<attributes><time><beats>${n}</beats><beat-type>4</beat-type></time></attributes>`;
+	const ms = measuresOf(
+		xml`${measure(1, attributes("<divisions>1</divisions><time><beats>1</beats><beat-type>4</beat-type></time>") + note("D", 4, 1))}${measure(2, t(3) + note("G", 4, 3))}${measure(3, note("C", 4, 3))}`,
+	);
+	expect(ms.map((m) => m.oneBar)).toEqual([{ n: 1, d: 4 }, null, null]);
+	expect(ms.map((m) => m.time)).toEqual([{ n: 3, d: 4 }, null, null]);
+	expect(ms[0]?.length).toEqual(frac(1));
+});
+
+test("a long first bar before a shorter meter is a time change, not a pickup", () => {
+	const t = (n: number) =>
+		`<attributes><time><beats>${n}</beats><beat-type>4</beat-type></time></attributes>`;
+	const ms = measuresOf(
+		xml`${measure(1, base(1) + note("C", 4, 4))}${measure(2, t(3) + note("G", 4, 3))}`,
+	);
+	expect(ms.map((m) => m.time)).toEqual([
+		{ n: 4, d: 4 },
+		{ n: 3, d: 4 },
+	]);
+	expect(ms.map((m) => m.oneBar)).toEqual([null, null]);
+});
 
 test("a pickup that no meter expresses is a warning", () => {
 	const { score, diagnostics } = read(

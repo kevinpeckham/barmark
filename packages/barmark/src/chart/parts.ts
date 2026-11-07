@@ -60,7 +60,7 @@ const plays = (l: Labelled | undefined) => l?.kind === "bars" && !l.dropped;
  */
 type Stream = { key: string; name: string | null; first: boolean };
 
-/** The stream's own line in a system, if written. */
+/** The stream's own line in a system, if written; a bare line dropped from a part's lines is none of them (grammar 7.6). */
 const ownLine = (system: Labelled[], s: Stream) =>
 	system.find(
 		(m) =>
@@ -68,7 +68,7 @@ const ownLine = (system: Labelled[], s: Stream) =>
 			(s.name === null
 				? true
 				: m.lineName === undefined
-					? s.first
+					? s.first && !(m.kind === "bars" && m.dropped)
 					: m.lineName.toLowerCase() === s.name.toLowerCase()),
 	);
 

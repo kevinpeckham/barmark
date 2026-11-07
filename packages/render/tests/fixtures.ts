@@ -32,3 +32,14 @@ export const PEACEFUL_DREAMS = readFileSync(
 	join(import.meta.dir, "../../../examples/peaceful-dreams.chart.md"),
 	"utf8",
 );
+
+/** The spec's lead sheet (section 1): chords on the bare line, the melody on `Vox.Mel`, a second verse under it. */
+export const AMAZING_GRACE = `# Amazing Grace
+part: Vox = Voice, instrument: voice
+key: G, time: 3/4
+
+## Verse
+Vox       | [1/4] N.C.    | G                           | G          / G7       | C            / /      | G              |
+Vox.Mel   | [1/4] {D4}:A- | {G4}:maz- / {B4}:ing_{G4}:/ | {B4}:grace / {A4}:how | {G4}:sweet / {E4}:the | {D4}:sound / / |
+lyrics 2: | 'Twas         | grace / that                | taught / my           | heart / to            | fear / /       |
+`;

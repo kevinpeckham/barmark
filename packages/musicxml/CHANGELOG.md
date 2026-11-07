@@ -6,6 +6,124 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- **Import: melodies and verses** (barmark's grammar 4.3 and 7.7). A
+  part that sings (lyrics, or a `voice.*` instrument sound) comes in as a
+  lead sheet: chords on its bare line, the melody with verse 1's
+  syllables on `Vox.Mel` (on the bare line when the part has no chords),
+  `~` for an elision (`<elision>`, or MuseScore's U+E551 glyph) and `:/`
+  for a melisma (`<extend/>`, or a word's first or middle syllable over
+  unsung notes, as MuseScore writes one). Later verses are `lyrics N:`
+  rows; a section sung again to the same notes with new words is a
+  replay heading with its `lyrics:` rows; inside a repeat, verse N stays
+  pass N. Each part of a choir keeps its own syllables, the rows being the
+  first voice part's. A lyric staff (`<?barmark lyrics?>`, or a one-line
+  staff named "Lyrics" with only slashes and words) comes back as lyric
+  rows. A rhythm the grammar can't write snaps to the nearest it can,
+  with a warning naming the measures. The self-check compares every
+  verse's syllables as the chart plays them. Endings that no pass plays
+  are now an error rather than an empty chart. Barmark → MusicXML →
+  barmark gives a lead sheet back as written.
+  Lyrics the import can't place (on a line that doesn't sing, on slash
+  notes, a part's later verses with no one to sing them) are a warning
+  naming the part and the measures, never dropped silently, and saying
+  why: on a line that doesn't sing, on a rest or a tied note, on slash
+  notes, or two syllables snapped onto one note. A repeat with
+  more stacked verses than passes keeps every verse as a `lyrics N:` row
+  and its play count, passing on barmark's "verse N is never sung".
+  Lyrics with curly quotes or brackets (`“Ho-`, `[x]`) import cleanly.
+  A lyric row's `/` means what barmark reads: where the chart plays a bar
+  after a breath (a repeat written out in played order) and nothing is
+  held, the row writes `--`, and a bar that only breathes is one `--`. A
+  syllable of hyphens alone is no syllable, so it never reads as a breath.
+  A lyric row writes its bars on one grid, as many slots a beat as its
+  finest bar, so a held syllable keeps its holds (`fear / /` beside
+  `grace / that`), except where a hold would sing on a new note or
+  follow a breath. A system whose rows sing verse 1 alone writes
+  `lyrics:`, however other systems number theirs (an ending's rows stay
+  numbered in a chart that numbers its verses). A melody bar playing
+  the notes of the bar before it, unsung, is `%` (which copies notes, not
+  syllables). A lyric staff's rows stay the voice part's: the chart
+  keeps its `part:` lines even where every part plays one tutti line.
+  A melisma ends at the held note that carries its own `<lyric>` (our
+  `<extend/>` alone, or an extend's `type="stop"`): the unsung note or
+  breath after it stays unsung, and a melisma before a repeat's endings
+  no longer holds into the first. A word's first or middle syllable holds
+  over unsung notes, as MuseScore writes a melisma, only until its verse
+  writes such a held note. A lyric row starting with `/` holds on what
+  its verse's row before it left held, as barmark reads it, so a verse 2
+  melisma held across two systems, or from a repeat's body into the
+  second ending that sings it, comes back as written. A melisma holds
+  along play order: each ending starts from what the body held, and a
+  first ending doesn't hold verse 2, which its pass doesn't sing. With
+  nothing held (the verse breathed, or hasn't sung yet) the row's `/` is
+  written `--`; where a repeat or ending between the rows leaves it
+  unsure what barmark holds, it is `--` too, and a warning names the
+  measure.
+
+- **Export: lyrics** (barmark's grammar 4.3 and 7.7). A syllable on a
+  note is a `<lyric number="1">` on it, with `syllabic` (single, begin,
+  middle or end, from the word's `-`s); `~` writes `<elision>` between
+  the syllables on one note; `:/` writes a `<lyric>` of `<extend/>`
+  alone on its note, and `<extend type="start"/>` on the syllable it
+  holds (which MuseScore keeps), and so does a lyric row's `/` over a
+  new note of the melody; a tied note carries its syllable on without a
+  mark. A keyboard part's syllables go on the staff that sounds their
+  note. A numbered verse is `<lyric number="N">` on the same
+  notes: stacked on bars written once, or sung on a repeat's pass N. A
+  replay is written out, so its lyric rows go on its own measures. A
+  lyric row with no melody under it (no part sings, or the singer writes
+  no notes) is a part of its own after the others, "Lyrics": a one-line
+  percussion-clef staff of slash notes at the syllables' onsets, held as
+  the row holds them, rests where every verse breathes, the syllables on
+  the slashes, its instrument at volume 0, and `<?barmark lyrics?>` in
+  its first measure so the import can read it back as a lyric row. A
+  part exported alone (`part`) leaves it out. Text-line lyrics are words,
+  as before. Needs the next `barmark` release.
+
+### Changed
+
+- **Import:** lyrics are no longer text lines under each row, and the
+  "lyrics written as text lines" warning is gone; a singing part's melody
+  is no longer "left out as a melody". The `lead-sheet` fixture now reads
+  `part: Vo = Voice, instrument: voice` with its melody and a `lyrics 2:`
+  row.
+- **Export:** a part's bare line with its named lines written after it
+  (`Vox` over `Vox.Mel`, barmark's amended grammar 7.6) plays with them in
+  the same measures. One that writes no notes (chords, `/`, `N.C.`,
+  words) is `<harmony>` and its words over the first named line, each
+  before the note it falls on (an `<offset>` where none does), with no
+  voice of its own: a lead sheet is one voice with chord symbols, a
+  piano's hands stay on their staves. One with note sets or voicings is
+  the next voice on the upper staff, after the named lines. Where the
+  part writes only its bare line, it plays in the first line's place;
+  systems without it export as before. Needs the next `barmark` release.
+
+### Fixed
+
+- **Import:** a pickup written as barmark's export writes it (a short
+  first bar in its own `<time>`, then the full meter) is a `[1/4]` pickup
+  again under `time: 3/4`, not `time: 1/4` then `time: 3/4`; and a pickup
+  doesn't count toward a system's four bars.
+- **Export:** a lyric row or a `---` line between a repeat's endings no
+  longer cuts the repeat's passes short (`times` on the backward
+  repeat), as barmark already reads them.
+- **Import:** where one labelled system would otherwise run into the
+  next (a part stops or enters), a `---` line keeps them apart, instead
+  of a text line such as `Gtr tacet` or `Pno enters`. Needs `barmark`
+  with `---` (it ends a labelled system).
+- **Import:** a melody doubled in thirds (or any two-note melody) in a
+  part that writes slashes somewhere is read as a melody, its notes left
+  out with the melody warning, instead of as voicings and note sets. In
+  another program's file, a bar of a chord part reads as voicings only
+  where its attacks land on chord changes or beats; an attack off both
+  makes the bar a melody's only when its pitches move from the voicing
+  sounding and it isn't a push into the next chord, so re-struck and
+  pushed comping keeps its voicings. A melody bar writes its chords
+  alone and the warning names it; the part's other bars keep their
+  notes.
+
 ## [0.5.0] - 2026-11-06
 
 ### Added

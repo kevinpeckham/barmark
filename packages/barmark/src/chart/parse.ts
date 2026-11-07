@@ -1,5 +1,5 @@
 import { readDocument } from "./document.js";
-import { expand, flattenBars } from "./expand.js";
+import { expand, flattenBars, type Sing } from "./expand.js";
 import { projectPart, projectPartLines } from "./parts.js";
 import { pedalWarnings } from "./pedal.js";
 import type {
@@ -12,6 +12,7 @@ import type {
 	PartBar,
 	PlayedBar,
 } from "./types.js";
+import { type Singer, together, type Voice, voicesIn, voicesOf, withSings } from "./verses.js";
 
 const RANK = { error: 0, warning: 1 };
 
@@ -37,9 +38,17 @@ const partBar = (b: PlayedBar): PartBar =>
 
 const meterText = (b: PlayedBar) => `${b.meter.n}/${b.meter.d}`;
 
-/** One bar of every part: shared fields from the first, the meter from the first that plays. */
+/** Every stream's words in a bar, in verse order, then score order (grammar 7.7). */
+const lyricsOf = (bars: PlayedBar[]) =>
+	bars.flatMap((b) => b.lyrics ?? []).sort((a, b) => a.verse - b.verse);
+
+/**
+ * One bar of every part: shared fields from the first, the meter from the
+ * first that plays, the words of every stream that sings.
+ */
 function zipBar(bars: PlayedBar[], report: (d: ChartDiagnostic) => void): PlayedBar {
 	const [first, ...rest] = bars as [PlayedBar, ...PlayedBar[]];
+	const lyrics = lyricsOf(bars);
 	const playing = bars.filter((b) => !b.tacet);
 	const meter = playing[0]?.meter ?? first.meter;
 	const meters = [...new Set(playing.map(meterText))];
@@ -52,7 +61,13 @@ function zipBar(bars: PlayedBar[], report: (d: ChartDiagnostic) => void): Played
 				message: `the parts disagree on this bar's meter (${meters.join(", ")})`,
 				token: "|",
 			});
-	return { ...first, meter, parts: [first, ...rest].map(partBar) };
+	const { lyrics: _l, ...shared } = first;
+	return {
+		...shared,
+		meter,
+		parts: [first, ...rest].map(partBar),
+		...(lyrics.length && { lyrics }),
+	};
 }
 
 const lineOf = (e: ChartEvent) => (e.kind === "bar" ? e.bar.line : e.line);
@@ -110,6 +125,9 @@ export function zipEvents(
 
 /** One played stream: a part, or one of its lines (grammar 7.6); `part` indexes the parts shown. */
 type Stream = { part: number; label: string; name: string | null };
+
+/** How a stream's line is labelled in its messages: `Pno.RH`, or the part's label for its bare line. */
+const lineLabel = (label: string, name: string | null) => (name ? `${label}.${name}` : label);
 
 const streamsOf = (shown: DeclaredPart[]): Stream[] =>
 	shown.flatMap((p, part): Stream[] =>
@@ -177,18 +195,39 @@ function linedPedalWarnings(events: ChartEvent[], shown: DeclaredPart[]): ChartD
 	);
 }
 
+/** The stream a voice sings on: its singing line, else its part's first; the first shown for the chart's words. */
+function singingStream(streams: Stream[], singer: Singer | null): number {
+	const label = singer?.label?.toLowerCase();
+	if (label === undefined) return 0;
+	const own = (s: Stream) => s.label.toLowerCase() === label;
+	const at = streams.findIndex(
+		(s) => own(s) && (s.name ?? "").toLowerCase() === singer?.sings?.toLowerCase(),
+	);
+	return at >= 0 ? at : streams.findIndex(own);
+}
+
+/** Each stream's words: the voices singing on it, together. */
+function singsOn(streams: Stream[], voices: Voice[]): (Sing | undefined)[] {
+	return streams.map((_, i) =>
+		together(voices.filter((v) => singingStream(streams, v.singer) === i).map((v) => v.sing)),
+	);
+}
+
 /**
  * Parts and their lines: each stream projected and played, zipped into one
- * timeline, then folded into the parts shown (grammar 7.4, 7.6).
+ * timeline, then folded into the parts shown (grammar 7.4, 7.6). With a
+ * voice, the stream that sings takes the words.
  */
-function playStreams(lines: Line[], parts: DeclaredPart[], shown: DeclaredPart[]) {
+function playStreams(lines: Line[], parts: DeclaredPart[], shown: DeclaredPart[], voices: Voice[]) {
 	const streams = streamsOf(shown);
-	const played = streams.map((s) =>
+	const sings = singsOn(streams, voices);
+	const played = streams.map((s, i) =>
 		expand(
 			projectPart(lines, parts, s.label, s.name),
-			s.name === null ? s.label : `${s.label}.${s.name}`,
+			lineLabel(s.label, s.name),
 			streams.length,
 			s.name === null,
+			sings[i],
 		),
 	);
 	const diagnostics = mergeReports(played.map((p) => p.diagnostics));
@@ -203,49 +242,67 @@ function playStreams(lines: Line[], parts: DeclaredPart[], shown: DeclaredPart[]
 
 const lined = (parts: DeclaredPart[]) => parts.some((p) => p.lines?.length);
 
+type Doc = ReturnType<typeof readDocument>;
+
+/** What the voices found as they sang (grammar 7.7), once playing is done. */
+function sungChecks(voices: Voice[]): ChartDiagnostic[] {
+	return voices.flatMap((v) => {
+		v.finish();
+		return v.diagnostics;
+	});
+}
+
 /** Read a whole barmark chart: the document as written and the bars in play order. Never throws. */
 export function parseChart(text: string): ChartParse {
 	const doc = readDocument(text);
+	const voice = voicesOf(doc.lines, doc.parts);
 	const played =
 		doc.parts.length > 1 || lined(doc.parts)
-			? playStreams(doc.lines, doc.parts, doc.parts)
-			: expand(doc.lines);
+			? playStreams(doc.lines, doc.parts, doc.parts, voice.voices)
+			: expand(doc.lines, undefined, 1, true, together(voice.voices.map((v) => v.sing)));
+	const [part = null] = doc.part ? withSings([doc.part], voice.all) : [];
 	return {
 		title: doc.title,
-		part: doc.part,
-		parts: doc.parts,
+		part,
+		parts: withSings(doc.parts, voice.all),
 		credits: doc.credits,
 		lines: doc.lines,
 		events: played.events,
 		bars: flattenBars(played.events),
 		sections: played.sections,
-		diagnostics: sortDiagnostics([...doc.diagnostics, ...played.diagnostics]),
+		diagnostics: sortDiagnostics([
+			...doc.diagnostics,
+			...voice.diagnostics,
+			...played.diagnostics,
+			...sungChecks(voice.voices),
+		]),
 	};
 }
 
-type Doc = ReturnType<typeof readDocument>;
 type Played = Pick<ReturnType<typeof expand>, "events" | "sections" | "diagnostics">;
 
 /** What an extract holds and plays: one of the part's lines, the part with its lines, or the part. */
 function extractOf(
 	doc: Doc,
 	part: DeclaredPart,
+	voices: Voice[],
 	lineName?: string,
 ): { lines: Line[]; played: Played } | null {
 	const label = part.label ?? "";
+	const sing = together(voices.map((v) => v.sing));
 	if (lineName !== undefined) {
 		const name = part.lines?.find((n) => n.toLowerCase() === lineName.toLowerCase());
-		if (!name) return null;
+		if (name === undefined) return null;
 		const lines = projectPart(doc.lines, doc.parts, label, name);
-		return { lines, played: expand(lines, `${label}.${name}`) };
+		return { lines, played: expand(lines, lineLabel(label, name), 1, true, sing) };
 	}
 	if (part.lines?.length)
 		return {
 			lines: projectPartLines(doc.lines, label),
-			played: playStreams(doc.lines, doc.parts, [part]),
+			played: playStreams(doc.lines, doc.parts, [part], voices),
 		};
 	const lines = doc.parts.length > 1 ? projectPart(doc.lines, doc.parts, label) : doc.lines;
-	return { lines, played: expand(lines, part.label) };
+	return { lines, played: expand(lines, part.label, 1, true, sing) };
 }
 
 /**
@@ -253,15 +310,22 @@ function extractOf(
  * its own bars, and `N.C.` marked `tacet` where it rests. With `lineName`,
  * one of the part's lines alone (grammar 7.6), as a converter writes each
  * line: the part's first line also plays its bare and tutti lines, and a
- * line rests where it isn't written. Null when the chart declares no part
+ * line rests where it isn't written. A part that writes its bare line
+ * beside its named lines makes it a line of its own (`lineName` `""`), and
+ * the named lines no longer play it. Null when the chart declares no part
  * with that label, or the part no line of that name. Never throws.
  */
 export function extractPart(text: string, label: string, lineName?: string): ChartParse | null {
 	const doc = readDocument(text);
 	const part = doc.parts.find((p) => p.label?.toLowerCase() === label.toLowerCase());
-	const extract = part ? extractOf(doc, part, lineName) : null;
+	const voice = voicesOf(doc.lines, doc.parts);
+	const voices = part ? voicesIn(voice.voices, part, lineName) : [];
+	const extract = part ? extractOf(doc, part, voices, lineName) : null;
 	if (!part || !extract) return null;
-	const { lines, played } = extract;
+	const { played } = extract;
+	// The lyric rows are their owner's, or the chart's when no part sings (grammar 7.7).
+	const rows = voices.some((v) => v.singer === voice.owner);
+	const lines = rows ? extract.lines : extract.lines.filter((l) => l.kind !== "lyrics");
 	const kept = new Set(lines.map((l) => l.line));
 	// A stand-in may sit on another part's line; that part's problems are not this one's.
 	for (const l of doc.lines)
@@ -269,16 +333,17 @@ export function extractPart(text: string, label: string, lineName?: string): Cha
 			kept.delete(l.line);
 	return {
 		title: doc.title,
-		part,
-		parts: [part],
+		part: withSings([part], voice.all)[0] ?? part,
+		parts: withSings([part], voice.all),
 		credits: doc.credits,
 		lines,
 		events: played.events,
 		bars: flattenBars(played.events),
 		sections: played.sections,
 		diagnostics: sortDiagnostics([
-			...doc.diagnostics.filter((d) => kept.has(d.line)),
+			...[...doc.diagnostics, ...voice.diagnostics].filter((d) => kept.has(d.line)),
 			...played.diagnostics,
+			...sungChecks(voices),
 		]),
 	};
 }

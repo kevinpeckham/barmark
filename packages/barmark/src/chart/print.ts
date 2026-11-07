@@ -10,9 +10,11 @@ import type {
 	Directives,
 	Key,
 	Line,
+	LyricSlot,
 	Repeat,
 	SimpleSlot,
 	Slot,
+	Syllable,
 	TempoChange,
 	Words,
 } from "./types.js";
@@ -65,10 +67,22 @@ function printMarks(s: SimpleSlot): string {
 	return pedal + push + (s.kind === "chord" && s.articulation ? ARTICULATIONS[s.articulation] : "");
 }
 
+/** A syllable as written after its note's colon (grammar 4.3). */
+const printSyllable = (s: Syllable) =>
+	s.kind === "held" ? "/" : s.parts.join("~") + (s.continues ? "-" : "");
+
+/** A lyric row's slot as written (grammar 7.7); a group's members are joined with `_`. */
+const printLyricSlot = (s: LyricSlot): string => {
+	if (s.kind === "group") return s.members.map(printLyricSlot).join("_");
+	if (s.kind === "syllable") return printSyllable(s.syllable);
+	return s.kind === "hold" ? "/" : "--";
+};
+
 function printSimple(s: SimpleSlot): string {
 	const body =
 		s.kind === "chord" ? s.chord.canonical + (s.voicing?.canonical ?? "") : SYMBOLS[s.kind];
-	return printMarks(s) + body + (s.dotted ? "." : "");
+	const sung = s.kind === "chord" && s.syllable ? `:${printSyllable(s.syllable)}` : "";
+	return printMarks(s) + body + (s.dotted ? "." : "") + sung;
 }
 
 /** A slot in canonical spelling; a group's members are joined with `_`. */
@@ -142,6 +156,17 @@ function printDirectives(d: Directives): string {
 }
 
 type BarsLine = Extract<Line, { kind: "bars" }>;
+type LyricsLine = Extract<Line, { kind: "lyrics" }>;
+
+/** A lyric row's label: `lyrics:`, or `lyrics N:` for verse N. */
+const lyricLabel = (l: LyricsLine) => `lyrics${l.verse === null ? "" : ` ${l.verse}`}:`;
+
+/** A lyric row's pieces, never reduced: its holds place the syllables. */
+const lyricPieces = (l: LyricsLine) => ({
+	open: "|",
+	cells: l.cells.map((c) => c.map(printLyricSlot).join(" ")),
+	close: "|",
+});
 
 /** A bar line's opening, cells and closing, each printed. */
 function barPieces(
@@ -176,6 +201,10 @@ export function printLine(l: Line, beats: (number | undefined)[] = []): string {
 			return `${l.role}: ${l.text}`;
 		case "bars":
 			return joinPieces(barPieces(l, beats));
+		case "break":
+			return "---";
+		case "lyrics":
+			return `${lyricLabel(l)} ${joinPieces(lyricPieces(l))}`;
 		default:
 			return l.text;
 	}
@@ -197,7 +226,7 @@ const labelOf = (l: BarsLine) =>
 	`${l.part ?? ""}${l.lineName === undefined ? "" : `.${l.lineName}`}`;
 const labelsOf = (p: DeclaredPart) => [
 	p.label ?? "",
-	...(p.lines ?? []).map((n) => `${p.label}.${n}`),
+	...(p.lines ?? []).map((n) => (n ? `${p.label}.${n}` : (p.label ?? ""))),
 ];
 
 /** Score order: by part, then by the part's line, a bare line first. */
@@ -207,34 +236,131 @@ function scoreOf(l: BarsLine, parsed: ChartParse): number {
 	return at * 10 + line + 1;
 }
 
-/** A system's lines in score order, labels padded and pipes lined up (section 8, grammar 7.4). */
+type Pieces = { label: string; line: number; open: string; cells: string[]; close: string };
+type Span = [number, number];
+
+/**
+ * The bar-line cells a row's cell `k` lies under: from its bar to the next
+ * bar, so a fermata, mark or direction falls in the cell before it, and
+ * any before the first bar in the first cell.
+ */
+const spanOf = (k: number, bars: number[], n: number): Span => [
+	k === 0 ? 0 : (bars[k] ?? 0),
+	(bars[k + 1] ?? n) - 1,
+];
+const roomOf = (columns: number[], [a, b]: Span) =>
+	columns.slice(a, b + 1).reduce((x, y) => x + y, 0) + 3 * (b - a);
+
+/** Each column's width: the widest of the bar lines' cells, widened for a row's cell that won't fit. */
+function columnsOf(lines: Pieces[], rows: Pieces[], bars: number[]): number[] {
+	const columns = (lines[0]?.cells ?? []).map((_, i) =>
+		Math.max(...lines.map((p) => p.cells[i]?.length ?? 0)),
+	);
+	for (const r of rows)
+		for (const [k, c] of r.cells.entries()) {
+			const room = roomOf(columns, spanOf(k, bars, columns.length));
+			const at = bars[k] ?? 0;
+			if (c.length > room) columns[at] = (columns[at] ?? 0) + c.length - room;
+		}
+	return columns;
+}
+
+/**
+ * Bar lines and the lyric rows under them, labels padded to `width` and
+ * pipes lined up; a row's cell spans the cells of its bar (grammar 7.7).
+ */
+function alignBlock(
+	lines: Pieces[],
+	rows: Pieces[],
+	bars: number[],
+	width: number,
+): Map<number, string> {
+	const w = Math.max(width, ...rows.map((r) => r.label.length));
+	const columns = columnsOf(lines, rows, bars);
+	const print = (p: Pieces, pad: (c: string, i: number) => string) =>
+		`${p.label.padEnd(w)} ${joinPieces({ ...p, cells: p.cells.map(pad) })}`.trimEnd();
+	const texts = new Map<number, string>();
+	for (const p of lines)
+		texts.set(
+			p.line,
+			print(p, (c, i) => c.padEnd(columns[i] ?? 0)),
+		);
+	for (const r of rows)
+		texts.set(
+			r.line,
+			print(r, (c, k) => c.padEnd(roomOf(columns, spanOf(k, bars, columns.length)))),
+		);
+	return texts;
+}
+
+/** A system's lines in score order, labels padded and pipes lined up, with its lyric rows (section 8, grammar 7.4, 7.7). */
 function alignSystem(
-	system: BarsLine[],
+	block: Block,
 	parsed: ChartParse,
 	beatsFor: Beats,
 	edit: (l: Line) => Line,
-): string[] {
-	const width = Math.max(...parsed.parts.flatMap(labelsOf).map((label) => label.length));
-	const pieces = [...system]
-		.sort((a, b) => scoreOf(a, parsed) - scoreOf(b, parsed))
-		.map((l) => ({ label: labelOf(l), ...barPieces(edit(l) as BarsLine, beatsFor(l)) }));
-	const columns = pieces[0]?.cells.map((_, i) =>
-		Math.max(...pieces.map((p) => p.cells[i]?.length ?? 0)),
-	);
-	return pieces.map((p) =>
-		`${p.label.padEnd(width)} ${joinPieces({ ...p, cells: p.cells.map((c, i) => c.padEnd(columns?.[i] ?? 0)) })}`.trimEnd(),
-	);
+): Map<number, string> {
+	const system = block.lines as BarsLine[];
+	const labelled = system[0]?.system !== undefined;
+	const width = labelled
+		? Math.max(...parsed.parts.flatMap(labelsOf).map((label) => label.length))
+		: 0;
+	const sorted = labelled
+		? [...system].sort((a, b) => scoreOf(a, parsed) - scoreOf(b, parsed))
+		: system;
+	// Sorted lines take the written lines' places, so the system's rows stay together.
+	const pieces = sorted.map((l, i) => ({
+		label: labelled ? labelOf(l) : "",
+		line: system[i]?.line ?? l.line,
+		...barPieces(edit(l) as BarsLine, beatsFor(l)),
+	}));
+	const rows = block.rows.map((r) => ({ label: lyricLabel(r), line: r.line, ...lyricPieces(r) }));
+	const bars = (system[0]?.cells ?? []).flatMap((c, i) => (isBar(c) ? [i] : []));
+	return alignBlock(pieces, rows, bars, width);
 }
 
-function systemsOf(lines: Line[]): Line[][] {
-	const systems = new Map<number, Line[]>();
-	for (const l of lines)
-		if ((l.kind === "bars" || l.kind === "invalid") && l.system !== undefined)
-			systems.set(l.system, [...(systems.get(l.system) ?? []), l]);
-	return [...systems.values()];
+/** A system, or an unlabelled bar line, with the lyric rows written just under it. */
+type Block = { lines: Line[]; rows: LyricsLine[] };
+
+/** A row lies just under its bars unless a heading comes between: under a replay heading it doesn't. */
+const isUnder = (r: LyricsLine, lines: Line[]) => {
+	if (!r.covers.length) return false;
+	const last = Math.max(...r.covers);
+	return !lines.some((l) => l.kind === "section" && l.line > last && l.line < r.line);
+};
+
+/** The block a bar line is in: its system's, or its own. */
+const blockKey = (l: Line) =>
+	(l.kind === "bars" || l.kind === "invalid") && l.system !== undefined
+		? `system ${l.system}`
+		: `line ${l.line}`;
+
+const inSystem = (l: Line) => (l.kind === "bars" || l.kind === "invalid") && l.system !== undefined;
+
+function blockFor(blocks: Map<string, Block>, l: Line): Block {
+	const block = blocks.get(blockKey(l)) ?? { lines: [], rows: [] };
+	blocks.set(blockKey(l), block);
+	return block;
 }
 
-/** Canonical text for the lines of a multi-part chart's systems, by line number. */
+/** Each system, and each bar line with rows just under it, with those rows (grammar 7.4, 7.7). */
+function blocksOf(lines: Line[]): Block[] {
+	const blocks = new Map<string, Block>();
+	for (const l of lines.filter(inSystem)) blockFor(blocks, l).lines.push(l);
+	const byLine = new Map(lines.map((l) => [l.line, l]));
+	for (const r of lines) {
+		if (r.kind !== "lyrics" || !isUnder(r, lines)) continue;
+		// An extracted part keeps only some of a system's lines.
+		const first = r.covers.map((n) => byLine.get(n)).find((l) => l !== undefined);
+		if (!first) continue;
+		const block = blockFor(blocks, first);
+		if (!block.lines.length) block.lines.push(first);
+		block.rows.push(r);
+	}
+	return [...blocks.values()];
+}
+
+/** Canonical text for the lines of systems and of bar lines with lyric rows, by line number. */
 function systemTexts(
 	parsed: ChartParse,
 	errored: Set<number>,
@@ -242,14 +368,19 @@ function systemTexts(
 	edit: (l: Line) => Line,
 ): Map<number, string> {
 	const texts = new Map<number, string>();
-	for (const lines of systemsOf(parsed.lines)) {
+	for (const block of blocksOf(parsed.lines)) {
+		const { lines } = block;
 		const valid = lines.filter((l): l is BarsLine => l.kind === "bars" && !errored.has(l.line));
+		const rows = block.rows.filter((r) => !errored.has(r.line));
+		const labelled = valid[0]?.system !== undefined;
+		if (!labelled && !rows.length) continue;
 		// A system with an error is neither sorted nor padded, so the error's line stays where it was written.
-		const printed =
-			valid.length === lines.length
-				? alignSystem(valid, parsed, beatsFor, edit)
-				: valid.map((l) => `${labelOf(l)} ${printLine(edit(l), beatsFor(l))}`);
-		for (const [i, l] of valid.entries()) texts.set(l.line, printed[i] ?? "");
+		if (valid.length === lines.length) {
+			for (const [line, text] of alignSystem({ lines: valid, rows }, parsed, beatsFor, edit))
+				texts.set(line, text);
+			continue;
+		}
+		for (const l of valid) texts.set(l.line, `${labelOf(l)} ${printLine(edit(l), beatsFor(l))}`);
 	}
 	return texts;
 }
@@ -358,7 +489,11 @@ export function printPart(text: string, label: string): string | null {
 				(l) =>
 					// A `part:` demoted to text (a shared label) would declare a part again in the extract.
 					(l.kind === "text" && /^part\s*:/i.test(l.text)) ||
-					((l.kind === "part" || l.kind === "bars" || l.kind === "invalid") && !kept.has(l.line)),
+					((l.kind === "part" ||
+						l.kind === "bars" ||
+						l.kind === "invalid" ||
+						l.kind === "lyrics") &&
+						!kept.has(l.line)),
 			)
 			.map((l) => l.line),
 	);

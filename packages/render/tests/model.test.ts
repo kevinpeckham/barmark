@@ -134,3 +134,11 @@ describe("layoutChart: degenerate charts never throw", () => {
 		expect(rows(m)[0]?.barNumber).toBe(1);
 	});
 });
+
+describe("layoutChart: grammar riders", () => {
+	test("a break draws nothing, and an escaped text line shows without its backslash", () => {
+		const m = layoutChart("## A\n| D |\n---\n\\| la la |\n| G |");
+		expect(m.blocks[0]?.items.map((i) => i.kind)).toEqual(["row", "text", "row"]);
+		expect(m.blocks[0]?.items[1]).toMatchObject({ kind: "text", text: "| la la |" });
+	});
+});

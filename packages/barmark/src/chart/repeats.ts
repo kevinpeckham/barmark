@@ -109,6 +109,9 @@ function addEntry(st: State, entry: Entry): void {
 	else st.items.push({ kind: "line", ...entry });
 }
 
+/** Lines that may sit between endings (grammar 5.1): they mean nothing to the timeline. */
+const BETWEEN_ENDINGS = new Set<Line["kind"]>(["text", "credit", "lyrics", "break"]);
+
 /**
  * Pair `|:` and `:|` within one section's lines, with the endings that
  * follow a repeat (grammar 5.1). Problems are reported, and what cannot
@@ -122,7 +125,7 @@ export function pairRepeats(lines: Line[], error: Report): Item[] {
 	};
 	for (const l of lines) {
 		if (l.kind === "bars" && l.ending) takeEnding(st, l, error);
-		else if (st.endings && (l.kind === "text" || l.kind === "credit"))
+		else if (st.endings && BETWEEN_ENDINGS.has(l.kind))
 			st.endings.between.push({ line: l, repeat: null });
 		else {
 			finish();

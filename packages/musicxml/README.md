@@ -36,9 +36,19 @@ const { text: chart, diagnostics } = importMusicXml(xml); // or { part: "Piano" 
 
 `importMusicXml` reads a `score-partwise` file into a canonical barmark
 chart: chord symbols, credits, keys, meters, tempo, sections, repeats,
-endings and jumps, words, lyrics as text lines under each row, parts, and
-the voicings, note sets and part lines of parts whose notes act as chords
-(a melody is left out, its chords kept). A chord symbol barmark can't name
+endings and jumps, words, parts, and the voicings, note sets and part
+lines of parts whose notes act as chords. A part that sings (it has
+lyrics, or a `voice.*` instrument sound) keeps its melody: its chords on
+its bare line (`Vox |`), its notes with verse 1's syllables on a melody
+line (`Vox.Mel | {G4}:maz- / {B4}:ing |`, or the bare line when it has no
+chords), `~` for an elision and `:/` for a melisma, MuseScore's ways of
+writing both included. Later verses are `lyrics N:` rows under each
+system; a section sung again to the same notes with new words is a replay
+with its `lyrics:` rows. In a choir each part keeps its own syllables. A
+lyric staff (the export's, or MuseScore's one-line "Lyrics" staff of
+slashes) comes back as lyric rows. A rhythm barmark can't write snaps to
+the nearest it can, with a warning naming the measures; another part's
+melody is still left out, its chords kept. A chord symbol barmark can't name
 (a Tristan chord) comes in as `?`, its original kept as words on the bar.
 It never throws: what couldn't come over is in `diagnostics`, one warning
 per kind and part, and a file that gives nothing returns empty `text` and
@@ -80,8 +90,16 @@ part, "Chart"), at concert pitch except where an instrument transposes:
   bar numbers.
 - **Directives:** key, time, tempo (a metronome mark), rit. and accel.,
   and the feel (MusicXML 4.0 swing).
+- **Lyrics:** syllables on notes (`{G4}:maz-`) are `<lyric>`s on their
+  notes with `syllabic`; `~` is an `<elision>`, `:/` an `<extend>`, a
+  tie carries its syllable on. Verse N (`lyrics N:`, or pass N of a
+  repeat) is `<lyric number="N">` on the same notes; a replay's words go
+  on its written-out measures. A lyric row with no melody under it is a
+  part of its own, "Lyrics": a silent one-line staff of slash notes at
+  the syllables' onsets, marked `<?barmark lyrics?>` in its first
+  measure.
 - **Text:** section headings, rehearsal marks, words on bars, and every
-  text line (lyrics, `###` notes) as words, so nothing written is lost.
+  text line (free-text lyrics, `###` notes) as words, so nothing written is lost.
   In a score of several parts, headings, rehearsal marks, tempo, feel and
   jumps are written once, over the top part.
 - **Credits:** the title as the work's title; composers, lyricists,
@@ -104,9 +122,7 @@ things its own way:
 - **Repeat counts aren't read.** A repeat played more than twice is also
   printed as words ("×3"), since Dorico ignores the count in the file.
 
-Not yet: lyrics placed as `<lyric>` syllables (barmark doesn't place them
-by beat, so the import reads them as text lines and the export writes
-them as words), and MIDI.
+Not yet: ChordPro and MIDI.
 
 ## License
 

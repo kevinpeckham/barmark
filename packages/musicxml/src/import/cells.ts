@@ -8,7 +8,14 @@ import type { Attack } from "./read.js";
 export type Chord = { at: Frac; slot: string; original: string | null };
 
 /** A measure as all of a part's lines share it: its length, its own meter and its chords. */
-export type Bar = { number: string; length: Frac; meter: Meter; chords: Chord[] };
+/** A measure as the lines read it; `ending`, the numbers of the ending (5.1) it is part of. */
+export type Bar = {
+	number: string;
+	length: Frac;
+	meter: Meter;
+	chords: Chord[];
+	ending?: number[] | null;
+};
 
 /** An unreadable chord's place (measure index, slot index) and the program's own text, empty when it has none. */
 export type Unread = { measure: number; at: number; text: string };
@@ -27,7 +34,13 @@ export type LineRead = {
  * read, and whether they are a melody left out (its rests never end a
  * chord: lead sheets write chords only on change).
  */
-export type Reading = { chords: boolean; notes: boolean; melody?: boolean };
+export type Reading = {
+	chords: boolean;
+	notes: boolean;
+	melody?: boolean;
+	/** Bars (by index) read as a melody's: their chords alone. */
+	melodyBars?: ReadonlySet<number>;
+};
 
 type Pitch = Attack["pitches"][number];
 
@@ -40,7 +53,7 @@ function semitone(p: Pitch): number {
 }
 
 /** Pitches as a note set, low to high with octaves, the first marked root as `!` (grammar 4, 4.1). */
-function noteSet(pitches: Pitch[]): string {
+export function noteSet(pitches: Pitch[]): string {
 	const seen = new Set<string>();
 	const unique = pitches.filter((p) => {
 		const key = `${p.name}${p.octave}`;
@@ -193,10 +206,13 @@ export function readLine(bars: Attack[][], shared: Bar[], reading: Reading): Lin
 	let run: Run = { last: null, silent: true, sounding: false };
 	shared.forEach((bar, i) => {
 		const attacks = bars[i] ?? [];
-		const cell = cellOf(bar, attacks, run, reading, out);
+		const here = reading.melodyBars?.has(i)
+			? { chords: reading.chords, notes: false, melody: true }
+			: reading;
+		const cell = cellOf(bar, attacks, run, here, out);
 		if (cell !== null && reading.chords) out.unread.push(...unreadIn(cell, bar.chords, i));
 		out.cells.push(cell);
-		run = after(run, bar, attacks, cell, reading.melody);
+		run = after(run, bar, attacks, cell, here.melody);
 	});
 	return out;
 }

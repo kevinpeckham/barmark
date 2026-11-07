@@ -7,7 +7,7 @@
  */
 import { join } from "node:path";
 import { fontFaceCss, type RenderOptions, renderChart } from "../src/index.js";
-import { EXAMPLE } from "../tests/fixtures.js";
+import { AMAZING_GRACE, EXAMPLE } from "../tests/fixtures.js";
 import { MORNING_SONG } from "../tests/morning-song.js";
 
 const root = join(import.meta.dir, "../../..");
@@ -19,6 +19,11 @@ const CHARTS: Record<string, string> = {
 		"# Layout\nkey: G, time: 4/4\n\n## Verse\n| G | D7sus4 | {E1} | {C3 G3 E4} |\nWalking down the line\n### Watch for the cutoff\n| N.C. | C D_E_F | [2/4] G | G |\ntime: 3/4, tempo: 120\n| Am | D | ? | x2\n## Verse ->",
 	rit: "tempo: 145\n## Outro\n| D5 | % |\ntempo: rit. to 90\n| D5 | % |",
 	parts: MORNING_SONG,
+	lead: AMAZING_GRACE,
+	spoken:
+		"# Spoken\n| Am7 | D9 |\nlyrics: | I_got roll-_in' on_the / | beat_and -- I_keep it_up |\n",
+	verses:
+		"# Rows\ntime: 4/4\n## Verse\n| C | F | G | C |\nlyrics: | Down / by the | riv- / er | wait- / ing | / |\n| Am | F | G | C |\nlyrics 1: | morn- / ing | comes / a- | gain / to | me |\nlyrics 2: | eve- / ning | falls / up- | on / the | sea |\n",
 	piano:
 		"# Piano\npart: Pno = Piano\npart: Bs = Bass\n## A\nPno.RH | +G{B3 D4 G4} / C._D / | *C{C4 E4 G4} |\nPno.LH | {G2} / / / | {C3} |\nBs | {G1} | {C2} |\n| G | C |",
 	pianoAlone:

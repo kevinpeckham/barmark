@@ -8,6 +8,7 @@ import type {
 	Meter,
 	Repeat,
 	Slot,
+	Syllable,
 	Words,
 } from "barmark";
 
@@ -56,6 +57,16 @@ export type BlockItem =
 			/** The passes an ending plays on; null for any other row. */
 			ending: number[] | null;
 			cells: CellModel[];
+			/** Set on a line that sings words (barmark's grammar 7.7): its note sets draw as pitch names over them. */
+			sings?: true;
+			/** The verses sung on a singing line's bars, in verse order, each syllable under its slot. */
+			verses?: Verse[];
+			/**
+			 * A lyric row on no melody under this row, or under the system whose
+			 * last row this is (barmark's grammar 7.7): each verse's syllables in
+			 * the bars they cover, spaced by beat.
+			 */
+			lyrics?: Verse[];
 	  }
 	/**
 	 * A system (barmark's grammar 7.4): a row per declared part, in score
@@ -72,6 +83,15 @@ export type BlockItem =
 	| { kind: "text"; text: string; note: boolean }
 	| { kind: "directive"; set: Directives }
 	| ErrorItem;
+
+/**
+ * One verse's syllables on a row's bars, as the parser places them: per
+ * cell (a cell that isn't a bar has none), per position, the syllables
+ * there. Under a singing line the positions are the bar's slots, a group's
+ * members each one; in a lyric row they are equal steps of the bar, as fine
+ * as its syllables need.
+ */
+export type Verse = { verse: number; cells: Syllable[][][] };
 
 export type ErrorItem = { kind: "error"; line: number; source: string; messages: string[] };
 

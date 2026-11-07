@@ -10,6 +10,7 @@ import {
 	type Key,
 	type SimpleSlot,
 	type Slot,
+	type Syllable,
 } from "barmark";
 import type { CellModel } from "./types.js";
 
@@ -187,4 +188,29 @@ export function speakBar(barNumber: number | null, cell: CellModel, numerals = f
 	);
 	const spoken = [...slots, ...words(cell.slots.length)].join(", ");
 	return `bar${barNumber === null ? "" : ` ${barNumber}`}${meter}: ${spoken}${cut}`;
+}
+
+/** A verse's syllables as words: "maz-ing"; elided syllables apart, a held one silent. */
+function speakSyllables(syllables: Syllable[]): string {
+	let words = "";
+	for (const s of syllables)
+		if (s.kind === "sung") words += `${s.parts.join(" ")}${s.continues ? "-" : " "}`;
+	return words.trim();
+}
+
+/**
+ * The words on a bar, each verse's: `sung “maz-ing”` (or `words “…”` in a
+ * lyric row on no melody), or with several verses `verse 1 “maz-ing”,
+ * verse 2 “grace that”`. Empty when nothing is sung there.
+ */
+export function speakVerses(
+	verses: { verse: number; syllables: Syllable[] }[],
+	numbered: boolean,
+	label: "sung" | "words",
+): string {
+	return verses
+		.map((v) => ({ verse: v.verse, words: speakSyllables(v.syllables) }))
+		.filter((v) => v.words)
+		.map((v) => `${numbered ? `verse ${v.verse}` : label} “${v.words}”`)
+		.join(", ");
 }

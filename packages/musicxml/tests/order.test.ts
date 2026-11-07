@@ -43,6 +43,12 @@ describe("play order", () => {
 		plays("|: G | C |\n|1-3 D | E :|\n|4 G |");
 		plays("|: G |\n|1 D :|\n|2 E :|\n|3 F |");
 	});
+	test("a lyric row or --- between endings keeps the repeat's passes", () => {
+		for (const between of ["lyrics: | la |", "---"]) {
+			const xml = plays(`|: G |\n|1-2 D :|\n${between}\n|3 E |`);
+			expect(measures(xml)[1]).toContain('<repeat direction="backward" times="3"/>');
+		}
+	});
 	test("a section heading is bold words; a rehearsal mark is rehearsal", () => {
 		const xml = plays("## Verse\n| @B | G | C |");
 		expect(measures(xml)[0]).toContain('<words font-weight="bold">Verse</words>');

@@ -253,7 +253,8 @@ test.each(SEEDS)("random score %i plays as the file does", (seed) => {
 	expect(parseChart(r.text).diagnostics.filter((d) => d.severity === "error")).toEqual([]);
 });
 
+// A hundred imports, now writing each melody too, take longer than bun's 5 s default.
 test("most random scores import", () => {
 	const imported = SEEDS.filter((seed) => importMusicXml(score(seed)).text !== "");
 	expect(imported.length).toBeGreaterThan(80);
-});
+}, 30_000);

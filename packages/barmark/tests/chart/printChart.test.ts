@@ -238,3 +238,13 @@ describe("fuzz", () => {
 		}
 	});
 });
+
+describe("the README's voice and lyrics example", () => {
+	const readme = readFileSync(join(ROOT, "packages/barmark/README.md"), "utf8");
+	const block = readme.split("### Voice and lyrics")[1]?.match(/```\n([\s\S]*?)```/)?.[1] ?? "";
+	test("parses cleanly and is already canonical", () => {
+		expect(block).toContain("lyrics 2:");
+		expect(parseChart(block).diagnostics).toEqual([]);
+		expect(printChart(block)).toBe(block);
+	});
+});
