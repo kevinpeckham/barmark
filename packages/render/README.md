@@ -188,7 +188,13 @@ numbers count the bars as written, each once, as a band counts them: a
 repeat, an ending, a jump or a replay doesn't move them, so a replayed
 section shows the numbers it was written with. A line with an error shows as written, underlined,
 with its message. `layoutChart(text)` returns all of this as data, if
-you want to draw it yourself.
+you want to draw it yourself, and `typesetChord(parts)` with `glyphs`
+gives a chord's pieces as the page sets them (root and quality, the
+raised extension, the bass after a slash, ♯ and ♭), and
+`typesetNumeral(parts, key, style)` its Nashville or Roman numeral, so a
+PDF or canvas drawer matches it. A section block's `bars` counts its
+widest row's bars (0 when it has none), where `columns` also counts its
+fermata, direction and rehearsal cells.
 
 A chart of several parts (barmark's grammar 7.4) draws each system as
 stacked rows, one per part in score order, with the part's label in the

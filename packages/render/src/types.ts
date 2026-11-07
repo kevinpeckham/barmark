@@ -38,8 +38,10 @@ export type SectionBlock = {
 	form: number | null;
 	/** "A", "B", … when rehearsal letters are on. */
 	rehearsal: string | null;
-	/** The widest row's cell count. */
+	/** The widest row's cell count: fermata, direction and rehearsal cells included. */
 	columns: number;
+	/** The most bars any row has: its `slots` cells alone, for a drawer that gives the narrow cells their own width. 0 when no row has a bar. */
+	bars: number;
 	items: BlockItem[];
 };
 

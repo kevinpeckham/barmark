@@ -42,8 +42,8 @@ type Context = {
 	errors: Map<number, string[]>;
 	/** Each section's lines, by its heading's line number. */
 	written: Map<number, Group>;
-	/** The played bars by the line they are written on: in a chart of several parts, each part's own. */
-	bars: DrawnBar[];
+	/** The played bars of each line, by the line they are written on: in a chart of several parts, each part's own. */
+	bars: Map<number, DrawnBar[]>;
 };
 
 /** A played bar as drawn: `perPart` marks a tutti bar its parts play differently. */
@@ -58,6 +58,17 @@ const playedApart = (b: PlayedBar, line: number) => {
 /** What each line written plays in a bar: each part's share, or each of its lines' (barmark's grammar 7.4, 7.6). */
 const sharesOf = (b: PlayedBar): (PartBar | LineBar)[] =>
 	b.lines ?? (b.parts ?? []).flatMap((p): (PartBar | LineBar)[] => p?.lines ?? [p]);
+
+/** Played bars grouped by their line, in play order: each line then finds its own without reading every bar. */
+function indexByLine(bars: DrawnBar[]): Map<number, DrawnBar[]> {
+	const out = new Map<number, DrawnBar[]>();
+	for (const b of bars) {
+		const list = out.get(b.line);
+		if (list) list.push(b);
+		else out.set(b.line, [b]);
+	}
+	return out;
+}
 
 /** Each part's bars on its own lines, and each line's; a tutti bar once (barmark's grammar 7.4, 7.6). */
 function barsByLine(parse: ChartParse): DrawnBar[] {
@@ -101,7 +112,7 @@ export function layoutChart(text: string, options: LayoutOptions = {}): ChartMod
 		source: text.split(/\r?\n/),
 		errors: errorsByLine(parse),
 		written: new Map(groups.flatMap((g) => (g.heading ? [[g.heading.line, g] as const] : []))),
-		bars: barsByLine(parse),
+		bars: indexByLine(barsByLine(parse)),
 	};
 	const blocks = groups.map((g) => layoutGroup(g, ctx));
 	if (options.rehearsalLetters) letterBlocks(blocks);
@@ -261,6 +272,15 @@ const widthOf = (i: BlockItem) =>
 			? Math.max(0, ...i.rows.map((p) => (p.row.kind === "row" ? p.row.cells.length : 0)))
 			: 0;
 
+/** How many bars an item's widest row has: its `slots` cells, not its fermatas, directions or rehearsal marks. */
+const barsIn = (cells: CellModel[]) => cells.filter((c) => c.kind === "slots").length;
+const barsOf = (i: BlockItem) =>
+	i.kind === "row"
+		? barsIn(i.cells)
+		: i.kind === "system"
+			? Math.max(0, ...i.rows.map((p) => (p.row.kind === "row" ? barsIn(p.row.cells) : 0)))
+			: 0;
+
 function blockOf(
 	h: SectionLine | null,
 	occurrence: SectionOccurrence | undefined,
@@ -272,6 +292,7 @@ function blockOf(
 		form: occurrence?.form ?? null,
 		rehearsal: null,
 		columns: Math.max(0, ...items.map(widthOf)),
+		bars: Math.max(0, ...items.map(barsOf)),
 		items,
 	};
 }
@@ -335,7 +356,7 @@ function layoutOne(
 
 /** The written bars a bar line draws, as played in the occurrence: a cut bar as written. */
 function landingsOn(l: BarsLine, played: PlayedBar[], ctx: Context): Landing[] {
-	const written = ctx.bars.filter((b) => b.line === l.line);
+	const written = barsOn(l.line, ctx);
 	let bar = 0;
 	const bars = l.cells.map((cell) => {
 		if (cell.kind !== "slots" && cell.kind !== "simile") return undefined;
@@ -358,7 +379,7 @@ function lyricRows(
 	const ref = drawn[0];
 	if (!ref) return [];
 	const sung = new Set(drawn.flatMap((l) => singerOf(l, ctx.parse) ?? []));
-	const lands = landingsOn(ref, playedOn(ref.line, occurrence, ctx.bars), ctx);
+	const lands = landingsOn(ref, playedOn(ref.line, occurrence, ctx), ctx);
 	return rowVerses(lands, sung);
 }
 
@@ -410,13 +431,11 @@ function layoutSystem(
 	ctx: Context,
 ): SystemItem {
 	const ref = lines.find((l): l is BarsLine => l.kind === "bars" && !ctx.errors.has(l.line));
-	const reference = ref
-		? layoutRow(ref, playedOn(ref.line, occurrence, ctx.bars), previous, ctx)
-		: null;
+	const reference = ref ? layoutRow(ref, playedOn(ref.line, occurrence, ctx), previous, ctx) : null;
 	const ownRow = (own: SystemLine): RowItem | ErrorItem =>
 		ctx.errors.has(own.line) || own.kind !== "bars"
 			? errorItem(own.line, ctx)
-			: layoutRow(own, playedOn(own.line, occurrence, ctx.bars), previous, ctx);
+			: layoutRow(own, playedOn(own.line, occurrence, ctx), previous, ctx);
 	const rows = ctx.parse.parts.flatMap((p) => {
 		const own = ownLines(lines, p);
 		if (!own.length)
@@ -461,7 +480,7 @@ function layoutLine(
 ): BlockItem | null {
 	switch (l.kind) {
 		case "bars":
-			return layoutRow(l, playedOn(l.line, occurrence, ctx.bars), previous, ctx);
+			return layoutRow(l, playedOn(l.line, occurrence, ctx), previous, ctx);
 		case "text":
 			return textItem(l.text);
 		case "directive":
@@ -492,15 +511,18 @@ function errorItem(line: number, ctx: Context): ErrorItem {
 const lastSlots = (cells: CellModel[]) =>
 	cells.findLast((c): c is SlotsCell => c.kind === "slots") ?? null;
 
+/** Every bar a line plays, in play order. */
+const barsOn = (line: number, ctx: Context): DrawnBar[] => ctx.bars.get(line) ?? [];
+
 /** The bars a line plays within its section occurrence, in play order. */
 function playedOn(
 	line: number,
 	occurrence: SectionOccurrence | undefined,
-	bars: PlayedBar[],
+	ctx: Context,
 ): PlayedBar[] {
 	const first = occurrence?.firstBar ?? 1;
 	const last = occurrence?.lastBar ?? Number.POSITIVE_INFINITY;
-	return bars.filter((b) => b.line === line && b.index >= first && b.index <= last);
+	return barsOn(line, ctx).filter((b) => b.index >= first && b.index <= last);
 }
 
 function layoutRow(
@@ -511,7 +533,7 @@ function layoutRow(
 ): RowItem {
 	const cells: CellModel[] = [];
 	// A cut bar is not played: what it would play is what the line's bar played when written.
-	const written = ctx.bars.filter((b) => b.line === l.line);
+	const written = barsOn(l.line, ctx);
 	let bar = 0;
 	let prev = previous;
 	for (const cell of l.cells) {

@@ -17,6 +17,14 @@ function timed(text: string): number {
 const lines = (count: number) => "| D | G |\n".repeat(count);
 
 test("a long chart with no parts lays out in linear time: each line doesn't read every bar", () => {
-	// The ratio catches a quadratic path; ten times the lines may cost at most 25 times as long.
-	expect(timed(lines(2000)) / timed(lines(200))).toBeLessThan(25);
+	// The ratio catches a quadratic path; ten times the lines may cost at most 20 times as long.
+	expect(timed(lines(2000)) / timed(lines(200))).toBeLessThan(20);
 }, 30_000);
+
+/** A lead sheet with a guitar: a voice line with syllables, a guitar line and a verse 2 row, `count` systems of them. */
+const systems = (count: number) =>
+	`part: V = Voice, instrument: voice\npart: G = Guitar\n${"V | {C4}:la {D4}:li | {E4}:lo |\nG | C | G |\nlyrics 2: | ha he | ho |\n---\n".repeat(count)}`;
+
+test("a long chart of parts and lyric rows lays out in linear time: each line finds its own bars", () => {
+	expect(timed(systems(2000)) / timed(systems(200))).toBeLessThan(20);
+}, 60_000);
