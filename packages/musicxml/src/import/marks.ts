@@ -44,8 +44,8 @@ export type MeasureMarks = {
 /** Text as barmark writes it: no-break spaces (the export's after a leading "A") plain, whitespace collapsed. */
 const tidy = (text: string) => text.replace(/\s+/g, " ").trim();
 
-/** The measure, its part's name, whether the file is the export's own, and where its heading is among its marks. */
-type Context = { m: ReadMeasure; part: string; losses: Losses; own: boolean; heading: number };
+/** The measure, its part's name, whether the file is the export's own, and the marks written ahead of its heading. */
+type Context = { m: ReadMeasure; part: string; losses: Losses; own: boolean; ahead: Set<Mark> };
 
 const atStart = (mark: Mark) => cmp(mark.at, ZERO) === 0;
 
@@ -59,7 +59,7 @@ const isHeading = (mark: Mark) =>
  * the line first; another program's direction order means nothing.
  */
 function textPlace(mark: Mark, c: Context): "leadLines" | "footLines" | "textLines" {
-	if (c.own && atStart(mark) && c.m.marks.indexOf(mark) < c.heading) return "leadLines";
+	if (atStart(mark) && c.ahead.has(mark)) return "leadLines";
 	const end = cmp(c.m.length, ZERO) > 0 && cmp(mark.at, c.m.length) >= 0;
 	return end ? "footLines" : "textLines";
 }
@@ -258,8 +258,9 @@ export function readMarks(
 	own: boolean,
 ): MeasureMarks {
 	const out = blank();
-	const heading = m.marks.findIndex(isHeading);
-	const c: Context = { m, part, losses, own, heading: Math.max(heading, 0) };
+	// Built once: looking each text line up in the marks would be quadratic in them.
+	const ahead = new Set(own ? m.marks.slice(0, Math.max(m.marks.findIndex(isHeading), 0)) : []);
+	const c: Context = { m, part, losses, own, ahead };
 	const words = m.marks.filter((k) => k.kind === "words");
 	for (const mark of [...words, ...m.marks.filter((k) => k.kind !== "words")])
 		READERS[mark.kind](mark, out, c);

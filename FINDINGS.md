@@ -1144,3 +1144,19 @@ profiling 8,000 lines. 0.16.0 indexes the bars by line once; the test
 also times a chart with parts and lyric rows, where the scans cost most,
 and both bounds are now 20. A ratio test only sees a quadratic term as
 large as the linear work around it: profile the long case too.
+
+### A quadratic scan no timing test could see (2026-11-07)
+
+**Symptom:** Vercel's security review of #174 flagged the MusicXML
+import: placing each text line under the staff looked the line up in
+its measure's marks (`indexOf`), so a file with many words in one
+measure cost n²/2 comparisons.
+**Cause:** a ratio test (ten times the words, at most 25 times as
+long) passed before the fix. The engine runs `indexOf` so fast that
+at 250,000 words the scan was 8 of 14 seconds, still under the bound.
+**Fix:** the marks before the heading are gathered once per measure
+(`readMarks`, `ahead`). `musicxml/tests/import/scale.test.ts` counts
+the work instead of timing it: it wraps the marks in a `Proxy`, counts
+element reads, and fails at n²/2 (2,007,003 reads for 2,000 lines;
+under 10 per mark now). Where a quadratic term is cheap per step,
+count the steps.

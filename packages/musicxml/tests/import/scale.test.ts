@@ -1,5 +1,9 @@
 /** Untrusted files with many measures: nothing in the import may grow faster than the file. */
 import { expect, test } from "bun:test";
+import { Losses } from "../../src/import/losses.js";
+import { readMarks } from "../../src/import/marks.js";
+import { readScore } from "../../src/import/read.js";
+import { parseXml } from "../../src/import/tree.js";
 import { type ImportDiagnostic, importMusicXml } from "../../src/index.js";
 
 // The bounds below are best-of-two timings; each test's 30 s timeout only keeps a loaded machine from cutting a run short.
@@ -178,3 +182,35 @@ test(
 	},
 	TIMEOUT,
 );
+
+/** One chord-bearing measure of the export's own file with `n` text lines under the staff at beat 0, then its heading. */
+const wordsAtStart = (n: number, same: boolean) =>
+	score(
+		1,
+		() => {
+			let words = "";
+			for (let i = 0; i < n; i++)
+				words += `<direction placement="below"><direction-type><words>${same ? "w" : `w${i}`}</words></direction-type></direction>`;
+			return `<attributes><divisions>1</divisions></attributes>${words}<direction placement="above"><direction-type><words font-weight="bold">Verse</words></direction-type></direction>${harmony}${slash}`;
+		},
+		"@barmark/musicxml 0.6.0",
+	);
+
+test("placing a measure's text lines reads its marks a fixed number of times each", () => {
+	const n = 2000;
+	const root = parseXml(wordsAtStart(n, false));
+	const m = root ? readScore(root, new Losses())?.parts[0]?.measures[0] : undefined;
+	if (!m) throw new Error("no measure");
+	let reads = 0;
+	m.marks = new Proxy(m.marks, {
+		get(target, key, receiver) {
+			if (typeof key === "string" && /^\d+$/.test(key)) reads++;
+			return Reflect.get(target, key, receiver);
+		},
+	});
+	const out = readMarks(m, "Gtr", new Losses(), true);
+	expect(out.leadLines).toHaveLength(n);
+	expect(out.headings).toEqual(["Verse"]);
+	// A scan of the marks per text line would read them about n²/2 times.
+	expect(reads).toBeLessThan(10 * (n + 1));
+});
