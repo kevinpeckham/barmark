@@ -52,6 +52,8 @@ type Context = {
 	own: boolean;
 	ahead: Set<Mark>;
 	swing: boolean;
+	/** Whether plain words naming a section are a heading: another program's file, its first part. */
+	sections: boolean;
 };
 
 const atStart = (mark: Mark) => cmp(mark.at, ZERO) === 0;
@@ -61,7 +63,7 @@ const atStart = (mark: Mark) => cmp(mark.at, ZERO) === 0;
  * `Coda` is left out: plain, it is the coda sign's direction (grammar 5.2).
  */
 const SECTION =
-	/^(?:intro|verse|pre-chorus|chorus|bridge|solo|interlude|break|tag|outro|ending|refrain|instrumental)(?: (?:\d+|[a-z]))?$/i;
+	/^((?:intro|verse|pre-chorus|chorus|bridge|solo|interlude|break|tag|outro|ending|refrain|instrumental)(?: (?:\d+|[a-z]))?)[:.]?$/i;
 
 const aboveAtStart = (mark: Mark) =>
 	mark.kind === "words" && mark.placement !== "below" && atStart(mark);
@@ -70,16 +72,16 @@ const aboveAtStart = (mark: Mark) =>
 const isBoldHeading = (mark: Mark) => aboveAtStart(mark) && mark.bold;
 
 /**
- * Words over the start of the bar that are a heading: bold ones, or in
- * another program's file plain (not italic) ones naming a section, as
- * Dorico writes system text with no `font-weight`.
+ * The heading words over the start of the bar give: bold words, or on the
+ * first part of another program's file (where Dorico writes system text,
+ * with no `font-weight`) plain, not italic words naming a section, a
+ * trailing `:` or `.` left out. Null when they aren't one.
  */
-const isHeading = (mark: Mark, text: string, c: Context) =>
-	isBoldHeading(mark) ||
-	(!c.own &&
-		aboveAtStart(mark) &&
-		mark.node.attrs["font-style"] !== "italic" &&
-		SECTION.test(text));
+function headingOf(mark: Mark, text: string, c: Context): string | null {
+	if (isBoldHeading(mark)) return text;
+	if (!c.sections || !aboveAtStart(mark) || mark.node.attrs["font-style"] === "italic") return null;
+	return SECTION.exec(text)?.[1] ?? null;
+}
 
 /**
  * A text line's place: before the heading, after the notes, or before the
@@ -164,7 +166,8 @@ function meaningful(mark: Mark, text: string, c: Context, out: MeasureMarks): bo
 
 /** Words over the bar: a heading, the export's `?`, or what they stand for, else words on the bar. */
 function wordsAbove(mark: Mark, text: string, out: MeasureMarks, c: Context): void {
-	if (isHeading(mark, text, c)) out.headings.push(text);
+	const heading = headingOf(mark, text, c);
+	if (heading !== null) out.headings.push(heading);
 	else if (text === "?" && c.m.harmonies.length === 0) out.question = true;
 	// The export writes its own marks over the whole score (`system`): in its
 	// files other words are a bar's words, whatever they say.
@@ -278,18 +281,19 @@ function fermataAtEnd(m: ReadMeasure): boolean {
 	return m.lines.some((line) => line.at(-1)?.fermata === true);
 }
 
-/** One part's marks on one measure. Words are read before `<sound>`s, which add only what words didn't name. */
+/** One part's marks on one measure (`firstPart`: the score's first). Words are read before `<sound>`s, which add only what words didn't name. */
 export function readMarks(
 	m: ReadMeasure,
 	part: string,
 	losses: Losses,
 	own: boolean,
+	firstPart = true,
 ): MeasureMarks {
 	const out = blank();
 	// Built once: working these out per word would be quadratic in the marks.
 	const ahead = new Set(own ? m.marks.slice(0, Math.max(m.marks.findIndex(isBoldHeading), 0)) : []);
 	const swing = m.marks.some((k) => k.kind === "swing");
-	const c: Context = { m, part, losses, own, ahead, swing };
+	const c: Context = { m, part, losses, own, ahead, swing, sections: !own && firstPart };
 	const words = m.marks.filter((k) => k.kind === "words");
 	for (const mark of [...words, ...m.marks.filter((k) => k.kind !== "words")])
 		READERS[mark.kind](mark, out, c);

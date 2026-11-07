@@ -17,12 +17,14 @@ package uses [semantic versioning](https://semver.org/).
 - **Dorico's section names import as headings.** The import took only
   bold words above a bar's start as a heading; Dorico writes system text
   with no `font-weight`, so `Intro` and `Verse` came in as quoted words.
-  In another program's file, plain (not italic) words above a bar's start
-  are a heading too when they name a section: Intro, Verse, Pre-Chorus,
-  Chorus, Bridge, Solo, Interlude, Break, Tag, Outro, Ending, Refrain or
-  Instrumental, perhaps numbered or lettered (`Verse 2`, `Chorus B`), in
-  any case. `Coda` stays the coda sign's direction; bold words are
-  headings as before, and barmark's own files are read as before.
+  On the first part of another program's file, plain (not italic) words
+  above a bar's start are a heading too when they name a section: Intro,
+  Verse, Pre-Chorus, Chorus, Bridge, Solo, Interlude, Break, Tag, Outro,
+  Ending, Refrain or Instrumental, perhaps numbered or lettered
+  (`Verse 2`, `Chorus B`), in any case, with a trailing `:` or `.` left
+  out of the heading (`Verse 1:`). `Coda` stays the coda sign's
+  direction; bold words are headings as before, and barmark's own files
+  are read as before.
 - **Dorico's placeholder project info is left out.** Dorico fills empty
   project info with greyed `Project Composer` and `Project Copyright`
   page credits, which came in as `composer:` and `copyright:` lines. In a

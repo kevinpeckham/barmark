@@ -587,12 +587,19 @@ and round-trip it through `format`.
   - A comping bar's slashes are voice 2 and its voicing voice 1, each
     silent (a `<forward>`) where the other plays, so the import gave two
     lines.
-- **The fix.** `harteToBarmark` prefers a Harte shorthand's name on a
-  tie (`packages/barmark/src/chords/harte.ts`); plain words naming a
-  section are a heading in another program's file
-  (`packages/musicxml/src/import/marks.ts`); Dorico's placeholders are
-  dropped (`read.ts`); a voice of slashes in another voice's gaps folds
-  into it (`merge.ts`, `foldRhythm`). The files and their charts are
+- **The fix.** The import names a kind with no `<degree>` by its own
+  Harte shorthand where one spells exactly its notes (`kinds.ts`,
+  `chords.ts`: half-diminished is `hdim7`, so `m7(b5)`), and
+  `harteToBarmark` also prefers a shorthand's name on a tie
+  (`packages/barmark/src/chords/harte.ts`). Words that are plain (not
+  bold, not italic), above the staff at the bar's start, on the score's
+  first part, in a file barmark didn't write, and name a section from the
+  list in `packages/musicxml/src/import/marks.ts` (`SECTION`, a trailing
+  `:` or `.` left out) are a heading. Dorico's placeholders are dropped
+  (`read.ts`). A voice of slashes and rests whose slashes sound only
+  where the other voice is silent folds into it (`merge.ts`,
+  `foldRhythm`), a rest with the other voice's sound in it read as a gap.
+  The files and their charts are
   `packages/musicxml/tests/fixtures/import/dorico-*`, tested in
   `tests/import/programs.test.ts`.
 

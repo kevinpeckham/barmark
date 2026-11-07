@@ -48,6 +48,22 @@ describe("what it reads", () => {
 		expect(pick(bars, "words")).toEqual([[], [], [], [], []]);
 	});
 
+	test("a section word's trailing colon or full stop is left out of the heading", () => {
+		const bar = (n: number, text: string) =>
+			measure(n, (n === 1 ? start() : "") + words(text) + whole);
+		const { bars } = structureOf(xml`${bar(1, "Intro.")}${bar(2, "Verse 1:")}${bar(3, "Chorus:")}`);
+		expect(pick(bars, "heading")).toEqual(["Intro", "Verse 1", "Chorus"]);
+	});
+
+	test("plain section words are a heading only on the score's first part, where Dorico writes system text", () => {
+		const part = (id: string, text: string) =>
+			`<part id="${id}"><measure number="1">${start()}${words(text)}${whole}</measure></part>`;
+		const two = `<?xml version="1.0"?><score-partwise version="4.0"><part-list><score-part id="P1"><part-name>A</part-name></score-part><score-part id="P2"><part-name>B</part-name></score-part></part-list>${part("P1", "Verse")}${part("P2", "Solo")}</score-partwise>`;
+		const { bars } = structureOf(two);
+		expect(bars[0]?.heading).toBe("Verse");
+		expect(bars[0]?.words).toEqual([{ text: "Solo", at: 0 }]);
+	});
+
 	test("plain words that are not a section name, italic or mid-bar section words, and Coda stay what they were", () => {
 		const { bars } = structureOf(
 			xml`${measure(1, start() + words("Intro please") + whole)}${measure(2, words("Verse", ' font-style="italic"') + whole)}${measure(3, note("C", 4, 2) + words("Chorus") + note("C", 4, 2))}${measure(4, words("Coda") + whole)}`,
