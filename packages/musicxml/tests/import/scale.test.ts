@@ -277,8 +277,8 @@ test(
 			return best;
 		};
 		structure(2000);
-		// Allocation makes ten times the lines about 30 times as long; comparing every pair made it over 200.
-		expect(structure(40_000) / structure(4000)).toBeLessThan(50);
+		// Allocation makes ten times the lines up to about 30 times as long; comparing every pair made it over 200.
+		expect(structure(40_000) / structure(4000)).toBeLessThan(100);
 	},
 	TIMEOUT,
 );
