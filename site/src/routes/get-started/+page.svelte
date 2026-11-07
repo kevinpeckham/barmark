@@ -5,18 +5,20 @@ import Window from "#lib/components/Window.svelte";
 import { LINKS } from "#lib/site.js";
 import {
 	CLI_CI,
+	INSTALL_MUSICXML,
 	INSTALL_PARSER,
 	INSTALL_RENDER,
 	LIVE_EDITOR,
 	SAMPLE_CHART,
 	USE_CLI,
 	USE_ELEMENT,
+	USE_MUSICXML,
 	USE_PARSER,
 	USE_RENDER,
 } from "#lib/start.js";
 
 const description =
-	"Write a Barmark chart, read it with the parser, draw it with @barmark/render or the <barmark-chart> web component, and check charts from the terminal with @barmark/cli.";
+	"Write a Barmark chart, read it with the parser, draw it with @barmark/render or the <barmark-chart> web component, convert it to and from MusicXML with @barmark/musicxml, and check charts from the terminal with @barmark/cli.";
 const step = "font-serif text-xl text-ink";
 const link = "underline decoration-accent/60 underline-offset-3 hover-text-accent";
 const code = "font-mono text-accent";
@@ -38,9 +40,10 @@ const code = "font-mono text-accent";
 		<p class="max-w-prose opacity-80">
 			A Barmark chart is a plain-text file. Two packages read and draw it:
 			<code class={code}>barmark</code>, the parser, and <code class={code}>@barmark/render</code>, which
-			draws the bar grid as HTML or as a web component. Both are ESM, with TypeScript types, and run in
-			Node 20 or later, Bun, Deno and the browser. A third, <code class={code}>@barmark/cli</code>, puts
-			them in the terminal, for checking charts without writing any code.
+			draws the bar grid as HTML or as a web component. <code class={code}>@barmark/musicxml</code> converts
+			charts to and from MusicXML. All three are ESM, with TypeScript types, and run in Node 20 or
+			later, Bun, Deno and the browser. <code class={code}>@barmark/cli</code> puts them in the
+			terminal, for checking charts without writing any code.
 		</p>
 	</div>
 
@@ -108,7 +111,24 @@ const code = "font-mono text-accent";
 	</section>
 
 	<section class="flex flex-col gap-4 min-w-0">
-		<h2 id="terminal" class="{step} scroll-mt-6">5. Check charts from the terminal</h2>
+		<h2 class={step}>5. Convert to and from MusicXML</h2>
+		<p class="max-w-prose opacity-80">
+			<code class={code}>exportMusicXml</code> writes a chart as MusicXML 4.0, so it opens in MuseScore,
+			Dorico, Sibelius or Finale with the same bars, chords, repeats, sections and parts, and plays in
+			the chart's play order. <code class={code}>importMusicXml</code> reads a score back into a chart:
+			its chord symbols, sections, repeats and endings, parts, and a singer's melody and verses. Neither
+			throws; what can't come over is a warning.
+		</p>
+		<Code title="Terminal" code={INSTALL_MUSICXML} />
+		<Code title="convert.ts" code={USE_MUSICXML} />
+		<p class="text-sm opacity-80">
+			What each direction keeps is in the <a href={LINKS.musicxmlReadme} class={link}>MusicXML package's
+			README</a>, with a note on compressed <code class={code}>.mxl</code> files.
+		</p>
+	</section>
+
+	<section class="flex flex-col gap-4 min-w-0">
+		<h2 id="terminal" class="{step} scroll-mt-6">6. Check charts from the terminal</h2>
 		<p class="max-w-prose opacity-80">
 			<code class={code}>@barmark/cli</code> is the <code class={code}>barmark</code> command. It
 			checks a folder of charts and names each problem by file and line, rewrites charts in their

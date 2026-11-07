@@ -57,6 +57,19 @@ editor.addEventListener("input", () => {
 	chart.text = editor.value;
 });`;
 
+export const INSTALL_MUSICXML = "npm install @barmark/musicxml";
+
+export const USE_MUSICXML = `import { exportMusicXml, importMusicXml } from "@barmark/musicxml";
+
+// A chart to MusicXML 4.0, for MuseScore, Dorico, Sibelius or Finale
+const exported = exportMusicXml(text); // or exportMusicXml(text, { part: "Gtr" })
+if (exported.ok) save("example-song.musicxml", exported.xml);
+
+// A MusicXML score back to a chart: chord symbols, sections, repeats, parts and lyrics
+const imported = importMusicXml(xml);
+imported.text; // "# Example Song\\nkey: D, tempo: 145\\n\\n## Verse\\n…"
+imported.diagnostics; // what didn't come over, one warning per kind`;
+
 export const USE_CLI = `npx @barmark/cli check songs          # every .chart.md in songs/, problems by line
 npx @barmark/cli format --write songs # rewrite them in standard form
 npx @barmark/cli transpose example-song.chart.md --to E

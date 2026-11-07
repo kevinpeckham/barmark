@@ -10,6 +10,7 @@ export const LINKS = {
 	issues: "https://github.com/kevinpeckham/barmark/issues",
 	renderReadme: "https://github.com/kevinpeckham/barmark/tree/main/packages/render#readme",
 	cliReadme: "https://github.com/kevinpeckham/barmark/tree/main/packages/cli#readme",
+	musicxmlReadme: "https://github.com/kevinpeckham/barmark/tree/main/packages/musicxml#readme",
 	cliReleases: "https://github.com/kevinpeckham/barmark/releases?q=cli-v",
 	songs: "https://github.com/kevinpeckham/songs",
 	parserReadme: "https://github.com/kevinpeckham/barmark/tree/main/packages/barmark#readme",

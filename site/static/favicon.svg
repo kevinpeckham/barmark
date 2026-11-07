@@ -1,13 +1,8 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" fill-rule="evenodd" viewBox="0 0 500 500">
 	<title>Barmark</title>
-	<rect width="32" height="32" rx="6" fill="#0b1426" />
-	<path d="M7 7v18M25 7v18" stroke="#ebf92f" stroke-width="2.5" stroke-linecap="round" />
-	<path
-		d="M12 22V10l8 3.5v8.5"
-		fill="none"
-		stroke="#f5f5f5"
-		stroke-width="2"
-		stroke-linejoin="round"
-		stroke-linecap="round"
-	/>
+	<circle fill="#01061c" cx="250" cy="253" r="245" />
+	<g fill="#ebfa2f">
+		<path d="M314 403c27.614 0 50-22.81 50-50.948s-22.386-50.948-50-50.948-50 22.81-50 50.948S286.386 403 314 403zm0-197.104c27.614 0 50-22.81 50-50.948S341.614 104 314 104s-50 22.81-50 50.948 22.386 50.948 50 50.948z" />
+		<path d="M136.163 418V88a8 8 0 0 1 8-8h55a8 8 0 0 1 8 8v330a8 8 0 0 1-8 8h-55a8 8 0 0 1-8-8z" fill-rule="nonzero" />
+	</g>
 </svg>
