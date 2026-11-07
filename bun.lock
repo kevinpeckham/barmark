@@ -50,6 +50,13 @@
         "barmark": "workspace:^",
       },
     },
+    "packages/sync": {
+      "name": "@barmark/sync",
+      "version": "0.1.0",
+      "dependencies": {
+        "barmark": "workspace:^",
+      },
+    },
   },
   "packages": {
     "@barmark/cli": ["@barmark/cli@workspace:packages/cli"],
@@ -57,6 +64,8 @@
     "@barmark/musicxml": ["@barmark/musicxml@workspace:packages/musicxml"],
 
     "@barmark/render": ["@barmark/render@workspace:packages/render"],
+
+    "@barmark/sync": ["@barmark/sync@workspace:packages/sync"],
 
     "@biomejs/biome": ["@biomejs/biome@2.6.4", "", { "optionalDependencies": { "@biomejs/cli-android-arm64": "2.6.4", "@biomejs/cli-android-x64": "2.6.4", "@biomejs/cli-darwin-arm64": "2.6.4", "@biomejs/cli-darwin-x64": "2.6.4", "@biomejs/cli-linux-arm64": "2.6.4", "@biomejs/cli-linux-arm64-musl": "2.6.4", "@biomejs/cli-linux-x64": "2.6.4", "@biomejs/cli-linux-x64-musl": "2.6.4", "@biomejs/cli-win32-arm64": "2.6.4", "@biomejs/cli-win32-x64": "2.6.4" }, "bin": { "biome": "bin/biome" } }, "sha512-8sKKwaNW4ot22awZ3lBjwWLHnUFXgXnrBPYS2gNlBAXRbDC++7kqjK2H7dR/FgCDtPvO1xfKpgEhJkGxAKYkxA=="],
 

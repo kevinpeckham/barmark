@@ -9,6 +9,21 @@ not here.
 
 ## Testing
 
+### A path import never reads `exports` (2026-11-07, @barmark/sync)
+
+- **The symptom.** `verify:package` imports a package's built
+  `dist/index.js` by path, so it passes even when the `exports` map is
+  wrong. `@barmark/sync` has a second entry, `./timing`; a typo in its
+  map would ship, and `import "@barmark/sync/timing"` would fail for every
+  reader.
+- **The cause.** Node applies `exports` only to bare specifiers
+  (`@barmark/sync/timing`), never to a file path.
+- **The fix.** `scripts/smoke-sync.mjs` reads `exports["./timing"].import`
+  from the package.json beside `dist/` and imports that file, so a wrong
+  map fails locally; the release's `confirm` job runs it against the
+  copy installed from npm, where the bare `@barmark/sync/timing` goes
+  through Node's own resolution.
+
 ### A hold worked out in file order is wrong in played order (2026-11-06, @barmark/musicxml)
 
 - **The symptom.** Random lyric scores (the Task 8 reviewer's lyric

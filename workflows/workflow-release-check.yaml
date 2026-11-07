@@ -15,7 +15,7 @@ inputs:
   properties:
     pkg:
       type: string
-      enum: [barmark, render, musicxml, cli]
+      enum: [barmark, render, musicxml, sync, cli]
       default: barmark
       description: The workspace package whose package and release checks run
     allowDirty:
