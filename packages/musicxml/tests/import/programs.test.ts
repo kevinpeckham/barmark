@@ -82,10 +82,13 @@ describe("MuseScore 4", () => {
 		expect(r.diagnostics).toEqual(diagnostics);
 	});
 
-	test("the lead sheet's .mxl reads as its .musicxml does", async () => {
-		const xml = await readMxl(new Uint8Array(readFileSync(fixture("lead-sheet.mxl"))));
-		expect(importMusicXml(xml)).toEqual(importMusicXml(text("lead-sheet.musicxml")));
-	});
+	test.each([...FILES.map(([name]) => name), "hymn"])(
+		"%s.mxl reads as its .musicxml does",
+		async (name) => {
+			const xml = await readMxl(new Uint8Array(readFileSync(fixture(`${name}.mxl`))));
+			expect(importMusicXml(xml)).toEqual(importMusicXml(text(`${name}.musicxml`)));
+		},
+	);
 
 	test("the band's bass comes in as note sets at sounding pitch with --part", () => {
 		const r = sound(importMusicXml(text("band.musicxml"), { part: "El. B." }));
@@ -130,4 +133,13 @@ describe("Dorico 6", () => {
 		expect(r.text).toBe(text(`dorico-${name}.chart.md`));
 		expect(r.diagnostics).toEqual(diagnostics);
 	});
+
+	// Dorico's .mxl has no mimetype entry, and may list the score before META-INF/.
+	test.each(DORICO.map(([name]) => name))(
+		"dorico-%s.mxl reads as its .musicxml does",
+		async (name) => {
+			const xml = await readMxl(new Uint8Array(readFileSync(fixture(`dorico-${name}.mxl`))));
+			expect(importMusicXml(xml)).toEqual(importMusicXml(text(`dorico-${name}.musicxml`)));
+		},
+	);
 });

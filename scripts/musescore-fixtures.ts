@@ -1,7 +1,7 @@
 /**
  * Regenerates the MuseScore files the import tests read
  * (packages/musicxml/tests/fixtures/import/): each `.mscx` source we wrote,
- * converted by MuseScore 4 to `.musicxml` (the lead sheet also to a
+ * converted by MuseScore 4 to `.musicxml` (and to a
  * compressed `.mxl`), and each one's import as its expected `.chart.md`,
  * to read over before committing. It runs on the VM only, where `~/.local/bin/mscore`
  * runs MuseScore's AppImage under `xvfb-run` (FINDINGS.md); CI reads the
@@ -21,10 +21,10 @@ const DIR = fileURLToPath(new URL("../packages/musicxml/tests/fixtures/import/",
 /** Each source and the formats it is converted to. */
 const SOURCES: [string, string[]][] = [
 	["lead-sheet", ["musicxml", "mxl"]],
-	["comping-guitar", ["musicxml"]],
-	["piano", ["musicxml"]],
-	["band", ["musicxml"]],
-	["hymn", ["musicxml"]],
+	["comping-guitar", ["musicxml", "mxl"]],
+	["piano", ["musicxml", "mxl"]],
+	["band", ["musicxml", "mxl"]],
+	["hymn", ["musicxml", "mxl"]],
 ];
 
 /** Converts one file; MuseScore prints Qt warnings and may exit 0 on failure, so the output file decides. */
