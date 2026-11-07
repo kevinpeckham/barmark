@@ -15,6 +15,8 @@ const bar = (index: number): BarInfo => ({
 	rehearsal: null,
 	directives: null,
 	textLines: [],
+	leadLines: [],
+	footLines: [],
 	words: [],
 	question: false,
 	before: [],

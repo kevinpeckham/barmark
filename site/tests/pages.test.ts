@@ -2,9 +2,10 @@ import { beforeAll, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
+import { exportMusicXml, importMusicXml } from "@barmark/musicxml";
 import { parseChart, printChart, transposeChart } from "barmark";
 import { LINKS } from "../src/lib/site.ts";
-import { CLI_CI, SAMPLE_CHART, USE_CLI } from "../src/lib/start.ts";
+import { CLI_CI, SAMPLE_CHART, USE_CLI, USE_MUSICXML } from "../src/lib/start.ts";
 import { build, page, site } from "./built.ts";
 
 beforeAll(build, 120_000);
@@ -22,6 +23,18 @@ describe("the sample chart Get Started shows", () => {
 	test("transposes and prints as the page says", () => {
 		expect(transposeChart(SAMPLE_CHART, { to: "E" }).text).toContain("|: E | B | C#m | A :|");
 		expect(printChart("| D / A / |")).toBe("| D A |\n");
+	});
+});
+
+describe("the MusicXML code Get Started shows", () => {
+	test("exports the sample chart and imports it back as the page says", () => {
+		const exported = exportMusicXml(SAMPLE_CHART);
+		if (!exported.ok) throw new Error(exported.diagnostics.map((d) => d.message).join("; "));
+		expect(exported.xml).toContain("<score-partwise");
+		const imported = importMusicXml(exported.xml);
+		expect(imported.text).toStartWith("# Example Song\nkey: D, tempo: 145\n\n## Verse\n");
+		expect(USE_MUSICXML).toContain('"# Example Song\\nkey: D, tempo: 145\\n\\n## Verse\\n…"');
+		expect(imported.diagnostics.filter((d) => d.severity === "error")).toEqual([]);
 	});
 });
 
@@ -90,12 +103,16 @@ describe("Get Started, prerendered", () => {
 			"2. Read it with the parser",
 			"3. Render it as HTML",
 			"4. Or use the web component",
-			"5. Check charts from the terminal",
+			"5. Convert to and from MusicXML",
+			"6. Check charts from the terminal",
 		]);
 		const page = text(doc().querySelector("main")) ?? "";
 		for (const line of [
 			"npm install barmark",
 			"npm install @barmark/render",
+			"npm install @barmark/musicxml",
+			"exportMusicXml(",
+			"importMusicXml(",
 			'import "@barmark/render/element";',
 			"<barmark-chart",
 			"renderChart(",

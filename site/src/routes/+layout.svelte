@@ -26,7 +26,6 @@ const edwin = `<style data-barmark-font>${fontFaceCss("/fonts/Edwin-Roman.otf")}
 
 <svelte:head>
 	{@html edwin}
-	<link rel="icon" href="/favicon.svg" type="image/svg+xml" />
 	<!-- Every page shares one card; scripts/og.ts draws it. -->
 	<meta property="og:image" content="{LINKS.origin}/og.png" />
 	<meta property="og:image:width" content="1200" />

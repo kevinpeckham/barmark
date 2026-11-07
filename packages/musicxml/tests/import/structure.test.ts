@@ -43,6 +43,25 @@ describe("what it reads", () => {
 		expect(pick(bars, "words")).toEqual([[], []]);
 	});
 
+	test("in another program's file words below before the heading still follow it; words below after the notes close the bar", () => {
+		const bold = words("Verse", ' font-weight="bold"');
+		const below = (text: string) => words(text, "", "below");
+		const { bars } = structureOf(
+			xml`${measure(1, start() + below("first") + bold + below("then") + whole + below("last"))}`,
+		);
+		expect(bars[0]?.heading).toBe("Verse");
+		expect(bars[0]?.leadLines).toEqual([]);
+		expect(bars[0]?.textLines).toEqual(["first", "then"]);
+		expect(bars[0]?.footLines).toEqual(["last"]);
+	});
+
+	test("the export's text before a heading and at a section's foot", () => {
+		const { bars } = fromChart("intro\n## Verse\n| C | G |\nWatch\n## Chorus\n| F |");
+		expect(pick(bars, "leadLines")).toEqual([["intro"], [], []]);
+		expect(pick(bars, "textLines")).toEqual([[], [], []]);
+		expect(pick(bars, "footLines")).toEqual([[], ["Watch"], []]);
+	});
+
 	test("other words are words on the bar, at their beat", () => {
 		const { bars } = fromChart('| "solo" C "fill" G | D "out" |');
 		expect(bars[0]?.words).toEqual([

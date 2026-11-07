@@ -21,6 +21,25 @@ Releases follow the process in [RELEASING.md](RELEASING.md).
 - `transposeChart`'s keyless spelling and its key-signature helpers now live in
   `src/chart/keys.ts`, shared with `spellPitch`; behaviour is unchanged.
 
+## [0.18.0] - 2026-11-07
+
+### Fixed
+
+- **A cell of many quoted words parses in linear time.** Each word
+  re-read the whole cell and re-split what came before it, so 20,000
+  words in one bar took about 25 seconds; `barmark check` on a hostile
+  chart, and the MusicXML import's check of what it wrote, waited on it.
+- **A text line starting `constructor:` or `__proto__:` gets no near-miss
+  warning.** The directive and credit near misses were looked up on plain
+  objects, so those words found `Object.prototype` and suggested
+  "function Object() { [native code] }:".
+
+### Changed
+
+- **`title: X` warns as a near miss, suggesting `# X`** (Kevin's ruling,
+  2026-11-07, issue #173), as `meter:` suggests `time:`. A chart's title
+  is its `#` line; the `title:` line stays text and prints as written.
+
 ## [0.17.1] - 2026-11-07
 
 A parse is plain data that owns its objects, and the README says what it
@@ -558,7 +577,8 @@ The first working release: the reference parser and printer for the
 
 - **A placeholder package that holds the `barmark` name** while the spec and parser are written.
 
-[Unreleased]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.17.1...HEAD
+[Unreleased]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.18.0...HEAD
+[0.18.0]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.17.1...barmark-v0.18.0
 [0.17.1]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.17.0...barmark-v0.17.1
 [0.17.0]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.16.0...barmark-v0.17.0
 [0.16.0]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.15.0...barmark-v0.16.0

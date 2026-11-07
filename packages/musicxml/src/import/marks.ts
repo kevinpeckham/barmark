@@ -26,7 +26,12 @@ export type TempoMarks = {
 export type MeasureMarks = {
 	headings: string[];
 	rehearsals: string[];
+	/** Text lines before the bar, after its heading. */
 	textLines: string[];
+	/** Text lines before the bar's heading: words below written ahead of it. */
+	leadLines: string[];
+	/** Text lines after the bar: words below written after its notes. */
+	footLines: string[];
 	words: { text: string; at: Frac }[];
 	cells: Cell[];
 	/** The jump a `<sound>` makes with no words to name it, its `al` still to settle. */
@@ -39,15 +44,39 @@ export type MeasureMarks = {
 /** Text as barmark writes it: no-break spaces (the export's after a leading "A") plain, whitespace collapsed. */
 const tidy = (text: string) => text.replace(/\s+/g, " ").trim();
 
-/** The measure, its part's name, and whether the file is the export's own. */
-type Context = { m: ReadMeasure; part: string; losses: Losses; own: boolean };
+/** The measure, its part's name, whether the file is the export's own, the marks written ahead of its heading, and whether it has a `<swing>`. */
+type Context = {
+	m: ReadMeasure;
+	part: string;
+	losses: Losses;
+	own: boolean;
+	ahead: Set<Mark>;
+	swing: boolean;
+};
 
 const atStart = (mark: Mark) => cmp(mark.at, ZERO) === 0;
+
+/** Bold words over the start of the bar: a heading. */
+const isHeading = (mark: Mark) =>
+	mark.kind === "words" && mark.placement !== "below" && mark.bold && atStart(mark);
+
+/**
+ * A text line's place: before the heading, after the notes, or before the
+ * notes. Only the export's own files say "before the heading" by writing
+ * the line first; another program's direction order means nothing.
+ */
+function textPlace(mark: Mark, c: Context): "leadLines" | "footLines" | "textLines" {
+	if (atStart(mark) && c.ahead.has(mark)) return "leadLines";
+	const end = cmp(c.m.length, ZERO) > 0 && cmp(mark.at, c.m.length) >= 0;
+	return end ? "footLines" : "textLines";
+}
 
 const blank = (): MeasureMarks => ({
 	headings: [],
 	rehearsals: [],
 	textLines: [],
+	leadLines: [],
+	footLines: [],
 	words: [],
 	cells: [],
 	soundJump: null,
@@ -97,16 +126,16 @@ function feelText(text: string): string | null {
 }
 
 /** The words the export writes beside a `<swing>`: the feel's name, which says its amount exactly. */
-function feelWords(text: string, m: ReadMeasure, out: MeasureMarks): boolean {
-	if (!m.marks.some((k) => k.kind === "swing")) return false;
+function feelWords(text: string, c: Context, out: MeasureMarks): boolean {
+	if (!c.swing) return false;
 	const feel = feelText(text);
 	if (feel !== null) out.feel = feel;
 	return feel !== null;
 }
 
 /** Words that stand for something else: a repeat's count, a direction, a tempo change, a feel. */
-function meaningful(mark: Mark, text: string, m: ReadMeasure, out: MeasureMarks): boolean {
-	if (repeatWords(text, m) || tempoWords(text, out) || feelWords(text, m, out)) return true;
+function meaningful(mark: Mark, text: string, c: Context, out: MeasureMarks): boolean {
+	if (repeatWords(text, c.m) || tempoWords(text, out) || feelWords(text, c, out)) return true;
 	const direction = directionOf(text);
 	if (direction) addCell(out, direction.kind, printDirection(direction), atStart(mark));
 	return direction !== null;
@@ -114,21 +143,25 @@ function meaningful(mark: Mark, text: string, m: ReadMeasure, out: MeasureMarks)
 
 /** Words over the bar: a heading, the export's `?`, or what they stand for, else words on the bar. */
 function wordsAbove(mark: Mark, text: string, out: MeasureMarks, c: Context): void {
-	if (mark.bold && atStart(mark)) out.headings.push(text);
+	if (isHeading(mark)) out.headings.push(text);
 	else if (text === "?" && c.m.harmonies.length === 0) out.question = true;
 	// The export writes its own marks over the whole score (`system`): in its
 	// files other words are a bar's words, whatever they say.
-	else if ((c.own && !mark.system) || !meaningful(mark, text, c.m, out))
+	else if ((c.own && !mark.system) || !meaningful(mark, text, c, out))
 		out.words.push({ text, at: mark.at });
 }
 
-/** Words: below the staff a text line (italic, a `###` note), else read as words above. */
+/**
+ * Words: below the staff a text line (italic, a `###` note), before the
+ * heading when written ahead of it and after the bar when written after its
+ * notes; else read as words above.
+ */
 function readWords(mark: Mark, out: MeasureMarks, c: Context): void {
 	const text = tidy(mark.text);
 	if (text === "") return;
 	const italic = mark.node.attrs["font-style"] === "italic";
 	if (mark.placement !== "below") wordsAbove(mark, text, out, c);
-	else out.textLines.push(italic ? `### ${text}` : text);
+	else out[textPlace(mark, c)].push(italic ? `### ${text}` : text);
 }
 
 const UNIT_QUARTERS: Record<string, number> = {
@@ -232,7 +265,10 @@ export function readMarks(
 	own: boolean,
 ): MeasureMarks {
 	const out = blank();
-	const c: Context = { m, part, losses, own };
+	// Built once: working these out per word would be quadratic in the marks.
+	const ahead = new Set(own ? m.marks.slice(0, Math.max(m.marks.findIndex(isHeading), 0)) : []);
+	const swing = m.marks.some((k) => k.kind === "swing");
+	const c: Context = { m, part, losses, own, ahead, swing };
 	const words = m.marks.filter((k) => k.kind === "words");
 	for (const mark of [...words, ...m.marks.filter((k) => k.kind !== "words")])
 		READERS[mark.kind](mark, out, c);

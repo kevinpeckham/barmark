@@ -13,8 +13,8 @@ describe("the site builds", () => {
 	test("the packages come from npm at exact versions", () => {
 		const pkg = JSON.parse(readFileSync(join(site, "package.json"), "utf8"));
 		expect(pkg.dependencies).toEqual({
-			barmark: "0.17.1",
-			"@barmark/render": "0.16.0",
+			barmark: "0.18.0",
+			"@barmark/render": "0.16.1",
 			"@vercel/analytics": "2.0.1",
 			"@vercel/speed-insights": "2.0.0",
 		});
@@ -65,11 +65,14 @@ describe("the site builds", () => {
 			expect(html.match(/font-family:\s*"?barmark Edwin"?\s*;/g)?.length).toBe(1);
 		}
 	});
-	test("every page names an icon that ships, so browsers don't ask for /favicon.ico", () => {
+	test("every page names its icons, each one shipped: a 48px .ico for Google, the SVG and a touch icon", () => {
 		for (const path of ["index.html", "syntax.html", "try.html", "get-started.html", "faq.html"]) {
-			const href = page(path).querySelector('link[rel="icon"]')?.getAttribute("href") ?? "";
-			expect(href).toStartWith("/");
-			expect(existsSync(join(out, href))).toBe(true);
+			const links = [
+				...page(path).querySelectorAll('link[rel="icon"], link[rel="apple-touch-icon"]'),
+			];
+			const hrefs = links.map((l) => l.getAttribute("href"));
+			expect(hrefs).toEqual(["/favicon.ico", "/favicon.svg", "/apple-touch-icon.png"]);
+			for (const href of hrefs) expect(existsSync(join(out, href ?? ""))).toBe(true);
 		}
 	});
 	test("no page keeps its URL with SvelteKit's deprecated replaceState", () => {

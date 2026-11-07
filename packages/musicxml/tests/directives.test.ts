@@ -68,8 +68,27 @@ describe("text lines", () => {
 		);
 		expect(ms[1]).toContain('<words font-style="italic">watch for the cue</words>');
 	});
-	test("text after the last bar goes below the last bar", () => {
-		expect(measures(xmlOf("| G |\nfade out"))[0]).toContain("<words>fade out</words>");
+	test("text after the last bar goes below the last bar, after its notes", () => {
+		const [m = ""] = measures(xmlOf("| G |\nfade out"));
+		expect(m).toContain("<words>fade out</words>");
+		expect(m.indexOf("fade out")).toBeGreaterThan(m.lastIndexOf("</note>"));
+	});
+	test("text before the first heading is written before the heading", () => {
+		const [m = ""] = measures(xmlOf("title: Lead Sheet Test\n## Verse\n| G |"));
+		const heading = m.indexOf('<words font-weight="bold">Verse</words>');
+		expect(heading).toBeGreaterThan(-1);
+		expect(m.indexOf("title: Lead Sheet Test")).toBeGreaterThan(-1);
+		expect(m.indexOf("title: Lead Sheet Test")).toBeLessThan(heading);
+	});
+	test("text after the heading is written after it", () => {
+		const [m = ""] = measures(xmlOf("## Verse\nla la\n| G |"));
+		expect(m.indexOf("la la")).toBeGreaterThan(m.indexOf(">Verse</words>"));
+	});
+	test("text at a section's foot goes below its last bar, after the notes, not the next section's", () => {
+		const ms = measures(xmlOf("## Verse\n| G | C |\nWatch\n## Chorus\n| D |"));
+		expect(ms[1]).toContain("<words>Watch</words>");
+		expect(ms[1]?.indexOf("Watch")).toBeGreaterThan(ms[1]?.lastIndexOf("</note>") ?? 0);
+		expect(ms[2]).not.toContain("Watch");
 	});
 	test("a replay's own lyric lines go below its first bar", () => {
 		const ms = measures(
