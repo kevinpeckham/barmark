@@ -17,7 +17,8 @@ Requires `barmark` 0.19.0 (its key and spelling exports: `keyFromText`, `convent
   `%`, lays the bars out `barsPerLine` to a line, and never throws:
   problems come back as `BuildDiagnostic`s with twenty codes. Input is
   bounded: a symbol over 64 characters or 16 notes is `?`, a section name is
-  cut to 200 characters, and a build repairs at most 2,000 section names.
+  cut to 200 characters, and a build parses section names at most 2,000
+  times, dropping any name past that which would need a parse.
 - **Titles, sections, changes, tempo and pickups** in the builder: a
   `title`; `sections`, snapped to the nearest bar and written out in full,
   with names checked so they read back as one plain section; `key`,

@@ -176,8 +176,8 @@ showed the rule needed refining.
   every overlay was written in full at each attack.
 - **The fix.** `readsPlain` reads the document only (`readDocument`, no
   expansion) and marks are stripped again after each dropped word;
-  names of plain letters skip the parse, and a build parses at most 2,000
-  names (`packages/sync/src/build/marks.ts`). Symbols over 64 characters or 16
+  names of plain letters skip the parse, and a build parses names at most
+  2,000 times, then drops (never renames) any name that still needs one (`packages/sync/src/build/marks.ts`). Symbols over 64 characters or 16
   notes are `?` (`packages/sync/src/build/spell.ts`), which bounds the chart
   at a fixed factor of the slots with no extra budget. The counts and
   sizes are pinned in `scale.test.ts`; a timing ratio alone would not have

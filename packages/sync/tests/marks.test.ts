@@ -111,6 +111,20 @@ describe("sections", () => {
 		expect(r2.list[0]?.path).toBe("sections[0]");
 	});
 
+	test("past the parse budget, a name that would need the parser is dropped whole, never renamed", () => {
+		const report = createReport();
+		const budget = { left: 0 };
+		const names = ["Verse 2", "Intro (slow)", "2nd Verse", "Chorus"];
+		expect(names.map((n, i) => sectionName(n, report, `sections[${i}]`, budget))).toEqual([
+			null,
+			null,
+			null,
+			"Chorus",
+		]);
+		expect(report.list.map((d) => d.code)).toEqual(Array(3).fill("section-unnamed"));
+		expect(report.list.every((d) => d.message.startsWith("Too many section names"))).toBe(true);
+	});
+
 	test("two sections on one bar: the later wins", () => {
 		const r = build({
 			sections: [

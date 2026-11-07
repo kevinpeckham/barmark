@@ -84,9 +84,9 @@ A few things the builder settles for you:
 
 A label or symbol over 64 characters, or a note set of more than 16
 notes, is not read: it is written `?` with `label-unknown`. Section names
-are cut to 200 characters, and a build checks at most 2,000 names that
-need a parse (names of plain letters need none); past that, such names
-are dropped with `section-unnamed`. They keep the work and the chart
+are cut to 200 characters, and a build parses section names at most
+2,000 times (names of plain letters need none); past that, a name that
+would need a parse is dropped whole with `section-unnamed`, never renamed. They keep the work and the chart
 linear in the input.
 
 ### Diagnostics

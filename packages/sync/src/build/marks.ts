@@ -109,13 +109,20 @@ export function sectionName(
 	let text = cutName(original);
 	text = stripMarks(text);
 	text = text.replace(/\s*(?:->|→)\s*/g, " - ").trim();
-	while (text !== "" && !(isLetters(text) || (budget.left-- > 0 && readsPlain(text))))
+	while (text !== "" && !isLetters(text)) {
+		// Past the budget a name the parser would have to read is dropped whole, never renamed.
+		if (budget.left-- <= 0) {
+			report.warning(
+				"section-unnamed",
+				"Too many section names needed repair; this one is dropped",
+				{
+					path,
+				},
+			);
+			return null;
+		}
+		if (readsPlain(text)) break;
 		text = stripMarks(text.replace(/\s*\S+$/, ""));
-	if (text === "" && budget.left < 0) {
-		report.warning("section-unnamed", "Too many section names needed repair; this one is dropped", {
-			path,
-		});
-		return null;
 	}
 	if (text === "") {
 		report.warning("section-unnamed", "A section has no name once its marks are removed; dropped", {
