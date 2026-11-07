@@ -19,6 +19,10 @@ package uses [semantic versioning](https://semver.org/).
   files; another program's direction order isn't read as placement), and
   words below after a measure's notes as text after its bar. Text at the foot of a section
   whose passes are written out no longer moves to the section's first bar.
+- **Many words in one measure import in linear time.** Words above the
+  staff each looked through the whole measure for a `<swing>`, so a file
+  with 50,000 words in a bar took minutes; a measure's swing, and the
+  text lines ahead of its heading, are now worked out once.
 
 ## [0.6.0] - 2026-11-07
 

@@ -11,6 +11,10 @@ Releases follow the process in [RELEASING.md](RELEASING.md).
 
 ### Fixed
 
+- **A cell of many quoted words parses in linear time.** Each word
+  re-read the whole cell and re-split what came before it, so 20,000
+  words in one bar took about 25 seconds; `barmark check` on a hostile
+  chart, and the MusicXML import's check of what it wrote, waited on it.
 - **A text line starting `constructor:` or `__proto__:` gets no near-miss
   warning.** The directive and credit near misses were looked up on plain
   objects, so those words found `Object.prototype` and suggested

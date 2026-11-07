@@ -132,6 +132,7 @@ function barInfo(
 	// The export writes text lines in every part, the heading in the top part alone.
 	// Known limit: the same text before and after a heading collapses to the one before.
 	const leadLines = once(marks.flatMap((m) => m.leadLines));
+	const lead = new Set(leadLines);
 	const words = marks.flatMap((m) => m.words.map((w) => ({ text: w.text, at: beatOf(w.at, own) })));
 	return {
 		index: i,
@@ -139,9 +140,7 @@ function barInfo(
 		meter: read.oneBar,
 		heading,
 		rehearsal,
-		textLines: once([...extra, ...marks.flatMap((m) => m.textLines)]).filter(
-			(t) => !leadLines.includes(t),
-		),
+		textLines: once([...extra, ...marks.flatMap((m) => m.textLines)]).filter((t) => !lead.has(t)),
 		leadLines,
 		footLines: once(marks.flatMap((m) => m.footLines)),
 		words: once(words, (w) => `${w.at}|${w.text}`),

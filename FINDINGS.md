@@ -1160,3 +1160,12 @@ the work instead of timing it: it wraps the marks in a `Proxy`, counts
 element reads, and fails at n²/2 (2,007,003 reads for 2,000 lines;
 under 10 per mark now). Where a quadratic term is cheap per step,
 count the steps.
+**Then:** a review profiling the same file found two more per-word
+scans the finding didn't name: words above the staff looked for a
+`<swing>` in the whole measure (`marks.ts`, now `Context.swing`), and
+text after a heading was compared with every line before it
+(`structure.ts`, now a `Set`). Worst was the barmark parser:
+`readWords` re-read the whole cell and re-split what came before each
+quoted word, and the import's self-check parses what it writes. The
+security report named one site; the class was "per word, look at all
+the words". Search for the class, not the line.

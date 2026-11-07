@@ -44,8 +44,15 @@ export type MeasureMarks = {
 /** Text as barmark writes it: no-break spaces (the export's after a leading "A") plain, whitespace collapsed. */
 const tidy = (text: string) => text.replace(/\s+/g, " ").trim();
 
-/** The measure, its part's name, whether the file is the export's own, and the marks written ahead of its heading. */
-type Context = { m: ReadMeasure; part: string; losses: Losses; own: boolean; ahead: Set<Mark> };
+/** The measure, its part's name, whether the file is the export's own, the marks written ahead of its heading, and whether it has a `<swing>`. */
+type Context = {
+	m: ReadMeasure;
+	part: string;
+	losses: Losses;
+	own: boolean;
+	ahead: Set<Mark>;
+	swing: boolean;
+};
 
 const atStart = (mark: Mark) => cmp(mark.at, ZERO) === 0;
 
@@ -119,16 +126,16 @@ function feelText(text: string): string | null {
 }
 
 /** The words the export writes beside a `<swing>`: the feel's name, which says its amount exactly. */
-function feelWords(text: string, m: ReadMeasure, out: MeasureMarks): boolean {
-	if (!m.marks.some((k) => k.kind === "swing")) return false;
+function feelWords(text: string, c: Context, out: MeasureMarks): boolean {
+	if (!c.swing) return false;
 	const feel = feelText(text);
 	if (feel !== null) out.feel = feel;
 	return feel !== null;
 }
 
 /** Words that stand for something else: a repeat's count, a direction, a tempo change, a feel. */
-function meaningful(mark: Mark, text: string, m: ReadMeasure, out: MeasureMarks): boolean {
-	if (repeatWords(text, m) || tempoWords(text, out) || feelWords(text, m, out)) return true;
+function meaningful(mark: Mark, text: string, c: Context, out: MeasureMarks): boolean {
+	if (repeatWords(text, c.m) || tempoWords(text, out) || feelWords(text, c, out)) return true;
 	const direction = directionOf(text);
 	if (direction) addCell(out, direction.kind, printDirection(direction), atStart(mark));
 	return direction !== null;
@@ -140,7 +147,7 @@ function wordsAbove(mark: Mark, text: string, out: MeasureMarks, c: Context): vo
 	else if (text === "?" && c.m.harmonies.length === 0) out.question = true;
 	// The export writes its own marks over the whole score (`system`): in its
 	// files other words are a bar's words, whatever they say.
-	else if ((c.own && !mark.system) || !meaningful(mark, text, c.m, out))
+	else if ((c.own && !mark.system) || !meaningful(mark, text, c, out))
 		out.words.push({ text, at: mark.at });
 }
 
@@ -258,9 +265,10 @@ export function readMarks(
 	own: boolean,
 ): MeasureMarks {
 	const out = blank();
-	// Built once: looking each text line up in the marks would be quadratic in them.
+	// Built once: working these out per word would be quadratic in the marks.
 	const ahead = new Set(own ? m.marks.slice(0, Math.max(m.marks.findIndex(isHeading), 0)) : []);
-	const c: Context = { m, part, losses, own, ahead };
+	const swing = m.marks.some((k) => k.kind === "swing");
+	const c: Context = { m, part, losses, own, ahead, swing };
 	const words = m.marks.filter((k) => k.kind === "words");
 	for (const mark of [...words, ...m.marks.filter((k) => k.kind !== "words")])
 		READERS[mark.kind](mark, out, c);
