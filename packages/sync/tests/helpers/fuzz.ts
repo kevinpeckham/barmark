@@ -99,12 +99,16 @@ function runOf(r: Rand, lo: number, span: number, unit: number): Run {
 /** The same two chords in every bar of the grid, so that bars repeat and `%` is in play. */
 function patternRuns(bars: number[]): { runs: Run[] } {
 	const sorted = bars.filter((x) => Number.isFinite(x)).sort((a, b) => a - b);
+	// On an even count, each bar's last quarter is left unheard, so a repeated
+	// bar holds a `?`: the case that must never be written as `%`. Chosen from
+	// the grid, not the random stream, so every other seed builds as before.
+	const gap = sorted.length % 2 === 0;
 	const runs = sorted.slice(0, -1).flatMap((start, i) => {
 		const end = sorted[i + 1] as number;
 		const mid = (start + end) / 2;
 		return [
 			{ start, end: mid, label: "C:maj" },
-			{ start: mid, end, label: "G:maj" },
+			{ start: mid, end: gap ? mid + (end - mid) / 2 : end, label: "G:maj" },
 		];
 	});
 	return { runs };
