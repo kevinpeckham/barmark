@@ -20,7 +20,7 @@ package uses [semantic versioning](https://semver.org/).
   `meter` and `tempo` `changes`, written as directive lines before their
   bar (a run that crosses a key change is cut at the change's bar and each
   piece is spelled in its own key); a `tempo`, given or derived as the
-  median beat of the grid, with a `tempo-grid-disagree` warning when it is
+  median beat of the grid (half-length and double-length bars folded first), with a `tempo-grid-disagree` warning when it is
   far from the grid's; and a `pickup`, counted as bar 1 of the timing map.
 - **The timing map** (`@barmark/sync/timing`): the `TimingMap` format and
   its helpers `chartHash`, `checkTimingMap`, `barAt` and `secondsAtBar`.

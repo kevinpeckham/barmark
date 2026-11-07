@@ -1,5 +1,5 @@
 # Eat All the Clocks
-key: Em, time: 4/4, tempo: 130
+key: Em, time: 4/4, tempo: 120
 | Am | Em | / | / |
 | / | / | / | / |
 | / | / | / | / |
@@ -21,4 +21,4 @@ key: Em, time: 4/4, tempo: 130
 | Esus4 | / | D | A |
 | Esus4 | Em | D | A |
 | Em | / | / | / |
-| / | N.C. |
+| / | / |

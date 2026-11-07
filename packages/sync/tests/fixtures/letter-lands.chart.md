@@ -1,5 +1,5 @@
 # Letter Lands
-key: F#, time: 4/4, tempo: 141
+key: F#, time: 4/4, tempo: 132
 | F# | / | / | F#7 |
 | / | / | / | / |
 | / | / | / / E F# | / / / B |

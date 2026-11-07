@@ -1,5 +1,5 @@
 # Eat All the Clocks
-key: Em, time: 4/4, tempo: 130
+key: Em, time: 4/4, tempo: 120
 | Em Am | Em / / A | / Em | / A |
 | Em / / A | Em Am | % | % |
 | % | % | Em | / / Am Em |

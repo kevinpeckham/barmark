@@ -94,18 +94,24 @@ export function sectionName(name: unknown, report: Report, path: string): string
 	return text;
 }
 
-/** 60 divided by the median beat length of the bars (a pickup bar is not counted). */
+const median = (sorted: number[]): number => {
+	const mid = sorted.length >> 1;
+	return sorted.length % 2
+		? (sorted[mid] as number)
+		: ((sorted[mid - 1] as number) + (sorted[mid] as number)) / 2;
+};
+
+/**
+ * 60 divided by the median beat length of the bars (a pickup bar is not
+ * counted). A bar under 0.6 times the plain median counts as half a bar (its
+ * beat length doubled), one over 1.6 times as two bars (halved), before the
+ * median is taken: a grid with many half bars would otherwise drag it.
+ */
 export function gridTempo(bars: BarSpan[]): number {
-	const beats = bars
-		.filter((b) => !b.pickup)
-		.map((b) => (b.end - b.start) / b.beats)
-		.sort((a, b) => a - b);
-	const mid = beats.length >> 1;
-	const median =
-		beats.length % 2
-			? (beats[mid] as number)
-			: ((beats[mid - 1] as number) + (beats[mid] as number)) / 2;
-	return 60 / median;
+	const beats = bars.filter((b) => !b.pickup).map((b) => (b.end - b.start) / b.beats);
+	const plain = median(beats.toSorted((a, b) => a - b));
+	const folded = beats.map((x) => (x < plain * 0.6 ? x * 2 : x > plain * 1.6 ? x / 2 : x));
+	return 60 / median(folded.sort((a, b) => a - b));
 }
 
 type Placed<T> = { i: number; start: Seconds; bar: number; value: T };

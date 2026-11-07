@@ -13,8 +13,9 @@
  * audio, nothing derived from audio but the labels. CI reads the checked-in
  * outputs and never runs this.
  */
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
-import { homedir } from "node:os";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { homedir, tmpdir } from "node:os";
+import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { chartFromDetections, type Detections } from "../packages/sync/src/index.js";
 
@@ -54,10 +55,10 @@ function loadRaw(file: string): Float32Array {
 }
 
 /** The app's pipeline: CQT, the ONNX model, smoothing; the raw runs in frames. */
-async function detect(slug: string): Promise<{ runs: Run[]; frames: number }> {
+async function detect(slug: string, scratch: string): Promise<{ runs: Run[]; frames: number }> {
 	const samples = loadRaw(`${BENCH}corpus-mmkk/${slug}/mix.mp3.22050.f32le.raw`);
 	const { frames, features } = cqtMod.chordminiFeatures(samples, plan);
-	const logits = await inferMod.chordminiLogits(features, frames, "/tmp");
+	const logits = await inferMod.chordminiLogits(features, frames, scratch);
 	const indices = smoothMod.chordminiIndices(logits, frames) as Int32Array;
 	return { runs: runsMod.chordminiRunsOf(indices, config.chordVocab) as Run[], frames };
 }
@@ -71,7 +72,7 @@ function perBar(runs: Run[], frames: number, barStarts: number[]): string[] {
 		runs: runs.map((r) => ({ start: r.start, end: r.end, chord: symbols[r.label] || "N.C." })),
 	};
 	const out = new Array<string>(bars).fill("N.C.");
-	const segs = barsMod.chordminiBarChords(stored, barStarts.slice(0, bars)) as {
+	const segs = barsMod.chordminiBarChords(stored, barStarts) as {
 		bar: number;
 		bars: number;
 		chord: string;
@@ -86,9 +87,11 @@ function write(name: string, text: string): void {
 	console.log(name);
 }
 
+const scratch = mkdtempSync(join(tmpdir(), "barmark-sync-fixtures-"));
 for (const song of SONGS) {
-	const barStarts = (study.songs[song.slug] ?? { barStarts: [] }).barStarts;
-	const { runs, frames } = await detect(song.slug);
+	const barStarts = study.songs[song.slug]?.barStarts;
+	if (!barStarts) throw new Error(`${song.slug} is missing from results/study19.json`);
+	const { runs, frames } = await detect(song.slug, scratch);
 	const base = { title: song.title, key: song.key, meter: song.meter, grid: { bars: barStarts } };
 
 	const framed: Detections = {
@@ -119,3 +122,4 @@ for (const song of SONGS) {
 		for (const d of built.diagnostics) console.log(`  ${d.severity} ${d.code} ${d.message}`);
 	}
 }
+rmSync(scratch, { recursive: true, force: true });

@@ -62,8 +62,10 @@ for the bar before bar 1. The timing map counts a pickup as bar 1.
 
 A few things the builder settles for you:
 
-- A derived tempo is the median beat of the grid, rounded, so a few
-  stretched bars don't move it.
+- A derived tempo is the median beat of the grid, rounded. Before the
+  median, a bar under 0.6 times the plain median counts as half a bar and
+  one over 1.6 times as two, so a grid that marks half-length bars still
+  gives the song's tempo.
 - A run that crosses a key change is cut at the change's bar, after
   overlapping runs are settled, and each piece is spelled in the key in
   force where it starts. A chord held across the change is written again

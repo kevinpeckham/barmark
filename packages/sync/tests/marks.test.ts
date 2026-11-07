@@ -257,6 +257,41 @@ describe("tempo", () => {
 		expect(gridTempo(bars)).toBeCloseTo(120, 6);
 	});
 
+	describe("a derived tempo folds half and double bars before the median", () => {
+		const spans = (lengths: number[], pickupFirst = false) =>
+			lengths.map((l, i) => ({
+				start: i,
+				end: i + l,
+				meter: { n: 4, d: 4 },
+				beats: 4,
+				...(pickupFirst && i === 0 ? { pickup: true as const } : {}),
+			}));
+		const mix = (main: number, odd: number, nOdd: number) => [
+			...Array(10 - nOdd).fill(main),
+			...Array(nOdd).fill(odd),
+		];
+
+		test("40% half-length bars among mains near 2.0 s: 120", () => {
+			// Unfolded, the median is the shortest main bar, 1.85 s (130 bpm).
+			expect(gridTempo(spans([1, 1, 1, 1, 1.8, 1.9, 2, 2, 2.1, 2.2]))).toBeCloseTo(120, 6);
+		});
+		test("some double-length bars: the main tempo", () => {
+			expect(gridTempo(spans([4, 4, 4, 4, 1.8, 1.9, 2, 2, 2.1, 2.2]))).toBeCloseTo(120, 6);
+		});
+		test("an even grid is unchanged", () => {
+			expect(gridTempo(spans(mix(2, 2, 0)))).toBeCloseTo(120, 6);
+			expect(gridTempo(spans([2, 2, 2.2]))).toBeCloseTo(120, 6);
+		});
+		test("a pickup is still not counted", () => {
+			expect(gridTempo(spans([0.5, 2, 2, 2], true))).toBeCloseTo(120, 6);
+		});
+		test("the chart says so", () => {
+			const starts = [0, 2, 4, 5, 6, 8, 10, 11, 12, 14, 16];
+			const r = chartFromDetections({ grid: { bars: starts }, meter: "4/4", chords: { runs: [] } });
+			expect(r.chart).toContain("tempo: 120");
+		});
+	});
+
 	test("a tempo far from the grid's warns; one near it does not", () => {
 		expect(codes(build({ tempo: 60 }))).toContain("tempo-grid-disagree");
 		expect(codes(build({ tempo: 60 }))).not.toContain("tempo-unreadable");
