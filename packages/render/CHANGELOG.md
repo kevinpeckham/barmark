@@ -6,6 +6,11 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.16.0] - 2026-11-07
+
+Chord typesetting for drawers other than HTML, a section's bar count,
+and layout in linear time. Needs `barmark` 0.17.0.
+
 ### Added
 
 - **Chord typesetting for other drawers** (issue #151): `typesetChord`,
@@ -403,7 +408,8 @@ that needs no script or as the `<barmark-chart>` web component. Requires
   zoom without sideways scrolling, the element renders and re-renders, and
   a screen reader hears "bar 9: D". Run them with `bun run test:browser`.
 
-[Unreleased]: https://github.com/kevinpeckham/barmark/compare/render-v0.15.1...HEAD
+[Unreleased]: https://github.com/kevinpeckham/barmark/compare/render-v0.16.0...HEAD
+[0.16.0]: https://github.com/kevinpeckham/barmark/compare/render-v0.15.1...render-v0.16.0
 [0.15.1]: https://github.com/kevinpeckham/barmark/compare/render-v0.15.0...render-v0.15.1
 [0.15.0]: https://github.com/kevinpeckham/barmark/compare/render-v0.14.0...render-v0.15.0
 [0.14.0]: https://github.com/kevinpeckham/barmark/compare/render-v0.13.0...render-v0.14.0

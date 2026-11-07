@@ -9,6 +9,11 @@ Releases follow the process in [RELEASING.md](RELEASING.md).
 
 ## [Unreleased]
 
+## [0.17.1] - 2026-11-07
+
+A parse is plain data that owns its objects, and the README says what it
+holds and how to store charts.
+
 ### Fixed
 
 - **A chord's unaltered interval is `alter: 0`, never `-0`,** so a parse
@@ -541,7 +546,8 @@ The first working release: the reference parser and printer for the
 
 - **A placeholder package that holds the `barmark` name** while the spec and parser are written.
 
-[Unreleased]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.17.0...HEAD
+[Unreleased]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.17.1...HEAD
+[0.17.1]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.17.0...barmark-v0.17.1
 [0.17.0]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.16.0...barmark-v0.17.0
 [0.16.0]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.15.0...barmark-v0.16.0
 [0.15.0]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.14.1...barmark-v0.15.0
