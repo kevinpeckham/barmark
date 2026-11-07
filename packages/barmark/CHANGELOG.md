@@ -14,6 +14,10 @@ Releases follow the process in [RELEASING.md](RELEASING.md).
 - **A chord's unaltered interval is `alter: 0`, never `-0`,** so a parse
   written to JSON and read back is the same object, as the README now
   promises.
+- **Two parses share no objects.** A chord's intervals were the chord
+  vocabulary's own objects, shared by every parse in the process, so
+  changing one parse's intervals changed every later parse's. Each chord
+  now has its own.
 
 ### Technical
 

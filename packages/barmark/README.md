@@ -170,12 +170,16 @@ Verses come out in play order: inside a repeat, verse N is pass N.
 ### The parse result, and storing charts
 
 `parseChart` returns plain data: no classes, Maps or functions, so
-`JSON.stringify` and `JSON.parse` give the same object back. It has two
-kinds of field:
+`JSON.stringify` and `JSON.parse` give an equal object back. Inside one
+parse, objects are shared (a bar in `bars` is the same object as in
+`events`, and a `%` bar shares its slots), so treat a parse as read-only;
+`structuredClone(chart)` gives a copy to change. Two parses never share
+an object. It has two kinds of field:
 
 - **The chart as written:** `title`, `parts`, `credits` and `lines`, one
-  entry per source line in order (a bar line, a heading, a directive, a
-  `part:` line, a lyric row, text or a break), each with its line number.
+  entry per source line in order (the title, a bar line, a heading, a
+  directive, a `part:` line, a credit, a lyric row, text, a break, or an
+  invalid bar line kept as written), each with its line number.
 - **The chart as played**, worked out from the written lines:
   - `events` is play order with fermatas and an open repeat kept as
     events.
@@ -190,8 +194,9 @@ kinds of field:
 - **`diagnostics`:** every error and warning, with its line. `parseChart`
   never throws; a chart with errors still parses what it can.
 
-The parse is several dozen times the size of the text (a 600-byte lead
-sheet parses to about 27 KB of JSON), and its shape follows this
+The parse is tens to hundreds of times the size of the text, a few
+kilobytes for each bar played: a 700-byte song whose repeats and replays
+play out parses to about 170 KB of JSON. Its shape follows this
 package's minor versions: 0.17.0, for example, added the `break` and
 `lyrics` line kinds. So:
 
@@ -204,8 +209,10 @@ package's minor versions: 0.17.0, for example, added the `break` and
   diagnostics with `severity: "error"`; store `printChart(text)` to keep
   one spelling of each chart.
 - **Times in a recording** belong beside the chart, not in it: key them
-  by `PlayedBar.index`, which names the same bar however often the chart
-  is reformatted.
+  by `PlayedBar.index`, which names the same bar however the chart is
+  reformatted or its repeats are spelled (`|: :|` or `x2`), until the
+  music itself changes. An open repeat (`x ...`) plays its bars once in
+  `bars`, so its later passes have no index of their own.
 
 ## Develop
 
