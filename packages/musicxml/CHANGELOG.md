@@ -35,6 +35,10 @@ package uses [semantic versioning](https://semver.org/).
   out the bars after a Fine or To Coda that never play, and the text
   lines among them or after them went too. They now come after the last
   bar.
+- **A text line written twice imports twice.** The import read each
+  text line once, to read once the lines the export writes in every
+  part, so two lines alike in a row came back as one. It now keeps as
+  many as one part writes.
 
 ## [0.6.3] - 2026-11-07
 

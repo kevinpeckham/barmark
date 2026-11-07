@@ -150,3 +150,14 @@ test.each([
 ])("a chart written in play order keeps its text lines %s", (_name, text) => {
 	expect(texts(roundTrip(text)).map((t) => t.text)).toEqual(texts(text).map((t) => t.text));
 });
+
+test.each([
+	["after the last bar", "| C |\nhi\nhi\n"],
+	["before the first bar", "hi\nhi\n| C |\n"],
+	[
+		"among bars, two parts",
+		"part: A = Alpha\npart: B = Beta\nA | C |\nB | D |\nhi\nhi\nA | E |\nB | F |\n",
+	],
+])("a text line written twice comes back twice: %s", (_name, text) => {
+	expect(roundTrip(text)).toBe(text);
+});

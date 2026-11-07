@@ -9,6 +9,17 @@ not here.
 
 ## Testing
 
+### Reading a mark once per score also reads a repeated line once (2026-11-07, MusicXML import)
+
+- **The symptom.** `| C |` then `hi` twice imported with one `hi`.
+- **The cause.** The export writes text lines in every part, so the
+  import read each text once (`once` in
+  `packages/musicxml/src/import/structure.ts`), which also collapsed a
+  line one part writes twice.
+- **The fix.** `shared` keeps each line as many times as one part writes
+  it. Found by the round trip's property test, whose generator wrote the
+  same line twice by chance. Dedupe across sources, not within one.
+
 ### Writing bars out in play order drops the text of bars that never play (2026-11-07, @barmark/musicxml)
 
 - **The symptom.** `| E | Fine |`, `| F | D.C. al Fine |`, then `mid`,
