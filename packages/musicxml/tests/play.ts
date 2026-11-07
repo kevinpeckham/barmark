@@ -133,7 +133,10 @@ function skipEnding(ms: M[], i: number, s: State): number | null {
 /** Plays one part of the score (P1 by default). */
 export function play(xml: string, part = "P1"): PlayedOrder {
 	const body = xml.split(`<part id="${part}">`)[1]?.split("</part>")[0] ?? "";
-	const ms = (body.match(/<measure [\s\S]*?<\/measure>/g) ?? []).map(readMeasure);
+	// An empty measure (a bar no pass plays, with nothing to write) closes itself.
+	const ms = (body.match(/<measure [^>]*\/>|<measure [^>]*[^/]>[\s\S]*?<\/measure>/g) ?? []).map(
+		readMeasure,
+	);
 	const out: PlayedOrder = { shown: [], harmony: [] };
 	const s: State = { jumped: false, start: 0, passes: new Map() };
 	let i: number | null = 0;

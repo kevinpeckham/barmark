@@ -8,14 +8,17 @@
 import { expect, test } from "bun:test";
 import { parseChart, printChart } from "barmark";
 import { exportMusicXml, importMusicXml } from "../../src/index.js";
+import { expected, play } from "../play.js";
 import { jumpChart } from "./jump-charts.js";
 import { played, texts } from "./played.js";
 
-const roundTrip = (text: string) => {
-	const exported = exportMusicXml(text);
-	if (!exported.ok) throw new Error(exported.diagnostics.map((d) => d.message).join("; "));
-	return importMusicXml(exported.xml).text;
+const exported = (text: string) => {
+	const r = exportMusicXml(text);
+	if (!r.ok) throw new Error(r.diagnostics.map((d) => d.message).join("; "));
+	return r.xml;
 };
+
+const roundTrip = (text: string) => importMusicXml(exported(text)).text;
 
 const lines = (text: string) => texts(text).map((t) => t.text);
 
@@ -36,6 +39,8 @@ test("most seeds make a chart", () => {
 
 test.each(CHARTS)("random chart %i plays the same after export and import", (_seed, text) => {
 	const back = roundTrip(text);
+	// Two readers: the export as the tests' player plays it, and the import.
+	expect(play(exported(text))).toEqual(expected(text));
 	if (unnamedStart(text)) expect(unsectioned(back)).toEqual(unsectioned(text));
 	else expect(played(back)).toEqual(played(text));
 	expect(lines(back)).toEqual(lines(text));

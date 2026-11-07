@@ -52,7 +52,10 @@ not here.
   signs, repeats, endings, `x N` on lines and headings, replays,
   elisions, `%`, a closing `...`, text lines, two parts) and asks that
   each plays the same, keeps every text line in order and prints
-  canonically. Where a text line lands among bars written out isn't
+  canonically, and that the tests' player (`tests/play.ts`) plays the
+  export as barmark plays the chart: two readers. The player missed
+  self-closing `<measure/>`s (a bar no pass plays, with nothing in it)
+  until this check met one. Where a text line lands among bars written out isn't
   asked: writing passes out puts more bars before it. Shrink a failure
   by deleting lines and cells while it still fails.
 
