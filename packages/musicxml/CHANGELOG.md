@@ -6,6 +6,10 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-11-07
+
+Needs `barmark` 0.17.0.
+
 ### Added
 
 - **Import: melodies and verses** (barmark's grammar 4.3 and 7.7). A
@@ -80,7 +84,7 @@ package uses [semantic versioning](https://semver.org/).
   the slashes, its instrument at volume 0, and `<?barmark lyrics?>` in
   its first measure so the import can read it back as a lyric row. A
   part exported alone (`part`) leaves it out. Text-line lyrics are words,
-  as before. Needs the next `barmark` release.
+  as before.
 
 ### Changed
 
@@ -98,7 +102,7 @@ package uses [semantic versioning](https://semver.org/).
   piano's hands stay on their staves. One with note sets or voicings is
   the next voice on the upper staff, after the named lines. Where the
   part writes only its bare line, it plays in the first line's place;
-  systems without it export as before. Needs the next `barmark` release.
+  systems without it export as before.
 
 ### Fixed
 
@@ -367,7 +371,8 @@ and each grammar example's sounding notes and chord symbols.
 - **Errors:** a chart with errors, or with no bars, returns its
   diagnostics and no XML; characters XML can't hold are left out.
 
-[Unreleased]: https://github.com/kevinpeckham/barmark/compare/musicxml-v0.5.0...HEAD
+[Unreleased]: https://github.com/kevinpeckham/barmark/compare/musicxml-v0.6.0...HEAD
+[0.6.0]: https://github.com/kevinpeckham/barmark/compare/musicxml-v0.5.0...musicxml-v0.6.0
 [0.5.0]: https://github.com/kevinpeckham/barmark/compare/musicxml-v0.4.1...musicxml-v0.5.0
 [0.4.1]: https://github.com/kevinpeckham/barmark/compare/musicxml-v0.4.0...musicxml-v0.4.1
 [0.4.0]: https://github.com/kevinpeckham/barmark/compare/musicxml-v0.3.0...musicxml-v0.4.0

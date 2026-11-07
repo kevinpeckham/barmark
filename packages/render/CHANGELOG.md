@@ -6,6 +6,10 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.15.0] - 2026-11-07
+
+Needs `barmark` 0.17.0.
+
 ### Added
 
 - **Voice lines and lyrics** (barmark's grammar 4.3, 7.7): the line a part
@@ -18,15 +22,15 @@ package uses [semantic versioning](https://semver.org/).
   `lyrics`; `--barmark-lyrics` colours the words, and `::part(lyrics)`
   styles each verse's line. A `lyrics:` line followed by a
   bar line, which drew as a line of text, now draws its words on the
-  beats. Needs the next `barmark` release.
+  beats.
 
 ### Changed
 
 - A `---` break draws nothing, and a text line written with a leading `\`
-  shows without the backslash. Needs the next `barmark` release.
+  shows without the backslash.
 - A part's bare line with its named lines written after it (`Vox` over
   `Vox.Mel`, barmark's amended grammar 7.6) draws in the same system, as
-  the part's first row. Needs the next `barmark` release.
+  the part's first row.
 
 ## [0.14.0] - 2026-11-04
 
@@ -371,7 +375,8 @@ that needs no script or as the `<barmark-chart>` web component. Requires
   zoom without sideways scrolling, the element renders and re-renders, and
   a screen reader hears "bar 9: D". Run them with `bun run test:browser`.
 
-[Unreleased]: https://github.com/kevinpeckham/barmark/compare/render-v0.14.0...HEAD
+[Unreleased]: https://github.com/kevinpeckham/barmark/compare/render-v0.15.0...HEAD
+[0.15.0]: https://github.com/kevinpeckham/barmark/compare/render-v0.14.0...render-v0.15.0
 [0.14.0]: https://github.com/kevinpeckham/barmark/compare/render-v0.13.0...render-v0.14.0
 [0.13.0]: https://github.com/kevinpeckham/barmark/compare/render-v0.12.0...render-v0.13.0
 [0.12.0]: https://github.com/kevinpeckham/barmark/compare/render-v0.11.0...render-v0.12.0

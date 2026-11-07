@@ -9,6 +9,13 @@ Releases follow the process in [RELEASING.md](RELEASING.md).
 
 ## [Unreleased]
 
+## [0.17.0] - 2026-11-07
+
+A grammar change: syllables on notes (4.3), lyric rows and verses in play
+order (7.7), a part's bare line sharing a system with its named lines
+(7.6, amended), `---` breaks and a leading `\` (1). Implements the
+[grammar v0.1 draft](https://github.com/kevinpeckham/barmark/blob/main/docs/grammar-v0.1-draft.md).
+
 **Changes what an existing chart means.** A line of only `---` (three or
 more hyphens) is now a break that ends a system, not text. A part's bare
 line followed directly by its named lines (`Pno | C |` then
@@ -518,7 +525,8 @@ The first working release: the reference parser and printer for the
 
 - **A placeholder package that holds the `barmark` name** while the spec and parser are written.
 
-[Unreleased]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.16.0...HEAD
+[Unreleased]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.17.0...HEAD
+[0.17.0]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.16.0...barmark-v0.17.0
 [0.16.0]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.15.0...barmark-v0.16.0
 [0.15.0]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.14.1...barmark-v0.15.0
 [0.14.1]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.14.0...barmark-v0.14.1
