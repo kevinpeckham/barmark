@@ -92,6 +92,13 @@ Fallow, CI, Swamp), the grammar, `examples/`, the scripts and FINDINGS.md.
     `.musicxml`/`.mxl` MuseScore made of them and each expected
     `.chart.md`; `bun scripts/musescore-fixtures.ts` regenerates them on
     the VM only (`~/.local/bin/mscore`), never in CI
+- `packages/sync/`: `@barmark/sync`, syncing a chart with a recording; the
+  timing map (`chartHash`, `checkTimingMap`, `barAt`, `secondsAtBar`) is
+  also the `@barmark/sync/timing` subpath, so a map-only reader gets no
+  builder code
+  - `src/timing/`: `types.ts`, `hash.ts` (FNV-1a 64 of the printed chart),
+    `check.ts` (hand-written validation), `lookup.ts`
+  - `tests/`: `bun test`
 - `packages/cli/`: `@barmark/cli`, the `barmark` command (`check`,
   `format`, `part`, `render`, `transpose`, `export`, `import`), a thin
   layer over the libraries, pinned to them exactly
@@ -110,7 +117,7 @@ Fallow, CI, Swamp), the grammar, `examples/`, the scripts and FINDINGS.md.
   `bun test` skips it (`bunfig.toml`), Fallow ignores it
 - `docs/superpowers/`: designs (`specs/`) and implementation plans (`plans/`)
 - `scripts/verify-package.ts`, `scripts/verify-release.ts`: release checks
-  shared by CI and Swamp; both take the package (`barmark`, `render`, `musicxml` or `cli`)
+  shared by CI and Swamp; both take the package (`barmark`, `render`, `musicxml`, `sync` or `cli`)
 
 ## Commands
 
@@ -144,7 +151,7 @@ cd site && bun run dev|build|check|test|test:browser   # barmark.dev
   or other AI attribution trailer.
 - Releases follow `RELEASING.md` (the `/release` skill walks it). Each
   package is tagged on its own: `barmark-vX.Y.Z`, `render-vX.Y.Z`,
-  `musicxml-vX.Y.Z`, `cli-vX.Y.Z`. A library release is followed by a CLI release and a
-  bump in `kevinpeckham/songs` (RELEASING.md steps 13–14).
+  `musicxml-vX.Y.Z`, `sync-vX.Y.Z`, `cli-vX.Y.Z`. A library release is followed by a CLI release and a
+  bump in `kevinpeckham/songs` (RELEASING.md steps 13–14); a `sync` release needs neither.
 - `@barmark/render` never changes the music: anything musical (what `%`
   copies, bar numbers, what a replay plays) comes from the parser.

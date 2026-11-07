@@ -1,6 +1,6 @@
 # Releasing
 
-This repository publishes four npm packages from one Bun workspace, each
+This repository publishes five npm packages from one Bun workspace, each
 versioned and released on its own:
 
 | Package | Directory | Release tag |
@@ -8,6 +8,7 @@ versioned and released on its own:
 | `barmark` | `packages/barmark` | `barmark-vX.Y.Z` |
 | `@barmark/render` | `packages/render` | `render-vX.Y.Z` |
 | `@barmark/musicxml` | `packages/musicxml` | `musicxml-vX.Y.Z` |
+| `@barmark/sync` | `packages/sync` | `sync-vX.Y.Z` |
 | `@barmark/cli` | `packages/cli` | `cli-vX.Y.Z` |
 
 (`barmark` 0.0.x and 0.1.0 were tagged `vX.Y.Z`, before the workspace.)
@@ -69,7 +70,7 @@ the site to both.
 
 ## Checks
 
-The same scripts run in three places; `<pkg>` is `barmark`, `render` or `cli`:
+The same scripts run in three places; `<pkg>` is `barmark`, `render`, `musicxml`, `sync` or `cli`:
 
 | Check | Command | Local (Swamp) | CI (every push and PR) | Release workflow |
 |---|---|---|---|---|
@@ -96,7 +97,7 @@ runs, and `verify:package cli` fails on anything else.
 
 ## Steps
 
-`<pkg>` is the package's key (`barmark`, `render` or `cli`) and the tag is
+`<pkg>` is the package's key (`barmark`, `render`, `musicxml`, `sync` or `cli`) and the tag is
 `<pkg>-vX.Y.Z`.
 
 1. **Start a release branch** from an up-to-date `main` with CI green:
@@ -140,7 +141,9 @@ runs, and `verify:package cli` fails on anything else.
     request `chore(site): use <npm name> X.Y.Z` (`site/package.json` and
     `site/bun.lock`). Until it merges, CI's `site-versions` check is red
     on purpose; it is not required, so other pull requests still merge.
-13. **Release the CLI** (after a `barmark` or `@barmark/render` release):
+13. **Release the CLI** (after a `barmark` or `@barmark/render` release;
+    a `@barmark/sync` release needs no CLI release and no `songs` bump,
+    since the CLI does not use it):
     `@barmark/cli` pins the libraries exactly, so a library release
     reaches CLI users only through a CLI release. On a new branch, bump
     `packages/cli` (a patch, unless the CLI itself changed) with a

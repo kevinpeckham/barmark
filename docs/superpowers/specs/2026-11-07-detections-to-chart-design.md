@@ -229,7 +229,7 @@ type TimingMap = {
   recording?: { id?: string; duration?: Seconds };
   /** How it was made: "detected", "aligned", "tapped", "tempo", or the host's word. */
   source?: string;
-  /** In recording order. */
+  /** In recording order; never empty (Kevin's decision, 2026-11-07). */
   bars: TimedBar[];
   /** Where the last entry ends. */
   end: Seconds;
@@ -386,7 +386,8 @@ no confidences today, so for SS the record is agreement only.
    on a section's first bar, and not across a meter change, the pickup
    included (Claude's calls: `%` is only ever shorthand inside a
    passage). With the hold rule, `%` appears exactly for repeated
-   multi-chord bars (`| C G | % |`); a bar holding one chord stays `/`.
+   multi-chord bars (`| C G | % |`); a bar holding one chord stays `/`. A bar with a `?` slot is always written
+   out, never `%` (Kevin's decision, 2026-11-07).
 7. `printChart` then reduces each cell to the fewest even slots
    (`| C / G / |` → `| C G |`).
 
@@ -400,8 +401,9 @@ no confidences today, so for SS the record is agreement only.
   on the first line, played bar 1, as the MusicXML import writes a
   pickup. Otherwise `pickup-ignored` (info).
 - **Runs outside the bars** are cut at bar 1's start (or the pickup's)
-  and at the grid's end. When chords other than `N` lose a beat or more,
-  one `outside-bars` warning each side, with the seconds lost.
+  and at the grid's end. When chords other than `N` and `?` lose a beat or more,
+  one `outside-bars` warning each side, with the seconds lost; unknown
+  time (Kevin's decision, 2026-11-07) is not counted.
 
 ### 6.5 Title, sections and directives
 
@@ -427,7 +429,9 @@ no confidences today, so for SS the record is agreement only.
   know leaves it out.
 - **Tempo**, in grammar 2.1's beat. A given tempo is written as given,
   decimals included (`tempo: 87.5`). Omitted, it is 60 ÷ the grid's
-  median beat length, rounded to a whole bpm. A given tempo more than
+  folded median beat length, rounded to a whole bpm: a bar under 0.6× the
+  plain median counts as half a bar, one over 1.6× as two, before the median
+  is taken (real grids carry many half-length bars). A given tempo more than
   15% from the grid's (over the bars where it is in force) is still
   written, warning `tempo-grid-disagree`: it is usually in the wrong unit
   (section 9, step 6). Outside 1–999: dropped, `tempo-unreadable`.

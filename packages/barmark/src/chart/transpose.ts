@@ -4,18 +4,10 @@ import { parseChord } from "../chords/parse.js";
 import { printChord } from "../chords/print.js";
 import type { ChordRecord } from "../chords/types.js";
 import { parseDirectiveLine } from "./directives.js";
+import { alterOf, conventionalKey, plain, SHARPS, spellPitch } from "./keys.js";
 import { parseChart } from "./parse.js";
 import { printParsed } from "./print.js";
-import type {
-	Cell,
-	ChartDiagnostic,
-	ChartParse,
-	Key,
-	Line,
-	Mode,
-	SimpleSlot,
-	Slot,
-} from "./types.js";
+import type { Cell, ChartDiagnostic, ChartParse, Key, Line, SimpleSlot, Slot } from "./types.js";
 
 /** What to transpose by: a target key (the chart needs a `key:`), or a number of semitones. */
 export type TransposeBy = { to: string } | { semitones: number };
@@ -23,44 +15,12 @@ export type TransposeBy = { to: string } | { semitones: number };
 /** How each note moves: its new spelling, and how far it moves in pitch (for note-set octaves). */
 type Move = { spell: (note: string) => string; semitones: number };
 
-const SHARPS = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
-const FLATS = ["C", "Db", "D", "Eb", "E", "F", "Gb", "G", "Ab", "A", "Bb", "B"];
-/** A chart with no key spells each root from this table. */
-const TABLE = ["C", "C#", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"];
-/** Each letter's place on the circle of fifths, and each mode's offset from its parent major. */
-const FIFTHS: Record<string, number> = { F: -1, C: 0, G: 1, D: 2, A: 3, E: 4, B: 5 };
-const MODE_FIFTHS: Record<Mode, number> = {
-	lydian: 1,
-	major: 0,
-	ionian: 0,
-	mixolydian: -1,
-	dorian: -2,
-	minor: -3,
-	aeolian: -3,
-	phrygian: -4,
-	locrian: -5,
-};
-
 const mod = (n: number, m: number) => ((n % m) + m) % m;
-const alterOf = (note: string) => (note.includes("#") ? 1 : -1) * (note.length - 1);
-
-/** Double sharps and flats are written as the plain note: Fx is G, Ebb is D. */
-function plain(note: string): string {
-	if (!/##|bb/.test(note)) return note;
-	return (note.includes("#") ? SHARPS : FLATS)[noteSemitone(note)] ?? note;
-}
-
-/** Sharps (positive) or flats (negative) in a key's signature. */
-const signature = (tonic: string, mode: Mode) =>
-	(FIFTHS[tonic[0] ?? "C"] ?? 0) + 7 * alterOf(tonic) + MODE_FIFTHS[mode];
 
 /** The key `semitones` away, spelled with the fewest accidentals; sharps win a tie (F# over Gb). */
 function nearestKey(key: Key, semitones: number): string {
 	const pc = mod(noteSemitone(key.tonic) + semitones, 12);
-	const [a = "C", b = "C"] = [SHARPS[pc], FLATS[pc]];
-	const sa = signature(a, key.mode);
-	const sb = signature(b, key.mode);
-	return Math.abs(sb) < Math.abs(sa) || (Math.abs(sb) === Math.abs(sa) && sb > sa) ? b : a;
+	return conventionalKey({ tonic: SHARPS[pc] ?? "C", mode: key.mode }).tonic;
 }
 
 function firstKey(parsed: ChartParse): Key | undefined {
@@ -90,7 +50,7 @@ function moveTo(key: Key | undefined, to: string): Move | ChartDiagnostic {
 function moveBy(key: Key | undefined, semitones: number): Move | ChartDiagnostic {
 	if (!Number.isInteger(semitones))
 		return fail("transpose by a whole number of semitones", String(semitones));
-	if (!key) return { spell: (n) => TABLE[mod(noteSemitone(n) + semitones, 12)] ?? n, semitones };
+	if (!key) return { spell: (n) => spellPitch(noteSemitone(n) + semitones, null), semitones };
 	const interval = intervalBetween(key.tonic, nearestKey(key, semitones));
 	return { spell: (n) => plain(transpose(n, interval)), semitones };
 }

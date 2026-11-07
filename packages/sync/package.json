@@ -1,0 +1,52 @@
+{
+	"name": "@barmark/sync",
+	"version": "0.1.0",
+	"description": "Sync a barmark chord chart with a recording: the timing map, its checker and its lookups.",
+	"type": "module",
+	"sideEffects": false,
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"import": "./dist/index.js"
+		},
+		"./timing": {
+			"types": "./dist/timing/index.d.ts",
+			"import": "./dist/timing/index.js"
+		}
+	},
+	"types": "./dist/index.d.ts",
+	"files": [
+		"dist",
+		"CHANGELOG.md"
+	],
+	"engines": {
+		"node": ">=20"
+	},
+	"keywords": [
+		"barmark",
+		"chord-chart",
+		"chords",
+		"music",
+		"timing",
+		"sync",
+		"lead-sheet"
+	],
+	"author": "Kevin Peckham",
+	"license": "MIT",
+	"homepage": "https://github.com/kevinpeckham/barmark/tree/main/packages/sync#readme",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/kevinpeckham/barmark.git",
+		"directory": "packages/sync"
+	},
+	"bugs": {
+		"url": "https://github.com/kevinpeckham/barmark/issues"
+	},
+	"dependencies": {
+		"barmark": "workspace:^"
+	},
+	"scripts": {
+		"build": "rm -rf dist && tsc -p tsconfig.build.json",
+		"prepack": "bun run build"
+	}
+}

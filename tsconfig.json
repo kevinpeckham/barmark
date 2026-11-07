@@ -16,7 +16,9 @@
 		"paths": {
 			"barmark": ["./packages/barmark/src/index.ts"],
 			"@barmark/render": ["./packages/render/src/index.ts"],
-			"@barmark/musicxml": ["./packages/musicxml/src/index.ts"]
+			"@barmark/musicxml": ["./packages/musicxml/src/index.ts"],
+			"@barmark/sync": ["./packages/sync/src/index.ts"],
+			"@barmark/sync/timing": ["./packages/sync/src/timing/index.ts"]
 		}
 	},
 	"include": ["packages/*/src", "packages/*/tests", "packages/*/browser", "scripts"]

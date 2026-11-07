@@ -1,3 +1,4 @@
+import { MODES } from "./keys.js";
 import type { ChartDiagnostic, Directives, Feel, Key, Meter, Mode, TempoChange } from "./types.js";
 
 export const DIRECTIVE_NAMES = ["key", "time", "tempo", "feel"] as const;
@@ -6,17 +7,6 @@ export const DIRECTIVE_NAMES = ["key", "time", "tempo", "feel"] as const;
 export const DIRECTIVE_AFTER = /,\s*(key|time|tempo|feel)\s*:/i;
 type Name = (typeof DIRECTIVE_NAMES)[number];
 
-const MODES: Mode[] = [
-	"major",
-	"minor",
-	"ionian",
-	"dorian",
-	"phrygian",
-	"lydian",
-	"mixolydian",
-	"aeolian",
-	"locrian",
-];
 const FEELS: Feel[] = ["straight", "swing", "shuffle", "swing 16"];
 
 /** `n/d` with n from 1 to 32 and d in 2, 4, 8, 16. */

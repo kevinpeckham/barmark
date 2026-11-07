@@ -9,6 +9,35 @@ not here.
 
 ## Testing
 
+### Spelling by a chord's start picked the old key (2026-11-07, @barmark/sync)
+
+- **The symptom.** The round trip of `| G | D |` then `key: Db` then `| Gb | Db |`
+  passed exactly, but with a little timing jitter it came back `F#`
+  for `Gb`.
+- **The cause.** Chord edges jitter. The builder spelled a run in the key in
+  force where the run starts; an edge a few tens of milliseconds early
+  started the run in the old key, and that spelling covered the whole run.
+- **The fix.** `symbolRuns` (`packages/sync/src/build/runs.ts`) cuts a run at
+  every key change inside it and spells each piece in the key at its own
+  start, so the sliver before the bar loses its vote and the rest is
+  spelled in the new key. Found because the yardstick's key-change chart
+  was spelling-sensitive and its jitter variant ran.
+
+### A path import never reads `exports` (2026-11-07, @barmark/sync)
+
+- **The symptom.** `verify:package` imports a package's built
+  `dist/index.js` by path, so it passes even when the `exports` map is
+  wrong. `@barmark/sync` has a second entry, `./timing`; a typo in its
+  map would ship, and `import "@barmark/sync/timing"` would fail for every
+  reader.
+- **The cause.** Node applies `exports` only to bare specifiers
+  (`@barmark/sync/timing`), never to a file path.
+- **The fix.** `scripts/smoke-sync.mjs` reads `exports["./timing"].import`
+  from the package.json beside `dist/` and imports that file, so a wrong
+  map fails locally; the release's `confirm` job runs it against the
+  copy installed from npm, where the bare `@barmark/sync/timing` goes
+  through Node's own resolution.
+
 ### A round trip that compares only what plays can't see text move (2026-11-07, @barmark/musicxml)
 
 - **The symptom.** Issue #173: a `title:` line before the first heading
@@ -134,6 +163,26 @@ showed the rule needed refining.
 
 ## Performance and robustness
 
+### Two DoS shapes the review's probes didn't build (2026-11-07, @barmark/sync)
+
+- **The symptom.** Vercel's review found two: 300 sections named
+  `Verse x9999 (x2)` took 5.7 s (1,000 took 16 s), and a 14 KB input of one
+  2,000-note run with short overlays over 200 bars built a 1.2 MB chart
+  (about 83 times the input) in 3.5 s.
+- **The cause.** (1) `sectionName` checked each repaired name with
+  `parseChart`, which expands a hidden `x9999` into thousands of bars, and
+  dropping a typo like `(x2)` exposed a repeat the one-time mark strip had
+  missed. (2) A symbol had no size limit, so a long note set resumed after
+  every overlay was written in full at each attack.
+- **The fix.** `readsPlain` reads the document only (`readDocument`, no
+  expansion) and marks are stripped again after each dropped word;
+  names of plain letters skip the parse, and a build parses names at most
+  2,000 times, then drops (never renames) any name that still needs one (`packages/sync/src/build/marks.ts`). Symbols over 64 characters or 16
+  notes are `?` (`packages/sync/src/build/spell.ts`), which bounds the chart
+  at a fixed factor of the slots with no extra budget. The counts and
+  sizes are pinned in `scale.test.ts`; a timing ratio alone would not have
+  seen the first.
+
 ### fast-xml-parser counts `&amp;` against the entity cap, and leaves `&#233;` alone (2026-11-06, MusicXML import)
 
 - **The symptom.** A score with more than 1,000 `&amp;`, `&apos;` or
@@ -245,6 +294,21 @@ When converting to a format that keeps written order, test the played
 order, not just the written marks.
 
 ## Design
+
+### Half-length bars skewed a derived tempo (2026-11-07, @barmark/sync)
+
+- **The symptom.** Built from Stem Shovel's ChordMini grids, Letter Lands
+  came out `tempo: 141` and Eat All the Clocks `tempo: 130`; the corpus
+  charts say 132 and 120. No synthetic test had shown it.
+- **The cause.** The reference's bar rendering leaves many half-length
+  bars: 24 of 76 bars in Letter Lands and 22 of 86 in Eat, at half the
+  main cluster. A share that size, all on one side, pulls the median down
+  onto the short end of the main cluster.
+- **The fix.** `gridTempo` (`packages/sync/src/build/marks.ts`) folds before
+  the median: a bar under 0.6 times the plain median counts as half a bar
+  (its beat length doubled), one over 1.6 times as two (halved). It gives
+  132 and 120 on the real grids, and `real.test.ts` pins the charts. No
+  diagnostic was added for an uneven grid; that would change the spec.
 
 ### Syllables drawn as rows of their own drifted off their notes (2026-11-06, @barmark/render)
 

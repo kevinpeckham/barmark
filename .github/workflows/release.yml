@@ -52,8 +52,9 @@ jobs:
             barmark-v*) key=barmark; smoke=scripts/smoke.mjs ;;
             render-v*) key=render; smoke=scripts/smoke-render.mjs ;;
             musicxml-v*) key=musicxml; smoke=scripts/smoke-musicxml.mjs ;;
+            sync-v*) key=sync; smoke=scripts/smoke-sync.mjs ;;
             cli-v*) key=cli; smoke=scripts/smoke-cli.mjs ;;
-            *) echo "::error::${GITHUB_REF_NAME} is not a release tag (barmark-vX.Y.Z, render-vX.Y.Z, musicxml-vX.Y.Z or cli-vX.Y.Z)"; exit 1 ;;
+            *) echo "::error::${GITHUB_REF_NAME} is not a release tag (barmark-vX.Y.Z, render-vX.Y.Z, musicxml-vX.Y.Z, sync-vX.Y.Z or cli-vX.Y.Z)"; exit 1 ;;
           esac
           dir="packages/${key}"
           name=$(node -p "require('./${dir}/package.json').name")

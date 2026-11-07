@@ -2,13 +2,13 @@ import { isBar } from "./barLine.js";
 import { printDirection } from "./direction.js";
 import { beatsOf } from "./directives.js";
 import { readDocument } from "./document.js";
+import { printKey } from "./keys.js";
 import { extractPart, parseChart } from "./parse.js";
 import type {
 	Cell,
 	ChartParse,
 	DeclaredPart,
 	Directives,
-	Key,
 	Line,
 	LyricSlot,
 	Repeat,
@@ -132,12 +132,6 @@ export function printPasses(passes: number[]): string {
 }
 
 const printRepeat = (r: Repeat) => (r === null ? "" : r === "open" ? " x ..." : ` x${r}`);
-
-function printKey(k: Key): string {
-	if (k.mode === "major") return k.tonic;
-	if (k.mode === "minor") return `${k.tonic}m`;
-	return `${k.tonic} ${k.mode}`;
-}
 
 function printTempoChange(c: TempoChange): string {
 	if (c.kind === "a tempo") return "a tempo";
