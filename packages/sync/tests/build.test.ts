@@ -32,6 +32,30 @@ describe("simile", () => {
 	});
 });
 
+describe("simile on held cells", () => {
+	test("a bar that only matches the raw symbols is not %", () => {
+		const r = make([0, 2, 4, 6], [C(0, 3), C(3, 4, "G:maj"), C(4, 5), C(5, 6, "G:maj")]);
+		expect(r.chart).toBe("time: 4/4\n| C | / G | C G |\n");
+		expect(parseChart(r.chart).bars.map((b) => b.slots.length)).toEqual([1, 2, 2]);
+	});
+});
+
+describe("directives", () => {
+	const withKey = (extra: Record<string, unknown>) =>
+		chartFromDetections({
+			grid: { bars: [0, 2, 4] },
+			meter: "4/4",
+			key: "C major",
+			chords: { runs: [{ start: 0, end: 4, symbol: "C" }] },
+			...extra,
+		});
+	test("key and meter share a line, comma separated", () => {
+		const r = withKey({});
+		expect(r.chart).toBe("key: C, time: 4/4\n| C | / |\n");
+		expect(parseChart(r.chart).diagnostics.filter((d) => d.severity === "error")).toEqual([]);
+	});
+});
+
 describe("layout", () => {
 	const lines = (o?: { barsPerLine?: number }) => {
 		const grid = [0, 2, 4, 6, 8, 10, 12];
@@ -45,6 +69,7 @@ describe("layout", () => {
 		expect(lines({ barsPerLine: 0 })).toHaveLength(2);
 		expect(lines({ barsPerLine: Number.NaN })).toHaveLength(2);
 		expect(lines({ barsPerLine: 3.9 })).toHaveLength(2);
+		expect(lines({ barsPerLine: 3.9 })[0]?.split("|").length).toBe(5);
 	});
 });
 
@@ -70,6 +95,15 @@ describe("the timing map", () => {
 		expect(t && "ref" in t.chart).toBe(false);
 		expect(checkTimingMap(t, { text: r.chart }).diagnostics).toEqual([]);
 		expect(r.confidence).toBeNull();
+	});
+
+	test("a recording with nothing usable is left out", () => {
+		const r = chartFromDetections({
+			grid: { bars: [0, 2] },
+			chords: { runs: [C(0, 2)] },
+			recording: { id: 5, duration: Number.NaN } as never,
+		});
+		expect(r.timing && "recording" in r.timing).toBe(false);
 	});
 
 	test("an unusable grid", () => {

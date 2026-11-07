@@ -11,7 +11,7 @@ function recordingOf(recording: unknown): TimingMap["recording"] | null {
 	if (typeof recording.id === "string") copy.id = recording.id;
 	if (typeof recording.duration === "number" && Number.isFinite(recording.duration))
 		copy.duration = recording.duration;
-	return copy;
+	return Object.keys(copy).length > 0 ? copy : null;
 }
 
 /**
