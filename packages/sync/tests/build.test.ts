@@ -94,7 +94,7 @@ describe("the timing map", () => {
 		expect(t?.bars.some((b) => "beats" in b || "end" in b)).toBe(false);
 		expect(t && "ref" in t.chart).toBe(false);
 		expect(checkTimingMap(t, { text: r.chart }).diagnostics).toEqual([]);
-		expect(r.confidence).toBeNull();
+		expect(r.confidence?.bars).toHaveLength(2);
 	});
 
 	test("a recording with nothing usable is left out", () => {

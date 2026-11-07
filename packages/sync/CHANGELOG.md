@@ -8,6 +8,12 @@ package uses [semantic versioning](https://semver.org/).
 
 ### Added
 
+- **The confidence record** (experimental): `chartFromDetections` returns
+  `confidence` beside the chart, a `ConfidenceRecord` with, per played
+  bar and slot, how well the detector's runs back what was written
+  (agreement times the runs' own confidence; `?` is 0), and the
+  confidences the input gave for `key`, `meter`, `tempo` and `sections`.
+  It is `null` exactly when the chart is empty. The shape may change.
 - **Sections, changes, tempo and pickups** in `chartFromDetections`: a
   `title`; `sections`, snapped to the nearest bar, written out in full,
   with repeat and elision marks stripped from their names; `key`, `meter`

@@ -59,6 +59,19 @@ omitted, it is taken from the grid, and `null` writes none; one far from
 the grid's warns with `tempo-grid-disagree`) and a `pickup: { start }`
 for the bar before bar 1. The timing map counts a pickup as bar 1.
 
+## The confidence record (experimental)
+
+`chartFromDetections` also returns `confidence`, a `ConfidenceRecord`
+(`null` exactly when the chart is empty). It has one entry per played bar,
+keyed by the bar's `PlayedBar.index` like the timing map, whose `slots`
+line up with that bar's slots. A slot's value is agreement times detector
+confidence: the share of the slot's time covered by runs of the symbol
+written (a hold counts as the chord it holds), times those runs' mean
+`confidence` (1 where not given); a `?` slot is 0. A bar's value is the
+mean of its slots. `key`, `meter`, `tempo` and `sections` carry the
+confidence of their `{ value, confidence }` wrappers, and are left out
+for bare values. The shape is experimental and may change.
+
 ## The timing map
 
 ```ts

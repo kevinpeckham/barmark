@@ -1,4 +1,5 @@
 import { parseChart, printChart } from "barmark";
+import { confidenceOf } from "./confidence.js";
 import { readInput } from "./input.js";
 import { createReport } from "./report.js";
 import { cutRuns } from "./runs.js";
@@ -36,6 +37,7 @@ export function chartFromDetections(d: Detections, o?: BuildOptions): BuildResul
 		barsPerLine: barsPerLineOf(options.barsPerLine),
 	});
 	const chart = printChart(text);
-	const timing = timingOf(parseChart(chart), input, chart, (d as Detections).recording);
-	return { chart, timing, confidence: null, diagnostics: report.list };
+	const parse = parseChart(chart);
+	const timing = timingOf(parse, input, chart, (d as Detections).recording);
+	return { chart, timing, confidence: confidenceOf(parse, input), diagnostics: report.list };
 }
