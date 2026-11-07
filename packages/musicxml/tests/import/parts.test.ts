@@ -1,7 +1,8 @@
-import { expect, test } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import { Losses } from "../../src/import/losses.js";
+import { foldRhythm } from "../../src/import/merge.js";
 import { type ImportedPart, importPart } from "../../src/import/parts.js";
-import { readScore } from "../../src/import/read.js";
+import { type Attack, readScore } from "../../src/import/read.js";
 import { parseXml } from "../../src/import/tree.js";
 import { exportMusicXml } from "../../src/index.js";
 import { attributes, measure, note, rest } from "./helpers.js";
@@ -579,4 +580,154 @@ test("label and instrument", () => {
 test("lyrics are the part's measures", () => {
 	const r = importChart("| C |");
 	expect(r.part?.lyrics).toHaveLength(1);
+});
+
+describe("a voice of slashes alone in another voice's gaps", () => {
+	const forward = (duration: number) => `<forward><duration>${duration}</duration></forward>`;
+	const gMajor: [string, number][] = [
+		["G", 3],
+		["B", 3],
+		["D", 4],
+	];
+	/** Dorico's comping bar: voice 1 silent (a <forward>) for the slashes, which are voice 2. */
+	const doricoBar = (second: string) =>
+		harmony("A", "minor") +
+		forward(2) +
+		chordOf(1, gMajor, voice(1)) +
+		backup(1) +
+		harmony("G") +
+		forward(1) +
+		rest(1, voice(1)) +
+		backup(4) +
+		second;
+
+	test("is the part's rhythm, on its one line (Dorico)", () => {
+		const r = importXml(
+			scoreXml(
+				{ software: "Dorico 6.2.31.6349" },
+				measure(1, time44() + harmony("C") + slash(1, voice(1)).repeat(4)) +
+					measure(2, doricoBar(slash(1, voice(2)).repeat(2) + forward(2))),
+			),
+		);
+		expect(r.part?.lines).toHaveLength(1);
+		expect(bars(r)).toEqual(["C", "Am / G{G3 B3 D4} --"]);
+	});
+
+	test("is the part's rhythm when the slashes are voice 2 throughout and voice 1 plays one bar", () => {
+		const bar2 =
+			harmony("A", "minor") +
+			slash(1, voice(2)).repeat(2) +
+			harmony("G") +
+			chordOf(1, gMajor, voice(1)) +
+			rest(1, voice(1));
+		const r = importXml(
+			scoreXml(
+				{ software: "Dorico 6.2.31.6349" },
+				measure(1, time44() + harmony("C") + slash(1, voice(2)).repeat(4)) + measure(2, bar2),
+			),
+		);
+		expect(r.part?.lines).toHaveLength(1);
+		expect(bars(r)).toEqual(["C", "Am / G{G3 B3 D4} --"]);
+	});
+
+	test("explicit rests in both voices, each where the other plays, fold to one line (MuseScore's shape)", () => {
+		const twoVoices =
+			harmony("A", "minor") +
+			rest(2, voice(1)) +
+			harmony("G") +
+			chordOf(2, gMajor, voice(1)) +
+			backup(4) +
+			slash(1, voice(2)).repeat(2) +
+			rest(2, voice(2));
+		const oneVoice = harmony("A", "minor") + slash(1).repeat(2) + harmony("G") + chordOf(2, gMajor);
+		const head = measure(1, time44() + harmony("C") + slash(1, voice(1)).repeat(4));
+		const folded = importXml(
+			scoreXml({ software: "MuseScore 4.4.2" }, head + measure(2, twoVoices)),
+		);
+		const single = importXml(
+			scoreXml({ software: "MuseScore 4.4.2" }, head + measure(2, oneVoice)),
+		);
+		expect(folded.part?.lines).toHaveLength(1);
+		expect(bars(folded)).toEqual(bars(single));
+		expect(bars(folded)?.[1]).toContain("G{G3 B3 D4}");
+	});
+
+	test("slashes sounding with the other voice's notes stay a line of their own", () => {
+		const r = importXml(
+			scoreXml(
+				{ software: "Dorico 6.2.31.6349" },
+				measure(1, time44() + harmony("C") + slash(1, voice(1)).repeat(4)) +
+					measure(
+						2,
+						doricoBar(slash(1, voice(2)).repeat(3) + "<forward><duration>1</duration></forward>"),
+					),
+			),
+		);
+		expect(r.part?.lines).toHaveLength(2);
+	});
+});
+
+describe("foldRhythm", () => {
+	const attack = (kind: Attack["kind"], at: number, length: number): Attack => ({
+		at: { n: at, d: 1 },
+		length: { n: length, d: 1 },
+		kind,
+		pitches: kind === "notes" ? [{ name: "E", octave: 4, root: false }] : [],
+		tieIn: false,
+		tieOut: false,
+		fermata: false,
+		lyrics: [],
+	});
+
+	test("a slash under a long note a <backup> wrote before a shorter one overlaps it", () => {
+		// Voice 1: a whole note, then (backed up) a quarter on beat 2; the slash on beat 3 sounds with the whole note.
+		const first = [[attack("notes", 0, 4), attack("notes", 1, 1)]];
+		expect(foldRhythm(first, [[attack("slash", 2, 1)]])).toBeNull();
+	});
+
+	test("slashes in the gaps come in by onset, the other voice first on a tie", () => {
+		const zero = attack("slash", 2, 0);
+		const folded = foldRhythm(
+			[[attack("notes", 2, 1)]],
+			[[attack("slash", 3, 1), attack("slash", 0, 2), zero]],
+		);
+		expect(folded?.[0]?.map((a) => [a.kind, a.at.n])).toEqual([
+			["slash", 0],
+			["notes", 2],
+			["slash", 2],
+			["slash", 3],
+		]);
+	});
+
+	test("a rest the other voice's notes or slashes cover is a gap; rests over the same silence are one", () => {
+		const folded = foldRhythm(
+			[[attack("rest", 0, 2), attack("notes", 2, 1), attack("rest", 3, 1)]],
+			[[attack("slash", 0, 1), attack("slash", 1, 1), attack("rest", 2, 2)]],
+		);
+		expect(folded?.[0]?.map((a) => [a.kind, a.at.n, a.length.n])).toEqual([
+			["slash", 0, 1],
+			["slash", 1, 1],
+			["notes", 2, 1],
+			["rest", 3, 1],
+		]);
+		// Voice 1's rest under the slash on beat 4 is dropped; voice 2's rest on beat 3 stays.
+		const partly = foldRhythm(
+			[[attack("notes", 0, 2), attack("rest", 2, 2)]],
+			[[attack("rest", 0, 1), attack("rest", 2, 1), attack("slash", 3, 1)]],
+		);
+		expect(partly?.[0]?.map((a) => [a.kind, a.at.n, a.length.n])).toEqual([
+			["notes", 0, 2],
+			["rest", 2, 1],
+			["slash", 3, 1],
+		]);
+		const both = foldRhythm(
+			[[attack("notes", 0, 1), attack("rest", 2, 2)]],
+			[[attack("slash", 1, 1), attack("rest", 2, 2)]],
+		);
+		expect(both?.[0]?.map((a) => [a.kind, a.at.n, a.length.n])).toEqual([
+			["notes", 0, 1],
+			["slash", 1, 1],
+			["rest", 2, 2],
+		]);
+	});
 });

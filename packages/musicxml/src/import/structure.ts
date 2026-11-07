@@ -228,10 +228,10 @@ export function readStructure(score: ReadScore, losses: Losses, words?: Set<Read
 	const at = (i: number) => parts.map((p) => p[i]);
 	const own = score.software?.startsWith("@barmark/musicxml") ?? false;
 	const marks = Array.from({ length: count }, (_, i) =>
-		score.parts.flatMap((p) => {
+		score.parts.flatMap((p, k) => {
 			const m = p.measures[i];
 			if (!m) return [];
-			const read = readMarks(m, p.name, losses, own);
+			const read = readMarks(m, p.name, losses, own, k === 0);
 			return [words && !words.has(p) ? wordless(read) : read];
 		}),
 	);

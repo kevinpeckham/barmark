@@ -12,6 +12,42 @@ package uses [semantic versioning](https://semver.org/).
   (MusicXML and `.mxl` to a chart) beside the export, with `mxl`,
   `import` and `export` keywords.
 
+### Fixed
+
+- **Dorico's section names import as headings.** The import took only
+  bold words above a bar's start as a heading; Dorico writes system text
+  with no `font-weight`, so `Intro` and `Verse` came in as quoted words.
+  On the first part of another program's file, plain (not italic) words
+  above a bar's start are a heading too when they name a section: Intro,
+  Verse, Pre-Chorus, Chorus, Bridge, Solo, Interlude, Break, Tag, Outro,
+  Ending, Refrain or Instrumental, perhaps numbered or lettered
+  (`Verse 2`, `Chorus B`), in any case, with a trailing `:` or `.` left
+  out of the heading (`Verse 1:`). `Coda` stays the coda sign's
+  direction; bold words are headings as before, and barmark's own files
+  are read as before.
+- **Dorico's placeholder project info is left out.** Dorico fills empty
+  project info with greyed `Project Composer` and `Project Copyright`
+  page credits, which came in as `composer:` and `copyright:` lines. In a
+  file whose `<software>` is Dorico, those, `Project Lyricist`,
+  `Project Arranger` and a `Project Title` title are dropped.
+- **A comping part's slashes in a voice of their own stay its rhythm.**
+  Dorico writes a guitar's slashes in voice 2 and a voiced bar in voice 1,
+  each silent (a `<forward>`) where the other plays, and the import gave
+  two lines (`ElGtr.1`, `ElGtr.2`). On one staff, a voice of slashes and
+  rests alone whose slashes sound only where the other voice is silent (a
+  `<forward>` or a rest) is now read as that voice's rhythm, on one line:
+  `| F#m7(b5) / B7{B2 D#3 A3 B3 F#4} -- |`. A rest with the other voice's
+  notes or slashes in it is a gap and is dropped, so MuseScore's shape,
+  explicit rests in both voices, folds too. Slashes that sound with the
+  other voice's notes still make a line of their own.
+- **A half-diminished chord imports as `m7(b5)`, not `dim(7)`.** Dorico
+  writes `<kind text="m7">half-diminished</kind>` with no `<degree>`; the
+  shown `m7` isn't the chord, so its meaning names it. A kind with a
+  Harte shorthand of exactly its notes and no `<degree>`
+  (half-diminished, diminished-seventh, major-minor and the like) is now
+  named by that shorthand (`hdim7` is `m7(b5)`, the grammar's name for
+  `ø`), not by its interval list.
+
 ## [0.6.2] - 2026-11-07
 
 ### Changed

@@ -1,6 +1,7 @@
 /** Chord symbols read from <harmony>: by meaning, then by display text, else `?`. */
 import { harteToBarmark, type Interval, parseChord } from "barmark";
 import { type Degree, intervalsOf } from "../harmony.js";
+import { KINDS } from "../kinds.js";
 import { writtenName } from "../written.js";
 import { child, children, textOf, type XNode } from "./tree.js";
 
@@ -40,9 +41,14 @@ const spelled = (i: Interval) => `${accidentals(i.alter)}${i.degree}`;
 
 /** The chord symbol a kind and its degrees mean, or null when no named chord fits. */
 function byMeaning(root: string, kind: string, harmony: XNode): string | null {
-	const intervals = intervalsOf(kind, degreesOf(harmony));
+	const degrees = degreesOf(harmony);
+	const intervals = intervalsOf(kind, degrees);
 	if (intervals.length === 0) return null;
-	const named = harteToBarmark(`${root}:(${intervals.map(spelled).join(",")})`);
+	// A kind with its own shorthand and no degrees is named as barmark names that shorthand.
+	const shorthand = degrees.length === 0 ? KINDS.find((k) => k.kind === kind)?.harte : undefined;
+	const named = harteToBarmark(
+		shorthand ? `${root}:${shorthand}` : `${root}:(${intervals.map(spelled).join(",")})`,
+	);
 	return named && !named.startsWith("{") && named !== "?" && named !== "N.C." ? named : null;
 }
 

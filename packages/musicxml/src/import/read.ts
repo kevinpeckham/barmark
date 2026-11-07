@@ -761,6 +761,27 @@ function creditsOf(root: XNode): Credits {
 	};
 }
 
+/** What Dorico writes for project info left empty, greyed on its page. */
+const DORICO_PLACEHOLDERS = new Set([
+	"Project Title",
+	"Project Composer",
+	"Project Lyricist",
+	"Project Arranger",
+	"Project Copyright",
+]);
+
+/** The credits without Dorico's placeholders, in a file Dorico wrote. */
+function withoutPlaceholders(credits: Credits, dorico: boolean): Credits {
+	if (!dorico) return credits;
+	const real = (names: string[]) => names.filter((n) => !DORICO_PLACEHOLDERS.has(n));
+	return {
+		composer: real(credits.composer),
+		lyricist: real(credits.lyricist),
+		arranger: real(credits.arranger),
+		copyright: real(credits.copyright),
+	};
+}
+
 /** The score, or null (with an error) when the file isn't a score-partwise. */
 export function readScore(root: XNode, losses: Losses): ReadScore | null {
 	if (root.name !== "score-partwise") {
@@ -775,10 +796,13 @@ export function readScore(root: XNode, losses: Losses): ReadScore | null {
 	}
 	const meta = partMeta(child(root, "part-list"));
 	const identification = child(root, "identification");
+	const software = textOf(child(identification ?? root, "encoding"), "software") || null;
+	const dorico = software?.startsWith("Dorico") ?? false;
+	const title = textOf(child(root, "work"), "work-title") || textOf(root, "movement-title") || null;
 	return {
-		title: textOf(child(root, "work"), "work-title") || textOf(root, "movement-title") || null,
-		credits: creditsOf(root),
-		software: textOf(child(identification ?? root, "encoding"), "software") || null,
+		title: dorico && title !== null && DORICO_PLACEHOLDERS.has(title) ? null : title,
+		credits: withoutPlaceholders(creditsOf(root), dorico),
+		software,
 		parts: children(root, "part").map((part) =>
 			readPart(part, meta.get(part.attrs.id ?? "") ?? noMeta(part.attrs.id ?? "")),
 		),

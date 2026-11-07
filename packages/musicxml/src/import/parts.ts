@@ -9,7 +9,7 @@ import { harmonyOf } from "./chords.js";
 import type { Losses } from "./losses.js";
 import type { Words } from "./lyrics.js";
 import { melodyBars } from "./melody.js";
-import { type Line, mergeStaves } from "./merge.js";
+import { foldRhythm, type Line, mergeStaves } from "./merge.js";
 import { LEFT_OUT, type LeftOut, ON_NOTES, type ReadPart } from "./read.js";
 import { readSinging, type Sung, type Unplaced } from "./voice.js";
 
@@ -63,13 +63,19 @@ export function barsOf(part: ReadPart): Bar[] {
 	});
 }
 
-/** The part's lines; a two-staff part whose staves split one line (as the export writes a bare keyboard line) is that one line. */
+/**
+ * The part's lines; a two-staff part whose staves split one line (as the
+ * export writes a bare keyboard line), or a one-staff part whose second
+ * voice is slashes in the first's gaps (Dorico's comping), is that one line.
+ */
 export function linesOf(part: ReadPart): Line[] {
 	const count = Math.max(1, ...part.measures.map((m) => m.lines.length));
 	const lines = Array.from({ length: count }, (_, i) => part.measures.map((m) => m.lines[i] ?? []));
 	const [upper = [], lower = []] = lines;
 	const merged = part.staves === 2 && part.voices === 2 && count === 2 && mergeStaves(upper, lower);
-	return merged ? [merged] : lines;
+	if (merged) return [merged];
+	const folded = part.staves === 1 && count === 2 && foldRhythm(upper, lower);
+	return folded ? [folded] : lines;
 }
 
 /**

@@ -37,6 +37,49 @@ describe("what it reads", () => {
 		expect(pick(bars, "measure")).toEqual(["1", "2", "3"]);
 	});
 
+	test("in another program's file plain words above naming a section at a bar's start are a heading (Dorico's system text)", () => {
+		const dorico = ' font-family="Academico" font-size="11.9055" justify="left"';
+		const bar = (n: number, text: string, attrs = dorico) =>
+			measure(n, (n === 1 ? start() : "") + words(text, attrs) + whole);
+		const { bars } = structureOf(
+			xml`${bar(1, "Intro")}${bar(2, "Verse 2")}${bar(3, "pre-chorus")}${bar(4, "Chorus B")}${bar(5, "Outro")}`,
+		);
+		expect(pick(bars, "heading")).toEqual(["Intro", "Verse 2", "pre-chorus", "Chorus B", "Outro"]);
+		expect(pick(bars, "words")).toEqual([[], [], [], [], []]);
+	});
+
+	test("a section word's trailing colon or full stop is left out of the heading", () => {
+		const bar = (n: number, text: string) =>
+			measure(n, (n === 1 ? start() : "") + words(text) + whole);
+		const { bars } = structureOf(xml`${bar(1, "Intro.")}${bar(2, "Verse 1:")}${bar(3, "Chorus:")}`);
+		expect(pick(bars, "heading")).toEqual(["Intro", "Verse 1", "Chorus"]);
+	});
+
+	test("plain section words are a heading only on the score's first part, where Dorico writes system text", () => {
+		const part = (id: string, text: string) =>
+			`<part id="${id}"><measure number="1">${start()}${words(text)}${whole}</measure></part>`;
+		const two = `<?xml version="1.0"?><score-partwise version="4.0"><part-list><score-part id="P1"><part-name>A</part-name></score-part><score-part id="P2"><part-name>B</part-name></score-part></part-list>${part("P1", "Verse")}${part("P2", "Solo")}</score-partwise>`;
+		const { bars } = structureOf(two);
+		expect(bars[0]?.heading).toBe("Verse");
+		expect(bars[0]?.words).toEqual([{ text: "Solo", at: 0 }]);
+	});
+
+	test("plain words that are not a section name, italic or mid-bar section words, and Coda stay what they were", () => {
+		const { bars } = structureOf(
+			xml`${measure(1, start() + words("Intro please") + whole)}${measure(2, words("Verse", ' font-style="italic"') + whole)}${measure(3, note("C", 4, 2) + words("Chorus") + note("C", 4, 2))}${measure(4, words("Coda") + whole)}`,
+		);
+		expect(pick(bars, "heading")).toEqual([null, null, null, null]);
+		expect(bars[0]?.words).toEqual([{ text: "Intro please", at: 0 }]);
+		expect(bars[1]?.words).toEqual([{ text: "Verse", at: 0 }]);
+		expect(bars[2]?.words).toEqual([{ text: "Chorus", at: 2 }]);
+	});
+
+	test("in the export's own files plain words are a bar's words, whatever they say", () => {
+		const { bars } = fromChart('| "Intro" C | G |');
+		expect(pick(bars, "heading")).toEqual([null, null]);
+		expect(bars[0]?.words).toEqual([{ text: "Intro", at: 0 }]);
+	});
+
 	test("words below the staff are a text line; a ### note keeps its marks", () => {
 		const { bars } = fromChart("| C |\nla la la\n### hits\n| G |");
 		expect(pick(bars, "textLines")).toEqual([[], ["la la la", "### hits"]]);

@@ -71,6 +71,30 @@ test(
 	TIMEOUT,
 );
 
+/** One one-staff measure: `n` notes in voice 1 and, between them, `n` slashes and rests in voice 2 (Dorico's comping, many times over). */
+function interleaved(n: number): string {
+	const forward = "<forward><duration>1</duration></forward>";
+	let first = "";
+	let second = "";
+	for (let i = 0; i < n; i++) {
+		first += `<note><pitch><step>E</step><octave>4</octave></pitch><duration>1</duration><voice>1</voice></note>${forward}`;
+		second += `${forward}<note>${i % 2 ? "<rest/>" : "<pitch><step>B</step><octave>4</octave></pitch>"}<duration>1</duration><voice>2</voice>${i % 2 ? "" : "<notehead>slash</notehead>"}</note>`;
+	}
+	const measure = `<attributes><divisions>${n / 2}</divisions><time><beats>4</beats><beat-type>4</beat-type></time></attributes>${harmony}${first}<backup><duration>${2 * n}</duration></backup>${second}`;
+	return score(1, () => measure, "Dorico 6.2.31.6349");
+}
+
+test(
+	"one measure of thousands of attacks in two voices, one of slashes and rests in the other's gaps, imports in linear time",
+	() => {
+		const big = timed(interleaved(8000));
+		expect(big.text).not.toBe("");
+		expect(big.ms).toBeLessThan(5000);
+		expect(big.ms / timed(interleaved(800)).ms).toBeLessThan(25);
+	},
+	TIMEOUT,
+);
+
 test(
 	"one measure with thousands of attacks and chord symbols, on two staves, imports in linear time",
 	() => {
