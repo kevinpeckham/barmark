@@ -1,9 +1,10 @@
 # @barmark/sync
 
-Sync a [barmark](https://barmark.dev) chord chart with a recording. This
-first release holds the **timing map**: a small JSON format that says
-when each played bar of a chart starts in a recording, a checker for it
-and the two lookups a player needs.
+Sync a [barmark](https://barmark.dev) chord chart with a recording. It
+holds two things: a **builder** that turns a chord detector's output
+(bar grid, chord runs, key, meter) into a chart, and the **timing map**,
+a small JSON format that says when each played bar of a chart starts in a
+recording, with a checker for it and the two lookups a player needs.
 
 ```sh
 npm install @barmark/sync
@@ -58,6 +59,57 @@ directive lines before their bar), a `tempo` (counting the meter's beat;
 omitted, it is taken from the grid, and `null` writes none; one far from
 the grid's warns with `tempo-grid-disagree`) and a `pickup: { start }`
 for the bar before bar 1. The timing map counts a pickup as bar 1.
+
+A few things the builder settles for you:
+
+- A derived tempo is the median beat of the grid, rounded, so a few
+  stretched bars don't move it.
+- A run that crosses a key change is cut at the change's bar, after
+  overlapping runs are settled, and each piece is spelled in the key in
+  force where it starts. A chord held across the change is written again
+  after the `key:` line.
+- A section name is checked against the parser so it reads back as one
+  plain section: repeat and elision marks are removed (`section-marks-stripped`).
+- Chords outside the grid are dropped (`outside-bars`); the builder never
+  guesses at bars the grid doesn't have.
+
+### Diagnostics
+
+Every problem is a `BuildDiagnostic` `{ severity, code, message, path?,
+at?, bar? }`; the builder never throws. Only an unusable grid is an
+error, and it gives an empty chart.
+
+| Code | Severity | Meaning |
+| --- | --- | --- |
+| `grid-unusable` | error | Fewer than two usable bar starts; no chart. |
+| `grid-unsorted` | warning | Bar starts were unsorted, duplicated or not numbers; mended. |
+| `meter-assumed` | info | No meter given; 4/4 assumed. |
+| `meter-unreadable` | warning | The meter isn't understood; 4/4 assumed. |
+| `key-unreadable` | warning | The key isn't understood; none written. |
+| `key-respelled` | info | The key is written under an enharmonic name the chart can spell. |
+| `tempo-unreadable` | warning | The tempo isn't 1 to 999; none written. |
+| `tempo-grid-disagree` | warning | The given tempo is over 15% from the grid's; written as given. |
+| `run-invalid` | warning | A chord run, or `frameSec`, is unusable; dropped. |
+| `run-overlap` | warning | Runs overlap; the later onset wins. |
+| `label-unknown` | warning | A label or symbol isn't understood; written as `?`. |
+| `no-chord-detected` | warning | Nothing covers a slot; written as `?`. |
+| `outside-bars` | warning | Chords before the first bar or after the last were dropped. |
+| `pickup-ignored` | info | The pickup isn't one to a few beats before bar 1; ignored. |
+| `section-unnamed` | warning | A section has no name or no usable start; dropped. |
+| `section-marks-stripped` | warning | A section name was changed so it reads as a plain heading. |
+| `section-collision` | warning | Two sections land on one bar; the later one is kept. |
+| `after-last-bar` | warning | A section or change starts at the grid's end; dropped. |
+| `change-collision` | warning | Two changes of one kind land on one bar; the later one is kept. |
+| `change-unreadable` | warning | A change isn't understood; dropped. |
+
+### What it doesn't do
+
+It does not detect anything: audio, beats, bar lines and chords come from
+your detector. It does not guess at sections, repeats or a key it wasn't
+given. It does not time beats inside a bar, so the timing map has bar
+starts only. Tempo changes are written as the
+input gives them, not found. The output is a first draft for a person to
+correct, and the confidence record says where to look first.
 
 ## The confidence record (experimental)
 

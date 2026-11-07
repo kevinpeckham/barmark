@@ -255,6 +255,21 @@ order, not just the written marks.
 
 ## Design
 
+### A real bar grid is too uneven for its tempo to be trusted (2026-11-07, @barmark/sync)
+
+- **The symptom.** Built from Stem Shovel's ChordMini runs, Letter Lands
+  came out `tempo: 141` and Eat All the Clocks `tempo: 130`; the songs'
+  corpus charts say 132 and 120. No synthetic test had shown it.
+- **The cause.** The grid is DTW-aligned and uneven: bars run from 0.90 to
+  2.43 s in Letter Lands (median 1.70 s) and 1.00 to 2.54 s in the other
+  (median 1.85 s). A mean would give 159 and 146; even the median of the
+  beat lands 7 to 8% off the declared tempo.
+- **The fix.** None in the code: the median is the right robust choice and
+  `tempo-grid-disagree` only judges a tempo the host gave. The README
+  says a derived tempo is the median beat of the grid, and the fixtures
+  keep it, so a change to how it is derived shows in `real.test.ts`.
+  A host that knows the song's tempo should pass it.
+
 ### Syllables drawn as rows of their own drifted off their notes (2026-11-06, @barmark/render)
 
 - **The symptom.** The first draft drew each verse as a row under the
