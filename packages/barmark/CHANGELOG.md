@@ -9,6 +9,13 @@ Releases follow the process in [RELEASING.md](RELEASING.md).
 
 ## [Unreleased]
 
+### Fixed
+
+- **A text line starting `constructor:` or `__proto__:` gets no near-miss
+  warning.** The directive and credit near misses were looked up on plain
+  objects, so those words found `Object.prototype` and suggested
+  "function Object() { [native code] }:".
+
 ### Changed
 
 - **`title: X` warns as a near miss, suggesting `# X`** (Kevin's ruling,

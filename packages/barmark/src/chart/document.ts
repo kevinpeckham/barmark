@@ -188,7 +188,10 @@ function nearDirective(text: string): { message: string; suggestion: string } | 
 	const [, word = "", value = ""] = near ?? [];
 	if (word.toLowerCase() === "title" && value)
 		return { message: "not a directive; a title is a # heading", suggestion: `# ${value}` };
-	const name = NEAR_DIRECTIVES[word.toLowerCase()];
+	// Own keys only: `constructor:` is not a directive's near miss.
+	const name = Object.hasOwn(NEAR_DIRECTIVES, word.toLowerCase())
+		? NEAR_DIRECTIVES[word.toLowerCase()]
+		: undefined;
 	if (!near || !name) return null;
 	return { message: `not a directive; did you mean ${name}:?`, suggestion: `${name}: ${value}` };
 }

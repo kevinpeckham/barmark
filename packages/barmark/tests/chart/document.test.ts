@@ -99,6 +99,14 @@ describe("text-line warnings for old formats", () => {
 		expect(suggestionFor("Title: Song")).toBe("# Song");
 		expect(printChart("title: Lead Sheet Test\n| G |")).toBe("title: Lead Sheet Test\n| G |\n");
 	});
+	test.each(["constructor", "toString", "__proto__", "hasOwnProperty"])(
+		"%s: is not a near miss of a directive or a credit",
+		(word) => {
+			const doc = readDocument(`${word}: x\n| G |`);
+			expect(doc.lines[0]?.kind).toBe("text");
+			expect(doc.diagnostics).toEqual([]);
+		},
+	);
 	test("prose is left alone", () =>
 		expect(readDocument("| D |\nWatch for the cutoff").diagnostics).toEqual([]));
 	test("escaped pipes", () => {
