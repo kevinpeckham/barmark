@@ -29,12 +29,17 @@ not here.
   with replays) all came back playing the same.
 - **The cause.** The bugs were in combinations nobody writes by hand: a
   jump back through a replay that repeats or holds the Fine, a jump on
-  its own bar line after a `:|`, text among bars that never play, a text
-  line written twice. The dropped last bar itself never turned up in
-  about 9,000 random charts; the nearest is a replay with `->` that the
-  Fine ends after the jump, where barmark plays none of it (a grammar
-  question: does the cut take the replay's last written bar or its last
-  played one?), kept as a `test.todo`.
+  its own bar line after a `:|`, a `:|` on a bar line with no bar, text
+  among bars that never play, a text line written twice. The dropped
+  last bar itself never turned up in about 5,800 random charts (seeds 1
+  to 9000). Two shapes still fail. A replay with `->` that the Fine or
+  To Coda ends after the jump (seeds 1827, 3674): barmark cuts the bar
+  before the Fine and plays none of it, a grammar question (does the cut
+  take the replay's last written bar or its last played one?), kept as
+  a `test.todo`. And seed 6404: the import, falling back to played order
+  (it can't hold an unplayed `## Chorus x2` after a To Coda), writes the
+  D.S.'s return into the section before it, losing its heading; the
+  same happens on main.
 - **The fix.** `packages/musicxml/tests/import/jumps-property.test.ts`
   round-trips 300 seeded charts from `jump-charts.ts` (one jump with its
   signs, repeats, endings, `x N` on lines and headings, replays,
