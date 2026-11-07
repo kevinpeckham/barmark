@@ -34,15 +34,16 @@ function held(input: Input, symbols: string[][], b: number): string[] {
  * Whether bar `b` is written `%` (spec 6.3.6): its written slots equal the
  * bar before's, it starts on an attack, and it sits in the same passage. The
  * parser copies the previous bar's written slots, holds included, so the
- * comparison is of held cells. A directive line before it (changes, Task 5)
+ * comparison is of held cells. A bar with an unknown slot (`?`) is written
+ * out, never `%`. A directive line before it (changes, Task 5)
  * also refuses it: they share `changes`.
  */
-function repeats(input: Input, cells: string[][], b: number): boolean {
+function repeats(input: Input, cells: string[][], b: number, symbols: string[][]): boolean {
 	const prev = cells[b - 1];
 	const here = cells[b];
 	const bar = input.bars[b];
 	const before = input.bars[b - 1];
-	if (!prev || !here || !bar || !before) return false;
+	if (!prev || !here || !bar || !before || symbols[b]?.includes("?")) return false;
 	if (input.sections.has(b) || input.changes.has(b) || !sameMeter(bar, before)) return false;
 	return here[0] !== "/" && here.length === prev.length && here.every((s, k) => s === prev[k]);
 }
@@ -64,7 +65,7 @@ function cellOf(input: Input, slots: string[], b: number): string {
 export function writeChart(input: Input, symbols: string[][], options: WriteOptions): string {
 	const slots = symbols.map((_, b) => held(input, symbols, b));
 	const cells = slots.map((c, b) =>
-		options.simile && repeats(input, slots, b) ? "%" : cellOf(input, c, b),
+		options.simile && repeats(input, slots, b, symbols) ? "%" : cellOf(input, c, b),
 	);
 	const lines: string[] = [];
 	if (input.title !== null) lines.push(`# ${input.title}`);

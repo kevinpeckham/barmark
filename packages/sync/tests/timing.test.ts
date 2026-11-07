@@ -39,6 +39,12 @@ const errorPaths = (value: unknown, chart?: { text: string }) =>
 		.map((d) => d.path);
 
 describe("checkTimingMap", () => {
+	test("an empty bars list is rejected at bars", () => {
+		const m = { ...clone(), bars: [] };
+		expect(checkTimingMap(m).map).toBeNull();
+		expect(errorPaths(m)).toEqual(["bars"]);
+	});
+
 	test("a valid map passes, with and without its chart", () => {
 		for (const chart of [undefined, THREE, { text: THREE.text, parse: parseChart(THREE.text) }]) {
 			const r = checkTimingMap(ok, chart);

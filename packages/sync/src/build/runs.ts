@@ -221,7 +221,7 @@ export function cutRuns(runs: SymbolRun[], bars: BarSpan[], report: Report): Sym
 	for (const run of runs) {
 		const before = Math.max(0, Math.min(run.end, from) - run.start);
 		const after = Math.max(0, run.end - Math.max(run.start, to));
-		if (run.symbol !== "N.C.") {
+		if (run.symbol !== "N.C." && run.symbol !== "?") {
 			lostBefore += before;
 			lostAfter += after;
 		}

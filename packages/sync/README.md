@@ -50,7 +50,8 @@ const { chart, timing, diagnostics } = chartFromDetections({
 
 Each slot takes the chord that covers most of it, `?` where under half is
 covered; a slot that repeats the one before is `/`, and a repeated
-multi-chord bar is `%` (`simile: false` writes it out). `barsPerLine`
+multi-chord bar is `%` (`simile: false` writes it out; a bar with a `?`
+is always written out). `barsPerLine`
 sets bars per line (default 4). Problems come back in `diagnostics`; an
 unusable grid gives an empty chart and a `null` timing map.
 
@@ -76,7 +77,7 @@ A few things the builder settles for you:
   after the `key:` line.
 - A section name is checked against the parser so it reads back as one
   plain section: repeat and elision marks are removed (`section-marks-stripped`).
-- Chords outside the grid are dropped (`outside-bars`); the builder never
+- Chords outside the grid are dropped (`outside-bars`, which ignores unknown time); the builder never
   guesses at bars the grid doesn't have.
 
 ### Diagnostics
@@ -99,7 +100,7 @@ error, and it gives an empty chart.
 | `run-overlap` | warning | Runs overlap; the later onset wins. |
 | `label-unknown` | warning | A label or symbol isn't understood; written as `?`. |
 | `no-chord-detected` | warning | Nothing covers a slot; written as `?`. |
-| `outside-bars` | warning | Chords before the first bar or after the last were dropped. |
+| `outside-bars` | warning | Chords (not `N.C.` or `?` time) before the first bar or after the last were dropped. |
 | `pickup-ignored` | info | The pickup isn't one to a few beats before bar 1; ignored. |
 | `section-unnamed` | warning | A section has no name or no usable start; dropped. |
 | `section-marks-stripped` | warning | A section name was changed so it reads as a plain heading. |
@@ -143,7 +144,7 @@ type TimingMap = {
 	recording?: { id?: string; duration?: Seconds };
 	/** How it was made: "detected", "aligned", "tapped", "tempo", or the host's word. */
 	source?: string;
-	/** In recording order. */
+	/** In recording order; never empty. */
 	bars: TimedBar[];
 	/** Where the last entry ends. */
 	end: Seconds;
@@ -166,7 +167,7 @@ to barmark: a host's revision id, since a hash can't be looked up.
 
 The rules, which `checkTimingMap` enforces:
 
-- Starts strictly increase; `end` is after the last start.
+- `bars` names at least one bar. Starts strictly increase; `end` is after the last start.
 - An entry runs from its `start` to its own `end` when given, else to the
   next entry's start (or the map's `end`). An entry's `end` is after its
   start and no later than the next start; the gap between is a pause, and

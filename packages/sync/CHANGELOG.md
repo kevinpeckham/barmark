@@ -13,7 +13,7 @@ Requires `barmark` 0.19.0 (its key and spelling exports: `keyFromText`, `convent
 - **`chartFromDetections`**: a chord chart, and the timing map that places
   it in the recording, from a detector's bar grid and chord runs (in
   seconds or in frames, as Harte labels or barmark symbols). It votes one
-  symbol per slot, writes holds as `/` and repeated multi-chord bars as
+  symbol per slot, writes holds as `/` and repeated multi-chord bars (without a `?`) as
   `%`, lays the bars out `barsPerLine` to a line, and never throws:
   problems come back as `BuildDiagnostic`s with twenty codes.
 - **Titles, sections, changes, tempo and pickups** in the builder: a

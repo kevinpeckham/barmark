@@ -32,6 +32,21 @@ function percentAfterDirective(parse: ChartParse): string | null {
 	return null;
 }
 
+/** No `%` follows a bar with an unknown slot (Kevin's decision, 2026-11-07). */
+function percentAfterUnknown(chart: string): string | null {
+	const cells = chart
+		.split("\n")
+		.filter((l) => l.startsWith("|"))
+		.flatMap((l) =>
+			l
+				.split("|")
+				.slice(1, -1)
+				.map((c) => c.trim()),
+		);
+	const at = cells.findIndex((c, i) => c === "%" && cells[i - 1]?.includes("?"));
+	return at < 0 ? null : `bar ${at + 1} is a % of a bar with a ?`;
+}
+
 /** Whether slot `k` of played bar `i` is written `?`. */
 const isUnknown = (parse: ChartParse, i: number, k: number) =>
 	parse.bars[i]?.slots[k]?.kind === "unknown";
@@ -50,6 +65,7 @@ const CHECKS: Check[] = [
 	},
 	({ parse }) => (parse.sections.some((s) => s.firstBar === null) ? "a heading has no bar" : null),
 	({ parse }) => percentAfterDirective(parse),
+	({ r }) => percentAfterUnknown(r.chart),
 	({ r }) => (r.timing && r.confidence ? null : "a record is missing"),
 	({ r, parse }) => {
 		const c = r.confidence;

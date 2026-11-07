@@ -9,7 +9,7 @@ export type TimingMap = {
 	recording?: { id?: string; duration?: Seconds };
 	/** How it was made: "detected", "aligned", "tapped", "tempo", or the host's word. */
 	source?: string;
-	/** In recording order. */
+	/** In recording order; never empty. */
 	bars: TimedBar[];
 	/** Where the last entry ends. */
 	end: Seconds;

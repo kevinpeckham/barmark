@@ -182,6 +182,7 @@ export function checkTimingMap(
 	}
 	const chartBars = checkHeader(value, r);
 	if (!Array.isArray(value.bars)) r.error("bars", "bars must be a list");
+	else if (value.bars.length === 0) r.error("bars", "bars must name at least one bar");
 	else {
 		const valid = value.bars.map((e, i) => checkEntryShape(e, `bars[${i}]`, chartBars, r));
 		checkOrder(value.bars as Obj[], valid, isNum(value.end) ? value.end : null, r);

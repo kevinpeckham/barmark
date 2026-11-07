@@ -159,3 +159,37 @@ describe("junk", () => {
 		expect(r.chart).toBe("key: C, tempo: 120\n| C | / | G | / |\n");
 	});
 });
+
+describe("a bar with an unknown slot is never a %", () => {
+	const build = (runs: { start: number; end: number; label: string }[], end = 4) =>
+		chartFromDetections({
+			grid: { bars: Array.from({ length: end / 2 + 1 }, (_, i) => i * 2) },
+			meter: "4/4",
+			tempo: 120,
+			chords: { runs },
+		}).chart;
+
+	test("? C | ? C is written out", () => {
+		const chart = build([
+			{ start: 1, end: 2, label: "C:maj" },
+			{ start: 3, end: 4, label: "C:maj" },
+		]);
+		expect(chart).toContain("| ? C | ? C |");
+		expect(chart).not.toContain("%");
+	});
+
+	test("an all-? bar after an all-? bar is not a %", () => {
+		const chart = build([{ start: 0, end: 2, label: "C:maj" }], 6);
+		expect(chart).not.toContain("%");
+	});
+
+	test("a known repeated bar is still a %", () => {
+		const chart = build([
+			{ start: 0, end: 1, label: "C:maj" },
+			{ start: 1, end: 2, label: "G:maj" },
+			{ start: 2, end: 3, label: "C:maj" },
+			{ start: 3, end: 4, label: "G:maj" },
+		]);
+		expect(chart).toContain("%");
+	});
+});

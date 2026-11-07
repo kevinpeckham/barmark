@@ -228,6 +228,28 @@ describe("cutRuns", () => {
 		expect(list).toEqual([]);
 	});
 
+	test("a ? lead-in and tail of several seconds give no warning", () => {
+		const { list } = cut([
+			{ start: -5, end: 1, symbol: "?" },
+			{ start: 7, end: 12, symbol: "?" },
+		]);
+		expect(list).toEqual([]);
+	});
+
+	test("a chord run 2 s before the first bar still warns", () => {
+		const { list } = cut([{ start: -2, end: 1, symbol: "C" }]);
+		expect(list.map((d) => d.code)).toEqual(["outside-bars"]);
+	});
+
+	test("a mix warns only on the chord time", () => {
+		const { list } = cut([
+			{ start: -5, end: -2, symbol: "?" },
+			{ start: -2, end: 1, symbol: "C" },
+		]);
+		expect(list).toHaveLength(1);
+		expect(list[0]?.message).toContain("2 s");
+	});
+
 	test("under a beat lost gives no warning", () => {
 		const { runs, list } = cut([{ start: -0.4, end: 1, symbol: "C" }]);
 		expect(runs).toEqual([{ start: 0, end: 1, symbol: "C" }]);
