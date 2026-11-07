@@ -6,7 +6,10 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
-Requires `barmark` 0.19.0 (its key and spelling exports: `keyFromText`, `conventionalKey`, `printKey`, `spellPitch`).
+## [0.1.0] - 2026-11-07
+
+The first release. Requires `barmark` 0.19.0 (its key and spelling
+exports: `keyFromText`, `conventionalKey`, `printKey`, `spellPitch`).
 
 ### Added
 
@@ -34,3 +37,6 @@ Requires `barmark` 0.19.0 (its key and spelling exports: `keyFromText`, `convent
   and slot, how well the detector's runs back what was written (agreement
   times the runs' own confidence; `?` is 0), and the confidences the input
   gave for `key`, `meter`, `tempo` and `sections`. The shape may change.
+
+[Unreleased]: https://github.com/kevinpeckham/barmark/compare/sync-v0.1.0...HEAD
+[0.1.0]: https://github.com/kevinpeckham/barmark/releases/tag/sync-v0.1.0
