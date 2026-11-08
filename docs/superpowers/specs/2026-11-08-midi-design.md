@@ -650,18 +650,48 @@ Appendix A.4 and common inversions:
    in barmark's suffix table (Appendix A's combinations, up to three
    added tones). A root whose perfect fifth isn't sounding is tried with
    it supplied too, since voicings leave fifths out (`{C E Bb}` is `C7`).
-2. **The least cost wins:** one for each added tone in parentheses
+2. **Suffixes no one writes are dropped** (Claude's ruling, 2026-11-08,
+   from Fable's review): a degree held both plain and altered (`b9` with
+   `9`, `b7` with `7`: a cluster, not a chord; two alterations, as in
+   `7(b9,#9)`, stay), a `(7)` tone on a `6` or `6/9` chord, any added
+   tone on `dim` or `dim7`, and an altered tone on `5`, `6` or `6/9`.
+   Without this the table names anything (`{C C# D D# E}` was
+   `C#mmaj7(b9,9)/B#`, `{C E G A Bb}` was `C6(7)`, `{B G F Ab}` was
+   `Fdim(9)/Cb`).
+3. **The least cost wins:** one for each added tone in parentheses
    (`m7(b5)` counts none: it is the half-diminished shorthand), one when
-   the root isn't the bass, one when the fifth was supplied.
-3. **Ties:** triads, then sevenths, then sixths, then sus, then extended
-   chords, then added tones; then `(9)`, `(11)` over `(2)`, `(4)`; then
-   the shorter suffix; then the root nearest above the bass.
-4. **Two pitch classes** a perfect fifth apart are a power chord (`E5`);
+   the root isn't the bass, a half when the fifth was supplied (Claude's
+   ruling, 2026-11-08, from Fable's review: a left-out fifth is the
+   commonest voicing, cheaper than a slash).
+4. **Ties** (the order is Claude's ruling, 2026-11-08, from Fable's
+   review): triads, then sevenths, then sixths, then sus, then extended
+   chords, then added tones; then the root in the bass (`{C E G Bb Db
+   Eb}` is `C7(b9,#9)`, not `Eb13(b9)/C`; `{G C F}` is `G7sus4`); then
+   `(9)`, `(11)`, `(13)` over `(2)`, `(4)`, `(6)` (`{G B F E}` is
+   `G7(13)`); then the shorter suffix; then the root nearest above the
+   bass.
+5. **Two pitch classes** a perfect fifth apart are a power chord (`E5`);
    any other dyad, and a single note, is null (the importer writes the
    note set).
-5. **Spelling:** the root by `spellPitch(root, key)`, the bass and tones
-   by interval from it; a result with a double accidental retries the
-   enharmonic root, as sync does for Harte labels.
+6. **Spelling** (Claude's ruling, 2026-11-08, from Fable's review): the
+   root by `spellPitch(root, key)`. The bass by its interval from the
+   root, but by `spellPitch(bass, key)` when that spelling has a double
+   accidental, or is E♯, B♯, C♭ or F♭ while the root has no key or is
+   outside the key's scale (`{G E G#}` is `E(#9)/G`, not `E(#9)/F##`).
+   A root with no key or outside the key's scale takes its enharmonic
+   spelling when that has fewer faults among the root, its third and the
+   bass, a fault being a double accidental or an E♯, B♯, C♭ or F♭ that
+   `spellPitch` would not itself produce: keyless `{Db F Ab}` is `Db`
+   (not `C#` over `E#`), `{G# B D F}` is `G#dim7` (not `Abdim7`, whose
+   seventh is E𝄫), `{C# E G#}` stays `C#m`. A root in the key's scale
+   keeps the key's spelling (`C#/E#` in C♯ major, `Cb/Gb` in G♭).
+
+Known residuals of the rule (kept, not named the way a musician would):
+`{D F G C}` is `G7sus4/D` (`Dm7(11)` costs 1.5, the slash 1), `{C Eb F
+Bb}` is `F7sus4/C`, `{C E G# D}` is `Eaug7/C` (the augmented triad's
+symmetry), `{C G B}` is `G(11)/C` (no `(no3)` in the table), and
+rootless shells such as `{E Bb D}` (`Bb(b5)/E`) are named rather than
+null.
 
 What the spike gave (key-less): every A.4 symbol on C comes back as
 itself except `C11` (`C9sus4`, the same notes), `C/Bb` (`C7/Bb`, the
