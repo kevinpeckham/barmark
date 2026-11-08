@@ -54,6 +54,16 @@ describe("engraveChart", () => {
 		expect(count(lower, /class="(mRest|rest)"/g)).toBe(1);
 	});
 
+	test("a pickup is drawn as one: no time signature of its own, numbered 0", () => {
+		engraveChart(vrv, read("shenandoah.chart.md"), { width: 800 });
+		const mei = vrv.getMEI();
+		const meters = [...mei.matchAll(/<meterSig [^>]*count="(\d+)" unit="(\d+)"/g)].map(
+			(m) => `${m[1]}/${m[2]}`,
+		);
+		expect(new Set(meters)).toEqual(new Set(["4/4"]));
+		expect(mei).toMatch(/<measure [^>]*metcon="false" n="0">/);
+	});
+
 	test("as many measures as the export", () => {
 		const r = engraveChart(vrv, read("morning-song.chart.md"), { width: 800 });
 		if (!r.ok) throw new Error(r.reason);

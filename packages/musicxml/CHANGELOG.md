@@ -22,6 +22,18 @@ package uses [semantic versioning](https://semver.org/).
   slash notes already carry slash noteheads and no stems. Its first
   measure now writes `<slash type="stop"/>`, as Verovio carries slash
   style on from the part before it.
+- **A pickup is written as a pickup.** A first bar in a one-bar meter
+  shorter than the `time:` meter, followed by a bar in that meter
+  (`time: 3/4` then `| [1/4] C | D |`), is now measure 0 with
+  `implicit="yes"`, under the running time signature, as MuseScore writes
+  one; the measures after it are numbered from 1. It used to be measure 1
+  with a `<time>` of 1/4 and then the running meter, so Verovio and Dorico
+  printed a 1/4 time signature and counted the pickup as bar 1. A first
+  bar MusicXML's pickup can't say keeps its own time signature: one whose
+  length would read back as another meter in the running meter's beat
+  (`[1/4]` in 6/8 reads `[2/8]`), and one followed by another one-bar
+  meter (`| [2/4] G | % |`). The import reads either shape back as the
+  same pickup.
 
 ## [0.7.1] - 2026-11-08
 

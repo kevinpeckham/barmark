@@ -22,11 +22,13 @@ import {
 	barLength,
 	beatLength,
 	beatPieces,
+	cmp,
 	type Frac,
 	frac,
 	meterValues,
 	type NoteValue,
 	noteValues,
+	pickupMeter,
 	plus,
 } from "./rhythm.js";
 import { splitStaves } from "./staves.js";
@@ -38,6 +40,8 @@ export type MeasureContext = {
 	index: number;
 	previous: Measure | null;
 	next: Measure | null;
+	/** The part opens with a pickup (`opensWithPickup`): its first measure is measure 0, implicit. */
+	pickup: boolean;
 	/** This bar's clef, and the bar before's (null for the first). */
 	clef: { now: Clef; before: Clef | null };
 	/** How far the part is written above where it sounds (a bass's octave; barmark's grammar 7.3). */
@@ -92,10 +96,32 @@ function keyXml(m: Measure, prev: Measure | null, written: WrittenInterval): str
 	]);
 }
 
+/**
+ * Whether a part's first measure is a pickup MusicXML can say: a one-bar meter shorter
+ * than the `time:` meter (grammar 2.4), then a bar in that meter, and a length a reader
+ * counting the running meter's beat reads back as the same meter. An implicit measure has
+ * no meter of its own, so `[1/4]` in 6/8, which would read back `[2/8]`, keeps its own
+ * time signature, as does `| [2/4] G | % |`, two bars of 2/4.
+ */
+function opensWithPickup([first, second]: Measure[]): boolean {
+	if (!first?.time || second?.time) return false;
+	const length = barLength(first.meter);
+	const back = pickupMeter(length, first.time);
+	return (
+		cmp(length, barLength(first.time)) < 0 && back?.n === first.meter.n && back.d === first.meter.d
+	);
+}
+
+/** The meter a measure's time signature shows: a pickup shows the running meter. */
+const shownMeter = (m: Measure, index: number, pickup: boolean): Meter =>
+	pickup && index === 0 ? (m.time ?? m.meter) : m.meter;
+
 /** The time signature, when it is the first or a change. */
-function timeXml(m: Measure, prev: Measure | null): string {
-	if (prev && prev.meter.n === m.meter.n && prev.meter.d === m.meter.d) return "";
-	return el("time", {}, [text("beats", m.meter.n), text("beat-type", m.meter.d)]);
+function timeXml(m: Measure, ctx: MeasureContext): string {
+	const meter = shownMeter(m, ctx.index, ctx.pickup);
+	const prev = ctx.previous && shownMeter(ctx.previous, ctx.index - 1, ctx.pickup);
+	if (prev && prev.n === meter.n && prev.d === meter.d) return "";
+	return el("time", {}, [text("beats", meter.n), text("beat-type", meter.d)]);
 }
 
 const CLEF_LINE: Record<string, number> = { G: 2, F: 4, C: 3 };
@@ -148,11 +174,11 @@ function attributesXml(m: Measure, ctx: MeasureContext): string {
 	const prev = ctx.previous;
 	const slash = slashStyleXml(ctx.slashed, ctx.staves);
 	const head = prev
-		? [keyXml(m, prev, ctx.written), timeXml(m, prev), clefsXml(ctx), slash]
+		? [keyXml(m, prev, ctx.written), timeXml(m, ctx), clefsXml(ctx), slash]
 		: [
 				text("divisions", ctx.divisions),
 				keyXml(m, null, ctx.written),
-				timeXml(m, null),
+				timeXml(m, ctx),
 				clefsXml(ctx),
 				transposeXml(ctx.written),
 				slash,
@@ -446,12 +472,17 @@ function rightBarlineXml(marks: Marks): string {
 	]);
 }
 
-/** A measure's place among a part's measures: its index, and the measures either side. */
+/** A measure's place among a part's measures: its index, the measures either side, and whether the part opens with a pickup. */
 export const placeIn = (measures: Measure[], index: number) => ({
 	index,
 	previous: measures[index - 1] ?? null,
 	next: measures[index + 1] ?? null,
+	pickup: opensWithPickup(measures),
 });
+
+/** A measure's number and, for a pickup, `implicit`: MuseScore numbers its pickup 0. */
+const numbering = ({ index, pickup }: MeasureContext) =>
+	pickup ? { number: index, ...(index === 0 ? { implicit: "yes" } : {}) } : { number: index + 1 };
 
 export function measureXml(bar: MeasureEvents, ctx: MeasureContext): string {
 	const m = bar.measure;
@@ -460,7 +491,7 @@ export function measureXml(bar: MeasureEvents, ctx: MeasureContext): string {
 		: ctx.staves === 2
 			? stavesXml(bar, ctx)
 			: staffXml(bar, ctx);
-	return el("measure", { number: ctx.index + 1, text: m.shown }, [
+	return el("measure", { ...numbering(ctx), text: m.shown }, [
 		// A processing instruction: other programs ignore it, the importer reads a lyric row.
 		ctx.lyricRow ? "<?barmark lyrics?>" : "",
 		attributesXml(m, ctx),

@@ -1,7 +1,7 @@
 /** Reads a MusicXML score-partwise into parts, lines and marks at exact positions. */
 import { type Credits, type Key, type Meter, parseMeter } from "barmark";
 import { MODE_FIFTHS } from "../measure-xml.js";
-import { cmp, type Frac, frac, minus, plus, ZERO } from "../rhythm.js";
+import { cmp, type Frac, frac, minus, pickupMeter, plus, ZERO } from "../rhythm.js";
 import { writtenPitch } from "../written.js";
 import type { Losses } from "./losses.js";
 import { child, children, textOf, type XNode } from "./tree.js";
@@ -536,18 +536,6 @@ function readMeasure(node: XNode, p: PartState): RawMeasure {
 	return raw;
 }
 
-/** The finest unit a pickup is counted in: a 32nd. */
-const FINEST = 32;
-
-/** The bar's length in the meter's beat unit (its denominator), else in halves of it and so on to 32nds; null when none counts it whole. */
-function pickupMeter(length: Frac, meter: Meter): Meter | null {
-	for (let d = meter.d; d <= FINEST; d *= 2) {
-		const n = frac(length.n * d, length.d * 4);
-		if (n.d === 1 && n.n > 0) return parseMeter(`${n.n}/${d}`);
-	}
-	return null;
-}
-
 const NOT_WHOLE = "a short bar's length can't be written as a meter; read as a full bar";
 const TOO_LONG = "an implicit bar is longer than its meter; read as a full bar";
 
@@ -573,7 +561,8 @@ function settlePickup(m: RawMeasure, at: number, meter: Meter, part: PartState):
 /**
  * A first bar in a meter of its own, shorter than the meter the next bar
  * sets, is a pickup (`[1/4]` before `time: 3/4`), as barmark's export
- * writes one; MuseScore marks its pickups `implicit` instead.
+ * wrote one up to 0.7.1; MuseScore, and barmark's export since, mark a
+ * pickup `implicit` instead.
  */
 function settleFirstPickup(measures: RawMeasure[]): void {
 	const [first, next] = measures;
