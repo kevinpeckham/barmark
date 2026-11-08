@@ -147,7 +147,8 @@ A keyboard part has `<staves>2</staves>`, treble above and bass below.
   No slash style (amended 2026-11-08, FINDINGS "Verovio beside Dorico,
   first run"): Verovio slashed both staves, the rest included, from
   `<measure-style number="1">`, and carries slash style on from the part
-  before, so a keyboard's first measure turns it off; its slash notes
+  before, so a keyboard's first measure turns it off (as does any part's
+  that doesn't start in slashes); its slash notes
   carry slash noteheads and no stems on their own.
 - **Chord symbols** above the upper staff.
 - Each staff is its own voice in the measure (voice 1 upper, voice 5

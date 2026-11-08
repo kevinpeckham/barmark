@@ -49,6 +49,14 @@ describe("notes", () => {
 		expect(ms[1]).toContain('<slash type="stop"/>');
 		expect(ms[2]).toContain('<slash type="start" use-stems="no"/>');
 	});
+	test("a part that doesn't start in slashes says so in its first measure", () => {
+		// Verovio carries slash style on from the part before.
+		const xml = xmlOf("part: Gtr = Guitar\npart: Bs = Bass\nGtr | G | C |\n| D | G |");
+		const [first = "", second = ""] = measures(xml, "P2");
+		expect(first).toContain('<measure-style><slash type="stop"/></measure-style>');
+		expect(second).not.toContain("<measure-style");
+		expect(measures(xmlOf("| {C E G} | {D F A} |"))[0]).toContain('<slash type="stop"/>');
+	});
 	test("slash style stops in a part's tacet bars", () => {
 		// A one-staff part: a keyboard's two staves write no slash style (staves.test.ts).
 		const chart =

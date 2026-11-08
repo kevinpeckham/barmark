@@ -25,7 +25,7 @@ const KNOWN: Record<string, Partial<Record<Field, [number, number]>>> = {
 	"melody-rest.musicxml": { notes: [4, 20], rests: [3, 0] },
 	"part-enters.musicxml": { notes: [12, 48], rests: [4, 12] },
 	"piano.musicxml": { notes: [24, 12] },
-	"replay-holds.musicxml": { notes: [137, 160], rests: [35, 71], harms: [33, 42] },
+	"replay-holds.musicxml": { notes: [137, 160], rests: [35, 73], harms: [33, 42] },
 	"six-guitars.musicxml": { notes: [18, 9], harms: [18, 3] },
 	"trading-fours.musicxml": { notes: [8, 32], rests: [8, 16] },
 };

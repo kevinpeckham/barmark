@@ -135,14 +135,14 @@ const slashStyle = (on: boolean) =>
 
 /**
  * Slash style on from the first slashed measure, off for a measure of notes, and on again
- * after. A keyboard's two staves never turn it on: its slash notes already carry slash
- * noteheads and no stems, and Verovio slashes both staves (whole-bar rests and all) from
- * `<measure-style number="1">`. Its first measure turns it off instead, as Verovio carries
- * slash style on from the part before.
+ * after. A part's first measure always says which: Verovio carries slash style on from the
+ * part before, and drew a following part's whole-bar rests as slashes. A keyboard's two
+ * staves never turn it on: its slash notes already carry slash noteheads and no stems, and
+ * Verovio slashes both staves (whole-bar rests and all) from `<measure-style number="1">`.
  */
 function slashStyleXml({ now: on, before }: MeasureContext["slashed"], staves: 1 | 2): string {
-	if (staves === 2) return before === null ? slashStyle(false) : "";
-	if (before === null ? !on : on === before) return "";
+	if (before === null) return slashStyle(on && staves === 1);
+	if (staves === 2 || on === before) return "";
 	return slashStyle(on);
 }
 

@@ -76,6 +76,19 @@ describe("engraveChart", () => {
 		expect(tstamp).toBe(4);
 	});
 
+	test("a part after a slashed one draws its own whole-bar rest, not slashes", () => {
+		// Verovio carries slash style on from the part before.
+		const r = engraveChart(vrv, "part: Gtr = Guitar\npart: Bs = Bass\nGtr | G | C |\n| D | G |", {
+			width: 800,
+		});
+		if (!r.ok) throw new Error(r.reason);
+		const system = r.svg.split('class="system"')[1] ?? "";
+		const measure = system.split('class="measure"')[1] ?? "";
+		const [, bass = ""] = measure.split('class="staff"').slice(1);
+		expect(count(bass, /class="beatRpt"/g)).toBe(0);
+		expect(count(bass, /class="(mRest|rest)"/g)).toBe(1);
+	});
+
 	test("as many measures as the export", () => {
 		const r = engraveChart(vrv, read("morning-song.chart.md"), { width: 800 });
 		if (!r.ok) throw new Error(r.reason);

@@ -19,9 +19,12 @@ package uses [semantic versioning](https://semver.org/).
 - **A keyboard's lower staff is not drawn in slashes.** A two-staff part
   no longer writes `<measure-style number="1"><slash>`: Verovio applied it
   to both staves and drew the lower staff's whole-bar rest as slashes. Its
-  slash notes already carry slash noteheads and no stems. Its first
-  measure now writes `<slash type="stop"/>`, as Verovio carries slash
-  style on from the part before it.
+  slash notes already carry slash noteheads and no stems.
+- **No part inherits the slash style of the part before it.** Every part
+  that doesn't start in slashes now writes `<slash type="stop"/>` in its
+  first measure: Verovio carries slash style from one part to the next,
+  and drew a bass's opening whole-bar rest, after a slashed guitar, as
+  four slashes.
 - **A pickup is written as a pickup.** A first bar in a one-bar meter
   shorter than the `time:` meter, followed by a bar in that meter
   (`time: 3/4` then `| [1/4] C | D |`), is now measure 0 with

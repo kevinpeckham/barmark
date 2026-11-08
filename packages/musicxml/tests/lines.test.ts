@@ -79,7 +79,7 @@ describe("part lines in MusicXML", () => {
 		for (const bar of bars) {
 			expect(notes(bar).every((n) => tag(n, "voice") === "1")).toBe(true);
 			expect(bar).not.toContain("<notehead>slash</notehead>");
-			expect(bar).not.toContain("<measure-style>");
+			expect(bar).not.toContain('<slash type="start"');
 		}
 		// Each chord symbol's kind, and the note it stands right before.
 		const chords = (bar: string) =>
