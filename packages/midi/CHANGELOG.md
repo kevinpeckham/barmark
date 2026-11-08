@@ -19,7 +19,7 @@ package uses [semantic versioning](https://semver.org/).
   and a hit at 112 for its whole slot (a `/` after it holds it); a push
   attacks an eighth or a sixteenth early, taking the time from the slot
   played before it in play order, across bar lines, repeats and replays
-  (a push no longer than the slot before it stays on the beat, so no
+  (a push at least as long as the slot before it stays on the beat, so no
   written chord is lost);
   the sustain pedal as controller 64 presses, changes (lift, then press,
   at one time) and lifts, with `--`, a tacet bar and the chart's end
@@ -55,3 +55,23 @@ package uses [semantic versioning](https://semver.org/).
   tacet part or a resting line sounds nothing; the pedal is on every
   track of its part; lyrics go to the singing line's track and, with
   words, move with a pushed note.
+- `exportMidi(text, options?)`: a chart's play order as a format 1
+  Standard MIDI File. Track 1 is the conductor: the title (or the
+  `title` option) as its name, the credits (copyright as a copyright
+  event, the others as `Composer: …` text), the tempo map, time
+  signatures (clicking on the meter's beat), key signatures (beyond seven
+  sharps or flats written as their enharmonic) and markers; then a track
+  for each performed track, with its program at tick 0, its notes
+  (note-offs at velocity 64), pedal, lyrics and words. The division is
+  the smallest multiple of 480 that makes every time whole, up to 32,640
+  and what keeps the chart within SMF's longest time; finer rhythms play
+  at 480, rounded but never to nothing, with a `ticks-rounded` loss, and
+  a chart too long for any division is an error. Each track has its own
+  channel, skipping channel 10; past 15 tracks a part's lines share one
+  (by the part's label) and its harmony track another, with a
+  `channels-shared` loss. A tempo MIDI can't hold is clamped with a
+  `tempo-range` loss; a pitch beyond 0–127 moves by octaves into it. The
+  `part` option exports one part as `extractPart` reads it. A chart with
+  errors, with no bars, or a `part` naming no part writes nothing. Each
+  loss is reported once, at the first bar it happened in. The main entry
+  also exports the performance's types and `VERSION`.

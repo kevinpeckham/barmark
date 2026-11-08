@@ -116,6 +116,28 @@ describe("perform: parts, lines, programs and harmony tracks", () => {
 		);
 	});
 
+	test("a tutti bar in a lined chart sounds on the part's first line (grammar 7.6)", () => {
+		// The Outro's `| G | % |` is tutti: Piano RH plays G at 24 and 28; LH and RH2 rest.
+		const lines = play(PIANO_LINES);
+		expect(notes(lines, "Piano RH").filter(([, at]) => at === 24)).toHaveLength(4);
+		expect(notes(lines, "Piano RH").filter(([, at]) => at === 28)).toHaveLength(4);
+		for (const name of ["Piano LH", "Piano RH2"])
+			expect(notes(lines, name).filter(([, at]) => (at ?? 0) >= 24)).toEqual([]);
+	});
+
+	test("a melodic part's harmony track hears a chord on whichever line is first in its system", () => {
+		// Vo.B is alone in the second system, so it is the part's first line there and may hold a chord (7.6).
+		const voice = play(
+			"part: Vo = Voice, instrument: voice\n\nVo.A | {C4} | {D4} |\nVo.B | {E4} | {F4} |\n\nVo.B | G | {A4} |\n",
+		);
+		expect(notes(voice, "Voice chords")).toEqual([
+			[43, 8, 4],
+			[62, 8, 4],
+			[67, 8, 4],
+			[71, 8, 4],
+		]);
+	});
+
 	test("the part option", () => {
 		const gtr = extractPart(MORNING_SONG, "Gtr");
 		if (!gtr) throw new Error("no part Gtr");

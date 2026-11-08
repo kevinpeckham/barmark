@@ -72,7 +72,7 @@ function writeEvent(event: SmfEvent, out: number[]): void {
 const isEnd = (event: SmfEvent) => event.kind === "meta" && event.type === END_OF_TRACK;
 
 /** One track's events in order, ending with one end-of-track (at the latest tick given). */
-function ordered(track: SmfEvent[]): SmfEvent[] {
+export function ordered(track: SmfEvent[]): SmfEvent[] {
 	const events = track
 		.filter((event) => !isEnd(event))
 		.sort((a, b) => a.tick - b.tick || rank(a) - rank(b));

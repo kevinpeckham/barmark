@@ -99,7 +99,12 @@ type Context = {
 /** A plan performed: its lines' notes, its part's pedal, its lines' words and the lyrics it sings, swung. */
 function performTrack(plan: TrackPlan, ctx: Context): PerformedTrack {
 	const { timed, lines, swing } = ctx;
-	const lineOf = (s: Stream) => lines.get(s) as Played;
+	const lineOf = (s: Stream): Played => {
+		const line = lines.get(s);
+		// `perform` plays every stream a plan names, its words' streams among them.
+		if (!line) throw new Error(`perform: track ${plan.name} names a line it never played`);
+		return line;
+	};
 	const swung = <T extends { at: Quarters }>(items: T[], moved: Played["moved"] = (at) => at) =>
 		items.map((e) => ({ ...e, at: swing(moved(e.at)) }));
 	const words = plan.words.flatMap((s) =>
