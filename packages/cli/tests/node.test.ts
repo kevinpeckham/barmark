@@ -11,6 +11,10 @@ const PACKAGE = join(import.meta.dir, "..");
 const BIN = join(PACKAGE, "dist/cli.js");
 let dir = "";
 
+/** The Verovio the CLI pins exactly. */
+const verovioVersion = () =>
+	JSON.parse(readFileSync(join(PACKAGE, "package.json"), "utf8")).dependencies.verovio;
+
 /** Run the built bin with Node in the temp folder. */
 function barmark(...args: string[]) {
 	const run = Bun.spawnSync(["node", BIN, ...args], { cwd: dir });
@@ -38,7 +42,7 @@ describe("the built bin under Node", () => {
 		const version = (name: string) =>
 			JSON.parse(readFileSync(join(PACKAGE, "..", name, "package.json"), "utf8")).version;
 		expect(barmark("--version").out).toBe(
-			`@barmark/cli ${version("cli")} (barmark ${version("barmark")}, @barmark/render ${version("render")}, @barmark/musicxml ${version("musicxml")}, @barmark/score ${version("score")}, @barmark/midi ${version("midi")})\n`,
+			`@barmark/cli ${version("cli")} (barmark ${version("barmark")}, @barmark/render ${version("render")}, @barmark/musicxml ${version("musicxml")}, @barmark/score ${version("score")}, @barmark/midi ${version("midi")}, verovio ${verovioVersion()})\n`,
 		);
 	});
 	test("export --midi writes the file; import reads one", () => {

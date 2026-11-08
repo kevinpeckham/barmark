@@ -33,7 +33,7 @@ const score = scored.status === 0 && scored.stdout.includes('role="img"');
 const result = { version, check, render, score };
 console.log(JSON.stringify(result));
 const ok =
-	/^@barmark\/cli \d+\.\d+\.\d+ \(barmark \d+\.\d+\.\d+, @barmark\/render \d+\.\d+\.\d+, @barmark\/musicxml \d+\.\d+\.\d+, @barmark\/score \d+\.\d+\.\d+, @barmark\/midi \d+\.\d+\.\d+\)$/.test(
+	/^@barmark\/cli \d+\.\d+\.\d+ \(barmark \d+\.\d+\.\d+, @barmark\/render \d+\.\d+\.\d+, @barmark\/musicxml \d+\.\d+\.\d+, @barmark\/score \d+\.\d+\.\d+, @barmark\/midi \d+\.\d+\.\d+, verovio \d+\.\d+\.\d+\)$/.test(
 		version,
 	) &&
 	check === 0 &&

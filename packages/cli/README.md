@@ -53,8 +53,8 @@ takes the renderer's options as flags: `--theme auto|light|dark`,
 `--numerals nashville|roman`, `--no-bar-numbers`, `--rehearsal-letters`,
 `--no-wrap`, `--diagnostics`, `--part <label>` to draw one part, and `--font-url <url>` to link the font
 instead of embedding it. `barmark <command> --help` lists each command's
-flags; `barmark --version` prints the versions of the CLI and its
-libraries.
+flags; `barmark --version` prints the versions of the CLI, its
+libraries and Verovio.
 
 `render --score` writes a standalone page of the full engraved score
 instead of the bar grid: the drawing `<barmark-score>` shows, the chart

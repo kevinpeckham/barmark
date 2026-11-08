@@ -25,9 +25,9 @@ export const COMMANDS: Record<string, Command> = {
 export async function main(argv: string[], io: Io): Promise<number> {
 	const [name, ...args] = argv;
 	if (name === "--version" || name === "-v") {
-		const { cli, barmark, render, musicxml, score, midi } = io.versions;
+		const { cli, barmark, render, musicxml, score, midi, verovio } = io.versions;
 		io.stdout(
-			`@barmark/cli ${cli} (barmark ${barmark}, @barmark/render ${render}, @barmark/musicxml ${musicxml}, @barmark/score ${score}, @barmark/midi ${midi})\n`,
+			`@barmark/cli ${cli} (barmark ${barmark}, @barmark/render ${render}, @barmark/musicxml ${musicxml}, @barmark/score ${score}, @barmark/midi ${midi}, verovio ${verovio})\n`,
 		);
 		return 0;
 	}

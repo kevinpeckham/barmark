@@ -18,8 +18,9 @@ package uses [semantic versioning](https://semver.org/).
   `--rehearsal-letters`, `--no-wrap`, `--diagnostics`, `--font-url`) are
   usage errors with `--score` (exit 2), as is `--width` without it. A
   chart that won't engrave writes nothing: `file: reason` on stderr, exit
-  1.
-- **`--version`** lists `@barmark/score`.
+  1. In the standalone binaries Verovio is an embedded file loaded on the
+  first score, so the other commands start as fast as before.
+- **`--version`** lists `@barmark/score` and Verovio.
 - The binaries' release carries Verovio's licence (`Verovio-LGPL-3.0.txt`,
   `Verovio-GPL-3.0.txt`) beside `Edwin-OFL.txt`.
 
