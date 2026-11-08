@@ -5,15 +5,15 @@
     "": {
       "name": "barmark-site",
       "dependencies": {
-        "@barmark/render": "0.16.2",
+        "@barmark/render": "0.17.0",
         "@vercel/analytics": "2.0.1",
         "@vercel/speed-insights": "2.0.0",
-        "barmark": "0.19.1",
+        "barmark": "0.20.0",
       },
       "devDependencies": {
-        "@barmark/cli": "0.6.6",
-        "@barmark/musicxml": "0.6.4",
-        "@barmark/sync": "0.1.0",
+        "@barmark/cli": "0.7.0",
+        "@barmark/musicxml": "0.7.0",
+        "@barmark/sync": "0.2.0",
         "@fontsource/noto-mono": "5.3.0",
         "@fontsource/noto-sans": "5.3.0",
         "@fontsource/noto-serif": "5.3.0",
@@ -40,13 +40,13 @@
 
     "@antfu/install-pkg": ["@antfu/install-pkg@2.1.0", "", { "dependencies": { "package-manager-detector": "^1.8.0", "tinyexec": "^1.3.1" } }, "sha512-sdg9NxU3zR4Mnawfbc/x6GB5Wf17WYud5qOuEuxXjaKpYpMkISSJEjItGebXJ2bQ4DIcly4NYH23mtkGJjvKUw=="],
 
-    "@barmark/cli": ["@barmark/cli@0.6.6", "", { "dependencies": { "@barmark/musicxml": "0.6.4", "@barmark/render": "0.16.2", "barmark": "0.19.1" }, "bin": { "barmark": "dist/cli.js" } }, "sha512-hLmSO/hmFlcfVcX076QoVCEc7F8vVJNOzcsMH8gmgIXnpxTeUDsJGbXzZlICWHb5EQuVXB0HpAtamlTd7hxJuw=="],
+    "@barmark/cli": ["@barmark/cli@0.7.0", "", { "dependencies": { "@barmark/musicxml": "0.7.0", "@barmark/render": "0.17.0", "barmark": "0.20.0" }, "bin": { "barmark": "dist/cli.js" } }, "sha512-Pnm1ijqrh1/bHEysOy/H0WJAEBmn06ZO7yr70kQO7cafN6UAWx+ez+9A3Z7ZLXiGWHTlBbYp9KagS78LnmS1lQ=="],
 
-    "@barmark/musicxml": ["@barmark/musicxml@0.6.4", "", { "dependencies": { "barmark": "^0.19.1", "fast-xml-parser": "5.12.0" } }, "sha512-7l68eBl+4cul6IXCnnaFCW4lnkbkaTwQVD/LwARIHyE50I1+HzKVzfDk37RmhuXQpZbsEnCrjkvCgL3FKCFy2Q=="],
+    "@barmark/musicxml": ["@barmark/musicxml@0.7.0", "", { "dependencies": { "barmark": "^0.20.0", "fast-xml-parser": "5.12.0" } }, "sha512-eDYBUYUJdDFy+m1Tff3XoKeF/lJLdCkxv3pvLvIh0IaToc/AnHK4fscqyG0c76MyH8W9iFRIkSNOvUZVF997HQ=="],
 
-    "@barmark/render": ["@barmark/render@0.16.2", "", { "dependencies": { "barmark": "^0.19.0" } }, "sha512-4sv+j0unb9ptV/Vpj2KHDjiKK/7iaoayeZ15BfZe5KEF5uRggsRIKxnGsyeOgnTPfPNeWScu/HY5SEnJDbVx1w=="],
+    "@barmark/render": ["@barmark/render@0.17.0", "", { "dependencies": { "barmark": "^0.20.0" } }, "sha512-LewseHimpWWPzHIUgL2FMg0BFCt+486Qx5lvtduIsY0xp6zQ2+dRbq4mCxOLjtwPioVls9ltZLLBYd2g8OeWXg=="],
 
-    "@barmark/sync": ["@barmark/sync@0.1.0", "", { "dependencies": { "barmark": "^0.19.0" } }, "sha512-L82z+r9yO5glXQ1B6Eacbdc1Qk3l6kwyJgOBv892Y7XyE5S1WAWzch7efqYQHHdYlvkOrzL5fwgw9dWHQanW2A=="],
+    "@barmark/sync": ["@barmark/sync@0.2.0", "", { "dependencies": { "barmark": "^0.20.0" } }, "sha512-/nJxIoLv2iQ4FhJV0GDkXZCIPkA+XGFMNFdeb9Lf1mrSK93o95XXL7vNkYuL2Gt1GMmMcQxl0YI9zjqwb6mxig=="],
 
     "@fontsource/noto-mono": ["@fontsource/noto-mono@5.3.0", "", {}, "sha512-QZieY3OyKEImCXg3HRiF6p6/H0GXX94uEb53ayLyQgCTB20LdkvsyJIgigo6lAGmVw3WEs40DdG5KTqpxfwgGg=="],
 
@@ -246,7 +246,7 @@
 
     "balanced-match": ["balanced-match@4.0.4", "", {}, "sha512-BLrgEcRTwX2o6gGxGOCNyMvGSp35YofuYzw9h1IMTRmKqttAZZVU67bdb9Pr2vUHA8+j3i2tJfjO6C6+4myGTA=="],
 
-    "barmark": ["barmark@0.19.1", "", {}, "sha512-nBzWJE/EzycHMfz4HvESPHQjeq2ZTomQlAIaEUqXssZxX7niBvjAENVxJXiXxDRWOGORTBRpQcubPRfgaxNTNQ=="],
+    "barmark": ["barmark@0.20.0", "", {}, "sha512-0EVc2R9HcM+GkdgH1uA4tld2prbfj9uF1vf4yT9uvzitu2Z8QznEt8j124+r4cYk1/6fSPbxw9UyED+cI2ETRA=="],
 
     "bindings": ["bindings@1.5.0", "", { "dependencies": { "file-uri-to-path": "1.0.0" } }, "sha512-p2q/t/mhvuOj/UeLlV6566GD/guowlr0hHxClI0W9m7MWYkL1F0hLo+0Aexs9HSPCtR1SXQ0TD3MMKrXZajbiQ=="],
 
