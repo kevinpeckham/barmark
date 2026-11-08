@@ -42,6 +42,8 @@ export type Measure = {
 	/** The played bar (`PlayedBar.index`) this measure was made from; null for a bar no pass plays. */
 	played: number | null;
 	meter: Meter;
+	/** The `time:` meter in force, when a one-bar meter gives the measure its own (`PlayedBar.time`): tempo counts its beat. */
+	time?: Meter;
 	key: Key | null;
 	slots: Slot[];
 	words: Words[];
@@ -91,6 +93,7 @@ const measureOf = (b: PlayedBar, fermatas: Set<number>): Measure => ({
 	shown: b.written,
 	played: b.index,
 	meter: b.meter,
+	...(b.time && { time: b.time }),
 	key: b.key,
 	slots: b.slots,
 	words: b.words ?? [],
@@ -235,19 +238,27 @@ function playedOut(w: Walk, o: SectionOccurrence): void {
 	for (const b of bars) add(w, measureOf(b, w.fermatas));
 }
 
-type Running = Pick<Measure, "meter" | "key" | "tempo" | "feel" | "swingPercent">;
+type Running = Pick<Measure, "meter" | "time" | "key" | "tempo" | "feel" | "swingPercent">;
 
-/** The meter, key, tempo and feel a bar carries on from the one before it; a chart's defaults at its start. */
+/**
+ * The meter, key, tempo and feel a bar carries on from the one before it;
+ * a chart's defaults at its start. The meter is the `time:` in force, not
+ * a one-bar meter, which holds for its own bar only (grammar 2.4).
+ */
 function runningAfter(m: Measure | undefined): Running {
 	if (!m) return { meter: { n: 4, d: 4 }, key: null, tempo: null, feel: "straight" };
-	const { meter, key, tempo, feel, swingPercent } = m;
+	const { key, tempo, feel, swingPercent } = m;
+	const meter = m.time ?? m.meter;
 	return { meter, key, tempo, feel, ...(swingPercent === undefined ? {} : { swingPercent }) };
 }
 
 /** A bar no pass plays, as written, in the meter, key, tempo and feel of the bar before it. */
 function unplayed(w: Walk, cell: Extract<Cell, { kind: "slots" | "simile" }>): Measure {
 	const running = runningAfter(w.out.at(-1));
-	if (cell.kind === "slots" && cell.meter) running.meter = cell.meter;
+	if (cell.kind === "slots" && cell.meter) {
+		running.time = running.meter;
+		running.meter = cell.meter;
+	}
 	return {
 		...running,
 		shown: w.written,

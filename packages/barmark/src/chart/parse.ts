@@ -43,14 +43,15 @@ const lyricsOf = (bars: PlayedBar[]) =>
 	bars.flatMap((b) => b.lyrics ?? []).sort((a, b) => a.verse - b.verse);
 
 /**
- * One bar of every part: shared fields from the first, the meter from the
- * first that plays, the words of every stream that sings.
+ * One bar of every part: shared fields from the first, the meter and the
+ * `time:` meter (grammar 2.4) together from the first that plays, the
+ * words of every stream that sings.
  */
 function zipBar(bars: PlayedBar[], report: (d: ChartDiagnostic) => void): PlayedBar {
 	const [first, ...rest] = bars as [PlayedBar, ...PlayedBar[]];
 	const lyrics = lyricsOf(bars);
 	const playing = bars.filter((b) => !b.tacet);
-	const meter = playing[0]?.meter ?? first.meter;
+	const lead = playing[0] ?? first;
 	const meters = [...new Set(playing.map(meterText))];
 	// A `%` copies its bar's one-bar meter, so parts can disagree: say so on every line that plays the bar.
 	if (meters.length > 1)
@@ -61,10 +62,11 @@ function zipBar(bars: PlayedBar[], report: (d: ChartDiagnostic) => void): Played
 				message: `the parts disagree on this bar's meter (${meters.join(", ")})`,
 				token: "|",
 			});
-	const { lyrics: _l, ...shared } = first;
+	const { lyrics: _l, time: _t, ...shared } = first;
 	return {
 		...shared,
-		meter,
+		meter: lead.meter,
+		...(lead.time && { time: lead.time }),
 		parts: [first, ...rest].map(partBar),
 		...(lyrics.length && { lyrics }),
 	};

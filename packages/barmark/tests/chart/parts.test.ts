@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { parseChart } from "../../src/chart/parse.js";
+import { extractPart, parseChart } from "../../src/chart/parse.js";
 
 const diags = (text: string) =>
 	parseChart(text).diagnostics.map((d) => ({
@@ -97,5 +97,44 @@ describe("labelled bar lines (grammar 7.4)", () => {
 		const p = parseChart("| G |\nOh | yeah | baby");
 		expect(p.lines.at(-1)?.kind).toBe("text");
 		expect(p.diagnostics).toEqual([]);
+	});
+});
+
+describe("a one-bar meter where the lead part rests (grammar 2.4, 7.4)", () => {
+	const REST = `${TWO}time: 6/8, tempo: 60\nGtr | G | C |\nPno | G | C |\nPno | [2/8] G | % | C |\n`;
+	const meters = (bars: { meter: { n: number; d: number }; time?: { n: number; d: number } }[]) =>
+		bars.map((b) => `${b.meter.n}/${b.meter.d}${b.time ? ` in ${b.time.n}/${b.time.d}` : ""}`);
+	test("a % copying it keeps its meter and the time: meter, whoever leads", () => {
+		const p = parseChart(REST);
+		expect(p.diagnostics.filter((d) => d.severity === "error")).toEqual([]);
+		expect(meters(p.bars)).toEqual(["6/8", "6/8", "2/8 in 6/8", "2/8 in 6/8", "6/8"]);
+	});
+	test("the resting part's stand-in for that % is a bar of the same meter", () => {
+		const gtr = extractPart(REST, "Gtr");
+		expect(meters(gtr?.bars ?? [])).toEqual(["6/8", "6/8", "2/8 in 6/8", "2/8 in 6/8", "6/8"]);
+		// Across a line break too: the % copies the bar that ends the line before.
+		const across = `${TWO}time: 6/8\nGtr | G |\nPno | G |\nPno | [2/8] G |\nPno | % | C |\n`;
+		expect(meters(extractPart(across, "Gtr")?.bars ?? [])).toEqual([
+			"6/8",
+			"2/8 in 6/8",
+			"2/8 in 6/8",
+			"6/8",
+		]);
+	});
+	test("a tutti line's % and a part's % straight after a tutti line copy the tutti bar's meter", () => {
+		const hands =
+			"part: Pno = Piano\ntime: 6/8\nPno.RH | C |\nPno.LH | {C3} |\n| [2/8] G | % | C |\n";
+		const want = ["6/8", "2/8 in 6/8", "2/8 in 6/8", "6/8"];
+		expect(meters(extractPart(hands, "Pno", "LH")?.bars ?? [])).toEqual(want);
+		const after = `${TWO}time: 6/8\n| C | [2/8] G |\nPno | % | C |\n`;
+		expect(meters(extractPart(after, "Gtr")?.bars ?? [])).toEqual(want);
+		// The tutti bar, not the part's own bar before it.
+		const between = `${TWO}time: 6/8\nGtr | [2/8] C |\nPno | [2/8] C |\n| C |\nPno | % | C |\n`;
+		expect(meters(extractPart(between, "Gtr")?.bars ?? [])).toEqual([
+			"2/8 in 6/8",
+			"6/8",
+			"6/8",
+			"6/8",
+		]);
 	});
 });

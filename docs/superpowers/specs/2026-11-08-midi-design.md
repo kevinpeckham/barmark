@@ -397,7 +397,11 @@ chart's MIDI is for (a guide, not an arrangement).
 
 - **Tempo** in quarter notes a minute: barmark's tempo counts grammar
   2.1's beat, so qpm = bpm × the beat's length in quarters (6/8 at
-  `tempo: 60` is 90 qpm). A tempo event goes wherever a bar's qpm
+  `tempo: 60` is 90 qpm). The beat is the `time:` meter's, also in a
+  bar of a one-bar meter (grammar 2.4, Kevin 2026-11-08): a `[2/8]`
+  pickup in 6/8 at `tempo: 60` plays at 90 qpm, not 30, and a ramp or
+  fermata steps in that beat too (a `[2/8]` bar holds one, from its
+  downbeat). A tempo event goes wherever a bar's qpm
   differs from the bar before's, which includes a meter change under an
   unchanged `tempo:`. Microseconds a quarter are rounded to whole;
   outside SMF's range (1 to 16,777,215 µs) the tempo is clamped, with a

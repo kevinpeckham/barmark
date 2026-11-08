@@ -24,6 +24,51 @@ describe("perform: tempo, meters, keys, markers, words and lyrics", () => {
 		]);
 	});
 
+	test("a one-bar meter keeps the time: meter's beat (grammar 2.4)", () => {
+		// A [2/8] pickup in 6/8 plays at 60 dotted quarters a minute, like the rest: 90 qpm, not 30.
+		expect(tempos(play("time: 6/8, tempo: 60\n| [2/8] E7 | Am | Dm |"))).toEqual([[0, 90]]);
+		// A [3/4] bar in 6/8 lasts two dotted quarters at the same speed.
+		expect(tempos(play("time: 6/8, tempo: 60\n| C | [3/4] D | E |"))).toEqual([[0, 90]]);
+		// A rit. steps a dotted quarter at a time through it, the target held in 6/8's beat.
+		const rounded = (text: string) =>
+			tempos(play(text)).map(([at, qpm]) => [at, Math.round((qpm as number) * 1e6) / 1e6]);
+		const ramp = (bars: string) =>
+			rounded(`time: 6/8, tempo: 60\n| C |\ntempo: rit. to 40\n${bars}`);
+		expect(ramp("| [3/4] C | C |")).toEqual([
+			[0, 90],
+			[3, 80],
+			[4.5, 70],
+			[6, 60],
+		]);
+		// A [5/8] bar holds a beat and a half: a step at each beat that starts in it.
+		expect(ramp("| [5/8] C | C |")).toEqual([
+			[0, 90],
+			[3, 80],
+			[4.5, 70],
+			[5.5, 60],
+		]);
+		// The target on a one-bar meter's bar is still in 6/8's beat.
+		expect(ramp("| C | [3/4] C |")).toEqual([
+			[0, 90],
+			[3, 80],
+			[4.5, 70],
+			[6, 60],
+		]);
+	});
+
+	test("a % of a one-bar meter where the lead part rests keeps the time: meter's beat", () => {
+		const parts = "part: Gtr = Electric Guitar 1\npart: Pno = Piano\ntime: 6/8, tempo: 60\n";
+		const steady = `${parts}Gtr | G | C |\nPno | G | C |\nPno | [2/8] G | % | C |\n`;
+		expect(tempos(play(steady))).toEqual([[0, 90]]);
+		const rit = `${parts}Gtr | G | C |\nPno | G | C |\ntempo: rit. to 40\nPno | [2/8] G | % |\ntempo: 60\nPno | C |\n`;
+		expect(tempos(play(rit))).toEqual([
+			[0, 90],
+			[6, 75],
+			[7, 60],
+			[8, 90],
+		]);
+	});
+
 	test("no tempo", () => {
 		const assumed = play("| C |");
 		expect(tempos(assumed)).toEqual([[0, 120]]);
@@ -86,6 +131,16 @@ describe("perform: tempo, meters, keys, markers, words and lyrics", () => {
 			[0, 90],
 			[1.5, 30],
 			[3, 90],
+		]);
+		// In a one-bar meter the beat is still the time: meter's, from the bar's end, never before its start.
+		expect(tempos(play("time: 6/8, tempo: 60\n| [3/4] C | ... | G |"))).toEqual([
+			[0, 90],
+			[1.5, 30],
+			[3, 90],
+		]);
+		expect(tempos(play("time: 6/8, tempo: 60\n| [2/8] C | ... | G |"))).toEqual([
+			[0, 30],
+			[1, 90],
 		]);
 	});
 

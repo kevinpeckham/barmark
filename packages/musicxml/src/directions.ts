@@ -69,6 +69,9 @@ function soundTempo(bpm: number, m: Meter): string {
 const metronome = (bpm: number, m: Meter) =>
 	scoreDirection(el("metronome", {}, [beatXml(m), text("per-minute", bpm)]), soundTempo(bpm, m));
 
+/** The meter `tempo:` counts: the `time:` in force, also in a one-bar meter (grammar 2.4). */
+const tempoMeter = (m: Measure) => m.time ?? m.meter;
+
 const sameChange = (a: Measure | null, b: Measure | null) =>
 	a?.tempoChange?.kind === b?.tempoChange?.kind && a?.tempoChange?.to === b?.tempoChange?.to;
 
@@ -79,7 +82,8 @@ function changeXml(m: Measure, prev: Measure | null, next: Measure | null): stri
 	const words = sameChange(m, prev)
 		? ""
 		: scoreDirection(text("words", change.kind === "rit" ? "rit." : "accel."));
-	const target = change.to !== null && !sameChange(m, next) ? soundTempo(change.to, m.meter) : "";
+	const target =
+		change.to !== null && !sameChange(m, next) ? soundTempo(change.to, tempoMeter(m)) : "";
 	return words + target;
 }
 
@@ -88,8 +92,8 @@ export function tempoXml(m: Measure, prev: Measure | null, next: Measure | null)
 	if (m.tempoChange) return changeXml(m, prev, next);
 	if (m.tempo === null || (prev && prev.tempo === m.tempo && !prev.tempoChange)) return "";
 	if (prev?.tempoChange && prev.tempo === m.tempo)
-		return scoreDirection(text("words", "a tempo"), soundTempo(m.tempo, m.meter));
-	return metronome(m.tempo, m.meter);
+		return scoreDirection(text("words", "a tempo"), soundTempo(m.tempo, tempoMeter(m)));
+	return metronome(m.tempo, tempoMeter(m));
 }
 
 const feelName = (m: Measure) =>

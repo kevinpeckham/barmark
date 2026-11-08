@@ -9,6 +9,8 @@ Releases follow the process in [RELEASING.md](RELEASING.md).
 
 ## [Unreleased]
 
+## [0.21.0] - 2026-11-08
+
 ### Added
 
 - **`nameNotes(pitchClasses, bass, key)`** names a chord from the pitch
@@ -27,6 +29,13 @@ Releases follow the process in [RELEASING.md](RELEASING.md).
   spelled by its interval from the root, or by pitch when that would
   double (`E(#9)/G`); with no key, a black-key root takes the spelling
   with fewer awkward notes (`Db`, `C#m`, `G#dim7`).
+- **`time` on a played bar in a one-bar meter** (Kevin's decision,
+  2026-11-08, grammar 2.4, A.7): the meter of the `time:` in force,
+  whose beat `tempo:` counts there, so a short or odd bar never changes
+  speed. In `time: 6/8, tempo: 60` a `[2/8]` pickup plays at 60 dotted
+  quarters a minute, not 60 eighths. Absent on any other bar, where
+  `meter` is the `time:` meter. No change to what any chart means
+  otherwise.
 
 ### Fixed
 
@@ -35,6 +44,16 @@ Releases follow the process in [RELEASING.md](RELEASING.md).
   chart for a heading in between, once a row: 100 verses under each of
   500 bar lines took 9 s to print. The headings are now found by halves;
   the same chart prints in about a second, parse included.
+- **A part's tacet stand-in for a `%` is as long as the bar it copies**
+  (grammar 7.4, 2.4). Where one part writes `| [2/8] G | % |` and another
+  has no line, the resting part's bar for the `%` was a bar of the
+  running meter (`| [2/8] N.C. | N.C. |` in 6/8), so an extracted part
+  and the score disagreed on the bar's length. It is now `[2/8] N.C.`,
+  across line breaks and after a tutti line too. A bar of several parts
+  also takes its `time` from the part its meter comes from, the first
+  that plays, so a `%` of a one-bar meter where the lead part rests no
+  longer loses it (it played at 30 quarter notes a minute in 6/8 at
+  `tempo: 60`, not 90).
 
 ## [0.20.0] - 2026-11-08
 
@@ -637,7 +656,8 @@ The first working release: the reference parser and printer for the
 
 - **A placeholder package that holds the `barmark` name** while the spec and parser are written.
 
-[Unreleased]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.20.0...HEAD
+[Unreleased]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.21.0...HEAD
+[0.21.0]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.20.0...barmark-v0.21.0
 [0.20.0]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.19.1...barmark-v0.20.0
 [0.19.1]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.19.0...barmark-v0.19.1
 [0.19.0]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.18.0...barmark-v0.19.0

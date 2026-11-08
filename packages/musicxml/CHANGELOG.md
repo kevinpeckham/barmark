@@ -6,6 +6,18 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+
+- **A tempo on a one-bar meter counts the `time:` meter's beat**
+  (Kevin's decision, 2026-11-08, grammar 2.4). `time: 6/8, tempo: 60`
+  then a `[2/8]` pickup wrote its metronome as an eighth = 60 and its
+  `<sound tempo>` as 30; it is now a dotted quarter = 60 and 90, so the
+  pickup plays at the speed of the 6/8 bars and imports back as
+  `tempo: 60` (it read back as 20). The same holds for a rit.'s target
+  and an `a tempo` on such a bar. A bar no pass plays after a one-bar
+  meter is now in the running meter, as written, not the one-bar
+  meter's (and so is its tempo). Needs barmark 0.21.0 (`PlayedBar.time`).
+
 ## [0.7.0] - 2026-11-08
 
 ### Changed

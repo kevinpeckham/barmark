@@ -74,7 +74,8 @@ next, plays straight; compound meters aren't swung (a `swing-compound`
 loss).
 
 **Tempo, ramps and fermatas.** The tempo is written in quarter notes a
-minute from the meter's beat (6/8 at `tempo: 60` is 90), with a new
+minute from the beat of the `time:` meter, a one-bar meter's bar
+included (6/8 at `tempo: 60` is 90, a `[2/8]` pickup too), with a new
 tempo wherever a bar's differs. `rit.` and `accel.` are a tempo a beat,
 straight from the tempo before to the target, reaching it at the
 downbeat of the run's last bar (80% or 120% with no target); `a tempo`

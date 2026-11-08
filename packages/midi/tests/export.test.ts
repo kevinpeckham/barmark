@@ -342,6 +342,20 @@ describe("exportMidi: what the file carries", () => {
 		expect([...new Set(velocities)]).toEqual(["0:80", "480:80", "960:100", "1440:112", "1920:80"]);
 	});
 
+	test("a one-bar meter plays at the time: meter's tempo (grammar 2.4)", () => {
+		// 60 dotted quarters a minute is 90 quarters: 666,667 µs a quarter, the [2/8] pickup and the [3/4] bar included.
+		for (const text of [
+			"time: 6/8, tempo: 60\n| [2/8] E7 | Am | Dm |",
+			"time: 6/8, tempo: 60\n| Am | [3/4] E7 | Am |",
+		]) {
+			const r = exportMidi(text);
+			expect(pick(read(bytesOf(r)).tracks[0], "setTempo", "microsecondsPerBeat")).toEqual([
+				[0, 666_667],
+			]);
+			expect(heardByBeat(bytesOf(r))).toEqual(chartByBeat(parseChart(text)));
+		}
+	});
+
 	test("the tempo option", () => {
 		const conductor = read1("| C |", { tempo: 90 }).tracks[0];
 		expect(pick(conductor, "setTempo", "microsecondsPerBeat")).toEqual([[0, 666_667]]);
