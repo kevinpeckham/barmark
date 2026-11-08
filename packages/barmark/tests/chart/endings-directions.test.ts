@@ -248,6 +248,17 @@ describe("directions: errors", () => {
 		expect(messages("| C | To Coda | D | D.C. al Coda | Coda |\n## Coda\n| E |")).toEqual([]);
 		expect(messages("| C | To Coda | D | D.C. al Coda | Coda | ... |\n| % |")).toEqual([]);
 	});
+	test("a replay heading after the Coda counts as its bars: the last chorus as coda", () => {
+		const text =
+			"## Verse\n| Segno | Am | F |\n## Chorus\n| C | To Coda | G | D.S. al Coda |\n| Coda |\n## Verse";
+		expect(messages(text)).toEqual([]);
+		expect(play(text).texts).toEqual(["Am", "F", "C", "G", "Am", "F", "C", "Am", "F"]);
+		const twice = "## Verse\n| C | To Coda | D | D.C. al Coda |\n## Coda\n| Coda |\n## Verse x2";
+		expect(messages(twice)).toEqual([]);
+	});
+	test("only the Coda an al Coda goes on needs a bar after it; an unused one has one error", () => {
+		expect(messages("| C | Coda |")).toEqual(["Coda: no jump uses it"]);
+	});
 	test("a Coda with only marks after it is an error, and the jump is not taken", () => {
 		const text = "| C | To Coda | D | D.C. al Coda | Coda | ... |\ntext\n| @A |";
 		expect(messages(text).filter((m) => m.includes("no bar after it"))).toHaveLength(1);

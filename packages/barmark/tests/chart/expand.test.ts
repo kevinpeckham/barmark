@@ -167,6 +167,10 @@ describe("elision cuts the last written bar (grammar 6)", () => {
 		const text = "## A\n| C | D | Fine |\n## B\n| E |\n## A ->\n## C\n| F | D.C. al Fine |";
 		expect(play(text).texts).toEqual(["C", "D", "E", "C", "F", "C", "D"]);
 	});
+	test("a Fine right after the cut bar, on the return: the bar is reached and cut", () => {
+		const text = "## A\n| C | D | Fine |\n## B\n| Segno | E |\n## A ->\n## C\n| F | D.S. al Fine |";
+		expect(play(text).texts).toEqual(["C", "D", "E", "C", "F", "E", "C"]);
+	});
 	test("the return after the jump cuts the last written bar of the replay", () => {
 		const text = "## A\n| C | D |\n## B\n| E |\n## A ->\n## Out\n| F | D.C. |";
 		expect(play(text).texts).toEqual(["C", "D", "E", "C", "F", "C", "D", "E", "C", "F"]);

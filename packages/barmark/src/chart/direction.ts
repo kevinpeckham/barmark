@@ -85,11 +85,21 @@ function missingMarks(jump: Mark, plan: JumpPlan, first: Map<string, Mark>): str
 	return wants.filter(([missing]) => missing).map(([, what]) => `${name} has ${what}`);
 }
 
-/** Whether a bar is written after `m`: on its line, or on any later one. */
+const writes = (l: Line) => l.kind === "bars" || l.kind === "invalid";
+
+/** Whether the section heading at `i` is a replay: no bar line before the next heading. */
+function isReplay(lines: Line[], i: number): boolean {
+	const next = lines.findIndex((l, k) => k > i && l.kind === "section");
+	return !lines.slice(i + 1, next < 0 ? undefined : next).some(writes);
+}
+
+/** Whether a bar follows `m`: on its line, on a later one, or in a later replay (grammar 5.2). */
 function barAfter(lines: Line[], m: Mark): boolean {
-	return lines.some((l) => {
+	return lines.some((l, i) => {
+		if (l.line < m.line) return false;
+		if (l.kind === "section") return l.line > m.line && isReplay(lines, i);
 		if (l.kind === "invalid") return l.line > m.line && l.written > 0;
-		if (l.kind !== "bars" || l.line < m.line) return false;
+		if (l.kind !== "bars") return false;
 		const cells = l.line === m.line ? l.cells.slice(m.cell + 1) : l.cells;
 		return cells.some((c) => c.kind === "slots" || c.kind === "simile");
 	});
@@ -124,7 +134,8 @@ export function planJump(lines: Line[], error: Report): JumpPlan | null {
 	if (jump && plan)
 		problems.push(...missingMarks(jump, plan, first).map((m): [Mark, string] => [jump, m]));
 	const coda = first.get("coda");
-	if (coda && !barAfter(lines, coda))
+	// Only the Coda an al Coda goes on; an unused one is an error of its own.
+	if (coda && plan?.al === "coda" && !barAfter(lines, coda))
 		problems.push([coda, "Coda has no bar after it, so To Coda has nowhere to go on"]);
 	for (const m of unusedMarks(plan, first))
 		problems.push([m, `${printDirection(m.direction)}: no jump uses it`]);

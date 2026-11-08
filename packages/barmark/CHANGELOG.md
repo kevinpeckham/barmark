@@ -21,9 +21,10 @@ Releases follow the process in [RELEASING.md](RELEASING.md).
   the replay plays up to the stop and its occurrence's `elided` is false.
 - **A `Coda` with no bar after it is an error** (Kevin's decision,
   2026-11-08, grammar 5.2): "Coda has no bar after it, so To Coda has
-  nowhere to go on", on the `Coda`'s line. A `Coda` needs at least one
-  bar after it, anywhere later in written order. Like every direction
-  error, it drops the jump. Before, such a chart parsed cleanly and played
+  nowhere to go on", on the `Coda`'s line. The `Coda` an `al Coda` goes
+  on needs a bar after it: a bar written later in the chart, or a later
+  heading that replays one (`## Chorus` alone, the last chorus as the
+  coda). Like every direction error, it drops the jump. Before, such a chart parsed cleanly and played
   nothing after `To Coda`.
 
 ## [0.19.1] - 2026-11-07

@@ -41,10 +41,10 @@ not here.
   `packages/barmark/src/chart/expand.ts`, and the `test.todo` is now a
   test. (Those seed numbers no longer make that chart: the generator has
   changed since. A sweep of seeds 1 to 9000 on 2026-11-08 fails on 2479,
-  3839 and 4318, on main too, none with an elision.) And seed 6404: the import, falling back to played order
-  (it can't hold an unplayed `## Chorus x2` after a To Coda), writes the
-  D.S.'s return into the section before it, losing its heading; the
-  same happens on main.
+  3839 and 4318, on main too, none with an elision.) And seed 6404:
+  the import, falling back to played order (it can't hold an unplayed
+  `## Chorus x2` after a To Coda), writes the D.S.'s return into the
+  section before it, losing its heading; the same happens on main.
   A known limit of any chart written in play order: bars before the
   first heading (the unnamed section) that a jump plays again can't be
   named again, since barmark writes no heading for it mid-chart, so
