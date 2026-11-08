@@ -18,14 +18,18 @@ package uses [semantic versioning](https://semver.org/).
 - Rhythm figures in the performance: an accent sounds at velocity 100
   and a hit at 112 for its whole slot (a `/` after it holds it); a push
   attacks an eighth or a sixteenth early, taking the time from the slot
-  played before it in play order, across bar lines, repeats and replays;
+  played before it in play order, across bar lines, repeats and replays
+  (a push no longer than the slot before it stays on the beat, so no
+  written chord is lost);
   the sustain pedal as controller 64 presses, changes (lift, then press,
   at one time) and lifts, with `--`, a tacet bar and the chart's end
   lifting it; and swing (`swing`, `shuffle`, `swing 16`, with or without
   an amount) moving every second eighth (or sixteenth) after pushes, so a
   pushed "and of 4" swings. Compound meters aren't swung, with one
   `swing-compound` loss, and neither is a beat with a note off the
-  binary grid (sextuplets play straight, every note kept).
+  binary grid or one where swing would move a note onto the next
+  (sextuplets, or sixteenths under `swing 75%`, play straight, every
+  note kept).
 - The performance's tempo map, meters, keys, markers, words and lyrics:
   tempo in quarter notes a minute from the meter's beat (6/8 at
   `tempo: 60` is 90), with a new tempo wherever a bar's differs, a meter

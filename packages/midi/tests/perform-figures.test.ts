@@ -244,6 +244,37 @@ describe("perform: accents, hits, pushes, pedal and swing", () => {
 		]);
 	});
 
+	test("a beat where swing would meet the next point isn't swung", () => {
+		// Controller's ruling: under swing 75% E would move from 1/2 to 3/4, onto F; the beat plays straight.
+		const sixteenths = [
+			[0, 1 / 4],
+			[1 / 4, 1 / 4],
+			[1 / 2, 1 / 4],
+			[3 / 4, 1 / 4],
+		];
+		expect(attacks("feel: swing 75%\n| C_D_E_F G G G |").slice(0, 4)).toEqual(sixteenths);
+		// The other beats still swing, and below 75% the sixteenths swing too.
+		expect(attacks("feel: swing 75%\n| C_D_E_F G_G G G |").map(([at]) => at)).toEqual([
+			0,
+			1 / 4,
+			1 / 2,
+			3 / 4,
+			1,
+			7 / 4,
+			2,
+			3,
+		]);
+		expect(attacks("feel: swing\n| C_D_E_F G G G |").map(([at]) => at)).toEqual([
+			0,
+			1 / 4,
+			2 / 3,
+			3 / 4,
+			1,
+			2,
+			3,
+		]);
+	});
+
 	test("a pushed and of 4 is swung", () => {
 		expect(attacks("feel: swing\n| C / / <G |")).toEqual([
 			[0, 8 / 3],

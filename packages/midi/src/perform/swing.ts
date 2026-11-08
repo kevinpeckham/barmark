@@ -1,7 +1,7 @@
 /** Swing (spec 3.6): the second eighth of each quarter, or sixteenth of each eighth, played late. */
 import type { Feel, Meter } from "barmark";
 import type { TimedSlot } from "./line.js";
-import { add, type BarAt, barQuarters, cmp, mul, q, sub, ZERO } from "./quarters.js";
+import { add, type BarAt, barQuarters, cmp, mul, q, sub } from "./quarters.js";
 import type { MidiLoss, Quarters } from "./types.js";
 
 /** Where the swung note lands in its pair: ⅔ for the bare word, else the amount (58% is 0.58). */
@@ -32,8 +32,9 @@ const compound = (meter: Meter) => meter.d === 8 && [6, 9, 12].includes(meter.n)
  * moves). A swung compound bar isn't swung, with one `swing-compound`
  * loss for the chart. A beat (a quarter from the bar's start) where a
  * point of `line` falls off the binary grid, as sextuplets do, isn't
- * swung either, so swing never runs one written note into the next
- * (controller's ruling, 2026-11-08).
+ * swung either, nor is one where swing would move a point onto or past
+ * the next (sixteenths under swing 75%), so swing never runs one written
+ * note into the next (controller's rulings, 2026-11-08).
  */
 export function swingMap(
 	bars: BarAt[],
@@ -49,13 +50,14 @@ export function swingMap(
 				},
 			]
 		: [];
-	const offGrid = offGridBeats(bars, line);
+	const straight = offGridBeats(bars, line);
 	const swing = (at: Quarters) => {
 		const found = barOf(bars, at);
-		if (!found || compound(found.bar.meter) || offGrid.has(beatOf(found, at))) return at;
+		if (!found || compound(found.bar.meter) || straight.has(beatOf(found, at))) return at;
 		const { bar, at: start } = found;
 		return add(start, swingPoint(sub(at, start), bar.feel, bar.swingPercent));
 	};
+	for (const beat of meetingBeats(bars, line, swing)) straight.add(beat);
 	return { swing, losses };
 }
 
@@ -83,6 +85,26 @@ function offGridBeats(bars: BarAt[], line: TimedSlot[]): Set<string> {
 	return beats;
 }
 
+/**
+ * The beats where swing would leave a slot of the line no length: its
+ * attack swung onto or past its end. Swing moves a point only within its
+ * own half unit, so leaving these beats straight leaves every other as it was.
+ */
+function meetingBeats(
+	bars: BarAt[],
+	line: TimedSlot[],
+	swing: (at: Quarters) => Quarters,
+): string[] {
+	return line.flatMap(({ at, length }) => {
+		const end = add(at, length);
+		if (cmp(swing(end), swing(at)) > 0) return [];
+		return [at, end].flatMap((point) => {
+			const found = barOf(bars, point);
+			return found ? [beatOf(found, point)] : [];
+		});
+	});
+}
+
 /** The bar a point falls in (start ≤ at < end), by binary search; undefined past the end. */
 function barOf(bars: BarAt[], at: Quarters): BarAt | undefined {
 	let [lo, hi] = [0, bars.length - 1];
@@ -98,14 +120,12 @@ function barOf(bars: BarAt[], at: Quarters): BarAt | undefined {
 
 /**
  * A line with every time point, attacks and ends alike, swung once, so
- * lengths stay whole. Where a swung point reaches or passes the next
- * unswung one (sextuplets under swing), the slot between is left with no
- * length, never less.
+ * lengths stay whole. `swingMap` leaves straight any beat where a slot
+ * would lose its length, so every slot keeps some.
  */
 export function swingLine(line: TimedSlot[], swing: (at: Quarters) => Quarters): TimedSlot[] {
 	return line.map((timed) => {
 		const at = swing(timed.at);
-		const length = sub(swing(add(timed.at, timed.length)), at);
-		return { ...timed, at, length: cmp(length, ZERO) > 0 ? length : ZERO };
+		return { ...timed, at, length: sub(swing(add(timed.at, timed.length)), at) };
 	});
 }
