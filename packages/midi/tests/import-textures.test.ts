@@ -407,12 +407,13 @@ describe("silence beside a bass struck alone, its chord following in the bar (fi
 
 	test("a lone note after silence with no chord after it in the bar still starts its own", () => {
 		// G2 alone on beat 4 after a rest; the next chord is in the next bar
-		const notes = [
-			...ch([C2, C4, E4, G4], 0, 2 * Q),
-			n(G2, 3 * Q, 4 * Q - 1),
-			...ch([F2, F3, A3, C4], 4 * Q, 8 * Q),
-		];
+		const F = ch([F2, F3, A3, C4], 4 * Q, 8 * Q);
+		const notes = [...ch([C2, C4, E4, G4], 0, 2 * Q), n(G2, 3 * Q, 4 * Q - 1), ...F];
 		expect(bars(notes)).toBe("| C / N.C. {G} | F |");
+		// G2 alone on beat 3 after the chord stops a tick early, then a rest: the rest stays a
+		// rest, since the chord after it is in the next bar
+		const early = [...ch([C2, C4, E4, G4], 0, 2 * Q - 1), n(G2, 2 * Q, 3 * Q), ...F];
+		expect(bars(early)).toBe("| C / {G} N.C. | F |");
 	});
 
 	test("a chord struck in the bar before, ringing past the line, then a rest and the bass alone: the rest stays", () => {
