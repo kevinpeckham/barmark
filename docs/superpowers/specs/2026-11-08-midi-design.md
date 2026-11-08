@@ -623,17 +623,43 @@ examples slot by slot.
 
 ### 5.5 Chords from notes: segments
 
-The harmony streams' notes are cut into **segments**, each one chord:
+The harmony streams' notes are cut into **segments**, each one chord.
+**Chord boundaries come from the harmony voices, not the bass**
+(Claude's ruling, 2026-11-08, revising the first draft, under which a
+walking bass under off-beat comping read four symbols a bar, `Cmaj7
+{E} Cmaj7/G {A}`, and a melody note struck with a left-hand re-strike
+read as a new chord):
 
-- A segment starts at an **attack**: a tick where two or more harmony
-  notes start within a 32nd note of each other (a block chord, a strum),
-  or where a note starts while no harmony note sounds (a fresh start). A
-  single note starting under held notes (a melody note in the right
-  hand, an arpeggio over a pedal, a walking bass under a held chord) does
-  not cut. Where every harmony note has stopped, a segment of **no
-  harmony** begins.
-- **What sounds in a segment:** each pitch class weighted by how long it
-  sounds within the segment; pitch classes under a quarter of the
+- **Stretches:** where every harmony note has stopped, a segment of
+  **no harmony** begins; a note struck as the last one stops is no gap.
+- **The bass line** is the stream that never strikes two notes at once,
+  lowest on average, when it lies below every stream that plays chords
+  (MuseScore's piano: none, so every note is a harmony voice). Movement
+  in the bass line alone never starts a new chord.
+- An **attack** is two or more harmony-voice notes starting within a
+  32nd note of each other (a block chord, a strum, a stab). A stretch's
+  first chord starts with the stretch: a bass leading in belongs to the
+  chord the voices then play (`-- Fmaj7 -- Fmaj7` over `F2 A2 C3 D3` is
+  `Fmaj7` from beat 1). A later attack starts a new chord when it adds a
+  pitch class to the chord's sound (what the voices struck and still
+  hold at its start), unless the only one added is its top note while
+  the chord still sounds (a melody note on a re-strike: MuseScore's
+  `piano.mscx` bar 2 stays `Em`). A single note never starts a chord.
+  So a chord lasts until the voices' pitch-class set changes and carries
+  through their rests until they next sound; a change first heard after
+  such a rest starts at the last bar line in the rest, where the bass
+  moved to it (Dm7 to G7 as stabs on 2 and 4 over a walking bass changes
+  at the bar line, over G2, not on beat 2 over B2).
+- A stretch with no attack at all, single lines only, cuts where two
+  notes start together or one starts as all others stop: it reads note
+  by note.
+- **Different sounds** named an import are at most 20,000 (`nameNotes`
+  costs up to a millisecond each, and a hostile file can make every
+  segment different); past that, `?` with one `chord-unnamed`.
+- **What sounds in a segment:** each pitch class of the harmony voices
+  weighted by how long it sounds within the segment (the bass line counts
+  only as the chord's bass: its later notes under the chord are passing);
+  pitch classes under a quarter of the
   strongest one's weight are passing tones, left out. The **bass** is the
   lowest note struck at the segment's start (within the 32nd), or held
   into it from before when it sounds at least until the first struck
@@ -646,9 +672,10 @@ The harmony streams' notes are cut into **segments**, each one chord:
   first, then upward, no octaves, spelled for the key), else `?`, warning
   `chord-unnamed` (once, with a count and the first few bars; never the
   notes, a value read from the file, since the report counts by message).
-  The key spelling a segment is the one in force at its start (the first
-  from bar 1), as sync will write it (`conventionalKey`: chords under a
-  `Cb` signature are spelled in B).
+  A chord is spelled for each key in force over it (the first from bar
+  1), as sync will write it (`conventionalKey`: chords under a `Cb`
+  signature are spelled in B); a chord carried over a key change is
+  spelled anew there.
 - **No harmony** is `N.C.`: the importer always says what sounds, so
   sync never writes `?` for a gap.
 - Each segment is a **chord run** (`{ start, end, symbol }`, nominal
@@ -659,9 +686,12 @@ The harmony streams' notes are cut into **segments**, each one chord:
 
 The two numbers (a 32nd for an attack, a quarter of the strongest weight
 for a passing tone) are tuned against the fixtures; changing them is a
-FINDINGS entry. Known limit: a broken chord whose notes never overlap
+FINDINGS entry. Known limits: a broken chord whose notes never overlap
 and start one at a time from silence reads note by note (each note a
-fresh start); a pedalled or held arpeggio reads as its chord.
+fresh start); a pedalled or held arpeggio reads as its chord. A change
+of inversion alone (the bass moving under the same voices) is no new
+chord, by the ruling above; a voice moving only its top note to a new
+pitch class over the chord still sounding is read as melody.
 
 ### 5.6 Naming a chord: `nameNotes` in barmark
 

@@ -1,22 +1,36 @@
 /**
  * Chords from the notes sounding (spec 5.5). The harmony is cut into
- * segments, each one chord:
+ * segments, each one chord. Chords come from the harmony voices, not the
+ * bass line (Claude's ruling, 2026-11-08, fix round 1):
  *
- * - A segment starts at an **attack**: two or more notes starting within
- *   a 32nd of the first of them (a block chord, a strum), or a note
- *   starting while none sounds (a fresh start). A single note under held
- *   notes (a melody note, a walking bass) doesn't cut. Where every note
- *   has stopped, a segment of no harmony, `N.C.`, begins.
- * - Each pitch class weighs the time it sounds in the segment; one under
- *   `PASSING` of the strongest is a passing tone, left out.
+ * - **Stretches:** where every note has stopped, a segment of no
+ *   harmony, `N.C.`, begins; a note struck as the last stops is no gap.
+ * - **The bass line** is the stream (track and channel) that never
+ *   strikes two notes at once, lowest on average, when it lies below
+ *   every stream that plays chords. Its movement never starts a chord.
+ * - **An attack** is two or more harmony-voice notes struck within a 32nd
+ *   of the first. A stretch's first chord starts with the stretch (the
+ *   bass leading in belongs to it); a later attack starts a new chord
+ *   when it adds a pitch class to the chord's sound, unless only its top
+ *   note over the chord still sounding (a melody note on a re-strike). A
+ *   single note never does. So a chord carries through rests in the
+ *   harmony voices; a change first heard after such a rest starts at the
+ *   last bar line in the rest, where the bass moved to it.
+ * - A stretch with no attack at all (single lines only) cuts where two
+ *   notes are struck together or one starts as all stop: note by note.
+ * - Each pitch class of the harmony voices weighs the time it sounds in
+ *   the segment (the bass line counts only as each chord's bass); one
+ *   under `PASSING` of the strongest is a passing tone, left out.
  * - The **bass** is the lowest note struck within a 32nd of the
  *   segment's start, or held into it from before when it sounds at least
  *   until the first struck note stops (a pedal, a bass held under a
  *   stab): so the tail of the last chord played legato is not the bass
  *   (Claude's ruling, 2026-11-08). Its pitch class is always kept.
  * - The name is barmark's `nameNotes`, spelled for the key sync writes
- *   (its `conventionalKey`); with none, a note set of at most three pitch
- *   classes (bass first, then upward), else `?` (`chord-unnamed`).
+ *   (its `conventionalKey`), once for each key in force over the chord;
+ *   with none, a note set of at most three pitch classes (bass first,
+ *   then upward), else `?` (`chord-unnamed`). At most `MAX_NAMES`
+ *   different sounds are named an import; past it, `?`.
  *
  * Runs are in ticks and cover the grid from its first bar to its end,
  * equal neighbours merged. One sort, then linear sweeps.
@@ -42,34 +56,172 @@ type Segment = {
 	end: number;
 	harmony: boolean;
 	weights: number[];
-	bass: number | null;
+	/** The bass pitch; set for every harmony segment by `findBasses`. */
+	bass: number;
 };
 
-/** Where segments start: the attacks, and where every note has stopped. */
-function cutsOf(notes: Note[], window: number): { at: number; harmony: boolean }[] {
-	const cuts: { at: number; harmony: boolean }[] = [];
-	let reach = Number.NEGATIVE_INFINITY;
-	let i = 0;
-	while (i < notes.length) {
-		const first = (notes[i] as Note).start;
+type Cut = { at: number; harmony: boolean };
+
+/** Two or more harmony-voice notes struck together: what sounds above the bass line after them. */
+type Attack = { mask: number; top: number; end: number };
+
+/** The notes starting within a 32nd of the first: `[from, to)` in the sorted notes. */
+type Group = { start: number; from: number; to: number; end: number; attack: Attack | null };
+
+const streamOf = (n: Note) => n.track * 16 + n.channel;
+const bit = (pitch: number) => 1 << (pitch % 12);
+
+function groupsOf(notes: Note[], window: number): Group[] {
+	const groups: Group[] = [];
+	for (let i = 0; i < notes.length; ) {
+		const start = (notes[i] as Note).start;
+		let end = start;
 		let j = i;
-		let groupReach = reach;
-		for (let n = notes[j]; n !== undefined && n.start < first + window; n = notes[++j])
-			groupReach = Math.max(groupReach, n.end);
-		if (reach < first && cuts.length > 0) cuts.push({ at: reach, harmony: false });
-		if (j - i >= 2 || reach <= first) cuts.push({ at: first, harmony: true });
-		reach = groupReach;
+		for (let n = notes[j]; n !== undefined && n.start < start + window; n = notes[++j])
+			end = Math.max(end, n.end);
+		groups.push({ start, from: i, to: j, end, attack: null });
 		i = j;
 	}
-	if (cuts.length > 0) cuts.push({ at: reach, harmony: false });
-	return cuts;
+	return groups;
 }
 
-/** The segments covering `[from, to)`: no harmony before the first cut, a later cut at one tick winning. */
-function segmentsOf(notes: Note[], window: number, from: number, to: number): Segment[] {
-	const starts = [{ at: from, harmony: false }, ...cutsOf(notes, window)].filter(
-		(c) => c.at >= from && c.at < to,
-	);
+/**
+ * The bass line: the stream (track and channel) that never strikes two
+ * notes at once, lowest on average, when it lies below every stream that
+ * plays chords; else none, and every note is a harmony voice.
+ */
+function bassStreamOf(notes: Note[], groups: Group[]): number | null {
+	const stats = new Map<number, { sum: number; count: number; chordal: boolean }>();
+	for (const g of groups) {
+		const seen = new Set<number>();
+		for (const n of notes.slice(g.from, g.to)) {
+			const id = streamOf(n);
+			const st = stats.get(id) ?? { sum: 0, count: 0, chordal: false };
+			st.sum += n.pitch;
+			st.count++;
+			st.chordal ||= seen.has(id);
+			seen.add(id);
+			stats.set(id, st);
+		}
+	}
+	let bass: number | null = null;
+	let low = Number.POSITIVE_INFINITY;
+	let chordLow = Number.POSITIVE_INFINITY;
+	for (const [id, st] of stats) {
+		const mean = st.sum / st.count;
+		if (st.chordal) chordLow = Math.min(chordLow, mean);
+		else if (mean < low) [bass, low] = [id, mean];
+	}
+	return low < chordLow ? bass : null;
+}
+
+/**
+ * Marks each group whose harmony voices strike two or more notes. Its
+ * sound is the pitch classes struck and those held (to at least the first
+ * struck note's end), its top the highest struck.
+ */
+function markAttacks(notes: Note[], groups: Group[], bass: number | null) {
+	const latest = new Array<number>(128).fill(Number.NEGATIVE_INFINITY);
+	for (const g of groups) {
+		const upper = notes.slice(g.from, g.to).filter((n) => streamOf(n) !== bass);
+		if (upper.length >= 2) {
+			const firstStop = Math.min(...upper.map((n) => n.end));
+			let mask = 0;
+			for (const n of upper) mask |= bit(n.pitch);
+			latest.forEach((end, pitch) => {
+				if (end >= firstStop) mask |= bit(pitch);
+			});
+			const top = Math.max(...upper.map((n) => n.pitch));
+			g.attack = { mask, top: top % 12, end: Math.max(...upper.map((n) => n.end)) };
+		}
+		for (const n of upper) latest[n.pitch] = Math.max(latest[n.pitch] ?? 0, n.end);
+	}
+}
+
+/**
+ * Whether an attack changes the chord whose sound is `chord`: it adds a
+ * pitch class, unless that is only its top note over the chord still
+ * sounding (a melody note on a re-strike).
+ */
+function changes(chord: number, a: Attack): boolean {
+	const added = a.mask & ~chord;
+	if (added === 0) return false;
+	return !(added === 1 << a.top && (chord & ~a.mask) === 0);
+}
+
+/**
+ * Where a change at `tick` starts: at the last bar line since the
+ * harmony voices' last chord stopped (`reach`), when one falls in that
+ * rest, since the change sounded there in the bass; else at `tick`.
+ */
+function changeAt(grid: Grid, reach: number, tick: number): number {
+	const line = grid.bars[barAt(grid, tick) - 1]?.start;
+	return line !== undefined && line >= reach ? line : tick;
+}
+
+/** A stretch with attacks: a chord from its start, a new one where an attack changes it. */
+function voiceCuts(stretch: Group[], grid: Grid, cuts: Cut[]) {
+	let chord: number | null = null;
+	let reach = Number.NEGATIVE_INFINITY;
+	for (const { attack: a, start } of stretch) {
+		if (a === null) continue;
+		if (chord === null || changes(chord, a)) {
+			if (chord !== null) cuts.push({ at: changeAt(grid, reach, start), harmony: true });
+			chord = a.mask;
+		}
+		reach = Math.max(reach, a.end);
+	}
+}
+
+/** A stretch of single lines only: a cut at two notes struck together, or a note struck as all stop. */
+function lineCuts(stretch: Group[], cuts: Cut[]) {
+	let reach = Number.NEGATIVE_INFINITY;
+	for (const [i, g] of stretch.entries()) {
+		if (i > 0 && (g.to - g.from >= 2 || reach <= g.start))
+			cuts.push({ at: g.start, harmony: true });
+		reach = Math.max(reach, g.end);
+	}
+}
+
+/**
+ * Where segments start, by stretches of sound (silence between them is
+ * no harmony), and the notes weighed: a stretch whose harmony voices
+ * strike chords changes chord only where they do (the bass line is
+ * weighed only as each chord's bass); a stretch of single lines cuts as
+ * they start.
+ */
+function cutsOf(notes: Note[], window: number, grid: Grid) {
+	const groups = groupsOf(notes, window);
+	const bass = bassStreamOf(notes, groups);
+	markAttacks(notes, groups, bass);
+	const cuts: Cut[] = [];
+	const weighed: Note[] = [];
+	for (let g = 0; g < groups.length; ) {
+		const { stretch, reach } = stretchFrom(groups, g);
+		const voiced = stretch.some((x) => x.attack !== null);
+		cuts.push({ at: (stretch[0] as Group).start, harmony: true });
+		if (voiced) voiceCuts(stretch, grid, cuts);
+		else lineCuts(stretch, cuts);
+		cuts.push({ at: reach, harmony: false });
+		for (const n of notes.slice(stretch[0]?.from, stretch.at(-1)?.to))
+			if (!voiced || streamOf(n) !== bass) weighed.push(n);
+		g += stretch.length;
+	}
+	return { cuts, weighed };
+}
+
+/** The groups from `g` sounding without a gap, and where the last of their notes stops. */
+function stretchFrom(groups: Group[], g: number) {
+	let h = g;
+	let reach = (groups[g] as Group).start;
+	for (let x = groups[h]; x !== undefined && x.start <= reach; x = groups[++h])
+		reach = Math.max(reach, x.end);
+	return { stretch: groups.slice(g, h), reach };
+}
+
+/** The segments covering the grid: no harmony before the first cut, a later cut at one tick winning. */
+function segmentsOf(cuts: Cut[], from: number, to: number): Segment[] {
+	const starts = [{ at: from, harmony: false }, ...cuts].filter((c) => c.at >= from && c.at < to);
 	const segments: Segment[] = [];
 	for (const [i, c] of starts.entries()) {
 		const end = starts[i + 1]?.at ?? to;
@@ -79,7 +231,7 @@ function segmentsOf(notes: Note[], window: number, from: number, to: number): Se
 				end,
 				harmony: c.harmony,
 				weights: new Array<number>(12).fill(0),
-				bass: null,
+				bass: 0,
 			});
 	}
 	return segments;
@@ -129,9 +281,9 @@ function findBasses(notes: Note[], segments: Segment[], window: number) {
 			latest[n.pitch] = Math.max(latest[n.pitch] ?? 0, n.end);
 		if (!s.harmony) continue;
 		const { low, firstStop } = struck(notes, next, s.start + window, s.end);
-		const held = latest.findIndex((end) => end >= firstStop);
-		const bass = held >= 0 && held < low ? held : low;
-		s.bass = bass < 128 ? bass : null;
+		// nothing struck (a key change inside a chord): the lowest still sounding
+		const held = latest.findIndex((end) => end >= (low < 128 ? firstStop : s.start + 1));
+		s.bass = held >= 0 && held < low ? held : low;
 	}
 }
 
@@ -147,33 +299,49 @@ function symbolOf(kept: number[], bass: number, key: Key | null): string | null 
 	const name = nameNotes(kept, bass, key);
 	if (name !== null) return name;
 	if (kept.length > MAX_SET) return null;
-	const upward = kept.sort((a, b) => ((a - bass + 12) % 12) - ((b - bass + 12) % 12));
+	const upward = [...kept].sort((a, b) => ((a - bass + 12) % 12) - ((b - bass + 12) % 12));
 	return `{${upward.map((pc) => spellPitch(pc, key)).join(" ")}}`;
 }
 
-/** A segment's symbol, or null; `cache` holds each distinct sound's (a chart repeats its chords). */
-function nameOf(s: Segment, key: Key | null, cache: Map<string, string | null>): string | null {
-	const bass = (s.bass ?? 0) % 12;
+/** The most different sounds an import names (`nameNotes` costs up to a millisecond each). */
+const MAX_NAMES = 20_000;
+
+/** Each distinct sound's symbol (a chart repeats its chords), and how many more may be named. */
+type Names = { cache: Map<number, string | null>; left: number };
+
+/** A segment's symbol; null when nothing names it, undefined past `MAX_NAMES`. */
+function nameOf(s: Segment, key: Key | null, keyId: number, names: Names) {
+	const bass = s.bass % 12;
 	const kept = keptOf(s, bass);
-	const id = `${kept.join(",")} ${bass} ${key ? `${key.tonic} ${key.mode}` : ""}`;
-	if (!cache.has(id)) cache.set(id, symbolOf(kept, bass, key));
-	return cache.get(id) ?? null;
+	let mask = 0;
+	for (const pc of kept) mask |= 1 << pc;
+	const id = (keyId * 12 + bass) * 4096 + mask;
+	if (names.cache.has(id)) return names.cache.get(id) ?? null;
+	if (names.left === 0) return undefined;
+	names.left--;
+	const symbol = symbolOf(kept, bass, key);
+	names.cache.set(id, symbol);
+	return symbol;
 }
 
 /**
- * The key spelling each segment, as `key:` will read (sync's
- * `conventionalKey`): the last at or before its start, the first from bar 1.
+ * A harmony segment's runs, one for each key in force over it from
+ * `keys[k]` (the first from bar 1), each spelled for its key as `key:`
+ * will read (sync's `conventionalKey`): a chord carried over a key
+ * change is spelled anew, its sound unchanged.
  */
-function keysFor(segments: Segment[], keys: KeyAt[]): (Key | null)[] {
-	const spelled = keys.map((k) => {
-		const key = keyFromText(k.name);
-		return key && conventionalKey(key);
-	});
-	let k = 0;
-	return segments.map((s) => {
-		while ((keys[k + 1]?.tick ?? Number.POSITIVE_INFINITY) <= s.start) k++;
-		return spelled[k] ?? null;
-	});
+function spansOf(
+	s: Segment,
+	keys: KeyAt[],
+	k: number,
+): { start: number; end: number; k: number }[] {
+	const spans: { start: number; end: number; k: number }[] = [];
+	for (let start = s.start; start < s.end; k++) {
+		const end = Math.min(s.end, keys[k + 1]?.tick ?? Number.POSITIVE_INFINITY);
+		spans.push({ start, end, k });
+		start = end;
+	}
+	return spans;
 }
 
 /** Equal neighbours merged (segments are contiguous). */
@@ -187,26 +355,56 @@ function merged(runs: ChordRun[]): ChordRun[] {
 	return out;
 }
 
+/** A `?` written: nothing names the sound (null), or past `MAX_NAMES` (undefined). */
+function unnamed(report: Report, symbol: null | undefined, bar: number) {
+	const message =
+		symbol === null
+			? "notes no chord symbol names are written as ?"
+			: "past 20,000 different sounds, the chords are written as ?";
+	report.add("chord-unnamed", "warning", message, { bar });
+}
+
 /**
  * The chord runs of `harmony` (sorted by start), in ticks, covering the
  * grid; `keys` as directives kept them.
  */
 export function chordRuns(harmony: Note[], grid: Grid, keys: KeyAt[], report: Report): ChordRun[] {
-	const from = grid.bars[0]?.start ?? 0;
 	const window = grid.ppq * ATTACK;
-	const segments = segmentsOf(harmony, window, from, grid.end);
-	weigh(harmony, segments);
+	const { cuts, weighed } = cutsOf(harmony, window, grid);
+	const segments = segmentsOf(cuts, grid.bars[0]?.start ?? 0, grid.end);
+	weigh(weighed, segments);
 	findBasses(harmony, segments, window);
-	const spelled = keysFor(segments, keys);
-	const cache = new Map<string, string | null>();
-	const runs = segments.map((s, i) => {
-		if (!s.harmony) return { start: s.start, end: s.end, symbol: "N.C." };
-		const symbol = nameOf(s, spelled[i] ?? null, cache);
-		if (symbol === null)
-			report.add("chord-unnamed", "warning", "notes no chord symbol names are written as ?", {
-				bar: barAt(grid, s.start),
-			});
-		return { start: s.start, end: s.end, symbol: symbol ?? "?" };
+	return merged(namedRuns(segments, keys, grid, report));
+}
+
+/** What naming needs: the keys, spelled; the names given so far; where to report. */
+type Naming = { keys: KeyAt[]; spelled: (Key | null)[]; names: Names; grid: Grid; report: Report };
+
+/** A harmony segment's runs: its chord named under each key in force over it from `keys[k]`. */
+function chordRunsOf(s: Segment, k: number, n: Naming): ChordRun[] {
+	return spansOf(s, n.keys, k).map((span) => {
+		const symbol = nameOf(s, n.spelled[span.k] ?? null, span.k, n.names);
+		if (typeof symbol !== "string") unnamed(n.report, symbol, barAt(n.grid, span.start));
+		return { start: span.start, end: span.end, symbol: symbol ?? "?" };
 	});
-	return merged(runs);
+}
+
+/** Each segment's runs: `N.C.`, or its chord named under each key in force over it. */
+function namedRuns(segments: Segment[], keys: KeyAt[], grid: Grid, report: Report): ChordRun[] {
+	const spelled = keys.map((k) => {
+		const key = keyFromText(k.name);
+		return key && conventionalKey(key);
+	});
+	const naming: Naming = {
+		keys,
+		spelled,
+		names: { cache: new Map(), left: MAX_NAMES },
+		grid,
+		report,
+	};
+	let k = 0;
+	return segments.flatMap((s) => {
+		while ((keys[k + 1]?.tick ?? Number.POSITIVE_INFINITY) <= s.start) k++;
+		return s.harmony ? chordRunsOf(s, k, naming) : [{ start: s.start, end: s.end, symbol: "N.C." }];
+	});
 }
