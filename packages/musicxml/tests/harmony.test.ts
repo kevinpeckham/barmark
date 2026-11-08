@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { type Interval, parseChord } from "barmark";
-import { harmonyXml, intervalsOf, kindOf, noChordXml } from "../src/harmony.js";
+import { harmonyXml, intervalsOf, kindOf, noChordXml, textSpells } from "../src/harmony.js";
 import { measures, xmlOf } from "./helpers.js";
 
 const record = (symbol: string) => {
@@ -75,11 +75,32 @@ describe("harmony", () => {
 	test("an added degree is written relative to a dominant chord", () => {
 		// MusicXML: an added 7 is a minor seventh unless altered.
 		expect(harmonyXml(record("C(9)"))).toContain(
-			"<degree><degree-value>9</degree-value><degree-alter>0</degree-alter><degree-type>add</degree-type></degree>",
+			'<degree print-object="no"><degree-value>9</degree-value><degree-alter>0</degree-alter><degree-type>add</degree-type></degree>',
 		);
 		expect(harmonyXml(record("C7(#9)"))).toContain(
-			"<degree><degree-value>9</degree-value><degree-alter>1</degree-alter><degree-type>add</degree-type></degree>",
+			'<degree print-object="no"><degree-value>9</degree-value><degree-alter>1</degree-alter><degree-type>add</degree-type></degree>',
 		);
+	});
+	test("a degree the kind text already spells is not printed again", () => {
+		// Verovio prints the text and then each printed degree: D7sus4(7), G5(7)(no3).
+		const sus = harmonyXml(record("D7sus4"));
+		expect(sus).toContain('<kind text="7sus4">suspended-fourth</kind>');
+		expect(sus).toContain(
+			'<degree print-object="no"><degree-value>7</degree-value><degree-alter>0</degree-alter><degree-type>add</degree-type></degree>',
+		);
+		const power = harmonyXml(record("G5(7)"));
+		expect(power).toContain('<kind text="5(7)">dominant</kind>');
+		expect(power).toContain(
+			'<degree print-object="no"><degree-value>3</degree-value><degree-alter>0</degree-alter><degree-type>subtract</degree-type></degree>',
+		);
+		expect(power).not.toMatch(/<degree>/);
+	});
+	test("degrees stay printed when the kind text does not spell the chord", () => {
+		// A kind text that names less than the chord leaves its degrees to say the rest.
+		const add9 = record("C(9)").intervals;
+		expect(textSpells("C", "(9)", add9)).toBe(true);
+		expect(textSpells("C", "", add9)).toBe(false);
+		expect(textSpells("C", "(", add9)).toBe(false);
 	});
 	test("N.C. is kind none with its root hidden", () => {
 		expect(noChordXml()).toBe(

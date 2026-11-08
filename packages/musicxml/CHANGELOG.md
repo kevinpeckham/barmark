@@ -6,6 +6,17 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+
+- **A chord's degrees are not printed when its kind text already spells
+  them.** `<kind text="7sus4">` with an added 7, or `text="5(7)"` with a
+  subtracted 3, now writes each such `<degree>` with `print-object="no"`,
+  so a program that prints the text and then the degrees no longer shows
+  `D7sus4(7)` or `G5(7)(no3)`. The degrees are still written, so the
+  chord means the same notes to a program that reads kind and degrees
+  (and to the import). A kind text that does not name the whole chord
+  leaves its degrees printed.
+
 ## [0.7.1] - 2026-11-08
 
 ### Fixed
