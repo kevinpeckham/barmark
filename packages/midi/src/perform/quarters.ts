@@ -12,6 +12,7 @@ function gcd(a: number, b: number): number {
 /** `n/d` quarters, in lowest terms with a positive denominator. */
 export function q(n: number, d = 1): Quarters {
 	const g = gcd(n, d) * Math.sign(d);
+	// `+ 0` turns -0 (from 0 over a negative denominator) into 0, so equal times compare equal.
 	return { n: n / g + 0, d: d / g };
 }
 export const ZERO: Quarters = { n: 0, d: 1 };

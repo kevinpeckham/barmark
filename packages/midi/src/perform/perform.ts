@@ -60,11 +60,11 @@ export function perform(parse: ChartParse, options: { tempo?: number } = {}): Pe
 /** Seconds from the start at a point, through the tempo map. */
 export function secondsAt(p: Performance, at: Quarters): number {
 	let seconds = 0;
-	p.tempos.forEach((t, i) => {
-		if (cmp(t.at, at) >= 0) return;
+	for (const [i, t] of p.tempos.entries()) {
+		if (cmp(t.at, at) >= 0) break;
 		const next = p.tempos[i + 1]?.at;
 		const until = next && cmp(next, at) < 0 ? next : at;
 		seconds += (toNumber(sub(until, t.at)) * 60) / t.qpm;
-	});
+	}
 	return seconds;
 }

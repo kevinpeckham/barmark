@@ -33,6 +33,8 @@ describe("perform: slots, voicing and holds", () => {
 	test("note sets and voicings are exact", () => {
 		expect(pitches("| {C3 G3 E4} |")).toEqual([48, 55, 64]);
 		expect(pitches("| Cmaj7{E3 G3 B3} |")).toEqual([52, 55, 59]);
+		expect(pitches("| {C### E} |")).toEqual([63, 64]);
+		expect(pitches("| {Cbbb E} |")).toEqual([57, 64]);
 	});
 
 	test("note sets without octaves rise from octave 4", () => {
@@ -71,11 +73,11 @@ describe("perform: slots, voicing and holds", () => {
 		]);
 		const tacet =
 			"part: Gtr = Electric Guitar 1\npart: Pno = Piano\n\nGtr | C / |\nPno | F |\n---\nPno | / |\n";
-		expect(notes(tacet).map(([, at, length]) => [at, length])).toEqual([
-			[0, 4],
-			[0, 4],
-			[0, 4],
-			[0, 4],
+		expect(notes(tacet)).toEqual([
+			[48, 0, 4, 80],
+			[60, 0, 4, 80],
+			[64, 0, 4, 80],
+			[67, 0, 4, 80],
 		]);
 	});
 

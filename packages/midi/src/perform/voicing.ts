@@ -2,15 +2,16 @@
 import type { ChordRecord } from "barmark";
 
 const STEPS: Record<string, number> = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
-const NOTE = /^([A-G])(#{1,2}|b{1,2})?(\d)?$/;
+/** A letter, any run of sharps or flats, and an optional octave: every spelling barmark's note sets accept. */
+const NOTE = /^([A-G])(#+|b+)?(\d)?$/;
 
-/** A spelled note (`F#`, `Bb3`): its semitone above C, alterations included, and its octave if written. */
+/** A spelled note (`F#`, `Bb3`, `C###`): its semitone above C, alterations included, and its octave if written. */
 function readNote(name: string): { semitone: number; octave: number | null } {
-	const m = NOTE.exec(name);
-	const alter = m?.[2] ? (m[2].startsWith("#") ? 1 : -1) * m[2].length : 0;
+	const [, letter = "C", accidentals = "", octave] = NOTE.exec(name) ?? [];
+	const alter = (accidentals.startsWith("#") ? 1 : -1) * accidentals.length;
 	return {
-		semitone: (STEPS[m?.[1] ?? "C"] ?? 0) + alter,
-		octave: m?.[3] ? Number(m[3]) : null,
+		semitone: (STEPS[letter] ?? 0) + alter,
+		octave: octave === undefined ? null : Number(octave),
 	};
 }
 
