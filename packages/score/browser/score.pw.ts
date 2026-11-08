@@ -132,7 +132,7 @@ test("dark score is light on dark", async ({ page }) => {
 
 test("a bad verovio-url keeps the grid with a note", async ({ page }) => {
 	const seen = countEngine(page);
-	await page.goto(`/score?verovio-url=${encodeURIComponent("/nope/verovio.mjs")}`);
+	await page.goto("/score?engine=missing");
 	const el = page.locator("barmark-score");
 	await el.getByRole("radio", { name: "Score" }).click();
 	await expect(el.getByRole("status")).toHaveText("The score couldn't be drawn", {
@@ -148,14 +148,21 @@ test("a bad verovio-url keeps the grid with a note", async ({ page }) => {
 
 test("a data: verovio-url shows the note without starting the worker", async ({ page }) => {
 	const seen = countEngine(page);
-	const data = "data:text/javascript,export default async () => ({})";
-	await page.goto(`/score?verovio-url=${encodeURIComponent(data)}`);
+	await page.goto("/score?engine=data");
 	const el = page.locator("barmark-score");
 	await el.getByRole("radio", { name: "Score" }).click();
 	await expect(el.getByRole("status")).toHaveText("The score couldn't be drawn");
 	await expect(el.locator(".bms-grid .bm-chart")).toBeVisible();
 	await page.waitForLoadState("networkidle");
 	expect(seen.worker).toBe(0);
+});
+
+test("the page server takes no module URL and caps count", async ({ request }) => {
+	const url = encodeURIComponent("https://example.com/evil.mjs");
+	expect((await request.get(`/score?verovio-url=${url}`)).status()).toBe(400);
+	expect((await request.get("/score?engine=other")).status()).toBe(400);
+	expect((await request.get("/score?count=1000000")).status()).toBe(400);
+	expect((await request.get("/score?count=2")).status()).toBe(200);
 });
 
 test("resizing reflows the score", async ({ page }) => {

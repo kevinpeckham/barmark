@@ -1844,3 +1844,24 @@ becomes Acoustic Bass 1). It drops every section marker (MIDI marker
 events) and keeps only 2 of a rit.'s 15 tempo steps.
 **Tooling:** mac-bench's `dorico --midi` job drives the import; it needed
 three fixes to read Dorico's import window (see mac-bench's FINDINGS).
+
+### Vercel's security review read our test tooling as attack surface (2026-11-08, score)
+
+**Symptom:** the Vercel Security Review check failed on PR #223 with three
+Low findings, all in VM-only or test-only code: `scripts/score-dorico.ts`
+defaulted to a fixed `/tmp/score-dorico` and wrote through whatever sat at
+its file names (a planted symlink would be followed); the score suite's page
+server copied `?verovio-url=` into the element, so a crafted link could make
+its worker import any module; and its `?count=` was uncapped. **Cause:** we
+treated a dev server and a manual script as trusted by being local, but a
+shared `/tmp` and a listener on every interface are reachable by others.
+**Fix:** `scripts/out-dir.ts` (`outDir`: a new `mkdtemp` folder by default, a
+given one must be a real folder we own; `writeFresh`: remove what's there,
+then an exclusive create), tested in `packages/score/tests/out-dir.test.ts`;
+the page server binds `127.0.0.1`, takes only `theme`, `engine` (a name:
+`missing` or `data`, mapped to fixed URLs) and `count` (1 to 4), and answers
+400 to anything else (`score.pw.ts`, "the page server takes no module URL
+and caps count"). **Rule:** a script's default output goes in a fresh
+`mkdtemp` folder, as the other VM scripts already do; a test server binds
+loopback and never turns a query parameter into code to load. Fallow scores
+code only Playwright runs as untested, so its helpers stay small.

@@ -8,14 +8,15 @@
  * `engraveChart` draws the same chart with Verovio; `index.html` in the output
  * folder puts the two side by side. Advice for a person to read, not a test.
  *
- *   bun scripts/score-dorico.ts [outdir]     (default /tmp/score-dorico)
+ *   bun scripts/score-dorico.ts [outdir]     (default: a new private folder under tmpdir)
  */
-import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
-import { basename, join, resolve } from "node:path";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { basename, join } from "node:path";
 import { AMAZING_GRACE } from "../packages/render/tests/fixtures.js";
 import { engraveChart } from "../packages/score/src/engrave.js";
 import { loadToolkit } from "../packages/score/tests/helpers/toolkit.js";
 import { runMacBench } from "./mac-bench.js";
+import { outDir, writeFresh } from "./out-dir.js";
 import { type Entry, sideBySide } from "./score-dorico-page.js";
 
 const ROOT = new URL("../", import.meta.url);
@@ -49,7 +50,7 @@ function prepare(vrv: Toolkit, out: string) {
 		if (!e.ok) throw new Error(`${name}: ${e.reason}`);
 		const path = join(out, `${name}.musicxml`);
 		// The very MusicXML Verovio drew is what Dorico gets.
-		writeFileSync(path, e.xml);
+		writeFresh(path, e.xml);
 		xmls.push(path);
 		svgs.set(name, e.svg);
 	}
@@ -74,15 +75,15 @@ function writePage(
 		.filter((x) => !missing.includes(x))
 		.map((x) => basename(x, ".musicxml"))
 		.map((name) => ({ name, svg: svgs.get(name) ?? "", pdf: `${name}.pdf` }));
-	writeFileSync(join(out, "index.html"), sideBySide(entries));
+	writeFresh(join(out, "index.html"), sideBySide(entries));
 	console.log(`\n${entries.length} charts beside Dorico: ${join(out, "index.html")}`);
 	if (missing.length) console.error(`no PDF for: ${missing.join(", ")}`);
 	return missing.length ? 1 : 0;
 }
 
 async function main(): Promise<number> {
-	const out = resolve(process.argv[2] ?? "/tmp/score-dorico");
-	mkdirSync(out, { recursive: true });
+	const out = outDir(process.argv[2], "score-dorico-");
+	console.log(`writing to ${out}`);
 	const { xmls, svgs } = prepare(await loadToolkit(), out);
 	return writePage(out, xmls, svgs, doricoWithRetry(xmls, out));
 }

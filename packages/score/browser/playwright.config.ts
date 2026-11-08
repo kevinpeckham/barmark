@@ -6,10 +6,10 @@ export default defineConfig({
 	testDir: ".",
 	testMatch: "*.pw.ts",
 	timeout: 30_000,
-	use: { baseURL: `http://localhost:${PORT}`, ...devices["Desktop Chrome"] },
+	use: { baseURL: `http://127.0.0.1:${PORT}`, ...devices["Desktop Chrome"] },
 	webServer: {
 		command: "bun server.ts",
-		url: `http://localhost:${PORT}/score`,
+		url: `http://127.0.0.1:${PORT}/score`,
 		env: { PORT: String(PORT) },
 		reuseExistingServer: false,
 	},
