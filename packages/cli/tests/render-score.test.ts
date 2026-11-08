@@ -101,6 +101,12 @@ describe("barmark render --score", () => {
 		expect(html).toBe("");
 		expect(err).toMatch(/^ms\.chart\.md: Line \d+: .+\n$/);
 	});
+	test("--part of a chart with no bars: the export's reason", async () => {
+		const files = { "p.chart.md": "part: Pno = Piano\n\n# Empty\n" };
+		const { code, err } = await scored(["--score", "p.chart.md", "--part", "Pno"], files);
+		expect(code).toBe(1);
+		expect(err).toBe("p.chart.md: the chart has no bars to export\n");
+	});
 	test("a chart with no bars won't engrave either", async () => {
 		const { code, err } = await scored(["--score", "e.chart.md"], { "e.chart.md": "# Empty\n" });
 		expect(code).toBe(1);

@@ -90,7 +90,8 @@ its dependency, and then by a CLI release (step 13): the CLI pins
 `render --score`. A Verovio upgrade is a `@barmark/score` release (its
 range) followed by a CLI release that raises the CLI's exact `verovio`
 pin to match, so the binaries and an npm install engrave with the same
-Verovio.
+Verovio (`verify:release cli` checks the pin is inside `@barmark/score`'s
+range at its tag).
 
 ## Checks
 

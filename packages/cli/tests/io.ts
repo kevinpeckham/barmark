@@ -17,6 +17,7 @@ export function fakeIo(
 		readStdin: async () => stdin,
 		cwd: process.cwd(),
 		font: () => new Uint8Array([1, 2, 3, 4]),
+		verovio: async () => (await import("verovio/wasm")).default,
 		versions: {
 			cli: "0.1.0",
 			barmark: "9.9.9",
@@ -24,6 +25,7 @@ export function fakeIo(
 			musicxml: "7.7.7",
 			score: "5.5.5",
 			midi: "6.6.6",
+			verovio: "4.4.4",
 		},
 		...rest,
 		out: () => out,

@@ -4,7 +4,7 @@
  * bundle. Here because the root `bun test` runs packages/ only.
  */
 import { describe, expect, test } from "bun:test";
-import { packedRange, staleRange, staleRanges } from "../../../scripts/packed-range.js";
+import { packedRange, pinProblem, staleRange, staleRanges } from "../../../scripts/packed-range.js";
 
 describe("packedRange: a dependency as bun pm pack writes it", () => {
 	test("workspace ranges take the dependency's version at the tag", () => {
@@ -52,5 +52,26 @@ describe("staleRanges: a library's dependencies at its tag", () => {
 		expect(problems).toEqual([
 			"@barmark/midi at midi-v0.2.0 depends on @barmark/sync ^0.2.0, which does not admit the bundled 0.3.0: release a @barmark/midi patch first (Requires @barmark/sync 0.3.0)",
 		]);
+	});
+});
+
+describe("pinProblem: the CLI's exact pin of a library's own dependency (Verovio)", () => {
+	const score = { name: "@barmark/score", tag: "score-v0.1.0" };
+	test("a pin the library's range at its tag admits is fine", () => {
+		expect(pinProblem(score, "verovio", "^6.4.1", "6.4.1")).toBeNull();
+		expect(pinProblem(score, "verovio", "^6.4.1", "6.5.2")).toBeNull();
+	});
+	test("a pin it does not admit means two Verovios for npm users", () => {
+		expect(pinProblem(score, "verovio", "^6.5.0", "6.4.1")).toBe(
+			"@barmark/cli pins verovio 6.4.1, which @barmark/score at score-v0.1.0 (verovio ^6.5.0) does not admit: pin a version both agree on",
+		);
+	});
+	test("the library dropping the dependency, or the CLI not pinning it, is a problem too", () => {
+		expect(pinProblem(score, "verovio", undefined, "6.4.1")).toBe(
+			"@barmark/score at score-v0.1.0 does not depend on verovio, which @barmark/cli pins at 6.4.1",
+		);
+		expect(pinProblem(score, "verovio", "^6.4.1", undefined)).toBe(
+			"@barmark/cli does not pin verovio, which @barmark/score at score-v0.1.0 depends on (^6.4.1)",
+		);
 	});
 });

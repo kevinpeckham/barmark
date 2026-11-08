@@ -1,13 +1,15 @@
 /**
  * barmark render --score: the chart engraved as a full score, the drawing
- * `<barmark-score>` shows, by Verovio in this process (no worker). Verovio
- * (about 7 MB) is imported on the first score only, so the other commands
- * never load it.
+ * `<barmark-score>` shows, by Verovio in this process (no worker). Verovio's
+ * module (about 7 MB) comes from `io.verovio` on the first score only, so the
+ * other commands never load it.
  */
 import { exportMusicXml } from "@barmark/musicxml";
 import { stylesheet } from "@barmark/render";
 import { engraveChart, engraveXml, type ScoreTheme, scorePane, scoreStyles } from "@barmark/score";
+import type { ChartDiagnostic } from "barmark";
 import type { VerovioToolkit } from "verovio/esm";
+import type { Io } from "./io.js";
 
 /** The width a score is engraved at unless --width says otherwise, in CSS pixels. */
 export const DEFAULT_WIDTH = 900;
@@ -18,11 +20,10 @@ export const MAX_WIDTH = 40_000;
 let toolkit: Promise<VerovioToolkit> | undefined;
 
 /** One toolkit for the process, its log off: Verovio would otherwise print to stdout, into the page. */
-function loadToolkit(): Promise<VerovioToolkit> {
+function loadToolkit(verovio: Io["verovio"]): Promise<VerovioToolkit> {
 	toolkit ??= (async () => {
 		const esm = await import("verovio/esm");
-		const { default: createModule } = await import("verovio/wasm");
-		const module = await createModule();
+		const module = await (await verovio())();
 		// Verovio's typings omit the log switch; it is exported all the same (as the score worker uses it).
 		const { enableLog, LOG_OFF } = esm as unknown as {
 			enableLog(level: number, module: unknown): void;
@@ -36,18 +37,17 @@ function loadToolkit(): Promise<VerovioToolkit> {
 
 type Result = { ok: true; svg: string } | { ok: false; reason: string };
 
-/**
- * One part alone: its MusicXML (`@barmark/musicxml`'s `part`), engraved as
- * `engraveChart` engraves the whole. The caller has checked the part
- * exists, so its export fails only when the chart's does: `engraveChart`
- * then gives the reason, worded as for the whole chart, before Verovio runs.
- */
+/** Why the export failed, worded as `engraveChart` words it: the first error, with its line when it has one. */
+function exportReason(diagnostics: readonly ChartDiagnostic[]): string {
+	const first = diagnostics.find((d) => d.severity === "error") ?? diagnostics[0];
+	if (first === undefined) return "the chart could not be exported";
+	return first.line > 0 ? `Line ${first.line}: ${first.message}` : first.message;
+}
+
+/** One part alone: its MusicXML (`@barmark/musicxml`'s `part`), engraved as `engraveChart` engraves the whole. */
 function engravePart(vrv: VerovioToolkit, text: string, part: string, width: number): Result {
 	const exported = exportMusicXml(text, { part });
-	if (!exported.ok) {
-		const whole = engraveChart(vrv, text, { width });
-		return whole.ok ? { ok: false, reason: `no part labelled ${part}` } : whole;
-	}
+	if (!exported.ok) return { ok: false, reason: exportReason(exported.diagnostics) };
 	try {
 		return { ok: true, svg: engraveXml(vrv, exported.xml, { width }).svg };
 	} catch (e) {
@@ -61,8 +61,9 @@ export type ScoreOptions = { theme: ScoreTheme; width: number; part?: string; la
 export async function scoreBody(
 	text: string,
 	options: ScoreOptions,
+	io: Pick<Io, "verovio">,
 ): Promise<{ ok: true; html: string } | { ok: false; reason: string }> {
-	const vrv = await loadToolkit();
+	const vrv = await loadToolkit(io.verovio);
 	const engraved =
 		options.part === undefined
 			? engraveChart(vrv, text, { width: options.width })

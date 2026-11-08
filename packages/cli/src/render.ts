@@ -110,12 +110,16 @@ export async function render(args: string[], io: Io): Promise<number> {
 		writeOutput(htmlDocument(title, renderChart(text, options)), values.out, io);
 		return 0;
 	}
-	const score = await scoreBody(text, {
-		theme,
-		width,
-		label: title,
-		...(values.part === undefined ? {} : { part: values.part }),
-	});
+	const score = await scoreBody(
+		text,
+		{
+			theme,
+			width,
+			label: title,
+			...(values.part === undefined ? {} : { part: values.part }),
+		},
+		io,
+	);
 	if (!score.ok) {
 		io.stderr(`${path}: ${score.reason}\n`);
 		return 1;

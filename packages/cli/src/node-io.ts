@@ -20,6 +20,7 @@ function versions(): Versions {
 		musicxml: versionAt("@barmark/musicxml"),
 		score: versionAt("@barmark/score"),
 		midi: versionAt("@barmark/midi"),
+		verovio: versionAt("verovio"),
 	};
 }
 
@@ -52,6 +53,7 @@ export function processIo(): Pick<Io, "stdout" | "stderr" | "readStdin" | "cwd">
 export function nodeIo(): Io {
 	return {
 		...processIo(),
+		verovio: async () => (await import("verovio/wasm")).default,
 		font: () =>
 			readFileSync(fileURLToPath(import.meta.resolve("@barmark/render/fonts/Edwin-Roman.otf"))),
 		versions: versions(),
