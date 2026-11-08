@@ -150,12 +150,22 @@ describe("chordRuns", () => {
 		expect(runs([...chord([C4, E4, G4], 0, 960), note(E4, 960, BAR)])).toEqual([
 			{ start: 0, end: BAR, symbol: "C" },
 		]);
-		// a gap is silence: what follows starts afresh
+		// a gap is silence: a lone note after it with no chord attack after it in the bar starts
+		// afresh (the final fix pass's ruling leaves this as it was)
 		expect(runs([...chord([C4, E4, G4], 0, 900), note(E4, 960, BAR)])).toEqual([
 			{ start: 0, end: 900, symbol: "C" },
 			{ start: 900, end: 960, symbol: "N.C." },
 			{ start: 960, end: BAR, symbol: "{E}" },
 		]);
+		// with a chord attack after it in the bar, the silence beside it is no gap: the chord
+		// carries, and the note is no bass inside its register (Claude's ruling, final fix pass)
+		expect(
+			runs([
+				...chord([C4, E4, G4], 0, 900),
+				note(E4, 960, 1200),
+				...chord([C4, E4, G4], 1440, BAR),
+			]),
+		).toEqual([{ start: 0, end: BAR, symbol: "C" }]);
 	});
 
 	test("silence is N.C.", () => {

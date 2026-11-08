@@ -365,3 +365,72 @@ describe("a bass in octaves or double stops, struck alone before the chord (fix 
 		expect(bars(play(4 * Q, ballad))).toBe("| C | F | G | C |");
 	});
 });
+
+describe("silence beside a bass struck alone, its chord following in the bar (final fix pass)", () => {
+	// MuseScore ends every note a tick early; a staccato bass stops sooner still
+	const staccato =
+		(track: number, short: number) => (root: number, triad: number[], at: number) => [
+			n(root, at, at + Q - short, track),
+			...ch(triad, at + Q, at + 2 * Q - 1),
+			n(root + 7, at + 2 * Q, at + 3 * Q - short, track),
+			...ch(triad, at + 3 * Q, at + 4 * Q - 1),
+		];
+	const on = (track: number) => (x: Note) => ({ ...x, track, channel: track - 1 });
+	const octaves = (track: number, short: number) => (root: number, triad: number[], at: number) => [
+		...ch([root, root + 12], at, at + Q - short).map(on(track)),
+		...ch(triad, at + Q, at + 2 * Q - 1),
+		...ch([root + 7, root + 19], at + 2 * Q, at + 3 * Q - short).map(on(track)),
+		...ch(triad, at + 3 * Q, at + 4 * Q - 1),
+	];
+
+	test("boom-chick with every note a tick short, and bass notes of 420, 400 and 240 ticks", () => {
+		for (const short of [1, 60, 80, 240]) {
+			expect(bars(play(4 * Q, staccato(2, short)))).toBe("| C | F | G | C |");
+			expect(bars(play(4 * Q, staccato(1, short)))).toBe("| C | F | G | C |");
+		}
+	});
+
+	test("the same with the bass in octaves, on its own track and on the chords'", () => {
+		for (const short of [1, 240]) {
+			expect(bars(play(4 * Q, octaves(2, short)))).toBe("| C | F | G | C |");
+			expect(bars(play(4 * Q, octaves(1, short)))).toBe("| C | F | G | C |");
+		}
+	});
+
+	test("a bass note alone on the downbeat, a rest, then its chord on beat 3", () => {
+		// F2 stops before beat 2; the F chord on beat 3 is its chord, so F from the bar line
+		const rest = [n(F2, 4 * Q, 4 * Q + 400), ...ch([F3, A3, C4], 6 * Q, 8 * Q)];
+		expect(bars([...ch([C2, C4, E4, G4], 0, 4 * Q), ...rest])).toBe("| C | F |");
+		// the chord before stopping a tick early too
+		expect(bars([...ch([C2, C4, E4, G4], 0, 4 * Q - 1), ...rest])).toBe("| C | F |");
+	});
+
+	test("a lone note after silence with no chord after it in the bar still starts its own", () => {
+		// G2 alone on beat 4 after a rest; the next chord is in the next bar
+		const notes = [
+			...ch([C2, C4, E4, G4], 0, 2 * Q),
+			n(G2, 3 * Q, 4 * Q - 1),
+			...ch([F2, F3, A3, C4], 4 * Q, 8 * Q),
+		];
+		expect(bars(notes)).toBe("| C / N.C. {G} | F |");
+	});
+
+	test("a chord struck in the bar before, ringing past the line, then a rest and the bass alone: the rest stays", () => {
+		// C struck on beat 4 rings a 16th into bar 2; F2 on beat 2 after a rest, the F chord on beat 3
+		const notes = [
+			...ch([C2, C4, E4, G4], 3 * Q, 4 * Q + 120),
+			n(F2, 5 * Q, 5 * Q + 400),
+			...ch([F3, A3, C4], 6 * Q, 8 * Q),
+		];
+		expect(bars(notes)).toBe("| N.C. / / C | N.C. F / / |");
+	});
+
+	test("a chord stab, a rest, the fifth alone, then the chord again: one chord (the ruling's reach)", () => {
+		const notes = [
+			...ch([C2, C4, E4, G4], 0, Q),
+			n(G2, 2 * Q, 3 * Q - 1),
+			...ch([C4, E4, G4], 3 * Q, 4 * Q),
+		];
+		expect(bars(notes)).toBe("| C |");
+	});
+});

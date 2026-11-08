@@ -653,12 +653,31 @@ voices, the bass on 1 and the chord after it, as in a waltz, boom-chick,
 ballad, reggae skank, stride or off-beat jazz comping; fix round 5 made
 that hold however far the chord before rings past the bar line, read a
 bass in octaves or double stops as a bass, and placed a change heard
-after a rest at the last bar line the bass sounds through; round 1 had
+after a rest at the last bar line the bass sounds through; the final fix
+pass bridged the silence beside a bass struck alone before its chord;
+round 1 had
 revised the first draft, under which a walking bass under off-beat
 comping read four symbols a bar):
 
 - **Stretches:** where every harmony note has stopped, a segment of
   **no harmony** begins; a note struck as the last one stops is no gap.
+  Nor is silence beside a **bass struck alone** (a lone note, the bass
+  line's note, or a bass figure) whose chord attack follows in the same
+  bar: the stretch goes on as if the bass had held, so a staccato
+  boom-chick, or MuseScore's notes each ending a tick early, reads as
+  the legato one does, `| C | F | G | C |` (Claude's ruling, 2026-11-08,
+  the final fix pass: a bass note struck alone and followed in the same
+  bar by a chord attack is that chord's bass whatever the silence
+  between; it had read `{C} C {G} C`, and a bass alone on the downbeat,
+  a rest, then its chord on beat 3 `| C | / N.C. F / |`, now `| C | F |`).
+  The silence before such a bass is bridged only when what sounded last
+  was struck in the same bar: a chord struck in the bar before, ringing
+  past the line, then a rest, is not carried into this bar
+  (`| N.C. / / C | N.C. F / / |`). A lone note after silence with no
+  chord attack after it in the bar still starts its own (`{G}`), and so
+  does one before a chord in the next bar. Cost (the ruling's): a single
+  note meant alone, with a rest and then a chord in its bar, reads as
+  part of the chord.
 - **The bass line** is the harmony choice's lowest stream (5.2: lowest
   at its 10th percentile, ties to the lower median) when it is a single
   line (overlap under a tenth of its time), so a grace note or a slide
@@ -1230,8 +1249,10 @@ for every open question, so each one below is **decided as recommended**
 16. Monophonic streams other than the lowest are melody and left out of
     the harmony; drums (channel 10) left out; `options.tracks` overrides.
 17. Segments cut at multi-note attacks and fresh starts; passing tones
-    under a quarter of the strongest weight dropped; the bass is the
-    lowest note at the segment's start.
+    at a quarter of the strongest weight or under dropped (fix round 4:
+    `w > PASSING * strongest` keeps a pitch class, so a note must sound
+    more than a quarter of the segment; it was "under a quarter"); the
+    bass is the lowest note at the segment's start.
 18. `nameNotes` in barmark, with the cost and tie rules of 5.6.
 19. No harmony is `N.C.`; unnameable notes are a note set (up to three
     pitch classes) or `?`.

@@ -3,7 +3,12 @@
  * fix rounds 1-5). The harmony is cut into segments, each one chord:
  *
  * - **Stretches:** where every note has stopped, a segment of no
- *   harmony, `N.C.`, begins; a note struck as the last stops is no gap.
+ *   harmony, `N.C.`, begins; a note struck as the last stops is no gap,
+ *   and nor is silence beside a bass struck alone whose chord follows in
+ *   the same bar (a staccato boom-chick, MuseScore's notes each ending a
+ *   tick early): the stretch goes on as if the bass had held. A lone
+ *   note after silence with no chord attack after it in the bar starts
+ *   its own.
  * - **The bass line** is `streams.ts`'s lowest stream when it is a single
  *   line (`bassLine`); with none, every note is a harmony voice, and a
  *   single note struck below a chord's voices is its bass (a lone bass).
@@ -599,10 +604,11 @@ function cutsOf(notes: Note[], window: number, grid: Grid) {
 	const found = bassLine(notes);
 	const line = found && found.track * 16 + found.channel;
 	markGroups(notes, groups, line, window);
+	const stretching: Stretching = { grid, window, next: nextAttacks(groups) };
 	const cuts: Cut[] = [];
 	const weighed: Weighed[] = [];
 	for (let g = 0; g < groups.length; ) {
-		const { stretch, reach } = stretchFrom(groups, g);
+		const { stretch, reach } = stretchFrom(groups, g, stretching);
 		const voiced = stretch.some((x) => x.attack !== null);
 		cuts.push({ at: (stretch[0] as Group).start, harmony: true });
 		const begin = voiced ? voiceCuts(stretch, grid, window, cuts) : null;
@@ -614,14 +620,56 @@ function cutsOf(notes: Note[], window: number, grid: Grid) {
 	return { cuts, weighed };
 }
 
-/** The groups from `g` sounding without a gap, and where the last of their notes stops. */
-function stretchFrom(groups: Group[], g: number) {
+/** What a stretch is read against: the grid, the attack window, and each group's next attack (`nextAttacks` over every group). */
+type Stretching = { grid: Grid; window: number; next: number[] };
+
+/**
+ * The groups from `g` sounding without a gap, and where the last of their
+ * notes stops. Silence beside a bass struck alone whose chord follows in
+ * the same bar is no gap (`bridged`).
+ */
+function stretchFrom(groups: Group[], g: number, s: Stretching) {
 	let h = g;
 	let reach = (groups[g] as Group).start;
-	for (let x = groups[h]; x !== undefined && x.start <= reach; x = groups[++h])
+	for (
+		let x = groups[h];
+		x !== undefined && (x.start <= reach || bridged(groups, h, s));
+		x = groups[++h]
+	)
 		reach = Math.max(reach, x.end);
 	return { stretch: groups.slice(g, h), reach };
 }
+
+/**
+ * Whether the silence before group `h` is no gap (Claude's ruling,
+ * 2026-11-08, the final fix pass: a bass note struck alone and followed
+ * in the same bar by a chord attack is that chord's bass whatever the
+ * silence between, as MuseScore ends every note a tick early and a
+ * staccato boom-chick read `{C} C {G} C`; a lone note after silence with
+ * no chord attack after it in the bar still starts its own). The group
+ * before it is such a bass, its chord struck in its bar; or the group is,
+ * its chord struck in its bar, and the group before was struck in that
+ * bar too (a chord struck in the bar before, ringing past the line, then
+ * a rest, is not carried into this bar).
+ */
+function bridged(groups: Group[], h: number, s: Stretching): boolean {
+	const last = groups[h - 1] as Group;
+	const next = groups[h] as Group;
+	const following = groups[s.next[h] ?? -1];
+	const chord = next.attack === null ? following : next;
+	const inBar = (g: Group, c: Group) => sameBar(s.grid, g.start, c.start, s.window);
+	if (chord !== undefined && alone(last, chord) && inBar(last, chord)) return true;
+	return (
+		following !== undefined && alone(next, following) && inBar(next, following) && inBar(last, next)
+	);
+}
+
+/** Whether a group is a bass struck alone: no attack (one note, or the bass line's), or two notes that are a figure under `chord`'s voices or an octave. */
+const alone = (g: Group, chord: Group) =>
+	g.attack === null ||
+	(g.attack.struck.length === 2 &&
+		chord.attack !== null &&
+		isFigure(g.attack, voicesLow(chord.attack)));
 
 /** The segments covering the grid: no harmony before the first cut (the cuts come in order), a later cut at one tick winning. */
 function segmentsOf(cuts: Cut[], from: number, to: number): Segment[] {
