@@ -47,6 +47,15 @@ const CONTENTS: Record<PackageKey, { required: string[]; allowed: RegExp }> = {
 		],
 		allowed: /^dist\/.+\.(js|d\.ts)$/,
 	},
+	midi: {
+		required: [
+			"dist/index.js",
+			"dist/index.d.ts",
+			"dist/perform/index.js",
+			"dist/perform/index.d.ts",
+		],
+		allowed: /^dist\/.+\.(js|d\.ts)$/,
+	},
 	cli: {
 		required: ["dist/cli.js", "dist/main.js"],
 		allowed: /^dist\/.+\.(js|d\.ts)$/,

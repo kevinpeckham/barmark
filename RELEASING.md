@@ -1,6 +1,6 @@
 # Releasing
 
-This repository publishes five npm packages from one Bun workspace, each
+This repository publishes six npm packages from one Bun workspace, each
 versioned and released on its own:
 
 | Package | Directory | Release tag |
@@ -9,6 +9,7 @@ versioned and released on its own:
 | `@barmark/render` | `packages/render` | `render-vX.Y.Z` |
 | `@barmark/musicxml` | `packages/musicxml` | `musicxml-vX.Y.Z` |
 | `@barmark/sync` | `packages/sync` | `sync-vX.Y.Z` |
+| `@barmark/midi` | `packages/midi` | `midi-vX.Y.Z` |
 | `@barmark/cli` | `packages/cli` | `cli-vX.Y.Z` |
 
 (`barmark` 0.0.x and 0.1.0 were tagged `vX.Y.Z`, before the workspace.)
@@ -60,17 +61,19 @@ something new in `barmark`, **release `barmark` first**: the render
 release check fails while the `barmark` version it would name is not on
 npm.
 
-**A `barmark` minor release needs a renderer release too**, even with no
-renderer change. In 0.x a caret range stops at the next minor (`^0.7.0`
-allows 0.7.x, not 0.8.0), so a page or the CLI that installs the new
-`barmark` beside the old renderer gets two copies, and the renderer
-reads charts with the old rules. Release `@barmark/render` as a patch
+**A `barmark` minor release needs a release of every package that
+depends on `barmark` with a caret** (`@barmark/render`,
+`@barmark/musicxml`, `@barmark/sync` and `@barmark/midi`), even with no
+change of their own. In 0.x a caret range stops at the next minor
+(`^0.7.0` allows 0.7.x, not 0.8.0), so a page or the CLI that installs
+the new `barmark` beside an old dependant gets two copies, and the
+dependant reads charts with the old rules. Release each as a patch
 ("Requires `barmark` X.Y.0") right after the `barmark` release, then bump
-the site to both.
+the site to the new `barmark` and renderer.
 
 ## Checks
 
-The same scripts run in three places; `<pkg>` is `barmark`, `render`, `musicxml`, `sync` or `cli`:
+The same scripts run in three places; `<pkg>` is `barmark`, `render`, `musicxml`, `sync`, `midi` or `cli`:
 
 | Check | Command | Local (Swamp) | CI (every push and PR) | Release workflow |
 |---|---|---|---|---|
@@ -97,7 +100,7 @@ runs, and `verify:package cli` fails on anything else.
 
 ## Steps
 
-`<pkg>` is the package's key (`barmark`, `render`, `musicxml`, `sync` or `cli`) and the tag is
+`<pkg>` is the package's key (`barmark`, `render`, `musicxml`, `sync`, `midi` or `cli`) and the tag is
 `<pkg>-vX.Y.Z`.
 
 1. **Start a release branch** from an up-to-date `main` with CI green:
@@ -145,8 +148,8 @@ runs, and `verify:package cli` fails on anything else.
     `grep '/barmark": \["barmark@' site/bun.lock` prints nothing, or
     delete the nested entries it finds and `bun install` again (FINDINGS).
 13. **Release the CLI** (after a `barmark` or `@barmark/render` release;
-    a `@barmark/sync` release needs no CLI release and no `songs` bump,
-    since the CLI does not use it):
+    a `@barmark/sync` or `@barmark/midi` release needs no CLI release and
+    no `songs` bump, since the CLI does not use them yet):
     `@barmark/cli` pins the libraries exactly, so a library release
     reaches CLI users only through a CLI release. On a new branch, bump
     `packages/cli` (a patch, unless the CLI itself changed) with a

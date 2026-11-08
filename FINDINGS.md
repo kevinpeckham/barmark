@@ -9,6 +9,23 @@ not here.
 
 ## Testing
 
+### A plan's charts don't parse until something parses them; barmark's syllable times are floats (2026-11-08, @barmark/midi)
+
+- **The symptom.** Task 4 of the MIDI plan wrote `| @B C |` and
+  `| @A C |` for rehearsal-mark markers: both are errors ("a rehearsal
+  mark is a cell of its own", grammar 2.5). And lyric onsets came back
+  as `0.3333333333333333`, not a third.
+- **The cause.** The plan's charts were written from memory of the
+  grammar, never run. `PlayedSyllable.at` is a float in whole notes
+  (barmark's `slotTimes`, `chart/shares.ts`), where the performance needs
+  exact quarters.
+- **The fix.** The tests write `| C | @B | C |`. `nearest` in
+  `packages/midi/src/perform/quarters.ts` turns four times the float back
+  into the fraction it came from (the first continued-fraction
+  convergent within 1e-9), and `perform-map.test.ts` checks thirds come
+  back exact. Parse every chart a plan or brief quotes before relying on
+  it.
+
 ### A repeat mark on a bar line with no bar had no measure to go on (2026-11-07, @barmark/musicxml)
 
 - **The symptom.** `| Gm |`, `|: % |`, `| ... :|` plays Gm Gm Gm; the
@@ -283,6 +300,23 @@ canonical, because both write a run of replay headings together, which
 showed the rule needed refining.
 
 ## Performance and robustness
+
+### Node refuses a spread Bun allows, so `bun test` couldn't see the limit (2026-11-08, @barmark/midi)
+
+- **The symptom.** The SMF writer appended each event with
+  `bytes.push(...eventBytes(event))`. Under `bun test` a 200,000-byte
+  text meta wrote; the built package under Node 22 threw `RangeError:
+  Maximum call stack size exceeded` from about 130,000 bytes (found in
+  review, not by a test).
+- **The cause.** Spread call arguments go on the stack, and the limit is
+  the engine's: about 130,000 in Node (V8), about 1,000,000 in Bun (JSC).
+  `midi-file` has the same limit reading text (`String.fromCharCode.apply`),
+  so it can't read back a megabyte meta event either.
+- **The fix.** `src/smf/write.ts` never spreads a payload into a call: it
+  pushes byte by byte and assembles chunks with `Uint8Array.set`. The test
+  writes a megabyte meta event, which fails under Bun too if anything
+  spreads, and checks its bytes directly rather than through `midi-file`.
+  Size a limit test past both engines' limits.
 
 ### Two DoS shapes the review's probes didn't build (2026-11-07, @barmark/sync)
 
@@ -685,6 +719,30 @@ when two rules each define "first", test a chart that tells them apart,
 and round-trip it through `format`.
 
 ## Tooling
+
+### MuseScore's MIDI import keeps one text event a tick, and makes credits a lyric (2026-11-08, midi export)
+
+- **The symptom.** `bun scripts/midi-fixtures.ts --check-export` sent
+  Peaceful Dreams, Morning Song and the lead sheet through MuseScore 4.7.6
+  (`mscore -o x.musicxml x.mid`). Bars, meters, keys, tempos (the
+  fermata's third of the tempo included), programs and track names came
+  through, and every part had the chart's played bars. But the lead
+  sheet's second verse was gone (`Hap`, not `Whis`, at the first tick),
+  the conductor track's `Composer: Kevin Peckham` text event became a
+  verse-1 lyric on the first note of one part (the only part in Peaceful
+  Dreams; in the lead sheet the chords part, `Voice chords`, not the
+  melody), `Lyricist: …` at the same tick was dropped, and neither the markers (section headings), the
+  title (track 1's name), the copyright nor the words (`FTristan`, a text
+  event on the `Voice chords` track) appeared anywhere.
+- **The cause.** MuseScore's importer, not our file: the file holds both
+  verses at one tick in verse order, as MuseScore's own export writes
+  them (spec 8), and `midi-file` reads every event back. The importer
+  seems to take one lyric or text event a tick and to read a text event
+  as a lyric; it reads no markers.
+- **The fix.** None in the export: the file follows the spec, and other
+  programs (GarageBand, Logic, Dorico) are checked before the release.
+  The check compares measures only, not lyrics. Phase 2's import must not
+  expect MuseScore's round trip to keep a second verse or the markers.
 
 ### Raising an exact pin left Bun's nested copies of the old version (2026-11-07, site bump)
 
