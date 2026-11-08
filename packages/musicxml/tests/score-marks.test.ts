@@ -64,6 +64,17 @@ describe("a bar no pass plays", () => {
 		expect(all(xml, "fifths")).toEqual(["2"]);
 		expect(xml.match(/<metronome/g)).toHaveLength(1);
 	});
+	test("after a one-bar meter, keeps the time: meter and its tempo (grammar 2.4)", () => {
+		const chart =
+			"key: D, time: 6/8, tempo: 60\n| D | To Coda |\ntempo: rit.\n| [2/8] G |\n| D.C. al Coda | E |\n| Coda | A | D |";
+		const ms = measures(xmlOf(chart));
+		expect(ms[2]).toContain("<beats>6</beats><beat-type>8</beat-type>");
+		expect(ms[2]).not.toContain('<sound tempo="30"/>');
+		expect(ms[3]).not.toContain("<beats>");
+		const own = measures(xmlOf(chart.replace("| E |", "| [3/4] E |")));
+		expect(own[2]).toContain("<beats>3</beats><beat-type>4</beat-type>");
+		expect(own[2]).toContain('<sound tempo="90"/>');
+	});
 });
 
 describe("the last ending", () => {

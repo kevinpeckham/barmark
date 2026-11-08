@@ -181,6 +181,21 @@ describe("what it reads", () => {
 		expect(fromChart("tempo: 120\n| C |").bars[0]?.directives).toBe("tempo: 120");
 	});
 
+	test("a tempo on a one-bar meter counts the time: meter's beat (grammar 2.4)", () => {
+		const pickup = fromChart("time: 6/8, tempo: 60\n| [2/8] E7 | Am | Dm |").bars;
+		expect(pick(pickup, "meter")).toEqual([{ n: 2, d: 8 }, null, null]);
+		expect(pick(pickup, "directives")).toEqual(["time: 6/8, tempo: 60", null, null]);
+		const odd = fromChart(
+			"time: 6/8, tempo: 60\n| C |\ntempo: rit. to 40\n| C | [3/4] D | C |",
+		).bars;
+		expect(pick(odd, "directives")).toEqual([
+			"time: 6/8, tempo: 60",
+			"tempo: rit. to 40",
+			null,
+			null,
+		]);
+	});
+
 	test("without a metronome, <sound tempo> counts quarters: 90 is 6/8's 60", () => {
 		const text = xml`${measure(1, `${start("<beats>6</beats><beat-type>8</beat-type>")}<sound tempo="90"/>${note("C", 4, 3)}`)}`;
 		expect(structureOf(text).bars[0]?.directives).toBe("time: 6/8, tempo: 60");

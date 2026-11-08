@@ -16,6 +16,23 @@ describe("directives", () => {
 		);
 		expect(m).toContain('<sound tempo="90"/>');
 	});
+	test("a one-bar meter keeps the time: meter's beat (grammar 2.4)", () => {
+		const dotted = "<beat-unit>quarter</beat-unit><beat-unit-dot/><per-minute>60</per-minute>";
+		for (const chart of [
+			"time: 6/8, tempo: 60\n| [2/8] E7 | Am | Dm |",
+			"time: 6/8, tempo: 60\n| [3/4] Am | E7 |",
+		]) {
+			const [m] = measures(xmlOf(chart));
+			expect(m).toContain(dotted);
+			expect(m).toContain('<sound tempo="90"/>');
+		}
+		const rit = measures(xmlOf("time: 6/8, tempo: 60\n| C |\ntempo: rit. to 40\n| C | [3/4] D |"));
+		expect(rit[2]).toContain('<sound tempo="60"/>');
+		const back = measures(
+			xmlOf("time: 6/8, tempo: 60\n| C |\ntempo: rit.\n| C |\ntempo: a tempo\n| [3/4] D |"),
+		);
+		expect(back[2]).toContain('<sound tempo="90"/>');
+	});
 	test("a new tempo mid-chart is marked on its bar", () => {
 		const ms = measures(xmlOf("tempo: 120\n| G | C |\ntempo: 140\n| D |"));
 		expect(ms[1]).not.toContain("<metronome>");
