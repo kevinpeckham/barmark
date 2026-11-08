@@ -710,9 +710,12 @@ comping read four symbols a bar):
   the chord's bass, a carried melody note not at all. Single lines (a
   lead-in, a stretch without attacks) always count. A segment where
   nothing counts takes the sound of the one before it. Pitch classes
-  under a quarter of the strongest one's weight are passing tones, left
-  out; since a pitch class sounding throughout is the strongest, a note
-  sounding a quarter of the segment or more is kept.
+  at a quarter of the strongest one's weight or under are passing tones,
+  left out; since a pitch class sounding throughout is the strongest, a
+  note must sound more than a quarter of the segment to be kept, so a
+  fill D5 E5 F5 E5 D5 over a held C reads `C`, and a pedal ringing C E G
+  a beat into an F bar reads `F` (Claude's ruling, 2026-11-08; it was
+  "under a quarter", which named those `C(9)` and `Fmaj9`).
   The **bass** is the lowest note struck at the segment's start (within
   the window), or held into it from before when it sounds at least
   until the first struck note stops (a pedal point, a bass held under

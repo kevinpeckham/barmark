@@ -28,8 +28,8 @@
  *   segment, once however many octaves double it. Past a lead-in the
  *   voices count only while two or more notes struck in attacks sound (a
  *   fill after a stab is not the chord); the bass line and a lone bass
- *   note count only as the bass. A pitch class under `PASSING` of the
- *   strongest is a passing tone, left out.
+ *   note count only as the bass. A pitch class at `PASSING` of the
+ *   strongest or under is a passing tone, left out.
  * - The **bass** is the lowest note struck within a 16th of the segment's
  *   start, or held into it from before when it sounds at least until the
  *   first struck note stops (a pedal, a bass held under a stab): so the
@@ -53,7 +53,7 @@ import { bassLine } from "./streams.js";
 
 /** Notes starting within this many quarters (a 16th) of the first are one attack: a chord whose notes are each played up to a 32nd early or late (Claude's ruling, 2026-11-08, from Task 13b's jitter test). */
 const ATTACK = 1 / 4;
-/** A pitch class under this share of the strongest one's weight is a passing tone. */
+/** A pitch class at this share of the strongest one's weight or under is a passing tone (Claude's ruling, 2026-11-08: a fill or a pedal's ring a quarter long is not a chord tone). */
 const PASSING = 0.25;
 /** The most pitch classes a note set names when no chord does. */
 const MAX_SET = 3;
@@ -595,10 +595,10 @@ function findBasses(notes: Note[], segments: Segment[], window: number) {
 	}
 }
 
-/** The kept pitch classes: none under `PASSING` of the strongest, the bass's always. */
+/** The kept pitch classes: those over `PASSING` of the strongest, the bass's always. */
 function keptOf(s: Segment, bass: number): number[] {
 	const strongest = Math.max(...s.weights);
-	const kept = s.weights.flatMap((w, pc) => (w >= PASSING * strongest ? [pc] : []));
+	const kept = s.weights.flatMap((w, pc) => (w > PASSING * strongest ? [pc] : []));
 	return kept.includes(bass) ? kept : [...kept, bass];
 }
 

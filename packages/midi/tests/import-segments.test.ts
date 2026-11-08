@@ -101,13 +101,27 @@ describe("chordRuns", () => {
 		expect(runs(harmony)).toEqual([{ start: 0, end: BAR, symbol: "C" }]);
 	});
 
-	test("a pitch class at a quarter of the strongest weight stays; under it, it is passing", () => {
+	test("a pitch class over a quarter of the strongest weight stays; at a quarter or less, it is passing", () => {
 		// C, E and G for a bar, G in two octaves (still 1,920: a pitch class weighs its time
-		// once); A for 480 is a quarter
+		// once); A for 480 is a quarter (Claude's ruling, 2026-11-08)
 		const withA = (length: number) =>
 			symbols([...chord([C4, E4, G4, G4 + 12], 0, BAR), note(A4, BAR - length, BAR)]);
-		expect(withA(480)).toEqual(["C6"]);
-		expect(withA(479)).toEqual(["C"]);
+		expect(withA(481)).toEqual(["C6"]);
+		expect(withA(480)).toEqual(["C"]);
+	});
+
+	test("a melody fill over a held chord is passing: D for a quarter of the bar names no 9th", () => {
+		// C E G held a bar; eighths D5 E5 F5 E5 D5 from beat 2: D sounds 480 of 1,920
+		const fill = [D5, E5, F4 + 12, E5, D5].map((p, i) =>
+			note(p, 480 + i * 240, 480 + (i + 1) * 240),
+		);
+		expect(symbols([...chord([C4, E4, G4], 0, BAR), ...fill])).toEqual(["C"]);
+	});
+
+	test("a pedal ringing the chord before a beat into the bar is passing", () => {
+		// C E G struck in bar 1 and held a beat into bar 2, where F A C is struck
+		const pedal = [...chord([C4, E4, G4], 0, BAR + 480), ...chord([F4, A4, C4 + 12], BAR, 2 * BAR)];
+		expect(symbols(pedal, 2)).toEqual(["C", "F"]);
 	});
 
 	test("the bass's pitch class is kept, however short", () => {
