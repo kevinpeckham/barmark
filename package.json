@@ -23,6 +23,6 @@
 		"fallow": "fallow --health-baseline .fallow-health-baseline.json",
 		"verify:package": "bun scripts/verify-package.ts",
 		"verify:release": "bun scripts/verify-release.ts",
-		"test:browser": "bun run build && playwright test -c packages/render/browser"
+		"test:browser": "bun run build && playwright test -c packages/render/browser && playwright test -c packages/score/browser"
 	}
 }
