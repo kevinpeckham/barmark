@@ -6,6 +6,17 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-11-08
+
+### Changed
+
+- **Uses** barmark 0.20.0, @barmark/render 0.17.0 and @barmark/musicxml
+  0.7.0. `barmark check` reports a `Coda` that an `al Coda` goes on
+  with no bar after it (a bar written later, or a later heading that
+  replays one) as an error, and `->` cuts the replay's last bar as
+  written, so a replay that a `Fine` or `To Coda` stops first plays up
+  to the stop.
+
 ## [0.6.6] - 2026-11-07
 
 ### Changed
@@ -231,7 +242,8 @@ The first release of the `barmark` command. Uses `barmark` 0.8.0 and
 - **The `barmark` command:** `check`, `format`, `render` and `transpose`
   for `.chart.md` files, on npm and as standalone binaries.
 
-[Unreleased]: https://github.com/kevinpeckham/barmark/compare/cli-v0.6.6...HEAD
+[Unreleased]: https://github.com/kevinpeckham/barmark/compare/cli-v0.7.0...HEAD
+[0.7.0]: https://github.com/kevinpeckham/barmark/compare/cli-v0.6.6...cli-v0.7.0
 [0.6.6]: https://github.com/kevinpeckham/barmark/compare/cli-v0.6.5...cli-v0.6.6
 [0.6.5]: https://github.com/kevinpeckham/barmark/compare/cli-v0.6.4...cli-v0.6.5
 [0.6.4]: https://github.com/kevinpeckham/barmark/compare/cli-v0.6.3...cli-v0.6.4
