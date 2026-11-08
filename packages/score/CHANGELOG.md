@@ -6,6 +6,15 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+
+- **A chord symbol is drawn as the chart spells it.** Verovio 6.4 appends
+  every `<degree>` to the kind text, `print-object="no"` or not, so
+  `D7sus4` was drawn `D7sus4(7)` and `G5(7)` as `G5(7)(no3)`. The score
+  now drops a degree that is not printed before Verovio reads the
+  MusicXML (with `@barmark/musicxml`'s next release, which hides a degree
+  its kind text already spells). `Engraved.xml` is the export unchanged.
+
 ## [0.1.0] - 2026-11-08
 
 First release.

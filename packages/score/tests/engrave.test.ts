@@ -47,6 +47,24 @@ describe("engraveChart", () => {
 		expect(count(r.svg, /class="measure"/g)).toBe(count(firstPart, /<measure /g));
 	});
 
+	/** Every chord symbol Verovio drew, as its text. */
+	const harms = (svg: string) =>
+		[...svg.matchAll(/class="harm"[\s\S]*?<\/g>/g)].map((m) =>
+			m[0].replace(/<[^>]+>|\s|class="harm">/g, ""),
+		);
+
+	test("a degree the export hides is not drawn after the kind text", () => {
+		// Verovio 6.4 appends every <degree>, print-object="no" or not: D7sus4(7), G5(7)(no3).
+		const r = engraveChart(vrv, read("peaceful-dreams.chart.md"), { width: 800 });
+		if (!r.ok) throw new Error(r.reason);
+		expect(r.xml).toContain('<degree print-object="no">');
+		const drawn = new Set(harms(r.svg));
+		expect(drawn).toContain("D7sus4");
+		expect(drawn).toContain("G5(7)");
+		expect([...drawn].filter((h) => h.includes(")("))).toEqual([]);
+		expect([...drawn].filter((h) => h.endsWith("sus4(7)"))).toEqual([]);
+	});
+
 	test("refuses a chart that does not export", () => {
 		const text = "| C |\n| Xq9 |";
 		expect(exportMusicXml(text).ok).toBe(false);

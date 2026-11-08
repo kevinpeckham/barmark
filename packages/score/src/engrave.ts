@@ -28,6 +28,14 @@ export const LAYOUT = {
 const DEFAULT_SCALE = 40;
 const MIN_WIDTH = 320;
 
+/**
+ * The MusicXML as Verovio should read it. Verovio 6.4 appends every chord <degree> to the
+ * kind text, `print-object="no"` or not, so a degree the text already spells is drawn twice
+ * (`D7sus4(7)`); a degree that is not printed is dropped, which changes nothing it draws.
+ */
+const forVerovio = (xml: string) =>
+	xml.replace(/<degree print-object="no">[\s\S]*?<\/degree>/g, "");
+
 /** MusicXML laid out for a width, every page as SVG in a `bms-score-page` div. Throws on unreadable XML. */
 export function engraveXml(
 	vrv: VerovioToolkit,
@@ -41,7 +49,7 @@ export function engraveXml(
 		// Verovio's page width is in its own units at scale 100.
 		pageWidth: Math.round((Math.max(MIN_WIDTH, options.width) * 100) / scale),
 	});
-	if (!vrv.loadData(xml)) throw new Error("Verovio could not read the score");
+	if (!vrv.loadData(forVerovio(xml))) throw new Error("Verovio could not read the score");
 	const pages = vrv.getPageCount();
 	if (pages < 1) throw new Error("The score has no pages");
 	const svgs: string[] = [];
