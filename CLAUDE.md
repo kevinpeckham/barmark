@@ -125,7 +125,7 @@ Fallow, CI, Swamp), the grammar, `examples/`, the scripts and FINDINGS.md.
   - `tests/`: `bun test`; every file is read back with `midi-file`
     (a devDependency, pinned exactly), an independent parser, and
     `helpers/player.ts` hears it beat by beat against the chart;
-    `export-scale.test.ts` holds a 1,000-bar export linear.
+    `export-scale.test.ts` checks a 1,000-bar export takes linear time.
     `bun scripts/midi-fixtures.ts --check-export` puts three charts'
     exports through MuseScore on the VM only, never in CI
 - `packages/cli/`: `@barmark/cli`, the `barmark` command (`check`,

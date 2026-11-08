@@ -729,8 +729,9 @@ and round-trip it through `format`.
   through, and every part had the chart's played bars. But the lead
   sheet's second verse was gone (`Hap`, not `Whis`, at the first tick),
   the conductor track's `Composer: Kevin Peckham` text event became a
-  verse-1 lyric on the first note of the first part, `Lyricist: …` at the
-  same tick was dropped, and neither the markers (section headings), the
+  verse-1 lyric on the first note of one part (the only part in Peaceful
+  Dreams; in the lead sheet the chords part, `Voice chords`, not the
+  melody), `Lyricist: …` at the same tick was dropped, and neither the markers (section headings), the
   title (track 1's name), the copyright nor the words (`FTristan`, a text
   event on the `Voice chords` track) appeared anywhere.
 - **The cause.** MuseScore's importer, not our file: the file holds both

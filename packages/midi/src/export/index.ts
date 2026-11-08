@@ -143,7 +143,7 @@ function fileLosses(
 	if (rounded)
 		losses.push({
 			code: "ticks-rounded",
-			message: `a rhythm finer than the file's ${rounded.ppq} ticks a quarter is rounded to the nearest tick`,
+			message: `a rhythm needs more ticks a quarter than the file can have (32,640, fewer in a long chart): it plays at ${rounded.ppq}, rounded to the nearest tick`,
 			bar: barAt(p, rounded.at),
 		});
 	return losses;

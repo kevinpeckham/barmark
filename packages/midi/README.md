@@ -1,8 +1,10 @@
 # @barmark/midi
 
 MIDI for [barmark](https://barmark.dev) chord charts: export a chart's
-play order as a Standard MIDI File, to hear it in GarageBand, Logic,
-MuseScore, Dorico or any DAW. The performance core, chart to timed notes,
+play order as a Standard MIDI File, to hear it in a sequencer or a
+notation program. So far it has been checked in MuseScore 4.7.6 (its MIDI
+import, read through the MusicXML it writes); other programs are
+untested. The performance core, chart to timed notes,
 is the `@barmark/midi/perform` subpath. (Import, a MIDI file to a chart,
 comes later.)
 
@@ -92,7 +94,8 @@ the singing line's track, as MuseScore writes them: a space ends a word,
 
 A format 1 file. Track 1 is the conductor: the title (or the `title`
 option) as its name, the copyright as a copyright event and the other
-credits as `Composer: …` text, the tempo map, time and key signatures
+credits as text labelled by role (`Composer: …`, `Lyricist: …`,
+`Arranger: …`), the tempo map, time and key signatures
 and markers. Then a track for each part line in score order, named by
 the part (`Electric Guitar 1`) or the part and the line (`Piano RH`),
 with its instrument's General MIDI program (piano for a part with no
@@ -118,10 +121,14 @@ Each loss is reported once, at the first bar it happened in:
 | `tempo-range` | a tempo MIDI can't hold, clamped |
 | `channels-shared` | more than 15 tracks |
 | `swing-compound` | swing in 6/8, 9/8 or 12/8, not applied |
-| `ticks-rounded` | a rhythm finer than 32,640 ticks a quarter, rounded to 480 |
+| `ticks-rounded` | a rhythm needing more ticks a quarter than the file can have (32,640, fewer in a long chart): played at 480, rounded |
 
 The division (ticks a quarter) is the smallest multiple of 480 that
-makes every time whole. A pitch beyond MIDI's 0–127 moves by octaves
+makes every time whole, within two caps: 32,640 (the largest multiple of
+480 SMF's division holds), and whatever keeps the chart's end within
+SMF's latest tick, which in a long chart is lower. Past either cap the
+file uses 480 and rounds each time to the nearest tick, never a note to
+nothing (`ticks-rounded`). A pitch beyond MIDI's 0–127 moves by octaves
 into it, and a key beyond seven sharps or flats is written as its
 enharmonic. A chart too long for any division is an error.
 

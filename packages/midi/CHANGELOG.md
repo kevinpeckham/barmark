@@ -11,7 +11,8 @@ package uses [semantic versioning](https://semver.org/).
 - **`exportMidi(text, options?)`**: a chart's play order as a format 1
   Standard MIDI File. Track 1 is the conductor: the title (or the
   `title` option) as its name, the credits (copyright as a copyright
-  event, the others as `Composer: …` text), the tempo map, time
+  event, the others as text labelled by role: `Composer: …`,
+  `Lyricist: …`, `Arranger: …`), the tempo map, time
   signatures (clicking on the meter's beat), key signatures (beyond seven
   sharps or flats written as their enharmonic) and markers; then a track
   for each performed track, with its program at tick 0, its notes
@@ -28,8 +29,6 @@ package uses [semantic versioning](https://semver.org/).
   errors, with no bars, or a `part` naming no part writes nothing. Each
   loss is reported once, at the first bar it happened in. The main entry
   also exports the performance's types and `VERSION`.
-- **Export at scale**: a 1,000-bar chart of two parts with lyrics exports
-  in time linear in its length.
 - **`@barmark/midi/perform`**: `perform(parse, options?)` turns a parsed
   chart's play order into timed notes in exact quarter notes: a chord
   symbol as its bass in E2–D♯3 under each chord tone in C4–B4 (the bass

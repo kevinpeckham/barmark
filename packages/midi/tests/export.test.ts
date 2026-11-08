@@ -165,7 +165,7 @@ describe("exportMidi", () => {
 			{
 				code: "ticks-rounded",
 				message:
-					"a rhythm finer than the file's 480 ticks a quarter is rounded to the nearest tick",
+					"a rhythm needs more ticks a quarter than the file can have (32,640, fewer in a long chart): it plays at 480, rounded to the nearest tick",
 				bar: 1,
 			},
 		]);

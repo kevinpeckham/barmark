@@ -68,7 +68,7 @@ function checkExport(): void {
 	}
 }
 
-requireMscore();
 if (!process.argv.includes("--check-export"))
 	throw new Error("usage: bun scripts/midi-fixtures.ts --check-export [--keep]");
+requireMscore();
 checkExport();
