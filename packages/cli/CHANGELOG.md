@@ -6,6 +6,8 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-11-08
+
 ### Added
 
 - **`barmark export --midi <chart> --out <file.mid>`** writes a Standard
@@ -24,6 +26,8 @@ package uses [semantic versioning](https://semver.org/).
 
 ### Changed
 
+- **Uses** barmark 0.21.0, @barmark/render 0.17.1, @barmark/musicxml
+  0.7.1, @barmark/midi 0.2.0 and, through it, @barmark/sync 0.2.1.
 - `barmark export` with no format now says `give a format: --musicxml or
   --midi`.
 - **The npm homepage is https://www.barmark.dev**, not the package's
@@ -265,7 +269,8 @@ The first release of the `barmark` command. Uses `barmark` 0.8.0 and
 - **The `barmark` command:** `check`, `format`, `render` and `transpose`
   for `.chart.md` files, on npm and as standalone binaries.
 
-[Unreleased]: https://github.com/kevinpeckham/barmark/compare/cli-v0.7.0...HEAD
+[Unreleased]: https://github.com/kevinpeckham/barmark/compare/cli-v0.8.0...HEAD
+[0.8.0]: https://github.com/kevinpeckham/barmark/compare/cli-v0.7.0...cli-v0.8.0
 [0.7.0]: https://github.com/kevinpeckham/barmark/compare/cli-v0.6.6...cli-v0.7.0
 [0.6.6]: https://github.com/kevinpeckham/barmark/compare/cli-v0.6.5...cli-v0.6.6
 [0.6.5]: https://github.com/kevinpeckham/barmark/compare/cli-v0.6.4...cli-v0.6.5
