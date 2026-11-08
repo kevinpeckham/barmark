@@ -452,10 +452,7 @@ function repeatWords(m: Measure, divisions: number): string {
 	const words =
 		end === "open" ? "repeat as needed" : typeof end === "number" && end > 2 ? `×${end}` : "";
 	if (!words) return "";
-	return scoreDirection(text("words", words)).replace(
-		"</direction-type></direction>",
-		`</direction-type>${text("offset", -lastBeat(m, divisions))}</direction>`,
-	);
+	return scoreDirection(text("words", words), "", -lastBeat(m, divisions));
 }
 
 /** After the notes (top part only): a repeat's words, To Coda, Fine and the jump. */
