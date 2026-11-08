@@ -148,8 +148,8 @@ runs, and `verify:package cli` fails on anything else.
     `grep '/barmark": \["barmark@' site/bun.lock` prints nothing, or
     delete the nested entries it finds and `bun install` again (FINDINGS).
 13. **Release the CLI** (after a `barmark` or `@barmark/render` release;
-    a `@barmark/sync` release needs no CLI release and no `songs` bump,
-    since the CLI does not use it):
+    a `@barmark/sync` or `@barmark/midi` release needs no CLI release and
+    no `songs` bump, since the CLI does not use them yet):
     `@barmark/cli` pins the libraries exactly, so a library release
     reaches CLI users only through a CLI release. On a new branch, bump
     `packages/cli` (a patch, unless the CLI itself changed) with a

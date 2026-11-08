@@ -107,7 +107,9 @@ chords.
 
 Each track has its own channel, skipping channel 10 (General MIDI's
 drums, never written). Past 15 tracks a part's lines share a channel,
-and its chords track another, with a `channels-shared` loss.
+and its chords track another, with a `channels-shared` loss. Lines that
+share a channel share its notes too: when two of them sound the same
+pitch, the first note-off ends both, as in any sequencer.
 
 ### Losses
 
@@ -153,7 +155,9 @@ lyrics, words), its end and its losses. A time is a fraction `{ n, d }`
 of a quarter note from the first downbeat, so swing and tuplets never
 drift; `secondsAt` turns one into seconds through the tempo map. The
 subpath imports none of the MIDI file code. The main entry exports the
-same types.
+same types. Pitches are as written: a long note set without octaves can
+climb past MIDI's 127, which `exportMidi` folds back by octaves and a
+player should too.
 
 ## License
 

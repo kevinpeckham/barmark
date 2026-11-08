@@ -181,6 +181,6 @@ cd site && bun run dev|build|check|test|test:browser   # barmark.dev
 - Releases follow `RELEASING.md` (the `/release` skill walks it). Each
   package is tagged on its own: `barmark-vX.Y.Z`, `render-vX.Y.Z`,
   `musicxml-vX.Y.Z`, `sync-vX.Y.Z`, `midi-vX.Y.Z`, `cli-vX.Y.Z`. A library release is followed by a CLI release and a
-  bump in `kevinpeckham/songs` (RELEASING.md steps 13–14); a `sync` release needs neither.
+  bump in `kevinpeckham/songs` (RELEASING.md steps 13–14); a `sync` or `midi` release needs neither (until the CLI uses midi).
 - `@barmark/render` never changes the music: anything musical (what `%`
   copies, bar numbers, what a replay plays) comes from the parser.
