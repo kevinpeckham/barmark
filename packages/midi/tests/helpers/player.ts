@@ -116,9 +116,9 @@ function timedSlots(slots: Slot[], start: number, barLength: number): Heard[] {
 const PUSH = { eighth: 1 / 2, sixteenth: 1 / 4 };
 /**
  * Pushes (grammar 2.8): a pushed slot attacks early, taking the time from
- * the slot before it on the line, which ends there; a push no longer than
- * that slot leaves it on the beat (the controller's ruling: no written
- * chord is taken whole).
+ * the slot before it on the line, which ends there; a push at least as
+ * long as that slot stays on the beat (the controller's ruling: no
+ * written chord is taken whole).
  */
 function pushed(line: Heard[]): Heard[] {
 	const out: Heard[] = [];

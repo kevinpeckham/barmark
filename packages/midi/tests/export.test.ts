@@ -162,16 +162,14 @@ describe("exportMidi", () => {
 		expect(read(bytesOf(r)).header.ticksPerBeat).toBe(480);
 		expect(r.ok && r.losses).toEqual([
 			expect.objectContaining({ code: "tempo-assumed" }),
-			{ code: "ticks-rounded", message: expect.any(String), bar: 1 },
+			{
+				code: "ticks-rounded",
+				message:
+					"a rhythm finer than the file's 480 ticks a quarter is rounded to the nearest tick",
+				bar: 1,
+			},
 		]);
 		expect(heardByBeat(bytesOf(r))).toEqual(chartByBeat(parseChart(fine)));
-		// Every note keeps a length.
-		const ons = new Map<number, number[]>();
-		for (const e of read(bytesOf(r)).tracks[1] ?? []) {
-			if (e.type === "noteOn") ons.set(e.noteNumber, [...(ons.get(e.noteNumber) ?? []), e.tick]);
-			if (e.type === "noteOff")
-				expect(e.tick).toBeGreaterThan(ons.get(e.noteNumber)?.shift() ?? -1);
-		}
 	});
 
 	test("ticks stay within what SMF can hold", () => {
@@ -221,7 +219,6 @@ describe("exportMidi", () => {
 		const { tracks } = read(bytesOf(r));
 		expect(tracks).toHaveLength(25);
 		const used = new Set(tracks.flatMap((t) => [...channelsOf(t)]));
-		expect(used.size).toBeLessThanOrEqual(15);
 		expect(used.has(9)).toBe(false);
 		// A part's lines share their part's channel.
 		expect(tracks.slice(1).map((t) => [...channelsOf(t)])).toEqual(
@@ -319,6 +316,96 @@ describe("exportMidi", () => {
 });
 
 /** Each event type's fields, in the order compared; text events' text is decoded as UTF-8. */
+type Read = { tick: number } & MidiEvent;
+/** A track's events of some types, as `[tick, …fields]`. */
+const pick = (track: Read[] | undefined, type: string, ...fields: string[]) =>
+	(track ?? [])
+		.filter((e) => e.type === type)
+		.map((e) => [e.tick, ...fields.map((f) => (e as unknown as Record<string, unknown>)[f])]);
+
+describe("exportMidi: what the file carries", () => {
+	// Two bars: a pressed pedal, a sung note set, words, an accent and a hit; then a new key and tempo, the pedal lifted.
+	const FIGURES =
+		'# Song\nkey: G, tempo: 100\n| +{G4}:Hel- {A4}:lo "solo" >C ^D |\nkey: D, tempo: 80\n| *G |\n';
+
+	test("a second tempo and a second key", () => {
+		const conductor = read1(FIGURES).tracks[0];
+		expect(pick(conductor, "setTempo", "microsecondsPerBeat")).toEqual([
+			[0, 600_000],
+			[1920, 750_000],
+		]);
+		expect(pick(conductor, "keySignature", "key", "scale")).toEqual([
+			[0, 1, 0],
+			[1920, 2, 0],
+		]);
+	});
+
+	test("pedal, lyrics, words and velocities", () => {
+		const chart = read1(FIGURES).tracks[1];
+		expect(pick(chart, "controller", "channel", "controllerType", "value")).toEqual([
+			[0, 0, 64, 127],
+			[1920, 0, 64, 0],
+		]);
+		expect(pick(chart, "lyrics", "text")).toEqual([
+			[0, "Hel"],
+			[480, "lo "],
+		]);
+		expect(pick(chart, "text", "text")).toEqual([[960, "solo"]]);
+		const velocities = pick(chart, "noteOn", "velocity").map(([tick, v]) => `${tick}:${v}`);
+		expect([...new Set(velocities)]).toEqual(["0:80", "480:80", "960:100", "1440:112", "1920:80"]);
+	});
+
+	test("the tempo option", () => {
+		const conductor = read1("| C |", { tempo: 90 }).tracks[0];
+		expect(pick(conductor, "setTempo", "microsecondsPerBeat")).toEqual([[0, 666_667]]);
+	});
+
+	test("a note shorter than a tick still sounds, its off after its on", () => {
+		// An eighth-note bar of four slots, the last split 400 ways: notes of 0.15 tick at 480.
+		const members = (n: number) => Array.from({ length: n }, (_, i) => "CDEFGAB"[i % 7]).join("_");
+		const text = `time: 1/8\n| ${members(7)} ${members(11)} ${members(13)} ${members(400)} |`;
+		const r = exportMidi(text);
+		const { header, tracks } = read(bytesOf(r));
+		expect(header.ticksPerBeat).toBe(480);
+		const ons = new Map<string, number[]>();
+		let offs = 0;
+		for (const e of tracks[1] ?? []) {
+			if (e.type !== "noteOn" && e.type !== "noteOff") continue;
+			const key = `${e.channel}:${e.noteNumber}`;
+			if (e.type === "noteOn") ons.set(key, [...(ons.get(key) ?? []), e.tick]);
+			else {
+				const on = ons.get(key)?.shift();
+				expect(on).toBeDefined();
+				expect(e.tick).toBeGreaterThan(on ?? Number.POSITIVE_INFINITY);
+				offs++;
+			}
+		}
+		expect(offs).toBeGreaterThan(1500);
+	});
+
+	test("ticks round to the nearest", () => {
+		// Sevenths of a quarter beside elevenths and thirteenths: 480, so the second member starts at 68.57, tick 69.
+		const text = "| C_D_E_F_G_A_B C_D_E_F_G_A_B_C_D_E_F C_D_E_F_G_A_B_C_D_E_F_G_A C |";
+		const ticks = [...new Set(pick(read1(text).tracks[1], "noteOn").map(([tick]) => tick))];
+		expect(ticks.slice(0, 3)).toEqual([0, 69, 137]);
+	});
+
+	test("channels repeat in turn past 15 groups", () => {
+		const text = [
+			...Array.from({ length: 17 }, (_, i) => `part: P${i} = Piano`),
+			"",
+			...Array.from({ length: 17 }, (_, i) => `P${i} | C |`),
+		].join("\n");
+		const r = exportMidi(text);
+		expect(
+			read(bytesOf(r))
+				.tracks.slice(1)
+				.map((t) => [...channelsOf(t)]),
+		).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 10, 11, 12, 13, 14, 15, 0, 1].map((c) => [c]));
+		expect(lossesOf(r)).toContain("channels-shared");
+	});
+});
+
 const FIELDS: Record<string, string[]> = {
 	noteOn: ["channel", "noteNumber", "velocity"],
 	noteOff: ["channel", "noteNumber", "velocity"],

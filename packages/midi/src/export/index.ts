@@ -121,7 +121,11 @@ function trackEvents(
 }
 
 /** The losses the file adds to the performance's: a tempo clamped, channels shared, ticks rounded. */
-function fileLosses(p: Performance, shared: boolean, rounded: Quarters | null): MidiLoss[] {
+function fileLosses(
+	p: Performance,
+	shared: boolean,
+	rounded: { at: Quarters; ppq: number } | null,
+): MidiLoss[] {
 	const clamped = p.tempos.find((t) => tempoMicros(t.qpm).clamped);
 	const losses: MidiLoss[] = [];
 	if (clamped)
@@ -139,11 +143,13 @@ function fileLosses(p: Performance, shared: boolean, rounded: Quarters | null): 
 	if (rounded)
 		losses.push({
 			code: "ticks-rounded",
-			message: "a rhythm finer than 32,640 ticks a quarter is rounded to the nearest tick",
-			bar: barAt(p, rounded),
+			message: `a rhythm finer than the file's ${rounded.ppq} ticks a quarter is rounded to the nearest tick`,
+			bar: barAt(p, rounded.at),
 		});
 	return losses;
 }
+
+const roundedAt = (at: Quarters | null, ppq: number) => (at === null ? null : { at, ppq });
 
 /** Each loss code once, at the first bar it happened in. */
 function once(losses: MidiLoss[]): MidiLoss[] {
@@ -205,7 +211,7 @@ export function midiOf(
 		ok: true,
 		smf: { format: 1, ppq, tracks },
 		diagnostics: parse.diagnostics,
-		losses: once([...p.losses, ...fileLosses(p, shared, ticks.firstRounded())]),
+		losses: once([...p.losses, ...fileLosses(p, shared, roundedAt(ticks.firstRounded(), ppq))]),
 	};
 }
 
