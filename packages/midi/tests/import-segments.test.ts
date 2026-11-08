@@ -91,9 +91,9 @@ describe("chordRuns", () => {
 				2,
 			);
 		expect(enter(ATTACK - 1)).toEqual(["C", "Fmaj9/C"]);
-		// each enters alone over the held chord, a melody note: no new chord, and over the two
-		// bars A (1,800 of C's 7,680) is passing
-		expect(enter(ATTACK)).toEqual(["C(11)"]);
+		// each enters alone over the held chord: no new chord, one name for the two bars (F for
+		// 1,920 and A for 1,800 of C's 3,840 are no passing tones)
+		expect(enter(ATTACK)).toEqual(["Fmaj9/C"]);
 	});
 
 	test("a melody note doesn't cut; a passing tone is dropped", () => {
@@ -102,11 +102,12 @@ describe("chordRuns", () => {
 	});
 
 	test("a pitch class at a quarter of the strongest weight stays; under it, it is passing", () => {
-		// C, E and G for a bar (G the strongest: two octaves, 3840); A for 960 is a quarter
+		// C, E and G for a bar, G in two octaves (still 1,920: a pitch class weighs its time
+		// once); A for 480 is a quarter
 		const withA = (length: number) =>
 			symbols([...chord([C4, E4, G4, G4 + 12], 0, BAR), note(A4, BAR - length, BAR)]);
-		expect(withA(960)).toEqual(["C6"]);
-		expect(withA(959)).toEqual(["C"]);
+		expect(withA(480)).toEqual(["C6"]);
+		expect(withA(479)).toEqual(["C"]);
 	});
 
 	test("the bass's pitch class is kept, however short", () => {
@@ -327,9 +328,9 @@ describe("chordRuns", () => {
 			// C E G held; then F A struck together below the held G: a change (C E F G A over C)
 			const below = [...chord([C3, E4, G4 + 12], 0, 2 * BAR), ...chord([F4, A4], BAR, 2 * BAR)];
 			expect(symbols(below, 2)).toEqual(["C", "Fmaj9/C"]);
-			// a single new top note over the chord still sounding is melody
+			// a single new top note over the chord still sounding is melody, and weighs nothing
 			const over = [...chord([C3, E4, G4], 0, 2 * BAR), ...chord([C4, E4, A4], BAR, 2 * BAR)];
-			expect(symbols(over, 2)).toEqual(["C6"]);
+			expect(symbols(over, 2)).toEqual(["C"]);
 		});
 
 		test("a re-strike of fewer voices is no new chord", () => {
@@ -508,14 +509,77 @@ describe("chordRuns", () => {
 			]);
 		});
 
-		test("a bass moving at a bar line while the voices rest keeps their chord", () => {
-			// a C stab, then the bass C2 to F2 at bar 2: the chord sounds on, over F
+		test("a bass moving at a bar line while the voices rest starts no chord (fix round 3)", () => {
+			// a C stab, then the bass C2 to F2 at bar 2: the chord carries
 			const rest = [
 				...chord([C4, E4, G4], 0, 480),
 				bassNote(C2, 0, BAR),
 				bassNote(41, BAR, 2 * BAR),
 			];
-			expect(symbols(rest, 2)).toEqual(["C", "C(11)/F"]);
+			expect(symbols(rest, 2)).toEqual(["C"]);
+			// the voices back on the same chord over the new bass: the slash from the bar line
+			const back = [...rest, ...chord([C4, E4, G4], BAR + 480, BAR + 960)];
+			expect(runs(back, 2).map((r) => [r.start, r.symbol])).toEqual([
+				[0, "C"],
+				[BAR, "C(11)/F"],
+			]);
+		});
+
+		test("a change after a rest starts at the last bar line where the bass moved", () => {
+			// a C/G stab; the bass walks C E G A | G B D F; a G stab on bar 3 beat 3: G from bar 3,
+			// where the bass came back to G, not from bar 2
+			const walk = [C2, E2, G2, A2, G2, B2, 50, 53].map((p, i) =>
+				bassNote(p, BAR + i * 480, BAR + (i + 1) * 480),
+			);
+			const back = [
+				bassNote(G2, 0, BAR),
+				...chord([C4, E4, G4], 0, 240),
+				...walk,
+				...chord([G3, B3, D4], 2 * BAR + 960, 2 * BAR + 1200),
+			];
+			expect(runs(back, 3).map((r) => [r.start, r.symbol])).toEqual([
+				[0, "C/G"],
+				[2 * BAR, "G"],
+			]);
+		});
+
+		test("a bass re-struck on its pitch class under a chord struck after it moves nothing", () => {
+			// C2 whole notes, re-struck at bar 2; C E G from the and of 1 for two bars, B only in bar 1
+			const held = [
+				bassNote(C2, 0, BAR),
+				bassNote(C2, BAR, 2 * BAR),
+				...chord([C4, E4, G4], 240, 2 * BAR),
+				note(71, 240, BAR),
+			];
+			expect(symbols(held, 2)).toEqual(["Cmaj7"]);
+		});
+
+		test("one track: a new bass note at the bar line under a held chord starts nothing", () => {
+			const pad = [...chord([C4, E4, G4], 0, 2 * BAR), note(C2, 0, BAR), note(G2, BAR, 2 * BAR)];
+			expect(symbols(pad, 2)).toEqual(["C"]);
+		});
+
+		test("a bass anticipating its move and struck again on the bar line moved there", () => {
+			// a C stab; the bass C2, then G2 on the and of 4 and again on bar 2; a G stab on bar 2 beat 2
+			const early = [
+				bassNote(C2, 0, 1680),
+				bassNote(G2, 1680, BAR),
+				bassNote(G2, BAR, 2 * BAR),
+				...chord([C4, E4, G4], 0, 240),
+				...chord([G3, B3, D4], BAR + 480, BAR + 720),
+			];
+			expect(runs(early, 2).map((r) => r.start)).toEqual([0, BAR]);
+		});
+
+		test("the bass moving under one voice still sounding keeps the chord's sound", () => {
+			// C E G struck; only C4 held into bar 2, where the bass moves C2 to F2
+			const thin = [
+				...chord([E4, G4], 0, BAR),
+				note(C4, 0, 2 * BAR),
+				bassNote(C2, 0, BAR),
+				bassNote(41, BAR, 2 * BAR),
+			];
+			expect(symbols(thin, 2)).toEqual(["C", "C(11)/F"]);
 		});
 
 		test("the bass re-struck on its own pitch class moves nothing", () => {

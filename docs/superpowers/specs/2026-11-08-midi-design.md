@@ -629,11 +629,14 @@ examples slot by slot.
 
 The harmony streams' notes are cut into **segments**, each one chord.
 **Chord boundaries come from the harmony voices; the bass line moves a
-chord only at a bar line** (Claude's ruling, 2026-11-08, fix round 2,
-revising round 1, whose carry merged real changes: `| C | C7 |`,
-`| Cmaj7 | C |` and Peaceful Dreams' `D7sus4` then `D5` each read one
-chord; round 1 had itself revised the first draft, under which a walking
-bass under off-beat comping read four symbols a bar):
+chord only at a bar line** (Claude's rulings, 2026-11-08: fix round 2
+revised round 1, whose carry merged real changes, `| C | C7 |`,
+`| Cmaj7 | C |` and Peaceful Dreams' `D7sus4` then `D5` each one chord;
+fix round 3 made the bass's move count when it strikes before the
+voices, the bass on 1 and the chord after it, as in a waltz, boom-chick,
+ballad, reggae skank, stride or off-beat jazz comping; round 1 had
+revised the first draft, under which a walking bass under off-beat
+comping read four symbols a bar):
 
 - **Stretches:** where every harmony note has stopped, a segment of
   **no harmony** begins; a note struck as the last one stops is no gap.
@@ -642,7 +645,11 @@ bass under off-beat comping read four symbols a bar):
   line (overlap under a tenth of its time), so a grace note or a slide
   doesn't lose it; else none, and every note is a harmony voice
   (MuseScore's piano). One helper, `bassLine` in `streams.ts`, serves
-  both.
+  both. With no bass line, a single note struck below a chord's voices
+  is its bass (stride, a one-track waltz): the voices are the notes its
+  attack struck above their widest gap when that is a fifth or more (a
+  bass with its octave or double stop below the chord), else all it
+  struck.
 - An **attack** is two or more harmony-voice notes starting within a
   16th note of the first (a block chord, a strum, a stab, a chord whose
   notes are each played up to a 32nd early or late: Claude's ruling,
@@ -657,26 +664,36 @@ bass under off-beat comping read four symbols a bar):
 - **A later attack starts a new chord** when its sound differs from the
   chord's in any way, a pitch class added or dropped. Two carry:
   - inside a bar, a re-strike that only drops notes, each stream
-    striking above its own lowest voice in the chord (a thinner voicing:
-    Cmaj7 on beat 1, then E G on beat 3, stays `Cmaj7`; a guitar's dyad
-    over a piano's held chord is compared with the guitar's own notes);
+    striking above its own lowest voice in the chord's voicing, struck
+    or held (a thinner voicing: Cmaj7 on beat 1, then E G on beat 3,
+    stays `Cmaj7`; over a held C3, E G B then E G stays `Cmaj7`; a
+    guitar's dyad over a piano's held chord is compared with the
+    guitar's own notes);
   - a lone new top note over a chord whose every pitch class is **held
-    from before**, not re-struck (a melody note: MuseScore's `piano.mscx`
-    bar 2 stays `Em`; `| C | C7 |` with the Bb on top re-strikes all, so
-    it cuts).
+    from before**, not re-struck (a melody note, which weighs nothing:
+    MuseScore's `piano.mscx` bar 2 stays `Em`; `| C | C7 |` with the Bb
+    on top re-strikes all, so it cuts).
   A written sustain pedal holds notes, but a changed sound still cuts.
-- **The bass:** where the bass line strikes a new pitch class **at a bar
-  line** (within the attack window of it) under the chord, a new chord
-  starts there, and `nameNotes` gives the slash (`C/E | C/G`, `Dm7 | F`,
-  `Cdim7 | Ebdim7`, a held pad over C F G C reads `C | C(11)/F | C/G |
-  C`). Inside a bar, the bass line moving never starts a chord (a
-  walking bass under held comping or off-beat stabs stays one chord).
+- **The bass at a bar line** (within the attack window of it): struck
+  on a new pitch class under voices still sounding (or with an attack),
+  a new chord starts there, and `nameNotes` gives the slash (`C/E |
+  C/G`, `Dm7 | F`, `Cdim7 | Ebdim7`, a held pad over C F G C reads `C |
+  C(11)/F | C/G | C`). **While the voices rest, the bass alone never
+  starts a chord** (Claude's ruling, 2026-11-08, fix round 3: a C stab,
+  a bass walking D F A C alone, then a G stab reads `| C | / | G |`, not
+  `D9sus4` for the walking bar). Inside a bar the bass never moves a
+  chord (a walking bass under held comping or off-beat stabs stays one
+  chord). A new chord's bass is the bass last struck, so a chord whose
+  attack comes after the bass (the bass on 1, the chord on 2) has it.
 - **Rests:** a chord carries through its voices' rests until they next
-  strike. A change first heard after such a rest starts where the bass
-  moved at a bar line in the rest (Dm7 to G7 as stabs on 2 and 4 over a
-  walking bass changes at the bar line, over G2, not on beat 2 over B2);
-  where the bass didn't move, at the attack (a pedal C2 under a C stab
-  and a G stab on beat 3 of the next bar: `| C | / / G(11)/C / |`).
+  strike. Their next attack starts at the last bar line in the rest
+  where the bass struck a new pitch class (back to the chord's own
+  included): a change (a waltz's `| C | F |`, Dm7 to G7 as stabs over a
+  walking bass, both at the bar line), or the same voicing over a new
+  bass (`| C | C/G |` in a reggae skank). Voices ringing up to a 16th
+  past the bar line (a legato release) have rested. Where the bass didn't move, at
+  the attack (a pedal C2 under a C stab and a G stab on beat 3 of the
+  next bar: `| C | / / G(11)/C / |`).
 - A stretch with no attack at all, single lines only, cuts where two
   notes start together or one starts as all others stop: it reads note
   by note.
@@ -684,14 +701,18 @@ bass under off-beat comping read four symbols a bar):
   costs up to a millisecond each, and a hostile file can make every
   segment different); past that, `?` with one `chord-unnamed`.
 - **What sounds in a segment:** each pitch class weighted by how long it
-  sounds within the segment. Past a stretch's lead-in, the harmony
+  sounds within the segment, once however many octaves double it (fix
+  round 3: weighing notes made a doubled root outweigh the chord, LH G2
+  G3 under B D G read `{G}`). Past a stretch's lead-in, the harmony
   voices count only while two or more notes struck in its attacks sound,
   so single notes struck after a stab stops (a fill, `C` then `C5 B4
-  A4`) don't rename it; the bass line counts only as the chord's bass.
-  Single lines (a lead-in, a stretch without attacks) always count. A
-  segment where nothing counts (the bass moved at a bar line while the
-  voices rest) takes the sound of the one before it. Pitch classes under
-  a quarter of the strongest one's weight are passing tones, left out.
+  A4`) don't rename it; the bass line and a lone bass note count only as
+  the chord's bass, a carried melody note not at all. Single lines (a
+  lead-in, a stretch without attacks) always count. A segment where
+  nothing counts takes the sound of the one before it. Pitch classes
+  under a quarter of the strongest one's weight are passing tones, left
+  out; since a pitch class sounding throughout is the strongest, a note
+  sounding a quarter of the segment or more is kept.
   The **bass** is the lowest note struck at the segment's start (within
   the window), or held into it from before when it sounds at least
   until the first struck note stops (a pedal point, a bass held under
