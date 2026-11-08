@@ -2,11 +2,10 @@ import { expect, test } from "bun:test";
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { exportMusicXml, importMusicXml } from "@barmark/musicxml";
-import { VerovioToolkit } from "verovio/esm";
-import createVerovioModule from "verovio/wasm";
 import { type Music, musicOf } from "./helpers/music.js";
+import { loadToolkit } from "./helpers/toolkit.js";
 
-const vrv = new VerovioToolkit(await createVerovioModule());
+const vrv = await loadToolkit();
 const dir = join(import.meta.dir, "../../musicxml/tests/fixtures/import");
 const fixtures = readdirSync(dir)
 	.filter((f) => f.endsWith(".musicxml"))

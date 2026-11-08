@@ -2,11 +2,10 @@ import { describe, expect, test } from "bun:test";
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { exportMusicXml } from "@barmark/musicxml";
-import { VerovioToolkit } from "verovio/esm";
-import createVerovioModule from "verovio/wasm";
 import { engraveChart } from "../src/index.js";
+import { loadToolkit } from "./helpers/toolkit.js";
 
-const vrv = new VerovioToolkit(await createVerovioModule());
+const vrv = await loadToolkit();
 const examples = join(import.meta.dir, "../../../examples");
 const charts = readdirSync(examples).filter((f) => f.endsWith(".chart.md"));
 const read = (f: string) => readFileSync(join(examples, f), "utf8");

@@ -19,17 +19,16 @@
  *   bun scripts/dorico-midi.ts [--keep] [name…]
  */
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { homedir, tmpdir } from "node:os";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { parseChart } from "../packages/barmark/src/index.js";
 import { exportMidi } from "../packages/midi/src/index.js";
 import { perform } from "../packages/midi/src/perform/index.js";
 import { compareFile, type FileReport, formatReport } from "./dorico-compare.js";
-import { macBenchEnv } from "./dorico-env.js";
 import { DORICO_CHARTS } from "./dorico-midi-charts.js";
+import { runMacBench } from "./mac-bench.js";
 
 const ROOT = new URL("../", import.meta.url);
-const MAC_BENCH = process.env.MAC_BENCH_DIR ?? join(homedir(), "projects/mac-bench");
 
 /** The charts, by the name their files get. */
 const FILES: [string, string][] = [
@@ -59,19 +58,7 @@ function exportAll(dir: string, list: [string, string][]): string[] {
 }
 
 /** mac-bench's MIDI job on every file; its output lines, and whether it succeeded. */
-function runMacBench(mids: string[], out: string): { lines: string[]; ok: boolean } {
-	const bin = join(MAC_BENCH, "bin/mac-bench");
-	if (!existsSync(bin)) throw new Error(`no mac-bench at ${MAC_BENCH} (set MAC_BENCH_DIR)`);
-	const r = Bun.spawnSync([bin, "dorico", "--midi", ...mids, "--out", out], {
-		cwd: MAC_BENCH,
-		env: macBenchEnv(process.env),
-		stdout: "pipe",
-		stderr: "inherit",
-	});
-	const lines = r.stdout.toString().split("\n").filter(Boolean);
-	for (const line of lines) console.log(`mac-bench: ${line}`);
-	return { lines, ok: r.exitCode === 0 };
-}
+const midiJob = (mids: string[], out: string) => runMacBench(["dorico", "--midi", ...mids], out);
 
 const readJson = (path: string): unknown =>
 	existsSync(path) ? JSON.parse(readFileSync(path, "utf8")) : null;
@@ -116,7 +103,7 @@ function noneFailed(failed: string[]): boolean {
 function check(dir: string, list: [string, string][], keep: boolean): number {
 	const out = join(dir, "dorico");
 	mkdirSync(out);
-	const { lines, ok } = runMacBench(exportAll(dir, list), out);
+	const { lines, ok } = midiJob(exportAll(dir, list), out);
 	const { reports, failed } = compareAll(list, out, lines);
 	if (keep) writeFileSync(join(dir, "report.json"), `${JSON.stringify(reports, null, 2)}\n`);
 	return noneFailed(failed) && ok ? 0 : 1;

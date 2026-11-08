@@ -15,11 +15,16 @@ describe("sideBySide", () => {
 		expect(html).toContain("<!doctype html>");
 	});
 
-	test("names and paths are escaped", () => {
+	test("names are escaped and paths encoded", () => {
 		const html = sideBySide([{ name: '<b>"x"&', svg, pdf: 'a"b.pdf' }]);
 		expect(html).not.toContain("<b>");
 		expect(html).toContain("&lt;b&gt;&quot;x&quot;&amp;");
-		expect(html).toContain('src="a&quot;b.pdf"');
+		expect(html).toContain('src="a%22b.pdf"');
+	});
+
+	test("a PDF path with a space and a # is URL-encoded", () => {
+		const html = sideBySide([{ name: "a b", svg, pdf: "my song #1.pdf" }]);
+		expect(html).toContain('src="my%20song%20%231.pdf"');
 	});
 
 	test("the SVG goes through cleanSvg", () => {

@@ -11,21 +11,17 @@
  *   bun scripts/score-dorico.ts [outdir]     (default /tmp/score-dorico)
  */
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
-import { createRequire } from "node:module";
-import { homedir } from "node:os";
 import { basename, join, resolve } from "node:path";
-import { pathToFileURL } from "node:url";
-import { exportMusicXml } from "../packages/musicxml/src/index.js";
 import { AMAZING_GRACE } from "../packages/render/tests/fixtures.js";
 import { engraveChart } from "../packages/score/src/engrave.js";
-import { macBenchEnv } from "./dorico-env.js";
+import { loadToolkit } from "../packages/score/tests/helpers/toolkit.js";
+import { runMacBench } from "./mac-bench.js";
 import { type Entry, sideBySide } from "./score-dorico-page.js";
 
 const ROOT = new URL("../", import.meta.url);
-const MAC_BENCH = process.env.MAC_BENCH_DIR ?? join(homedir(), "projects/mac-bench");
 const WIDTH = 900;
 
-type Toolkit = Parameters<typeof engraveChart>[0];
+type Toolkit = Awaited<ReturnType<typeof loadToolkit>>;
 
 const charts = (): [string, string][] => [
 	...readdirSync(new URL("examples/", ROOT))
@@ -38,44 +34,22 @@ const charts = (): [string, string][] => [
 	["amazing-grace", AMAZING_GRACE],
 ];
 
-/** Verovio lives in packages/score's node_modules, which a root script can't import by name. */
-async function toolkit() {
-	const req = createRequire(new URL("packages/score/package.json", ROOT));
-	const load = async (id: string) => import(pathToFileURL(req.resolve(id)).href);
-	const { VerovioToolkit } = await load("verovio/esm");
-	const create = (await load("verovio/wasm")).default;
-	return new VerovioToolkit(await create());
-}
-
-/** mac-bench's job on `files`; the names of the PDFs it did not write. */
+/** mac-bench's job on `files`; the files it wrote no PDF for. */
 function dorico(files: string[], out: string): string[] {
-	if (!existsSync(join(MAC_BENCH, "bin/mac-bench")))
-		throw new Error(`no mac-bench at ${MAC_BENCH} (set MAC_BENCH_DIR)`);
-	const r = Bun.spawnSync([join(MAC_BENCH, "bin/mac-bench"), "dorico", ...files, "--out", out], {
-		cwd: MAC_BENCH,
-		env: macBenchEnv(process.env),
-		stdout: "pipe",
-		stderr: "inherit",
-	});
-	for (const line of r.stdout.toString().split("\n").filter(Boolean))
-		console.log(`mac-bench: ${line}`);
-	return files.filter((f) => !existsSync(pdfOf(out, f)));
+	runMacBench(["dorico", ...files], out);
+	return files.filter((f) => !existsSync(join(out, `${basename(f, ".musicxml")}.pdf`)));
 }
-
-const pdfOf = (out: string, xml: string): string =>
-	join(out, xml.replace(/^.*\//, "").replace(/\.musicxml$/, ".pdf"));
 
 /** Each chart's MusicXML written into `out`, and its Verovio engraving. */
 function prepare(vrv: Toolkit, out: string) {
 	const xmls: string[] = [];
 	const svgs = new Map<string, string>();
 	for (const [name, text] of charts()) {
-		const x = exportMusicXml(text, { title: name });
-		if (!x.ok) throw new Error(`${name}: ${x.diagnostics.map((d) => d.message).join("; ")}`);
 		const e = engraveChart(vrv, text, { width: WIDTH });
 		if (!e.ok) throw new Error(`${name}: ${e.reason}`);
 		const path = join(out, `${name}.musicxml`);
-		writeFileSync(path, x.xml);
+		// The very MusicXML Verovio drew is what Dorico gets.
+		writeFileSync(path, e.xml);
 		xmls.push(path);
 		svgs.set(name, e.svg);
 	}
@@ -85,7 +59,8 @@ function prepare(vrv: Toolkit, out: string) {
 /** mac-bench on `xmls`, and once more on the ones that failed (the Export dialog's timing is a known flake). */
 function doricoWithRetry(xmls: string[], out: string): string[] {
 	const missing = dorico(xmls, out);
-	return missing.length ? dorico(missing, out) : missing;
+	// A run that wrote nothing is a wedged Dorico or a missing token, not the flake.
+	return missing.length && missing.length < xmls.length ? dorico(missing, out) : missing;
 }
 
 /** The page for the charts that got a PDF, written to `out`; the exit code. */
@@ -108,7 +83,7 @@ function writePage(
 async function main(): Promise<number> {
 	const out = resolve(process.argv[2] ?? "/tmp/score-dorico");
 	mkdirSync(out, { recursive: true });
-	const { xmls, svgs } = prepare(await toolkit(), out);
+	const { xmls, svgs } = prepare(await loadToolkit(), out);
 	return writePage(out, xmls, svgs, doricoWithRetry(xmls, out));
 }
 

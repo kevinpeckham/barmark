@@ -817,9 +817,9 @@ and round-trip it through `format`.
   found no `MAC_BENCH_TOKEN`. Running the wrapper from mac-bench's folder
   doesn't help: varlock prefers variables already set.
 - **The fix.** The script spawns mac-bench without `OP_ENV_ID` and
-  `OP_TOKEN` (`scripts/dorico-env.ts`), so mac-bench's `.env.local`
+  `OP_TOKEN` (`scripts/mac-bench.ts`), so mac-bench's `.env.local`
   decides. Any script that calls another varlock repo needs the same.
-- **Where.** `scripts/dorico-env.ts`, `scripts/dorico-midi.ts`.
+- **Where.** `scripts/mac-bench.ts`, `scripts/dorico-midi.ts`.
 
 ### The release gate failed on main because the checkout's packages were older than main (2026-11-08, barmark 0.21.0)
 

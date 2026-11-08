@@ -10,7 +10,7 @@ const row = ({ name, svg, pdf }: Entry): string => `<section>
 <h2>${esc(name)}</h2>
 <div class="pair">
 <figure><figcaption>Verovio</figcaption><div class="verovio">${cleanSvg(svg)}</div></figure>
-<figure><figcaption>Dorico</figcaption><embed src="${esc(pdf)}" type="application/pdf"></figure>
+<figure><figcaption>Dorico</figcaption><embed src="${esc(encodeURIComponent(pdf))}" type="application/pdf"></figure>
 </div>
 </section>`;
 

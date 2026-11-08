@@ -160,7 +160,7 @@
 - Test: `packages/score/tests/score-dorico-page.test.ts`
 
 - [ ] **Step 1: Failing test** `sideBySide`: one row per entry, names escaped, the SVG passed through `cleanSvg`, the PDF in an `<embed>`/`<iframe>` by relative path.
-- [ ] **Step 2–5:** FAIL; implement; the script exports the three examples plus Amazing Grace's lead sheet, runs `~/projects/mac-bench/bin/mac-bench dorico <xml…> --out <dir>` (cwd `~/projects/mac-bench`, `env: macBenchEnv(process.env)` from `scripts/dorico-env.ts`), engraves with Verovio and writes `<dir>/index.html`; VM only, never in CI; run it once and note what differs in the music (not house style) in FINDINGS; commit `feat(scripts): score-dorico, Verovio's score beside Dorico's`.
+- [ ] **Step 2–5:** FAIL; implement; the script exports the three examples plus Amazing Grace's lead sheet, runs `~/projects/mac-bench/bin/mac-bench dorico <xml…> --out <dir>` (cwd `~/projects/mac-bench`, `env: macBenchEnv(process.env)` from `scripts/mac-bench.ts`), engraves with Verovio and writes `<dir>/index.html`; VM only, never in CI; run it once and note what differs in the music (not house style) in FINDINGS; commit `feat(scripts): score-dorico, Verovio's score beside Dorico's`.
 
 ### Task 9: Release plumbing and docs
 

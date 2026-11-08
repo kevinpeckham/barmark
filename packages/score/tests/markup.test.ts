@@ -2,11 +2,11 @@ import { describe, expect, test } from "bun:test";
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { parseHTML } from "linkedom";
-import { VerovioToolkit } from "verovio/esm";
-import createVerovioModule from "verovio/wasm";
+import type { VerovioToolkit } from "verovio/esm";
 import { cleanSvg, engraveChart, engraveXml, scorePane, scoreStyles } from "../src/index.js";
+import { loadToolkit } from "./helpers/toolkit.js";
 
-const vrv = new VerovioToolkit(await createVerovioModule());
+const vrv = await loadToolkit();
 
 const examples = join(import.meta.dir, "../../../examples");
 const fixtures = join(import.meta.dir, "../../musicxml/tests/fixtures/import");
