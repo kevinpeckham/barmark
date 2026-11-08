@@ -139,6 +139,58 @@ describe("notesOf", () => {
 		expect(notes).toEqual([note(1, 60, 0, 960), note(1, 60, 0, 480, 1), note(2, 60, 0, 240)]);
 	});
 
+	test("at one tick, a note-off comes before a note-on of its pitch, whatever the file order", () => {
+		const { notes } = notesFrom([
+			[
+				{ dt: 0, on: [0, 60, 80] },
+				{ dt: 0, on: [1, 62, 80] },
+				// the new note-on written before the old note-off, as a note-off and as a zero-velocity on
+				{ dt: 480, on: [0, 60, 80] },
+				{ dt: 0, on: [1, 62, 80] },
+				{ dt: 0, off: [0, 60] },
+				{ dt: 0, on: [1, 62, 0] },
+				{ dt: 480, off: [0, 60] },
+				{ dt: 0, off: [1, 62] },
+			],
+		]);
+		expect(notes).toEqual([
+			note(1, 60, 0, 480),
+			note(1, 62, 0, 480, 1),
+			note(1, 60, 480, 960),
+			note(1, 62, 480, 960, 1),
+		]);
+	});
+
+	test("at one tick, a re-strike of a note the pedal holds comes after the note-off too", () => {
+		const { notes } = notesFrom([
+			[
+				{ dt: 0, control: [0, 64, 127] },
+				{ dt: 0, on: [0, 60, 80] },
+				{ dt: 240, off: [0, 60] },
+				// held by the pedal, re-struck: the new note-on written before the note-off
+				{ dt: 240, on: [0, 60, 80] },
+				{ dt: 0, off: [0, 60] },
+				{ dt: 480, control: [0, 64, 0] },
+				{ dt: 480, off: [0, 60] },
+			],
+		]);
+		expect(notes).toEqual([note(1, 60, 0, 480), note(1, 60, 480, 1440)]);
+	});
+
+	test("at one tick, only note-ons move: a pedal pressed before a note-off still holds it", () => {
+		const { notes } = notesFrom([
+			[
+				{ dt: 0, on: [0, 60, 80] },
+				{ dt: 480, on: [0, 64, 80] },
+				{ dt: 0, control: [0, 64, 127] },
+				{ dt: 0, off: [0, 60] },
+				{ dt: 480, control: [0, 64, 0] },
+				{ dt: 0, off: [0, 64] },
+			],
+		]);
+		expect(notes).toEqual([note(1, 60, 0, 960), note(1, 64, 480, 960)]);
+	});
+
 	test("the sustain pedal holds released notes", () => {
 		const { notes } = notesFrom([
 			[
@@ -255,33 +307,61 @@ describe("harmonyNotes", () => {
 		expect(report.list[0]?.message).toContain("track 2, channel 4");
 	});
 
-	test("MuseScore's slash notes are a melody", () => {
-		// Chord playback (F2 C4 E4 F4 A4, section 8) on its own channel beside B4 slash notes, one a beat.
-		const { harmony, report } = harmonyFrom([
+	/** MuseScore's chord playback (F2 C4 E4 F4 A4, section 8) on channel 2 beside slash notes of `pitch` on channel 1, one a beat, each ending a tick early. */
+	const musescore = (pitch: number) =>
+		harmonyFrom([
 			track(
 				chords(1, [[41, 60, 64, 65, 69]]),
-				// MuseScore ends a note one tick early before the next
 				[0, 480, 960, 1440].flatMap((t) => [
-					at(t, { on: [0, 71, 80] }),
-					at(t + 479, { off: [0, 71] }),
+					at(t, { on: [0, pitch, 80] }),
+					at(t + 479, { off: [0, pitch] }),
 				]),
 			),
 		]);
+
+	test("MuseScore's slash notes are a melody: B4", () => {
+		const { harmony, report } = musescore(71);
 		expect(harmony.map((n) => n.pitch).sort()).toEqual([41, 60, 64, 65, 69]);
 		expect(codes(report)).toEqual([["info", "melody-left-out", 1]]);
 	});
 
-	test("the lowest stream is the lowest by median pitch, not by its lowest note", () => {
-		// A line at C5 that dips once to C3, beside chords at C4 E4 G4: a melody.
-		const { harmony } = harmonyFrom([
-			track(chords(0, [C_E_G])),
-			track(line(1, [72, 72, 48, 72, 72])),
+	test("MuseScore's slash notes are a melody: B3, below the chord's median", () => {
+		// The chord stream's lowest note (F2) is the lowest: it is the bass, and B is not added.
+		const { harmony, report } = musescore(59);
+		expect(harmony.map((n) => n.pitch).sort()).toEqual([41, 60, 64, 65, 69]);
+		expect(codes(report)).toEqual([["info", "melody-left-out", 1]]);
+	});
+
+	test("the bass is the stream with the lowest note, not the lowest median", () => {
+		// A line at C5 that dips once to C2, beside chords at C3 C4 E4 G4: the line has the lowest note.
+		const { harmony, report } = harmonyFrom([
+			track(chords(0, [[48, ...C_E_G]])),
+			track(line(1, [72, 72, 36, 72, 72])),
 		]);
-		expect(harmony.map((n) => n.pitch).sort()).toEqual(C_E_G);
+		expect(harmony.filter((n) => n.track === 2)).toHaveLength(5);
+		expect(report.list).toEqual([]);
+	});
+
+	test("a tie on the lowest note goes to the lower median, then to file order", () => {
+		const chordsAbove = track(chords(0, [[60, 64, 67, 72]]));
+		// Both lines reach C2; track 3's median (E2) is lower than track 2's (C3).
+		const median = harmonyFrom([
+			chordsAbove,
+			track(line(0, [36, 48, 48, 48])),
+			track(line(0, [36, 40, 40, 40])),
+		]);
+		expect(codes(median.report)).toEqual([["info", "melody-left-out", 2]]);
+		// The same line twice: the first in the file stays.
+		const order = harmonyFrom([
+			chordsAbove,
+			track(line(0, [36, 40, 40, 40])),
+			track(line(0, [36, 40, 40, 40])),
+		]);
+		expect(codes(order.report)).toEqual([["info", "melody-left-out", 3]]);
 	});
 
 	test("a monophonic stream above the lowest stream is a melody, with no bass part", () => {
-		// A tenor line at C4 over chords in octave 3: the chords are the lowest stream.
+		// A tenor line at C4 over chords in octave 3: the chords have the lowest note.
 		const { harmony } = harmonyFrom([
 			track(chords(0, [[48, 52, 55]])),
 			track(line(1, [60, 62, 60, 59])),

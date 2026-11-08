@@ -518,19 +518,29 @@ examples slot by slot.
 - **Notes:** a note-on and the next note-off of the same pitch on the
   same track and channel; a second note-on of a sounding pitch ends the
   first there (a re-strike). A note still sounding at the end ends at the
-  last event of its track. Zero-length notes are dropped.
+  last event of its track. Zero-length notes are dropped. At one tick, a
+  note-off (or zero-velocity note-on) comes before a re-strike of its
+  pitch whatever the file order, so a file that writes the new note-on
+  before the old note-off keeps both notes (Claude's ruling, 2026-11-08;
+  only a note-on of a pitch still sounding moves, so an on and an off of
+  a silent pitch at one tick stay a zero-length note, and nothing else
+  moves, so the pedal keeps its place).
 - **Sustain pedal:** controller 64 at 64 or more holds a released note
   on its channel until the pedal lifts or the pitch is struck again.
 - **Streams:** the notes of one track on one channel. Channel 10 is
   drums: left out (`drums-left-out`, info).
 - **Melody streams are left out of the harmony:** a stream that is
   monophonic (two or more of its notes sound together for less than 10%
-  of its sounding time) and isn't the lowest stream (by median pitch) is
-  a melody, a lead line or MuseScore's slash notes (which sound as one
-  repeated pitch, section 8). One `melody-left-out` info names them. The
-  lowest monophonic stream is a bass line and stays: it gives the bass.
-  If every pitched stream would be left out, all are used, warning
-  `harmony-from-melody`.
+  of its sounding time) and isn't the lowest stream is a melody, a lead
+  line or MuseScore's slash notes (which sound as one repeated pitch,
+  section 8). One `melody-left-out` info names them. The lowest stream
+  is the one whose lowest note is lowest, ties to the lower median pitch,
+  then to file order (Claude's ruling, 2026-11-08: not the lowest median,
+  which made B3 slash notes the bass beside MuseScore's chord playback,
+  F2 C4 E4 F4 A4, whose median is E4, and added B to every chord). When
+  the lowest stream is monophonic it is a bass line and stays: it gives
+  the bass. When no stream is polyphonic (only melody streams), all are
+  used, warning `harmony-from-melody`.
 - **Melody lines are not part of the round trip, by design.** The
   harmony is what the import reads, so a chart's own single-note lines
   that aren't its lowest (a melody, a `Vo.Mel` line, a pedal-tone line, a

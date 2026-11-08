@@ -5,7 +5,8 @@
  * end of its track ends at the track's last event; zero-length notes are
  * dropped. Controller 64 at 64 or more holds a released note on its
  * channel until the pedal lifts or the pitch is struck again. Events are
- * taken in file order, one pass a track.
+ * taken in file order, one pass a track, except that at one tick a
+ * note-off comes before a re-strike of its pitch.
  */
 import type { Smf, SmfEvent } from "../smf/types.js";
 import type { Report } from "./report.js";
@@ -68,13 +69,68 @@ function step(p: Pairing, e: SmfEvent) {
 		sustain(p, e.channel, e.value >= 64, e.tick);
 }
 
-function trackNotes(events: SmfEvent[], track: number, out: Note[]) {
-	const p: Pairing = { track, out, sounding: channels(), held: channels(), pedal: [] };
-	for (const e of events) step(p, e);
-	const last = events[events.length - 1]?.tick ?? 0;
+const keyOf = (e: { channel: number; pitch: number }) => e.channel * 128 + e.pitch;
+
+/** Whether `pitch` sounds, or is held by the pedal, on its channel. */
+const isSounding = (p: Pairing, e: { channel: number; pitch: number }) =>
+	(p.sounding[e.channel]?.has(e.pitch) ?? false) || (p.held[e.channel]?.has(e.pitch) ?? false);
+
+/**
+ * One tick's events in order, except that a re-strike
+ * (a note-on of a pitch still sounding) comes right after the last
+ * note-off of its channel and pitch at that tick when the file wrote it
+ * before (Claude's ruling, 2026-11-08): the off ends the old note and both
+ * notes are kept. A note-on of a silent pitch doesn't move, so an on and
+ * an off at one tick stay a zero-length note, dropped; nothing else moves,
+ * so a pedal keeps its place among the note-offs.
+ */
+function stepTick(p: Pairing, tick: SmfEvent[]) {
+	const lastOff = new Map<number, number>();
+	for (const [i, e] of tick.entries()) if (e.kind === "off") lastOff.set(keyOf(e), i);
+	const deferred: SmfEvent[][] = [];
+	for (const [i, e] of tick.entries()) {
+		const after = movedTo(p, e, lastOff);
+		if (after > i) {
+			const list = deferred[after] ?? [];
+			list.push(e);
+			deferred[after] = list;
+		} else step(p, e);
+		for (const d of deferred[i] ?? []) step(p, d);
+	}
+}
+
+/** Where at its tick a re-strike moves: after the last note-off of its channel and pitch, or -1 to stay. */
+function movedTo(p: Pairing, e: SmfEvent, lastOff: Map<number, number>): number {
+	if (e.kind !== "on" || !isSounding(p, e)) return -1;
+	return lastOff.get(keyOf(e)) ?? -1;
+}
+
+/** A track's events, grouped by tick. */
+function ticksOf(events: SmfEvent[]): SmfEvent[][] {
+	const ticks: SmfEvent[][] = [];
+	let current: SmfEvent[] = [];
+	for (const e of events) {
+		if (current.length > 0 && current[0]?.tick !== e.tick) {
+			ticks.push(current);
+			current = [];
+		}
+		current.push(e);
+	}
+	if (current.length > 0) ticks.push(current);
+	return ticks;
+}
+
+/** Ends every note still sounding or held at `last`. */
+function endAll(p: Pairing, last: number) {
 	for (let channel = 0; channel < 16; channel++)
 		for (const map of [p.sounding[channel], p.held[channel]])
 			for (const pitch of [...(map?.keys() ?? [])]) endPitch(p, channel, pitch, last);
+}
+
+function trackNotes(events: SmfEvent[], track: number, out: Note[]) {
+	const p: Pairing = { track, out, sounding: channels(), held: channels(), pedal: [] };
+	for (const tick of ticksOf(events)) stepTick(p, tick);
+	endAll(p, events[events.length - 1]?.tick ?? 0);
 }
 
 const byStart = (a: Note, b: Note) =>

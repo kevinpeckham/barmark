@@ -3,8 +3,9 @@
  * track on one channel. Channel 10 is drums and never harmony. By
  * default a monophonic stream (two or more of its notes sounding together
  * for under 10% of its sounding time) is a melody, a lead line or
- * MuseScore's slash notes, and is left out, unless it is the lowest stream
- * by median pitch: then it is a bass line and stays. When no stream is
+ * MuseScore's slash notes, and is left out, unless it is the lowest
+ * stream, the one whose lowest note is lowest (ties: the lower median,
+ * then file order): then it is a bass line and stays. When no stream is
  * polyphonic, every stream is used. `options.tracks` names the harmony
  * tracks instead.
  */
@@ -27,7 +28,7 @@ function streamsOf(notes: Note[]): Stream[] {
 		stream.notes.push(n);
 		streams.set(key, stream);
 	}
-	return [...streams.values()];
+	return [...streams.values()].sort((a, b) => a.track - b.track || a.channel - b.channel);
 }
 
 /** Whether two or more notes sound together for less than `POLYPHONY` of the time any sounds: one sweep over starts and ends. */
@@ -75,6 +76,7 @@ function chosenByDefault(pitched: Note[], names: (string | null)[], report: Repo
 		...s,
 		mono: isMonophonic(s.notes),
 		median: median(s.notes),
+		low: s.notes.reduce((low, n) => Math.min(low, n.pitch), 127),
 	}));
 	if (streams.length === 0) return [];
 	if (streams.every((s) => s.mono)) {
@@ -85,7 +87,9 @@ function chosenByDefault(pitched: Note[], names: (string | null)[], report: Repo
 		);
 		return pitched;
 	}
-	const lowest = streams.reduce((low, s) => (s.median < low.median ? s : low));
+	const lowest = streams.reduce((low, s) =>
+		s.low < low.low || (s.low === low.low && s.median < low.median) ? s : low,
+	);
 	const melodies = streams.filter((s) => s.mono && s !== lowest);
 	if (melodies.length === 0) return pitched;
 	const labels = melodies.map(
