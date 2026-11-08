@@ -6,6 +6,8 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-11-08
+
 First release.
 
 ### Added
@@ -59,3 +61,6 @@ First release.
 - The README says how to use the element with Vite: Vite 8 (and Vite+)
   needs no config; Vite 7 needs `optimizeDeps.exclude` and
   `worker.format: "es"`.
+
+[Unreleased]: https://github.com/kevinpeckham/barmark/compare/score-v0.1.0...HEAD
+[0.1.0]: https://github.com/kevinpeckham/barmark/releases/tag/score-v0.1.0
