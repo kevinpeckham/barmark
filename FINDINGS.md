@@ -1667,3 +1667,55 @@ with `git archive HEAD | tar -x -C <scratch>`, then symlink the root
 `node_modules` and copy each package's `node_modules` (their links are
 relative), or use a separate `git worktree`. Task 13b's experiments ran
 this way.
+
+### What the import fixtures lose on the way to a score (2026-11-08, score)
+
+**Symptom:** `packages/score/tests/round-trip.test.ts` draws each
+`musicxml/tests/fixtures/import/*.musicxml` with Verovio, imports it to a
+chart, exports the chart (no `part`) and draws that, then counts measures,
+staves, notes, rests, harmonies and lyric verses in Verovio's MEI. Of 22
+fixtures (none refuses), `comping-guitar`, `dorico-comping-guitar` and
+`dorico-lead-sheet` come back identical; the other 14 differ. Kevin's goal is
+"close to the original", so each difference is pinned in `KNOWN`,
+`MEASURE_KNOWN` and `STAFF_KNOWN` (original, redrawn) and fails if it moves
+either way.
+**Cause**, by group. "Expected" follows from the grammar; "candidate" is a
+fix worth considering. Causes were read from the import diagnostics, the
+fixture's `.chart.md` and the exported MusicXML; the ones marked unverified
+were not traced into the code.
+1. *Melody dropped, chords filled in* (`piano`, `dorico-piano`,
+   `melody-rest`, `melody-measure-rest`, `harmony-edges`: notes 24 to 12,
+   4 to 20, 5 to 28, rests 3 to 0). Import: "notes read as a melody and left
+   out", so the chart is chords only. Export: a chord-only line is drawn as
+   slash or voiced notes, so the note count goes up or down with no relation
+   to the original. Expected (a chord-only line has no melody); the melody
+   case is a candidate if a bar could keep its tune.
+2. *Parts with no chord symbols are dropped* (`band`, `dorico-band`: the bass,
+   notes 72 to 64 and 32, rests 8 to 0). Import warns "no chord symbols in
+   these parts, left out". Expected.
+3. *Parts that carry the same chords become one line* (`dorico-band` staves
+   4 to 1, harms 16 to 8; `six-guitars` staves 6 to 1, harms 18 to 3).
+   Import writes one chord line where the charts agree. Expected as far as
+   the chart goes; unverified which importer step merges them.
+4. *A keyboard changes staves* (`piano`, `dorico-piano` 2 to 1;
+   `part-enters`, `trading-fours` 2 to 3). The import writes no
+   `instrument:` for a keyboard part, and the export makes a grand staff
+   from the part's name ("Piano"), so a one-staff Piano part comes back on
+   two while a two-staff piano with no part line comes back on one. Candidate:
+   import writes `instrument: piano` from the staves it read.
+5. *A pickup gains a no-chord symbol, an unreadable symbol loses its harmony*
+   (`hymn`, `dorico-hymn` harms 6 to 7; `lead-sheet` 7 to 6). Import writes
+   `N.C.` in the pickup, which the export draws as a `none` harmony the
+   original never had; `FTristan` becomes `?` plus words, which draws as text
+   and not a `<harmony>`. The second is expected (grammar: `?`); the first is
+   a candidate.
+6. *Four bars more* (`replay-holds`: measures 16 to 20, notes 137 to 160,
+   rests 35 to 71, harms 33 to 42). The chart for this stress file has 20
+   bars for 16 written measures. Import, unverified: probably where the
+   repeats, endings and jumps are written out. Candidate; the extra bars
+   also account for its note, rest and harmony counts.
+**Fix:** none yet; the test pins the gap. To close a group, fix it, then
+update the table and this entry together.
+**Where:** `packages/score/tests/round-trip.test.ts`,
+`packages/score/tests/helpers/music.ts` (`musicOf`, test-only);
+`packages/musicxml/src/import/` and `packages/musicxml/src/score.ts`.
