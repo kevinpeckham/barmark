@@ -1,12 +1,13 @@
 import { expect, type Locator, type Page, test } from "@playwright/test";
 
-/** Counts, from now on, the page's requests for the score engine: the worker or a Verovio module. */
-function countEngine(page: Page): { worker: number; engine: number } {
-	const seen = { worker: 0, engine: 0 };
+/** Counts, from now on, the page's requests for the score engine: engine.js, the worker or a Verovio module. */
+function countEngine(page: Page): { worker: number; engine: number; urls: string[] } {
+	const seen = { worker: 0, engine: 0, urls: [] as string[] };
 	page.on("request", (r) => {
 		const url = r.url();
+		seen.urls.push(new URL(url).pathname);
 		if (url.includes("worker.js")) seen.worker++;
-		if (url.includes("worker.js") || url.includes("verovio")) seen.engine++;
+		if (/\/score\/engine\.js$|worker\.js|verovio/.test(url)) seen.engine++;
 	});
 	return seen;
 }
@@ -19,8 +20,8 @@ async function switchToScore(el: Locator) {
 	await expect(scoreSvg(el)).toBeVisible({ timeout: 20_000 });
 }
 
-/** The highest luminance among a PNG's pixels, decoded by the browser itself. */
-function brightest(page: Page, png: Buffer): Promise<number> {
+/** The lowest and highest luminance among a PNG's pixels, decoded by the browser itself. */
+function luminanceRange(page: Page, png: Buffer): Promise<{ min: number; max: number }> {
 	return page.evaluate(
 		async (src) => {
 			const img = new Image();
@@ -34,13 +35,15 @@ function brightest(page: Page, png: Buffer): Promise<number> {
 			if (!ctx) throw new Error("no canvas");
 			ctx.drawImage(img, 0, 0);
 			const data = ctx.getImageData(0, 0, img.width, img.height).data;
+			let min = 255;
 			let max = 0;
-			for (let i = 0; i < data.length; i += 4)
-				max = Math.max(
-					max,
-					0.2126 * (data[i] ?? 0) + 0.7152 * (data[i + 1] ?? 0) + 0.0722 * (data[i + 2] ?? 0),
-				);
-			return max;
+			for (let i = 0; i < data.length; i += 4) {
+				const y =
+					0.2126 * (data[i] ?? 0) + 0.7152 * (data[i + 1] ?? 0) + 0.0722 * (data[i + 2] ?? 0);
+				min = Math.min(min, y);
+				max = Math.max(max, y);
+			}
+			return { min, max };
 		},
 		`data:image/png;base64,${png.toString("base64")}`,
 	);
@@ -55,7 +58,8 @@ test("no engine request until the first switch", async ({ page }) => {
 	expect(seen.engine).toBe(0);
 	await switchToScore(el);
 	expect(seen.worker).toBe(1);
-	expect(seen.engine).toBe(1);
+	// engine.js, then the worker (Verovio is bundled into it).
+	expect(seen.engine).toBe(2);
 });
 
 test("two scores, one engine request", async ({ page }) => {
@@ -95,6 +99,8 @@ test("dark score is light on dark", async ({ page }) => {
 	await page.goto("/score?theme=dark");
 	const el = page.locator("barmark-score");
 	const ink = await el.locator(".bms-grid .bm-chart").evaluate((e) => getComputedStyle(e).color);
+	// render's dark ink, #ece8e0.
+	expect(ink).toBe("rgb(236, 232, 224)");
 	await switchToScore(el);
 	const score = el.locator(".bms-pane .bms-score");
 	expect(await score.evaluate((e) => getComputedStyle(e).color)).toBe(ink);
@@ -103,10 +109,12 @@ test("dark score is light on dark", async ({ page }) => {
 	expect(await notehead.evaluate((e) => getComputedStyle(e).fill)).toBe(ink);
 	const staff = el.locator(".bms-score g.staff > path").first();
 	expect(await staff.evaluate((e) => getComputedStyle(e).stroke)).toBe(ink);
-	// And on screen: a bar's staff lines and slashes, on dark paper, are drawn light.
+	// And on screen: a bar's staff lines and slashes are drawn light, and its paper is dark.
 	const box = await el.locator(".bms-score g.measure").first().boundingBox();
 	if (!box) throw new Error("no bar");
-	expect(await brightest(page, await page.screenshot({ clip: box }))).toBeGreaterThan(128);
+	const { min, max } = await luminanceRange(page, await page.screenshot({ clip: box }));
+	expect(max).toBeGreaterThan(128);
+	expect(min).toBeLessThan(128);
 });
 
 test("a bad verovio-url keeps the grid with a note", async ({ page }) => {
@@ -121,6 +129,8 @@ test("a bad verovio-url keeps the grid with a note", async ({ page }) => {
 	await expect(el.locator(".bms-pane")).toBeHidden();
 	await expect(el.getByRole("radio", { name: "Score" })).toHaveAttribute("aria-disabled", "true");
 	expect(seen.worker).toBe(1);
+	// The failure is the worker's import of that URL, not something earlier.
+	expect(seen.urls).toContain("/nope/verovio.mjs");
 });
 
 test("a data: verovio-url shows the note without starting the worker", async ({ page }) => {
