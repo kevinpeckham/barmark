@@ -9,6 +9,23 @@ not here.
 
 ## Testing
 
+### A malformed-file test can fail for an earlier reason than the rule it names (2026-11-08, @barmark/midi)
+
+- **The symptom.** The SMF reader's `not-midi` tests passed with the
+  `MThd` id check deleted, and with a header length of 4 accepted; the
+  truncated-file test passed with a `bad-event` wrongly reported for an
+  event cut by the end of the file.
+- **The cause.** The hand-built bytes were shorter than 14, so the
+  reader refused them for being too short before it ever looked at the
+  id or the length; and the "100 bytes short" file was cut exactly on an
+  event boundary, so no event was ever half read.
+- **The fix.** Mutation runs over every rule of `packages/midi/src/smf/read.ts`
+  (deleting or bending each check and seeing a test fail) found all
+  three; the tests now use files that are otherwise good (a whole header
+  after a `MTrk` id, a short header in a long enough file, a cut inside
+  an event). For hostile-input tests, make the input fail only the rule
+  under test, and mutate the rule to prove it.
+
 ### A plan's charts don't parse until something parses them; barmark's syllable times are floats (2026-11-08, @barmark/midi)
 
 - **The symptom.** Task 4 of the MIDI plan wrote `| @B C |` and
