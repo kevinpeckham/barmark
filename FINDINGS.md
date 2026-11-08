@@ -1673,7 +1673,7 @@ this way.
 **Symptom:** `packages/score/tests/round-trip.test.ts` draws each
 `musicxml/tests/fixtures/import/*.musicxml` with Verovio, imports it to a
 chart, exports the chart (no `part`) and draws that, then counts measures,
-staves, notes, rests, harmonies and lyric verses in Verovio's MEI. Of 22
+staves, notes, rests, harmonies and lyric verses in Verovio's MEI. Of 17
 fixtures (none refuses), `comping-guitar`, `dorico-comping-guitar` and
 `dorico-lead-sheet` come back identical; the other 14 differ. Kevin's goal is
 "close to the original", so each difference is pinned in `KNOWN`,
@@ -1681,8 +1681,7 @@ fixtures (none refuses), `comping-guitar`, `dorico-comping-guitar` and
 either way.
 **Cause**, by group. "Expected" follows from the grammar; "candidate" is a
 fix worth considering. Causes were read from the import diagnostics, the
-fixture's `.chart.md` and the exported MusicXML; the ones marked unverified
-were not traced into the code.
+fixture's `.chart.md` and the exported MusicXML, then traced into the code.
 1. *Melody dropped, chords filled in* (`piano`, `dorico-piano`,
    `melody-rest`, `melody-measure-rest`, `harmony-edges`: notes 24 to 12,
    4 to 20, 5 to 28, rests 3 to 0). Import: "notes read as a melody and left
@@ -1695,14 +1694,21 @@ were not traced into the code.
    these parts, left out". Expected.
 3. *Parts that carry the same chords become one line* (`dorico-band` staves
    4 to 1, harms 16 to 8; `six-guitars` staves 6 to 1, harms 18 to 3).
-   Import writes one chord line where the charts agree. Expected as far as
-   the chart goes; unverified which importer step merges them.
+   `import/rows.ts:136` `playingOf` calls a bar tutti when every part's first
+   line plays alone and all are alike; `import/write.ts:319-323` then leaves
+   out the `part:` header (`labelled` is false). Expected as far as the chart
+   goes: a tutti bar is one line in the grammar.
 4. *A keyboard changes staves* (`piano`, `dorico-piano` 2 to 1;
-   `part-enters`, `trading-fours` 2 to 3). The import writes no
-   `instrument:` for a keyboard part, and the export makes a grand staff
-   from the part's name ("Piano"), so a one-staff Piano part comes back on
-   two while a two-staff piano with no part line comes back on one. Candidate:
-   import writes `instrument: piano` from the staves it read.
+   `part-enters`, `trading-fours` 2 to 3). Two causes. (i) `piano` and
+   `dorico-piano` have one part, so `write.ts:321` writes no `part:` line:
+   the name and the instrument are both lost and the export draws 1 staff.
+   (ii) `part-enters` and `trading-fours` have `<part-name>Piano` with no
+   instrument name or MIDI program, so `import/parts.ts:214` (`instrumentOf`)
+   returns null and no `instrument:` is written; the export then guesses a
+   two-staff keyboard from the word (`musicxml/src/instruments.ts`
+   `KEYBOARD_WORDS`, used at `score.ts:183`). Candidates: the export should
+   not infer a grand staff from a name when the chart's lines fit one staff,
+   and the import should keep a `part:` line for a lone two-staff part.
 5. *A pickup gains a no-chord symbol, an unreadable symbol loses its harmony*
    (`hymn`, `dorico-hymn` harms 6 to 7; `lead-sheet` 7 to 6). Import writes
    `N.C.` in the pickup, which the export draws as a `none` harmony the
@@ -1710,12 +1716,16 @@ were not traced into the code.
    and not a `<harmony>`. The second is expected (grammar: `?`); the first is
    a candidate.
 6. *Four bars more* (`replay-holds`: measures 16 to 20, notes 137 to 160,
-   rests 35 to 71, harms 33 to 42). The chart for this stress file has 20
-   bars for 16 written measures. Import, unverified: probably where the
-   repeats, endings and jumps are written out. Candidate; the extra bars
-   also account for its note, rest and harmony counts.
+   rests 35 to 71, harms 33 to 42). This is a `@barmark/musicxml 0.4.0` fuzz
+   export (`hand-written.test.ts:134`), not a MuseScore file, with repeats,
+   endings, To Coda and a segno. `import/order.ts` works out the play order
+   and `import/repeats.ts` falls back to writing it out, giving 20 literal
+   bars with no repeat marks. Candidate; the extra bars also account for the
+   note, rest and harmony counts.
 **Fix:** none yet; the test pins the gap. To close a group, fix it, then
 update the table and this entry together.
 **Where:** `packages/score/tests/round-trip.test.ts`,
 `packages/score/tests/helpers/music.ts` (`musicOf`, test-only);
-`packages/musicxml/src/import/` and `packages/musicxml/src/score.ts`.
+`packages/musicxml/src/import/` (`rows.ts`, `write.ts`, `parts.ts`,
+`order.ts`, `repeats.ts`), `packages/musicxml/src/instruments.ts` and
+`packages/musicxml/src/score.ts`.

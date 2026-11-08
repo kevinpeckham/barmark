@@ -70,10 +70,13 @@ function expectCounts(f: string, original: Music, again: Music) {
 
 test("finds the import fixtures", () => expect(fixtures.length).toBeGreaterThan(10));
 
-test("each fixture re-draws with the same music", () => {
-	for (const f of fixtures) {
-		const drawn = redraw(f);
-		expect(drawn === null, `${f} refusal recorded in REFUSED`).toBe(f in REFUSED);
-		if (drawn) expectCounts(f, drawn.original, drawn.again);
-	}
+test("every pinned fixture exists", () => {
+	for (const table of [KNOWN, MEASURE_KNOWN, STAFF_KNOWN, REFUSED])
+		for (const f of Object.keys(table)) expect(fixtures).toContain(f);
+});
+
+test.each(fixtures)("%s re-draws with the same music", (f) => {
+	const drawn = redraw(f);
+	expect(drawn === null, `${f} refusal recorded in REFUSED`).toBe(f in REFUSED);
+	if (drawn) expectCounts(f, drawn.original, drawn.again);
 });
