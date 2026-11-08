@@ -66,6 +66,13 @@ describe("renderScoreHtml", () => {
 		expect(html).toContain("/f.otf");
 	});
 
+	test("an unknown view is the grid", () => {
+		const { inner } = parse(renderScoreHtml(chart, { view: "bogus" as "grid" }));
+		const radios = [...inner.querySelectorAll('[role="radio"]')];
+		expect(radios.map((r) => r.getAttribute("aria-checked"))).toEqual(["true", "false"]);
+		expect(radios.map((r) => r.getAttribute("tabindex"))).toEqual([null, "-1"]);
+	});
+
 	test("switchHtml marks the current view", () => {
 		expect(switchHtml("score")).toContain('aria-checked="true"');
 	});

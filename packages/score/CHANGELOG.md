@@ -8,6 +8,16 @@ package uses [semantic versioning](https://semver.org/).
 
 ### Added
 
+- `<barmark-score>` (import `@barmark/score/element`): the chart as the bar grid or
+  as a full score, with a Grid / Score switch (a keyboard radio group). Its
+  chart comes from `text`, `src` or a script child, as `<barmark-chart>`'s does,
+  and it takes every grid attribute plus `view` (`grid` | `score`) and
+  `verovio-url`; a `viewchange` event follows the view. The score engine loads
+  only on the first switch to the score, engraves at the element's width (again
+  after a resize), and shows "Loading score…" meanwhile; a score that can't be
+  drawn leaves the grid with a note by the switch. A shadow root drawn by
+  `renderScoreHtml` is taken over without redrawing the grid. Importing the
+  package root registers no element.
 - `renderScoreHtml` (from `@barmark/score/server`, which never reaches Verovio) draws
   `<barmark-score>` on the server: the bar grid, the Grid / Score switch and the
   chart text, so the grid shows before any script runs; `decodeCarried` reads the
@@ -33,6 +43,7 @@ package uses [semantic versioning](https://semver.org/).
 
 ### Fixed
 
+- `renderScoreHtml` reads any `view` but `"score"` as the grid.
 - The dark theme reaches the notes: Verovio's inner `svg` carries
   `color="black"`, now overridden by the score's styles.
 

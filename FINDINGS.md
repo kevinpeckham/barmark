@@ -9,6 +9,23 @@ not here.
 
 ## Testing
 
+### linkedom is not a browser for custom elements (2026-11-08, @barmark/score)
+
+- **The symptom.** Writing `<barmark-score>`'s tests on linkedom, three
+  things behaved unlike a browser: switching to the score asked the
+  engine twice; a server-drawn element connected after `define` never
+  upgraded; and every engraving was asked for at width `undefined`.
+- **The cause.** linkedom's `MutationObserver` reports attribute changes
+  to an observer that asked only for `childList` and `characterData`, so
+  setting `view` looked like a new chart; its `customElements.define`
+  upgrades only elements already connected, not ones connected later;
+  and it has no layout, so `clientWidth` is `undefined`, not 0.
+- **The fix.** The element ignores `attributes` records and reads
+  `clientWidth || 0`, both harmless in a browser; the test connects the
+  server markup before importing the element. The browser behaviour
+  itself is Task 6's Playwright suite's to prove
+  (`packages/score/src/element.ts`, `packages/score/tests/element.test.ts`).
+
 ### The package gate failed for six tasks without anyone running it (2026-11-08, @barmark/midi)
 
 - **The symptom.** At Task 15, `bun run verify:package midi` failed:
