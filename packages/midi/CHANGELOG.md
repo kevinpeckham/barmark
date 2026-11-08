@@ -6,6 +6,8 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-11-08
+
 ### Added
 
 - **`importMidi(bytes, options?)`**: a chord chart from a Standard MIDI
@@ -141,5 +143,6 @@ package uses [semantic versioning](https://semver.org/).
   bar, shorter than one, from its downbeat). Needs barmark 0.21.0
   (`PlayedBar.time`).
 
-[Unreleased]: https://github.com/kevinpeckham/barmark/compare/midi-v0.1.0...HEAD
+[Unreleased]: https://github.com/kevinpeckham/barmark/compare/midi-v0.2.0...HEAD
+[0.2.0]: https://github.com/kevinpeckham/barmark/compare/midi-v0.1.0...midi-v0.2.0
 [0.1.0]: https://github.com/kevinpeckham/barmark/releases/tag/midi-v0.1.0

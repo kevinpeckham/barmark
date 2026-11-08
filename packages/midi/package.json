@@ -1,6 +1,6 @@
 {
 	"name": "@barmark/midi",
-	"version": "0.1.0",
+	"version": "0.2.0",
 	"description": "MIDI for barmark chord charts: export a chart's play order as a Standard MIDI File, and import a chart from one, built on a performance core (@barmark/midi/perform).",
 	"type": "module",
 	"sideEffects": false,
