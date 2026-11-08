@@ -182,6 +182,8 @@ cd site && bun run dev|build|check|test|test:browser   # barmark.dev
   package is tagged on its own: `barmark-vX.Y.Z`, `render-vX.Y.Z`,
   `musicxml-vX.Y.Z`, `sync-vX.Y.Z`, `midi-vX.Y.Z`, `cli-vX.Y.Z`. A library release is followed by a CLI release and a
   bump in `kevinpeckham/songs` (RELEASING.md steps 13–14), a `sync` or
-  `midi` release included (the CLI bundles `sync` through `midi`).
+  `midi` release included (the CLI bundles `sync` through `midi`). After
+  a `sync` minor, a `midi` patch ("Requires `@barmark/sync` X.Y.0") comes
+  first, then the CLI, as a `barmark` minor's caret dependants do.
 - `@barmark/render` never changes the music: anything musical (what `%`
   copies, bar numbers, what a replay plays) comes from the parser.

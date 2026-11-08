@@ -18,8 +18,8 @@ package uses [semantic versioning](https://semver.org/).
   Its diagnostics go to stderr as `file: bar N (track T): severity:
   message`, control characters shown as U+FFFD; it exits 1 when no chart
   came out. `--tracks 2,Piano` names the tracks that carry the harmony,
-  by number or name; `--tracks` with a MusicXML score, or `--part` with
-  a MIDI file, is a usage error.
+  by number (from 1) or name; `--tracks` with a MusicXML score, or
+  `--part` with a MIDI file, is a usage error.
 - **`--version`** lists `@barmark/midi`.
 
 ### Changed

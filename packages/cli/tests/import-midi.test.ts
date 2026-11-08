@@ -90,6 +90,19 @@ describe("barmark import of a MIDI file", () => {
 			);
 		}
 	});
+	test("--tracks numbers start at 1", async () => {
+		for (const list of ["0", "-1", "2,-1", "99999999999999999999"]) {
+			const io = withFiles({ "lead.mid": LEAD_SHEET });
+			expect(await main(["import", "lead.mid", "--tracks", list], io)).toBe(2);
+			const bad = list.split(",").at(-1);
+			expect(io.err()).toBe(
+				`barmark: --tracks: "${bad}" is not a track number (they start at 1)\n`,
+			);
+		}
+		const io = withFiles({ "lead.mid": LEAD_SHEET });
+		expect(await main(["import", "lead.mid", "--tracks=-1"], io)).toBe(2);
+		expect(io.err()).toBe('barmark: --tracks: "-1" is not a track number (they start at 1)\n');
+	});
 	test("--tracks is for MIDI and --part for MusicXML", async () => {
 		const midi = withFiles({ "lead.mid": LEAD_SHEET });
 		expect(await main(["import", "lead.mid", "--part", "Piano"], midi)).toBe(2);

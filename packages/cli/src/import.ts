@@ -1,7 +1,7 @@
 /** barmark import: a MusicXML score (.musicxml, .xml or .mxl) or a MIDI file (.mid or .midi) as a chart. */
 import { importMidi, type MidiImportDiagnostic } from "@barmark/midi";
 import { decodeXmlBytes, type ImportDiagnostic, importMusicXml, readMxl } from "@barmark/musicxml";
-import { parseFlags } from "./args.js";
+import { joinNegative, parseFlags } from "./args.js";
 import { readBytes } from "./inputs.js";
 import { type Io, UsageError } from "./io.js";
 import { writeOutput } from "./output.js";
@@ -41,12 +41,20 @@ export function midiLine(path: string, d: MidiImportDiagnostic): string {
 	);
 }
 
+/** A `--tracks` entry that looks like a number: a track number, 1-based. */
+function trackNumber(entry: string): number {
+	const n = Number(entry);
+	if (!Number.isSafeInteger(n) || n < 1)
+		throw new UsageError(`--tracks: "${entry}" is not a track number (they start at 1)`);
+	return n;
+}
+
 /** `--tracks 2,Piano`: each entry a 1-based track number, or else a track's name. */
 export function tracksOf(list: string): (number | string)[] {
 	const entries = list.split(",").map((entry) => entry.trim());
 	if (entries.some((entry) => entry === ""))
 		throw new UsageError("--tracks takes track numbers or names, separated by commas");
-	return entries.map((entry) => (/^\d+$/.test(entry) ? Number(entry) : entry));
+	return entries.map((entry) => (/^[+-]?\d+$/.test(entry) ? trackNumber(entry) : entry));
 }
 
 /** The score's XML text: a .mxl is unpacked. Rejects with a message naming the problem. */
@@ -84,7 +92,7 @@ async function scoreImport(
 }
 
 export async function importCommand(args: string[], io: Io): Promise<number> {
-	const { values, positionals } = parseFlags(args, {
+	const { values, positionals } = parseFlags(joinNegative(args, "--tracks"), {
 		out: { type: "string" },
 		part: { type: "string" },
 		tracks: { type: "string" },
