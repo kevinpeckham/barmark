@@ -379,8 +379,9 @@ describe("withLyrics", () => {
 		expect(kept).toEqual(Array.from({ length: 99 }, (_, v) => v + 1));
 		expect(dropped).toBe(1);
 		// A verse counts only the bar lines it sings under.
-		const sparse = new Map([[1, new Map([[0, { text: "a", sings: ["0 a"] }]])]]);
-		expect(withinRows([1], sparse, lines, () => dropped++)).toEqual([1]);
+		const one = new Map([[0, { text: "a", sings: ["0 a"] }]]);
+		const sparse = new Map(Array.from({ length: 100 }, (_, v) => [v + 1, one]));
+		expect(withinRows([...sparse.keys()], sparse, lines, () => dropped++)).toHaveLength(100);
 	});
 
 	test("a chart whose bars aren't the grid's drops every verse", () => {
@@ -459,6 +460,12 @@ describe("importMidi's lyrics", () => {
 		noErrors(back.text);
 		expect(parseChart(back.text).bars).toHaveLength(4);
 		expect(verses(parseChart(back.text))).toEqual(verses(parseChart(chart)));
+		// A last lyric on a bar line brings its bar.
+		const downbeat = exportMidi("time: 4/4, tempo: 120\n| C | N.C. |\nlyrics: | one | two |\n");
+		if (!downbeat.ok) throw new Error("export failed");
+		expect(importMidi(downbeat.bytes).text).toBe(
+			printChart("time: 4/4, tempo: 120\n| C | N.C. |\nlyrics: | one | two |\n"),
+		);
 		// lyrics: false reads no lyric, so the grid ends with the chords.
 		expect(parseChart(importMidi(out.bytes, { lyrics: false }).text).bars).toHaveLength(2);
 	});
@@ -503,7 +510,8 @@ describe("importMidi's lyrics", () => {
 					at(0, { text: "@LENGL" }),
 					at(0, { text: "@TMy Song" }),
 					at(0, { text: "\\Hel" }),
-					at(PPQ, { text: "lo " }),
+					// No space after lo: the / before world ends its word.
+					at(PPQ, { text: "lo" }),
 					at(2 * PPQ, { text: "/world " }),
 					at(BAR, { text: "\\next" }),
 					...held([72], 0, 2 * BAR, 1),
