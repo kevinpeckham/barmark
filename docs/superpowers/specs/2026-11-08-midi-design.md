@@ -872,9 +872,11 @@ Test first, per rule, in `packages/midi/tests/`.
 - Then `@barmark/cli` 0.7.0 with both commands, the `songs` bump, and a
   Get Started line on barmark.dev (RELEASING.md steps 13–14).
 
-## Open questions for Kevin
+## Decisions on the open questions
 
-Only those that change what gets built.
+Kevin (2026-11-08) asked Claude to go ahead on its own recommendations
+for every open question, so each one below is **decided as recommended**
+(Claude's recommendation, Kevin's go-ahead). Revisit any on review.
 
 1. **Should the import name chords from notes?** The MusicXML import
    never names a note set (your decision, 2026-11-05), and grammar 4
