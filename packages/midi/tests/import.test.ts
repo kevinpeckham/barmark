@@ -1,10 +1,24 @@
 import { describe, expect, test } from "bun:test";
 import { parseChart, printChart } from "barmark";
-import { importMidi, type MidiImportResult, readSmf } from "../src/index.js";
+import { exportMidi, importMidi, type MidiImportResult, readSmf } from "../src/index.js";
 import { type Event, smf } from "./helpers/smf.js";
 
 const PPQ = 480;
 const BAR = 4 * PPQ;
+
+/** The distinct tempos a file plays, in quarter notes a minute (whole), in order. */
+function qpms(bytes: Uint8Array): number[] {
+	const read = readSmf(bytes);
+	if (read.smf === null) throw new Error("the exported file doesn't read");
+	const tempos = read.smf.tracks
+		.flat()
+		.filter((e) => e.kind === "meta" && e.type === 0x51)
+		.map((e) => {
+			const [a = 0, b = 0, c = 0] = e.kind === "meta" ? e.data : [];
+			return Math.round(60_000_000 / (a * 65536 + b * 256 + c));
+		});
+	return [...new Set(tempos)];
+}
 
 /** An event at an absolute tick; `at` turns a list of them into the helper's delta times. */
 type At = { tick: number; e: Omit<Event, "dt"> };
@@ -260,6 +274,38 @@ describe("importMidi", () => {
 		expect(r.text).toBe(
 			"time: 1/8, tempo: 240\n| G5 |\ntime: 4/4, tempo: 120\n| C | F | G | C |\n",
 		);
+	});
+
+	test("a bar cut by a time signature plays at the file's speed when the chart is exported again", () => {
+		// the cut bar becomes a `time:` line, which changes the tempo unit (grammar 2.1; only a
+		// `[k/d]` pickup keeps it, Kevin's decision 2026-11-08): 6/8 at 90 qpm cut by 2/4 at tick 720
+		// is `time: 3/8` at 180 eighths; 4/4 at 120 cut by 3/4 at tick 1200 is `time: 10/16` at 480
+		const cases: [At[], number, string][] = [
+			[
+				[at(0, { tempo: 90 }), at(0, { time: [6, 8] }), at(720, { time: [2, 4] })],
+				90,
+				"time: 3/8, tempo: 180\n| C |\ntime: 2/4, tempo: 90\n| F | G |\n",
+			],
+			[
+				[at(0, { tempo: 120 }), at(0, { time: [4, 4] }), at(1200, { time: [3, 4] })],
+				120,
+				"time: 10/16, tempo: 480\n| C |\ntime: 3/4, tempo: 120\n| F | G |\n",
+			],
+		];
+		for (const [meta, qpm, text] of cases) {
+			const cut = meta[2]?.tick ?? 0;
+			const bar = (text.includes("2/4") ? 2 : 3) * PPQ;
+			const notes = [
+				...chord([36, 60, 64, 67], 0, cut),
+				...chord([41, 60, 65, 69], cut, bar),
+				...chord([43, 62, 67, 71], cut + bar, bar),
+			];
+			const r = read(file(meta, notes));
+			expect(r.text).toBe(text);
+			const out = exportMidi(r.text);
+			if (!out.ok) throw new Error(out.diagnostics.map((d) => d.message).join("; "));
+			expect(qpms(out.bytes)).toEqual([qpm]);
+		}
 	});
 
 	test("absurd tempos and meters are dropped with a diagnostic, never written", () => {

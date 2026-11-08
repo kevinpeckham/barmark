@@ -11,8 +11,9 @@
  * - **Meter:** each bar's; a change where it differs from the bar
  *   before's. A pickup's meter is not a change: sync writes its `[k/d]`.
  * - **Tempo:** a bar's is the qpm at its downbeat in grammar 2.1's beat
- *   of the signature in force, to two decimals (a pickup counts the beat
- *   of the bar after it). A ramp, changes in one direction on two or more
+ *   of the meter the chart writes it in, to two decimals: its own, as a
+ *   `time:` line (a bar cut short by a signature included), or, for a
+ *   pickup written `[k/d]`, the bar after it. A ramp, changes in one direction on two or more
  *   consecutive downbeats with the tempo moving inside the bars between,
  *   writes its final tempo at its final bar (`tempo-ramp`); a tempo that
  *   moves inside a bar and is back by the next downbeat writes nothing
@@ -21,7 +22,7 @@
 import type { Change } from "@barmark/sync";
 import { beatsOf, type Meter } from "barmark";
 import { KEY, type Smf, TEMPO } from "../smf/types.js";
-import { barAt, type Grid, type MetaAt, metaOf, signaturesOf } from "./grid.js";
+import { barAt, type Grid, type MetaAt, metaOf } from "./grid.js";
 import { type Note, pitchClassPoints } from "./notes.js";
 import type { Report } from "./report.js";
 
@@ -85,24 +86,20 @@ const bpm = (qpm: number, m: Meter) => round2((qpm * beatsOf(m) * m.d) / (4 * m.
 type Span = { start: number; end: number; beat: Meter };
 
 /**
- * Each bar's span, and the meter whose beat its tempo counts: the
- * signature in force at its start, so a bar cut short by a signature
- * counts its signature's beat; a pickup counts the beat of the bar after it.
+ * Each bar's span, and the meter whose beat its tempo counts: the meter
+ * the chart writes it in. A bar cut short by a signature becomes a
+ * `time:` line in its own meter, which changes the tempo unit (grammar
+ * 2.1), so it counts that meter's beat and plays at the file's speed; a
+ * pickup, written `[k/d]`, keeps the unit of the `time:` in force
+ * (grammar 2.4, Kevin's decision 2026-11-08), so it counts the beat of
+ * the bar after it.
  */
-function spans(smf: Smf, grid: Grid): Span[] {
-	const sigs = signaturesOf(smf);
-	let next = 0;
-	let signature: Meter = { n: 4, d: 4 };
-	return grid.bars.map((bar, i) => {
-		for (let s = sigs[next]; s !== undefined && s.tick <= bar.start; s = sigs[++next])
-			signature = s.meter;
-		const pickup = grid.pickup && i === 0 ? grid.bars[1]?.meter : undefined;
-		return {
-			start: bar.start,
-			end: grid.bars[i + 1]?.start ?? grid.end,
-			beat: pickup ?? signature,
-		};
-	});
+function spans(grid: Grid): Span[] {
+	return grid.bars.map((bar, i) => ({
+		start: bar.start,
+		end: grid.bars[i + 1]?.start ?? grid.end,
+		beat: (grid.pickup && i === 0 ? grid.bars[1]?.meter : undefined) ?? bar.meter,
+	}));
 }
 
 /** Whether the tempo moves inside a bar: an event after its downbeat, before the next, at another qpm. */
@@ -154,7 +151,7 @@ function tempoChanges(
 
 function tempoOf(smf: Smf, grid: Grid, report: Report) {
 	const tempos = temposOf(metaOf(smf, TEMPO));
-	const bars = spans(smf, grid);
+	const bars = spans(grid);
 	const moving = bars.map((span) => moves(tempos, span));
 	for (const [i, span] of bars.entries())
 		if (stretched(tempos, span, moving[i] ?? false))

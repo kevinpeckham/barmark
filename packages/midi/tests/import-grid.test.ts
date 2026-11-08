@@ -338,13 +338,23 @@ describe("directivesOf", () => {
 		expect(codes(r2)).toEqual([["tempo-ramp", 5]]);
 	});
 
-	test("a cut bar counts the beat of the signature in force", () => {
+	test("a cut bar, written as a time: line, counts the beat of the meter it is written in", () => {
+		// 4/4 at 120 qpm cut at tick 1000 is written `time: 8/16`, whose beat is the 16th: 480 of
+		// them a minute keeps the file's speed (a `time:` line changes the tempo unit, grammar 2.1;
+		// only a `[k/d]` pickup keeps the unit, Kevin's decision 2026-11-08); the 4/4 after it is 120
 		const d = directives(file([time(0, 4, 4), time(1000, 4, 4), tempo(0, 120)]));
 		expect(d.grid.bars[0]?.meter).toEqual({ n: 8, d: 16 });
-		expect([d.tempo, tempos(d.changes)]).toEqual([120, []]);
+		expect([d.tempo, tempos(d.changes)]).toEqual([
+			480,
+			[{ kind: "tempo", start: sec(1000), value: 120 }],
+		]);
+		// 6/8 at 90 qpm cut at the fourth eighth: `time: 3/8` at 180 eighths, then 60 dotted quarters
 		const compound = directives(file([time(0, 6, 8), time(720, 6, 8), tempo(0, 90)]));
 		expect(compound.grid.bars[0]?.meter).toEqual({ n: 3, d: 8 });
-		expect([compound.tempo, tempos(compound.changes)]).toEqual([60, []]);
+		expect([compound.tempo, tempos(compound.changes)]).toEqual([
+			180,
+			[{ kind: "tempo", start: sec(720), value: 60 }],
+		]);
 	});
 
 	test("a stretch inside a bar writes nothing", () => {

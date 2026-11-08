@@ -616,10 +616,16 @@ examples slot by slot.
   `time:` lines, not `[2/4]` (sync has no one-bar meters; the pickup is
   the exception).
 - **Tempo:** a bar's tempo is the qpm in force at its downbeat, in
-  grammar 2.1's beat (qpm ÷ the beat in quarters) of the time signature
-  in force (a bar cut short by a signature counts its signature's beat,
-  a pickup the beat of the bar after it), rounded to two
-  decimals. A `tempo:` line is written where a bar's tempo differs from
+  grammar 2.1's beat (qpm ÷ the beat in quarters) of the meter the chart
+  writes the bar in, rounded to two decimals. A bar cut short by a
+  signature is written as a `time:` line in its own meter, which changes
+  the tempo unit, so it counts that meter's beat: a 6/8 bar at 90 qpm
+  cut at the fourth eighth is `time: 3/8, tempo: 180`, and plays at 90
+  on re-export (the final review's fix, 2026-11-08: it had counted the
+  signature in force, `tempo: 60`, three times too slow). A pickup is
+  written `[k/d]`, which keeps the unit of the `time:` in force (grammar
+  2.4, Kevin's decision 2026-11-08), so it counts the beat of the bar
+  after it. A `tempo:` line is written where a bar's tempo differs from
   the bar before's. A **ramp**, the downbeat tempo changing in the same
   direction on two or more consecutive downbeats (so three or more bars)
   **with the tempo moving inside each bar between them** (Claude's
