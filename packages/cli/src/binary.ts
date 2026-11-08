@@ -12,7 +12,6 @@ import musicxml from "../../musicxml/package.json" with { type: "json" };
 import fontPath from "../../render/fonts/Edwin-Roman.otf" with { type: "file" };
 import render from "../../render/package.json" with { type: "json" };
 import score from "../../score/package.json" with { type: "json" };
-import verovio from "../node_modules/verovio/package.json" with { type: "json" };
 import cli from "../package.json" with { type: "json" };
 import type { VerovioFactory } from "./io.js";
 import { main } from "./main.js";
@@ -31,7 +30,8 @@ const io = {
 		musicxml: musicxml.version,
 		score: score.version,
 		midi: midi.version,
-		verovio: verovio.version,
+		// Exact by policy (verify:release checks it against @barmark/score); its own package.json is outside verovio's exports.
+		verovio: cli.dependencies.verovio,
 	},
 };
 process.exitCode = await main(process.argv.slice(2), io);
