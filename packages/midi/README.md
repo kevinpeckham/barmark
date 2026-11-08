@@ -243,9 +243,10 @@ is an error, and otherwise parses with no errors.
 
 - `tracks`: the tracks to read the chords from, by 1-based number or
   track name (any case, every track of that name), in place of the
-  default choice. Every note on them counts, single-note lines
-  included, so naming a MuseScore part's track reads its slash notes too
-  and adds B to every chord: leave `tracks` out for MuseScore's files.
+  default choice. Every pitched note on them counts, single-note lines
+  included (channel 10, the drums, is still left out), so naming a
+  MuseScore part's track reads its slash notes too and adds B to every
+  chord: leave `tracks` out for MuseScore's files.
   An entry naming no track is a `track-unknown` warning; when none
   match, the default choice is used.
 - `lyrics`: read lyrics (default true).
@@ -267,7 +268,7 @@ is reported once, with a count and its first bars.
 | `smpte` | error | SMPTE time division: no beats to make bars from |
 | `too-large` | error | past a bound (above) |
 | `no-notes` | error | no pitched notes outside channel 10 |
-| `truncated` | warning | a chunk runs past the file; read to its end |
+| `truncated` | warning | a chunk runs past the file, or the file ends inside a header; read to its end |
 | `track-count` | warning | the header's track count is wrong |
 | `bad-event` | warning | junk in a track; the rest of that track skipped |
 | `meta-invalid` | warning | a tempo, time or key signature barmark can't use, ignored |

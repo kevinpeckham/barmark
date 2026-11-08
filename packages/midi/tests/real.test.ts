@@ -9,6 +9,13 @@ import { fixtureBytes, fixtureChart, MIDI_FIXTURES } from "./helpers/fixtures.js
  * MuseScore 4's own files (spec 9, Review Focus 4): what each imports to
  * was read over by hand against its score once, then checked in. The
  * reader's agreement with midi-file on each is in smf-read.test.ts.
+ *
+ * Two charts differ from their score's own symbols on purpose: the lead
+ * sheet's `{F}` for its `FTristan`, a symbol MuseScore can't parse and so
+ * sounds as F2 and F4 alone (there is no chord to hear), and the hymn's
+ * `/ / G7` for its `G / G7`, the G of bar 2 carried into bar 3 as sync
+ * writes a chord that goes on. Both are in FINDINGS ("MuseScore pedals
+ * one staff's track, and its slash notes sound only when a file asks").
  */
 
 /** What each file reports: MuseScore's slash notes and melodies left out, its drums too. */

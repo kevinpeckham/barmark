@@ -503,6 +503,28 @@ order, not just the written marks.
 
 ## Design
 
+### A passing tone at exactly a quarter of the chord named a 9th (2026-11-08, @barmark/midi import)
+
+- **The symptom.** A fill of eighths D5 E5 F5 E5 D5 from beat 2 over a
+  held C triad read `C(9)`, and a C chord's pedal ringing one beat into
+  an F bar read `Fmaj9` (Task 12 fix round 3's probes); each is a chart
+  no one would write.
+- **The cause.** Spec 5.5's passing-tone rule dropped a pitch class
+  sounding *under* a quarter of the strongest one's weight
+  (`w >= PASSING * strongest` kept it). The fill's D sounds 480 of the
+  bar's 1,920 ticks, the pedal's C E G one beat of four: exactly a
+  quarter, so each was kept. Common figures land on the threshold
+  exactly, because they are made of the beat the bar is made of.
+- **The fix.** `keptOf` in `packages/midi/src/import/segments.ts` keeps
+  a pitch class only when `w > PASSING * strongest`: a tone at a quarter
+  or under is passing, so a note must sound more than a quarter of the
+  segment to be a chord tone (Claude's ruling, fix round 4, 2026-11-08;
+  spec 5.5, "Claude's calls" 17). `import-segments.test.ts` pins both
+  sides (481 ticks of A over a C bar is `C6`, 480 is `C`), the fill and
+  the pedal. Cost: a real added tone held exactly a quarter of its chord
+  is dropped. Spec 5.5 makes a change of either tuned number (the 16th
+  attack window, the quarter) a FINDINGS entry; this is that entry.
+
 ### Half-length bars skewed a derived tempo (2026-11-07, @barmark/sync)
 
 - **The symptom.** Built from Stem Shovel's ChordMini grids, Letter Lands
