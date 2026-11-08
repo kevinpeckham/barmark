@@ -142,6 +142,12 @@ Fallow, CI, Swamp), the grammar, `examples/`, the scripts and FINDINGS.md.
     embedded)
   - `tests/`: commands in-process, plus the built bin under Node and a
     compiled binary
+- `scripts/score-dorico.ts [outdir]`: `@barmark/score`'s Verovio engraving
+  of the examples and the lead sheet beside the PDF Dorico engraves of the
+  same exported MusicXML (mac-bench `dorico`, beside this repo), as one
+  `index.html` (`scripts/score-dorico-page.ts`, tested in
+  `packages/score/tests/score-dorico-page.test.ts`); advice for a person,
+  not a gate; VM only, never in CI
 - `examples/`: real charts, each parsing cleanly and printing unchanged
   (Peaceful Dreams; Morning Song, the several-parts example the tests read)
 - `site/`: barmark.dev (SvelteKit, UnoCSS, prerendered). **Not a workspace
