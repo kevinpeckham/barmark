@@ -12,40 +12,34 @@ export function velocityOf(articulation?: Articulation): number {
 
 const PUSH: Record<Push, Quarters> = { eighth: q(1, 2), sixteenth: q(1, 4) };
 
-/** How early a slot arrives: an eighth for `<`, a sixteenth for `<<`, else nothing. */
-export function pushOf(slot: SimpleSlot): Quarters | undefined {
+/**
+ * How early a slot arrives, given the length of the slot played before
+ * it (zero when none): an eighth for `<`, a sixteenth for `<<`. A push
+ * with nothing before it (a chart error, grammar 2.8) or no longer than
+ * that slot stays on the beat, as musicxml's export keeps it, so no
+ * written chord is taken whole.
+ */
+export function pushOf(slot: SimpleSlot, giver: Quarters): Quarters | undefined {
 	const push = slot.kind === "hold" || slot.kind === "unknown" ? undefined : slot.push;
-	return push && PUSH[push];
+	const by = push && PUSH[push];
+	return by && cmp(giver, by) > 0 ? by : undefined;
 }
 
 /**
  * Each pushed slot attacks early and sounds to its own end, taking the
- * time from the slots played just before it on the line, in play order,
+ * time from the slot played just before it on the line, in play order,
  * across bar lines, repeats, replays and jumps (grammar 2.8): what sounds
- * there ends at the new attack. A slot left with no time is dropped.
+ * there ends at the new attack.
  */
 export function applyPushes(line: TimedSlot[]): TimedSlot[] {
 	const out: TimedSlot[] = [];
 	for (const timed of line) {
-		// A push with nothing before it is a chart error (grammar 2.8); it stays on the beat.
-		const by = out.length > 0 ? pushOf(timed.slot) : undefined;
-		if (by) take(out, by);
-		out.push(by ? { ...timed, at: sub(timed.at, by), length: add(timed.length, by) } : timed);
+		const giver = out.at(-1);
+		const by = pushOf(timed.slot, giver?.length ?? ZERO);
+		if (giver && by) {
+			out[out.length - 1] = { ...giver, length: sub(giver.length, by) };
+			out.push({ ...timed, at: sub(timed.at, by), length: add(timed.length, by) });
+		} else out.push(timed);
 	}
 	return out;
-}
-
-/** Shortens the slots at the end of `out` by `by` in all, dropping any it empties. */
-function take(out: TimedSlot[], by: Quarters): void {
-	let left = by;
-	while (cmp(left, ZERO) > 0) {
-		const last = out.at(-1);
-		if (!last) return;
-		if (cmp(last.length, left) > 0) {
-			out[out.length - 1] = { ...last, length: sub(last.length, left) };
-			return;
-		}
-		left = sub(left, last.length);
-		out.pop();
-	}
 }

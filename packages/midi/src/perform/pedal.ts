@@ -25,8 +25,8 @@ function pedalOf(slot: SimpleSlot): boolean | undefined {
 }
 
 /**
- * A part's pedal events: `+` presses at its slot's attack (pushed, if the
- * slot is), or, with the pedal down, lifts and presses at once, lift
+ * A part's pedal events: `+` presses at its slot's attack (pushed, as
+ * `applyPushes` pushes it), or, with the pedal down, lifts and presses at once, lift
  * first; `*`, `--`, a tacet bar's start and the chart's end lift it. The
  * walk is barmark's `pedalStates`, timed: just before each slot's end the
  * pedal is down exactly where `pedalStates` says so.
@@ -43,12 +43,16 @@ export function pedalEvents(
 		down = press;
 	};
 	let barAt = ZERO;
+	let giver = ZERO;
 	for (const bar of barsOf(parse, part)) {
 		const slots = bar.tacet ? [] : slotQuarters(bar.slots, bar.meter);
 		if (bar.tacet) set(barAt, false);
-		for (const { slot, at } of slots) {
+		for (const { slot, at, length } of slots) {
+			const by = pushOf(slot, giver) ?? ZERO;
 			const press = pedalOf(slot);
-			if (press !== undefined) set(sub(add(barAt, at), pushOf(slot) ?? ZERO), press);
+			if (press !== undefined) set(sub(add(barAt, at), by), press);
+			// A pushed slot gives the next its length with the push, as in `applyPushes`.
+			giver = add(length, by);
 		}
 		barAt = add(barAt, barQuarters(bar.meter));
 	}

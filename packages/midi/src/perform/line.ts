@@ -1,7 +1,7 @@
 /** One line's played slots, in order, as notes: attacks and the holds that extend them. */
 import type { SimpleSlot } from "barmark";
 import { velocityOf } from "./figures.js";
-import { add } from "./quarters.js";
+import { add, cmp, ZERO } from "./quarters.js";
 import type { PerformedNote, Quarters } from "./types.js";
 import { chordVoicing, noteSetPitches } from "./voicing.js";
 
@@ -21,7 +21,8 @@ function attack(slot: SimpleSlot, bassInstrument: boolean): number[] | null | un
  * Every named slot attacks its pitches for its own length; a `/` extends
  * whatever sounds before it, across bar lines, and nothing after a slot
  * that sounds nothing (spec 3.4). An accent or a hit sets its notes'
- * velocity, which a `/` after it keeps (3.6).
+ * velocity, which a `/` after it keeps (3.6). A note left with no length
+ * (swing can do that, 3.6) isn't played.
  */
 export function lineNotes(slots: TimedSlot[], bassInstrument = false): PerformedNote[] {
 	const out: PerformedNote[] = [];
@@ -36,5 +37,5 @@ export function lineNotes(slots: TimedSlot[], bassInstrument = false): Performed
 		sounding = (pitches ?? []).map((pitch) => ({ pitch, at, length, velocity }));
 		out.push(...sounding);
 	}
-	return out;
+	return out.filter((note) => cmp(note.length, ZERO) > 0);
 }

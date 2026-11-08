@@ -1,7 +1,7 @@
 /** Swing (spec 3.6): the second eighth of each quarter, or sixteenth of each eighth, played late. */
 import type { Feel, Meter, PlayedBar } from "barmark";
 import type { TimedSlot } from "./line.js";
-import { add, barQuarters, cmp, mul, q, sub } from "./quarters.js";
+import { add, barQuarters, cmp, mul, q, sub, ZERO } from "./quarters.js";
 import type { MidiLoss, Quarters } from "./types.js";
 
 /** Where the swung note lands in its pair: ⅔ for the bare word, else the amount (58% is 0.58). */
@@ -68,10 +68,16 @@ function barOf(bars: BarAt[], at: Quarters): BarAt | undefined {
 	return cmp(at, add(found.at, barQuarters(found.bar.meter))) < 0 ? found : undefined;
 }
 
-/** A line with every time point, attacks and ends alike, swung once, so lengths stay whole. */
+/**
+ * A line with every time point, attacks and ends alike, swung once, so
+ * lengths stay whole. Where a swung point reaches or passes the next
+ * unswung one (sextuplets under swing), the slot between is left with no
+ * length, never less.
+ */
 export function swingLine(line: TimedSlot[], swing: (at: Quarters) => Quarters): TimedSlot[] {
 	return line.map((timed) => {
 		const at = swing(timed.at);
-		return { ...timed, at, length: sub(swing(add(timed.at, timed.length)), at) };
+		const length = sub(swing(add(timed.at, timed.length)), at);
+		return { ...timed, at, length: cmp(length, ZERO) > 0 ? length : ZERO };
 	});
 }

@@ -65,6 +65,15 @@ describe("perform: accents, hits, pushes, pedal and swing", () => {
 		]);
 	});
 
+	test("a push as long as the slot before it stays on the beat", () => {
+		// musicxml refuses this push too: taking all of G would lose a written chord.
+		expect(attacks("| D / / /_G | <A |")).toEqual([
+			[0, 3.5],
+			[3.5, 0.5],
+			[4, 4],
+		]);
+	});
+
 	test("a push takes from a hold, shortening what it holds", () => {
 		expect(attacks("| C / / / | <G |")).toEqual([
 			[0, 3.5],
@@ -103,6 +112,17 @@ describe("perform: accents, hits, pushes, pedal and swing", () => {
 	test("a pushed pedal mark moves with its slot", () => {
 		expect(pedal("| C | +<G |")).toEqual([
 			[3.5, true],
+			[8, false],
+		]);
+		// A pushed first slot is a chart error; its note and its pedal stay on the beat.
+		expect(pedal("| +<C |")).toEqual([
+			[0, true],
+			[4, false],
+		]);
+		expect(attacks("| +<C |")).toEqual([[0, 4]]);
+		// A push as long as its giver doesn't take it; the press stays with its note.
+		expect(pedal("| D / / /_G | +<A |")).toEqual([
+			[4, true],
 			[8, false],
 		]);
 	});
@@ -175,13 +195,9 @@ describe("perform: accents, hits, pushes, pedal and swing", () => {
 	});
 
 	test("swing reads each bar's own feel", () => {
-		const text = "| C_D |\nfeel: swing\n| E_F |";
-		expect(attacks(text)).toEqual([
-			[0, 2],
-			[2, 2],
-			[4, 2],
-			[6, 2],
-		]);
+		// Swung, then straight again: only the first bar's off-beat moves.
+		const back = "feel: swing\n| C_D E F G |\nfeel: straight\n| C_D E F G |";
+		expect(attacks(back).map(([at]) => at)).toEqual([0, 2 / 3, 1, 2, 3, 4, 4.5, 5, 6, 7]);
 		// Points at k + 1/2 within a whole-note bar's quarters, in the second bar only.
 		expect(attacks("| C_D E F G |\nfeel: swing\n| C_D E F G |").map(([at]) => at)).toEqual([
 			0,
@@ -194,6 +210,27 @@ describe("perform: accents, hits, pushes, pedal and swing", () => {
 			5,
 			6,
 			7,
+		]);
+	});
+
+	test("swing never makes a note of no length", () => {
+		// Sextuplets: the fourth (at 1/2) swings onto the fifth (at 2/3), or past it at 75%.
+		const sextuplets = "| C_D_E_F_G_A / / / |";
+		expect(attacks(`feel: swing\n${sextuplets}`)).toEqual([
+			[0, 1 / 6],
+			[1 / 6, 1 / 6],
+			[1 / 3, 1 / 3],
+			[2 / 3, 1 / 6],
+			[5 / 6, 19 / 6],
+		]);
+		const wide = notesOf(perform(parseChart(`feel: swing 75%\n${sextuplets}`)));
+		expect(wide.every(([, , length]) => length > 0)).toBe(true);
+		expect(wide.filter(([pitch]) => pitch < 60).map(([, at]) => at)).toEqual([
+			0,
+			1 / 6,
+			1 / 3,
+			2 / 3,
+			5 / 6,
 		]);
 	});
 
