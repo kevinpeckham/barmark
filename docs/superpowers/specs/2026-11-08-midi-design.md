@@ -628,13 +628,20 @@ The harmony streams' notes are cut into **segments**, each one chord:
 - **What sounds in a segment:** each pitch class weighted by how long it
   sounds within the segment; pitch classes under a quarter of the
   strongest one's weight are passing tones, left out. The **bass** is the
-  lowest note sounding at the segment's start (within the 32nd); its
-  pitch class is always kept.
+  lowest note struck at the segment's start (within the 32nd), or held
+  into it from before when it sounds at least until the first struck
+  note stops (a pedal point, a bass held under stabs); its pitch class
+  is always kept. So the tail of the chord before, played legato into
+  this one, is not its bass (Claude's ruling, 2026-11-08: a G2 held a
+  16th into a C chord made it `C/G`).
 - **The name** comes from barmark's `nameNotes` (5.6). With none: a note
   set of the kept pitch classes when there are at most three (bass
   first, then upward, no octaves, spelled for the key), else `?`, warning
-  `chord-unnamed` (the notes in the message; once, with a count and the
-  first few bars).
+  `chord-unnamed` (once, with a count and the first few bars; never the
+  notes, a value read from the file, since the report counts by message).
+  The key spelling a segment is the one in force at its start (the first
+  from bar 1), as sync will write it (`conventionalKey`: chords under a
+  `Cb` signature are spelled in B).
 - **No harmony** is `N.C.`: the importer always says what sounds, so
   sync never writes `?` for a gap.
 - Each segment is a **chord run** (`{ start, end, symbol }`, nominal
@@ -710,7 +717,9 @@ Known residuals of the rule (kept, not named the way a musician would):
 Bb}` is `F7sus4/C`, `{C E G# D}` is `Eaug7/C` (the augmented triad's
 symmetry), `{C G B}` is `G(11)/C` (no `(no3)` in the table), and
 rootless shells such as `{E Bb D}` (`Bb(b5)/E`) are named rather than
-null.
+null. In import the bass line usually supplies the root, and then the
+shell names as written (`{E Bb D}` over C is `C9`, `{Bb E A}` over C is
+`C7(13)`); the residual arises only with no bass line under it.
 
 What the spike gave (key-less): every A.4 symbol on C comes back as
 itself except `C11` (`C9sus4`, the same notes), `C/Bb` (`C7/Bb`, the

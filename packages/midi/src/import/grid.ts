@@ -98,6 +98,18 @@ function isPickup(grid: Grid, sigs: Walk["sigs"]): boolean {
 	);
 }
 
+/** The 1-based bar holding `tick` (binary search); a pickup is bar 1. */
+export function barAt(grid: Grid, tick: number): number {
+	let lo = 0;
+	let hi = grid.bars.length - 1;
+	while (lo < hi) {
+		const mid = (lo + hi + 1) >> 1;
+		if ((grid.bars[mid]?.start ?? 0) <= tick) lo = mid;
+		else hi = mid - 1;
+	}
+	return lo + 1;
+}
+
 /**
  * The bars up to the end of the one in which `lastTick` falls, a bar
  * ending at its next bar's start exclusive: so `lastTick` is the end of

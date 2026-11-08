@@ -349,6 +349,8 @@ describe("directivesOf", () => {
 		expect(d.key).toBe("C");
 		expect(d.changes).toEqual([]);
 		expect(codes(d.report)).toEqual([["key-doubtful", 3]]);
+		// the keys kept, for the chords' spelling (Task 12's chordRuns)
+		expect(d.keys.map((k) => [k.tick, k.name])).toEqual([[0, "C"]]);
 		// the first key is the chart's from bar 1, so it is judged from there
 		const later = directives(file([key(2 * BAR, 0, 0)]), [
 			...chord([60, 64, 67], 0, 2 * BAR),

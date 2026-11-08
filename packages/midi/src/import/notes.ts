@@ -146,3 +146,13 @@ export function notesOf(smf: Smf, report: Report): Note[] {
 	}
 	return notes.sort(byStart);
 }
+
+/** Each note's start (step 1) and end (step -1) by pitch class, by tick: for sweeps over what sounds. */
+export function pitchClassPoints(notes: Note[]): { at: number; pc: number; step: number }[] {
+	return notes
+		.flatMap((n) => [
+			{ at: n.start, pc: n.pitch % 12, step: 1 },
+			{ at: n.end, pc: n.pitch % 12, step: -1 },
+		])
+		.sort((a, b) => a.at - b.at);
+}

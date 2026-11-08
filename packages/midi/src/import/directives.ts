@@ -19,8 +19,8 @@
  */
 import { beatsOf, type Meter } from "barmark";
 import type { Smf } from "../smf/types.js";
-import { type Grid, type MetaAt, metaOf } from "./grid.js";
-import type { Note } from "./notes.js";
+import { barAt, type Grid, type MetaAt, metaOf } from "./grid.js";
+import { type Note, pitchClassPoints } from "./notes.js";
 import type { Report } from "./report.js";
 
 /** Sync's `Change`, structurally (sync becomes a dependency with `importMidi`). */
@@ -32,6 +32,8 @@ export type Directives = {
 	meter: string | null;
 	tempo: number | null;
 	changes: Change[];
+	/** The key signatures kept (not doubtful), by tick: what spells the chords. */
+	keys: KeyAt[];
 };
 
 const TEMPO = 0x51;
@@ -41,18 +43,6 @@ const KEY_FIT = 0.6;
 
 const nominal = (grid: Grid, tick: number) => tick / grid.ppq / 2;
 const meterText = (m: Meter) => `${m.n}/${m.d}`;
-
-/** The 1-based bar holding `tick` (binary search). */
-function barAt(grid: Grid, tick: number): number {
-	let lo = 0;
-	let hi = grid.bars.length - 1;
-	while (lo < hi) {
-		const mid = (lo + hi + 1) >> 1;
-		if ((grid.bars[mid]?.start ?? 0) <= tick) lo = mid;
-		else hi = mid - 1;
-	}
-	return lo + 1;
-}
 
 function metersOf(grid: Grid): Pick<Directives, "meter" | "changes"> {
 	const first = grid.pickup ? 1 : 0;
@@ -157,7 +147,8 @@ const MAJOR_SCALE = [0, 2, 4, 5, 7, 9, 11];
 /** Natural minor plus the raised 7th. */
 const MINOR_SCALE = [0, 2, 3, 5, 7, 8, 10, 11];
 
-type KeyAt = { tick: number; name: string; scale: Set<number> };
+/** A key signature in force from `tick`: its name as `key:` writes it, and its scale's pitch classes. */
+export type KeyAt = { tick: number; name: string; scale: Set<number> };
 
 function keysOf(events: MetaAt[]): KeyAt[] {
 	return events.map(({ tick, data }) => {
@@ -175,12 +166,7 @@ function keysOf(events: MetaAt[]): KeyAt[] {
  * is in force (the first from tick 0): one sweep over note starts and ends.
  */
 function fits(keys: KeyAt[], harmony: Note[], end: number): number[] {
-	const points = harmony
-		.flatMap((n) => [
-			{ at: n.start, pc: n.pitch % 12, step: 1 },
-			{ at: n.end, pc: n.pitch % 12, step: -1 },
-		])
-		.sort((a, b) => a.at - b.at);
+	const points = pitchClassPoints(harmony);
 	const counts = new Array<number>(12).fill(0);
 	const totals = keys.map(() => ({ in: 0, all: 0 }));
 	let k = 0;
@@ -217,7 +203,7 @@ function keyOf(smf: Smf, grid: Grid, harmony: Note[], report: Report) {
 	for (const [i, k] of kept.entries())
 		if (i > 0 && k.name !== kept[i - 1]?.name)
 			changes.push({ kind: "key", start: nominal(grid, k.tick), value: k.name });
-	return { key: kept[0]?.name ?? null, changes };
+	return { key: kept[0]?.name ?? null, changes, kept };
 }
 
 /** The starting key, meter and tempo, and their changes by start. */
@@ -228,5 +214,5 @@ export function directivesOf(smf: Smf, grid: Grid, harmony: Note[], report: Repo
 	const changes = [...meters.changes, ...tempo.changes, ...key.changes].sort(
 		(a, b) => a.start - b.start,
 	);
-	return { key: key.key, meter: meters.meter, tempo: tempo.tempo, changes };
+	return { key: key.key, meter: meters.meter, tempo: tempo.tempo, changes, keys: key.kept };
 }
