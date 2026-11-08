@@ -193,3 +193,51 @@ test("resizing reflows the score", async ({ page }) => {
 	expect(reflow).toEqual({ blank: false, busy: true });
 	await expect(el.locator(".bms-pane")).not.toHaveAttribute("aria-busy", "true");
 });
+
+/** The Grid radio's text colour and the switch's border, as computed. */
+const switchColours = (el: Locator) =>
+	el.getByRole("radio", { name: "Grid" }).evaluate((b) => ({
+		ink: getComputedStyle(b).color,
+		rule: getComputedStyle(b.parentElement as Element).borderTopColor,
+	}));
+// render's palettes: ink and rule.
+const LIGHT = { ink: "rgb(29, 29, 31)", rule: "rgb(74, 74, 74)" };
+const DARK = { ink: "rgb(236, 232, 224)", rule: "rgb(143, 137, 127)" };
+
+test("the switch follows the element's theme, as the grid does", async ({ page }) => {
+	await page.emulateMedia({ colorScheme: "light" });
+	await page.goto("/score?theme=dark");
+	expect(await switchColours(page.locator("barmark-score"))).toEqual(DARK);
+	await page.emulateMedia({ colorScheme: "dark" });
+	await page.goto("/score?theme=light");
+	expect(await switchColours(page.locator("barmark-score"))).toEqual(LIGHT);
+	await page.goto("/score");
+	expect(await switchColours(page.locator("barmark-score"))).toEqual(DARK);
+	await page.goto("/score?theme=auto");
+	expect(await switchColours(page.locator("barmark-score"))).toEqual(DARK);
+	await page.emulateMedia({ colorScheme: "light" });
+	expect(await switchColours(page.locator("barmark-score"))).toEqual(LIGHT);
+	// Printed, every theme is light, as render prints the grid.
+	await page.goto("/score?theme=dark");
+	await page.emulateMedia({ media: "print" });
+	expect(await switchColours(page.locator("barmark-score"))).toEqual(LIGHT);
+});
+
+test("a server-drawn switch follows its theme with JavaScript disabled", async ({ browser }) => {
+	const context = await browser.newContext({ javaScriptEnabled: false, colorScheme: "light" });
+	const page = await context.newPage();
+	await page.goto("/server");
+	expect(await switchColours(page.locator("barmark-score"))).toEqual(DARK);
+	await context.close();
+});
+
+test("the switch's font is the chart's label font, not the page's initial serif", async ({
+	page,
+}) => {
+	await page.goto("/score");
+	const font = await page
+		.locator("barmark-score")
+		.getByRole("radio", { name: "Grid" })
+		.evaluate((b) => getComputedStyle(b).fontFamily);
+	expect(font).toContain("system-ui");
+});

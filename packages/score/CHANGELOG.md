@@ -14,6 +14,14 @@ package uses [semantic versioning](https://semver.org/).
   now drops a degree that is not printed before Verovio reads the
   MusicXML (with `@barmark/musicxml`'s next release, which hides a degree
   its kind text already spells). `Engraved.xml` is the export unchanged.
+- **The Grid / Score switch follows the element's `theme`.** It sits
+  outside the grid's themed `.bm-chart`, and render's `:host{all:initial}`
+  reset its colour and font, so on a dark page it was black text in the
+  browser's serif. It now takes render's ink and rule for `theme="dark"`,
+  for `auto` (or no theme) under a dark colour scheme, and light ones
+  otherwise and in print, honouring `--barmark-ink` and `--barmark-rule`,
+  in render's label font (`--barmark-label-font`). A page no longer has to
+  colour the host itself.
 
 ## [0.1.0] - 2026-11-08
 
