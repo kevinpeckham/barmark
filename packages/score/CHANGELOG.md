@@ -56,3 +56,6 @@ First release.
   module Worker that loads Verovio on first use, and for each element only
   the newest request is answered (`createEngine` takes any `WorkerLike`); a
   crashed worker rejects what is pending and is replaced on the next call.
+- The README says how to use the element with Vite: Vite 8 (and Vite+)
+  needs no config; Vite 7 needs `optimizeDeps.exclude` and
+  `worker.format: "es"`.

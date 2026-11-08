@@ -805,6 +805,40 @@ and round-trip it through `format`.
 
 ## Tooling
 
+### Vite 7 pre-bundles `<barmark-score>` out of reach of its worker and font; Vite 8 does not (2026-11-08, @barmark/score)
+
+- **The symptom.** In a scratch Vite app installing the packed
+  `@barmark/score` 0.1.0 (with `barmark`, `@barmark/render` and
+  `@barmark/musicxml` packed beside it), Vite 7.3.7's `vite dev` drew the
+  grid but clicking Score showed "The score couldn't be drawn": the worker
+  (`node_modules/.vite/deps/worker.js?worker_file&type=module`) was a 404
+  and Edwin failed to decode ("OTS parsing error: invalid sfntVersion").
+  `vite build` failed outright: `Invalid value "iife" for option
+  "worker.format" - UMD and IIFE output formats are not supported for
+  code-splitting builds`. Vite 8.3.5 and `@voidzero-dev/vite-plus-core`
+  1.4.0 (what Stem Shovel runs as `vite`) engraved the score, with the font
+  loaded, in both `vite dev` and `vite build && vite preview`, with no
+  config at all.
+- **The cause.** Vite 7's esbuild pre-bundler moves `element.js` into
+  `node_modules/.vite/deps/` without rewriting its
+  `new URL("../../render/fonts/…", import.meta.url)` or
+  `new URL("./worker.js", import.meta.url)`, so they resolve inside the
+  deps folder: the worker isn't there, and the font path falls through to
+  the dev server's HTML fallback (a 200 of HTML, hence the decode error).
+  Vite 8's Rolldown pre-bundler rewrites both URLs to the package's own
+  files. Separately, Vite 7 builds workers as `iife` by default, which
+  cannot hold the worker's dynamic import of Verovio.
+- **The fix.** A README note, not a code change (Vite 8 already works, and
+  the font path is `@barmark/render`'s layout):
+  `optimizeDeps: { exclude: ["@barmark/score"] }` for dev and
+  `worker: { format: "es" }` for the build. Each was needed on its own
+  (dev still broke with only the format; the build still failed with only
+  the exclude), and both together are harmless on Vite 8 and vite-plus,
+  rechecked in dev and preview (`packages/score/README.md`, "Bundling the
+  worker"). The scratch app was not kept; to repeat it, `bun pm pack` the
+  four packages, install the tarballs with a pinned `vite`, put a
+  `<barmark-score>` on the page and click Score in Playwright in both modes.
+
 ### A script's own 1Password environment leaked into mac-bench (2026-11-08, scripts/dorico-midi.ts)
 
 - **The symptom.** `bun scripts/dorico-midi.ts` failed every job with

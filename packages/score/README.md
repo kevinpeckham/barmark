@@ -67,6 +67,19 @@ The engine runs in a module Worker, created as
 That is the pattern Vite and webpack follow, so a bundler finds the worker
 and Verovio for you.
 
+Vite 8 (and Vite+) needs no config, in `vite dev` or a build. Vite 7 needs
+two lines: its dev pre-bundler moves the element away from the worker and
+the font it finds by URL, and it builds workers as `iife`, which cannot
+load Verovio on demand.
+
+```js
+// vite.config.js, for Vite 7 (harmless on Vite 8)
+export default {
+	optimizeDeps: { exclude: ["@barmark/score"] },
+	worker: { format: "es" },
+};
+```
+
 Without a bundler, a page's import map does not reach a worker, so the
 worker's bare imports (`verovio/esm`, `barmark`, `@barmark/musicxml`)
 fail. Serve a bundled `worker.js` at the package's URL. `verovio-url` can
