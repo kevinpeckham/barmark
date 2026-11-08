@@ -108,7 +108,22 @@ class PartReader {
 		this.pos = 0;
 		this.end = 0;
 		for (const el of m.children) this.element(el);
+		if (m.attrs.implicit === "yes" && this.start === 0) this.pickup();
 		this.start += this.end > EPSILON ? this.end : this.meter;
+	}
+
+	/**
+	 * MusicXML writes a pickup as an implicit first measure shorter than the
+	 * meter it carries: the pickup plays as its own length (a 1/4 bar), and the
+	 * written meter holds from the next bar.
+	 */
+	private pickup(): void {
+		const written = this.marks.times.find((t) => t.at === 0);
+		if (!written || this.end < EPSILON || this.end > this.meter - EPSILON) return;
+		const n = (this.end * written.d) / 4;
+		if (Math.abs(n - Math.round(n)) > EPSILON) return;
+		this.marks.times.push({ at: this.end, n: written.n, d: written.d });
+		written.n = Math.round(n);
 	}
 
 	private quarters(n: XNode | undefined) {

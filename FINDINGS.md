@@ -1650,3 +1650,30 @@ with `git archive HEAD | tar -x -C <scratch>`, then symlink the root
 `node_modules` and copy each package's `node_modules` (their links are
 relative), or use a separate `git worktree`. Task 13b's experiments ran
 this way.
+
+### Dorico's MIDI import of our exports (first full run, 2026-11-08, midi)
+
+**Symptom:** the first full live run of `bun scripts/dorico-midi.ts`
+(Dorico Elements 6.2.31, all 12 charts: `scripts/dorico-midi-charts.ts`,
+the examples and the lead sheet) matched every note exactly, yet the
+pickup charts reported "1/4 at bar 1: changed to 3/4; 3/4 at bar 2:
+dropped" (`pickup`) and "1/4 at bar 1: changed to 4/4; 4/4 at bar 2:
+dropped" (`shenandoah`).
+**Cause:** a comparison bug, not Dorico. Dorico kept the pickup: its first
+measure is `<measure number="X0" implicit="yes">` with the full meter in
+its `<time>` and one beat of music. MusicXML writes a pickup as an
+implicit measure shorter than its time signature, and
+`scripts/dorico-compare.ts` read the written meter as the bar's meter.
+**Fix:** `PartReader.pickup` reads an implicit first measure shorter than
+its meter as the pickup's own meter (1/4) followed by the written meter
+from the next bar. A full, non-implicit first measure is still reported
+as changed. Where: `scripts/dorico-compare.ts`,
+`packages/midi/tests/dorico-compare.test.ts`.
+**What the run showed:** every note exact, so no quantization tolerance
+has been needed yet (`TOLERANCE` stays). Dorico keeps time signatures,
+key signatures, lyrics and a tempo, and reads each track's instrument from
+its name or program ("Voice chords" becomes Voice 2, "Acoustic Bass"
+becomes Acoustic Bass 1). It drops every section marker (MIDI marker
+events) and keeps only 2 of a rit.'s 15 tempo steps.
+**Tooling:** mac-bench's `dorico --midi` job drives the import; it needed
+three fixes to read Dorico's import window (see mac-bench's FINDINGS).
