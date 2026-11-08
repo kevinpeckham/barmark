@@ -50,6 +50,35 @@ describe("parts falling out of step", () => {
 	});
 });
 
+describe("a zipped bar's meter", () => {
+	test("comes with its time: meter from the same part, the first that plays (grammar 2.4)", () => {
+		const own = (b: Partial<PlayedBar>): ChartEvent => ({
+			kind: "bar",
+			bar: { line: 4, slots: [], ...b } as unknown as PlayedBar,
+		});
+		const [zipped] = zipEvents(
+			[
+				[own({ meter: { n: 6, d: 8 }, tacet: true })],
+				[own({ meter: { n: 2, d: 8 }, time: { n: 6, d: 8 } })],
+			],
+			() => {},
+		);
+		const bar = zipped?.kind === "bar" ? zipped.bar : null;
+		expect([bar?.meter, bar?.time]).toEqual([
+			{ n: 2, d: 8 },
+			{ n: 6, d: 8 },
+		]);
+		const [plain] = zipEvents(
+			[
+				[own({ meter: { n: 2, d: 8 }, time: { n: 6, d: 8 }, tacet: true })],
+				[own({ meter: { n: 6, d: 8 } })],
+			],
+			() => {},
+		);
+		expect(plain?.kind === "bar" && "time" in plain.bar).toBe(false);
+	});
+});
+
 describe("printPart", () => {
 	test("leaves out a part: line demoted for sharing a label", () => {
 		const text = `${H}part: Gtr = Guitar 2\nGtr | D |\nPno | E |\nBs | F |\n`;

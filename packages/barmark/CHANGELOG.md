@@ -42,6 +42,16 @@ Releases follow the process in [RELEASING.md](RELEASING.md).
   chart for a heading in between, once a row: 100 verses under each of
   500 bar lines took 9 s to print. The headings are now found by halves;
   the same chart prints in about a second, parse included.
+- **A part's tacet stand-in for a `%` is as long as the bar it copies**
+  (grammar 7.4, 2.4). Where one part writes `| [2/8] G | % |` and another
+  has no line, the resting part's bar for the `%` was a bar of the
+  running meter (`| [2/8] N.C. | N.C. |` in 6/8), so an extracted part
+  and the score disagreed on the bar's length. It is now `[2/8] N.C.`,
+  across line breaks and after a tutti line too. A bar of several parts
+  also takes its `time` from the part its meter comes from, the first
+  that plays, so a `%` of a one-bar meter where the lead part rests no
+  longer loses it (it played at 30 quarter notes a minute in 6/8 at
+  `tempo: 60`, not 90).
 
 ## [0.20.0] - 2026-11-08
 

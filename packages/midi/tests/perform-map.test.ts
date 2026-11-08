@@ -56,6 +56,19 @@ describe("perform: tempo, meters, keys, markers, words and lyrics", () => {
 		]);
 	});
 
+	test("a % of a one-bar meter where the lead part rests keeps the time: meter's beat", () => {
+		const parts = "part: Gtr = Electric Guitar 1\npart: Pno = Piano\ntime: 6/8, tempo: 60\n";
+		const steady = `${parts}Gtr | G | C |\nPno | G | C |\nPno | [2/8] G | % | C |\n`;
+		expect(tempos(play(steady))).toEqual([[0, 90]]);
+		const rit = `${parts}Gtr | G | C |\nPno | G | C |\ntempo: rit. to 40\nPno | [2/8] G | % |\ntempo: 60\nPno | C |\n`;
+		expect(tempos(play(rit))).toEqual([
+			[0, 90],
+			[6, 75],
+			[7, 60],
+			[8, 90],
+		]);
+	});
+
 	test("no tempo", () => {
 		const assumed = play("| C |");
 		expect(tempos(assumed)).toEqual([[0, 120]]);

@@ -208,8 +208,9 @@ export type PlayedBar = {
 	meter: Meter;
 	/**
 	 * The `time:` meter in force, present only when a one-bar meter gives
-	 * this bar its own (grammar 2.4): `tempo:` counts its beat, not the
-	 * bar's, so a short or odd bar never changes speed.
+	 * this bar its own, a `%` copying a bracketed bar included (grammar
+	 * 2.4): `tempo:` counts its beat, not the bar's, so a short or odd bar
+	 * never changes speed.
 	 */
 	time?: Meter;
 	key: Key | null;

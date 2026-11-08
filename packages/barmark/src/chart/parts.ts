@@ -1,18 +1,56 @@
-import type { Cell, DeclaredPart, Line } from "./types.js";
+import type { Cell, DeclaredPart, Line, Meter } from "./types.js";
 
 type BarsLine = Extract<Line, { kind: "bars" }>;
 type Labelled = Extract<Line, { kind: "bars" | "invalid" }>;
+/** The one-bar meter (or null) each `%` copies from its line's bar before it (grammar 2.4). */
+type Copied = Map<Cell, Meter | null>;
 
-/** A bar of `N.C.` where the part rests; the system's marks stay (grammar 7.4). */
-const standInCell = (c: Cell): Cell =>
-	c.kind === "slots" || c.kind === "simile"
-		? {
-				kind: "slots",
-				meter: c.kind === "slots" ? c.meter : null,
-				slots: [{ kind: "nc" }],
-				tacet: true,
-			}
-		: c;
+/** The stream a labelled line plays (its part, and its line's name), or null for a tutti line. */
+const streamOf = (l: BarsLine) =>
+	l.part === undefined ? null : `${l.part}\u0000${l.lineName ?? ""}`.toLowerCase();
+
+/** Each `%` on a line gets the meter of the bar before it; returns the meter of the line's last bar. */
+function copyAlong(cells: Cell[], before: Meter | null, out: Copied): Meter | null {
+	let meter = before;
+	for (const c of cells) {
+		if (c.kind === "simile") out.set(c, meter);
+		else if (c.kind === "slots") meter = c.meter;
+	}
+	return meter;
+}
+
+/**
+ * What each `%` copies its meter from: the bar before it on its part's
+ * line (a part's line, or a tutti line, which every part plays), across
+ * line breaks, so a stand-in for it is a bar of the same length.
+ */
+function copiedMeters(lines: Line[]): Copied {
+	const out: Copied = new Map();
+	const last = new Map<string, Meter | null>();
+	let tutti: Meter | null = null;
+	for (const l of lines) {
+		if (l.kind !== "bars") continue;
+		const key = streamOf(l);
+		if (key === null) {
+			tutti = copyAlong(l.cells, tutti, out);
+			last.clear();
+		} else last.set(key, copyAlong(l.cells, last.has(key) ? (last.get(key) ?? null) : tutti, out));
+	}
+	return out;
+}
+
+/** A bar of `N.C.` where the part rests, as long as the bar it stands for; the system's marks stay (grammar 7.4). */
+const standInCell =
+	(copied: Copied) =>
+	(c: Cell): Cell =>
+		c.kind === "slots" || c.kind === "simile"
+			? {
+					kind: "slots",
+					meter: c.kind === "slots" ? c.meter : (copied.get(c) ?? null),
+					slots: [{ kind: "nc" }],
+					tacet: true,
+				}
+			: c;
 
 /** A system no line of which reads: kept as an error line, so its bars still count. */
 function unread(first: Labelled | undefined): Line {
@@ -34,11 +72,11 @@ const referenceOf = (system: Labelled[]) =>
  * part's own line when it has one that errs, so its error stays its own,
  * or else the reference line, which has none.
  */
-function standIn(system: Labelled[], at: Labelled): Line {
+function standIn(system: Labelled[], at: Labelled, copied: Copied): Line {
 	const ref = referenceOf(system);
 	if (!ref) return unread(at);
 	const { part: _p, system: _s, dropped: _d, ...rest } = ref;
-	return { ...rest, line: at.line, cells: ref.cells.map(standInCell) };
+	return { ...rest, line: at.line, cells: ref.cells.map(standInCell(copied)) };
 }
 
 /** A part's own line, as a single-part chart writes it. */
@@ -58,7 +96,7 @@ const plays = (l: Labelled | undefined) => l?.kind === "bars" && !l.dropped;
  * part writes lines (grammar 7.6). `first` says the line is the part's
  * first, which also plays the part's bare lines and the tutti lines.
  */
-type Stream = { key: string; name: string | null; first: boolean };
+type Stream = { key: string; name: string | null; first: boolean; copied: Copied };
 
 /** The stream's own line in a system, if written; a bare line dropped from a part's lines is none of them (grammar 7.6). */
 const ownLine = (system: Labelled[], s: Stream) =>
@@ -73,8 +111,8 @@ const ownLine = (system: Labelled[], s: Stream) =>
 	);
 
 /** A tutti line as a stream other than its part's first hears it: tacet. */
-const restingTutti = (l: Line): Line =>
-	l.kind === "bars" ? { ...l, cells: l.cells.map(standInCell) } : l;
+const restingTutti = (l: Line, copied: Copied): Line =>
+	l.kind === "bars" ? { ...l, cells: l.cells.map(standInCell(copied)) } : l;
 
 const inSystem = (l: Line): l is Labelled & { system: number } =>
 	(l.kind === "bars" || l.kind === "invalid") && l.system !== undefined;
@@ -90,7 +128,7 @@ function systemsOf(lines: Line[]): Map<number, Labelled[]> {
 function projectLine(l: Line, s: Stream, systems: Map<number, Labelled[]>): Line | null {
 	if (l.kind === "part") return l.label?.toLowerCase() === s.key ? l : null;
 	if (inSystem(l)) return projectSystemLine(l, s, systems.get(l.system) ?? []);
-	return s.first ? l : restingTutti(l);
+	return s.first ? l : restingTutti(l, s.copied);
 }
 
 /** A system's line in one stream's chart: its own line, a stand-in where it rests, or nothing. */
@@ -98,7 +136,7 @@ function projectSystemLine(l: Labelled, s: Stream, system: Labelled[]): Line | n
 	const own = ownLine(system, s);
 	if (own === l && plays(l)) return unlabelled(l);
 	const at = own ?? referenceOf(system) ?? system[0];
-	return at === l ? standIn(system, l) : null;
+	return at === l ? standIn(system, l, s.copied) : null;
 }
 
 /**
@@ -119,7 +157,12 @@ export function projectPart(
 	const key = label.toLowerCase();
 	const part = parts.find((p) => p.label?.toLowerCase() === key);
 	const first = part?.lines?.[0];
-	const s: Stream = { key, name: lineName, first: lineName === null || lineName === first };
+	const s: Stream = {
+		key,
+		name: lineName,
+		first: lineName === null || lineName === first,
+		copied: copiedMeters(lines),
+	};
 	const systems = systemsOf(lines);
 	return lines.map((l) => projectLine(l, s, systems)).filter((l): l is Line => l !== null);
 }
@@ -128,6 +171,7 @@ export function projectPart(
 export function projectPartLines(lines: Line[], label: string): Line[] {
 	const key = label.toLowerCase();
 	const systems = systemsOf(lines);
+	const copied = copiedMeters(lines);
 	return lines
 		.map((l): Line | null => {
 			if (l.kind === "part") return l.label?.toLowerCase() === key ? l : null;
@@ -136,7 +180,7 @@ export function projectPartLines(lines: Line[], label: string): Line[] {
 			const own = system.filter((m) => m.part?.toLowerCase() === key);
 			if (own.length) return own.includes(l) ? l : null;
 			const at = referenceOf(system) ?? system[0];
-			return at === l ? standIn(system, l) : null;
+			return at === l ? standIn(system, l, copied) : null;
 		})
 		.filter((l): l is Line => l !== null);
 }

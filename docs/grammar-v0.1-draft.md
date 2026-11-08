@@ -130,9 +130,10 @@ Whitespace separates slots, except inside braces (section 4).
 **Beats.** In simple meters the beat is the bottom number: 4/4 has four
 quarter-note beats. In compound meters (6/8, 9/8, 12/8) the beat is the
 dotted quarter, the way musicians count them: 6/8 has 2 beats, 9/8 has 3,
-12/8 has 4. The same beat is used for `tempo:` and for the slot rule.
-`tempo:` counts the beat of the running meter, the one `time:` set; a
-one-bar meter keeps it (2.4).
+12/8 has 4. The same beat is used for `tempo:` and for the slot rule,
+except in a bar of a one-bar meter (2.4): there the slot rule counts the
+bracketed meter's beat, while `tempo:` still counts the beat of the
+running meter, the one `time:` set.
 
 A cell whose slot count neither divides the beat count nor is a multiple
 of it is a **warning**. For example, 3 slots in 4/4 gives thirds.
@@ -939,7 +940,10 @@ the piano is **tacet**: it isn't written, so it rests.
   error only; its part is tacet there.
 - **One part at a time.** A part extracted from the chart is an ordinary
   single-part chart: the tutti bars, its own bars, and each tacet stretch
-  as bars of `N.C.` (not `--`: the rest of the band still plays).
+  as bars of `N.C.` (not `--`: the rest of the band still plays), each
+  as long as the bar it stands for, a one-bar meter included: where the
+  playing line writes `| [2/8] G | % |`, the extract has
+  `| [2/8] N.C. | [2/8] N.C. |`.
 
 ### 7.5 Credits
 
@@ -1381,7 +1385,7 @@ human to say whether the band was silent, and the structure line.
 | Written bar numbers | Machine output gains `written` on each played bar (A.7), the bar's number as written, so a host can speak a printed score's measure numbers (issue #70: a correction editor for a score read). No change to what any chart means. |
 | `title:` | Kevin's ruling (2026-11-07, issue #173): `title: X` is a text line with a warning suggesting `# X`, as `meter:` suggests `time:` (7). No new syntax: a chart's title stays its `#` line, there is no `subtitle:`, and the printer prints the line as written. A converter doesn't read it as a title either; MusicXML carries it as text like any other line. |
 | What `->` cuts | Decided by Kevin (2026-11-08): `->` cuts the replay's last bar as written, from the last pass with `x N` (6); when a `Fine` or `To Coda` stops play before it, after the jump, the bar is never reached and the replay plays up to the stop. Found by the MusicXML round trip's property test: `## Intro` holding a `Fine`, replayed as `## Intro ->` after a `D.S. al Fine`, played nothing. Rejected: cutting the last bar played, which can cut a bar before a `Fine` and leave nothing. |
-| Tempo in a one-bar meter | Decided by Kevin (2026-11-08): a one-bar meter keeps the tempo unit of the `time:` in force; `tempo:` counts the beat of the running meter `time:` set, so a short or odd bar never changes speed (2.4). In `time: 6/8, tempo: 60` a `[2/8]` pickup plays at 60 dotted quarters a minute, and a `[3/4]` bar lasts two of them. After a `time:` line the tempo counts the new meter's beat, as before (2.1). Machine output gains `time` on a played bar in a one-bar meter (A.7). Rejected: the bracketed meter's own beat, which changes speed at a pickup. |
+| Tempo in a one-bar meter | Decided by Kevin (2026-11-08): a one-bar meter keeps the tempo unit of the `time:` in force; `tempo:` counts the beat of the running meter `time:` set, so a short or odd bar never changes speed (2.4). In `time: 6/8, tempo: 60` a `[2/8]` pickup plays at 60 dotted quarters a minute, and a `[3/4]` bar lasts two of them. After a `time:` line the tempo counts the new meter's beat, as before (2.1). Rejected: the bracketed meter's own beat, which changes speed at a pickup. Machine output gains `time` on a played bar in a one-bar meter (A.7), and an extracted part's tacet stand-in for a `%` takes the meter of the bar it copies (7.4). |
 | A `Coda` with no bar after it | Decided by Kevin (2026-11-08): an **error** (5.2, 9); the `Coda` an `al Coda` goes on needs a bar after it: a bar written later in the chart, or a later heading that replays one (the last chorus as the coda). It gives `To Coda` nowhere to go on, and MusicXML has no measure to carry the sign. Before, it parsed, played nothing after `To Coda` and the export dropped the sign. Rejected: a warning, which would leave the jump going nowhere. |
 
 ## Open questions
