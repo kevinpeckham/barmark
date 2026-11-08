@@ -27,7 +27,7 @@
 	],
 	"author": "Kevin Peckham",
 	"license": "MIT",
-	"homepage": "https://github.com/kevinpeckham/barmark/tree/main/packages/cli#readme",
+	"homepage": "https://www.barmark.dev",
 	"repository": {
 		"type": "git",
 		"url": "git+https://github.com/kevinpeckham/barmark.git",

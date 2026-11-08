@@ -26,6 +26,8 @@ package uses [semantic versioning](https://semver.org/).
 
 - `barmark export` with no format now says `give a format: --musicxml or
   --midi`.
+- **The npm homepage is https://www.barmark.dev**, not the package's
+  folder on GitHub.
 
 ## [0.7.0] - 2026-11-08
 
