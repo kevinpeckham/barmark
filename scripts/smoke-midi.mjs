@@ -9,9 +9,10 @@
  * Locally <module> is the built entry (dist/index.js) and the subpath is
  * read from the `exports` map in the package.json beside dist/, so a wrong
  * map fails; from npm <module> is the package name and `<name>/perform` is
- * resolved by Node itself. The chart is read but not yet used: nothing is
- * exported until exportMidi and perform arrive. Prints the result as JSON;
- * exit 1 if anything differs.
+ * resolved by Node itself. The chart is read but not yet used: the main
+ * entry exports nothing until exportMidi arrives, and the subpath exports
+ * exactly `perform` and `secondsAt`. Prints the result as JSON; exit 1 if
+ * anything differs.
  */
 import { readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
@@ -35,6 +36,9 @@ const result = {
 	main: Object.keys(main).sort(),
 	perform: Object.keys(perform).sort(),
 };
-const good = result.chart && result.main.length === 0 && result.perform.length === 0;
+const good =
+	result.chart &&
+	result.main.length === 0 &&
+	JSON.stringify(result.perform) === JSON.stringify(["perform", "secondsAt"]);
 console.log(JSON.stringify(result));
 process.exit(good ? 0 : 1);
