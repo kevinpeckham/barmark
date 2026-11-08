@@ -8,6 +8,10 @@ package uses [semantic versioning](https://semver.org/).
 
 ### Added
 
+- `renderScoreHtml` (from `@barmark/score/server`, which never reaches Verovio) draws
+  `<barmark-score>` on the server: the bar grid, the Grid / Score switch and the
+  chart text, so the grid shows before any script runs; `decodeCarried` reads the
+  text back.
 - The package and its engraving core: `engraveChart` turns a chart into
   a full score (MusicXML from `@barmark/musicxml`, engraved by Verovio)
   as one SVG column, or says why the chart will not export.
