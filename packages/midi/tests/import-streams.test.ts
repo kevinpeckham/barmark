@@ -3,7 +3,7 @@ import { type Note, notesOf } from "../src/import/notes.js";
 import { createReport } from "../src/import/report.js";
 import { harmonyNotes } from "../src/import/streams.js";
 import type { MidiImportOptions } from "../src/import/types.js";
-import { readSmf } from "../src/smf/read.js";
+import { readSmf, readSmfInto } from "../src/smf/read.js";
 import type { Smf } from "../src/smf/types.js";
 import { type Chunk, type Event, smf } from "./helpers/smf.js";
 
@@ -546,7 +546,7 @@ describe("createReport", () => {
 	test("the reader reports into a report it is given", () => {
 		const report = createReport();
 		report.add("key-doubtful", "warning", "before");
-		const r = readSmf(smf({ tracks: [[{ dt: 0, key: [9, 0] }]] }), report);
+		const r = readSmfInto(smf({ tracks: [[{ dt: 0, key: [9, 0] }]] }), report);
 		expect(r.diagnostics).toBe(report.list);
 		expect(report.list.map((d) => d.code)).toEqual(["key-doubtful", "meta-invalid"]);
 	});

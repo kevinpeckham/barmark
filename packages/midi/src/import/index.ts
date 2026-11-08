@@ -7,8 +7,8 @@
  * back as an error diagnostic too.
  */
 import { chartFromDetections } from "@barmark/sync";
-import { readSmf } from "../smf/read.js";
-import { detectionsOf, mapBuild, syncWritesPickup } from "./build.js";
+import { readSmfInto } from "../smf/read.js";
+import { detectionsOf, mapBuild, withWritablePickup } from "./build.js";
 import { directivesOf } from "./directives.js";
 import { gridOf } from "./grid.js";
 import { sectionsOf, titleOf } from "./markers.js";
@@ -35,15 +35,15 @@ const failed = (report: Report) => report.list.some((d) => d.severity === "error
 
 /** The chart, or "" once an error is reported. */
 function chartOf(bytes: Uint8Array, options: MidiImportOptions, report: Report): string {
-	const { smf, names } = readSmf(bytes, report);
+	const { smf, names } = readSmfInto(bytes, report);
 	if (smf === null || failed(report)) return "";
 	const notes = notesOf(smf, report);
 	const harmony = failed(report) ? [] : harmonyNotes(notes, names, options, report);
 	if (failed(report)) return "";
 	const last = harmony.reduce((end, n) => Math.max(end, n.end), 0);
-	const grid = gridOf(smf, last, report);
+	const read = gridOf(smf, last, report);
 	if (failed(report)) return "";
-	grid.pickup = syncWritesPickup(grid);
+	const grid = withWritablePickup(read);
 	const directives = directivesOf(smf, grid, harmony, report);
 	const runs = chordRuns(harmony, grid, directives.keys, report);
 	const sections = sectionsOf(smf, grid, report);

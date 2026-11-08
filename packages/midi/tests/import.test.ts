@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { parseChart, printChart } from "barmark";
-import { importMidi, type MidiImportResult } from "../src/index.js";
+import { importMidi, type MidiImportResult, readSmf } from "../src/index.js";
 import { type Event, smf } from "./helpers/smf.js";
 
 const PPQ = 480;
@@ -267,6 +267,37 @@ describe("importMidi", () => {
 		);
 		expect(codes(later)).toContain("change-unreadable");
 		expect(later.text).toBe("time: 4/4, tempo: 120\n| C | F | G | C |\n");
+	});
+
+	test("under a meter sync drops, the tempo counts the 4/4 sync writes", () => {
+		// 255/16 at 120 qpm is 480 sixteenths a minute; sync writes 4/4, so 120
+		const wide = read(file([at(0, { tempo: 120 }), at(0, { time: [255, 16] })], CFGC()));
+		expect(codes(wide)).toContain("meter-unreadable");
+		// (sync divides the 63¾-quarter bar into four beats: the chords fill the first)
+		expect(wide.text).toBe("tempo: 120\n| C N.C. / / |\n");
+		// the same from a meter change on: no tempo change, since sync stays in 4/4
+		const later = read(
+			file([at(0, { tempo: 120 }), at(0, { time: [4, 4] }), at(BAR, { time: [255, 16] })], CFGC()),
+		);
+		expect(codes(later)).toContain("change-unreadable");
+		expect(later.text).toBe("time: 4/4, tempo: 120\n| C | F N.C. / / |\n");
+	});
+
+	test("a respelled key's message names no key", () => {
+		// 7 flats: Cb, which sync writes as B
+		const r = read(file([at(0, { key: [-7, 0] })], chord([47, 59, 63, 66], 0, BAR)));
+		const respelled = r.diagnostics.filter((d) => d.code === "key-respelled");
+		expect(respelled).toHaveLength(1);
+		expect(respelled[0]?.message).not.toMatch(/Cb|B\b/);
+	});
+
+	test("the public readSmf reports only into its own list", () => {
+		const outside = { add: () => {}, list: [] };
+		const r = (readSmf as (bytes: Uint8Array, report?: unknown) => ReturnType<typeof readSmf>)(
+			new Uint8Array(),
+			outside,
+		);
+		expect(r.diagnostics.map((d) => d.code)).toEqual(["not-midi"]);
 	});
 });
 

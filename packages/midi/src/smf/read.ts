@@ -309,8 +309,8 @@ function readChunk(r: Reading, at: number): number | SmfRead {
 	return end;
 }
 
-/** The file's tracks; its diagnostics go to `report` (the import's, when it passes one), which `diagnostics` is. */
-export function readSmf(bytes: Uint8Array, report: Report = createReport()): SmfRead {
+/** The file's tracks, its diagnostics reported into the import's `report` (which `diagnostics` is). */
+export function readSmfInto(bytes: Uint8Array, report: Report): SmfRead {
 	if (bytes.length > LIMITS.bytes)
 		return fail(report, "too-large", "the file is larger than 16 MiB, the most import reads");
 	const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
@@ -333,4 +333,9 @@ export function readSmf(bytes: Uint8Array, report: Report = createReport()): Smf
 		names: r.names,
 		diagnostics: report.list,
 	};
+}
+
+/** The file's tracks and their names, with its diagnostics. It never throws. */
+export function readSmf(bytes: Uint8Array): SmfRead {
+	return readSmfInto(bytes, createReport());
 }

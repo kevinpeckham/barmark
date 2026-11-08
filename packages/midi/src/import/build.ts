@@ -29,12 +29,49 @@ const ticksOf = (m: Meter, ppq: number) => (m.n * 4 * ppq) / m.d;
  * back another length, or be dropped (`pickup-ignored`) and its chords
  * with it; it is a bar of its own meter instead.
  */
-export function syncWritesPickup(grid: Grid): boolean {
+function syncWritesPickup(grid: Grid): boolean {
 	const [pickup, next] = grid.bars;
 	if (!grid.pickup || pickup === undefined || next === undefined) return false;
 	if (parseMeter(`${next.meter.n}/${next.meter.d}`) === null) return false;
 	const beats = (next.start - pickup.start) / (ticksOf(next.meter, grid.ppq) / beatsOf(next.meter));
 	return Number.isInteger(beats) && beats >= 1 && beats < beatsOf(next.meter);
+}
+
+/** The grid with a pickup only where sync writes it (`syncWritesPickup`); a new grid, the one read unchanged. */
+export function withWritablePickup(grid: Grid): Grid {
+	return { ...grid, pickup: syncWritesPickup(grid) };
+}
+
+const meterOf = (text: string): Meter => {
+	const [n = 4, d = 4] = text.split("/").map(Number);
+	return { n, d };
+};
+/** A beat's length in quarters. */
+const beatQuarters = (m: Meter) => (4 * m.n) / (m.d * beatsOf(m));
+const round2 = (n: number) => Math.round(n * 100) / 100;
+
+/**
+ * The directives with each tempo counting the beat of the meter sync
+ * writes: where the file's meter is one `time:` can't write, sync drops it
+ * and keeps the meter before (4/4 at the start), so a tempo in the
+ * dropped meter's beat (255/16 at 120 qpm is 480) is restated in that one.
+ */
+function tempoForSync(directives: Directives): Pick<Directives, "tempo" | "changes"> {
+	let file = meterOf(directives.meter ?? "4/4");
+	let sync = parseMeter(directives.meter ?? "4/4") ?? { n: 4, d: 4 };
+	const restate = (bpm: number) =>
+		parseMeter(`${file.n}/${file.d}`) !== null
+			? bpm
+			: round2((bpm * beatQuarters(file)) / beatQuarters(sync));
+	const tempo = directives.tempo === null ? null : restate(directives.tempo);
+	const changes = directives.changes.map((c) => {
+		if (c.kind === "meter") {
+			file = meterOf(String(c.value));
+			sync = parseMeter(String(c.value)) ?? sync;
+		}
+		return c.kind === "tempo" ? { ...c, value: restate(Number(c.value)) } : c;
+	});
+	return { tempo, changes };
 }
 
 /** The builder's input: bars after the pickup, the pickup's start, runs, directives, sections and title. */
@@ -51,8 +88,7 @@ export function detectionsOf(
 		grid: { bars: [...grid.bars.slice(first).map((b) => at(b.start)), at(grid.end)] },
 		chords: { runs: runs.map((r) => ({ start: at(r.start), end: at(r.end), symbol: r.symbol })) },
 		key: directives.key,
-		tempo: directives.tempo,
-		changes: directives.changes,
+		...tempoForSync(directives),
 		sections: sections.map((s) => ({ name: s.name, start: at(s.tick) })),
 	};
 	if (directives.meter !== null) d.meter = directives.meter;
@@ -63,7 +99,7 @@ export function detectionsOf(
 
 /**
  * Sync's messages that name what they were given (a section's name, a
- * symbol, a run's index or seconds): each is said without it, so a message
+ * symbol, a key, a run's index or seconds): each is said without it, so a message
  * carries no value read from the file and the report counts them as one.
  */
 const PLAIN: Partial<Record<BuildDiagnostic["code"], string>> = {
@@ -72,6 +108,7 @@ const PLAIN: Partial<Record<BuildDiagnostic["code"], string>> = {
 	"label-unknown": "a chord symbol sync doesn't understand is written as ?",
 	"run-invalid": "a chord run sync couldn't use was dropped",
 	"outside-bars": "chords outside the bars were dropped",
+	"key-respelled": "a key signature is written as its enharmonic key",
 };
 
 /** The nominal start of what a path names in the input: `sections[i]`, `changes[i]`, `chords.runs[i]`. */

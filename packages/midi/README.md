@@ -11,8 +11,9 @@ chart to timed notes, is the `@barmark/midi/perform` subpath.
 npm install @barmark/midi
 ```
 
-It requires `barmark` 0.20.0 or later. It has no runtime MIDI library:
-the file is written by hand.
+It requires `barmark` 0.21.0 or later (import names chords with its
+`nameNotes`). It has no runtime MIDI library: the file is written and
+read by hand.
 
 ## Export
 
@@ -173,7 +174,7 @@ Options: `tracks` (1-based numbers or track names, any case), `simile`
 can, a `track` (1-based, in file order) and the played `bar` (a pickup is
 bar 1). A problem that repeats is reported once, with a count and its
 first bars. The codes are the import's (`not-midi`, `format-2`, `smpte`,
-`too-large`, `no-notes`, `truncated`, `track-count`, `bad-event`,
+`unknown-chunk`, `too-large`, `no-notes`, `truncated`, `track-count`, `bad-event`,
 `meta-invalid`, `meter-mid-bar`, `key-doubtful`, `harmony-from-melody`,
 `track-unknown`, `chord-unnamed`, `drums-left-out`, `melody-left-out`,
 `tempo-ramp`, `tempo-in-bar`, `marker-dropped`, and for lyrics
