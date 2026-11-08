@@ -70,7 +70,7 @@ describe("part lines in MusicXML", () => {
 		expect(first.match(/<harmony>/g)).toHaveLength(1);
 		expect(first).toMatch(/<\/harmony><note><pitch><step>E<\/step>/);
 		expect(first).not.toContain("<notehead>slash</notehead>");
-		expect(first).not.toContain("<measure-style>");
+		expect(first).not.toContain('<slash type="start"');
 	});
 	test("the spec's lead sheet: one voice, each chord symbol before the note it falls on (7.6, 7.7)", () => {
 		const xml = xmlOf(AMAZING_GRACE);

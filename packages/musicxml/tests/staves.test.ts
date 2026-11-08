@@ -48,8 +48,17 @@ describe("two staves", () => {
 		const lower = allNotes(m).filter((n) => n.includes("<staff>2</staff>"));
 		expect(lower).toHaveLength(1);
 		expect(lower[0]).toStartWith('<note><rest measure="yes"/>');
-		expect(m).toContain('<measure-style number="1"><slash type="start"');
 		expect(m.indexOf("<harmony>")).toBeLessThan(m.indexOf("<backup>"));
+	});
+	test("two staves never turn slash style on: the notes are slashes, and Verovio slashed both staves", () => {
+		const ms = measures(piano("| C | {C3 C4} | D |"));
+		for (const m of ms) expect(m).not.toContain('<slash type="start"');
+		// Off in the first measure: Verovio carries slash style on from the part before.
+		expect(ms[0]).toContain('<measure-style><slash type="stop"/></measure-style>');
+		expect(ms.slice(1).join("")).not.toContain("<measure-style");
+		expect(staff(ms[0] ?? "", 1)).toEqual(["B4:quarter", "B4:quarter", "B4:quarter", "B4:quarter"]);
+		expect(ms[0]).toContain("<notehead>slash</notehead>");
+		expect(ms[0]).toContain("<stem>none</stem>");
 	});
 	test("each staff is its own voice, joined by a backup of the bar", () => {
 		const xml = piano("| {C3 C4} |");

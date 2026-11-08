@@ -40,6 +40,20 @@ describe("engraveChart", () => {
 		expect(count(measure, /class="staff"/g)).toBe(staves);
 	});
 
+	test("a piano's slash bar: slashes on the upper staff, a rest on the lower", () => {
+		// Verovio slashed both staves of a grand staff from <measure-style number="1">.
+		const r = engraveChart(vrv, read("morning-song.chart.md"), { width: 800 });
+		if (!r.ok) throw new Error(r.reason);
+		const system = r.svg.split('class="system"')[1] ?? "";
+		const measure = system.split('class="measure"')[1] ?? "";
+		// Guitar, then the piano's two staves; the last runs on to the measure's own marks.
+		const [, upper = "", lower = ""] = measure.split('class="staff"').slice(1);
+		expect(count(upper, /class="note"/g)).toBe(4);
+		expect(count(lower, /class="beatRpt"/g)).toBe(0);
+		expect(count(lower, /class="note"/g)).toBe(0);
+		expect(count(lower, /class="(mRest|rest)"/g)).toBe(1);
+	});
+
 	test("as many measures as the export", () => {
 		const r = engraveChart(vrv, read("morning-song.chart.md"), { width: 800 });
 		if (!r.ok) throw new Error(r.reason);

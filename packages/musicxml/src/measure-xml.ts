@@ -100,14 +100,24 @@ function timeXml(m: Measure, prev: Measure | null): string {
 
 const CLEF_LINE: Record<string, number> = { G: 2, F: 4, C: 3 };
 
-/** Slash style on from the first slashed measure, off for a measure of notes, and on again after. */
-function slashStyleXml({ now: on, before }: MeasureContext["slashed"], staves: 1 | 2): string {
-	if (before === null ? !on : on === before) return "";
-	return el(
+const slashStyle = (on: boolean) =>
+	el(
 		"measure-style",
-		staves === 2 ? { number: 1 } : {},
+		{},
 		el("slash", on ? { type: "start", "use-stems": "no" } : { type: "stop" }),
 	);
+
+/**
+ * Slash style on from the first slashed measure, off for a measure of notes, and on again
+ * after. A keyboard's two staves never turn it on: its slash notes already carry slash
+ * noteheads and no stems, and Verovio slashes both staves (whole-bar rests and all) from
+ * `<measure-style number="1">`. Its first measure turns it off instead, as Verovio carries
+ * slash style on from the part before.
+ */
+function slashStyleXml({ now: on, before }: MeasureContext["slashed"], staves: 1 | 2): string {
+	if (staves === 2) return before === null ? slashStyle(false) : "";
+	if (before === null ? !on : on === before) return "";
+	return slashStyle(on);
 }
 
 /** A rhythm staff's percussion clef, on one line. */

@@ -16,6 +16,12 @@ package uses [semantic versioning](https://semver.org/).
   chord means the same notes to a program that reads kind and degrees
   (and to the import). A kind text that does not name the whole chord
   leaves its degrees printed.
+- **A keyboard's lower staff is not drawn in slashes.** A two-staff part
+  no longer writes `<measure-style number="1"><slash>`: Verovio applied it
+  to both staves and drew the lower staff's whole-bar rest as slashes. Its
+  slash notes already carry slash noteheads and no stems. Its first
+  measure now writes `<slash type="stop"/>`, as Verovio carries slash
+  style on from the part before it.
 
 ## [0.7.1] - 2026-11-08
 
