@@ -56,6 +56,15 @@ describe("readMusicXml", () => {
 		]);
 	});
 
+	test("a tie written only as <notations><tied> joins too", () => {
+		const xml = score([
+			"Piano",
+			`<measure number="1">${ATTRS()}${rest(4)}${note("G", 4, 4, '<notations><tied type="start"/></notations>')}</measure>` +
+				`<measure number="2">${note("G", 4, 8, '<notations><tied type="stop"/></notations>')}</measure>`,
+		]);
+		expect(readMusicXml(xml)?.parts[0]?.notes).toEqual([{ pitch: 67, at: 2, length: 6 }]);
+	});
+
 	test("a transposing part's written pitch is moved to sounding", () => {
 		const xml = score([
 			"Guitar",

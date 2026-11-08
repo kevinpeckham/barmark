@@ -9,6 +9,7 @@
  */
 import { keyFifths } from "../packages/midi/src/perform/keys.js";
 import type { Performance, Quarters } from "../packages/midi/src/perform/types.js";
+import { hasTie } from "../packages/musicxml/src/import/read.js";
 import {
 	child,
 	children,
@@ -166,13 +167,12 @@ class PartReader {
 		this.lyrics.push(...lyricsOf(n, at));
 		const pitch = child(n, "pitch");
 		if (!pitch || child(n, "cue")) return;
-		const ties = children(n, "tie").map((t) => t.attrs.type);
 		this.notes.push({
 			pitch: midiOf(pitch) + this.transpose,
 			at,
 			length,
-			tieStart: ties.includes("start"),
-			tieStop: ties.includes("stop"),
+			tieStart: hasTie(n, "start"),
+			tieStop: hasTie(n, "stop"),
 		});
 	}
 
