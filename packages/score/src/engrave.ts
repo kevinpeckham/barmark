@@ -52,7 +52,9 @@ export function engraveXml(
 
 function refusal(diagnostics: ChartDiagnostic[]): string {
 	const first = diagnostics.find((d) => d.severity === "error") ?? diagnostics[0];
-	return first ? `Line ${first.line}: ${first.message}` : "The chart has no bars";
+	if (!first) return "The chart has no bars";
+	// A diagnostic about the whole chart has line 0: there is no line to name.
+	return first.line > 0 ? `Line ${first.line}: ${first.message}` : first.message;
 }
 
 /** A chart as a full score, or why it cannot be one. */

@@ -59,6 +59,13 @@ describe("engraveChart", () => {
 		expect(engraveChart(vrv, "", { width: 800 }).ok).toBe(false);
 	});
 
+	test("a refusal with no line of its own has no line prefix", () => {
+		const r = engraveChart(vrv, "", { width: 800 });
+		if (r.ok) throw new Error("engraved an empty chart");
+		expect(r.diagnostics[0]?.line).toBe(0);
+		expect(r.reason).toBe(r.diagnostics[0]?.message ?? "?");
+	});
+
 	test("narrow widths clamp to 320", () => {
 		const pageWidth = (width: number) => {
 			engraveChart(vrv, read("morning-song.chart.md"), { width });

@@ -51,3 +51,4 @@ package uses [semantic versioning](https://semver.org/).
 
 - `cleanSvg` drops attributes whose value holds a character reference and
   refuses a self-closing `style`, `title` or other raw-text element.
+- A refusal about the whole chart (line 0) no longer reads "Line 0: …".
