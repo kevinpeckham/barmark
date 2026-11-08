@@ -788,6 +788,22 @@ and round-trip it through `format`.
 
 ## Tooling
 
+### A script's own 1Password environment leaked into mac-bench (2026-11-08, scripts/dorico-midi.ts)
+
+- **The symptom.** `bun scripts/dorico-midi.ts` failed every job with
+  varlock's "MAC_BENCH_TOKEN is required", though `bin/mac-bench dorico
+  --health` worked from mac-bench's own folder.
+- **The cause.** Bun loads barmark's `.env.local` into the script, and its
+  `OP_ENV_ID` and `OP_TOKEN` name barmark's 1Password environment (the
+  one Swamp uses). The spawned `bin/mac-bench` inherited them, so
+  mac-bench's varlock read barmark's environment instead of its own and
+  found no `MAC_BENCH_TOKEN`. Running the wrapper from mac-bench's folder
+  doesn't help: varlock prefers variables already set.
+- **The fix.** The script spawns mac-bench without `OP_ENV_ID` and
+  `OP_TOKEN` (`scripts/dorico-env.ts`), so mac-bench's `.env.local`
+  decides. Any script that calls another varlock repo needs the same.
+- **Where.** `scripts/dorico-env.ts`, `scripts/dorico-midi.ts`.
+
 ### The release gate failed on main because the checkout's packages were older than main (2026-11-08, barmark 0.21.0)
 
 - **The symptom.** After the barmark 0.21.0 release PR merged on green

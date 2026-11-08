@@ -25,6 +25,7 @@ import { parseChart } from "../packages/barmark/src/index.js";
 import { exportMidi } from "../packages/midi/src/index.js";
 import { perform } from "../packages/midi/src/perform/index.js";
 import { compareFile, type FileReport, formatReport } from "./dorico-compare.js";
+import { macBenchEnv } from "./dorico-env.js";
 import { DORICO_CHARTS } from "./dorico-midi-charts.js";
 
 const ROOT = new URL("../", import.meta.url);
@@ -63,6 +64,7 @@ function runMacBench(mids: string[], out: string): { lines: string[]; ok: boolea
 	if (!existsSync(bin)) throw new Error(`no mac-bench at ${MAC_BENCH} (set MAC_BENCH_DIR)`);
 	const r = Bun.spawnSync([bin, "dorico", "--midi", ...mids, "--out", out], {
 		cwd: MAC_BENCH,
+		env: macBenchEnv(process.env),
 		stdout: "pipe",
 		stderr: "inherit",
 	});
