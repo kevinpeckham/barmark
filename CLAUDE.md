@@ -92,6 +92,22 @@ Fallow, CI, Swamp), the grammar, `examples/`, the scripts and FINDINGS.md.
     `.musicxml`/`.mxl` MuseScore made of them and each expected
     `.chart.md`; `bun scripts/musescore-fixtures.ts` regenerates them on
     the VM only (`~/.local/bin/mscore`), never in CI
+- `packages/score/`: `@barmark/score`, `<barmark-score>` (the bar grid or a
+  full score engraved by Verovio in a Web Worker) and `renderScoreHtml`
+  for the server; the heavier sibling of `@barmark/render`'s
+  `<barmark-chart>`, which never loads Verovio. Depends on `barmark`,
+  `@barmark/render` and `@barmark/musicxml`; Verovio is LGPL-3.0, loaded
+  unchanged from npm
+  - `src/`: the engraving core, chart to SVG (`engrave.ts`), safe themed
+    markup (`markup.ts`), the shared module Worker and its engine
+    (`engine.ts`, `worker.ts`), the shadow-root shell and the Grid / Score
+    switch (`shell.ts`, `switch.ts`), the server entry that never reaches
+    Verovio (`server.ts`) and the element (`element.ts`)
+  - `tests/`: `bun test` with real Verovio; linkedom for the element and
+    the server markup, the MusicXML round trip (`round-trip.test.ts`,
+    helpers in `tests/helpers/`)
+  - `browser/`: Playwright suite (`bun run test:browser`, port 5261) with
+    its own page server and a bundled worker
 - `packages/sync/`: `@barmark/sync`, syncing a chart with a recording; the
   timing map (`chartHash`, `checkTimingMap`, `barAt`, `secondsAtBar`) is
   also the `@barmark/sync/timing` subpath, so a map-only reader gets no
@@ -157,7 +173,7 @@ Fallow, CI, Swamp), the grammar, `examples/`, the scripts and FINDINGS.md.
   `bun test` skips it (`bunfig.toml`), Fallow ignores it
 - `docs/superpowers/`: designs (`specs/`) and implementation plans (`plans/`)
 - `scripts/verify-package.ts`, `scripts/verify-release.ts`: release checks
-  shared by CI and Swamp; both take the package (`barmark`, `render`, `musicxml`, `sync`, `midi` or `cli`)
+  shared by CI and Swamp; both take the package (`barmark`, `render`, `musicxml`, `score`, `sync`, `midi` or `cli`)
 
 ## Commands
 
@@ -191,10 +207,15 @@ cd site && bun run dev|build|check|test|test:browser   # barmark.dev
   or other AI attribution trailer.
 - Releases follow `RELEASING.md` (the `/release` skill walks it). Each
   package is tagged on its own: `barmark-vX.Y.Z`, `render-vX.Y.Z`,
-  `musicxml-vX.Y.Z`, `sync-vX.Y.Z`, `midi-vX.Y.Z`, `cli-vX.Y.Z`. A library release is followed by a CLI release and a
+  `musicxml-vX.Y.Z`, `score-vX.Y.Z`, `sync-vX.Y.Z`, `midi-vX.Y.Z`, `cli-vX.Y.Z`. A library release is followed by a CLI release and a
   bump in `kevinpeckham/songs` (RELEASING.md steps 13–14), a `sync` or
   `midi` release included (the CLI bundles `sync` through `midi`). After
   a `sync` minor, a `midi` patch ("Requires `@barmark/sync` X.Y.0") comes
   first, then the CLI, as a `barmark` minor's caret dependants do.
+  `score` depends on `barmark`, `@barmark/render` and `@barmark/musicxml`
+  with carets, so a release of any of them may need a `score` patch
+  raising that dependency, as `midi` follows `sync`. The CLI does not
+  bundle `score`: a `score` release is followed by no CLI release and no
+  `songs` bump.
 - `@barmark/render` never changes the music: anything musical (what `%`
   copies, bar numbers, what a replay plays) comes from the parser.

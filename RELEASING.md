@@ -1,6 +1,6 @@
 # Releasing
 
-This repository publishes six npm packages from one Bun workspace, each
+This repository publishes seven npm packages from one Bun workspace, each
 versioned and released on its own:
 
 | Package | Directory | Release tag |
@@ -8,6 +8,7 @@ versioned and released on its own:
 | `barmark` | `packages/barmark` | `barmark-vX.Y.Z` |
 | `@barmark/render` | `packages/render` | `render-vX.Y.Z` |
 | `@barmark/musicxml` | `packages/musicxml` | `musicxml-vX.Y.Z` |
+| `@barmark/score` | `packages/score` | `score-vX.Y.Z` |
 | `@barmark/sync` | `packages/sync` | `sync-vX.Y.Z` |
 | `@barmark/midi` | `packages/midi` | `midi-vX.Y.Z` |
 | `@barmark/cli` | `packages/cli` | `cli-vX.Y.Z` |
@@ -63,7 +64,7 @@ npm.
 
 **A `barmark` minor release needs a release of every package that
 depends on `barmark` with a caret** (`@barmark/render`,
-`@barmark/musicxml`, `@barmark/sync` and `@barmark/midi`), even with no
+`@barmark/musicxml`, `@barmark/score`, `@barmark/sync` and `@barmark/midi`), even with no
 change of their own. In 0.x a caret range stops at the next minor
 (`^0.7.0` allows 0.7.x, not 0.8.0), so a page or the CLI that installs
 the new `barmark` beside an old dependant gets two copies, and the
@@ -80,9 +81,16 @@ same CLI gets the old one through `@barmark/midi`'s range.
 ranges, as packed at its tag, must admit the versions the binaries
 bundle beside it.
 
+**`@barmark/score`** depends on `barmark`, `@barmark/render` and
+`@barmark/musicxml` with carets, so it follows their releases the way
+`@barmark/midi` follows `@barmark/sync`: a release of any of them may need
+a `@barmark/score` patch ("Requires `@barmark/render` X.Y.0") that raises
+its dependency. The CLI does not bundle `@barmark/score`, so a score
+release is followed by no CLI release and no `songs` bump.
+
 ## Checks
 
-The same scripts run in three places; `<pkg>` is `barmark`, `render`, `musicxml`, `sync`, `midi` or `cli`:
+The same scripts run in three places; `<pkg>` is `barmark`, `render`, `musicxml`, `score`, `sync`, `midi` or `cli`:
 
 | Check | Command | Local (Swamp) | CI (every push and PR) | Release workflow |
 |---|---|---|---|---|
@@ -109,7 +117,7 @@ runs, and `verify:package cli` fails on anything else.
 
 ## Steps
 
-`<pkg>` is the package's key (`barmark`, `render`, `musicxml`, `sync`, `midi` or `cli`) and the tag is
+`<pkg>` is the package's key (`barmark`, `render`, `musicxml`, `score`, `sync`, `midi` or `cli`) and the tag is
 `<pkg>-vX.Y.Z`.
 
 1. **Start a release branch** from an up-to-date `main` with CI green:
@@ -211,7 +219,7 @@ manual step before its first release (the same for `@barmark/cli`):
    environment `npm`. Then set publishing access to require two-factor
    authentication and disallow tokens.
 3. **Rulesets** (repository settings → Rules): add the new tag pattern
-   (`cli-v*` for the CLI, `musicxml-v*` for `@barmark/musicxml`) to
+   (`cli-v*` for the CLI, `musicxml-v*` for `@barmark/musicxml`, `score-v*` for `@barmark/score`) to
    "release tags", and the new package job's checks (`package (20, cli)`,
    `package (22, cli)`, `package (24, cli)`; likewise `package (N,
    musicxml)`) to the "main" ruleset's required checks.
