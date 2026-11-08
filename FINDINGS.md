@@ -860,8 +860,8 @@ practice all its degrees are hidden, and they still mean the chord. Verovio 6.4.
 `print-object` on a degree (`ConvertDegreeToText` in its `iomusxml.cpp` appends every one), so
 `@barmark/score` drops a hidden degree before Verovio reads the file (`forVerovio` in
 `packages/score/src/engrave.ts`); Verovio now draws `D7sus4` and `G5(7)`. (2) A two-staff part
-writes no slash style, and every part that doesn't start in slashes writes `<slash
-type="stop"/>` in its first measure: Verovio ignores
+writes no slash style, and a part after one that left slash style on writes `<slash
+type="stop"/>` in its first measure unless it starts in slashes: Verovio ignores
 `measure-style`'s `number` and keeps its slash state from one part to the next (one reader-wide
 `m_slash`), so the guitar's slash style alone turned the piano's lower-staff rests into
 slashes. Verovio now draws the rests (`engrave.test.ts`). Dorico used the piano's
@@ -894,9 +894,9 @@ whatever its `number`, never reset at a new part, which turns any
 `<rest measure="yes"/>` into beat slashes while it is on. So the guitar's slash
 style ran on into the piano. **Fix:** `@barmark/score` drops a hidden degree
 before Verovio reads the file (`forVerovio`, `packages/score/src/engrave.ts`);
-every part's first measure states its slash style, `<slash type="stop"/>` when it
-doesn't start in slashes (a two-staff part always), so no part inherits the one
-before's (`slashStyleXml`, `packages/musicxml/src/measure-xml.ts`). A one-staff part
+a part's first measure writes `<slash type="stop"/>` when the part before left
+slash style on and it doesn't start in slashes itself (a two-staff part never does),
+so no part inherits the one before's, and a slash-free chart writes no slash element (`slashStyleXml`, `packages/musicxml/src/measure-xml.ts`). A one-staff part
 after a slashed one (`Gtr | G | C |` then a tutti `| D | G |`: the bass's opening
 rest drew as four slashes) was caught in review and fixed the same day; it moved
 the score round trip's `replay-holds` rests from 71 to 73. Both Verovio behaviours

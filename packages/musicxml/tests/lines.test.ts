@@ -70,7 +70,7 @@ describe("part lines in MusicXML", () => {
 		expect(first.match(/<harmony>/g)).toHaveLength(1);
 		expect(first).toMatch(/<\/harmony><note><pitch><step>E<\/step>/);
 		expect(first).not.toContain("<notehead>slash</notehead>");
-		expect(first).not.toContain('<slash type="start"');
+		expect(first).not.toContain("<measure-style>");
 	});
 	test("the spec's lead sheet: one voice, each chord symbol before the note it falls on (7.6, 7.7)", () => {
 		const xml = xmlOf(AMAZING_GRACE);
@@ -79,7 +79,7 @@ describe("part lines in MusicXML", () => {
 		for (const bar of bars) {
 			expect(notes(bar).every((n) => tag(n, "voice") === "1")).toBe(true);
 			expect(bar).not.toContain("<notehead>slash</notehead>");
-			expect(bar).not.toContain('<slash type="start"');
+			expect(bar).not.toContain("<slash");
 		}
 		// Each chord symbol's kind, and the note it stands right before.
 		const chords = (bar: string) =>

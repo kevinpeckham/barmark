@@ -18,7 +18,7 @@ import {
 } from "./events.js";
 import { type Instrument, instrumentOf } from "./instruments.js";
 import { lyricPartXml, lyricScorePart } from "./lyric-staff.js";
-import { fifthsOf, measureXml, placeIn } from "./measure-xml.js";
+import { fifthsOf, leavesSlashes, measureXml, placeIn } from "./measure-xml.js";
 import { writtenMeasures } from "./measures.js";
 import { rhythmic, slashed, soundOf } from "./notes.js";
 import { applyPedals } from "./pedal.js";
@@ -154,17 +154,28 @@ function bareAlone(
 	};
 }
 
-function partXml(source: PartSource, i: number): string {
+/** A part's streams (its lines, the first leading) and the bars it writes, pedals applied. */
+function partBars(source: PartSource) {
 	const [lead, ...others] = source.parses;
 	const first = streamOf(lead);
 	const streams = [first, ...others.map(streamOf)];
-	const lined = (source.part?.lines?.length ?? 0) > 0;
-	const { measures } = first;
 	const bare = source.bare ? streamOf(source.bare) : null;
 	const pedalled = applyPedals(first.bars, (i) => streams.every((s) => s.bars[i]?.measure.tacet));
-	const { bars, rhythmicBars, beside } = bareAlone(pedalled, first.rhythmicBars, streams, bare);
+	return { first, streams, bare, ...bareAlone(pedalled, first.rhythmicBars, streams, bare) };
+}
+
+/** A part's `<part>`, and whether it leaves slash style on; `carried`: the part before did. */
+function partXml(
+	source: PartSource,
+	i: number,
+	carried: boolean,
+): { xml: string; slashes: boolean } {
+	const { first, streams, bare, bars, rhythmicBars, beside } = partBars(source);
+	const lined = (source.part?.lines?.length ?? 0) > 0;
+	const { measures } = first;
 	const slashedBars = bars.map(slashed);
 	const instrument = instrumentOf(source.part);
+	const staves = instrument?.staves ?? 1;
 	const keys = measures.flatMap((m) => (m.key ? [fifthsOf(m.key)] : []));
 	const written = fitWritten(instrument?.written ?? { diatonic: 0, chromatic: 0 }, keys);
 	const fixed = instrument?.clef;
@@ -176,11 +187,11 @@ function partXml(source: PartSource, i: number): string {
 		measureXml(bar, {
 			divisions,
 			...placeIn(measures, index),
-			slashed: around(slashedBars, index, true),
+			slashed: { ...around(slashedBars, index, true), carried },
 			clef: around(clefs, index, "G"),
 			rhythmic: rhythmicBars[index] ?? false,
 			written,
-			staves: instrument?.staves ?? 1,
+			staves,
 			score: i === 0,
 			...(lined
 				? { lines: [bar.events, ...streams.slice(1).map((s) => s.bars[index]?.events ?? [])] }
@@ -188,7 +199,19 @@ function partXml(source: PartSource, i: number): string {
 			...(beside[index] ? { bare: beside[index] } : {}),
 		}),
 	);
-	return el("part", { id: `P${i + 1}` }, xml);
+	return { xml: el("part", { id: `P${i + 1}` }, xml), slashes: leavesSlashes(slashedBars, staves) };
+}
+
+/** Every part's `<part>` in score order, each told whether the part before left slash style on. */
+function partsXml(sources: PartSource[]): { xml: string[]; slashes: boolean } {
+	const out: string[] = [];
+	let slashes = false;
+	sources.forEach((source, i) => {
+		const part = partXml(source, i, slashes);
+		out.push(part.xml);
+		slashes = part.slashes;
+	});
+	return { xml: out, slashes };
 }
 
 /** Whether a chart with no parts sings on its notes: some note carries a syllable (grammar 4.3). */
@@ -256,7 +279,8 @@ export function exportMusicXml(chart: string, options: MusicXmlOptions = {}): Mu
 		identificationXml(parse.credits),
 		el("part-list", {}, [...sources.map(scorePart), words ? lyricScorePart(wordsId) : ""]),
 	];
-	const parts = [...sources.map(partXml), words ? lyricPartXml(words, wordsId) : ""];
+	const written = partsXml(sources);
+	const parts = [...written.xml, words ? lyricPartXml(words, wordsId, written.slashes) : ""];
 	const xml = `<?xml version="1.0" encoding="UTF-8"?>\n${DOCTYPE}\n${el("score-partwise", { version: "4.0" }, [...head, ...parts])}\n`;
 	return { ok: true, xml, diagnostics: parse.diagnostics };
 }

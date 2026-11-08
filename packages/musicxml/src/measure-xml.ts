@@ -48,8 +48,11 @@ export type MeasureContext = {
 	written: WrittenInterval;
 	/** Whether this bar shows its rhythm (`rhythmic`): its slashes stemmed, in the meter's values. */
 	rhythmic: boolean;
-	/** Whether this bar shows slashes, and the bar before it (null for the first). */
-	slashed: { now: boolean; before: boolean | null };
+	/**
+	 * Whether this bar shows slashes, and the bar before it (null for the first); `carried`:
+	 * whether the part before left slash style on, which Verovio carries into this part.
+	 */
+	slashed: { now: boolean; before: boolean | null; carried?: boolean };
 	/** Two for a keyboard: treble and bass, the slashes on the upper. */
 	staves: 1 | 2;
 	/** Each of a part's lines' events in this bar, its first line's first (barmark's grammar 7.6); absent when it writes none. */
@@ -135,16 +138,25 @@ const slashStyle = (on: boolean) =>
 
 /**
  * Slash style on from the first slashed measure, off for a measure of notes, and on again
- * after. A part's first measure always says which: Verovio carries slash style on from the
- * part before, and drew a following part's whole-bar rests as slashes. A keyboard's two
- * staves never turn it on: its slash notes already carry slash noteheads and no stems, and
- * Verovio slashes both staves (whole-bar rests and all) from `<measure-style number="1">`.
+ * after. A part's first measure turns it off when the part before left it on: Verovio
+ * carries slash style from one part to the next, and drew a following part's whole-bar
+ * rests as slashes. A keyboard's two staves never turn it on: its slash notes already
+ * carry slash noteheads and no stems, and Verovio slashes both staves (whole-bar rests
+ * and all) from `<measure-style number="1">`.
  */
-function slashStyleXml({ now: on, before }: MeasureContext["slashed"], staves: 1 | 2): string {
-	if (before === null) return slashStyle(on && staves === 1);
+function slashStyleXml(
+	{ now: on, before, carried }: MeasureContext["slashed"],
+	staves: 1 | 2,
+): string {
+	const starts = on && staves === 1;
+	if (before === null) return starts ? slashStyle(true) : carried ? slashStyle(false) : "";
 	if (staves === 2 || on === before) return "";
 	return slashStyle(on);
 }
+
+/** Whether a part leaves slash style on after its last measure, as Verovio reads it. */
+export const leavesSlashes = (slashedBars: boolean[], staves: 1 | 2) =>
+	staves === 1 && slashedBars.at(-1) === true;
 
 /** A rhythm staff's percussion clef, on one line. */
 const RHYTHM_CLEF =

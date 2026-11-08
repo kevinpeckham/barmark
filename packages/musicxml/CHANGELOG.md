@@ -20,9 +20,11 @@ package uses [semantic versioning](https://semver.org/).
   no longer writes `<measure-style number="1"><slash>`: Verovio applied it
   to both staves and drew the lower staff's whole-bar rest as slashes. Its
   slash notes already carry slash noteheads and no stems.
-- **No part inherits the slash style of the part before it.** Every part
-  that doesn't start in slashes now writes `<slash type="stop"/>` in its
-  first measure: Verovio carries slash style from one part to the next,
+- **No part inherits the slash style of the part before it.** A part
+  after one that left slash style on, and that doesn't start in slashes
+  itself, now writes `<slash type="stop"/>` in its first measure (a
+  slash-free chart writes no slash element): Verovio carries slash style
+  from one part to the next,
   and drew a bass's opening whole-bar rest, after a slashed guitar, as
   four slashes.
 - **A pickup is written as a pickup.** A first bar in a one-bar meter

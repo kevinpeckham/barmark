@@ -55,7 +55,16 @@ describe("notes", () => {
 		const [first = "", second = ""] = measures(xml, "P2");
 		expect(first).toContain('<measure-style><slash type="stop"/></measure-style>');
 		expect(second).not.toContain("<measure-style");
-		expect(measures(xmlOf("| {C E G} | {D F A} |"))[0]).toContain('<slash type="stop"/>');
+		// Only a slashed part before it needs the stop: a slash-free score has no slash element.
+		expect(xmlOf("| {C E G} | {D F A} |")).not.toContain("<slash");
+		// A part before that never leaves slash style on: no stop either.
+		const before = xmlOf(
+			"part: Bs = Bass\npart: Gtr = Guitar\nBs | {C2} | {D2} |\n## B\nGtr | D | G |",
+		);
+		expect(measures(before, "P1").join("")).not.toContain("<slash");
+		const [gtr1 = "", , gtr3 = ""] = measures(before, "P2");
+		expect(gtr1).not.toContain("<slash");
+		expect(gtr3).toContain('<slash type="start"');
 	});
 	test("slash style stops in a part's tacet bars", () => {
 		// A one-staff part: a keyboard's two staves write no slash style (staves.test.ts).

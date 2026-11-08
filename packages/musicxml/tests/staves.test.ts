@@ -53,9 +53,13 @@ describe("two staves", () => {
 	test("two staves never turn slash style on: the notes are slashes, and Verovio slashed both staves", () => {
 		const ms = measures(piano("| C | {C3 C4} | D |"));
 		for (const m of ms) expect(m).not.toContain('<slash type="start"');
-		// Off in the first measure: Verovio carries slash style on from the part before.
-		expect(ms[0]).toContain('<measure-style><slash type="stop"/></measure-style>');
-		expect(ms.slice(1).join("")).not.toContain("<measure-style");
+		// Alone, nothing turned slash style on: no measure-style at all.
+		expect(ms.join("")).not.toContain("<measure-style");
+		// After a slashed part, off in the first measure: Verovio carries slash style on from it.
+		const after = xmlOf("part: Gtr = Guitar\npart: Pno = Piano\n| C | {C3 C4} | D |");
+		const [first = "", ...rest] = measures(after, "P2");
+		expect(first).toContain('<measure-style><slash type="stop"/></measure-style>');
+		expect(rest.join("")).not.toContain("<measure-style");
 		expect(staff(ms[0] ?? "", 1)).toEqual(["B4:quarter", "B4:quarter", "B4:quarter", "B4:quarter"]);
 		expect(ms[0]).toContain("<notehead>slash</notehead>");
 		expect(ms[0]).toContain("<stem>none</stem>");
