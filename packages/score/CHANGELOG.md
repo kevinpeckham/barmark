@@ -22,6 +22,12 @@ package uses [semantic versioning](https://semver.org/).
   otherwise and in print, honouring `--barmark-ink` and `--barmark-rule`,
   in render's label font (`--barmark-label-font`). A page no longer has to
   colour the host itself.
+- **Chord accidentals and the tempo's note draw in Chromium.** Verovio
+  declares its Leipzig font (the ♯, ♭ and ♩) inside the score's SVG, in the
+  shadow root, where Chromium never registers a font face, so `C♯m7` drew
+  as `C m7`. The element now copies that face, once per document, into a
+  `<style data-barmark-score-font>` in the head. A page that copied it
+  itself can drop the copy.
 
 ## [0.1.0] - 2026-11-08
 

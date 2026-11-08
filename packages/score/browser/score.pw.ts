@@ -241,3 +241,24 @@ test("the switch's font is the chart's label font, not the page's initial serif"
 		.evaluate((b) => getComputedStyle(b).fontFamily);
 	expect(font).toContain("system-ui");
 });
+
+test("chord accidentals and the tempo's note draw in Leipzig, registered with the document", async ({
+	page,
+}) => {
+	await page.goto("/score?chart=sharps");
+	const el = page.locator("barmark-score");
+	await switchToScore(el);
+	// A face declared only inside the shadow root's SVG is one Chromium never loads.
+	const leipzig = await page.evaluate(async () => {
+		await document.fonts.load('12px "Leipzig"', "\uE262");
+		return [...document.fonts]
+			.filter((f) => f.family.replaceAll('"', "") === "Leipzig")
+			.map((f) => f.status);
+	});
+	expect(leipzig).toEqual(["loaded"]);
+	// One copy for the page, however many scores show it.
+	await page.goto("/score?chart=sharps&count=2");
+	await switchToScore(page.locator("#s0"));
+	await switchToScore(page.locator("#s1"));
+	expect(await page.locator("head style[data-barmark-score-font]").count()).toBe(1);
+});

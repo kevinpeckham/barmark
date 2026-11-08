@@ -21,7 +21,7 @@ import {
 } from "@barmark/render/element";
 import { parseChart } from "barmark";
 import type { Engine, EngraveReply } from "./engine.js";
-import { scorePane } from "./markup.js";
+import { isLeipzigFace, scorePane } from "./markup.js";
 import { decodeCarried, gridError, scoreShell } from "./shell.js";
 import { type ScoreView, viewOf } from "./switch.js";
 
@@ -66,6 +66,23 @@ function addFont(doc: Document): void {
 	const url = new URL("../../render/fonts/Edwin-Roman.otf", import.meta.url);
 	const font = Object.assign(doc.createElement("style"), { textContent: fontFaceCss(url.href) });
 	font.setAttribute("data-barmark-font", FONT_FAMILY);
+	doc.head.append(font);
+}
+
+/**
+ * Verovio's Leipzig face (the ♯, ♭ and ♩ of chord symbols and tempo marks), once per
+ * document. Verovio declares it in a `<style>` inside the score's SVG, in the shadow
+ * root, where Chromium never registers a font face, so "C♯m7" drew as "C m7". The
+ * copy is the face `cleanSvg` already let through, checked again here.
+ */
+function addScoreFont(doc: Document, pane: Element): void {
+	if (doc.querySelector("style[data-barmark-score-font]") !== null) return;
+	const css = [...pane.querySelectorAll("style")]
+		.map((s) => s.textContent ?? "")
+		.find(isLeipzigFace);
+	if (!css) return;
+	const font = Object.assign(doc.createElement("style"), { textContent: css });
+	font.setAttribute("data-barmark-score-font", "Leipzig");
 	doc.head.append(font);
 }
 
@@ -388,6 +405,7 @@ function defineElement(): void {
 			if (this.#revealed?.svg !== svg || this.#revealed.theme !== theme) {
 				try {
 					pane.innerHTML = scorePane(svg, theme, label);
+					addScoreFont(this.ownerDocument, pane);
 				} catch (e) {
 					return this.#fail(messageOf(e));
 				}
