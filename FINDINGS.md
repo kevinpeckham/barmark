@@ -720,6 +720,29 @@ and round-trip it through `format`.
 
 ## Tooling
 
+### MuseScore's MIDI import keeps one text event a tick, and makes credits a lyric (2026-11-08, midi export)
+
+- **The symptom.** `bun scripts/midi-fixtures.ts --check-export` sent
+  Peaceful Dreams, Morning Song and the lead sheet through MuseScore 4.7.6
+  (`mscore -o x.musicxml x.mid`). Bars, meters, keys, tempos (the
+  fermata's third of the tempo included), programs and track names came
+  through, and every part had the chart's played bars. But the lead
+  sheet's second verse was gone (`Hap`, not `Whis`, at the first tick),
+  the conductor track's `Composer: Kevin Peckham` text event became a
+  verse-1 lyric on the first note of the first part, `Lyricist: …` at the
+  same tick was dropped, and neither the markers (section headings), the
+  title (track 1's name), the copyright nor the words (`FTristan`, a text
+  event on the `Voice chords` track) appeared anywhere.
+- **The cause.** MuseScore's importer, not our file: the file holds both
+  verses at one tick in verse order, as MuseScore's own export writes
+  them (spec 8), and `midi-file` reads every event back. The importer
+  seems to take one lyric or text event a tick and to read a text event
+  as a lyric; it reads no markers.
+- **The fix.** None in the export: the file follows the spec, and other
+  programs (GarageBand, Logic, Dorico) are checked before the release.
+  The check compares measures only, not lyrics. Phase 2's import must not
+  expect MuseScore's round trip to keep a second verse or the markers.
+
 ### Raising an exact pin left Bun's nested copies of the old version (2026-11-07, site bump)
 
 - **The symptom.** barmark.dev's bump to `barmark` 0.19.1 left `bun.lock`

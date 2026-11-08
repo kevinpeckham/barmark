@@ -8,14 +8,13 @@
  * checked-in outputs and never needs MuseScore. It then checks that our
  * export's lyrics survive MuseScore; `--lyrics` runs that check alone.
  */
-import { spawnSync } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { homedir, tmpdir } from "node:os";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { exportMusicXml, importMusicXml } from "../packages/musicxml/src/index.js";
+import { convert, requireMscore } from "./mscore.js";
 
-const MSCORE = `${homedir()}/.local/bin/mscore`;
 const DIR = fileURLToPath(new URL("../packages/musicxml/tests/fixtures/import/", import.meta.url));
 
 /** Each source and the formats it is converted to. */
@@ -27,21 +26,13 @@ const SOURCES: [string, string[]][] = [
 	["hymn", ["musicxml", "mxl"]],
 ];
 
-/** Converts one file; MuseScore prints Qt warnings and may exit 0 on failure, so the output file decides. */
-function convert(source: string, out: string): void {
-	rmSync(out, { force: true });
-	const run = spawnSync(MSCORE, ["-o", out, source], { encoding: "utf8" });
-	if (!existsSync(out)) throw new Error(`MuseScore didn't write ${out}:\n${run.stderr}`);
-}
-
 /** The importer must take the file as another program's: MuseScore names itself in `<software>`. */
 function checkSoftware(xml: string): void {
 	if (!readFileSync(xml, "utf8").includes("<software>MuseScore"))
 		throw new Error(`${xml} doesn't name MuseScore as its software`);
 }
 
-if (!existsSync(MSCORE))
-	throw new Error(`MuseScore not found at ${MSCORE} (this script runs on the VM)`);
+requireMscore();
 /** Regenerates every fixture from its `.mscx`, and the chart each `.musicxml` imports to. */
 function regenerate(): void {
 	for (const [name, formats] of SOURCES)

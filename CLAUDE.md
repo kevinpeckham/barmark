@@ -111,10 +111,23 @@ Fallow, CI, Swamp), the grammar, `examples/`, the scripts and FINDINGS.md.
   chart's play order; the performance core (chart to timed notes) is the
   `@barmark/midi/perform` subpath, which imports nothing from `smf/`,
   `export/` or `import/`
+  - `src/perform/`: `perform(parse)` in exact quarters (`quarters.ts`),
+    walking `parse.events` (`perform.ts`): tracks and programs
+    (`tracks.ts`), what a slot sounds (`voicing.ts`, `line.ts`), accents,
+    hits and pushes (`figures.ts`), the pedal (`pedal.ts`), swing
+    (`swing.ts`), the tempo map (`tempo.ts`), keys (`keys.ts`), markers,
+    words and lyrics (`marks.ts`, `lyrics.ts`)
+  - `src/export/`: `exportMidi`: ticks and the division (`ticks.ts`),
+    channels, skipping channel 10 (`channels.ts`), the tracks written
+    (`index.ts`)
   - `src/smf/`: the hand-written Standard MIDI File writer (`write.ts`,
     `vlq.ts`, `types.ts`): no runtime MIDI library
   - `tests/`: `bun test`; every file is read back with `midi-file`
-    (a devDependency, pinned exactly), an independent parser
+    (a devDependency, pinned exactly), an independent parser, and
+    `helpers/player.ts` hears it beat by beat against the chart;
+    `export-scale.test.ts` holds a 1,000-bar export linear.
+    `bun scripts/midi-fixtures.ts --check-export` puts three charts'
+    exports through MuseScore on the VM only, never in CI
 - `packages/cli/`: `@barmark/cli`, the `barmark` command (`check`,
   `format`, `part`, `render`, `transpose`, `export`, `import`), a thin
   layer over the libraries, pinned to them exactly
