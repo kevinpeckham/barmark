@@ -27,6 +27,13 @@ Releases follow the process in [RELEASING.md](RELEASING.md).
   spelled by its interval from the root, or by pitch when that would
   double (`E(#9)/G`); with no key, a black-key root takes the spelling
   with fewer awkward notes (`Db`, `C#m`, `G#dim7`).
+- **`time` on a played bar in a one-bar meter** (Kevin's decision,
+  2026-11-08, grammar 2.4, A.7): the meter of the `time:` in force,
+  whose beat `tempo:` counts there, so a short or odd bar never changes
+  speed. In `time: 6/8, tempo: 60` a `[2/8]` pickup plays at 60 dotted
+  quarters a minute, not 60 eighths. Absent on any other bar, where
+  `meter` is the `time:` meter. No change to what any chart means
+  otherwise.
 
 ### Fixed
 

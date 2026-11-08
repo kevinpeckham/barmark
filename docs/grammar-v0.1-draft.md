@@ -131,6 +131,8 @@ Whitespace separates slots, except inside braces (section 4).
 quarter-note beats. In compound meters (6/8, 9/8, 12/8) the beat is the
 dotted quarter, the way musicians count them: 6/8 has 2 beats, 9/8 has 3,
 12/8 has 4. The same beat is used for `tempo:` and for the slot rule.
+`tempo:` counts the beat of the running meter, the one `time:` set; a
+one-bar meter keeps it (2.4).
 
 A cell whose slot count neither divides the beat count nor is a multiple
 of it is a **warning**. For example, 3 slots in 4/4 gives thirds.
@@ -224,6 +226,20 @@ A `%` after a bracketed bar repeats that bar exactly, meter included:
 The brackets keep a time signature apart from the `6/9` chord. The value
 must be valid for `time:`. A bracket anywhere but the start of a cell is
 an **error**.
+
+A one-bar meter changes the bar's length and its slot rule, never its
+speed: `tempo:` still counts the beat of the `time:` in force, so a short
+or odd bar plays at the tempo around it. In
+
+```
+time: 6/8, tempo: 60
+| [2/8] E7 | Am | Dm |
+```
+
+the `[2/8]` pickup plays at 60 dotted quarters a minute (90 quarter notes
+a minute), like the bars after it, not at 60 eighths; a `[3/4]` bar in 6/8
+lasts two dotted quarters at that same speed. A `time:` line is different:
+after it, `tempo:` counts the new meter's beat (2.1).
 
 ### 2.5 Rehearsal marks
 
@@ -683,7 +699,7 @@ key: D, time: 4/4, tempo: 145, feel: swing
 |---|---|---|
 | `key:` | a root plus optional `m` (`D`, `Bm`, `F#m`; `B minor` accepted), or a root and a mode: `A mixolydian`, `E dorian` | none (key unknown) |
 | `time:` | `n/d` where d is 2, 4, 8 or 16 | `4/4` |
-| `tempo:` | beats per minute from 1 to 999, counting the meter's beat (2.1): `145` (`145 bpm` accepted). In 6/8, `tempo: 60` is 60 dotted quarters a minute. Or a gradual change (7.2): `rit.`, `accel.`, either `to` a tempo, or `a tempo`. | none (tempo unknown) |
+| `tempo:` | beats per minute from 1 to 999, counting the beat (2.1) of the meter `time:` set, a one-bar meter's bar included (2.4): `145` (`145 bpm` accepted). In 6/8, `tempo: 60` is 60 dotted quarters a minute. Or a gradual change (7.2): `rit.`, `accel.`, either `to` a tempo, or `a tempo`. | none (tempo unknown) |
 | `feel:` | `straight`, `swing`, `shuffle`, `swing 16`; the last three with an optional amount (`swing 58%`, 7.1) | `straight` |
 
 - **Modes.** `key:` accepts `major`, `minor`, and the seven church modes
@@ -1365,6 +1381,7 @@ human to say whether the band was silent, and the structure line.
 | Written bar numbers | Machine output gains `written` on each played bar (A.7), the bar's number as written, so a host can speak a printed score's measure numbers (issue #70: a correction editor for a score read). No change to what any chart means. |
 | `title:` | Kevin's ruling (2026-11-07, issue #173): `title: X` is a text line with a warning suggesting `# X`, as `meter:` suggests `time:` (7). No new syntax: a chart's title stays its `#` line, there is no `subtitle:`, and the printer prints the line as written. A converter doesn't read it as a title either; MusicXML carries it as text like any other line. |
 | What `->` cuts | Decided by Kevin (2026-11-08): `->` cuts the replay's last bar as written, from the last pass with `x N` (6); when a `Fine` or `To Coda` stops play before it, after the jump, the bar is never reached and the replay plays up to the stop. Found by the MusicXML round trip's property test: `## Intro` holding a `Fine`, replayed as `## Intro ->` after a `D.S. al Fine`, played nothing. Rejected: cutting the last bar played, which can cut a bar before a `Fine` and leave nothing. |
+| Tempo in a one-bar meter | Decided by Kevin (2026-11-08): a one-bar meter keeps the tempo unit of the `time:` in force; `tempo:` counts the beat of the running meter `time:` set, so a short or odd bar never changes speed (2.4). In `time: 6/8, tempo: 60` a `[2/8]` pickup plays at 60 dotted quarters a minute, and a `[3/4]` bar lasts two of them. After a `time:` line the tempo counts the new meter's beat, as before (2.1). Machine output gains `time` on a played bar in a one-bar meter (A.7). Rejected: the bracketed meter's own beat, which changes speed at a pickup. |
 | A `Coda` with no bar after it | Decided by Kevin (2026-11-08): an **error** (5.2, 9); the `Coda` an `al Coda` goes on needs a bar after it: a bar written later in the chart, or a later heading that replays one (the last chorus as the coda). It gives `To Coda` nowhere to go on, and MusicXML has no measure to carry the sign. Before, it parsed, played nothing after `To Coda` and the export dropped the sign. Rejected: a warning, which would leave the jump going nowhere. |
 
 ## Open questions
@@ -1503,6 +1520,7 @@ Each slot parses to one record:
 | `form` | on a section occurrence: which distinct section it plays, numbered from 0 in order of first appearance; a replay shares its written section's number, so hosts can label form (A, B, A, B, C) |
 | `parts` | on a chord: the canonical root, quality, extension, sus, tones (in canonical order) and bass its spelling is built from; empty for a note set |
 | `tempo` | on a played bar: the steady tempo, or empty when unknown |
+| `time` | on a played bar in a one-bar meter (2.4): the meter of the `time:` in force, whose beat `tempo` counts; absent on any other bar |
 | `tempoChange` | on a played bar inside a rit. or accel.: its `kind` (`rit` or `accel`), `from` (the steady tempo) and `to` (the target, or empty when open); empty outside one |
 | `swingPercent` | on a played bar and a directive: the swing amount in force (50 to 75), or empty for the bare word (66.7) and for `straight` |
 | `written` | on a played bar: its number as written, counting each written bar once in written order (`%` included, `...` not). A repeat or replay plays its bars under the numbers they were written with, and a bar line dropped for an error still counts its bars, so the numbers after it hold |
