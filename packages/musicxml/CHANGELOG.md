@@ -6,6 +6,8 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.7.1] - 2026-11-08
+
 ### Fixed
 
 - **A tempo on a one-bar meter counts the `time:` meter's beat**
@@ -520,7 +522,8 @@ and each grammar example's sounding notes and chord symbols.
 - **Errors:** a chart with errors, or with no bars, returns its
   diagnostics and no XML; characters XML can't hold are left out.
 
-[Unreleased]: https://github.com/kevinpeckham/barmark/compare/musicxml-v0.7.0...HEAD
+[Unreleased]: https://github.com/kevinpeckham/barmark/compare/musicxml-v0.7.1...HEAD
+[0.7.1]: https://github.com/kevinpeckham/barmark/compare/musicxml-v0.7.0...musicxml-v0.7.1
 [0.7.0]: https://github.com/kevinpeckham/barmark/compare/musicxml-v0.6.4...musicxml-v0.7.0
 [0.6.4]: https://github.com/kevinpeckham/barmark/compare/musicxml-v0.6.3...musicxml-v0.6.4
 [0.6.3]: https://github.com/kevinpeckham/barmark/compare/musicxml-v0.6.2...musicxml-v0.6.3

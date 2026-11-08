@@ -47,7 +47,7 @@
     },
     "packages/musicxml": {
       "name": "@barmark/musicxml",
-      "version": "0.7.0",
+      "version": "0.7.1",
       "dependencies": {
         "barmark": "workspace:^",
         "fast-xml-parser": "5.12.0",
