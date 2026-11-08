@@ -14,7 +14,7 @@ export const decodeCarried = (text: string) =>
 
 /** The shadow root's content around a drawn grid: styles, the switch, the grid, the (empty) score pane. */
 export const scoreShell = (grid: string, view: ScoreView) =>
-	`<style>${stylesheet}${switchStyles}${scoreStyles}</style>${switchHtml(view)}<div class="bms-grid">${grid}</div><div class="bms-score" hidden></div>`;
+	`<style>${stylesheet}${switchStyles}${scoreStyles}</style>${switchHtml(view)}<div class="bms-grid">${grid}</div><div class="bms-pane" hidden></div>`;
 
 const ENTITIES: Record<string, string> = {
 	"&": "&amp;",

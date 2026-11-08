@@ -12,7 +12,9 @@ package uses [semantic versioning](https://semver.org/).
   as a full score, with a Grid / Score switch (a keyboard radio group). Its
   chart comes from `text`, `src` or a script child, as `<barmark-chart>`'s does,
   and it takes every grid attribute plus `view` (`grid` | `score`) and
-  `verovio-url`; a `viewchange` event follows the view. The score engine loads
+  `verovio-url` (resolved against the page, http(s) only); a `viewchange`
+  event follows the view. A `view="score"` set before the chart arrives waits
+  for it. The score engine loads
   only on the first switch to the score, engraves at the element's width (again
   after a resize), and shows "Loading score…" meanwhile; a score that can't be
   drawn leaves the grid with a note by the switch. A shadow root drawn by

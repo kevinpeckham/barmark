@@ -96,8 +96,24 @@ type Engraving = { text: string; width: number };
 const same = (a: Engraving | null, b: Engraving) =>
 	a !== null && a.text === b.text && Math.abs(a.width - b.width) <= SLACK;
 
-/** What the grid draws: the chart text (null when there is none to engrave) and its markup. */
-type Grid = { text: string | null; html: string | null };
+/**
+ * What the grid draws: the chart text (null when it could not be loaded,
+ * undefined while there is no source yet) and its markup.
+ */
+type Grid = { text: string | null | undefined; html: string | null };
+
+const URL_REASON = "verovio-url must be an http(s) URL";
+
+/** `verovio-url` resolved against the page: undefined when absent, null unless http(s). */
+function verovioHref(value: string | null, base: string | undefined): string | null | undefined {
+	if (value === null) return undefined;
+	try {
+		const url = new URL(value, base);
+		return url.protocol === "http:" || url.protocol === "https:" ? url.href : null;
+	} catch {
+		return null;
+	}
+}
 
 function defineElement(): void {
 	class BarmarkScore extends HTMLElement {
@@ -113,14 +129,16 @@ function defineElement(): void {
 		#engraves = 0;
 		#fetched: { src: string; text: Promise<string> } | null = null;
 		#text: string | null = null;
-		/** The chart the grid shows, or null when there is nothing to engrave. */
-		#chart: string | null = null;
+		/** The chart the grid shows: null when it could not be loaded, undefined until there is a source. */
+		#chart: string | null | undefined;
 		/** Whether the shadow root has been drawn (or a server-drawn one taken over). */
 		#drawn = false;
 		/** The view last shown, null before the first: a change from it fires `viewchange`. */
 		#shown: ScoreView | null = null;
 		#failed = false;
 		#engraved: (Engraving & { svg: string }) | null = null;
+		/** The engraving and theme the pane holds, so an unchanged one is not written again. */
+		#revealed: { svg: string; theme: string } | null = null;
 		#asked: Engraving | null = null;
 
 		connectedCallback() {
@@ -200,7 +218,7 @@ function defineElement(): void {
 			script: Element | null,
 			options: RenderOptions,
 		): Promise<Grid> {
-			if (source === "none") return { text: null, html: null };
+			if (source === "none") return { text: undefined, html: null };
 			try {
 				const text = await this.#chartText(source, script);
 				return { text, html: renderChartUnwrapped(text, options) };
@@ -244,7 +262,7 @@ function defineElement(): void {
 			return {
 				switcher: root?.querySelector(".bms-switch") ?? null,
 				grid: root?.querySelector(".bms-grid") ?? null,
-				pane: root?.querySelector(".bms-score") ?? null,
+				pane: root?.querySelector(".bms-pane") ?? null,
 				radios: [...(root?.querySelectorAll(".bms-switch [data-view]") ?? [])],
 			};
 		}
@@ -311,18 +329,22 @@ function defineElement(): void {
 
 		/** Shows the score, engraving it first unless the one in hand is for this chart and width. */
 		#showScore() {
+			// No source yet: the grid stays and the score is engraved once the chart arrives.
+			if (this.#chart === undefined) return this.#showGrid();
 			if (this.#chart === null) return this.#fail("there is no chart to engrave");
 			const want = { text: this.#chart, width: this.clientWidth || 0 };
 			if (this.#engraved && same(this.#engraved, want)) return this.#reveal(this.#engraved.svg);
-			if (!same(this.#asked, want)) void this.#engrave(want);
+			if (same(this.#asked, want)) return this.#busy();
+			const url = verovioHref(this.getAttribute("verovio-url"), this.ownerDocument.baseURI);
+			if (url === null) return this.#fail(URL_REASON);
+			void this.#engrave(want, url);
 		}
 
 		/** Engraves `want`; only the newest request this element made is shown. */
-		async #engrave(want: Engraving) {
+		async #engrave(want: Engraving, url: string | undefined) {
 			this.#busy();
 			this.#asked = want;
 			const ask = ++this.#engraves;
-			const url = this.getAttribute("verovio-url") ?? undefined;
 			let reply: EngraveReply | null;
 			try {
 				reply = await (await loadEngine()).engrave(this, want.text, want.width, url);
@@ -339,6 +361,7 @@ function defineElement(): void {
 		#busy() {
 			const { grid, pane } = this.#parts();
 			if (!pane) return;
+			this.#revealed = null;
 			pane.textContent = LOADING;
 			pane.setAttribute("aria-busy", "true");
 			pane.toggleAttribute("hidden", false);
@@ -348,13 +371,15 @@ function defineElement(): void {
 		#reveal(svg: string) {
 			const { grid, pane } = this.#parts();
 			if (!pane) return;
-			let html: string;
-			try {
-				html = scorePane(svg, optionsFromAttributes(this).theme ?? "auto");
-			} catch (e) {
-				return this.#fail(messageOf(e));
+			const theme = optionsFromAttributes(this).theme ?? "auto";
+			if (this.#revealed?.svg !== svg || this.#revealed.theme !== theme) {
+				try {
+					pane.innerHTML = scorePane(svg, theme);
+				} catch (e) {
+					return this.#fail(messageOf(e));
+				}
+				this.#revealed = { svg, theme };
 			}
-			pane.innerHTML = html;
 			pane.removeAttribute("aria-busy");
 			pane.toggleAttribute("hidden", false);
 			grid?.toggleAttribute("hidden", true);
@@ -378,6 +403,7 @@ function defineElement(): void {
 			radios
 				.find((r) => r.getAttribute("data-view") === "score")
 				?.setAttribute("aria-disabled", "true");
+			this.#revealed = null;
 			pane?.replaceChildren();
 			pane?.removeAttribute("aria-busy");
 			this.#showGrid();

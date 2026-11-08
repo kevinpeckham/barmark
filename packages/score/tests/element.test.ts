@@ -6,7 +6,9 @@ import type { Engine, EngraveReply } from "../src/engine.js";
 import { renderScoreHtml } from "../src/server.js";
 
 // linkedom stands in for the browser: its window's classes become the globals the element uses.
-const window = parseHTML("<!doctype html><html><head></head><body></body></html>");
+const window = parseHTML(
+	'<!doctype html><html><head><base href="https://example.test/page/"></head><body></body></html>',
+);
 const { document } = window;
 Object.assign(globalThis, {
 	HTMLElement: window.HTMLElement,
@@ -110,7 +112,7 @@ const parts = (el: HTMLElement) => {
 	return {
 		root,
 		grid: root.querySelector(".bms-grid") as HTMLElement,
-		pane: root.querySelector(".bms-score") as HTMLElement,
+		pane: root.querySelector(".bms-pane") as HTMLElement,
 		radios: [...root.querySelectorAll('[role="radio"]')] as HTMLElement[],
 		note: root.querySelector(".bms-note"),
 	};
@@ -143,7 +145,7 @@ describe("<barmark-score>", () => {
 		await flush();
 		expect(made).toBe(1);
 		expect(calls.map((c) => [c.text, c.width, c.verovioUrl])).toEqual([
-			[chart, 0, "/vrv/verovio.mjs"],
+			[chart, 0, "https://example.test/vrv/verovio.mjs"],
 		]);
 		expect(pane.textContent).toBe("Loading score…");
 		expect(pane.getAttribute("aria-busy")).toBe("true");
@@ -151,6 +153,7 @@ describe("<barmark-score>", () => {
 		calls[0]?.resolve({ id: 1, ok: true, svg: svg("first"), pages: 1 });
 		await flush();
 		expect(pane.querySelector(".bm-chart[data-theme='auto'] g.first")).not.toBeNull();
+		expect(parts(el).root.querySelectorAll(".bms-score")).toHaveLength(1);
 		expect(pane.hasAttribute("aria-busy")).toBe(false);
 		expect(pane.hasAttribute("hidden")).toBe(false);
 		expect(grid.hasAttribute("hidden")).toBe(true);
@@ -234,6 +237,66 @@ describe("<barmark-score>", () => {
 			setEngineForTests(fakeEngine);
 			warn.mockRestore();
 		}
+	});
+
+	for (const url of ["data:text/javascript,1", "blob:https://example.test/x", "javascript:1"])
+		test(`a verovio-url of ${url.split(":")[0]}: is refused`, async () => {
+			const warn = spyOn(console, "warn").mockImplementation(() => {});
+			try {
+				const el = await make({ view: "score", "verovio-url": url });
+				expect(made).toBe(0);
+				expect(calls).toHaveLength(0);
+				expect(el.view).toBe("grid");
+				expect(parts(el).note?.textContent).toBe("The score couldn't be drawn");
+				expect(String(warn.mock.calls[0]?.[0])).toContain("verovio-url must be an http(s) URL");
+			} finally {
+				warn.mockRestore();
+			}
+		});
+
+	test("switching back to a score still engraving shows it loading", async () => {
+		const el = await make({ view: "score" });
+		const [grid, score] = parts(el).radios as [HTMLElement, HTMLElement];
+		click(grid);
+		await flush();
+		click(score);
+		await flush();
+		const { pane, grid: gridPane } = parts(el);
+		expect(calls).toHaveLength(1);
+		expect(pane.textContent).toBe("Loading score…");
+		expect(pane.getAttribute("aria-busy")).toBe("true");
+		expect(pane.hasAttribute("hidden")).toBe(false);
+		expect(gridPane.hasAttribute("hidden")).toBe(true);
+	});
+
+	test("the score view waits for a chart that has not arrived", async () => {
+		const warn = spyOn(console, "warn").mockImplementation(() => {});
+		try {
+			const el = await make({ view: "score" }, null);
+			const { grid, note, radios } = parts(el);
+			expect(el.view).toBe("score");
+			expect(grid.hasAttribute("hidden")).toBe(false);
+			expect(note).toBeNull();
+			expect(radios[1]?.hasAttribute("aria-disabled")).toBe(false);
+			expect(warn).not.toHaveBeenCalled();
+			expect(calls).toHaveLength(0);
+			el.text = chart;
+			await flush();
+			expect(calls.map((c) => c.text)).toEqual([chart]);
+		} finally {
+			warn.mockRestore();
+		}
+	});
+
+	test("a grid-only change leaves the shown score alone", async () => {
+		const el = await make({ view: "score" });
+		calls[0]?.resolve({ id: 1, ok: true, svg: svg("first"), pages: 1 });
+		await flush();
+		const shown = parts(el).pane.firstElementChild;
+		el.setAttribute("bar-numbers", "off");
+		await flush();
+		expect(parts(el).pane.firstElementChild).toBe(shown);
+		expect(calls).toHaveLength(1);
 	});
 
 	test("text changed while engraving shows the new score", async () => {

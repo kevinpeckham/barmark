@@ -33,7 +33,8 @@ describe("renderScoreHtml", () => {
 		expect(radios.map((r) => r.textContent)).toEqual(["Grid", "Score"]);
 		expect(radios.map((r) => r.getAttribute("aria-checked"))).toEqual(["true", "false"]);
 		expect(radios.map((r) => r.getAttribute("tabindex"))).toEqual([null, "-1"]);
-		expect(inner.querySelector(".bms-score")?.hasAttribute("hidden")).toBe(true);
+		expect(inner.querySelector(".bms-pane")?.hasAttribute("hidden")).toBe(true);
+		expect(inner.querySelector(".bms-score")).toBeNull();
 	});
 
 	test("carries chart text holding </script> intact", () => {
