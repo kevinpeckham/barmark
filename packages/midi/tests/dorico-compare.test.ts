@@ -281,3 +281,78 @@ describe("the hand-written charts", () => {
 		}
 	});
 });
+
+describe("a pickup, as MusicXML writes it", () => {
+	/** A chart `[1/4] | 3/4 | 3/4`: one quarter, then two bars of three. */
+	const pickupPerf = (): Performance => ({
+		...PERF([track("Chart", [])]),
+		bars: [
+			{ index: 1, at: { n: 0, d: 1 }, meter: { n: 1, d: 4 } },
+			{ index: 2, at: { n: 1, d: 1 }, meter: { n: 3, d: 4 } },
+			{ index: 3, at: { n: 4, d: 1 }, meter: { n: 3, d: 4 } },
+		],
+		end: { n: 7, d: 1 },
+	});
+	const rests = `<measure number="2">${rest(6)}</measure><measure number="3">${rest(6)}</measure>`;
+	const implicit = score([
+		"Piano",
+		`<measure number="X0" implicit="yes">${ATTRS("3/4")}${rest(2)}</measure>${rests}`,
+	]);
+	const full = score(["Piano", `<measure number="1">${ATTRS("3/4")}${rest(6)}</measure>${rests}`]);
+
+	test("an implicit first measure shorter than its meter is the pickup, then the written meter", () => {
+		expect(readMusicXml(implicit)?.times).toEqual([
+			{ at: 0, n: 1, d: 4 },
+			{ at: 1, n: 3, d: 4 },
+		]);
+	});
+
+	test("the played pickup and the meter after it are kept", () => {
+		const r = compareFile("t", pickupPerf(), implicit, null);
+		expect(r.time).toMatchObject({ kept: 2, changed: [], dropped: [], added: [] });
+	});
+
+	test("a full first measure is no pickup: the played 1/4 is changed to the written meter", () => {
+		expect(readMusicXml(full)?.times).toEqual([{ at: 0, n: 3, d: 4 }]);
+		const r = compareFile("t", pickupPerf(), full, null);
+		expect(r.time.kept).toBe(0);
+		expect(r.time.changed).toMatchObject([{ bar: 1, value: "1/4", found: "3/4" }]);
+	});
+
+	test("a pickup that isn't a whole number of the written beat is counted in finer beats", () => {
+		const m = (time: string, music: number) =>
+			readMusicXml(
+				score([
+					"Piano",
+					`<measure number="X0" implicit="yes">${ATTRS(time)}${rest(music)}</measure>`,
+				]),
+			)?.times;
+		// a quarter of music in 6/8 is 2/8
+		expect(m("6/8", 2)).toEqual([
+			{ at: 0, n: 2, d: 8 },
+			{ at: 1, n: 6, d: 8 },
+		]);
+		// 3/8 of music in 4/4
+		expect(m("4/4", 3)).toEqual([
+			{ at: 0, n: 3, d: 8 },
+			{ at: 1.5, n: 4, d: 4 },
+		]);
+	});
+
+	test("meters are compared in lowest terms: a played 2/8 pickup is Dorico's 1/4", () => {
+		const perf: Performance = {
+			...pickupPerf(),
+			bars: [
+				{ index: 1, at: { n: 0, d: 1 }, meter: { n: 2, d: 8 } },
+				{ index: 2, at: { n: 1, d: 1 }, meter: { n: 4, d: 4 } },
+				{ index: 3, at: { n: 5, d: 1 }, meter: { n: 4, d: 4 } },
+			],
+		};
+		const xml = score([
+			"Piano",
+			`<measure number="X0" implicit="yes">${ATTRS("4/4")}${rest(2)}</measure><measure number="2">${rest(8)}</measure>`,
+		]);
+		const r = compareFile("t", perf, xml, null);
+		expect(r.time).toMatchObject({ kept: 2, changed: [], dropped: [], added: [] });
+	});
+});
