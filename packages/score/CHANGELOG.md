@@ -11,3 +11,8 @@ package uses [semantic versioning](https://semver.org/).
 - The package and its engraving core: `engraveChart` turns a chart into
   a full score (MusicXML from `@barmark/musicxml`, engraved by Verovio)
   as one SVG column, or says why the chart will not export.
+- Safe, themed score markup: `cleanSvg` drops scripts, `foreignObject`,
+  `on*` attributes and links that leave the page; `scorePane` wraps the
+  pages in render's `.bm-chart[data-theme]` so the score follows the
+  palette (light, dark, auto, print); `scoreStyles` is the score's own
+  layout.
