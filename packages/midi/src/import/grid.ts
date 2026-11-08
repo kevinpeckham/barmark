@@ -7,7 +7,7 @@
  * `MAX_EXPANDED_BARS` bars, a pickup counted (`too-large`).
  */
 import { MAX_EXPANDED_BARS, type Meter } from "barmark";
-import type { Smf, SmfEvent } from "../smf/types.js";
+import { type Smf, type SmfEvent, TIME } from "../smf/types.js";
 import type { Report } from "./report.js";
 
 /** Bars in ticks; `end` is where the last ends. The pickup, when found, is `bars[0]`. */
@@ -17,8 +17,6 @@ export type Grid = {
 	end: number;
 	pickup: boolean;
 };
-
-const TIME = 0x58;
 
 /** A meta event's tick and bytes. */
 export type MetaAt = { tick: number; data: Uint8Array };
@@ -41,7 +39,7 @@ export function metaOf(smf: Smf, type: number): MetaAt[] {
 }
 
 /** The time signatures: 4/4 before the first (the SMF default). */
-function signaturesOf(smf: Smf): { tick: number; meter: Meter }[] {
+export function signaturesOf(smf: Smf): { tick: number; meter: Meter }[] {
 	return metaOf(smf, TIME).map(({ tick, data }) => ({
 		tick,
 		meter: { n: data[0] ?? 4, d: 2 ** (data[1] ?? 2) },
@@ -121,7 +119,11 @@ export function gridOf(smf: Smf, lastTick: number, report: Report): Grid {
 	const bars: Grid["bars"] = [];
 	while (bars.length === 0 || w.tick < lastTick) {
 		if (bars.length === MAX_EXPANDED_BARS) {
-			report.add("too-large", "error", "the file has more than 10,000 bars, the most import reads");
+			report.add(
+				"too-large",
+				"error",
+				`the file has more than ${MAX_EXPANDED_BARS.toLocaleString("en-US")} bars, the most import reads`,
+			);
 			return { ppq: smf.ppq, bars: [], end: 0, pickup: false };
 		}
 		bars.push(nextBar(w, report, bars.length + 1));

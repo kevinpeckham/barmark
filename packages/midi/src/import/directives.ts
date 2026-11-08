@@ -10,16 +10,17 @@
  *   (`key-doubtful`).
  * - **Meter:** each bar's; a change where it differs from the bar
  *   before's. A pickup's meter is not a change: sync writes its `[k/d]`.
- * - **Tempo:** a bar's is the qpm at its downbeat in grammar 2.1's beat,
- *   to two decimals (a pickup counts the beat of the bar after it). A
- *   ramp, changes in one direction on two or more consecutive downbeats,
+ * - **Tempo:** a bar's is the qpm at its downbeat in grammar 2.1's beat
+ *   of the signature in force, to two decimals (a pickup counts the beat
+ *   of the bar after it). A ramp, changes in one direction on two or more
+ *   consecutive downbeats with the tempo moving inside the bars between,
  *   writes its final tempo at its final bar (`tempo-ramp`); a tempo that
  *   moves inside a bar and is back by the next downbeat writes nothing
  *   (`tempo-in-bar`).
  */
 import { beatsOf, type Meter } from "barmark";
-import type { Smf } from "../smf/types.js";
-import { barAt, type Grid, type MetaAt, metaOf } from "./grid.js";
+import { KEY, type Smf, TEMPO } from "../smf/types.js";
+import { barAt, type Grid, type MetaAt, metaOf, signaturesOf } from "./grid.js";
 import { type Note, pitchClassPoints } from "./notes.js";
 import type { Report } from "./report.js";
 
@@ -36,8 +37,6 @@ export type Directives = {
 	keys: KeyAt[];
 };
 
-const TEMPO = 0x51;
-const KEY = 0x59;
 /** The share of the harmony's sounding time a key's scale must cover. */
 const KEY_FIT = 0.6;
 
@@ -47,10 +46,9 @@ const meterText = (m: Meter) => `${m.n}/${m.d}`;
 function metersOf(grid: Grid): Pick<Directives, "meter" | "changes"> {
 	const first = grid.pickup ? 1 : 0;
 	const changes: Change[] = [];
-	for (let i = first + 1; i < grid.bars.length; i++) {
-		const bar = grid.bars[i] as Grid["bars"][number];
-		const before = grid.bars[i - 1]?.meter as Meter;
-		if (meterText(bar.meter) !== meterText(before))
+	for (const [i, bar] of grid.bars.entries()) {
+		const before = grid.bars[i - 1]?.meter;
+		if (i > first && before && meterText(bar.meter) !== meterText(before))
 			changes.push({ kind: "meter", start: nominal(grid, bar.start), value: meterText(bar.meter) });
 	}
 	const start = grid.bars[first]?.meter;
@@ -86,33 +84,65 @@ const round2 = (n: number) => Math.round(n * 100) / 100;
 /** Beats a minute, counting the meter's beat. */
 const bpm = (qpm: number, m: Meter) => round2((qpm * beatsOf(m) * m.d) / (4 * m.n));
 
-/** Each bar's span, and the meter whose beat its tempo counts. */
-function spans(grid: Grid) {
-	return grid.bars.map((bar, i) => ({
-		start: bar.start,
-		end: grid.bars[i + 1]?.start ?? grid.end,
-		beat: (grid.pickup && i === 0 ? grid.bars[1]?.meter : undefined) ?? bar.meter,
-	}));
+type Span = { start: number; end: number; beat: Meter };
+
+/**
+ * Each bar's span, and the meter whose beat its tempo counts: the
+ * signature in force at its start, so a bar cut short by a signature
+ * counts its signature's beat; a pickup counts the beat of the bar after it.
+ */
+function spans(smf: Smf, grid: Grid): Span[] {
+	const sigs = signaturesOf(smf);
+	let next = 0;
+	let signature: Meter = { n: 4, d: 4 };
+	return grid.bars.map((bar, i) => {
+		for (let s = sigs[next]; s !== undefined && s.tick <= bar.start; s = sigs[++next])
+			signature = s.meter;
+		const pickup = grid.pickup && i === 0 ? grid.bars[1]?.meter : undefined;
+		return {
+			start: bar.start,
+			end: grid.bars[i + 1]?.start ?? grid.end,
+			beat: pickup ?? signature,
+		};
+	});
 }
 
-/** Whether the tempo moves inside a bar and is back by the next downbeat. */
-function stretched(tempos: Qpm[], span: { start: number; end: number }): boolean {
+/** Whether the tempo moves inside a bar: an event after its downbeat, before the next, at another qpm. */
+function moves(tempos: Qpm[], span: Span): boolean {
 	const at = qpmAt(tempos, span.start);
-	if (qpmAt(tempos, span.end) !== at) return false;
 	for (let i = lastAt(tempos, span.start) + 1; (tempos[i]?.tick ?? span.end) < span.end; i++)
 		if (tempos[i]?.qpm !== at) return true;
 	return false;
 }
 
-/** The bars where the tempo changes, ramps written as their final tempo. */
-function tempoChanges(grid: Grid, downbeats: number[], report: Report): Change[] {
+/** Whether the tempo moves inside a bar and is back by the next downbeat. */
+const stretched = (tempos: Qpm[], span: Span, moving: boolean) =>
+	moving && qpmAt(tempos, span.end) === qpmAt(tempos, span.start);
+
+/**
+ * The bars where the tempo changes. A ramp, changes in one direction on
+ * consecutive downbeats with the tempo moving inside each bar between
+ * them, is written as its final tempo; changes only at bar lines are
+ * kept, each one (Claude's ruling, 2026-11-08).
+ */
+function tempoChanges(
+	grid: Grid,
+	downbeats: number[],
+	moving: boolean[],
+	report: Report,
+): Change[] {
 	const changes: Change[] = [];
 	const direction = (i: number) => Math.sign((downbeats[i] ?? 0) - (downbeats[i - 1] ?? 0));
-	for (let i = 1; i < downbeats.length; i++) {
-		const dir = direction(i);
-		if (dir === 0) continue;
+	/** The last downbeat of the ramp starting at change `i`: on while the direction holds and the bar before moves. */
+	const rampEnd = (i: number) => {
 		let last = i;
-		while (last + 1 < downbeats.length && direction(last + 1) === dir) last++;
+		while (last + 1 < downbeats.length && direction(last + 1) === direction(i) && moving[last])
+			last++;
+		return last;
+	};
+	for (let i = 1; i < downbeats.length; i++) {
+		if (direction(i) === 0) continue;
+		const last = rampEnd(i);
 		if (last > i)
 			report.add("tempo-ramp", "info", "a gradual tempo change is written as a step to its end", {
 				bar: last + 1,
@@ -126,9 +156,10 @@ function tempoChanges(grid: Grid, downbeats: number[], report: Report): Change[]
 
 function tempoOf(smf: Smf, grid: Grid, report: Report) {
 	const tempos = temposOf(metaOf(smf, TEMPO));
-	const bars = spans(grid);
+	const bars = spans(smf, grid);
+	const moving = bars.map((span) => moves(tempos, span));
 	for (const [i, span] of bars.entries())
-		if (stretched(tempos, span))
+		if (stretched(tempos, span, moving[i] ?? false))
 			report.add(
 				"tempo-in-bar",
 				"info",
@@ -136,7 +167,7 @@ function tempoOf(smf: Smf, grid: Grid, report: Report) {
 				{ bar: i + 1 },
 			);
 	const downbeats = bars.map((span) => bpm(qpmAt(tempos, span.start), span.beat));
-	return { tempo: downbeats[0] ?? null, changes: tempoChanges(grid, downbeats, report) };
+	return { tempo: downbeats[0] ?? null, changes: tempoChanges(grid, downbeats, moving, report) };
 }
 
 // --- Key ---

@@ -133,7 +133,7 @@ describe("gridOf", () => {
 		const big = gridOf(pickup, 480 + 10_000 * BAR, over);
 		expect(big.bars).toEqual([]);
 		expect(over.list.map((d) => [d.severity, d.code])).toEqual([["error", "too-large"]]);
-		expect(over.list[0]?.message).toContain("10,000 bars");
+		expect(over.list[0]?.message).toContain("more than 10,000 bars");
 		// without a pickup, 10,000 bars fit
 		expect(gridOf(file([]), 10_000 * BAR, createReport()).bars.length).toBe(10_000);
 	});
@@ -223,12 +223,16 @@ describe("directivesOf", () => {
 	});
 
 	test("a ramp writes its end", () => {
+		// 100 to bar 2, then 95, 90, 85 at the downbeats of bars 3-5, each bar sliding on, and 80 at bar 6
 		const five = directives(
 			file([
 				tempo(0, 100),
 				tempo(2 * BAR, 95),
+				tempo(2 * BAR + 960, 92.5),
 				tempo(3 * BAR, 90),
+				tempo(3 * BAR + 960, 87.5),
 				tempo(4 * BAR, 85),
+				tempo(4 * BAR + 960, 82.5),
 				tempo(5 * BAR, 80),
 			]),
 		);
@@ -237,18 +241,40 @@ describe("directivesOf", () => {
 			["info", "tempo-ramp", 6],
 		]);
 
-		const three = directives(file([tempo(0, 100), tempo(BAR, 90), tempo(2 * BAR, 80)]));
+		const three = directives(
+			file([tempo(0, 100), tempo(BAR, 90), tempo(BAR + 960, 85), tempo(2 * BAR, 80)]),
+		);
 		expect(three.tempo).toBe(100);
 		expect(tempos(three.changes)).toEqual([{ kind: "tempo", start: sec(2 * BAR), value: 80 }]);
 		expect(codes(three.report)).toEqual([["tempo-ramp", 3]]);
+
+		// a ramp still sliding in the last bar ends at the last downbeat
+		const sliding = directives(
+			file([
+				tempo(0, 100),
+				tempo(BAR, 90),
+				tempo(BAR + 960, 85),
+				tempo(2 * BAR, 80),
+				tempo(2 * BAR + 960, 75),
+			]),
+			chord([60], 0, 3 * BAR),
+		);
+		expect(tempos(sliding.changes)).toEqual([{ kind: "tempo", start: sec(2 * BAR), value: 80 }]);
 
 		const single = directives(file([tempo(0, 100), tempo(BAR, 80)]));
 		expect(tempos(single.changes)).toEqual([{ kind: "tempo", start: sec(BAR), value: 80 }]);
 		expect(single.report.list).toEqual([]);
 
-		// a ramp, then a change the other way: the ramp's end, then a plain change
+		// a ramp still sliding in its last bar, then a change the other way: the ramp's end, then a plain change
 		const back = directives(
-			file([tempo(0, 100), tempo(BAR, 90), tempo(2 * BAR, 80), tempo(3 * BAR, 100)]),
+			file([
+				tempo(0, 100),
+				tempo(BAR, 90),
+				tempo(BAR + 960, 85),
+				tempo(2 * BAR, 80),
+				tempo(2 * BAR + 960, 75),
+				tempo(3 * BAR, 100),
+			]),
 		);
 		expect(tempos(back.changes).map((c) => [c.start, c.value])).toEqual([
 			[sec(2 * BAR), 80],
@@ -258,6 +284,35 @@ describe("directivesOf", () => {
 		const apart = directives(file([tempo(0, 100), tempo(BAR, 90), tempo(3 * BAR, 80)]));
 		expect(tempos(apart.changes).map((c) => c.value)).toEqual([90, 80]);
 		expect(apart.report.list).toEqual([]);
+	});
+
+	test("steps at bar lines are kept, not read as a ramp", () => {
+		const steps = directives(
+			file([
+				tempo(0, 100),
+				tempo(2 * BAR, 95),
+				tempo(3 * BAR, 90),
+				tempo(4 * BAR, 85),
+				tempo(5 * BAR, 80),
+			]),
+		);
+		expect(tempos(steps.changes).map((c) => [c.start, c.value])).toEqual([
+			[sec(2 * BAR), 95],
+			[sec(3 * BAR), 90],
+			[sec(4 * BAR), 85],
+			[sec(5 * BAR), 80],
+		]);
+		expect(steps.report.list).toEqual([]);
+		// the chart's own steps come back as written
+		const out = exportMidi("tempo: 100\n| C |\ntempo: 110\n| C |\ntempo: 120\n| C |\n");
+		if (!out.ok) throw new Error("export failed");
+		const read = readSmf(out.bytes);
+		if (read.smf === null) throw new Error("read failed");
+		const report = createReport();
+		const grid = gridOf(read.smf, 3 * BAR, report);
+		const d = directivesOf(read.smf, grid, chord([60], 0, 3 * BAR), report);
+		expect([d.tempo, tempos(d.changes).map((c) => c.value)]).toEqual([100, [110, 120]]);
+		expect(report.list).toEqual([]);
 	});
 
 	test("the export's ramp comes back as its target at its last bar", () => {
@@ -271,6 +326,24 @@ describe("directivesOf", () => {
 		expect(d.tempo).toBe(100);
 		expect(tempos(d.changes)).toEqual([{ kind: "tempo", start: sec(2 * BAR), value: 80 }]);
 		expect(codes(report)).toEqual([["tempo-ramp", 3]]);
+		// an accel. over four bars likewise
+		const accel = exportMidi("tempo: 100\n| C |\ntempo: accel. to 140\n| C | C | C | C |\n");
+		if (!accel.ok) throw new Error("export failed");
+		const file2 = readSmf(accel.bytes).smf;
+		if (file2 === null) throw new Error("read failed");
+		const r2 = createReport();
+		const a = directivesOf(file2, gridOf(file2, 5 * BAR, r2), chord([60], 0, 5 * BAR), r2);
+		expect(tempos(a.changes)).toEqual([{ kind: "tempo", start: sec(4 * BAR), value: 140 }]);
+		expect(codes(r2)).toEqual([["tempo-ramp", 5]]);
+	});
+
+	test("a cut bar counts the beat of the signature in force", () => {
+		const d = directives(file([time(0, 4, 4), time(1000, 4, 4), tempo(0, 120)]));
+		expect(d.grid.bars[0]?.meter).toEqual({ n: 8, d: 16 });
+		expect([d.tempo, tempos(d.changes)]).toEqual([120, []]);
+		const compound = directives(file([time(0, 6, 8), time(720, 6, 8), tempo(0, 90)]));
+		expect(compound.grid.bars[0]?.meter).toEqual({ n: 3, d: 8 });
+		expect([compound.tempo, tempos(compound.changes)]).toEqual([60, []]);
 	});
 
 	test("a stretch inside a bar writes nothing", () => {

@@ -9,7 +9,7 @@
 import { createReport, type Report } from "../import/report.js";
 import type { MidiImportCode, MidiImportDiagnostic } from "../import/types.js";
 import { decodeText } from "./text.js";
-import type { Smf, SmfEvent } from "./types.js";
+import { KEY, type Smf, type SmfEvent, TEMPO, TIME } from "./types.js";
 
 export const LIMITS = { bytes: 16 * 1024 * 1024, tracks: 1024, events: 2_000_000 } as const;
 
@@ -22,9 +22,6 @@ export type SmfRead = {
 
 const TRACK_NAME = 0x03;
 const END_OF_TRACK = 0x2f;
-const TEMPO = 0x51;
-const TIME = 0x58;
-const KEY = 0x59;
 /** The meta events import reads (spec 5.1): text, copyright, track name, lyric, marker, end of track, tempo, time and key. */
 const KEPT_META = new Set([0x01, 0x02, TRACK_NAME, 0x05, 0x06, END_OF_TRACK, TEMPO, TIME, KEY]);
 

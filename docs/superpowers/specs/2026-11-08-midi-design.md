@@ -602,13 +602,20 @@ examples slot by slot.
   `time:` lines, not `[2/4]` (sync has no one-bar meters; the pickup is
   the exception).
 - **Tempo:** a bar's tempo is the qpm in force at its downbeat, in
-  grammar 2.1's beat (qpm ÷ the beat in quarters), rounded to two
+  grammar 2.1's beat (qpm ÷ the beat in quarters) of the time signature
+  in force (a bar cut short by a signature counts its signature's beat,
+  a pickup the beat of the bar after it), rounded to two
   decimals. A `tempo:` line is written where a bar's tempo differs from
   the bar before's. A **ramp**, the downbeat tempo changing in the same
-  direction on two or more consecutive downbeats (so three or more bars),
-  writes only its final tempo, at its final bar (`tempo-ramp`, info): v1
-  writes no `rit.`/`accel.`. The export's ramp reaches its target at a
-  downbeat (3.7), so its target comes back exactly.
+  direction on two or more consecutive downbeats (so three or more bars)
+  **with the tempo moving inside each bar between them** (Claude's
+  ruling, 2026-11-08: tempos that change only at bar lines are steps the
+  chart wrote, `tempo: 100 | C | tempo: 110 | C | tempo: 120 | C |`, and
+  each is kept), writes only its final tempo, at its final bar
+  (`tempo-ramp`, info): v1 writes no `rit.`/`accel.`. The export's ramp
+  moves a beat at a time inside its bars and reaches its target at a
+  downbeat (3.7), so it is read as a ramp and its target comes back
+  exactly.
   A tempo that changes inside a bar and is back by the next downbeat (a
   fermata stretch) writes nothing (`tempo-in-bar`, info, with a count).
   The export's ramp and fermata therefore come back as a step and as
