@@ -1651,7 +1651,7 @@ with `git archive HEAD | tar -x -C <scratch>`, then symlink the root
 relative), or use a separate `git worktree`. Task 13b's experiments ran
 this way.
 
-### Dorico's MIDI import of our exports (first full run, 2026-11-08, midi)
+### Dorico's MIDI import of our exports, first full run (2026-11-08, midi)
 
 **Symptom:** the first full live run of `bun scripts/dorico-midi.ts`
 (Dorico Elements 6.2.31, all 12 charts: `scripts/dorico-midi-charts.ts`,
@@ -1665,7 +1665,8 @@ its `<time>` and one beat of music. MusicXML writes a pickup as an
 implicit measure shorter than its time signature, and
 `scripts/dorico-compare.ts` read the written meter as the bar's meter.
 **Fix:** `PartReader.pickup` reads an implicit first measure shorter than
-its meter as the pickup's own meter (1/4) followed by the written meter
+its meter as the pickup's own meter (its length in the written
+beat, e.g. 2/8 in 6/8) followed by the written meter
 from the next bar. A full, non-implicit first measure is still reported
 as changed. Where: `scripts/dorico-compare.ts`,
 `packages/midi/tests/dorico-compare.test.ts`.

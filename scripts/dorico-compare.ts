@@ -120,10 +120,14 @@ class PartReader {
 	private pickup(): void {
 		const written = this.marks.times.find((t) => t.at === 0);
 		if (!written || this.end < EPSILON || this.end > this.meter - EPSILON) return;
-		const n = (this.end * written.d) / 4;
+		let d = written.d;
+		while (d < 32 && Math.abs((this.end * d) / 4 - Math.round((this.end * d) / 4)) > EPSILON)
+			d *= 2;
+		const n = (this.end * d) / 4;
 		if (Math.abs(n - Math.round(n)) > EPSILON) return;
 		this.marks.times.push({ at: this.end, n: written.n, d: written.d });
 		written.n = Math.round(n);
+		written.d = d;
 	}
 
 	private quarters(n: XNode | undefined) {
@@ -372,6 +376,12 @@ export type FileReport = {
 };
 
 const n = (q: Quarters) => q.n / q.d;
+const gcd = (a: number, b: number): number => (b === 0 ? a : gcd(b, a % b));
+/** A meter in lowest terms, so 2/8 and 1/4 are the same. */
+const meterText = (m: { n: number; d: number }) => {
+	const g = gcd(m.n, m.d) || 1;
+	return `${m.n / g}/${m.d / g}`;
+};
 const NAMES = ["C", "C#", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"];
 const pitchName = (p: number) => `${NAMES[((p % 12) + 12) % 12]}${Math.floor(p / 12) - 1}`;
 /** A pitch moved by octaves into 0–127, as exportMidi writes it. */
@@ -399,16 +409,17 @@ function keptOf<T extends { at: number }>(
 	found: T[],
 	value: (t: T) => string,
 	bar: (at: number) => number,
+	same: (t: T) => string = value,
 ): Kept {
 	const used = new Set<T>();
 	const r: Kept = { kept: 0, changed: [], dropped: [], added: [] };
 	const mark = (t: T): PlacedMark => ({ at: round(t.at), bar: bar(t.at), value: value(t) });
 	for (const e of expected) {
 		const here = found.filter((f) => !used.has(f) && Math.abs(f.at - e.at) <= TOLERANCE + EPSILON);
-		const same = here.find((f) => value(f) === value(e));
-		const other = same ?? here[0];
+		const equal = here.find((f) => same(f) === same(e));
+		const other = equal ?? here[0];
 		if (other) used.add(other);
-		if (same) r.kept++;
+		if (equal) r.kept++;
 		else if (other) r.changed.push({ ...mark(e), found: value(other) });
 		else r.dropped.push(mark(e));
 	}
@@ -536,6 +547,10 @@ export function compareFile(
 			score.times.map((t) => ({ at: t.at, meter: `${t.n}/${t.d}` })),
 			(t) => t.meter,
 			bar,
+			(t) => {
+				const [a = 0, b = 1] = t.meter.split("/").map(Number);
+				return meterText({ n: a, d: b });
+			},
 		),
 		keys: keptOf(
 			p.keys.map((k) => {
