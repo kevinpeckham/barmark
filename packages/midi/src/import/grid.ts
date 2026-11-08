@@ -39,7 +39,7 @@ export function metaOf(smf: Smf, type: number): MetaAt[] {
 }
 
 /** The time signatures: 4/4 before the first (the SMF default). */
-export function signaturesOf(smf: Smf): { tick: number; meter: Meter }[] {
+function signaturesOf(smf: Smf): { tick: number; meter: Meter }[] {
 	return metaOf(smf, TIME).map(({ tick, data }) => ({
 		tick,
 		meter: { n: data[0] ?? 4, d: 2 ** (data[1] ?? 2) },
