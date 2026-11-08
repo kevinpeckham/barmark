@@ -1,11 +1,12 @@
 # MIDI import and export: design
 
-Status: draft for Kevin's review (2026-11-08). Kevin asked for "a package
-that imports and exports midi to / from barmark" and skipped the design
+Status: ready to build (2026-11-08). Kevin asked for "a package that
+imports and exports midi to / from barmark" and skipped the design
 questions, so every decision below is **Claude's call** unless it is
-marked otherwise. The calls list at the end gathers them; the open
-questions are the few that change what gets built, each with a
-recommendation. No grammar change.
+marked otherwise. Kevin gave the go-ahead on the five open questions as
+recommended, and delegated the review's rulings to Claude; those are
+marked **Claude's ruling, 2026-11-08**. The calls list at the end
+gathers the rest. No grammar change.
 
 ## Intent
 
@@ -270,7 +271,8 @@ repeat (`x ...`) plays one pass, as `parse.bars` gives it, with an
   `ticks-rounded` loss. 480 covers halves, thirds, fifths and sixteenths;
   a septuplet gives 3,360.
 - **Event order at one tick**, within a track: note-offs, pedal up,
-  meta events (marker, lyric, text), pedal down, note-ons. A re-attack
+  meta events (marker, lyric, text), pedal down, program changes and
+  other controllers, note-ons. A re-attack
   of a sounding pitch therefore ends the old note before the new one
   starts. Lyrics precede their note, as karaoke players expect.
 - **Writer conventions**: note-off as `0x80` with velocity 64 (not a
@@ -311,8 +313,13 @@ is never written.
 
 ### 3.4 Slots to notes
 
-Each line's played slots, timed by `slotTimes` (grammar 2.1, 2.2: groups,
-dotted members), become notes:
+Each line's played slots, timed as barmark's `slotTimes` times them
+(grammar 2.1, 2.2: groups, dotted members), become notes. **Claude's
+ruling, 2026-11-08:** `slotTimes` isn't exported from barmark (only
+`memberShares` is), so the package implements it in exact quarters in
+`src/perform/quarters.ts`, over the exported `memberShares`, and a test
+pins it to barmark's private `slotTimes` by a relative import, as the
+key signature is pinned (3.7). Export needs no barmark change.
 
 | Slot | Sounds |
 |---|---|
@@ -339,11 +346,11 @@ re-attacks the chart doesn't write).
 
 - **Bass:** the chord record's `bass` (the slash bass when written), in
   E2–D♯3 (MIDI 40–51).
-- **Upper:** each pitch class of the record's `pitches` (so `C/Bb`
-  includes B♭, as A.4 spells it), at its lowest octave from C4 (60–71),
-  sounded together. The bass's pitch class is doubled above when it is a
-  chord tone, as MuseScore's chord playback does (F2 under C4 E4 F4 A4
-  for Fmaj7, section 8).
+- **Upper:** each pitch class of the record's `pitches`, at its lowest
+  octave from C4 (60–71), sounded together. A record's `pitches` include
+  a slash bass (`C/Bb` is C E G B♭, as A.4 spells it), so **the bass is
+  always doubled above**, as MuseScore's chord playback doubles it (F2
+  under C4 E4 F4 A4 for Fmaj7, section 8).
 - **On a bass instrument** (`electric bass`, `double bass`): the bass
   note alone, in E1–D♯2 (28–39).
 - `7alt` sounds the tones it spells (root, 3, ♭7); the altered tones are
@@ -357,19 +364,25 @@ chart's MIDI is for (a guide, not an arrangement).
 ### 3.6 Rhythm figures
 
 - **Velocity:** 80 a note; an accent `>` 100; a hit `^` 112.
-- **A hit** sounds for half its own slot, then rests, and holds after it
-  hold that silence (the MusicXML export writes accent and staccato;
-  staccato plays at half length). Grammar 2.3's "a hit lasts its whole
-  slot" is about where the next slot starts, which is unchanged.
+- **A hit** sounds its whole slot at velocity 112, and a `/` after it
+  holds it, as after any chord. **Claude's ruling, 2026-11-08:** grammar
+  2.3 says a hit lasts its whole slot and 2.7 that a mark only adds
+  weight ("a short note without an accent is a shorter slot"), so the
+  export doesn't shorten it; a shorter hit is written `G_--`.
 - **Pushes** (`<` an eighth, `<<` a sixteenth) move the slot's attack
   earlier by that length, taking it from the slot played before it in
   play order on the same line: that sound ends at the new attack, even
   across a bar line, a repeat or a jump (grammar 2.8). The slot then
   sounds to its own end.
 - **Pedal** (`+`, `*`, grammar 2.9): controller 64 at 127 down, 0 up, on
-  the part's first line's channel(s). A change (`+` with the pedal down)
-  is 0 then 127 at one tick. It lifts at `--`, a tacet bar and the end,
-  as `pedalStates` reads it.
+  **every channel of the part** (all its line tracks and its harmony
+  track): the pedal belongs to the part. A change (`+` with the pedal
+  down) is 0 then 127 at one tick. It lifts at `--`, a tacet bar and the
+  end, as `pedalStates` reads it. `pedalStates` reads a bar's top-level
+  slots, which are the first part's, so another part's states come from
+  `pedalStates` over its own bars, built from `PlayedBar.parts[i]` as
+  `{ ...bar, slots: partBar?.slots ?? [], tacet: partBar === null ?
+  true : undefined }`.
 - **Swing** (`feel: swing`, `shuffle`, with or without an amount): every
   time point on a line (attacks and ends alike, so lengths stay whole)
   at the second eighth of a quarter, k + ½, moves to k + p, where p is
@@ -402,10 +415,15 @@ chart's MIDI is for (a guide, not an arrangement).
   computed in the package; a test pins it to barmark's own (the private
   `signature` in `chart/keys.ts`).
 - **rit. and accel.** (grammar 7.2): over the run of bars carrying the
-  change, one tempo event a beat, linear in qpm from the steady tempo to
-  the target, arriving at the target on the run's last beat. With no
-  target, rit. ends at 80% of the steady tempo and accel. at 120%.
-  `a tempo` returns to the bar's steady tempo.
+  change, one tempo event a beat, linear in qpm from the steady tempo,
+  **reaching the target at the downbeat of the run's last bar and holding
+  it through that bar**. Over a run of n bars the ramp spans the beats of
+  its first n − 1 bars; beat k of those m beats (from 0) plays at from +
+  (to − from) · (k + 1) / (m + 1), so the last bar's downbeat is exactly
+  the target. That way the import, which reads tempo at downbeats (5.4),
+  finds the target on a whole bar. A one-bar run reaches the target at
+  its own downbeat. With no target, rit. ends at 80% of the steady tempo
+  and accel. at 120%. `a tempo` returns to the bar's steady tempo.
 - **Fermata** `...`: the last beat before it lasts three times as long:
   a tempo event at that beat at a third of the qpm, and the qpm in force
   again at the next bar. The notes sounding there simply continue, so
@@ -436,7 +454,11 @@ chart's MIDI is for (a guide, not an arrangement).
 
 Chart diagnostics as `parseChart` gives them (warnings only, or errors
 and no file), and the losses of section 2, each once per file, with the
-first bar it happened in.
+first bar it happened in. As `exportMusicXml` does (`score.ts`): a chart
+with no bars is `{ ok: false }` with the error "the chart has no bars to
+export", and `part` naming no declared label (matched in any case) is
+`{ ok: false }` with "no part labelled X" before the chart's own
+diagnostics, both at line 0.
 
 ## 4. The performance
 
@@ -465,7 +487,11 @@ examples slot by slot.
   skipped (`unknown-chunk`, info, once). A track count that differs from
   the header's is a warning, `track-count`. A chunk whose length runs
   past the file is read to the end, warning `truncated`.
-- **Events:** running status; a zero-velocity note-on is a note-off;
+- **Events:** running status, kept across meta and sysex events
+  (leniently: the SMF spec says they cancel it, but files exist that rely
+  on it, and keeping it never misreads a valid file, since a valid file
+  restates its status after them); a zero-velocity note-on is a note-off,
+  as MuseScore writes every note-off (section 8);
   sysex (`F0`, `F7`) skipped. A VLQ longer than four bytes, a data byte
   with no running status, or a status byte that can't appear in a file
   (`F1`–`FE` other than `FF`) ends that track with a warning,
@@ -478,7 +504,8 @@ examples slot by slot.
 - **Text:** UTF-8 when the bytes are valid UTF-8, else Latin-1;
   control characters removed; cut at 200 characters with "…".
 - **Bounds:** at most 16 MiB, 1,024 track chunks, 2,000,000 events,
-  500,000 notes and 10,000 bars (`MAX_EXPANDED_BARS`). Past any of them:
+  500,000 notes and 10,000 bars (`MAX_EXPANDED_BARS`), a pickup counted
+  as a bar. Past any of them:
   error `too-large`, naming the limit, and an empty chart. The reader is
   linear in the file's size.
 
@@ -500,6 +527,12 @@ examples slot by slot.
   lowest monophonic stream is a bass line and stays: it gives the bass.
   If every pitched stream would be left out, all are used, warning
   `harmony-from-melody`.
+- **Melody lines are not part of the round trip, by design.** The
+  harmony is what the import reads, so a chart's own single-note lines
+  that aren't its lowest (a melody, a `Vo.Mel` line, a pedal-tone line, a
+  piano's left-hand single notes over a separate bass part) come back
+  only through the chords they sound in, or not at all. Section 9's
+  yardstick compares only what the import keeps.
 - **`options.tracks`** names the harmony tracks instead (numbers or
   names); unknown entries warn `track-unknown`, and when none match, the
   default choice is used.
@@ -515,8 +548,11 @@ examples slot by slot.
   signature that falls inside a bar starts a new bar there (`meter-mid-bar`
   warning): the cut bar's meter is its length in the signature's units
   (`3/8`) when whole, else in sixteenths, rounded.
-- **The end** is the end of the bar holding the last harmony note's end
-  or the last lyric; later bars (a long end-of-track) are dropped.
+- **The end** is the end of the bar in which the last harmony note
+  ends, or the last lyric falls; later bars (a long end-of-track) are
+  dropped. A bar spans its start up to but not including the next bar's
+  start, so a note ending exactly on a bar line ends in the bar before
+  it: ending at tick 1920 in 4/4 at 480, the grid ends at 1920.
 - **A pickup:** the first bar is a pickup when it is shorter than the
   second and a time signature at the second bar changes the meter, as
   MuseScore writes one (1/4 then 3/4, section 8) and as the export writes
@@ -542,15 +578,19 @@ examples slot by slot.
   every chord. No key signature: no `key:` line (grammar 7: a converter
   that doesn't know leaves it out).
 - **Meter:** each bar's meter; a change becomes a `time:` line before
-  its bar (sync's meter changes). A one-bar change comes back as two
+  its bar (sync's meter changes). A pickup's meter is not a change: sync
+  writes the pickup's `[k/d]` itself, and the starting meter is the
+  second bar's. A one-bar change comes back as two
   `time:` lines, not `[2/4]` (sync has no one-bar meters; the pickup is
   the exception).
 - **Tempo:** a bar's tempo is the qpm in force at its downbeat, in
   grammar 2.1's beat (qpm ÷ the beat in quarters), rounded to two
   decimals. A `tempo:` line is written where a bar's tempo differs from
   the bar before's. A **ramp**, the downbeat tempo changing in the same
-  direction on three or more bars in a row, writes only its final tempo,
-  at its final bar (`tempo-ramp`, info): v1 writes no `rit.`/`accel.`.
+  direction on two or more consecutive downbeats (so three or more bars),
+  writes only its final tempo, at its final bar (`tempo-ramp`, info): v1
+  writes no `rit.`/`accel.`. The export's ramp reaches its target at a
+  downbeat (3.7), so its target comes back exactly.
   A tempo that changes inside a bar and is back by the next downbeat (a
   fermata stretch) writes nothing (`tempo-in-bar`, info, with a count).
   The export's ramp and fermata therefore come back as a step and as
@@ -674,7 +714,9 @@ which the grammar allows.
   as the continuation. `‿` becomes `~`. Characters a lyric row can't hold
   as a syllable (`|`, `"`, `{`, `}`, `_`, whitespace inside) are removed
   (whitespace inside becomes `~`); a syllable left empty, or reading as
-  `/`, `--` or `-` alone, is skipped.
+  `/`, `--` or `-` alone, is skipped. Leading, trailing and doubled
+  `~` are removed (`~a`, `a~`, `a~~b` would be errors), and so is a
+  `/-` (an error in a row).
 - **Placement:** in each bar, the coarsest even grid that puts every
   syllable's onset on a slot: the whole bar, then its beats, then each
   beat in two, three or four (`_` groups). An onset finer than that moves
@@ -685,10 +727,12 @@ which the grammar allows.
   match one to one, `%` included. After the build, each bar line gets one
   row per verse that has a syllable on it (`lyrics:`, `lyrics 2:`, …),
   and the chart is printed again.
-- **Self-check:** the chart must parse with no errors and its
-  `PlayedBar.lyrics` must hold every syllable placed; otherwise the
-  importer reports `lyrics-dropped` (warning) and returns the chart
-  without rows. An importer bug can't cost the chords.
+- **Self-check, per verse:** the chart must parse with no errors and
+  its `PlayedBar.lyrics` must hold every syllable placed. On a failure
+  the importer drops the failing verse's rows and checks again, verse by
+  verse, before giving up on lyrics altogether; each dropped verse is
+  one `lyrics-dropped` warning naming it. An importer bug can't cost the
+  chords, nor the verses that did place.
 
 ### 5.9 Import diagnostics
 
@@ -712,8 +756,8 @@ which the grammar allows.
 | `unknown-chunk`, `drums-left-out`, `melody-left-out`, `tempo-ramp`, `tempo-in-bar`, `marker-dropped`, `lyrics-other-tracks` | info | as above |
 
 Plus sync's `BuildCode`s as they come (most can't arise from this
-input; `section-*`, `after-last-bar`, `change-collision`, `key-respelled`
-and `meter-*` can).
+input; `section-*`, `after-last-bar`, `change-collision`, `key-respelled`,
+`meter-*` and `tempo-unreadable`, a tempo outside 1–999 bpm, can).
 
 ## 6. Where import meets sync, and what sync lacks
 
@@ -764,8 +808,10 @@ marks, read with a throwaway dumper:
   in **track 1 beside its notes**: there is no conductor track, and
   track 1's name is the first part's ("Voice"), not the title. The title
   isn't written at all.
-- **One track per part** (an empty track for a piano's second staff),
-  **channel 10 skipped**.
+- **One track per part** (an empty track for a piano's second staff).
+  The files seen used channel indices 0–8 and 10–12, none on index 9,
+  but none had more than nine channels before it, so whether MuseScore
+  skips channel 10 on purpose is **unverified**.
 - **Chord symbols are played**, on a channel of their own inside the
   part's track, with program 1 (piano): the bass in octave 2 and the
   chord close above C4 (Fmaj7 is F2 C4 E4 F4 A4), held for the chord's
@@ -784,8 +830,11 @@ marks, read with a throwaway dumper:
   have rehearsal marks.
 - **rit. to 90** became a single tempo step to 90 at the end; **a
   fermata** changed nothing; **swing** wasn't applied (the pushed eighth
-  stayed straight); **an accent** was velocity 96 against 80.
-- Notes end one tick early before a re-attack.
+  stayed straight). One note at velocity 96 against 80 sat where the
+  accent was, but on a slash note: whether that is MuseScore's accent is
+  **unverified**.
+- Notes end one tick early before a re-attack, and **every note-off is
+  a zero-velocity note-on** (the reader treats them alike, 5.1).
 
 Dorico's MIDI export would come through mac-bench, whose `dorico
 --export` drives only MusicXML today: adding `mid` is a mac-bench change
@@ -804,15 +853,16 @@ Test first, per rule, in `packages/midi/tests/`.
   A test helper builds files from readable event lists.
 - **Performance:** one test per row and rule of section 3 on small
   charts (each slot kind, the voicing, a bass part, holds across bars, a
-  push across a bar line and back over a repeat, hits, pedal, swing and
+  push across a bar line and back over a repeat, a hit held by `/`, pedal
+  on every channel of a part, swing and
   swing 16, swing in 6/8, tempo per beat in 6/8, a ramp, a fermata, a
   one-bar meter, markers on replays, words, two verses, an elision,
   channels past 15, channel 10 never used).
 - **Export plays the chart:** a test player reads the file with
   `midi-file` and lists, for each beat, the pitch classes sounding just
   after it starts. It must equal what `parse.bars` sounds there, read
-  from the chart alone (holds resolved, a push from its early attack, a
-  hit for half its slot, nothing for `N.C.`, `--`, `?`), for every
+  from the chart alone (holds resolved, a push from its early attack,
+  nothing for `N.C.`, `--`, `?`), for every
   chart in `examples/`, the grammar's own example and the musicxml
   package's jump charts. This keeps "looks right, plays wrong" in check
   through repeats, endings, jumps and replays.
@@ -821,8 +871,14 @@ Test first, per rule, in `packages/midi/tests/`.
   name is themselves, sections as headings, key, meter and tempo lines,
   a pickup) come back as `printChart` of the original, exactly.
 - **Round trip, by ear (the yardstick):** for every single-part chart
-  above and the jump charts' single-part seeds, export then import sounds
-  the same pitch classes at every beat, with one allowance: the import
+  above and the jump charts' single-part seeds, the import's chart sounds
+  at every beat what the original's **voted** beat sounds: per line, the
+  slot covering the plurality of the beat, ties to the one sounding at
+  the beat's start (sync's vote, so pushes and eighth-note changes are
+  compared as the import writes them), unioned over what the import
+  keeps: chord symbols, voicings and note sets of two or more notes on
+  every line, single-note sets only on the lowest line (5.2). Sampling
+  at the beat's start stays the export player's measure. One allowance: the import
   may add the perfect fifth above its chord's root, which `nameNotes`
   supplies when a chord leaves it out (5.6; `C7alt` comes back as `C7`).
   Several-part charts are compared as the union of their parts, except
@@ -859,18 +915,29 @@ Test first, per rule, in `packages/midi/tests/`.
 
 ## 10. Release
 
-- **barmark minor** first, with `nameNotes`, then `@barmark/render` as a
-  patch ("requires barmark X"), per RELEASING.md.
+**Claude's ruling, 2026-11-08,** on the release order (this branch was
+designed on barmark 0.19.1; barmark 0.20.0 and render 0.17.0 are out):
+
+1. `@barmark/midi` **0.1.0**, export alone, depending on `barmark
+   ^0.20.0`: it needs no barmark change (3.4, 3.7).
+2. `barmark` **0.21.0** with `nameNotes`.
+3. Patches of every package that depends on `barmark` with a caret
+   (`@barmark/render`, `@barmark/musicxml`, `@barmark/sync`,
+   `@barmark/midi`), each "Requires barmark 0.21.0". RELEASING.md's
+   "a barmark minor needs a renderer release" is generalised to every
+   caret dependant (plan Task 1), since in 0.x `^0.20.0` stops before
+   0.21.0.
+4. `@barmark/midi` **0.2.0** with import.
+5. `@barmark/cli` **0.7.0** with both commands; the CLI then bundles
+   `@barmark/sync` through midi, so its release checks cover sync's and
+   midi's code too (plan Task 16).
 - **`@barmark/midi` is a new package:** before its first release
   **Kevin** does RELEASING.md's "A new package's first release": the
   placeholder 0.0.0 publish, the trusted publisher, `midi-v*` in the
   "release tags" ruleset and the `npm` environment, and the `package (N,
   midi)` checks in the "main" ruleset.
-- `@barmark/midi` **0.1.0** with export alone (useful on its own: it
-  needs no barmark change); **0.2.0** with import, after the barmark
-  minor.
-- Then `@barmark/cli` 0.7.0 with both commands, the `songs` bump, and a
-  Get Started line on barmark.dev (RELEASING.md steps 13–14).
+- After the CLI, the `songs` bump and a Get Started line on barmark.dev
+  (RELEASING.md steps 13–14).
 
 ## Decisions on the open questions
 
@@ -920,13 +987,14 @@ for every open question, so each one below is **decided as recommended**
    E2–D♯3, every chord tone once in C4–B4; a bass instrument plays the
    bass alone in E1–D♯2.
 7. Note sets without octaves rise from octave 4.
-8. Velocity 80, accent 100, hit 112 at half length; pushes move the
-   attack and shorten the sound before it in play order; pedal as
-   controller 64.
+8. Velocity 80, accent 100, hit 112 for its whole slot (Claude's
+   ruling, 2026-11-08); pushes move the attack and shorten the sound
+   before it in play order; pedal as controller 64 on every channel of
+   the part.
 9. Swing moves every time point at the second eighth (or sixteenth); not
    applied in compound meters.
-10. rit./accel. as a per-beat linear ramp to the target, or to 80%/120%
-    without one; a fermata triples the last beat before it by tempo, so
+10. rit./accel. as a per-beat linear ramp reaching the target at the
+    run's last downbeat, or 80%/120% without one; a fermata triples the last beat before it by tempo, so
     ticks and bars are unchanged.
 11. Headings and rehearsal marks as markers; words as text events; lyrics
     as lyric events, MuseScore's convention, `‿` for an elision.
@@ -947,14 +1015,19 @@ for every open question, so each one below is **decided as recommended**
 19. No harmony is `N.C.`; unnameable notes are a note set (up to three
     pitch classes) or `?`.
 20. Key signatures trusted unless the notes fit the key under 60%.
-21. Tempo by downbeat; ramps collapse to their end; in-bar dips ignored.
+21. Tempo by downbeat; ramps (two or more same-direction downbeat
+    changes) collapse to their end; in-bar dips ignored.
 22. Markers become headings, the first on a bar kept; the title only
     from a conductor track or a format 0 track's name.
 23. Lyrics as lyric rows on the coarsest grid, verses by order at a
     tick, with a self-check that drops them rather than the chords.
 24. Bounds: 16 MiB, 1,024 tracks, 2,000,000 events, 500,000 notes,
-    10,000 bars.
+    10,000 bars, a pickup included.
 25. The CLI's `export --midi` requires `--out`.
-26. Release: barmark minor (`nameNotes`), then midi 0.1.0 (export),
-    0.2.0 (import), cli 0.7.0; the new package's first publish is
-    Kevin's.
+26. Release: midi 0.1.0 (export), barmark 0.21.0 (`nameNotes`), the
+    caret dependants' patches, midi 0.2.0 (import), cli 0.7.0 (Claude's
+    ruling, 2026-11-08); the new package's first publish is Kevin's.
+27. `slotTimes` reimplemented in quarters over `memberShares`, pinned
+    to barmark's by a test (Claude's ruling, 2026-11-08).
+28. The import's running status survives meta and sysex events.
+29. Lyric verses are dropped one at a time when the self-check fails.
