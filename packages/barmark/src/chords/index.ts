@@ -1,4 +1,5 @@
 export { harteToBarmark, parseHarte, toHarte } from "./harte.js";
+export { nameNotes } from "./name.js";
 export { parseNoteSet } from "./noteSet.js";
 export { parseChord } from "./parse.js";
 export { printChord } from "./print.js";

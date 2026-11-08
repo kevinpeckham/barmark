@@ -9,6 +9,33 @@ Releases follow the process in [RELEASING.md](RELEASING.md).
 
 ## [Unreleased]
 
+### Added
+
+- **`nameNotes(pitchClasses, bass, key)`** names a chord from the pitch
+  classes sounding over a bass, spelled for the key, or returns null when
+  none fits: the name grammar 4's linter may suggest for a note set, and
+  what `@barmark/midi`'s import will call. Every root is tried, with the
+  fifth supplied where it is missing. The fewest added tones wins, a
+  slash and a supplied fifth costing one each; ties go to triads, then
+  sevenths, sixths, sus, extended chords and added tones, then the root
+  in the bass, then `(9)`, `(11)`, `(13)` over `(2)`, `(4)`, `(6)`.
+  Suffixes no one writes are never suggested: a degree both plain and
+  altered (`b9` with `9`), `(7)` on a sixth chord, a tone on `dim` or
+  `dim7`, an altered tone on `5`, `6` or `6/9`. `{G B F}` over G is `G7`,
+  `{E G C}` over E is `C/E`, `Am7/C`'s notes are `C6`, `{G B F E}` is
+  `G7(13)`; two pitch classes name only a power chord (`E5`). The bass is
+  spelled by its interval from the root, or by pitch when that would
+  double (`E(#9)/G`); with no key, a black-key root takes the spelling
+  with fewer awkward notes (`Db`, `C#m`, `G#dim7`).
+
+### Fixed
+
+- **`printChart` prints many lyric rows in linear time.** Deciding
+  whether a row lies just under its bar line scanned every line of the
+  chart for a heading in between, once a row: 100 verses under each of
+  500 bar lines took 9 s to print. The headings are now found by halves;
+  the same chart prints in about a second, parse included.
+
 ## [0.20.0] - 2026-11-08
 
 ### Changed

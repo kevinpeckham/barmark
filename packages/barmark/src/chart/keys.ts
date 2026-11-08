@@ -65,6 +65,10 @@ const scaleOf = (mode: Mode) => {
 	return MAJOR_SCALE.map((_, i) => mod((MAJOR_SCALE[(start + i) % 7] ?? 0) - root, 12));
 };
 
+/** Whether a pitch class is one of the key's seven. */
+export const inScale = (pitchClass: number, key: Key) =>
+	scaleOf(key.mode).includes(mod(pitchClass - noteSemitone(key.tonic), 12));
+
 /** Notes outside the mode: the major-scale map (bII, bIII, #IV, bVI, bVII). */
 const OUTSIDE: Record<number, Interval> = {
 	0: { degree: 1, alter: 0 },
