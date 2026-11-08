@@ -151,7 +151,7 @@ The main JavaScript MIDI libraries, checked 2026-11-08:
 **Claude's call: a small hand-written reader and writer** (about 400
 lines with tests), because the importer needs what none of them gives:
 diagnostics for truncation, a bad header and junk events (not silent
-partial results); limits on sizes and counts; UTF-8 text with Latin-1
+partial results); limits on sizes and counts; UTF-8 text with windows-1252
 fallback and control characters removed; and a writer whose event order
 at one tick is ours to define (5.1, 3.2). The SMF format is small and
 fixed (1988), so there is nothing to keep up with.
@@ -501,8 +501,12 @@ examples slot by slot.
   signature whose denominator isn't 2, 4, 8 or 16 (barmark's `time:`),
   or a key signature outside −7..7 or 0..1 is ignored with a warning
   (`meta-invalid`).
-- **Text:** UTF-8 when the bytes are valid UTF-8, else Latin-1;
-  control characters removed; cut at 200 characters with "…".
+- **Text:** UTF-8 when the bytes are valid UTF-8, else windows-1252
+  (Claude's ruling, 2026-11-08: not strict Latin-1, since 0x80–0x9F
+  are the curly quotes, dashes and € Windows programs write, and
+  "don’t" must survive; the five bytes it leaves unassigned decode as
+  C1 controls and are removed); control characters removed; cut at 200
+  characters with "…".
 - **Bounds:** at most 16 MiB, 1,024 track chunks, 2,000,000 events,
   500,000 notes and 10,000 bars (`MAX_EXPANDED_BARS`), a pickup counted
   as a bar. Past any of them:
@@ -880,7 +884,7 @@ Test first, per rule, in `packages/midi/tests/`.
   events as our reader gives; the reader on hand-built bytes for each
   rule of 5.1 (running status, zero-velocity note-on, format 0, SMPTE,
   format 2, a truncated chunk, a wrong track count, a five-byte VLQ, a
-  stray status byte, sysex, an unknown chunk, UTF-8 and Latin-1 text).
+  stray status byte, sysex, an unknown chunk, UTF-8 and windows-1252 text).
   A test helper builds files from readable event lists.
 - **Performance:** one test per row and rule of section 3 on small
   charts (each slot kind, the voicing, a bass part, holds across bars, a

@@ -248,6 +248,10 @@ describe("readSmf: errors", () => {
 		failsWith(Uint8Array.from([...ascii("MThd"), 0, 0, 0, 4, 0, 1, 0, 0, 1, 0xe0]), "not-midi");
 		// A header that claims six bytes but the file ends first.
 		failsWith(Uint8Array.from([...ascii("MThd"), 0, 0, 0, 6, 0, 1, 0, 1, 1]), "not-midi");
+		// It does begin with MThd: the message says the header is cut short.
+		const cut = readSmf(Uint8Array.from([...ascii("MThd"), 0, 0, 0, 6, 0, 1, 0, 1, 1]));
+		expect(cut.diagnostics[0]?.message).toContain("incomplete");
+		expect(cut.diagnostics[0]?.message).not.toContain("doesn't begin");
 		failsWith(smf({ format: 3, tracks: [[]] }), "not-midi");
 	});
 
@@ -346,6 +350,14 @@ describe("readSmf: warnings keep what was read", () => {
 	test("truncated: the file ends inside a chunk header", () => {
 		const r = readSmf(smf({ tracks: [notes(1), notes(1)], cut: 2 + 12 }));
 		expect(codes(r)).toEqual(["truncated", "track-count"]);
+		expect(tracksOf(r).length).toBe(1);
+		expect(r.diagnostics[0]?.track).toBeUndefined();
+	});
+
+	test("truncated: bytes after the last track name no track", () => {
+		const r = readSmf(Uint8Array.from([...smf({ tracks: [notes(1)] }), 0, 0, 0]));
+		expect(r.diagnostics).toEqual([expect.objectContaining({ code: "truncated" })]);
+		expect(r.diagnostics[0]?.track).toBeUndefined();
 		expect(tracksOf(r).length).toBe(1);
 	});
 
@@ -500,6 +512,33 @@ describe("readSmf: meta-invalid", () => {
 		for (const sf of [-7, 0, 7]) for (const mi of [0, 1]) invalid({ dt: 0, key: [sf, mi] }, true);
 	});
 
+	test("each distinct problem on a track, counted", () => {
+		const r = readSmf(
+			smf({
+				tracks: [
+					[
+						{ dt: 0, meta: [0x51, [0, 0, 0]] },
+						{ dt: 0, meta: [0x58, [7, 5, 24, 8]] },
+						{ dt: 0, key: [9, 0] },
+						{ dt: 0, key: [10, 0] },
+						{ dt: 0, meta: [0x58, [0, 2, 24, 8]] },
+					],
+				],
+			}),
+		);
+		expect(r.diagnostics.map((d) => [d.code, d.track])).toEqual([
+			["meta-invalid", 1],
+			["meta-invalid", 1],
+			["meta-invalid", 1],
+		]);
+		const [tempo, time, key] = r.diagnostics.map((d) => d.message);
+		expect(tempo).toContain("tempo");
+		expect(time).toContain("time signature");
+		expect(time).toContain("(2 times)");
+		expect(key).toContain("key signature");
+		expect(key).toContain("(2 times)");
+	});
+
 	test("reported once a track", () => {
 		const r = readSmf(
 			smf({
@@ -524,21 +563,31 @@ describe("text", () => {
 		expect(decodeText(new TextEncoder().encode("Café"))).toBe("Café");
 	});
 
-	test("Latin-1 when the bytes aren't UTF-8", () => {
+	test("windows-1252 when the bytes aren't UTF-8", () => {
 		expect(decodeText(Uint8Array.from([0x43, 0x61, 0x66, 0xe9]))).toBe("Café");
+		// 0x80-0x9F are windows-1252's quotes, dashes and euro, as Windows DAWs write them
+		expect(decodeText(Uint8Array.from([0x64, 0x6f, 0x6e, 0x92, 0x74]))).toBe("don’t");
+		expect(decodeText(Uint8Array.from([0x93, 0x41, 0x94, 0x96, 0x80, 0x85]))).toBe("“A”–€…");
 	});
 
 	test("control characters removed", () => {
 		expect(decodeText(new TextEncoder().encode("a\u0007b"))).toBe("ab");
 		expect(decodeText(new TextEncoder().encode("\u001b[31mred\u007f\u0085\nx\t"))).toBe("[31mredx");
-		expect(decodeText(Uint8Array.from([0x61, 0x85, 0x62]))).toBe("ab");
+		// 0x81 has no windows-1252 character: it decodes as the C1 control U+0081, removed
+		expect(decodeText(Uint8Array.from([0x61, 0x81, 0x62, 0xe9]))).toBe("abé");
 	});
 
 	test("cut at 200 characters with …", () => {
 		const long = decodeText(new TextEncoder().encode("x".repeat(300)));
 		expect(long).toBe(`${"x".repeat(199)}…`);
 		expect(decodeText(new TextEncoder().encode("x".repeat(200)))).toBe("x".repeat(200));
-		expect(Array.from(decodeText(new TextEncoder().encode("😀".repeat(201))))).toHaveLength(200);
+		expect(decodeText(new TextEncoder().encode("😀".repeat(201)))).toBe(`${"😀".repeat(199)}…`);
+		// 200 code points in 400 code units: kept whole
+		expect(decodeText(new TextEncoder().encode("😀".repeat(200)))).toBe("😀".repeat(200));
+		// the cut counts what is left after control characters go
+		expect(decodeText(new TextEncoder().encode(`${"\u0007".repeat(50)}${"x".repeat(200)}`))).toBe(
+			"x".repeat(200),
+		);
 	});
 
 	test("track names", () => {

@@ -107,11 +107,16 @@ const MUTATIONS: ((r: Rand, bytes: Uint8Array) => Uint8Array)[] = [
 
 type Read = ReturnType<typeof readSmf>;
 
+/** A diagnostic's track is one of the file's: within those read, or (when the read failed) at least 1. */
+const trackInRange = (track: number, r: Read) =>
+	Number.isInteger(track) && track >= 1 && (r.smf === null || track <= r.smf.tracks.length);
+
 /** Every diagnostic is one the reader gives, well formed; smf is null exactly on an error. */
 function diagnosticsProblem(r: Read): string | null {
 	for (const d of r.diagnostics) {
 		if (!READER_CODES.has(d.code)) return `unknown code ${d.code}`;
 		if (!SEVERITIES.has(d.severity) || d.message === "") return "a malformed diagnostic";
+		if (d.track !== undefined && !trackInRange(d.track, r)) return `track ${d.track} out of range`;
 	}
 	const failed = r.diagnostics.some((d) => d.severity === "error");
 	return failed === (r.smf === null) ? null : "smf is null exactly when there is an error";

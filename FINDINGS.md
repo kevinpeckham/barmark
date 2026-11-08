@@ -9,6 +9,21 @@ not here.
 
 ## Testing
 
+### Reporting each code once a track hid distinct problems (2026-11-08, @barmark/midi)
+
+- **The symptom.** A track with a tempo of 0, a time signature of 7/32
+  and a key of 9 sharps reported only the tempo: the dropped key, which
+  changes every chord's spelling, went unmentioned.
+- **The cause.** The SMF reader kept one diagnostic per (code, track)
+  and its first message, so three different `meta-invalid` problems
+  collapsed into one.
+- **The fix.** One counted report for the whole import,
+  `packages/midi/src/import/report.ts`, which the reader reports into:
+  each problem is a (code, track, message), repeats counted with their
+  first five bars. A message names the kind of problem and never a value
+  read from the file (the time signature's message no longer prints its
+  numbers), or a hostile file could raise one diagnostic per value.
+
 ### A malformed-file test can fail for an earlier reason than the rule it names (2026-11-08, @barmark/midi)
 
 - **The symptom.** The SMF reader's `not-midi` tests passed with the
