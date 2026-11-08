@@ -128,5 +128,13 @@ describe("a one-bar meter where the lead part rests (grammar 2.4, 7.4)", () => {
 		expect(meters(extractPart(hands, "Pno", "LH")?.bars ?? [])).toEqual(want);
 		const after = `${TWO}time: 6/8\n| C | [2/8] G |\nPno | % | C |\n`;
 		expect(meters(extractPart(after, "Gtr")?.bars ?? [])).toEqual(want);
+		// The tutti bar, not the part's own bar before it.
+		const between = `${TWO}time: 6/8\nGtr | [2/8] C |\nPno | [2/8] C |\n| C |\nPno | % | C |\n`;
+		expect(meters(extractPart(between, "Gtr")?.bars ?? [])).toEqual([
+			"2/8 in 6/8",
+			"6/8",
+			"6/8",
+			"6/8",
+		]);
 	});
 });
