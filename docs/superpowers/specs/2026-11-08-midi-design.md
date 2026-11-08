@@ -660,9 +660,10 @@ Appendix A.4 and common inversions:
    `Fdim(9)/Cb`).
 3. **The least cost wins:** one for each added tone in parentheses
    (`m7(b5)` counts none: it is the half-diminished shorthand), one when
-   the root isn't the bass, a half when the fifth was supplied (Claude's
-   ruling, 2026-11-08, from Fable's review: a left-out fifth is the
-   commonest voicing, cheaper than a slash).
+   the root isn't the bass, one when the fifth was supplied. (A half for
+   the supplied fifth was tried and reverted, 2026-11-08: it renamed
+   first-inversion triads as sixth chords, `{Eb C G}` as `Eb6` rather
+   than `Cm/Eb`, and named nothing better.)
 4. **Ties** (the order is Claude's ruling, 2026-11-08, from Fable's
    review): triads, then sevenths, then sixths, then sus, then extended
    chords, then added tones; then the root in the bass (`{C E G Bb Db
@@ -687,7 +688,7 @@ Appendix A.4 and common inversions:
    keeps the key's spelling (`C#/E#` in C♯ major, `Cb/Gb` in G♭).
 
 Known residuals of the rule (kept, not named the way a musician would):
-`{D F G C}` is `G7sus4/D` (`Dm7(11)` costs 1.5, the slash 1), `{C Eb F
+`{D F G C}` is `G7sus4/D` (`Dm7(11)` costs 2, the slash 1), `{C Eb F
 Bb}` is `F7sus4/C`, `{C E G# D}` is `Eaug7/C` (the augmented triad's
 symmetry), `{C G B}` is `G(11)/C` (no `(no3)` in the table), and
 rootless shells such as `{E Bb D}` (`Bb(b5)/E`) are named rather than

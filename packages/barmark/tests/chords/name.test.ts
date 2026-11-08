@@ -94,6 +94,12 @@ describe("nameNotes", () => {
 		expect(name("Dm7/C")).toBe("Dm7/C");
 	});
 
+	test("a first-inversion triad is the triad over its third, not a sixth chord", () => {
+		expect(name("{Eb C G}")).toBe("Cm/Eb");
+		expect(name("{G B E}")).toBe("Em/G");
+		expect(name("{Eb C Gb}")).toBe("Cdim/Eb");
+	});
+
 	test("a missing fifth is supplied", () => {
 		expect(name("{C E Bb}")).toBe("C7");
 		expect(name("{G B F}")).toBe("G7");
