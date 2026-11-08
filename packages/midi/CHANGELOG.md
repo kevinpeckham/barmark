@@ -25,3 +25,17 @@ package uses [semantic versioning](https://semver.org/).
   an amount) moving every second eighth (or sixteenth) after pushes, so a
   pushed "and of 4" swings. Compound meters aren't swung, with one
   `swing-compound` loss.
+- The performance's tempo map, meters, keys, markers, words and lyrics:
+  tempo in quarter notes a minute from the meter's beat (6/8 at
+  `tempo: 60` is 90), with a new tempo wherever a bar's differs, a meter
+  change included; 120 (or the `tempo` option) for a chart with none,
+  with a `tempo-assumed` loss; `rit.` and `accel.` as a tempo a beat,
+  reaching the target at the downbeat of the run's last bar and holding
+  it (80% or 120% with no target); a fermata playing the beat before it
+  at a third of the tempo, the bar grid unchanged. Keys where they
+  change (a church mode other than aeolian with a `mode` loss); each
+  section occurrence's heading and each rehearsal mark as a marker, in
+  play order; words on a bar at the slot they precede; each sung
+  syllable as MuseScore writes it (a space ending a word, `‿` joining an
+  elision, verses in order at one time); an open repeat played once with
+  an `open-repeat` loss.

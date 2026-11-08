@@ -1,52 +1,80 @@
 /** A chart's play order as timed notes, in exact quarters (spec 4). */
-import { beatsOf, type ChartEvent, type ChartParse, type PlayedBar } from "barmark";
+import type { ChartEvent, ChartParse } from "barmark";
 import { applyPushes } from "./figures.js";
+import { keysOf } from "./keys.js";
 import { lineNotes, type TimedSlot } from "./line.js";
+import { lyricsOf } from "./lyrics.js";
+import { markersOf, wordsOf } from "./marks.js";
 import { pedalEvents } from "./pedal.js";
-import { add, barQuarters, cmp, mul, q, slotQuarters, sub, toNumber, ZERO } from "./quarters.js";
-import { type BarAt, swingLine, swingMap } from "./swing.js";
-import type { Performance, Quarters } from "./types.js";
+import { add, barQuarters, cmp, slotQuarters, sub, toNumber, ZERO } from "./quarters.js";
+import { swingLine, swingMap } from "./swing.js";
+import { type TimedBar, tempoMap } from "./tempo.js";
+import type { MidiLoss, Performance, Quarters } from "./types.js";
 
 const BASS_INSTRUMENTS = new Set(["electric bass", "double bass"]);
 
-/** The played bars in order from the events: fermatas skipped for now, an open repeat's events once. */
-function playedBars(events: ChartEvent[]): PlayedBar[] {
-	return events.flatMap((e) =>
-		e.kind === "bar" ? [e.bar] : e.kind === "open" ? playedBars(e.events) : [],
-	);
+/** The play order from the events: bars at their onsets, each marked when a fermata follows it, an open repeat's events once. */
+function timeline(events: ChartEvent[]): { bars: TimedBar[]; open: number | null } {
+	const bars: TimedBar[] = [];
+	let at = ZERO;
+	let open: number | null = null;
+	const walk = (list: ChartEvent[]) => {
+		for (const e of list) {
+			if (e.kind === "bar") {
+				bars.push({ bar: e.bar, at });
+				at = add(at, barQuarters(e.bar.meter));
+			} else if (e.kind === "fermata") {
+				const before = bars.at(-1);
+				if (before) before.fermata = true;
+			} else {
+				const first = bars.length;
+				walk(e.events);
+				open ??= bars[first]?.bar.index ?? null;
+			}
+		}
+	};
+	walk(events);
+	return { bars, open };
 }
 
-/** One beat of a meter in quarters: a dotted quarter in 6/8, 9/8 and 12/8. */
-const beatQuarters = (bar: PlayedBar) => mul(barQuarters(bar.meter), q(1, beatsOf(bar.meter)));
+const openLoss = (bar: number): MidiLoss => ({
+	code: "open-repeat",
+	message: "an open repeat (x ...) plays once: MIDI can't repeat as needed",
+	bar,
+});
 
-/** The chart's play order performed: one track, "Chart", on piano, at one tempo. */
+/** The chart's play order performed: one track, "Chart", on piano, with the tempo map, keys and markers. */
 export function perform(parse: ChartParse, options: { tempo?: number } = {}): Performance {
-	const played = playedBars(parse.events);
-	const bars: Performance["bars"] = [];
-	const timed: BarAt[] = [];
-	const slots: TimedSlot[] = [];
-	let at = ZERO;
-	for (const bar of played) {
-		bars.push({ index: bar.index, at, meter: bar.meter });
-		timed.push({ bar, at });
-		for (const s of slotQuarters(bar.slots, bar.meter))
-			slots.push({ slot: s.slot, at: add(at, s.at), length: s.length });
-		at = add(at, barQuarters(bar.meter));
-	}
-	const first = played[0];
-	const bpm = options.tempo ?? 120;
-	const qpm = first ? bpm * toNumber(beatQuarters(first)) : bpm;
+	const { bars: timed, open } = timeline(parse.events);
+	const bars: Performance["bars"] = timed.map(({ bar, at }) => ({
+		index: bar.index,
+		at,
+		meter: bar.meter,
+	}));
+	const slots: TimedSlot[] = timed.flatMap(({ bar, at }) =>
+		slotQuarters(bar.slots, bar.meter).map((s) => ({
+			slot: s.slot,
+			at: add(at, s.at),
+			length: s.length,
+		})),
+	);
+	const last = timed.at(-1);
+	const end = last ? add(last.at, barQuarters(last.bar.meter)) : ZERO;
 	const instrument = parse.parts[0]?.instrument;
+	const tempo = tempoMap(timed, options);
+	const keys = keysOf(timed);
 	// Pushes land first, then swing moves every point once (3.6).
 	const { swing, losses } = swingMap(timed);
 	const line = swingLine(applyPushes(slots), swing);
+	const swung = <T extends { at: Quarters }>(items: T[]) =>
+		items.map((e) => ({ ...e, at: swing(e.at) }));
 	return {
 		title: parse.title,
 		credits: parse.credits,
 		bars,
-		tempos: [{ at: ZERO, qpm }],
-		keys: [],
-		markers: [],
+		tempos: tempo.tempos,
+		keys: keys.keys,
+		markers: markersOf(parse, bars),
 		tracks: [
 			{
 				name: "Chart",
@@ -55,13 +83,18 @@ export function perform(parse: ChartParse, options: { tempo?: number } = {}): Pe
 				role: "line",
 				program: 1,
 				notes: lineNotes(line, instrument !== undefined && BASS_INSTRUMENTS.has(instrument)),
-				pedal: pedalEvents(parse, null).map((e) => ({ ...e, at: swing(e.at) })),
-				lyrics: [],
-				words: [],
+				pedal: swung(pedalEvents(parse, null)),
+				lyrics: swung(timed.flatMap(({ bar, at }) => lyricsOf(bar, at))),
+				words: swung(timed.flatMap(({ bar, at }) => wordsOf(bar, at))),
 			},
 		],
-		end: at,
-		losses,
+		end,
+		losses: [
+			...(open === null ? [] : [openLoss(open)]),
+			...tempo.losses,
+			...keys.losses,
+			...losses,
+		],
 	};
 }
 

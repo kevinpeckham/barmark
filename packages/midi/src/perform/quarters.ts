@@ -51,3 +51,21 @@ export function slotQuarters(slots: Slot[], meter: Meter): SlotQuarters[] {
 	}
 	return out;
 }
+
+/**
+ * A float time back as an exact fraction: the first continued-fraction
+ * convergent within 1e-9. Onsets are sums of small fractions of a bar, so
+ * this finds the fraction they were computed from.
+ */
+export function nearest(x: number): Quarters {
+	let [h, hPrev, k, kPrev] = [Math.floor(x), 1, 1, 0];
+	let rest = x - h;
+	while (Math.abs(x - h / k) >= 1e-9 && rest > 0) {
+		const r = 1 / rest;
+		const a = Math.floor(r);
+		[h, hPrev] = [a * h + hPrev, h];
+		[k, kPrev] = [a * k + kPrev, k];
+		rest = r - a;
+	}
+	return q(h, k);
+}

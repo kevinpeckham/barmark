@@ -205,13 +205,15 @@ describe("perform: accents, hits, pushes, pedal and swing", () => {
 	});
 
 	test("no swing in compound meters", () => {
-		const p = perform(parseChart("time: 6/8, feel: swing\n| C D E F G A | C D E F G A |"));
+		const p = perform(
+			parseChart("time: 6/8, feel: swing, tempo: 80\n| C D E F G A | C D E F G A |"),
+		);
 		expect(
 			notesOf(p)
 				.filter(([pitch]) => pitch < 60)
 				.map(([, at]) => at),
 		).toEqual([0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5]);
 		expect(p.losses.map((l) => [l.code, l.bar])).toEqual([["swing-compound", 1]]);
-		expect(perform(parseChart("feel: swing\n| C |")).losses).toEqual([]);
+		expect(perform(parseChart("feel: swing, tempo: 120\n| C |")).losses).toEqual([]);
 	});
 });
