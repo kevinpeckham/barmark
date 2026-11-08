@@ -1,6 +1,4 @@
 import { describe, expect, test } from "bun:test";
-import { existsSync, readdirSync, readFileSync } from "node:fs";
-import { join } from "node:path";
 import { type MidiEvent, parseMidi } from "midi-file";
 import type { MidiImportCode } from "../src/import/types.js";
 import { exportMidi } from "../src/index.js";
@@ -8,6 +6,7 @@ import { LIMITS, readSmf } from "../src/smf/read.js";
 import { decodeText } from "../src/smf/text.js";
 import type { SmfEvent } from "../src/smf/types.js";
 import { CHARTS } from "./helpers/charts.js";
+import { fixtureBytes, MIDI_FIXTURES } from "./helpers/fixtures.js";
 import { type Event, smf } from "./helpers/smf.js";
 
 const END = { kind: "meta", type: 0x2f, data: new Uint8Array() };
@@ -748,12 +747,12 @@ describe("agrees with midi-file", () => {
 	});
 
 	test("every MuseScore fixture reads as midi-file reads it", () => {
-		const dir = join(import.meta.dir, "fixtures");
-		const files = existsSync(dir)
-			? readdirSync(dir, { recursive: true, encoding: "utf8" }).filter((f) => f.endsWith(".mid"))
-			: [];
-		for (const file of files) {
-			const bytes = new Uint8Array(readFileSync(join(dir, file)));
+		// real.test.ts checks the folder holds exactly these.
+		expect(MIDI_FIXTURES.length).toBe(7);
+		for (const file of MIDI_FIXTURES) {
+			const bytes = fixtureBytes(file);
+			const read = readSmf(bytes);
+			expect({ file, diagnostics: read.diagnostics }).toEqual({ file, diagnostics: [] });
 			expect({ file, events: ours(bytes) }).toEqual({ file, events: theirs(bytes) as never });
 		}
 	});

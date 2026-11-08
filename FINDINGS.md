@@ -9,6 +9,19 @@ not here.
 
 ## Testing
 
+### The package gate failed for six tasks without anyone running it (2026-11-08, @barmark/midi)
+
+- **The symptom.** At Task 15, `bun run verify:package midi` failed:
+  the Node smoke test wanted the main entry to export exactly
+  `exportMidi` and `VERSION`, and it had gained `importMidi` and
+  `readSmf` in Tasks 9 to 13.
+- **The cause.** `scripts/smoke-midi.mjs` pins the entry's exports, which
+  is its point, but the plan runs the package gate only at the end of
+  each phase, and `bun test` doesn't run it.
+- **The fix.** The smoke test now expects the four exports and imports
+  the file it exported. A task that adds a public export runs
+  `verify:package` for its package.
+
 ### Reporting each code once a track hid distinct problems (2026-11-08, @barmark/midi)
 
 - **The symptom.** A track with a tempo of 0, a time signature of 7/32
@@ -752,6 +765,41 @@ when two rules each define "first", test a chart that tells them apart,
 and round-trip it through `format`.
 
 ## Tooling
+
+### MuseScore pedals one staff's track, and its slash notes sound only when a file asks (2026-11-08, midi import fixtures)
+
+- **The symptom.** Writing the import's real files
+  (`bun scripts/midi-fixtures.ts`), four things weren't as expected. (1)
+  The pedalled piano (`packages/midi/tests/fixtures/piano-comping.mscx`)
+  came out of MuseScore 4.7.6 as two tracks, one a staff, both on
+  channel 1, with controller 64 only in the left hand's track (the staff
+  the pedal line is on), pressed two ticks after the downbeat and, at a
+  change, lifted a tick after the next note-on. (2) The musicxml
+  fixtures' slash notes didn't sound at all, though spec 8 says MuseScore
+  plays slashes as B3 or B4. (3) `importMidi(bytes, { tracks: [1] })` on
+  the band with bass and drums read `Cmaj7`, `F(#11)`, `Am(9)` for C, F,
+  Am. (4) The lead sheet's `FTristan`, a chord symbol MuseScore can't
+  parse, sounds as F2 and F4 only, and imports as `{F}`.
+- **The cause.** (1) MuseScore writes the pedal where the spanner is;
+  a sequencer would hold both staves (one channel), but the import holds
+  a released note only on its own track (`src/import/notes.ts`), so the
+  right hand isn't held. The chords come out right anyway, since a chord
+  carries through its upper voices' rests. (2) Our hand-written `.mscx`
+  slashes carry `<play>0</play>`; a MusicXML file's slashes, as Dorico
+  writes them, come into MuseScore as notes that play (`dorico-band`
+  sounds B3 and B4 on two parts), which is what spec 8 saw. (3) `tracks` reads every note of the named tracks, and a MuseScore
+  part's track holds its slash notes (B3) beside its chord-symbol
+  playback. (4) MuseScore plays an unparsed symbol as its root.
+- **The fix.** (1) None yet: whether the pedal holds a channel across
+  tracks (spec 5.2 says "on its channel") is a question for the spec;
+  the fixture pins today's reading. (2) `bass-and-chords.mscx` writes
+  its slashes without `<play>0</play>`, so one fixture has sounding
+  slashes, left out as a melody (`melody-left-out`). (3) The README says
+  to leave `tracks` out for MuseScore's files. (4) As intended: one pitch
+  class is a note set. To learn `.mscx` syntax for a pedal, a slash
+  chord's bass (`<bass>` on the line of fifths), a rehearsal mark or a
+  drum kit, write the smallest MusicXML with it and have MuseScore
+  convert it (`mscore -o x.mscx x.musicxml`).
 
 ### MuseScore's MIDI import keeps one text event a tick, and makes credits a lyric (2026-11-08, midi export)
 

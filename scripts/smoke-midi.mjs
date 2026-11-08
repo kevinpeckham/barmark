@@ -9,8 +9,9 @@
  * Locally <module> is the built entry (dist/index.js) and the subpath is
  * read from the `exports` map in the package.json beside dist/, so a wrong
  * map fails; from npm <module> is the package name and `<name>/perform` is
- * resolved by Node itself. The main entry exports exactly `exportMidi` and
- * `VERSION`, and exports the chart as a file starting `MThd`; the subpath
+ * resolved by Node itself. The main entry exports exactly `exportMidi`,
+ * `importMidi`, `readSmf` and `VERSION`, exports the chart as a file
+ * starting `MThd` and imports that file back as a chart; the subpath
  * exports exactly `perform` and `secondsAt`. Prints the result as JSON;
  * exit 1 if anything differs.
  */
@@ -34,12 +35,15 @@ const perform = await import(performSpec);
 const exported = main.exportMidi(chart);
 const result = {
 	midi: exported.ok && Buffer.from(exported.bytes.subarray(0, 4)).toString("latin1"),
+	imported: exported.ok && main.importMidi(exported.bytes).text !== "",
 	main: Object.keys(main).sort(),
 	perform: Object.keys(perform).sort(),
 };
 const good =
 	result.midi === "MThd" &&
-	JSON.stringify(result.main) === JSON.stringify(["VERSION", "exportMidi"]) &&
+	result.imported === true &&
+	JSON.stringify(result.main) ===
+		JSON.stringify(["VERSION", "exportMidi", "importMidi", "readSmf"]) &&
 	JSON.stringify(result.perform) === JSON.stringify(["perform", "secondsAt"]);
 console.log(JSON.stringify(result));
 process.exit(good ? 0 : 1);

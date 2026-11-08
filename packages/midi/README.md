@@ -148,6 +148,8 @@ if (text === "") console.error(diagnostics);
 bars a line. It never throws; `text` is `""` exactly when a diagnostic
 is an error, and otherwise parses with no errors.
 
+### What is read
+
 - **The chords** come from the notes that carry the harmony: drums
   (channel 10) and single-note lines other than the lowest (a melody,
   slash notes) are left out, unless `tracks` names the tracks to read.
@@ -190,19 +192,100 @@ is an error, and otherwise parses with no errors.
   characters go, and a name that would read as something else (`x2`) is
   repaired or dropped.
 
-Options: `tracks` (1-based numbers or track names, any case), `lyrics`
-(default true), `simile`
-(write a repeated bar as `%`, default true) and `barsPerLine` (default
-4). Each diagnostic has a `code`, a `severity`, a `message`, and where it
-can, a `track` (1-based, in file order) and the played `bar` (a pickup is
-bar 1). A problem that repeats is reported once, with a count and its
-first bars. The codes are the import's (`not-midi`, `format-2`, `smpte`,
-`unknown-chunk`, `too-large`, `no-notes`, `truncated`, `track-count`, `bad-event`,
-`meta-invalid`, `meter-mid-bar`, `key-doubtful`, `harmony-from-melody`,
-`track-unknown`, `chord-unnamed`, `drums-left-out`, `melody-left-out`,
-`tempo-ramp`, `tempo-in-bar`, `marker-dropped`, and for lyrics
-`lyrics-dropped`, `lyrics-verses-uncertain`, `lyrics-other-tracks`) and
-sync's builder's.
+- **MuseScore's files** read as they sound. MuseScore 4 plays its chord
+  symbols, on a channel of their own in the part's track (the bass in
+  octave 2 under the chord around middle C), and that is where the
+  chords come from. It plays slash notes as one pitch a beat (B3 or B4,
+  the staff's middle line) on the part's own channel: a single-note
+  line, left out like a melody, so C doesn't come back as Cmaj7. Its
+  rehearsal marks are markers (`## A`); its section names (staff text)
+  and its title aren't in the file at all. The sustain pedal holds the
+  notes of its track. Checked on MuseScore 4.7.6's files of a lead sheet,
+  a hymn with a pickup and two verses, a band, a comping guitar, a waltz,
+  a pedalled piano and a band with bass and drums.
+
+### What isn't read
+
+1. **Repeats, endings and jumps.** MIDI has none: the chart is the
+   file's play order written out (a bar repeated exactly comes back as
+   `%`, with `simile`).
+2. **Rhythm finer than a beat.** A push or an eighth-note change is
+   written on the beat it falls into, as the chord holding most of the
+   beat.
+3. **Rhythm figures.** Accents, hits, pushes, the pedal and swing aren't
+   written; silence is `N.C.`, never `--` (a file can't tell the band
+   stopped from the chord instruments stopping).
+4. **Gradual tempo changes and fermatas.** A ramp is written as its last
+   tempo (`tempo-ramp`); a tempo that changes inside a bar and is back
+   by the next is left out (`tempo-in-bar`).
+5. **Credits, words and text events**, other than the title, markers and
+   a karaoke file's lyrics; programs and instrument names.
+6. **Drums.** Channel 10 is never read (`drums-left-out`).
+7. **Melody lines, by design.** The import reads the harmony, so a
+   single-note line that isn't the lowest comes back only through the
+   chords it sounds in, or not at all: a melody or a `Vo.Mel` line, a
+   pedal-tone line, a chart's own `Pno.LH` single notes over a bass part
+   (`melody-left-out` names them). The lowest single-note line is a bass
+   line and gives the chords their bass.
+8. **Parts.** The whole file is one chord line: several parts are read
+   together, so a guitar's G over a piano's Em is `Em7`.
+9. **Inversions under a held chord.** The same upper voices over a new
+   bass inside a bar are one chord; a new bass at a bar line is a slash
+   chord.
+10. **Format 2 files and SMPTE time** (errors), and files past the
+    bounds: 16 MiB, 1,024 tracks, 2,000,000 events, 500,000 notes or
+    10,000 bars (`too-large`).
+
+### Options
+
+- `tracks`: the tracks to read the chords from, by 1-based number or
+  track name (any case, every track of that name), in place of the
+  default choice. Every note on them counts, single-note lines
+  included, so naming a MuseScore part's track reads its slash notes too
+  and adds B to every chord: leave `tracks` out for MuseScore's files.
+  An entry naming no track is a `track-unknown` warning; when none
+  match, the default choice is used.
+- `lyrics`: read lyrics (default true).
+- `simile`: write a bar that repeats the one before as `%` (default
+  true).
+- `barsPerLine`: bars a line (default 4).
+
+### Diagnostics
+
+Each diagnostic has a `code`, a `severity`, a `message`, and where it
+can, a `track` (1-based, in file order) and the played `bar` (a pickup
+is bar 1). A problem that repeats
+is reported once, with a count and its first bars.
+
+| Code | Severity | When |
+|---|---|---|
+| `not-midi` | error | no `MThd` header, or a division of 0 |
+| `format-2` | error | a format 2 file |
+| `smpte` | error | SMPTE time division: no beats to make bars from |
+| `too-large` | error | past a bound (above) |
+| `no-notes` | error | no pitched notes outside channel 10 |
+| `truncated` | warning | a chunk runs past the file; read to its end |
+| `track-count` | warning | the header's track count is wrong |
+| `bad-event` | warning | junk in a track; the rest of that track skipped |
+| `meta-invalid` | warning | a tempo, time or key signature barmark can't use, ignored |
+| `meter-mid-bar` | warning | a time signature inside a bar |
+| `key-doubtful` | warning | a key signature the notes don't fit, left out |
+| `harmony-from-melody` | warning | every line is a single line; all are read |
+| `track-unknown` | warning | a `tracks` entry naming no track |
+| `chord-unnamed` | warning | `?` written for notes with no name |
+| `lyrics-dropped` | warning | a verse that didn't read back as placed, or past 100 verses at a tick or 20,000 rows |
+| `lyrics-verses-uncertain` | warning | the number of lyrics at a tick varies, so verses may be mixed |
+| `unknown-chunk` | info | a chunk other than `MTrk`, skipped |
+| `drums-left-out` | info | channel 10's notes |
+| `melody-left-out` | info | the single-note lines left out of the harmony |
+| `tempo-ramp` | info | a gradual tempo change, written as its last tempo |
+| `tempo-in-bar` | info | a tempo that changes inside a bar and is back by the next, left out |
+| `marker-dropped` | info | a second marker on one bar |
+| `lyrics-other-tracks` | info | lyrics on tracks after the first with them, not read |
+
+Plus `@barmark/sync`'s builder's codes as they come: a section name it
+had to change, a key respelled, a meter or a tempo barmark can't write
+(`tempo:` is 1 to 999, `time:` up to 32 beats), dropped.
 
 `readSmf(bytes)` is the reader underneath: the file's format, division
 and tracks of absolute-tick events, each track's name, and its

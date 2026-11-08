@@ -109,6 +109,15 @@ package uses [semantic versioning](https://semver.org/).
   karaoke file with no lyric events gives its text events as lyrics.
   Before a verse's first syllable a slot is `--`. At most 20,000 lyric
   rows are written; later verses are left out (`lyrics-dropped`).
+- **Import checked on MuseScore's own files**: seven files MuseScore
+  4.7.6 wrote from scores of ours (a lead sheet, a hymn with a pickup
+  and two verses, a band, a comping guitar, a waltz, a pedalled piano
+  with no chord symbols, and a band with a bass line, sounding slash
+  notes and drums) import to charts read over by hand: the chord
+  symbols MuseScore plays, not its slash notes' B; the pickup; two
+  parts as one chord line; rehearsal marks as headings. The README
+  says what import reads and what it doesn't (melody lines, by design),
+  its options, and its diagnostics with their severities.
 - **`readSmf(bytes)`**: the Standard MIDI File reader import uses, with
   its diagnostics: format, division and tracks of absolute-tick events
   (notes, programs, controllers, the meta events barmark reads), each
