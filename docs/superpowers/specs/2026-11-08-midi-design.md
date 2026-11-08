@@ -834,7 +834,11 @@ which the grammar allows.
 - **From** the first track (file order) with lyric events; other tracks
   with lyrics are named in one info, `lyrics-other-tracks`.
 - **Verses:** lyric events at one tick are verses 1, 2, … in file order
-  (MuseScore writes two verses so, section 8, and so does the export).
+  (MuseScore writes two verses so, section 8, and so does the export),
+  up to 100; the rest are left out with a `lyrics-dropped` warning
+  (Claude's call, Task 14: barmark's parser and printer slow with the
+  rows under one bar line, and a hostile file can put every event at one
+  tick).
 - **Syllables:** a syllable continues its word (`-`) unless its text ends
   in whitespace, or the next syllable of its verse begins with
   whitespace (karaoke files put the space first); a trailing `-` is kept
@@ -845,15 +849,22 @@ which the grammar allows.
   `~` are removed (`~a`, `a~`, `a~~b` would be errors), and so is a
   `/-` (an error in a row).
 - **Placement:** in each bar, the coarsest even grid that puts every
-  syllable's onset on a slot: the whole bar, then its beats, then each
-  beat in two, three or four (`_` groups). An onset finer than that moves
-  to the nearest point. Two syllables of one verse on one slot are joined
-  as an elision. A slot with no syllable is `/` when the lyric track's
-  own notes are sounding at its start, else `--`.
+  syllable's onset on a slot: the whole bar, then each divisor of its
+  beats (onsets on beats 1 and 3 of 4/4 are two slots), then its beats
+  each in two, three or four (`_` groups; a beat whose later slots all
+  hold is written as one slot). An onset finer than that moves to the
+  nearest point (of the grid nearest every onset, ties to the coarser);
+  one nearer the next bar line stays on the last slot. A syllable after
+  the grid's end (whose bars come from the harmony) is not placed. Two
+  syllables of one verse on one slot are joined as an elision. A slot
+  with no syllable is `/` when the lyric track's own notes are sounding
+  at its start, else `--`.
 - **Rows:** sync writes no repeats, so played bars and written bars
   match one to one, `%` included. After the build, each bar line gets one
-  row per verse that has a syllable on it (`lyrics:`, `lyrics 2:`, …),
-  and the chart is printed again.
+  row per verse that has a syllable on it, and the chart is printed
+  again. A lone verse 1 is `lyrics:`; with more verses every row is
+  numbered (`lyrics 1:`, `lyrics 2:`, …), since grammar 7.7 makes an
+  unnumbered row among numbered ones an error.
 - **Self-check, per verse:** the chart must parse with no errors and
   its `PlayedBar.lyrics` must hold every syllable placed. On a failure
   the importer drops the failing verse's rows and checks again, verse by

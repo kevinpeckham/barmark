@@ -2,15 +2,16 @@
  * `importMidi` (spec 5): read the file; pair its notes and choose the
  * harmony; make the bar grid and the key, meter and tempo; name a chord
  * per segment; take the markers as sections and the title; then hand it
- * all to sync's `chartFromDetections`, which writes the chart. Any error
- * stops it with an empty chart. It never throws: a throw from a bug comes
+ * all to sync's `chartFromDetections`, which writes the chart; then add
+ * the lyrics as lyric rows. Any error stops it with an empty chart. It never throws: a throw from a bug comes
  * back as an error diagnostic too.
  */
 import { chartFromDetections } from "@barmark/sync";
 import { readSmfInto } from "../smf/read.js";
 import { detectionsOf, mapBuild, withWritablePickup } from "./build.js";
 import { directivesOf } from "./directives.js";
-import { gridOf } from "./grid.js";
+import { type Grid, gridOf } from "./grid.js";
+import { withLyrics } from "./lyrics.js";
 import { sectionsOf, titleOf } from "./markers.js";
 import { notesOf } from "./notes.js";
 import { createReport, type Report } from "./report.js";
@@ -41,6 +42,21 @@ const lastHeard = (n: { start: number; end: number }, ppq: number) =>
 
 const failed = (report: Report) => report.list.some((d) => d.severity === "error");
 
+/** Sync's chart from the detections, its diagnostics reported as the import's. */
+function built(
+	input: Parameters<typeof chartFromDetections>[0],
+	grid: Grid,
+	options: MidiImportOptions,
+	report: Report,
+): string {
+	const { chart, diagnostics } = chartFromDetections(input, options);
+	for (const d of diagnostics) {
+		const mapped = mapBuild(d, grid, input);
+		if (mapped) report.add(mapped.code, mapped.severity, mapped.message, { bar: mapped.bar });
+	}
+	return chart;
+}
+
 /** The chart, or "" once an error is reported. */
 function chartOf(bytes: Uint8Array, options: MidiImportOptions, report: Report): string {
 	const { smf, names } = readSmfInto(bytes, report);
@@ -56,12 +72,9 @@ function chartOf(bytes: Uint8Array, options: MidiImportOptions, report: Report):
 	const runs = chordRuns(harmony, grid, directives.keys, report);
 	const sections = sectionsOf(smf, grid, report);
 	const input = detectionsOf(grid, runs, directives, sections, titleOf(smf, names));
-	const built = chartFromDetections(input, options);
-	for (const d of built.diagnostics) {
-		const mapped = mapBuild(d, grid, input);
-		if (mapped) report.add(mapped.code, mapped.severity, mapped.message, { bar: mapped.bar });
-	}
-	return failed(report) ? "" : built.chart;
+	const chart = built(input, grid, options, report);
+	if (failed(report)) return "";
+	return options.lyrics === false ? chart : withLyrics(chart, smf, grid, notes, report);
 }
 
 /** A chord chart from a Standard MIDI File (format 0 or 1), with its diagnostics. */

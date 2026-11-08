@@ -13,11 +13,15 @@ import { exportMidi } from "../src/index.js";
 function bars(chart: string): string {
 	const out = exportMidi(chart);
 	if (!out.ok) throw new Error(out.diagnostics.map((d) => d.message).join("; "));
-	return importMidi(out.bytes)
-		.text.split("\n")
-		.filter((l) => l.startsWith("|"))
-		.join(" ")
-		.replaceAll(" | |", " |");
+	return (
+		importMidi(out.bytes)
+			.text.split("\n")
+			// A chart with lyric rows pads its bar lines to line up with them.
+			.map((l) => l.trim().replace(/\s+/g, " "))
+			.filter((l) => l.startsWith("|"))
+			.join(" ")
+			.replaceAll(" | |", " |")
+	);
 }
 
 const example = (name: string) =>

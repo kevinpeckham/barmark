@@ -161,6 +161,19 @@ is an error, and otherwise parses with no errors.
   written as its last tempo. A tempo or meter barmark can't write
   (`tempo:` is 1 to 999, `time:` up to 32 beats) is dropped with a
   diagnostic.
+- **Chords are read at beat resolution**, so a push on an off-beat (the
+  last eighth of a bar, say) is written on the next beat.
+- **Lyrics** become lyric rows under the bar lines (unless `lyrics:
+  false`): from the first track with lyric events, events at one tick
+  being verses 1, 2, … (up to 100). A syllable continues its word unless
+  its text ends in a space or the next begins with one; `‿` is an
+  elision (`~`). Each bar's syllables sit on the coarsest grid that
+  holds them (the bar, its beats, a beat in two, three or four), the
+  slots between held (`/`) while the track's notes sound, else `--`.
+  Characters a row can't hold as a syllable (`|`, `"`, braces, `_`) are
+  removed. The chart is checked before it is returned: a verse whose rows
+  don't read back as placed is left out (`lyrics-dropped`), never the
+  chords.
 - **Markers** become `## ` headings, on the bar line nearest them; two
   on one bar keep the first. **The title** is a format 0 file's track
   name, or track 1's name when track 1 has no notes (a conductor track).
@@ -168,7 +181,8 @@ is an error, and otherwise parses with no errors.
   characters go, and a name that would read as something else (`x2`) is
   repaired or dropped.
 
-Options: `tracks` (1-based numbers or track names, any case), `simile`
+Options: `tracks` (1-based numbers or track names, any case), `lyrics`
+(default true), `simile`
 (write a repeated bar as `%`, default true) and `barsPerLine` (default
 4). Each diagnostic has a `code`, a `severity`, a `message`, and where it
 can, a `track` (1-based, in file order) and the played `bar` (a pickup is

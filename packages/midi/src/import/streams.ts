@@ -91,7 +91,7 @@ export function bassLine(notes: Note[]): { track: number; channel: number } | nu
 }
 
 /** At most `MAX_NAMED` items named, then a count: "a, b, c and d", "a, …, h …and 2 more". */
-function namedList(items: string[]): string {
+export function namedList(items: string[]): string {
 	if (items.length <= MAX_NAMED) return andList(items);
 	return `${items.slice(0, MAX_NAMED).join(", ")} …and ${items.length - MAX_NAMED} more`;
 }

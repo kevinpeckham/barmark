@@ -91,6 +91,18 @@ package uses [semantic versioning](https://semver.org/).
   the file, and the played bar it concerns (a pickup is bar 1), counted
   once with its first bars; a tempo or meter barmark can't write is
   dropped with sync's diagnostic.
+- **`importMidi` reads lyrics** as lyric rows under the bar lines
+  (spec 5.8; `lyrics: false` reads none): the first track with lyric
+  events, events at one tick as verses 1, 2, … (up to 100; others
+  `lyrics-dropped`), other tracks with lyrics named once
+  (`lyrics-other-tracks`). Word ends from spaces (trailing, or leading
+  on the next syllable), `‿` as `~`; characters a row can't hold as a
+  syllable removed, so a syllable is one syllable or nothing. Each bar
+  takes the coarsest even grid that holds its syllables' onsets, with
+  `/` while the lyric track sounds and `--` where it doesn't. A
+  self-check reparses the chart and drops a verse whose rows don't read
+  back as placed (`lyrics-dropped`), keeping the chords and the other
+  verses.
 - **`readSmf(bytes)`**: the Standard MIDI File reader import uses, with
   its diagnostics: format, division and tracks of absolute-tick events
   (notes, programs, controllers, the meta events barmark reads), each
