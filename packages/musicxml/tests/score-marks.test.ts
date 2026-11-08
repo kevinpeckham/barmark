@@ -108,8 +108,8 @@ describe("an open repeat", () => {
 	});
 });
 
-describe("a leading word A", () => {
-	/** Dorico reads a leading "a" as the article in "a tempo" and drops it. */
+describe("a lone word A", () => {
+	/** Dorico reads a lone "a" as the article in "a tempo" and drops it. */
 	const NBSP = " ";
 	test("a heading A keeps its letter: a no-break space follows it", () => {
 		const xml = xmlOf("## A\n| G | C |\n## A section\n| D |");
@@ -119,6 +119,18 @@ describe("a leading word A", () => {
 	test("so does a text line, in either case", () => {
 		const xml = xmlOf("| G | C |\n### a cappella\n");
 		expect(xml).toContain(`>a${NBSP}cappella</words>`);
+	});
+	test("so does every lone a, not only a leading one", () => {
+		// Shenandoah's "every note a quarter." read "every note  quarter." in Dorico.
+		const xml = xmlOf("every note a quarter.\n\n## Plan A\n| G | C |\n### a, then A or a\n");
+		expect(xml).toContain(`>every note a${NBSP}quarter.</words>`);
+		expect(xml).toContain(`>Plan A${NBSP}</words>`);
+		expect(xml).toContain(`>a, then A${NBSP}or a${NBSP}</words>`);
+	});
+	test("a word holding an a is written as it is", () => {
+		const xml = xmlOf("## Abba, a.k.a. B\n| G |\n### Sara and band (a)\n");
+		expect(xml).toContain(">Abba, a.k.a. B</words>");
+		expect(xml).toContain(">Sara and band (a)</words>");
 	});
 	test("other text, and barmark's own a tempo, are written as they are", () => {
 		const xml = xmlOf("tempo: 120\n## Abba\n| G |\ntempo: rit.\n| C |\ntempo: a tempo\n| D |");

@@ -34,6 +34,11 @@ package uses [semantic versioning](https://semver.org/).
   (`[1/4]` in 6/8 reads `[2/8]`), and one followed by another one-bar
   meter (`| [2/4] G | % |`). The import reads either shape back as the
   same pickup.
+- **Every lone word "a" in chart text survives Dorico.** A heading's,
+  text line's or description's word "a" anywhere, not only at the start,
+  is now held to the next word by a no-break space: Dorico read
+  Shenandoah's "every note a quarter." as "every note  quarter.", taking
+  the "a" for the one in "a tempo". barmark's own "a tempo" stays plain.
 
 ## [0.7.1] - 2026-11-08
 
