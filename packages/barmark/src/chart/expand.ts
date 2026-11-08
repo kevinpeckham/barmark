@@ -336,14 +336,17 @@ export function expand(
 		if (plan) phase = NEXT[phase]?.[d.kind] ?? phase;
 	};
 
-	/** A bar as played now; its slot count is checked the first time a written bar plays. */
+	/** A written bar's slot count, checked the first time it plays. */
+	const checkSlots = (p: Extract<Played, { kind: "bar" }>, meter: Meter, line: number) => {
+		if (!p.own || checked.has(p)) return;
+		checked.add(p);
+		const warning = uneven(p.slots.length, meter, line);
+		if (warning) diagnostics.push(warning);
+	};
+	/** A bar as played now; in a one-bar meter it also carries the `time:` in force (grammar 2.4). */
 	const barOf = (p: Extract<Played, { kind: "bar" }>, line: number): PlayedBar => {
 		const meter = p.meter ?? state.time;
-		if (p.own && !checked.has(p)) {
-			checked.add(p);
-			const warning = uneven(p.slots.length, meter, line);
-			if (warning) diagnostics.push(warning);
-		}
+		checkSlots(p, meter, line);
 		const { key, tempo, change: tempoChange, feel, swingPercent } = state;
 		return {
 			index: 0,
@@ -351,6 +354,7 @@ export function expand(
 			line,
 			section: sectionName,
 			meter,
+			...(p.meter && { time: state.time }),
 			key,
 			tempo,
 			tempoChange,

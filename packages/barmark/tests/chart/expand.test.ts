@@ -85,6 +85,17 @@ describe("directives", () => {
 	test("a one-bar meter applies to that bar only", () => {
 		expect(play("| D | [2/4] A | G |").bars.map((b) => b.meter.n)).toEqual([4, 2, 4]);
 	});
+	test("a bar in a one-bar meter carries the time: meter in force, which tempo: counts (2.4)", () => {
+		const r = play("time: 6/8\n| [2/8] E7 | Am | [3/4] Dm | % |\ntime: 3/4\n| [3/4] G |");
+		expect(r.bars.map((b) => b.time)).toEqual([
+			{ n: 6, d: 8 },
+			undefined,
+			{ n: 6, d: 8 },
+			{ n: 6, d: 8 },
+			{ n: 3, d: 4 },
+		]);
+		expect("time" in (r.bars[1] ?? {})).toBe(false);
+	});
 	test("a bar carries the swing amount in force; a later feel without one clears it", () => {
 		const r = play("feel: swing 58%\n| D |\nfeel: shuffle\n| A |\nfeel: swing 16 55%\n| G |");
 		expect(r.bars.map((b) => [b.feel, b.swingPercent])).toEqual([

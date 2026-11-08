@@ -76,3 +76,15 @@ package uses [semantic versioning](https://semver.org/).
   tacet part or a resting line sounds nothing; the pedal is on every
   track of its part; lyrics go to the singing line's track and, with
   words, move with a pushed note.
+
+### Fixed
+
+- **A one-bar meter keeps the tempo of the `time:` around it** (Kevin's
+  decision, 2026-11-08, grammar 2.4). The export counted `tempo:` in a
+  bracketed bar's own beat, so `time: 6/8, tempo: 60` then a `[2/8]`
+  pickup played the pickup at 60 eighths a minute (30 quarter notes, 3×
+  too slow) and a `[3/4]` bar at 60 quarters. Both now play at 90
+  quarter notes a minute, like the 6/8 bars; a rit. or accel. steps a
+  dotted quarter at a time through such a bar, and a fermata holds its
+  last dotted quarter (a `[2/8]` bar, shorter than one, from its
+  downbeat). Needs barmark 0.21.0 (`PlayedBar.time`).

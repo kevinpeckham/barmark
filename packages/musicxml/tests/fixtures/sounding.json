@@ -1532,6 +1532,25 @@
 			]
 		}
 	},
+	"grammar block 2fa1b1df": {
+		"P1": {
+			"notes": [],
+			"harmonies": [
+				{
+					"text": "E7",
+					"at": "0/1"
+				},
+				{
+					"text": "Am",
+					"at": "1/1"
+				},
+				{
+					"text": "Dm",
+					"at": "4/1"
+				}
+			]
+		}
+	},
 	"grammar block 0db1e303": {
 		"P1": {
 			"notes": [],
