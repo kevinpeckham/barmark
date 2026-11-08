@@ -1,5 +1,6 @@
 /** A score's marks shown once, and the review's minors on running values, endings, short values and open repeats. */
 import { describe, expect, test } from "bun:test";
+import { ownText as ownTextOf } from "../src/directions.js";
 import { all, measures, notes, xmlOf } from "./helpers.js";
 import { expected, play } from "./play.js";
 
@@ -139,6 +140,10 @@ describe("a lone word A", () => {
 		expect(xml).toContain(`>every note a${NBSP}quarter.</words>`);
 		expect(xml).toContain(`>Plan A${NBSP}</words>`);
 		expect(xml).toContain(`>a, then A${NBSP}or a${NBSP}</words>`);
+	});
+	test("an a before a tab or a line break is held too", () => {
+		expect(ownTextOf("a\tb")).toBe("a\u00a0b");
+		expect(ownTextOf("Plan a\n")).toBe("Plan a\u00a0");
 	});
 	test("a word holding an a is written as it is", () => {
 		const xml = xmlOf("## Abba, a.k.a. B\n| G |\n### Sara and band (a)\n");

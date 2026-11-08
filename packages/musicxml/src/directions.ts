@@ -25,9 +25,10 @@ export const scoreDirection = (types: string, sound = "", offset?: number) =>
  * space: Dorico reads a lone "a" as the article in "a tempo" and drops it,
  * at the start ("A" vanishes, "A section" shows "section") and mid-sentence
  * ("every note a quarter." shows "every note  quarter."). A word is
- * whatever spaces delimit, so "a.k.a." and "(a)" are written as they are.
+ * whatever whitespace delimits, and the whitespace after an "a" (a tab too)
+ * becomes the no-break space, so "a.k.a." and "(a)" are written as they are.
  */
-export const ownText = (s: string) => s.replace(/(?<!\S)([Aa])(?: |$)/g, "$1\u00a0");
+export const ownText = (s: string) => s.replace(/(?<!\S)([Aa])(?:\s|$)/g, "$1\u00a0");
 
 export const wordsXml = (words: string) => direction(text("words", ownText(words)));
 
