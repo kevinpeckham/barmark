@@ -788,6 +788,20 @@ and round-trip it through `format`.
 
 ## Tooling
 
+### The release gate failed on main because the checkout's packages were older than main (2026-11-08, barmark 0.21.0)
+
+- **The symptom.** After the barmark 0.21.0 release PR merged on green
+  CI, `swamp workflow run release-check --input pkg=barmark` on `main`
+  failed: lint failed, four tests failed and `bun run --filter '*' build`
+  failed. The same commit was green in CI.
+- **The cause.** The local checkout had pulled `main` but not run
+  `bun install` since before `@barmark/midi` joined the workspace, so its
+  `node_modules` had no link for the new package or its dependencies.
+  CI installs fresh on every run; a long-lived checkout does not.
+- **The fix.** `bun install` after pulling `main`, then the gate passed
+  unchanged. RELEASING.md step 6 now says to run it.
+- **Where.** RELEASING.md step 6.
+
 ### MuseScore pedals one staff's track, and its slash notes sound only when a file asks (2026-11-08, midi import fixtures)
 
 - **The symptom.** Writing the import's real files

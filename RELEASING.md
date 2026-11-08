@@ -131,7 +131,9 @@ runs, and `verify:package cli` fails on anything else.
 5. **Commit** the bump: `git commit -m "<pkg>-vX.Y.Z: <one-line summary>"`,
    then push the branch and open a pull request
    (`gh pr create -R kevinpeckham/barmark --fill`).
-6. **Merge** once CI is green, then `git switch main && git pull`.
+6. **Merge** once CI is green, then `git switch main && git pull &&
+   bun install` (a checkout's packages fall behind when a workspace
+   package is added; FINDINGS 2026-11-08).
 7. **Gate:** `bunx varlock run -- swamp workflow run release-check --input
    pkg=<pkg>` on `main` (or the commands above). Fix anything it reports,
    through another pull request, before going on.
