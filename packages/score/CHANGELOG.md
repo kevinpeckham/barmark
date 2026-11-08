@@ -21,6 +21,12 @@ package uses [semantic versioning](https://semver.org/).
   drops anything else with its content, and throws on markup it cannot
   read cleanly; `engraveChart` turns that into `ok: false`.
 
+- A shared Verovio worker: `engine()` runs every score of a page through
+  one module Worker that loads Verovio on first use, and for each element
+  only the newest request is answered (`createEngine` takes any
+  `WorkerLike`); a crashed worker rejects what is pending and is replaced
+  on the next call.
+
 ### Fixed
 
 - The dark theme reaches the notes: Verovio's inner `svg` carries
