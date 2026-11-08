@@ -1,6 +1,7 @@
 import { exportMusicXml } from "@barmark/musicxml";
 import type { ChartDiagnostic } from "barmark";
 import type { VerovioToolkit } from "verovio/esm";
+import { cleanSvg } from "./markup.js";
 
 export type EngraveOptions = {
 	/** The width available, in CSS pixels; below 320 it is 320. */
@@ -59,5 +60,10 @@ export function engraveChart(vrv: VerovioToolkit, text: string, options: Engrave
 	const exported = exportMusicXml(text);
 	if (!exported.ok)
 		return { ok: false, reason: refusal(exported.diagnostics), diagnostics: exported.diagnostics };
-	return { ok: true, xml: exported.xml, ...engraveXml(vrv, exported.xml, options) };
+	const engraved = engraveXml(vrv, exported.xml, options);
+	try {
+		return { ok: true, xml: exported.xml, pages: engraved.pages, svg: cleanSvg(engraved.svg) };
+	} catch (e) {
+		return { ok: false, reason: e instanceof Error ? e.message : String(e), diagnostics: [] };
+	}
 }

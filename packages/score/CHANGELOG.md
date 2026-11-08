@@ -16,3 +16,12 @@ package uses [semantic versioning](https://semver.org/).
   pages in render's `.bm-chart[data-theme]` so the score follows the
   palette (light, dark, auto, print); `scoreStyles` is the score's own
   layout.
+- `cleanSvg` is an allow-list: a hand-written scanner keeps only the
+  elements and attributes Verovio emits (and its own two stylesheets),
+  drops anything else with its content, and throws on markup it cannot
+  read cleanly; `engraveChart` turns that into `ok: false`.
+
+### Fixed
+
+- The dark theme reaches the notes: Verovio's inner `svg` carries
+  `color="black"`, now overridden by the score's styles.
