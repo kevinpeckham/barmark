@@ -14,6 +14,25 @@ describe("chartKey", () => {
 		expect(chartKey("key: G\n| G | C |")).toEqual({ tonic: "G", mode: "major" });
 		expect(chartKey("key: Bbm\n| Bbm |")).toEqual({ tonic: "Bb", mode: "minor" });
 	});
+	test("a pipe in a title or a text line before the bars doesn't hide the key", () => {
+		expect(chartKey("# Song | live\nkey: A\n| A | D |")).toEqual({ tonic: "A", mode: "major" });
+		expect(chartKey("Intro: guitar | bass\nkey: Eb\n| Eb |")).toEqual({
+			tonic: "Eb",
+			mode: "major",
+		});
+	});
+	test("a labelled bar line is a bar line too", () => {
+		const parts =
+			"part: Gtr = Guitar\npart: Bs = Bass\nkey: F\n\nGtr | F | C |\nBs  | {F2} | {C2} |";
+		expect(chartKey(parts)).toEqual({ tonic: "F", mode: "major" });
+		expect(chartKey("part: Gtr = Guitar\nkey: Bm\nGtr | Bm |")).toEqual({
+			tonic: "B",
+			mode: "minor",
+		});
+	});
+	test("a line that only looks like a bar line (an undeclared label) is passed over", () => {
+		expect(chartKey("Bass | E | A |\nkey: G\n| G |")).toEqual({ tonic: "G", mode: "major" });
+	});
 	test("is null for a chart that names no key, or has no bars", () => {
 		expect(chartKey("| D | A |")).toBeNull();
 		expect(chartKey("key: D")).toBeNull();

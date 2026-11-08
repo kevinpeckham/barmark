@@ -30,17 +30,30 @@ function pitchClass(tonic: string): number | null {
 	return (pc + 12) % 12;
 }
 
+/** A bar line: `|` first, or a part label (no spaces; not `|`, `#`, `@` or a digit first) and a space before it. */
+const BAR_LINE = /^\s*(?:[^\s|#@\d][^\s|]*\s+)?\|/;
+/** Lines that look like bar lines but read as text (an undeclared label) are passed over, up to this many. */
+const TRIES = 5;
+
 /**
  * The key of the chart's first bar, or null. Only the text up to the first
  * bar line is read: the key that bar plays in is written before it, and a
- * long chart would otherwise be parsed whole on every key typed.
+ * long chart would otherwise be parsed whole on every key typed. A chart
+ * that changes key later is labelled by this first key; transposing still
+ * moves every key in it.
  */
 export function chartKey(text: string): ChartKey | null {
 	const lines = text.split("\n");
-	const first = lines.findIndex((line) => line.includes("|"));
-	if (first === -1) return null;
-	const key = parseChart(lines.slice(0, first + 1).join("\n")).bars[0]?.key ?? null;
-	return key && pitchClass(key.tonic) !== null ? { tonic: key.tonic, mode: key.mode } : null;
+	let tries = 0;
+	for (let i = 0; i < lines.length && tries < TRIES; i++) {
+		if (!BAR_LINE.test(lines[i] ?? "")) continue;
+		tries++;
+		const bar = parseChart(lines.slice(0, i + 1).join("\n")).bars[0];
+		if (!bar) continue;
+		const key = bar.key;
+		return key && pitchClass(key.tonic) !== null ? { tonic: key.tonic, mode: key.mode } : null;
+	}
+	return null;
 }
 
 /** The key `semitones` from the chart's own (its own spelling at 0), or with no key the distance. */
