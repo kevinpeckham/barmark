@@ -805,6 +805,22 @@ and round-trip it through `format`.
 
 ## Tooling
 
+### Verovio's npm package carries no licence text (2026-11-08, cli)
+
+**Symptom:** bundling Verovio into the CLI's binaries for `render
+--score`, we went to attach its licence as the release attaches Edwin's
+(`Edwin-OFL.txt`, copied from `@barmark/render`'s `fonts/`), and there was
+nothing to copy: `verovio@6.4.1` publishes only `README.md`,
+`package.json` and `dist/`. **Cause:** its `files` is `["dist"]`; the
+licence (`COPYING.LESSER`, and the GPL it builds on, `COPYING`) lives only
+in the GitHub repository. **Fix:** `packages/cli/licenses/` holds both, as
+Verovio's tag `version-6.4.1` has them (they differ from Debian's copies
+only in whitespace); the release workflow's binaries job copies them
+beside the binaries as `Verovio-LGPL-3.0.txt` and `Verovio-GPL-3.0.txt`,
+and `packages/cli/tests/licences.test.ts` keeps both the files and the
+copy step. An npm install needs nothing from us: Verovio arrives as its
+own package.
+
 ### Verovio beside Dorico, first run (2026-11-08, score)
 
 **Symptom:** `scripts/score-dorico.ts` exported four charts (Morning Song, Peaceful Dreams,

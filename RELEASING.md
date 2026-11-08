@@ -85,8 +85,12 @@ bundle beside it.
 `@barmark/musicxml` with carets, so it follows their releases the way
 `@barmark/midi` follows `@barmark/sync`: a release of any of them may need
 a `@barmark/score` patch ("Requires `@barmark/render` X.Y.0") that raises
-its dependency. The CLI does not bundle `@barmark/score`, so a score
-release is followed by no CLI release and no `songs` bump.
+its dependency, and then by a CLI release (step 13): the CLI pins
+`@barmark/score` exactly and its binaries bundle it, with Verovio, for
+`render --score`. A Verovio upgrade is a `@barmark/score` release (its
+range) followed by a CLI release that raises the CLI's exact `verovio`
+pin to match, so the binaries and an npm install engrave with the same
+Verovio.
 
 ## Checks
 
@@ -167,8 +171,9 @@ runs, and `verify:package cli` fails on anything else.
     `grep '/barmark": \["barmark@' site/bun.lock` prints nothing, or
     delete the nested entries it finds and `bun install` again (FINDINGS).
 13. **Release the CLI** (after a `barmark`, `@barmark/render`,
-    `@barmark/musicxml`, `@barmark/sync` or `@barmark/midi` release; the
-    CLI bundles `@barmark/sync` through `@barmark/midi`; after a `barmark`
+    `@barmark/musicxml`, `@barmark/score`, `@barmark/sync` or
+    `@barmark/midi` release; the CLI bundles `@barmark/sync` through
+    `@barmark/midi`, and Verovio through `@barmark/score`; after a `barmark`
     or `@barmark/sync` minor, release the caret dependants' patches first,
     as above: after a `sync` minor, a `@barmark/midi` patch "Requires
     `@barmark/sync` X.Y.0"):
@@ -176,18 +181,18 @@ runs, and `verify:package cli` fails on anything else.
     reaches CLI users only through a CLI release. On a new branch, bump
     `packages/cli` (a patch, unless the CLI itself changed) with a
     CHANGELOG line "Uses barmark A.B.C, @barmark/render D.E.F,
-    @barmark/musicxml G.H.I and @barmark/midi J.K.L" (naming the ones
-    that changed), and
+    @barmark/musicxml G.H.I, @barmark/score M.N.O and @barmark/midi
+    J.K.L" (naming the ones that changed), and
     release it with steps 1–11 (`pkg=cli`). Release the libraries first:
     the CLI's binaries bundle the libraries' code from the repository, so
     `verify:release cli` (and the release workflow) fail if
     `packages/barmark/src`, `packages/render/src`, `packages/render/fonts`,
-    `packages/musicxml/src`, `packages/sync/src` or `packages/midi/src`
-    changed since their own tags, or if a library's dependency range at
+    `packages/musicxml/src`, `packages/score/src`, `packages/sync/src` or
+    `packages/midi/src` changed since their own tags, or if a library's dependency range at
     its tag does not admit the version bundled beside it (verify:release
     only). Its release workflow also
-    attaches the binaries; check the release page lists all five and
-    `Edwin-OFL.txt`. Then bump barmark.dev as in step 12: the site
+    attaches the binaries; check the release page lists all five,
+    `Edwin-OFL.txt`, `Verovio-LGPL-3.0.txt` and `Verovio-GPL-3.0.txt`. Then bump barmark.dev as in step 12: the site
     installs the CLI as a dev dependency (`bun add --dev --exact
     @barmark/cli@X.Y.Z`), because Get Started's commands are tested
     against it and its CI example shows that version.
