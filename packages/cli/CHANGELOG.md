@@ -6,6 +6,23 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- **`barmark render --score <chart>`** writes a standalone HTML page of
+  the full engraved score instead of the bar grid: the drawing
+  `<barmark-score>` shows (`@barmark/score`'s `engraveChart`, by Verovio
+  in-process, now built in), themed by `--theme`. Open it in a browser and
+  print to PDF from there. `--width <px>` (320 to 40000, default 900) sets
+  the width it is engraved at; `--part <label>` engraves one part alone.
+  The grid's own flags (`--numerals`, `--no-bar-numbers`,
+  `--rehearsal-letters`, `--no-wrap`, `--diagnostics`, `--font-url`) are
+  usage errors with `--score` (exit 2), as is `--width` without it. A
+  chart that won't engrave writes nothing: `file: reason` on stderr, exit
+  1.
+- **`--version`** lists `@barmark/score`.
+- The binaries' release carries Verovio's licence (`Verovio-LGPL-3.0.txt`,
+  `Verovio-GPL-3.0.txt`) beside `Edwin-OFL.txt`.
+
 ## [0.8.0] - 2026-11-08
 
 ### Added

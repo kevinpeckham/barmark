@@ -90,6 +90,7 @@ const RELEASED_CODE = {
 	barmark: ["src"],
 	render: ["src", "fonts"],
 	musicxml: ["src"],
+	score: ["src"],
 	sync: ["src"],
 	midi: ["src"],
 } as const;

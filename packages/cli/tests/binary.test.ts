@@ -41,7 +41,7 @@ describe("the compiled binary, with no node_modules beside it", () => {
 			((await Bun.file(join(PACKAGE, "..", p, "package.json")).json()) as { version: string })
 				.version;
 		expect(barmark("--version").out).toBe(
-			`@barmark/cli ${own.version} (barmark ${await lib("barmark")}, @barmark/render ${await lib("render")}, @barmark/musicxml ${await lib("musicxml")}, @barmark/midi ${await lib("midi")})\n`,
+			`@barmark/cli ${own.version} (barmark ${await lib("barmark")}, @barmark/render ${await lib("render")}, @barmark/musicxml ${await lib("musicxml")}, @barmark/score ${await lib("score")}, @barmark/midi ${await lib("midi")})\n`,
 		);
 	});
 	test("check reads a chart", () => {
@@ -53,6 +53,19 @@ describe("the compiled binary, with no node_modules beside it", () => {
 	});
 	test("render embeds the font", () => {
 		expect(barmark("render", "peaceful-dreams.chart.md").out).toContain("data:font/otf;base64,");
+	});
+	test("render --score engraves the score with the Verovio inside it", () => {
+		const { code, out, err } = barmark(
+			"render",
+			"--score",
+			"peaceful-dreams.chart.md",
+			"--out",
+			"pd.html",
+		);
+		expect({ code, out, err }).toEqual({ code: 0, out: "", err: "" });
+		const page = readFileSync(join(dir, "pd.html"), "utf8");
+		expect(page).toContain('role="img"');
+		expect(page).toContain("<svg");
 	});
 	test("import unpacks a .mxl (deflate-raw)", () => {
 		const run = barmark("import", "song.mxl");

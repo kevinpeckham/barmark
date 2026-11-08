@@ -18,6 +18,7 @@ function versions(): Versions {
 		barmark: versionAt("barmark"),
 		render: versionAt("@barmark/render"),
 		musicxml: versionAt("@barmark/musicxml"),
+		score: versionAt("@barmark/score"),
 		midi: versionAt("@barmark/midi"),
 	};
 }

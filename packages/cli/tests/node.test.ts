@@ -38,7 +38,7 @@ describe("the built bin under Node", () => {
 		const version = (name: string) =>
 			JSON.parse(readFileSync(join(PACKAGE, "..", name, "package.json"), "utf8")).version;
 		expect(barmark("--version").out).toBe(
-			`@barmark/cli ${version("cli")} (barmark ${version("barmark")}, @barmark/render ${version("render")}, @barmark/musicxml ${version("musicxml")}, @barmark/midi ${version("midi")})\n`,
+			`@barmark/cli ${version("cli")} (barmark ${version("barmark")}, @barmark/render ${version("render")}, @barmark/musicxml ${version("musicxml")}, @barmark/score ${version("score")}, @barmark/midi ${version("midi")})\n`,
 		);
 	});
 	test("export --midi writes the file; import reads one", () => {
@@ -56,6 +56,15 @@ describe("the built bin under Node", () => {
 		const { code, out } = barmark("render", "peaceful-dreams.chart.md");
 		expect(code).toBe(0);
 		expect(out).toContain("data:font/otf;base64,");
+	});
+	test("render --score engraves the score, and stdout is the page alone", () => {
+		const { code, out, err } = barmark("render", "--score", "peaceful-dreams.chart.md");
+		expect(err).toBe("");
+		expect(code).toBe(0);
+		expect(out.startsWith("<!doctype html>\n")).toBe(true);
+		expect(out.endsWith("</html>\n")).toBe(true);
+		expect(out).toContain('role="img"');
+		expect(out).toContain("<svg");
 	});
 	test("a usage error is one line on stderr, exit 2", () => {
 		expect(barmark("check", "nope.chart.md")).toEqual({

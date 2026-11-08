@@ -40,7 +40,9 @@
 		"barmark": "workspace:*",
 		"@barmark/render": "workspace:*",
 		"@barmark/musicxml": "workspace:*",
-		"@barmark/midi": "workspace:*"
+		"@barmark/midi": "workspace:*",
+		"@barmark/score": "workspace:*",
+		"verovio": "6.4.1"
 	},
 	"scripts": {
 		"build": "rm -rf dist && tsc -p tsconfig.build.json",

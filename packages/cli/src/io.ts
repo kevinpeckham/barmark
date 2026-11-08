@@ -6,6 +6,7 @@ export type Versions = {
 	barmark: string;
 	render: string;
 	musicxml: string;
+	score: string;
 	midi: string;
 };
 

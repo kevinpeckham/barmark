@@ -33,7 +33,9 @@
         "@barmark/midi": "workspace:*",
         "@barmark/musicxml": "workspace:*",
         "@barmark/render": "workspace:*",
+        "@barmark/score": "workspace:*",
         "barmark": "workspace:*",
+        "verovio": "6.4.1",
       },
     },
     "packages/midi": {
