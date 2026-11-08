@@ -46,6 +46,10 @@ package uses [semantic versioning](https://semver.org/).
   (`instrument-name` "Acoustic guitar", program 26), as if `instrument:
   acoustic guitar` named it; `@barmark/midi` takes the same program from
   the same table.
+- **The description is written once.** The text before a chart's first
+  heading (Shenandoah's description) is now a direction in the top part
+  only, like the score's marks, not in every part, where every engraver
+  showed it once per part. A part exported alone (`part`) still writes it.
 
 ## [0.7.1] - 2026-11-08
 

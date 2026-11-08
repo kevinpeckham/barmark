@@ -429,9 +429,13 @@ function scoreStartXml(m: Measure, ctx: MeasureContext): string {
 	].join("");
 }
 
-/** Before the notes: text before the heading, the score's marks (top part only), then the part's own text lines. */
+/**
+ * Before the notes: the score's own (top part only): text before the heading, the chart's
+ * description, and its marks; then the part's own text lines. A description in every part
+ * was shown once per part.
+ */
 const startXml = (m: Measure, ctx: MeasureContext) =>
-	textXml(m.lead) + (ctx.score ? scoreStartXml(m, ctx) : "") + textXml(m.text);
+	(ctx.score ? textXml(m.lead) + scoreStartXml(m, ctx) : "") + textXml(m.text);
 
 /** A repeat's words: an open one's, or a count above 2, which Dorico won't read from `times`. */
 function repeatWords(end: Marks["repeatEnd"]): string {

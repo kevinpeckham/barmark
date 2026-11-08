@@ -55,6 +55,19 @@ describe("headings and rehearsal marks belong to the score", () => {
 	});
 });
 
+describe("the description belongs to the score", () => {
+	const DESCRIBED = `A slow one, every note a quarter.\n${BAND}`;
+	test("the top part writes it, once", () => {
+		const xml = xmlOf(DESCRIBED);
+		expect(xml.match(/every note a\u00a0quarter\./g)).toHaveLength(1);
+		expect(measures(xml, "P1")[0]).toContain("every note a\u00a0quarter.");
+		expect(measures(xml, "P2")[0]).not.toContain("quarter");
+	});
+	test("a part exported alone writes it", () => {
+		expect(xmlOf(DESCRIBED, "Bs")).toContain("every note a\u00a0quarter.");
+	});
+});
+
 describe("a bar no pass plays", () => {
 	const CODA =
 		"key: D, time: 3/4, tempo: 90\n| D | To Coda | G |\n| D.C. al Coda | E |\n| Coda | A | D |";
