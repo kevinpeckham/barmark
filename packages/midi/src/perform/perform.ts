@@ -1,7 +1,10 @@
 /** A chart's play order as timed notes, in exact quarters (spec 4). */
 import { beatsOf, type ChartEvent, type ChartParse, type PlayedBar } from "barmark";
+import { applyPushes } from "./figures.js";
 import { lineNotes, type TimedSlot } from "./line.js";
+import { pedalEvents } from "./pedal.js";
 import { add, barQuarters, cmp, mul, q, slotQuarters, sub, toNumber, ZERO } from "./quarters.js";
+import { type BarAt, swingLine, swingMap } from "./swing.js";
 import type { Performance, Quarters } from "./types.js";
 
 const BASS_INSTRUMENTS = new Set(["electric bass", "double bass"]);
@@ -20,10 +23,12 @@ const beatQuarters = (bar: PlayedBar) => mul(barQuarters(bar.meter), q(1, beatsO
 export function perform(parse: ChartParse, options: { tempo?: number } = {}): Performance {
 	const played = playedBars(parse.events);
 	const bars: Performance["bars"] = [];
+	const timed: BarAt[] = [];
 	const slots: TimedSlot[] = [];
 	let at = ZERO;
 	for (const bar of played) {
 		bars.push({ index: bar.index, at, meter: bar.meter });
+		timed.push({ bar, at });
 		for (const s of slotQuarters(bar.slots, bar.meter))
 			slots.push({ slot: s.slot, at: add(at, s.at), length: s.length });
 		at = add(at, barQuarters(bar.meter));
@@ -32,6 +37,9 @@ export function perform(parse: ChartParse, options: { tempo?: number } = {}): Pe
 	const bpm = options.tempo ?? 120;
 	const qpm = first ? bpm * toNumber(beatQuarters(first)) : bpm;
 	const instrument = parse.parts[0]?.instrument;
+	// Pushes land first, then swing moves every point once (3.6).
+	const { swing, losses } = swingMap(timed);
+	const line = swingLine(applyPushes(slots), swing);
 	return {
 		title: parse.title,
 		credits: parse.credits,
@@ -46,14 +54,14 @@ export function perform(parse: ChartParse, options: { tempo?: number } = {}): Pe
 				line: null,
 				role: "line",
 				program: 1,
-				notes: lineNotes(slots, instrument !== undefined && BASS_INSTRUMENTS.has(instrument)),
-				pedal: [],
+				notes: lineNotes(line, instrument !== undefined && BASS_INSTRUMENTS.has(instrument)),
+				pedal: pedalEvents(parse, null).map((e) => ({ ...e, at: swing(e.at) })),
 				lyrics: [],
 				words: [],
 			},
 		],
 		end: at,
-		losses: [],
+		losses,
 	};
 }
 

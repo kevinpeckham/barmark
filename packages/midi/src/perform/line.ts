@@ -1,13 +1,12 @@
 /** One line's played slots, in order, as notes: attacks and the holds that extend them. */
 import type { SimpleSlot } from "barmark";
+import { velocityOf } from "./figures.js";
 import { add } from "./quarters.js";
 import type { PerformedNote, Quarters } from "./types.js";
 import { chordVoicing, noteSetPitches } from "./voicing.js";
 
 /** A simple slot at its absolute onset, with its length, in quarters. */
 export type TimedSlot = { slot: SimpleSlot; at: Quarters; length: Quarters };
-
-const VELOCITY = 80;
 
 /** The pitches a slot attacks; null when it sounds nothing (N.C., `--`, `?`), undefined for a hold. */
 function attack(slot: SimpleSlot, bassInstrument: boolean): number[] | null | undefined {
@@ -21,7 +20,8 @@ function attack(slot: SimpleSlot, bassInstrument: boolean): number[] | null | un
 /**
  * Every named slot attacks its pitches for its own length; a `/` extends
  * whatever sounds before it, across bar lines, and nothing after a slot
- * that sounds nothing (spec 3.4).
+ * that sounds nothing (spec 3.4). An accent or a hit sets its notes'
+ * velocity, which a `/` after it keeps (3.6).
  */
 export function lineNotes(slots: TimedSlot[], bassInstrument = false): PerformedNote[] {
 	const out: PerformedNote[] = [];
@@ -32,7 +32,8 @@ export function lineNotes(slots: TimedSlot[], bassInstrument = false): Performed
 			for (const note of sounding) note.length = add(note.length, length);
 			continue;
 		}
-		sounding = (pitches ?? []).map((pitch) => ({ pitch, at, length, velocity: VELOCITY }));
+		const velocity = velocityOf(slot.kind === "chord" ? slot.articulation : undefined);
+		sounding = (pitches ?? []).map((pitch) => ({ pitch, at, length, velocity }));
 		out.push(...sounding);
 	}
 	return out;
