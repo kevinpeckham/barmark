@@ -123,6 +123,8 @@ async function staticFile(pathname: string): Promise<Response> {
 }
 
 const server = Bun.serve({
+	// Loopback only: nothing off this machine needs the suite's pages.
+	hostname: "127.0.0.1",
 	port: Number(process.env.PORT ?? 5260),
 	fetch(req) {
 		const url = new URL(req.url);
