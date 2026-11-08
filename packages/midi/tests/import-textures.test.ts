@@ -27,8 +27,11 @@ const n = (pitch: number, start: number, end: number, track = 1): Note => ({
 const ch = (pitches: number[], start: number, end: number) => pitches.map((p) => n(p, start, end));
 const bs = (pitch: number, start: number, end: number) => n(pitch, start, end, 2);
 
+/** The sustain pedal on track 1: down at `down`, up at `up`. */
+type Pedal = { down: number; up: number };
+
 /** The notes as a file in `meter`, imported: its bar lines, joined. */
-function bars(notes: Note[], meter: [number, number] = [4, 4]): string {
+function bars(notes: Note[], meter: [number, number] = [4, 4], pedals: Pedal[] = []): string {
 	const tracks: SmfEvent[][] = [
 		[
 			{
@@ -45,8 +48,15 @@ function bars(notes: Note[], meter: [number, number] = [4, 4]): string {
 			.flatMap((x): SmfEvent[] => [
 				{ tick: x.start, kind: "on", channel: x.channel, pitch: x.pitch, velocity: 90 },
 				{ tick: x.end, kind: "off", channel: x.channel, pitch: x.pitch, velocity: 0 },
-			])
-			.sort((a, b) => a.tick - b.tick || (a.kind === "off" ? -1 : 1));
+			]);
+		if (t === 1)
+			events.push(
+				...pedals.flatMap((p): SmfEvent[] => [
+					{ tick: p.down, kind: "control", channel: 0, control: 64, value: 127 },
+					{ tick: p.up, kind: "control", channel: 0, control: 64, value: 0 },
+				]),
+			);
+		events.sort((a, b) => a.tick - b.tick || (a.kind === "off" ? -1 : a.kind === "on" ? 1 : 0));
 		tracks.push(events);
 	}
 	return importMidi(writeSmf({ format: 1, ppq: 480, tracks }))
@@ -87,6 +97,46 @@ describe("bass on the downbeat, the chord after it", () => {
 		];
 		expect(bars(play(3 * Q, legato(2)), [3, 4])).toBe("| C | F | G | C |");
 		expect(bars(play(3 * Q, legato(1)), [3, 4])).toBe("| C | F | G | C |");
+	});
+
+	test("waltz with the last chick ringing well past the bar line: a release, not the next chord", () => {
+		// the chord before stops before the next one is struck, so it rang (fix round 5); the
+		// last bar doesn't ring, which would end the file in a fifth bar
+		const ring = (track: number, past: number) => (root: number, triad: number[], at: number) => [
+			n(root, at, at + Q, track),
+			...ch(triad, at + Q, at + 2 * Q),
+			...ch(triad, at + 2 * Q, at + 3 * Q + (at < 9 * Q ? past : 0)),
+		];
+		for (const past of [121, 240, 480]) {
+			expect(bars(play(3 * Q, ring(2, past)), [3, 4])).toBe("| C | F | G | C |");
+			expect(bars(play(3 * Q, ring(1, past)), [3, 4])).toBe("| C | F | G | C |");
+		}
+	});
+
+	test("boom-chick played legato, the chords ringing an eighth or a quarter", () => {
+		const legato = (track: number, past: number) => (root: number, triad: number[], at: number) => [
+			n(root, at, at + Q, track),
+			...ch(triad, at + Q, at + 2 * Q + past),
+			n(root + 7, at + 2 * Q, at + 3 * Q, track),
+			...ch(triad, at + 3 * Q, at + 4 * Q + (at < 12 * Q ? past : 0)),
+		];
+		for (const past of [E, Q]) {
+			expect(bars(play(4 * Q, legato(2, past)))).toBe("| C | F | G | C |");
+			expect(bars(play(4 * Q, legato(1, past)))).toBe("| C | F | G | C |");
+		}
+	});
+
+	test("the sustain pedal lifted an eighth after the next downbeat (a pianist's pedal change)", () => {
+		const change = (length: number) =>
+			CFGC.map((_, i): Pedal => ({ down: i * length + 10, up: (i + 1) * length + E }));
+		expect(bars(play(3 * Q, waltz(1)), [3, 4], change(3 * Q))).toBe("| C | F | G | C |");
+		const boom = (root: number, triad: number[], at: number) => [
+			n(root, at, at + Q),
+			...ch(triad, at + Q, at + 2 * Q),
+			n(root + 7, at + 2 * Q, at + 3 * Q),
+			...ch(triad, at + 3 * Q, at + 4 * Q),
+		];
+		expect(bars(play(4 * Q, boom), [4, 4], change(4 * Q))).toBe("| C | F | G | C |");
 	});
 
 	test("boom-chick 4/4: root, chord, fifth, chord; bass track and one track", () => {
@@ -259,5 +309,59 @@ describe("doublings and rests", () => {
 			...ch([E4, G4, B4], 3 * Q, 4 * Q),
 		];
 		expect(bars(comp)).toBe("| C Cmaj7 / / |");
+	});
+
+	test("one track: a melody note inside an open voicing's span on the downbeat is no bass", () => {
+		// C4 G4 E5 a bar; D5 alone on bar 2's downbeat; the voicing again on beat 2 (fix round 5)
+		const open = [
+			...ch([C4, G4, 76], 0, 4 * Q),
+			n(D5, 4 * Q, 5 * Q),
+			...ch([C4, G4, 76], 5 * Q, 8 * Q),
+		];
+		expect(bars(open)).toBe("| C | / |");
+	});
+});
+
+describe("a bass in octaves or double stops, struck alone before the chord (fix round 5)", () => {
+	const octave = (track: number) => (root: number, triad: number[], at: number) => [
+		...ch([root, root + 12], at, at + Q).map((x) => ({ ...x, track, channel: track - 1 })),
+		...ch(triad, at + Q, at + 2 * Q),
+		...ch([root + 7, root + 19], at + 2 * Q, at + 3 * Q).map((x) => ({
+			...x,
+			track,
+			channel: track - 1,
+		})),
+		...ch(triad, at + 3 * Q, at + 4 * Q),
+	];
+
+	test("boom-chick with left-hand octaves, and a bass track in octaves", () => {
+		expect(bars(play(4 * Q, octave(1)))).toBe("| C | F | G | C |");
+		expect(bars(play(4 * Q, octave(2)))).toBe("| C | F | G | C |");
+	});
+
+	test("a bass track in root-fifth double stops on 1 and 3 under stabs on 2 and 4", () => {
+		const stops = (root: number, triad: number[], at: number) => [
+			bs(root, at, at + Q),
+			bs(root + 7, at, at + Q),
+			...ch(triad, at + Q, at + 2 * Q),
+			bs(root, at + 2 * Q, at + 3 * Q),
+			bs(root + 7, at + 2 * Q, at + 3 * Q),
+			...ch(triad, at + 3 * Q, at + 4 * Q),
+		];
+		expect(bars(play(4 * Q, stops))).toBe("| C | F | G | C |");
+	});
+
+	test("a waltz with the octave on 1, and a ballad with the octave a whole note", () => {
+		const waltz = (root: number, triad: number[], at: number) => [
+			...ch([root, root + 12], at, at + Q),
+			...ch(triad, at + Q, at + 2 * Q),
+			...ch(triad, at + 2 * Q, at + 3 * Q),
+		];
+		expect(bars(play(3 * Q, waltz), [3, 4])).toBe("| C | F | G | C |");
+		const ballad = (root: number, triad: number[], at: number) => [
+			...ch([root, root + 12], at, at + 4 * Q),
+			...ch(triad, at + E, at + 4 * Q),
+		];
+		expect(bars(play(4 * Q, ballad))).toBe("| C | F | G | C |");
 	});
 });

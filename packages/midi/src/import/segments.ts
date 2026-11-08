@@ -1,13 +1,19 @@
 /**
  * Chords from the notes sounding (spec 5.5; Claude's rulings, 2026-11-08,
- * fix rounds 1-3). The harmony is cut into segments, each one chord:
+ * fix rounds 1-5). The harmony is cut into segments, each one chord:
  *
  * - **Stretches:** where every note has stopped, a segment of no
  *   harmony, `N.C.`, begins; a note struck as the last stops is no gap.
  * - **The bass line** is `streams.ts`'s lowest stream when it is a single
  *   line (`bassLine`); with none, every note is a harmony voice, and a
- *   single note struck below a chord's voices (above the widest gap of a
- *   fifth or more in its attack, else above its bass note) is its bass.
+ *   single note struck below a chord's voices is its bass (a lone bass).
+ *   The voices are the notes an attack struck above its widest gap, when
+ *   that is a fifth or more with two or more notes above it (a bass and
+ *   its octave or double stop under the chord), else all it struck. Two
+ *   notes struck alone, under the voices or an octave apart, their chord
+ *   following in the bar, are a bass figure, read like a lone note; with
+ *   no chord following in the bar they begin one (an octave under a
+ *   pedalled arpeggio).
  * - **An attack** is two or more harmony-voice notes struck within a 16th
  *   of the first. Its sound is what it strikes and what the voices hold.
  *   A stretch's first chord starts with it, or at the bar line its first
@@ -15,21 +21,26 @@
  *   A later attack starts a new chord when its sound differs in any way;
  *   inside a bar, a re-strike only dropping notes carries when each stream
  *   strikes above its lowest voice in the chord's voicing (struck or
- *   held), and a lone new top note carries over a chord all held from
- *   before (a melody note: it weighs nothing). A single note never does.
+ *   held), and a lone new top note shorter than half the bar carries over
+ *   a chord all held from before (a melody note: it weighs nothing; held
+ *   half the bar or longer it is a chord tone). A single note never does.
  * - **The bass at a bar line:** struck on a new pitch class under voices
  *   still sounding, a new chord there (the slash). While the voices rest
  *   it starts nothing, but their next attack starts at the last bar line
- *   where the bass moved: a change, or the same voicing over the new
- *   bass. Inside a bar the bass never moves a chord.
+ *   in the rest where the bass, having moved at one, sounds (struck
+ *   again, back on the chord's own note, or held through): a change, or
+ *   the same voicing over the new bass. The voices have rested when their
+ *   last notes stop before that attack, however far they rang past the
+ *   bar line: the ring is a release, weighed no further than the line.
+ *   Inside a bar the bass never moves a chord.
  * - A stretch with no attack at all (single lines only) cuts where two
  *   notes are struck together or one starts as all stop: note by note.
  * - **Weights:** each pitch class weighs the time it sounds in the
  *   segment, once however many octaves double it. Past a lead-in the
  *   voices count only while two or more notes struck in attacks sound (a
  *   fill after a stab is not the chord); the bass line and a lone bass
- *   note count only as the bass. A pitch class at `PASSING` of the
- *   strongest or under is a passing tone, left out.
+ *   count only as the bass. A pitch class at `PASSING` of the strongest
+ *   or under is a passing tone, left out.
  * - The **bass** is the lowest note struck within a 16th of the segment's
  *   start, or held into it from before when it sounds at least until the
  *   first struck note stops (a pedal, a bass held under a stab): so the
@@ -77,8 +88,9 @@ type Cut = { at: number; harmony: boolean };
  * voices sound after them: the pitch classes struck and those held (to
  * at least the first struck note's end); `held` the held ones alone;
  * `lows` each stream's lowest pitch struck, `voicing` each stream's
- * lowest struck or held, `top` the highest's pitch class, `end` where the
- * last struck stops.
+ * lowest struck or held, `top` the highest's pitch class and `topEnd`
+ * where the last note of that pitch class stops, `end` where the last
+ * struck stops.
  */
 type Attack = {
 	mask: number;
@@ -86,18 +98,21 @@ type Attack = {
 	lows: Map<number, number>;
 	voicing: Map<number, number>;
 	top: number;
-	topPitch: number;
+	topEnd: number;
 	struck: number[];
 	end: number;
 };
 
 /**
  * The notes starting within the window of the first: `[from, to)` in the
- * sorted notes. `bass` is the pitch of a bass note struck there (`lone`:
- * with no bass line, a single note); `sounding` whether harmony voices
- * struck before still sound past its window. `unweighed` is a pitch it
- * strikes that weighs nothing: all of a lone bass note, or the melody
- * note on a re-strike (-1 for none; 128 for every one).
+ * sorted notes. `bass` is the pitch of a bass note struck there and
+ * `bassEnd` where it stops (`lone`: with no bass line, a single note or
+ * a figure of two under the voices); `sounding` whether harmony voices
+ * struck before still sound past its window. `unweighed` masks the pitch
+ * classes it strikes that weigh nothing: all of a lone bass, or the
+ * melody note on a re-strike. `clip` is a tick before which the voices
+ * sounding from before it are weighed no further (a release ringing
+ * past the bar line where the next chord starts), or -1.
  */
 type Group = {
 	start: number;
@@ -106,13 +121,17 @@ type Group = {
 	end: number;
 	attack: Attack | null;
 	bass: number | null;
+	bassEnd: number;
 	lone: boolean;
 	sounding: boolean;
 	unweighed: number;
+	clip: number;
 };
 
 const streamOf = (n: Note) => n.track * 16 + n.channel;
 const bit = (pitch: number) => 1 << (pitch % 12);
+/** Every pitch class. */
+const ALL = 0xfff;
 
 function groupsOf(notes: Note[], window: number): Group[] {
 	const groups: Group[] = [];
@@ -129,9 +148,11 @@ function groupsOf(notes: Note[], window: number): Group[] {
 			end,
 			attack: null,
 			bass: null,
+			bassEnd: Number.NEGATIVE_INFINITY,
 			lone: false,
 			sounding: false,
-			unweighed: -1,
+			unweighed: 0,
+			clip: -1,
 		});
 		i = j;
 	}
@@ -163,31 +184,32 @@ function attackOf(upper: Note[], latest: number[], streams: number[]): Attack {
 	const holding = latest.flatMap((end, p): [number, number][] =>
 		end >= firstStop ? [[streams[p] as number, p]] : [],
 	);
-	const topPitch = Math.max(...upper.map((n) => n.pitch));
-	const top = topPitch % 12;
+	const top = Math.max(...upper.map((n) => n.pitch)) % 12;
 	return {
-		topPitch,
 		struck: upper.map((n) => n.pitch),
 		mask,
 		held,
 		lows: lowsOf(struck),
 		voicing: lowsOf([...struck, ...holding]),
 		top,
+		topEnd: Math.max(...upper.flatMap((n) => (n.pitch % 12 === top ? [n.end] : []))),
 		end: Math.max(...upper.map((n) => n.end)),
 	};
 }
 
 /**
- * The bass note a group strikes: the bass line's lowest, or with no bass
- * line an attack's lowest or a single note; none when a lower note still
- * sounds (to at least the first struck note's end).
+ * The bass note a group strikes, and where the notes it is chosen from
+ * stop: the bass line's lowest, or with no bass line an attack's lowest
+ * or a single note; none when a lower note still sounds (to at least the
+ * first struck note's end).
  */
 function bassOf(struck: Note[], line: number | null, latest: number[]) {
 	const candidates = line === null ? struck : struck.filter((n) => streamOf(n) === line);
 	if (candidates.length === 0) return null;
 	const low = Math.min(...candidates.map((n) => n.pitch));
 	const firstStop = Math.min(...struck.map((n) => n.end));
-	return latest.slice(0, low).some((end) => end >= firstStop) ? null : low;
+	if (latest.slice(0, low).some((end) => end >= firstStop)) return null;
+	return { pitch: low, end: Math.max(...candidates.map((n) => n.end)) };
 }
 
 /**
@@ -206,12 +228,21 @@ function markGroups(notes: Note[], groups: Group[], line: number | null, window:
 	for (const g of groups) {
 		const struck = notes.slice(g.from, g.to);
 		const upper = struck.filter((n) => streamOf(n) !== line);
-		if (upper.length >= 2) g.attack = attackOf(upper, before.upper, before.streams);
-		g.lone = line === null && struck.length === 1;
-		if (line !== null || g.attack !== null || g.lone) g.bass = bassOf(struck, line, before.latest);
+		markGroup(g, struck, upper, line, before);
 		g.sounding = before.until > g.start + window;
 		remember(before, struck, upper);
 	}
+}
+
+/** Marks one group's attack, whether it is a lone bass, and the bass it strikes. */
+function markGroup(g: Group, struck: Note[], upper: Note[], line: number | null, before: Before) {
+	if (upper.length >= 2) g.attack = attackOf(upper, before.upper, before.streams);
+	g.lone = line === null && struck.length === 1;
+	if (line === null && g.attack === null && !g.lone) return;
+	const bass = bassOf(struck, line, before.latest);
+	if (bass === null) return;
+	g.bass = bass.pitch;
+	g.bassEnd = bass.end;
 }
 
 /**
@@ -246,15 +277,16 @@ const thinner = (chord: Chord, a: Attack) =>
  * Whether an attack changes the chord (Claude's ruling, 2026-11-08, fix
  * round 2): any pitch class added or dropped. Two carry: a re-strike
  * inside a bar that only drops notes, each stream striking above its own
- * lowest voice in the chord (a thinner voicing), and a lone new top note
- * over a chord all held from before (a melody note on a re-strike).
+ * lowest voice in the chord (a thinner voicing), and a `brief` lone new
+ * top note over a chord all held from before (a melody note on a
+ * re-strike; held half the bar or longer it is a chord tone, fix round 5).
  */
-function changes(chord: Chord, a: Attack, atLine: boolean): boolean {
+function changes(chord: Chord, a: Attack, atLine: boolean, brief: boolean): boolean {
 	const added = a.mask & ~chord.mask;
 	const dropped = chord.mask & ~a.mask;
 	if (added === 0) return dropped !== 0 && (atLine || !thinner(chord, a));
 	// all held means nothing dropped, since what is held sounds
-	const melody = added === 1 << a.top && (chord.mask & ~a.held) === 0;
+	const melody = brief && added === 1 << a.top && (chord.mask & ~a.held) === 0;
 	return !melody;
 }
 
@@ -271,60 +303,134 @@ function atBarLine(grid: Grid, tick: number, window: number): boolean {
  * changes it (`changes`), or where the bass moves to a new pitch class at
  * a bar line under voices still sounding (`bassMove`). A bass moving at a
  * bar line while the voices rest starts nothing, but the voices' next
- * attack starts there: a change, or the same voicing over the new bass.
+ * attack starts at the last bar line in the rest the bass sounds through
+ * from its move (`heldThrough`): a change, or the same voicing over the
+ * new bass. Two notes struck alone under the voices are a bass figure,
+ * read like one note (`isFigure`), so the lead-in is found after them.
  */
 function voiceCuts(stretch: Group[], grid: Grid, window: number, cuts: Cut[]): number {
-	const begin = leadIn(stretch, grid, window, cuts);
 	const read: Reading = {
 		chord: null,
 		reach: Number.NEGATIVE_INFINITY,
+		struck: Number.NEGATIVE_INFINITY,
 		moved: Number.NEGATIVE_INFINITY,
 		movedTo: null,
 		bass: null,
-		window,
+		bassEnd: Number.NEGATIVE_INFINITY,
+		grid,
 	};
-	for (const g of stretch) {
+	const own: Cut[] = [];
+	const nexts = nextAttacks(stretch);
+	for (const [i, g] of stretch.entries()) {
+		demoteFigure(g, stretch[nexts[i] as number], read, window);
+		heldThrough(read, g.start);
 		const line = atBarLine(grid, g.start, window);
 		const bass = bassAt(read, g);
-		if (g.lone && bass !== null) g.unweighed = 128;
-		if (line && bass !== null) bassMove(read, g, bass, cuts);
-		if (bass !== null) read.bass = bass;
-		if (g.attack !== null) attack(read, g, g.attack, line, cuts);
+		if (g.lone && bass !== null) g.unweighed = ALL;
+		if (line && bass !== null) bassMove(read, g, bass, own);
+		if (bass !== null) {
+			read.bass = bass;
+			read.bassEnd = g.bassEnd;
+		}
+		if (g.attack !== null) attack(read, g, g.attack, line, own);
 	}
+	// the lead-in's cuts all fall at or before the first attack, these after it: in order
+	const begin = leadIn(stretch, grid, window, cuts);
+	cuts.push(...own);
 	return begin;
 }
 
 /**
- * The chord being read; where its voices last stop; where the bass last
- * moved at a bar line, and (`movedTo`) to what while the voices rested;
- * the pitch class of the bass last struck; the attack window (voices
- * ringing up to it past a bar line have rested).
+ * The chord being read; where its voices last stop and where their last
+ * attack struck; where the bass last moved at a bar line, and
+ * (`movedTo`) to what while the voices rested; the pitch class of the
+ * bass last struck and where its note stops; the grid.
  */
 type Reading = {
 	chord: Chord | null;
 	reach: number;
+	struck: number;
 	moved: number;
 	movedTo: number | null;
 	bass: number | null;
-	window: number;
+	bassEnd: number;
+	grid: Grid;
 };
 
-/** The pitch class of the bass a group strikes; with no bass line, a single note only below the chord's voices. */
+/** Whether the bass moved at a bar line since the voices' last attack: in this rest. */
+const movedInRest = (read: Reading) => read.moved > read.struck;
+
+/** The pitch class of the bass a group strikes; with no bass line, a lone note only below the chord's voices. */
 function bassAt(read: Reading, g: Group): number | null {
 	if (g.bass === null) return null;
 	return g.lone && g.bass >= (read.chord?.low ?? 128) ? null : g.bass % 12;
 }
 
 /**
+ * Two notes struck alone under the voices, with their chord (`chord`,
+ * the next attack) following in the same bar, are a bass figure, an
+ * octave or a double stop, read like one note: no attack, a lone bass
+ * (fix round 5: LH octaves under boom-chick, a bass track in octaves or
+ * double stops read `{C} C`). With no chord following in the bar they
+ * begin one themselves (an octave under a pedalled arpeggio: `Fmaj7`).
+ */
+function demoteFigure(g: Group, chord: Group | undefined, read: Reading, window: number) {
+	if (g.attack === null || g.attack.struck.length !== 2) return;
+	const next = chord?.attack;
+	if (next == null || !sameBar(read.grid, g.start, (chord as Group).start, window)) return;
+	if (isFigure(g.attack, read.chord?.low ?? voicesLow(next))) {
+		g.attack = null;
+		g.lone = true;
+	}
+}
+
+/** Whether `later` falls before the bar line after the bar `tick` is in (a tick within the window before a bar line is in that bar). */
+function sameBar(grid: Grid, tick: number, later: number, window: number): boolean {
+	const line = grid.bars[barAt(grid, tick + window)]?.start ?? Number.POSITIVE_INFINITY;
+	return later < line;
+}
+
+/** For each group, the next group with an attack (before any is demoted), as an index; the last ones have none. */
+function nextAttacks(stretch: Group[]): number[] {
+	const next = new Array<number>(stretch.length).fill(-1);
+	let j = -1;
+	for (let i = stretch.length - 1; i >= 0; i--) {
+		next[i] = j;
+		if ((stretch[i] as Group).attack !== null) j = i;
+	}
+	return next;
+}
+
+/** Whether two notes are a bass figure under voices whose lowest is `low`: a double stop below them, or an octave (one pitch class, never a chord). */
+function isFigure(a: Attack, low: number): boolean {
+	const [lo, hi] = [Math.min(...a.struck), Math.max(...a.struck)];
+	return hi < low || hi - lo === 12;
+}
+
+/**
+ * Once the bass has moved at a bar line in this rest, every later bar
+ * line it sounds through, held, is where it moved (a change heard after
+ * the rest starts at the last bar line in it): the last line at or
+ * before `at` that the bass note last struck reaches, sounding at it or
+ * ending there with the rest going on, when it is after the move.
+ */
+function heldThrough(read: Reading, at: number) {
+	if (read.chord === null || !movedInRest(read)) return;
+	const last = Math.min(at, read.bassEnd);
+	const line = read.grid.bars[barAt(read.grid, last) - 1]?.start;
+	if (line !== undefined && line > read.moved) read.moved = line;
+}
+
+/**
  * At a bar line, the bass on a new pitch class: under voices still
  * sounding (or struck with it), a new chord there; while they rest, or a
- * single note with no bass line, where their next attack starts.
+ * lone bass with no bass line, where their next attack starts. Back on
+ * the chord's own pitch class, no slash is pending (`heldThrough` places
+ * the move at that line when one was made in this rest).
  */
 function bassMove(read: Reading, g: Group, bass: number, cuts: Cut[]) {
 	const chord = read.chord;
 	if (chord === null) return;
-	// the bass moved here when it strikes a new pitch class, back to the chord's own too
-	if (bass !== (read.bass ?? chord.bass)) read.moved = g.start;
 	if (bass === chord.bass) read.movedTo = null;
 	else if (!g.lone && (g.attack !== null || g.sounding)) {
 		cuts.push({ at: g.start, harmony: true });
@@ -339,15 +445,23 @@ function bassMove(read: Reading, g: Group, bass: number, cuts: Cut[]) {
 
 /**
  * An attack: a new chord when it changes the one read, else the same
- * voicing over a bass that moved while the voices rested; either starts
- * where the bass so moved, else at the attack.
+ * voicing over a bass that moved while the voices rested. Either starts
+ * where the bass so moved when the voices have rested since (their last
+ * notes stopped before this attack, however long they rang past the bar
+ * line: a release), else at the attack. A cut placed back before the
+ * attack clips what rang past it from the new chord's weights.
  */
 function attack(read: Reading, g: Group, a: Attack, line: boolean, cuts: Cut[]) {
 	const chord = read.chord;
-	const rested = read.moved + read.window >= read.reach;
+	const rested = movedInRest(read) && read.reach <= g.start;
 	const at = rested ? read.moved : g.start;
-	if (chord === null || changes(chord, a, line)) {
-		if (chord !== null) cuts.push({ at, harmony: true });
+	const cut = () => {
+		cuts.push({ at, harmony: true });
+		if (at < g.start) g.clip = at;
+	};
+	const brief = a.topEnd - g.start < barLength(read.grid, g.start) / 2;
+	if (chord === null || changes(chord, a, line, brief)) {
+		if (chord !== null) cut();
 		read.chord = {
 			mask: a.mask,
 			lows: new Map(a.voicing),
@@ -355,15 +469,23 @@ function attack(read: Reading, g: Group, a: Attack, line: boolean, cuts: Cut[]) 
 			bass: read.bass,
 		};
 	} else if (read.movedTo !== null) {
-		cuts.push({ at, harmony: true });
+		cut();
 		chord.bass = read.movedTo;
 	} else {
 		keepLows(chord, a);
 		// a lone new top note carried (the melody exemption) weighs nothing
-		if ((a.mask & ~chord.mask) !== 0) g.unweighed = a.topPitch;
+		if ((a.mask & ~chord.mask) !== 0) g.unweighed = 1 << a.top;
 	}
 	read.movedTo = null;
+	read.struck = g.start;
 	read.reach = Math.max(read.reach, a.end);
+}
+
+/** The length of the bar holding `tick`. */
+function barLength(grid: Grid, tick: number): number {
+	const i = barAt(grid, tick) - 1;
+	const start = grid.bars[i]?.start ?? 0;
+	return (grid.bars[i + 1]?.start ?? grid.end) - start;
 }
 
 /** The widest gap that splits an attack into a bass register and its voices. */
@@ -371,13 +493,14 @@ const REGISTER = 7;
 
 /**
  * The lowest of an attack's voices: above the widest gap between the
- * notes it struck when that is a fifth or more (a bass and its double
- * stop or octave below the chord), else its lowest.
+ * notes it struck when that is a fifth or more and two or more notes lie
+ * above it (a bass and its double stop or octave below the chord; an
+ * open voicing's gap under its top note is no split), else its lowest.
  */
 function voicesLow(a: Attack): number {
 	const sorted = [...a.struck].sort((x, y) => x - y);
 	let split = 0;
-	for (let i = 1; i < sorted.length; i++)
+	for (let i = 1; i < sorted.length - 1; i++)
 		if (
 			(sorted[i] as number) - (sorted[i - 1] as number) >
 			(sorted[split] as number) - (sorted[split - 1] ?? 128)
@@ -423,16 +546,17 @@ function lineCuts(stretch: Group[], cuts: Cut[]) {
 	}
 }
 
-/** How a note is weighed: always, only while the chord's attack notes sound (`gated`), or as their gate. */
-type Weighed = { note: Note; gated: boolean; gate: boolean };
+/** How a note is weighed: to `until` (its end, or a clip); always, only while the chord's attack notes sound (`gated`), or as their gate. */
+type Weighed = { note: Note; until: number; gated: boolean; gate: boolean };
 
 /**
  * The notes weighed in a stretch. Single lines (a stretch without
  * attacks, or a lead-in) always. Past a lead-in, the harmony voices only
  * while two or more notes struck in its attacks sound: so a fill after
  * a stab, or a pedal under it, doesn't rename the chord; the bass line,
- * a lone bass note with no bass line, and a melody note carried on a
- * re-strike not at all (each chord keeps its bass's pitch class).
+ * a lone bass with no bass line, and a melody note carried on a
+ * re-strike not at all (each chord keeps its bass's pitch class). A note
+ * sounding at a group's `clip` is weighed only up to it.
  */
 function weighedIn(
 	notes: Note[],
@@ -440,14 +564,33 @@ function weighedIn(
 	begin: number | null,
 	line: number | null,
 ): Weighed[] {
-	const out: Weighed[] = [];
-	for (const g of stretch)
-		for (const note of notes.slice(g.from, g.to)) {
-			const weighs = streamOf(note) !== line && g.unweighed < 128 && note.pitch !== g.unweighed;
-			if (begin === null || g.start < begin) out.push({ note, gated: false, gate: false });
-			else if (weighs) out.push({ note, gated: true, gate: g.attack !== null });
-		}
-	return out;
+	const until = clipper(stretch);
+	return stretch.flatMap((g) =>
+		notes.slice(g.from, g.to).flatMap((note) => weighedNote(g, note, until(note), begin, line)),
+	);
+}
+
+/** Where each note is weighed to, taken in start order: its end, or the first clip after its start (clips ascend, as the notes do). */
+function clipper(stretch: Group[]): (note: Note) => number {
+	const clips = stretch.flatMap((g) => (g.clip >= 0 ? [g.clip] : []));
+	let c = 0;
+	return (note) => {
+		while (c < clips.length && (clips[c] as number) <= note.start) c++;
+		return Math.min(note.end, clips[c] ?? Number.POSITIVE_INFINITY);
+	};
+}
+
+/** How a note struck in `g` is weighed: always before `begin`; past it, gated, unless it is the bass line's or unweighed. */
+function weighedNote(
+	g: Group,
+	note: Note,
+	until: number,
+	begin: number | null,
+	line: number | null,
+): Weighed[] {
+	if (begin === null || g.start < begin) return [{ note, until, gated: false, gate: false }];
+	const weighs = streamOf(note) !== line && (g.unweighed & bit(note.pitch)) === 0;
+	return weighs ? [{ note, until, gated: true, gate: g.attack !== null }] : [];
 }
 
 /** Where segments start, by stretches of sound (silence between them is no harmony), and the notes weighed. */
@@ -480,7 +623,7 @@ function stretchFrom(groups: Group[], g: number) {
 	return { stretch: groups.slice(g, h), reach };
 }
 
-/** The segments covering the grid: no harmony before the first cut, a later cut at one tick winning. */
+/** The segments covering the grid: no harmony before the first cut (the cuts come in order), a later cut at one tick winning. */
 function segmentsOf(cuts: Cut[], from: number, to: number): Segment[] {
 	const starts = [{ at: from, harmony: false }, ...cuts].filter((c) => c.at >= from && c.at < to);
 	const segments: Segment[] = [];
@@ -502,9 +645,9 @@ type Point = { at: number; pc: number; step: number; gated: boolean; gate: boole
 
 function pointsOf(weighed: Weighed[]): Point[] {
 	return weighed
-		.flatMap(({ note: n, gated, gate }) => [
+		.flatMap(({ note: n, until, gated, gate }) => [
 			{ at: n.start, pc: n.pitch % 12, step: 1, gated, gate },
-			{ at: n.end, pc: n.pitch % 12, step: -1, gated, gate },
+			{ at: until, pc: n.pitch % 12, step: -1, gated, gate },
 		])
 		.sort((a, b) => a.at - b.at);
 }

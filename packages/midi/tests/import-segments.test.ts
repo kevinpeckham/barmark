@@ -342,9 +342,41 @@ describe("chordRuns", () => {
 			// C E G held; then F A struck together below the held G: a change (C E F G A over C)
 			const below = [...chord([C3, E4, G4 + 12], 0, 2 * BAR), ...chord([F4, A4], BAR, 2 * BAR)];
 			expect(symbols(below, 2)).toEqual(["C", "Fmaj9/C"]);
-			// a single new top note over the chord still sounding is melody, and weighs nothing
-			const over = [...chord([C3, E4, G4], 0, 2 * BAR), ...chord([C4, E4, A4], BAR, 2 * BAR)];
-			expect(symbols(over, 2)).toEqual(["C"]);
+			// a single new top note over the chord still sounding, shorter than half a bar, is
+			// melody, and weighs nothing; held half the bar or longer it is a chord tone (fix round 5)
+			const over = (length: number) => [
+				...chord([C3, E4, G4], 0, 2 * BAR),
+				...chord([C4, E4], BAR, 2 * BAR),
+				note(A4, BAR, BAR + length),
+			];
+			expect(symbols(over(BAR / 2 - 1), 2)).toEqual(["C"]);
+			expect(symbols(over(BAR / 2), 2)).toEqual(["C", "C6"]);
+		});
+
+		test("a melody note on a re-strike that lasts the bar is the chord's seventh", () => {
+			// C E G held two bars over a left-hand C3 struck each bar; Bb4 with the second strike
+			const pad = [...chord([C4, E4, G4], 0, 2 * BAR), note(C3, 0, BAR), note(C3, BAR, 2 * BAR)];
+			expect(runs([...pad, note(70, BAR, 2 * BAR)], 2)).toEqual([
+				{ start: 0, end: BAR, symbol: "C" },
+				{ start: BAR, end: 2 * BAR, symbol: "C7" },
+			]);
+			// a quarter of it: melody
+			expect(symbols([...pad, note(70, BAR, BAR + 480)], 2)).toEqual(["C"]);
+			// in octaves: both notes are the melody, neither weighs
+			expect(symbols([...pad, note(70 - 12, BAR, BAR + 480), note(70, BAR, BAR + 480)], 2)).toEqual(
+				["C"],
+			);
+			// a half note on beat 3 of a 4/4 bar, with the strike: C7 from there
+			const half = [
+				...chord([C4, E4, G4], 0, BAR),
+				note(C3, 0, 960),
+				note(C3, 960, BAR),
+				note(70, 960, BAR),
+			];
+			expect(runs(half).map((r) => [r.start, r.symbol])).toEqual([
+				[0, "C"],
+				[960, "C7"],
+			]);
 		});
 
 		test("a re-strike of fewer voices is no new chord", () => {
@@ -553,6 +585,157 @@ describe("chordRuns", () => {
 			];
 			expect(runs(back, 3).map((r) => [r.start, r.symbol])).toEqual([
 				[0, "C/G"],
+				[2 * BAR, "G"],
+			]);
+		});
+
+		test("a bass back on the chord's own note, re-struck at the next bar line, moved there", () => {
+			// a C stab over C2; the bass walks G A B C in bar 2 (its last beat already on C) and
+			// strikes C2 again at bar 3; a Dm stab on bar 3 beat 3 starts at bar 3, over C (fix round 5)
+			const back = [
+				bassNote(C2, 0, BAR),
+				...chord([C4, E4, G4], 0, 240),
+				...walk([G2, A2, B2, C2], 1),
+				bassNote(C2, 2 * BAR, 3 * BAR),
+				...chord([D4, F4, A4], 2 * BAR + 960, 2 * BAR + 1440),
+			];
+			expect(runs(back, 3).map((r) => [r.start, r.symbol])).toEqual([
+				[0, "C"],
+				[2 * BAR, "Dm7/C"],
+			]);
+			// the same with the bass walking D F A C | C E G A
+			const twice = [
+				bassNote(C2, 0, BAR),
+				...chord([C4, E4, G4], 0, 240),
+				...walk([38, 41, A2, C3], 1),
+				...walk([C2, E2, G2, A2], 2),
+				...chord([D4, F4, A4], 2 * BAR + 960, 2 * BAR + 1440),
+			];
+			expect(runs(twice, 3).map((r) => [r.start, r.symbol])).toEqual([
+				[0, "C"],
+				[2 * BAR, "Dm7/C"],
+			]);
+		});
+
+		test("a bass moved at a bar line and tied through the next: the change at the later line", () => {
+			// a C stab over C2; F2 struck at bar 2 and held to bar 4; a G stab on bar 3 beat 3
+			const tied = [
+				bassNote(C2, 0, BAR),
+				...chord([C4, E4, G4], 0, 480),
+				bassNote(41, BAR, 3 * BAR),
+				...chord([G3, B3, D4], 2 * BAR + 960, 2 * BAR + 1440),
+			];
+			expect(runs(tied, 3).map((r) => [r.start, r.symbol])).toEqual([
+				[0, "C"],
+				[2 * BAR, "G7/F"],
+			]);
+		});
+
+		test("two notes struck alone under the voices are a bass figure when their chord follows in the bar", () => {
+			// an octave, a passing note, then the chord: C for the bar, not {C} on beat 1
+			const run = [
+				...chord([C2, C3], 0, 240),
+				note(G2, 240, 480),
+				...chord([C4, E4, G4], 480, BAR),
+				...chord([C2, C3], BAR, BAR + 480),
+				...chord([C4, E4, G4], BAR + 480, 2 * BAR),
+			];
+			expect(symbols(run, 2)).toEqual(["C"]);
+			// held while single notes are added above it, an octave begins a chord: a pedalled
+			// arpeggio F2 F3, then A3 C4 E4 F4 A4 C5 E5 in eighths, after C7 reads Fmaj7
+			// (MuseScore's piano-comping, bar 8)
+			const arpeggio = [
+				...chord([C3, 58, E4, G4], 0, BAR),
+				...chord([41, 53], BAR, 2 * BAR),
+				...[57, C4, E4, F4, A4, 72, E5].map((p, i) => note(p, BAR + (i + 1) * 240, 2 * BAR)),
+			];
+			expect(symbols(arpeggio, 2)).toEqual(["C7", "Fmaj7"]);
+			// a dyad held for its bar with the next chord a bar later is a chord, however low
+			const dyads = [
+				...chord([G3, B3, D4, F4, A4], 0, BAR),
+				...chord([C3, D4 - 12], BAR, 2 * BAR),
+				...chord([C4, E4, G4], 2 * BAR, 3 * BAR),
+			];
+			expect(symbols(dyads, 3)).toEqual(["G9", "{C D}", "C"]);
+			// a figure struck a little before the bar line belongs to the bar after it
+			const early = [
+				...chord([C4, E4, G4], 0, BAR - 30),
+				...chord([41, 53], BAR - 30, BAR + 480),
+				...chord([F4, A4, 72], BAR + 480, 2 * BAR),
+			];
+			expect(symbols(early, 2)).toEqual(["C", "F"]);
+		});
+
+		test("the bass back on the chord's own note clears the pending slash", () => {
+			// a C stab over C2; G2 at bar 2 while the voices rest, C2 again at bar 3; the voicing
+			// struck on bar 3 beat 2 and held into bar 4, where the bass takes G2 under it: C/G there
+			const back = [
+				bassNote(C2, 0, BAR),
+				...chord([C4, E4, G4], 0, 480),
+				bassNote(G2, BAR, 2 * BAR),
+				bassNote(C2, 2 * BAR, 3 * BAR),
+				...chord([C4, E4, G4], 2 * BAR + 480, 3 * BAR + 960),
+				bassNote(G2, 3 * BAR, 4 * BAR),
+			];
+			expect(runs(back, 4).map((r) => [r.start, r.symbol])).toEqual([
+				[0, "C"],
+				[3 * BAR, "C/G"],
+			]);
+		});
+
+		test("a release is weighed no further than the bar line the next chord starts at; a note struck there counts", () => {
+			// C E G ringing a beat into bar 2 over a bass moving to F2; D5 struck on the downbeat and held
+			// through the F chord struck on beat 2: F6 (the D), not F with C E G
+			const ring = [
+				bassNote(C2, 0, BAR),
+				...chord([C4, E4, G4], 0, BAR + 480),
+				bassNote(41, BAR, 2 * BAR),
+				note(D5, BAR, BAR + 1440),
+				...chord([F4, A4, 72], BAR + 480, 2 * BAR),
+			];
+			expect(runs(ring, 2).map((r) => [r.start, r.symbol])).toEqual([
+				[0, "C"],
+				[BAR, "F6"],
+			]);
+		});
+
+		test("a lone bass weighs nothing, however much of the chord it sounds under", () => {
+			// one track, two chords a bar: C2 then A2 in quarters under a C half note, then G
+			const walk = [
+				...chord([C4, E4, G4], 0, 960),
+				note(C2, 0, 480),
+				note(A2, 480, 960),
+				...chord([G2, G3, B3, D4], 960, BAR),
+			];
+			expect(symbols(walk)).toEqual(["C", "G"]);
+		});
+
+		test("a change while the voices still sound starts at the attack, not where the bass moved", () => {
+			// a pad held into bar 2 over C2, then G2 at bar 2 (the slash there); a Dm stab on bar 2
+			// beat 3 while the pad still rings: Dm from its stab, the slash kept
+			const over = [
+				...chord([C4, E4, G4], 0, BAR + 1200),
+				bassNote(C2, 0, BAR),
+				bassNote(G2, BAR, 2 * BAR),
+				...chord([D4, F4, A4], BAR + 960, 2 * BAR),
+			];
+			expect(runs(over, 2).map((r) => r.start)).toEqual([0, BAR, BAR + 960]);
+		});
+
+		test("the bass ending at a bar line while the rest goes on: the change at that line", () => {
+			// a G4 on another track holds three bars; a C stab over C2; F2 for bar 2 only (the slash
+			// there, under the G4); a G stab on bar 3 beat 3 starts at bar 3, the last bar line in the
+			// stab's rest, where the bass ended (it sounds nowhere in bar 3)
+			const gone = [
+				{ ...note(G4, 0, 3 * BAR), track: 3 },
+				bassNote(C2, 0, BAR),
+				...chord([C4, E4, G4], 240, 720),
+				bassNote(41, BAR, 2 * BAR),
+				...chord([G3, B3, D4], 2 * BAR + 960, 2 * BAR + 1440),
+			];
+			expect(runs(gone, 3).map((r) => [r.start, r.symbol])).toEqual([
+				[0, "C"],
+				[BAR, "C(11)/F"],
 				[2 * BAR, "G"],
 			]);
 		});

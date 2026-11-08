@@ -640,7 +640,10 @@ revised round 1, whose carry merged real changes, `| C | C7 |`,
 `| Cmaj7 | C |` and Peaceful Dreams' `D7sus4` then `D5` each one chord;
 fix round 3 made the bass's move count when it strikes before the
 voices, the bass on 1 and the chord after it, as in a waltz, boom-chick,
-ballad, reggae skank, stride or off-beat jazz comping; round 1 had
+ballad, reggae skank, stride or off-beat jazz comping; fix round 5 made
+that hold however far the chord before rings past the bar line, read a
+bass in octaves or double stops as a bass, and placed a change heard
+after a rest at the last bar line the bass sounds through; round 1 had
 revised the first draft, under which a walking bass under off-beat
 comping read four symbols a bar):
 
@@ -653,9 +656,18 @@ comping read four symbols a bar):
   (MuseScore's piano). One helper, `bassLine` in `streams.ts`, serves
   both. With no bass line, a single note struck below a chord's voices
   is its bass (stride, a one-track waltz): the voices are the notes its
-  attack struck above their widest gap when that is a fifth or more (a
-  bass with its octave or double stop below the chord), else all it
-  struck.
+  attack struck above their widest gap when that is a fifth or more and
+  two or more notes lie above it (a bass with its octave or double stop
+  below the chord), else all it struck (fix round 5: an open voicing's
+  gap under its top note, C4 G4 E5, is no split, so a melody D5 struck
+  alone inside it is no bass; round 3 read `| C | D9sus4 |`). Two notes
+  struck alone, below the voices or an octave apart, with their chord
+  following in the same bar, are a **bass figure**, read like one note
+  (fix round 5: LH octaves under boom-chick, a bass track in octaves or
+  root–fifth double stops, a waltz's octave on 1 read `{C} C {G} C` and
+  `C5 C`); with no chord following in the bar they begin one themselves
+  (MuseScore's `piano-comping` bar 8: F2 F3 then a pedalled arpeggio,
+  one note at a time, `Fmaj7`).
 - An **attack** is two or more harmony-voice notes starting within a
   16th note of the first (a block chord, a strum, a stab, a chord whose
   notes are each played up to a 32nd early or late: Claude's ruling,
@@ -676,9 +688,15 @@ comping read four symbols a bar):
     guitar's dyad over a piano's held chord is compared with the
     guitar's own notes);
   - a lone new top note over a chord whose every pitch class is **held
-    from before**, not re-struck (a melody note, which weighs nothing:
-    MuseScore's `piano.mscx` bar 2 stays `Em`; `| C | C7 |` with the Bb
-    on top re-strikes all, so it cuts).
+    from before**, not re-struck, when the note is **shorter than half
+    the bar** (a melody note, which weighs nothing: MuseScore's
+    `piano.mscx` bar 2 stays `Em`, its A4 a beat of three; `| C | C7 |`
+    with the Bb on top re-strikes all, so it cuts). Held half the bar or
+    longer it is a chord tone and cuts (Claude's ruling, 2026-11-08, fix
+    round 5: a Bb4 a whole bar over a pad with the left hand re-struck
+    reads `| C | C7 |`, a half-note Bb4 from beat 3 `| C / C7 / |`;
+    round 3 had it weigh nothing however long, `| C | / |`. Cost: a
+    half-note melody 9th over a re-struck C names `C(9)` for that bar).
   A written sustain pedal holds notes, but a changed sound still cuts.
 - **The bass at a bar line** (within the attack window of it): struck
   on a new pitch class under voices still sounding (or with an attack),
@@ -692,14 +710,25 @@ comping read four symbols a bar):
   chord). A new chord's bass is the bass last struck, so a chord whose
   attack comes after the bass (the bass on 1, the chord on 2) has it.
 - **Rests:** a chord carries through its voices' rests until they next
-  strike. Their next attack starts at the last bar line in the rest
-  where the bass struck a new pitch class (back to the chord's own
-  included): a change (a waltz's `| C | F |`, Dm7 to G7 as stabs over a
-  walking bass, both at the bar line), or the same voicing over a new
-  bass (`| C | C/G |` in a reggae skank). Voices ringing up to a 16th
-  past the bar line (a legato release) have rested. Where the bass didn't move, at
-  the attack (a pedal C2 under a C stab and a G stab on beat 3 of the
-  next bar: `| C | / / G(11)/C / |`).
+  strike. Once the bass has struck a new pitch class at a bar line in
+  the rest, their next attack starts at the last bar line in the rest
+  that the bass sounds through, struck again (back on the chord's own
+  note included) or held: a change (a waltz's `| C | F |`, Dm7 to G7 as
+  stabs over a walking bass, both at the bar line; a C stab, the bass
+  walking G A B C then C2 again at bar 3, a Dm stab on bar 3 beat 3:
+  `| C | / | Dm7/C |`; F2 struck at bar 2 and tied through bar 3 under
+  a G stab on its beat 3: `| C | / | G7/F |`, fix round 5, which had
+  read `| C | G7sus2 | / |` and `| C | G7/F | / |`), or the same voicing
+  over a new bass (`| C | C/G |` in a reggae skank). The voices have
+  rested when their last notes stop before that attack, however far
+  they rang past the bar line (a legato release, or the sustain pedal
+  lifted after the next downbeat): the ring is weighed no further than
+  the bar line, so `| C | F | G | C |` played legato stays so (fix round
+  5; round 3 allowed a 16th, past which a waltz read `| C | / F / |`).
+  Where the bass didn't move at a bar line, at the attack (a pedal C2
+  under a C stab and a G stab on beat 3 of the next bar:
+  `| C | / / G(11)/C / |`; a bass anticipating its note on the and of 4
+  and holding it, likewise).
 - A stretch with no attack at all, single lines only, cuts where two
   notes start together or one starts as all others stop: it reads note
   by note.
@@ -753,7 +782,9 @@ fresh start); a pedalled or held arpeggio reads as its chord; under a
 written pedal the names are what the pedal holds (`| +C | F | G | *C |`
 reads `C | Fmaj9 | Dm13/F | C`, cut where written); a bass moving inside
 a bar under the same voices is no new chord; a voice moving only its top
-note to a new pitch class over a chord all held is read as melody.
+note to a new pitch class over a chord all held, for less than half a
+bar, is read as melody; a two-note bass figure struck on beat 4 before
+the next bar's chord reads as a note set for that beat.
 
 ### 5.6 Naming a chord: `nameNotes` in barmark
 
