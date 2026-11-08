@@ -316,11 +316,23 @@ function alignSystem(
 /** A system, or an unlabelled bar line, with the lyric rows written just under it. */
 type Block = { lines: Line[]; rows: LyricsLine[] };
 
-/** A row lies just under its bars unless a heading comes between: under a replay heading it doesn't. */
-const isUnder = (r: LyricsLine, lines: Line[]) => {
+/**
+ * Whether a row lies just under its bars: not when a heading comes
+ * between (under a replay heading it doesn't). `headings` are the
+ * headings' line numbers in order, searched by halves, so many rows
+ * print in linear time.
+ */
+const isUnder = (r: LyricsLine, headings: number[]) => {
 	if (!r.covers.length) return false;
 	const last = Math.max(...r.covers);
-	return !lines.some((l) => l.kind === "section" && l.line > last && l.line < r.line);
+	let lo = 0;
+	let hi = headings.length;
+	while (lo < hi) {
+		const mid = (lo + hi) >> 1;
+		if ((headings[mid] ?? 0) <= last) lo = mid + 1;
+		else hi = mid;
+	}
+	return !((headings[lo] ?? Number.POSITIVE_INFINITY) < r.line);
 };
 
 /** The block a bar line is in: its system's, or its own. */
@@ -342,8 +354,9 @@ function blocksOf(lines: Line[]): Block[] {
 	const blocks = new Map<string, Block>();
 	for (const l of lines.filter(inSystem)) blockFor(blocks, l).lines.push(l);
 	const byLine = new Map(lines.map((l) => [l.line, l]));
+	const headings = lines.flatMap((l) => (l.kind === "section" ? [l.line] : []));
 	for (const r of lines) {
-		if (r.kind !== "lyrics" || !isUnder(r, lines)) continue;
+		if (r.kind !== "lyrics" || !isUnder(r, headings)) continue;
 		// An extracted part keeps only some of a system's lines.
 		const first = r.covers.map((n) => byLine.get(n)).find((l) => l !== undefined);
 		if (!first) continue;

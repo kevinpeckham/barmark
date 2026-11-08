@@ -28,6 +28,14 @@ Releases follow the process in [RELEASING.md](RELEASING.md).
   double (`E(#9)/G`); with no key, a black-key root takes the spelling
   with fewer awkward notes (`Db`, `C#m`, `G#dim7`).
 
+### Fixed
+
+- **`printChart` prints many lyric rows in linear time.** Deciding
+  whether a row lies just under its bar line scanned every line of the
+  chart for a heading in between, once a row: 100 verses under each of
+  500 bar lines took 9 s to print. The headings are now found by halves;
+  the same chart prints in about a second, parse included.
+
 ## [0.20.0] - 2026-11-08
 
 ### Changed

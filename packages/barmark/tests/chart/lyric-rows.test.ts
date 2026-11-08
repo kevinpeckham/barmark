@@ -238,3 +238,24 @@ describe("lyric rows and breaks between endings (review fixes)", () => {
 		]);
 	});
 });
+
+describe("printing many lyric rows", () => {
+	test("rows under many bar lines print in linear time (MIDI import, Task 14)", () => {
+		// 2,000 bars, four a line, 100 verses under each: a row's heading check once scanned every line.
+		const line = `| C | F | G | C |\n${Array.from({ length: 100 }, (_, v) => `lyrics ${v + 1}: | a | b | c | d |`).join("\n")}\n`;
+		const chart = `# Long\n${line.repeat(500)}## Coda\n${line}`;
+		const parsed = parseChart(chart);
+		const start = performance.now();
+		const printed = printChart(chart);
+		const ms = performance.now() - start;
+		expect(printed.split("\n").filter((l) => l.startsWith("lyrics 100:"))).toHaveLength(501);
+		// printChart parses too; what's measured is the printing beyond that parse.
+		const parse = (() => {
+			const s = performance.now();
+			parseChart(chart);
+			return performance.now() - s;
+		})();
+		expect(parsed.diagnostics.filter((d) => d.severity === "error")).toEqual([]);
+		expect(ms - parse).toBeLessThan(1000);
+	});
+});
