@@ -1,5 +1,5 @@
 /** Lyrics (spec 3.8): each played syllable as MuseScore writes it. */
-import type { PlayedBar, Syllable } from "barmark";
+import type { PlayedLyrics, Syllable } from "barmark";
 import { add, cmp, nearest } from "./quarters.js";
 import type { PerformedTrack, Quarters } from "./types.js";
 
@@ -9,10 +9,10 @@ function textOf(syllable: Syllable): string | null {
 	return syllable.parts.join("‿") + (syllable.continues ? "" : " ");
 }
 
-/** A bar's sung syllables at their onsets, in time order, verses in order at one time. */
-export function lyricsOf(bar: PlayedBar, at: Quarters): PerformedTrack["lyrics"] {
+/** A bar's sung syllables, from the bar at `at`, at their onsets, in time order, verses in order at one time. */
+export function lyricsOf(lyrics: PlayedLyrics[], at: Quarters): PerformedTrack["lyrics"] {
 	const out: PerformedTrack["lyrics"] = [];
-	for (const { verse, syllables } of bar.lyrics ?? [])
+	for (const { verse, syllables } of lyrics)
 		for (const s of syllables) {
 			const text = textOf(s.syllable);
 			// PlayedSyllable.at is in whole notes, a float: four times it, made exact again, is quarters.

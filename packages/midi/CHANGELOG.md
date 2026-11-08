@@ -13,8 +13,8 @@ package uses [semantic versioning](https://semver.org/).
   symbol as its bass in E2–D♯3 under each chord tone in C4–B4 (the bass
   alone, in E1–D♯2, on `electric bass` or `double bass`), note sets and
   voicings exactly as written (without octaves, rising from octave 4),
-  every named slot re-attacking and `/` holding across bar lines. One
-  track for now. `secondsAt(performance, at)` reads the tempo map.
+  every named slot re-attacking and `/` holding across bar lines.
+  `secondsAt(performance, at)` reads the tempo map.
 - Rhythm figures in the performance: an accent sounds at velocity 100
   and a hit at 112 for its whole slot (a `/` after it holds it); a push
   attacks an eighth or a sixteenth early, taking the time from the slot
@@ -40,3 +40,14 @@ package uses [semantic versioning](https://semver.org/).
   syllable as MuseScore writes it (a space ending a word, `‿` joining an
   elision, verses in order at one time); an open repeat played once with
   an `open-repeat` loss.
+- Parts and lines in the performance: a track for each part line in
+  score order, named by the part (`Electric Guitar 1`) or the part and
+  the line (`Piano RH`), with its instrument's General MIDI program
+  (piano for a part with no `instrument:`); a chart with no `part:` is
+  one track, `Chart`. A melodic instrument's chord symbols (trumpet, the
+  saxes, trombone, flute, violin, cello, voice) sound on piano in a
+  track of their own, `Voice chords`, while its note sets stay on its
+  line's track, so a lead sheet is a `Voice` melody and its chords. A
+  tacet part or a resting line sounds nothing; the pedal is on every
+  track of its part; lyrics go to the singing line's track and, with
+  words, move with a pushed note.

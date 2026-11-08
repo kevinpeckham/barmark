@@ -1,8 +1,11 @@
 /** The sustain pedal (spec 3.6, grammar 2.9): controller 64's presses and lifts, a part's in play order. */
-import type { ChartParse, PlayedBar, SimpleSlot } from "barmark";
+import type { ChartParse, PlayedBar, SimpleSlot, Slot } from "barmark";
 import { pushOf } from "./figures.js";
 import { add, barQuarters, slotQuarters, sub, ZERO } from "./quarters.js";
 import type { Quarters } from "./types.js";
+
+/** What a tacet bar's slots read, as the parse writes them for the first part (grammar 7.4). */
+const TACET: Slot[] = [{ kind: "nc" }];
 
 /**
  * One part's bars: the chart's own for `null` (a chart with no parts, or
@@ -14,7 +17,9 @@ function barsOf(parse: ChartParse, part: number | null): PlayedBar[] {
 	if (part === null) return parse.bars;
 	return parse.bars.map((bar) => {
 		const own = bar.parts?.[part];
-		return { ...bar, slots: own?.slots ?? [], ...(own === null ? { tacet: true as const } : {}) };
+		return own === null
+			? { ...bar, slots: TACET, tacet: true }
+			: { ...bar, slots: own?.slots ?? [] };
 	});
 }
 
@@ -45,9 +50,9 @@ export function pedalEvents(
 	let barAt = ZERO;
 	let giver = ZERO;
 	for (const bar of barsOf(parse, part)) {
-		const slots = bar.tacet ? [] : slotQuarters(bar.slots, bar.meter);
+		// A tacet bar lifts the pedal, and its N.C. gives a push after it its time, as on the note line.
 		if (bar.tacet) set(barAt, false);
-		for (const { slot, at, length } of slots) {
+		for (const { slot, at, length } of slotQuarters(bar.slots, bar.meter)) {
 			const by = pushOf(slot, giver) ?? ZERO;
 			const press = pedalOf(slot);
 			if (press !== undefined) set(sub(add(barAt, at), by), press);

@@ -1,5 +1,5 @@
 /** Markers and words (spec 3.8). */
-import type { ChartParse, PlayedBar } from "barmark";
+import type { ChartParse, Meter, Slot, Words } from "barmark";
 import { add, barQuarters, mul, q } from "./quarters.js";
 import type { Performance, PerformedTrack, Quarters } from "./types.js";
 
@@ -22,8 +22,12 @@ export function markersOf(parse: ChartParse, bars: Performance["bars"]): Perform
 	});
 }
 
-/** A bar's words, each before the slot it precedes (after the last, at the bar's end). */
-export function wordsOf(bar: PlayedBar, at: Quarters): PerformedTrack["words"] {
-	const each = mul(barQuarters(bar.meter), q(1, Math.max(1, bar.slots.length)));
-	return (bar.words ?? []).map((w) => ({ at: add(at, mul(each, q(w.at))), text: w.text }));
+/** A line's words in a bar, each before the slot it precedes (after the last, at the bar's end). */
+export function wordsOf(
+	line: { slots: Slot[]; words?: Words[] },
+	meter: Meter,
+	at: Quarters,
+): PerformedTrack["words"] {
+	const each = mul(barQuarters(meter), q(1, Math.max(1, line.slots.length)));
+	return (line.words ?? []).map((w) => ({ at: add(at, mul(each, q(w.at))), text: w.text }));
 }
