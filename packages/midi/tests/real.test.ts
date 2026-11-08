@@ -56,7 +56,13 @@ describe("MuseScore's files", () => {
 	});
 
 	test("the pedalled piano's chords come from its notes alone", () => {
-		expect(fixtureChart("piano-comping")).toContain("| Am7 | D7 | Gm7 C7 | F6 |");
+		expect(fixtureChart("piano-comping")).toContain("| Am7 | D7 | Gm7 C7 | Fmaj7 |\n| F6 |");
+	});
+
+	test("the left hand's pedal holds the right hand's arpeggio, a track away", () => {
+		// bar 8: F3 A3 C4 E4 … one at a time on track 1; the pedal only on track 2, one channel
+		const r = importMidi(fixtureBytes("piano-comping"));
+		expect(r.text.split("\n")[2]).toBe("| Am7 | D7 | Gm7 C7 | Fmaj7 |");
 	});
 
 	test("the band's bass gives the slash chord and its rehearsal marks the headings", () => {

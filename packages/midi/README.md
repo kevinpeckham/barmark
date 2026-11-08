@@ -199,8 +199,10 @@ is an error, and otherwise parses with no errors.
   the staff's middle line) on the part's own channel: a single-note
   line, left out like a melody, so C doesn't come back as Cmaj7. Its
   rehearsal marks are markers (`## A`); its section names (staff text)
-  and its title aren't in the file at all. The sustain pedal holds the
-  notes of its track. Checked on MuseScore 4.7.6's files of a lead sheet,
+  and its title aren't in the file at all. The sustain pedal holds every
+  note on its channel, whichever track it is in: MuseScore writes a
+  piano's two staves as two tracks on one channel, and the pedal in one
+  of them. Checked on MuseScore 4.7.6's files of a lead sheet,
   a hymn with a pickup and two verses, a band, a comping guitar, a waltz,
   a pedalled piano and a band with bass and drums.
 

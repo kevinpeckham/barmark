@@ -235,6 +235,51 @@ describe("notesOf", () => {
 		expect(notes).toEqual([note(1, 60, 0, 960), note(1, 62, 0, 480, 2), note(1, 64, 0, 480, 3)]);
 	});
 
+	test("the pedal holds its channel on every track, as MuseScore writes a piano's two staves", () => {
+		const { notes } = notesFrom([
+			// the right hand: an arpeggio, one note at a time, on channel 1; a note on channel 2
+			[
+				{ dt: 0, on: [0, 60, 80] },
+				{ dt: 0, on: [1, 72, 80] },
+				{ dt: 240, off: [0, 60] },
+				{ dt: 0, off: [1, 72] },
+				{ dt: 0, on: [0, 64, 80] },
+				{ dt: 240, off: [0, 64] },
+				// after the left hand lifts at 1920, an off ends its note
+				{ dt: 1440, on: [0, 67, 80] },
+				{ dt: 240, off: [0, 67] },
+			],
+			// the left hand: the pedal, on channel 1 only, pressed a tick in, lifted at the bar line
+			[
+				{ dt: 1, control: [0, 64, 127] },
+				{ dt: 1919, control: [0, 64, 0] },
+			],
+		]);
+		expect(notes).toEqual([
+			note(1, 60, 0, 1920),
+			note(1, 72, 0, 240, 1),
+			note(1, 64, 240, 1920),
+			note(1, 67, 1920, 2160),
+		]);
+	});
+
+	test("at one tick, an earlier track's pedal comes before a later track's events", () => {
+		const { notes } = notesFrom([
+			// track 1 presses the pedal at 480, as track 2's note is released there
+			[
+				{ dt: 480, control: [0, 64, 127] },
+				{ dt: 480, control: [0, 64, 0] },
+			],
+			[
+				{ dt: 0, on: [0, 60, 80] },
+				{ dt: 480, off: [0, 60] },
+			],
+			// track 3 presses it again at 960, after track 1 lifts it: track 2's note ends at 960
+			[{ dt: 960, control: [0, 64, 127] }],
+		]);
+		expect(notes).toEqual([note(2, 60, 0, 960)]);
+	});
+
 	test("a pedal never lifted holds to the track's last event", () => {
 		const { notes } = notesFrom([
 			[

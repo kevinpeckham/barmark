@@ -526,7 +526,13 @@ examples slot by slot.
   a silent pitch at one tick stay a zero-length note, and nothing else
   moves, so the pedal keeps its place).
 - **Sustain pedal:** controller 64 at 64 or more holds a released note
-  on its channel until the pedal lifts or the pitch is struck again.
+  on its channel, across tracks, until the pedal lifts or the pitch is
+  struck again (Claude's ruling, 2026-11-08: a controller belongs to the
+  channel, and tracks are only how the file is filed; MuseScore writes a
+  piano's two staves as two tracks on one channel with the pedal in one
+  staff's track only, and a sequencer holds both). The tracks are read
+  in one pass, merged by tick, then track, then file order, so at one
+  tick an earlier track's pedal comes first.
 - **Streams:** the notes of one track on one channel. Channel 10 is
   drums: left out (`drums-left-out`, info).
 - **Melody streams are left out of the harmony:** a stream that is

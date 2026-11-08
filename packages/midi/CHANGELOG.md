@@ -115,7 +115,9 @@ package uses [semantic versioning](https://semver.org/).
   with no chord symbols, and a band with a bass line, sounding slash
   notes and drums) import to charts read over by hand: the chord
   symbols MuseScore plays, not its slash notes' B; the pickup; two
-  parts as one chord line; rehearsal marks as headings. The README
+  parts as one chord line; rehearsal marks as headings. The sustain
+  pedal holds every note on its channel, across tracks, as MuseScore
+  writes a piano's pedal in one staff's track only. The README
   says what import reads and what it doesn't (melody lines, by design),
   its options, and its diagnostics with their severities.
 - **`readSmf(bytes)`**: the Standard MIDI File reader import uses, with
