@@ -16,7 +16,7 @@ Releases follow the process in [RELEASING.md](RELEASING.md).
   none fits: the name grammar 4's linter may suggest for a note set, and
   what `@barmark/midi`'s import will call. Every root is tried, with the
   fifth supplied where it is missing. The fewest added tones wins, a
-  slash costing one and a supplied fifth a half; ties go to triads, then
+  slash and a supplied fifth costing one each; ties go to triads, then
   sevenths, sixths, sus, extended chords and added tones, then the root
   in the bass, then `(9)`, `(11)`, `(13)` over `(2)`, `(4)`, `(6)`.
   Suffixes no one writes are never suggested: a degree both plain and

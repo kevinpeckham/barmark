@@ -97,13 +97,13 @@ function family(suffix: Suffix): number {
 const PLAIN_TONES = ["2", "4", "6"];
 
 /**
- * The order spec 5.6 ranks candidates by: cost (added tones, a slash, half for a
+ * The order spec 5.6 ranks candidates by: cost (added tones, a slash, a
  * supplied fifth), then family, root in the bass, plain tones, the shorter
  * suffix and the root nearest above the bass.
  */
 function order(c: Candidate, bass: number): number[] {
 	const slash = c.root === bass ? 0 : 1;
-	const cost = addedTones(c.suffix) + slash + (c.supplied ? 0.5 : 0);
+	const cost = addedTones(c.suffix) + slash + (c.supplied ? 1 : 0);
 	const plainTone = c.suffix.parts.tones.some((t) => PLAIN_TONES.includes(t)) ? 1 : 0;
 	return [cost, family(c.suffix), slash, plainTone, c.suffix.suffix.length, mod12(c.root - bass)];
 }
