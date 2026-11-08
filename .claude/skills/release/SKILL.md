@@ -1,6 +1,6 @@
 ---
 name: release
-description: Cut a release of barmark, @barmark/render, @barmark/musicxml, @barmark/sync or @barmark/cli - gates via Swamp, bump version, CHANGELOG, commit, tag, push, GitHub release (which publishes to npm)
+description: Cut a release of barmark, @barmark/render, @barmark/musicxml, @barmark/sync, @barmark/midi or @barmark/cli - gates via Swamp, bump version, CHANGELOG, commit, tag, push, GitHub release (which publishes to npm)
 argument-hint: [package version, e.g. barmark 0.2.0 or render 0.1.0]
 ---
 
@@ -9,8 +9,9 @@ argument-hint: [package version, e.g. barmark 0.2.0 or render 0.1.0]
 Follow `RELEASING.md` step by step; it is the source of truth. The
 package is `barmark` (`packages/barmark`), `render`
 (`packages/render`, published as `@barmark/render`), `musicxml`
-(`packages/musicxml`, published as `@barmark/musicxml`) or `sync`
-(`packages/sync`, published as `@barmark/sync`) or `cli`
+(`packages/musicxml`, published as `@barmark/musicxml`), `sync`
+(`packages/sync`, published as `@barmark/sync`), `midi`
+(`packages/midi`, published as `@barmark/midi`) or `cli`
 (`packages/cli`, published as `@barmark/cli`); its tag is
 `<pkg>-vX.Y.Z`. If the package or version is missing, read the package's
 `package.json` and ask (0.x: a minor for grammar or API changes, a patch

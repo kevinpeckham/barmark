@@ -29,6 +29,12 @@ export const PACKAGES = {
 		tagPrefix: "sync-v",
 		smoke: "scripts/smoke-sync.mjs",
 	},
+	midi: {
+		dir: join(root, "packages/midi"),
+		name: "@barmark/midi",
+		tagPrefix: "midi-v",
+		smoke: "scripts/smoke-midi.mjs",
+	},
 	cli: {
 		dir: join(root, "packages/cli"),
 		name: "@barmark/cli",

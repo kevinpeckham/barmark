@@ -1,0 +1,55 @@
+{
+	"name": "@barmark/midi",
+	"version": "0.1.0",
+	"description": "MIDI for barmark chord charts: export a chart's play order as a Standard MIDI File, built on a performance core (@barmark/midi/perform).",
+	"type": "module",
+	"sideEffects": false,
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"import": "./dist/index.js"
+		},
+		"./perform": {
+			"types": "./dist/perform/index.d.ts",
+			"import": "./dist/perform/index.js"
+		}
+	},
+	"types": "./dist/index.d.ts",
+	"files": [
+		"dist",
+		"CHANGELOG.md"
+	],
+	"engines": {
+		"node": ">=20"
+	},
+	"keywords": [
+		"barmark",
+		"chord-chart",
+		"chords",
+		"music",
+		"midi",
+		"smf",
+		"lead-sheet"
+	],
+	"author": "Kevin Peckham",
+	"license": "MIT",
+	"homepage": "https://github.com/kevinpeckham/barmark/tree/main/packages/midi#readme",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/kevinpeckham/barmark.git",
+		"directory": "packages/midi"
+	},
+	"bugs": {
+		"url": "https://github.com/kevinpeckham/barmark/issues"
+	},
+	"dependencies": {
+		"barmark": "workspace:^"
+	},
+	"devDependencies": {
+		"midi-file": "1.2.4"
+	},
+	"scripts": {
+		"build": "rm -rf dist && tsc -p tsconfig.build.json",
+		"prepack": "bun run build"
+	}
+}

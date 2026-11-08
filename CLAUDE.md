@@ -107,6 +107,14 @@ Fallow, CI, Swamp), the grammar, `examples/`, the scripts and FINDINGS.md.
   - `tests/`: `bun test`; `tests/fixtures/` holds real ChordMini output on
     two songs (numbers and labels only), which `bun
     scripts/detection-fixtures.ts` regenerates on the VM only, never in CI
+- `packages/midi/`: `@barmark/midi`, MIDI export (and later import) of a
+  chart's play order; the performance core (chart to timed notes) is the
+  `@barmark/midi/perform` subpath, which imports nothing from `smf/`,
+  `export/` or `import/`
+  - `src/smf/`: the hand-written Standard MIDI File writer (`write.ts`,
+    `vlq.ts`, `types.ts`): no runtime MIDI library
+  - `tests/`: `bun test`; every file is read back with `midi-file`
+    (a devDependency, pinned exactly), an independent parser
 - `packages/cli/`: `@barmark/cli`, the `barmark` command (`check`,
   `format`, `part`, `render`, `transpose`, `export`, `import`), a thin
   layer over the libraries, pinned to them exactly
@@ -125,7 +133,7 @@ Fallow, CI, Swamp), the grammar, `examples/`, the scripts and FINDINGS.md.
   `bun test` skips it (`bunfig.toml`), Fallow ignores it
 - `docs/superpowers/`: designs (`specs/`) and implementation plans (`plans/`)
 - `scripts/verify-package.ts`, `scripts/verify-release.ts`: release checks
-  shared by CI and Swamp; both take the package (`barmark`, `render`, `musicxml`, `sync` or `cli`)
+  shared by CI and Swamp; both take the package (`barmark`, `render`, `musicxml`, `sync`, `midi` or `cli`)
 
 ## Commands
 
@@ -159,7 +167,7 @@ cd site && bun run dev|build|check|test|test:browser   # barmark.dev
   or other AI attribution trailer.
 - Releases follow `RELEASING.md` (the `/release` skill walks it). Each
   package is tagged on its own: `barmark-vX.Y.Z`, `render-vX.Y.Z`,
-  `musicxml-vX.Y.Z`, `sync-vX.Y.Z`, `cli-vX.Y.Z`. A library release is followed by a CLI release and a
+  `musicxml-vX.Y.Z`, `sync-vX.Y.Z`, `midi-vX.Y.Z`, `cli-vX.Y.Z`. A library release is followed by a CLI release and a
   bump in `kevinpeckham/songs` (RELEASING.md steps 13–14); a `sync` release needs neither.
 - `@barmark/render` never changes the music: anything musical (what `%`
   copies, bar numbers, what a replay plays) comes from the parser.

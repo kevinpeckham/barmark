@@ -35,6 +35,16 @@
         "barmark": "workspace:*",
       },
     },
+    "packages/midi": {
+      "name": "@barmark/midi",
+      "version": "0.1.0",
+      "dependencies": {
+        "barmark": "workspace:^",
+      },
+      "devDependencies": {
+        "midi-file": "1.2.4",
+      },
+    },
     "packages/musicxml": {
       "name": "@barmark/musicxml",
       "version": "0.7.0",
@@ -60,6 +70,8 @@
   },
   "packages": {
     "@barmark/cli": ["@barmark/cli@workspace:packages/cli"],
+
+    "@barmark/midi": ["@barmark/midi@workspace:packages/midi"],
 
     "@barmark/musicxml": ["@barmark/musicxml@workspace:packages/musicxml"],
 
@@ -204,6 +216,8 @@
     "is-unsafe": ["is-unsafe@2.0.3", "", {}, "sha512-ZBllczCCO267vgdFb6Tq3pv+LhHaCiGMdr+ZsuL+OopruAg7S+3ZDs1vD0RPC0uSrkjzbraxaGjtX1YBxjPeFQ=="],
 
     "linkedom": ["linkedom@0.18.13", "", { "dependencies": { "css-select": "^7.0.0", "cssom": "^0.5.0", "html-escaper": "^3.0.3", "htmlparser2": "^10.1.0", "uhyphen": "^0.2.0" }, "peerDependencies": { "canvas": ">= 2" }, "optionalPeers": ["canvas"] }, "sha512-ES/o9qotMpzpN2MHs+Iq/JcVoOj8Fa5wiQYrTdFpvAnwXL0g66XHHUc9WUMk6nAlBtGsFQ24ne+SYnvnaQ2FSw=="],
+
+    "midi-file": ["midi-file@1.2.4", "", {}, "sha512-B5SnBC6i2bwJIXTY9MElIydJwAmnKx+r5eJ1jknTLetzLflEl0GWveuBB6ACrQpecSRkOB6fhTx1PwXk2BVxnA=="],
 
     "nth-check": ["nth-check@3.0.1", "", { "dependencies": { "boolbase": "^2.0.0" } }, "sha512-GX0gsdbGVCgnRgbeGaubfjpBXyYRWOOCVeYh08bSQvDZqxz5ndXs1OTfAt/h36G1xvI94YIspsI0sVFqAV9+RQ=="],
 
