@@ -134,6 +134,41 @@ describe("nameNotes", () => {
 		expect(bad.filter(doublySpelled)).toEqual([]);
 	});
 
+	test("keyless: no double accidental and no E#, B#, Cb or Fb anywhere in the name", () => {
+		const bad = smallSets.flatMap((pcs) => pcs.map((bass) => nameNotes(pcs, bass, null) ?? ""));
+		expect(bad.filter((n) => /##|bb|E#|B#|Cb|Fb/.test(n))).toEqual([]);
+	});
+
+	test("a bass the interval would double is spelled by pitch", () => {
+		expect(name("{G E G#}")).toBe("E(#9)/G");
+	});
+
+	test("nonsense from the suffix table loses to the musician's name", () => {
+		expect(name("{B G F Ab}")).toBe("G7(b9)/B");
+		expect(name("{C E Bb A}")).toBe("C7(13)");
+		expect(name("{C E G A Bb}")).toBe("C7(13)");
+		expect(name("{G B F E}")).toBe("G7(13)");
+		expect(name("{C E Bb Db F#}")).toBe("C7(b5,b9)");
+	});
+
+	test("on a tie, the root in the bass wins", () => {
+		expect(name("{C E G Bb Db Eb}")).toBe("C7(b9,#9)");
+		expect(name("{G C F}")).toBe("G7sus4");
+	});
+
+	test("keyless roots on black keys take the spelling with fewer faults", () => {
+		expect(name("{Db F Ab}")).toBe("Db");
+		expect(name("{F Ab Db}")).toBe("Db/F");
+		expect(name("{C# E G#}")).toBe("C#m");
+		expect(name("{G# B D F}")).toBe("G#dim7");
+	});
+
+	test("an in-scale root keeps the key's spelling", () => {
+		expect(nameNotes([8, 0, 3], 8, { tonic: "E", mode: "major" })).toBe("G#");
+		expect(nameNotes([1, 5, 8], 5, { tonic: "C#", mode: "major" })).toBe("C#/E#");
+		expect(nameNotes([11, 3, 6], 6, { tonic: "Gb", mode: "major" })).toBe("Cb/Gb");
+	});
+
 	test("ties prefer (9) to (2)", () => {
 		expect(name("{C E G D}")).toBe("C(9)");
 	});

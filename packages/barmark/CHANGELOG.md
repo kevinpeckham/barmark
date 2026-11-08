@@ -15,12 +15,18 @@ Releases follow the process in [RELEASING.md](RELEASING.md).
   classes sounding over a bass, spelled for the key, or returns null when
   none fits: the name grammar 4's linter may suggest for a note set, and
   what `@barmark/midi`'s import will call. Every root is tried, with the
-  fifth supplied where it is missing; the fewest added tones, slash and
-  supplied fifth wins, ties going to triads, then sevenths, sixths, sus,
-  extended chords and added tones. `{G B F}` over G is `G7`, `{E G C}`
-  over E is `C/E`, `Am7/C`'s notes are `C6`; two pitch classes name only a
-  power chord (`E5`). A degree held both plain and altered (`b9` with `9`)
-  is a cluster, not a chord.
+  fifth supplied where it is missing. The fewest added tones wins, a
+  slash costing one and a supplied fifth a half; ties go to triads, then
+  sevenths, sixths, sus, extended chords and added tones, then the root
+  in the bass, then `(9)`, `(11)`, `(13)` over `(2)`, `(4)`, `(6)`.
+  Suffixes no one writes are never suggested: a degree both plain and
+  altered (`b9` with `9`), `(7)` on a sixth chord, a tone on `dim` or
+  `dim7`, an altered tone on `5`, `6` or `6/9`. `{G B F}` over G is `G7`,
+  `{E G C}` over E is `C/E`, `Am7/C`'s notes are `C6`, `{G B F E}` is
+  `G7(13)`; two pitch classes name only a power chord (`E5`). The bass is
+  spelled by its interval from the root, or by pitch when that would
+  double (`E(#9)/G`); with no key, a black-key root takes the spelling
+  with fewer awkward notes (`Db`, `C#m`, `G#dim7`).
 
 ## [0.20.0] - 2026-11-08
 
