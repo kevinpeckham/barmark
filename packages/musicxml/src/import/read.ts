@@ -244,7 +244,8 @@ function lyricsOf(note: XNode, p: PartState): Attack["lyrics"] {
 	});
 }
 
-const hasTie = (note: XNode, type: string) =>
+/** Whether a note is tied (`start` or `stop`), by `<tie>` or `<notations><tied>`. */
+export const hasTie = (note: XNode, type: string) =>
 	children(note, "tie").some((t) => t.attrs.type === type) ||
 	children(note, "notations").some((n) => children(n, "tied").some((t) => t.attrs.type === type));
 
