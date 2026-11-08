@@ -1,32 +1,42 @@
-import type { VerovioToolkit as Toolkit } from "verovio/esm";
 import * as esm from "verovio/esm";
+import { VerovioToolkit } from "verovio/esm";
 import type { Reply, Request } from "./engine.js";
 import { engraveChart } from "./engrave.js";
 
+type Toolkit = VerovioToolkit;
+
 // Verovio's typings omit the log switch; it is exported all the same.
-const { VerovioToolkit, enableLog, LOG_OFF } = esm as unknown as {
-	VerovioToolkit: new (module: unknown) => Toolkit;
+const { enableLog, LOG_OFF } = esm as unknown as {
 	enableLog(level: number, module: unknown): void;
 	LOG_OFF: number;
 };
 
-let toolkit: Promise<Toolkit> | undefined;
+/** Run `load` once and keep its result; a load that fails is forgotten, so the next call tries again. */
+export function loadOnce<A, T>(load: (arg: A) => Promise<T>): (arg: A) => Promise<T> {
+	let kept: Promise<T> | undefined;
+	return (arg) => {
+		kept ??= load(arg).catch((err) => {
+			kept = undefined;
+			throw err;
+		});
+		return kept;
+	};
+}
 
 /**
  * The page's one Verovio toolkit, loaded on first use and reused. By
  * default the package's own `verovio/wasm`; when a request carries
- * `verovioUrl` that module is imported instead. The first request's URL
- * wins for the worker's life: later ones are ignored.
+ * `verovioUrl` that module is imported instead. The first request whose
+ * load succeeds wins for the worker's life: later URLs are ignored.
  */
-function ready(verovioUrl?: string): Promise<Toolkit> {
-	toolkit ??= import(/* @vite-ignore */ verovioUrl ?? "verovio/wasm")
-		.then((m: { default: () => Promise<unknown> }) => m.default())
-		.then((module) => {
-			enableLog(LOG_OFF, module);
-			return new VerovioToolkit(module);
-		});
-	return toolkit;
-}
+const ready = loadOnce(async (verovioUrl: string | undefined): Promise<Toolkit> => {
+	const m: { default: () => Promise<unknown> } = verovioUrl
+		? await import(/* @vite-ignore */ verovioUrl)
+		: await import("verovio/wasm");
+	const module = await m.default();
+	enableLog(LOG_OFF, module);
+	return new VerovioToolkit(module as ConstructorParameters<typeof VerovioToolkit>[0]);
+});
 
 /** Answer one request. Never throws: a failure is a reply with its reason. */
 export async function handle(request: Request, loaded: () => Promise<Toolkit>): Promise<Reply> {

@@ -49,7 +49,8 @@ export function createEngine(makeWorker: () => WorkerLike): Engine {
 	const newest = new WeakMap<object, number>();
 
 	const fail = (w: WorkerLike) => {
-		if (worker === w) worker = null;
+		if (worker !== w) return;
+		worker = null;
 		w.terminate();
 		const all = [...pending.values()];
 		pending.clear();

@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { VerovioToolkit } from "verovio/esm";
 import createVerovioModule from "verovio/wasm";
 import { createEngine, type Reply, type Request, type WorkerLike } from "../src/engine.js";
-import { handle } from "../src/worker.js";
+import { handle, loadOnce } from "../src/worker.js";
 
 class FakeWorker implements WorkerLike {
 	posted: Request[] = [];
@@ -72,8 +72,8 @@ describe("createEngine", () => {
 		const a = engine.engrave({}, "a", 800);
 		const b = engine.engrave({}, "b", 800);
 		workers[0]?.onerror?.({} as ErrorEvent);
-		expect(a).rejects.toThrow("The score engine failed");
-		expect(b).rejects.toThrow("The score engine failed");
+		await expect(a).rejects.toThrow("The score engine failed");
+		await expect(b).rejects.toThrow("The score engine failed");
 		expect(workers[0]?.terminated).toBe(true);
 		const c = engine.engrave({}, "c", 800);
 		expect(workers.length).toBe(2);
@@ -109,5 +109,22 @@ describe("handle", () => {
 			Promise.reject(new Error("no wasm")),
 		);
 		expect(r).toEqual({ id: 9, ok: false, reason: "Error: no wasm" });
+	});
+});
+
+describe("loadOnce", () => {
+	test("a failed load is retried, a good one kept", async () => {
+		let calls = 0;
+		const load = loadOnce(async (n: number) => {
+			calls++;
+			if (calls === 1) throw new Error("fetch failed");
+			return n;
+		});
+		const flaky = async () => (await load(1)) as unknown as never;
+		const first = await handle({ id: 1, text: "x", width: 800 }, flaky);
+		expect(first).toMatchObject({ ok: false });
+		expect(await load(2)).toBe(2);
+		expect(await load(3)).toBe(2);
+		expect(calls).toBe(2);
 	});
 });
