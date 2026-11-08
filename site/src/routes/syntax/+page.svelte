@@ -3,6 +3,7 @@ import { onMount } from "svelte";
 import CategoryChips from "#lib/components/CategoryChips.svelte";
 import GuideSearch from "#lib/components/GuideSearch.svelte";
 import GuideTable from "#lib/components/GuideTable.svelte";
+import ScoreNotes from "#lib/components/ScoreNotes.svelte";
 import { type GuideQuery, readQuery, writeQuery } from "#lib/guide/query.js";
 import { LINKS } from "#lib/site.js";
 import { keepQuery } from "#lib/url.js";
@@ -24,7 +25,7 @@ $effect(() => {
 });
 
 const description =
-	"Everything you can write in Barmark, one row each: search it, filter it, and see each example rendered.";
+	"Everything you can write in Barmark, one row each: search it, filter it, and see each example rendered, then how a chart is drawn as a score.";
 </script>
 
 <svelte:head>
@@ -66,6 +67,8 @@ const description =
 	</div>
 
 	<GuideTable {query} />
+
+	<ScoreNotes />
 
 	<p class="text-sm opacity-80">
 		The full rules are in the

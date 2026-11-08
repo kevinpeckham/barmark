@@ -5,7 +5,8 @@ guide. SvelteKit, prerendered, styled with UnoCSS only (no CSS files,
 `<style>` blocks or `style` attributes), after Stem Shovel's look.
 
 This folder is **not** a member of the repository's Bun workspace: it
-installs `barmark` and `@barmark/render` from npm at exact versions, so
+installs `barmark`, `@barmark/render` and `@barmark/score` from npm at
+exact versions, so
 the site, and the guide's tests, run exactly what readers install. After
 a package release, bump them here (RELEASING.md, step 12).
 
@@ -21,7 +22,13 @@ bun run test:browser   # Playwright: live editing, the guide, no JavaScript, pho
 - `src/lib/guide/rows.ts`: the guide, one row per construct. Every
   example is parsed in `tests/guide.test.ts`; a row the parser disagrees
   with fails the build.
-- `src/lib/demo.chart.md`: the home page's chart.
+- `src/lib/demo.chart.md`: the home page's chart, drawn by
+  `<barmark-score>` (Grid / Score switch; Verovio loads only on Score)
+  with a Key menu (`src/lib/key.ts`, as Stem Shovel's, not remembered).
+- `src/lib/guide/score.ts`: the guide's "In the score" rows; each example
+  is exported and engraved with Verovio in `tests/score-notes.test.ts`.
+- `src/lib/score-font.ts`: copies Verovio's Leipzig font face out of the
+  score's shadow root, where Chromium ignores it (@barmark/score 0.1.0).
 - `uno.config.ts`: theme, shortcuts and fonts. Edwin comes from
   `@barmark/render` through `presetWebFonts`; `scripts/fonts.ts` copies
   the file into `static/fonts/` before `dev` and `build`.

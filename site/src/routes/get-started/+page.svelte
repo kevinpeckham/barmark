@@ -8,6 +8,7 @@ import {
 	INSTALL_MUSICXML,
 	INSTALL_PARSER,
 	INSTALL_RENDER,
+	INSTALL_SCORE,
 	INSTALL_SYNC,
 	LIVE_EDITOR,
 	SAMPLE_CHART,
@@ -16,11 +17,14 @@ import {
 	USE_MUSICXML,
 	USE_PARSER,
 	USE_RENDER,
+	USE_SCORE_ELEMENT,
+	USE_SCORE_SERVER,
 	USE_SYNC,
+	VITE7_CONFIG,
 } from "#lib/start.js";
 
 const description =
-	"Write a Barmark chart, read it with the parser, draw it with @barmark/render or the <barmark-chart> web component, convert it to and from MusicXML with @barmark/musicxml, check charts from the terminal with @barmark/cli, and sync a chart with a recording with @barmark/sync.";
+	"Write a Barmark chart, read it with the parser, draw it with @barmark/render or the <barmark-chart> web component, show it as a full score with @barmark/score, convert it to and from MusicXML with @barmark/musicxml, check charts from the terminal with @barmark/cli, and sync a chart with a recording with @barmark/sync.";
 const step = "font-serif text-xl text-ink";
 const link = "underline decoration-accent/60 underline-offset-3 hover-text-accent";
 const code = "font-mono text-accent";
@@ -45,7 +49,8 @@ const code = "font-mono text-accent";
 			draws the bar grid as HTML or as a web component. <code class={code}>@barmark/musicxml</code> converts
 			charts to and from MusicXML, and <code class={code}>@barmark/sync</code> syncs a chart with a
 			recording. All four are ESM, with TypeScript types, and run in Node 20 or later, Bun, Deno and
-			the browser. <code class={code}>@barmark/cli</code> puts them in the terminal, for checking
+			the browser. <code class={code}>@barmark/score</code> shows a chart as a full score on a web page,
+			beside the grid. <code class={code}>@barmark/cli</code> puts them in the terminal, for checking
 			charts without writing any code.
 		</p>
 	</div>
@@ -114,7 +119,53 @@ const code = "font-mono text-accent";
 	</section>
 
 	<section class="flex flex-col gap-4 min-w-0">
-		<h2 class={step}>5. Convert to and from MusicXML</h2>
+		<h2 id="score" class="{step} scroll-mt-6">5. Or show it as a full score</h2>
+		<p class="max-w-prose opacity-80">
+			<code class={code}>&lt;barmark-score&gt;</code>, from <code class={code}>@barmark/score</code>, is
+			<code class={code}>&lt;barmark-chart&gt;</code> with a Grid / Score switch above it. Score draws the
+			same chart engraved on staves: chord symbols over rhythm slashes, a singer's melody and its lyrics
+			as notes, and each part on a staff of its own. It takes the same sources and attributes as
+			<code class={code}>&lt;barmark-chart&gt;</code>, plus <code class={code}>view="score"</code> to open
+			on the score, and engraves again when its text changes.
+		</p>
+		<Code title="Terminal" code={INSTALL_SCORE} />
+		<Window title="The example song · press Score">
+			<div class="p-4 min-w-[26rem]">
+				<ChartRender text={SAMPLE_CHART} score label="The example song, as a grid or a score" />
+			</div>
+		</Window>
+		<Code title="index.html" code={USE_SCORE_ELEMENT} />
+		<p class="max-w-prose opacity-80">
+			The score is the heavier of the two. Its engraver, Verovio, is several megabytes, so it loads only
+			the first time a reader presses Score, in a background worker, and one copy serves every score on
+			the page. A reader who stays on the grid never downloads it; when the grid is all you need, use
+			<code class={code}>&lt;barmark-chart&gt;</code>.
+		</p>
+		<p class="max-w-prose opacity-80">
+			On a server or a static site, <code class={code}>renderScoreHtml</code> draws the grid and the
+			switch with no script, as <code class={code}>renderChart</code> does; the element takes it over in
+			the browser.
+		</p>
+		<Code title="page.ts" code={USE_SCORE_SERVER} />
+		<p class="max-w-prose opacity-80">
+			With Vite 8 it needs no configuration. Vite 7 needs two settings, so the worker can find Verovio:
+		</p>
+		<Code title="vite.config.js" code={VITE7_CONFIG} />
+		<p class="max-w-prose opacity-80">
+			<code class={code}>@barmark/score</code> is MIT, like every Barmark package. It depends on
+			<a href={LINKS.verovio} class={link}>Verovio</a>, which is licensed
+			<a href={LINKS.verovioLicense} class={link}>LGPL-3.0</a>, as an ordinary npm package, loaded
+			unchanged. A site that bundles the score ships Verovio inside its bundle; the README says how to keep
+			it a separate file and its notice.
+		</p>
+		<p class="text-sm opacity-80">
+			Every attribute, the worker and the licence are in the
+			<a href={LINKS.scoreReadme} class={link}>score package's README</a>.
+		</p>
+	</section>
+
+	<section class="flex flex-col gap-4 min-w-0">
+		<h2 class={step}>6. Convert to and from MusicXML</h2>
 		<p class="max-w-prose opacity-80">
 			<code class={code}>exportMusicXml</code> writes a chart as MusicXML 4.0, so it opens in MuseScore,
 			Dorico, Sibelius or Finale with the same bars, chords, repeats, sections and parts, and plays in
@@ -131,7 +182,7 @@ const code = "font-mono text-accent";
 	</section>
 
 	<section class="flex flex-col gap-4 min-w-0">
-		<h2 id="terminal" class="{step} scroll-mt-6">6. Check charts from the terminal</h2>
+		<h2 id="terminal" class="{step} scroll-mt-6">7. Check charts from the terminal</h2>
 		<p class="max-w-prose opacity-80">
 			<code class={code}>@barmark/cli</code> is the <code class={code}>barmark</code> command. It
 			checks a folder of charts and names each problem by file and line, rewrites charts in their
@@ -156,7 +207,7 @@ const code = "font-mono text-accent";
 	</section>
 
 	<section class="flex flex-col gap-4 min-w-0">
-		<h2 id="sync" class="{step} scroll-mt-6">7. Sync a chart with a recording</h2>
+		<h2 id="sync" class="{step} scroll-mt-6">8. Sync a chart with a recording</h2>
 		<p class="max-w-prose opacity-80">
 			<code class={code}>@barmark/sync</code> is for audio tools. <code class={code}>chartFromDetections</code>
 			takes what a chord detector hears in a recording, its bar starts and chord runs in seconds, and

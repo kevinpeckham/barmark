@@ -3,6 +3,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { exportMusicXml, importMusicXml } from "@barmark/musicxml";
+import { renderScoreHtml } from "@barmark/score/server";
 import { barAt, chartFromDetections, secondsAtBar } from "@barmark/sync";
 import { parseChart, printChart, transposeChart } from "barmark";
 import { LINKS } from "../src/lib/site.ts";
@@ -12,7 +13,10 @@ import {
 	SYNC_DETECTIONS,
 	USE_CLI,
 	USE_MUSICXML,
+	USE_SCORE_ELEMENT,
+	USE_SCORE_SERVER,
 	USE_SYNC,
+	VITE7_CONFIG,
 } from "../src/lib/start.ts";
 import { build, page, site } from "./built.ts";
 
@@ -43,6 +47,31 @@ describe("the MusicXML code Get Started shows", () => {
 		expect(imported.text).toStartWith("# Example Song\nkey: D, tempo: 145\n\n## Verse\n");
 		expect(USE_MUSICXML).toContain('"# Example Song\\nkey: D, tempo: 145\\n\\n## Verse\\n…"');
 		expect(imported.diagnostics.filter((d) => d.severity === "error")).toEqual([]);
+	});
+});
+
+describe("the score code Get Started shows", () => {
+	test("renderScoreHtml draws the grid and the switch, as the page says, with the font", () => {
+		const html = renderScoreHtml(SAMPLE_CHART, {
+			theme: "auto",
+			fontUrl: "/fonts/Edwin-Roman.otf",
+		});
+		expect(html).toStartWith("<style>@font-face");
+		expect(html).toContain("<barmark-score");
+		expect(html).toContain('aria-label="View"');
+		expect(html).toContain("Example Song");
+		expect(USE_SCORE_SERVER).toContain('import { renderScoreHtml } from "@barmark/score/server";');
+	});
+	test("the element sample imports the element and opens one chart on the score", () => {
+		expect(USE_SCORE_ELEMENT).toContain('import "@barmark/score/element";');
+		expect(USE_SCORE_ELEMENT).toContain('<barmark-score view="score"');
+	});
+	test("the Vite 7 settings are the score README's", () => {
+		const readme = readFileSync(
+			join(dirname(Bun.resolveSync("@barmark/score/package.json", site)), "README.md"),
+			"utf8",
+		);
+		expect(readme).toContain(VITE7_CONFIG);
 	});
 });
 
@@ -129,9 +158,10 @@ describe("Get Started, prerendered", () => {
 			"2. Read it with the parser",
 			"3. Render it as HTML",
 			"4. Or use the web component",
-			"5. Convert to and from MusicXML",
-			"6. Check charts from the terminal",
-			"7. Sync a chart with a recording",
+			"5. Or show it as a full score",
+			"6. Convert to and from MusicXML",
+			"7. Check charts from the terminal",
+			"8. Sync a chart with a recording",
 		]);
 		const page = text(doc().querySelector("main")) ?? "";
 		for (const line of [
@@ -139,6 +169,11 @@ describe("Get Started, prerendered", () => {
 			"npm install @barmark/render",
 			"npm install @barmark/musicxml",
 			"npm install @barmark/sync",
+			"npm install @barmark/score",
+			'import "@barmark/score/element";',
+			"<barmark-score",
+			"renderScoreHtml(",
+			"optimizeDeps",
 			"chartFromDetections(",
 			"exportMusicXml(",
 			"importMusicXml(",
@@ -150,8 +185,19 @@ describe("Get Started, prerendered", () => {
 		])
 			expect(page).toContain(line);
 	});
-	test("shows the sample chart rendered", () => {
+	test("shows the sample chart rendered, and again as a score with its switch", () => {
 		expect(doc().querySelector("main barmark-chart template[shadowrootmode=open]")).not.toBeNull();
+		const score = doc().querySelector("#score")?.parentElement;
+		expect(score?.querySelector("barmark-score template[shadowrootmode=open]")).not.toBeNull();
+	});
+	test("credits Verovio and its licence beside the score, and links the score's README", () => {
+		const score = doc().querySelector("#score")?.parentElement;
+		const hrefs = [...(score?.querySelectorAll("a") ?? [])].map((a) => a.getAttribute("href"));
+		expect(hrefs).toContain(LINKS.verovio);
+		expect(hrefs).toContain(LINKS.verovioLicense);
+		expect(hrefs).toContain(LINKS.scoreReadme);
+		expect(text(score)).toContain("LGPL-3.0");
+		expect(text(score)).toContain("Vite 8");
 	});
 });
 
@@ -179,11 +225,13 @@ describe("the FAQ, prerendered", () => {
 		const contents = [...doc().querySelectorAll("main nav a")].map((a) => a.getAttribute("href"));
 		expect(contents).toEqual(ids.map((id) => `#${id}`));
 	});
-	test("names the five packages, and answers how to check charts without code", () => {
+	test("names the six packages, and answers how to check charts without code", () => {
 		const what = text(doc().querySelector("#what")?.parentElement) ?? "";
+		expect(what).toContain("six npm packages");
 		for (const name of [
 			"barmark",
 			"@barmark/render",
+			"@barmark/score",
 			"@barmark/musicxml",
 			"@barmark/sync",
 			"@barmark/cli",
@@ -195,12 +243,41 @@ describe("the FAQ, prerendered", () => {
 		expect(hrefs).toContain("/get-started#terminal");
 		expect(hrefs).toContain(LINKS.songs);
 	});
+	test("answers what the score is, why it is its own package, what engraves it and how it compares", () => {
+		const answer = (id: string) => text(doc().querySelector(`#${id}`)?.parentElement) ?? "";
+		expect(text(doc().querySelector("#score"))).toBe("Can Barmark show a chart as sheet music?");
+		expect(answer("score")).toContain("Grid / Score switch");
+		expect(text(doc().querySelector("#score-package"))).toBe(
+			"Why is the score view a separate package?",
+		);
+		expect(answer("score-package")).toContain("first time a reader presses Score");
+		expect(text(doc().querySelector("#verovio"))).toBe("What engraves the score?");
+		expect(answer("verovio")).toContain("LGPL-3.0");
+		const hrefs = [
+			...(doc().querySelector("#verovio")?.parentElement?.querySelectorAll("a") ?? []),
+		].map((a) => a.getAttribute("href"));
+		expect(hrefs).toEqual([LINKS.verovio, LINKS.verovioLicense]);
+		expect(text(doc().querySelector("#score-dorico"))).toBe(
+			"Does the score match Dorico or MuseScore?",
+		);
+		expect(answer("score-dorico")).toContain("MusicXML");
+	});
 	test("links to Stem Shovel, the code and the licence", () => {
 		const hrefs = [...doc().querySelectorAll("main a")].map((a) => a.getAttribute("href"));
 		expect(hrefs).toContain(LINKS.stemShovel);
 		expect(hrefs).toContain(LINKS.syncReadme);
 		expect(hrefs).toContain(LINKS.github);
 		expect(hrefs).toContain(LINKS.license);
+	});
+});
+
+describe("the Syntax Guide's score section", () => {
+	const doc = () => page("syntax.html");
+	test("follows the guide with a row for each way notation is drawn, and a lead sheet to switch", () => {
+		const section = doc().querySelector("#in-the-score")?.parentElement;
+		expect(text(doc().querySelector("#in-the-score"))).toBe("In the score");
+		expect(section?.querySelectorAll("[data-score-note]").length).toBeGreaterThan(8);
+		expect(section?.querySelector("barmark-score template[shadowrootmode=open]")).not.toBeNull();
 	});
 });
 
@@ -225,7 +302,9 @@ describe("the name in prose", () => {
 	for (const path of ["index.html", "syntax.html", "try.html", "get-started.html", "faq.html"])
 		test(`${path} writes Barmark with a capital B`, () => {
 			const doc = page(path);
-			for (const el of doc.querySelectorAll("code, pre, script, style, template, barmark-chart"))
+			for (const el of doc.querySelectorAll(
+				"code, pre, script, style, template, barmark-chart, barmark-score",
+			))
 				el.remove();
 			doc.querySelector("nav a[href='/']")?.remove(); // the wordmark
 			const words = [doc.title, doc.querySelector("main")?.textContent ?? ""].join(" ");
@@ -255,9 +334,11 @@ describe("licences", () => {
 		);
 	});
 	for (const path of ["index.html", "faq.html"])
-		test(`${path}'s footer links both licences`, () => {
+		test(`${path}'s footer links both licences, and credits Verovio with its own`, () => {
 			const hrefs = [...page(path).querySelectorAll("footer a")].map((a) => a.getAttribute("href"));
 			expect(hrefs).toContain(LINKS.license);
 			expect(hrefs).toContain(LINKS.specLicense);
+			expect(hrefs).toContain(LINKS.verovio);
+			expect(hrefs).toContain(LINKS.verovioLicense);
 		});
 });
