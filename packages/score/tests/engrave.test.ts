@@ -64,6 +64,18 @@ describe("engraveChart", () => {
 		expect(mei).toMatch(/<measure [^>]*metcon="false" n="0">/);
 	});
 
+	test("a repeat's ×N is drawn in the bar it ends, not the next", () => {
+		engraveChart(vrv, "|: G | C :| x5\n| D |", { width: 800 });
+		const mei = vrv.getMEI();
+		const bars = mei.split("<measure ").slice(1);
+		expect(bars[1]).toContain("×5");
+		expect(bars[2]).not.toContain("×5");
+		const tstamp = Number(
+			/<dir [^>]*tstamp="([\d.]+)"[^>]*>(?:(?!<\/dir>)[\s\S])*×5/.exec(bars[1] ?? "")?.[1],
+		);
+		expect(tstamp).toBe(4);
+	});
+
 	test("as many measures as the export", () => {
 		const r = engraveChart(vrv, read("morning-song.chart.md"), { width: 800 });
 		if (!r.ok) throw new Error(r.reason);

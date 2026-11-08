@@ -50,6 +50,10 @@ package uses [semantic versioning](https://semver.org/).
   heading (Shenandoah's description) is now a direction in the top part
   only, like the score's marks, not in every part, where every engraver
   showed it once per part. A part exported alone (`part`) still writes it.
+- **A repeat's `×N` stands over the bar it ends.** The count (and "repeat
+  as needed") was a direction after the bar's last note, at its closing
+  barline, so Verovio and Dorico both drew Peaceful Dreams' `×5` over the
+  next bar. It now carries an `<offset>` back to the bar's last beat.
 
 ## [0.7.1] - 2026-11-08
 

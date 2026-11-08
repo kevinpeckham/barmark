@@ -437,15 +437,30 @@ function scoreStartXml(m: Measure, ctx: MeasureContext): string {
 const startXml = (m: Measure, ctx: MeasureContext) =>
 	(ctx.score ? textXml(m.lead) + scoreStartXml(m, ctx) : "") + textXml(m.text);
 
+/**
+ * How far back from the bar's end a repeat's words stand, in divisions: its last beat
+ * (in the bar's own meter), so they sit over the bar the repeat ends. Written at the
+ * bar's end, Verovio and Dorico drew them over the next bar. A whole number, as a beat
+ * of a compound meter may not be: it only places the words.
+ */
+const lastBeat = (m: Measure, divisions: number) =>
+	Math.max(1, Math.round(whole(beatLength(m.meter), divisions)));
+
 /** A repeat's words: an open one's, or a count above 2, which Dorico won't read from `times`. */
-function repeatWords(end: Marks["repeatEnd"]): string {
-	if (end === "open") return scoreDirection(text("words", "repeat as needed"));
-	return typeof end === "number" && end > 2 ? scoreDirection(text("words", `×${end}`)) : "";
+function repeatWords(m: Measure, divisions: number): string {
+	const end = m.marks.repeatEnd;
+	const words =
+		end === "open" ? "repeat as needed" : typeof end === "number" && end > 2 ? `×${end}` : "";
+	if (!words) return "";
+	return scoreDirection(text("words", words)).replace(
+		"</direction-type></direction>",
+		`</direction-type>${text("offset", -lastBeat(m, divisions))}</direction>`,
+	);
 }
 
 /** After the notes (top part only): a repeat's words, To Coda, Fine and the jump. */
-function endXml(marks: Marks, score: boolean): string {
-	return score ? [repeatWords(marks.repeatEnd), ...marks.end.map(jumpXml)].join("") : "";
+function endXml(m: Measure, ctx: MeasureContext): string {
+	return ctx.score ? [repeatWords(m, ctx.divisions), ...m.marks.end.map(jumpXml)].join("") : "";
 }
 
 const endingXml = (marks: Marks, type: string | null | undefined) =>
@@ -504,7 +519,7 @@ export function measureXml(bar: MeasureEvents, ctx: MeasureContext): string {
 		bar.lift === "start" ? pedalXml("stop", ctx.staves === 2 ? 2 : null) : "",
 		body,
 		bar.lift === "end" ? pedalXml("stop", ctx.staves === 2 ? 2 : null) : "",
-		endXml(m.marks, ctx.score),
+		endXml(m, ctx),
 		textXml(m.foot),
 		rightBarlineXml(m.marks),
 	]);
