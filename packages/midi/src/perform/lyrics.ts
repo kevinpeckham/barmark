@@ -18,6 +18,5 @@ export function lyricsOf(bar: PlayedBar, at: Quarters): PerformedTrack["lyrics"]
 			// PlayedSyllable.at is in whole notes, a float: four times it, made exact again, is quarters.
 			if (text !== null) out.push({ at: add(at, nearest(s.at * 4)), verse, text });
 		}
-	// Stable: verses stay in order at one onset.
-	return out.sort((a, b) => cmp(a.at, b.at));
+	return out.sort((a, b) => cmp(a.at, b.at) || a.verse - b.verse);
 }

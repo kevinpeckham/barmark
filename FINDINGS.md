@@ -9,6 +9,23 @@ not here.
 
 ## Testing
 
+### A plan's charts don't parse until something parses them; barmark's syllable times are floats (2026-11-08, @barmark/midi)
+
+- **The symptom.** Task 4 of the MIDI plan wrote `| @B C |` and
+  `| @A C |` for rehearsal-mark markers: both are errors ("a rehearsal
+  mark is a cell of its own", grammar 2.5). And lyric onsets came back
+  as `0.3333333333333333`, not a third.
+- **The cause.** The plan's charts were written from memory of the
+  grammar, never run. `PlayedSyllable.at` is a float in whole notes
+  (barmark's `slotTimes`, `chart/shares.ts`), where the performance needs
+  exact quarters.
+- **The fix.** The tests write `| C | @B | C |`. `nearest` in
+  `packages/midi/src/perform/quarters.ts` turns four times the float back
+  into the fraction it came from (the first continued-fraction
+  convergent within 1e-9), and `perform-map.test.ts` checks thirds come
+  back exact. Parse every chart a plan or brief quotes before relying on
+  it.
+
 ### A repeat mark on a bar line with no bar had no measure to go on (2026-11-07, @barmark/musicxml)
 
 - **The symptom.** `| Gm |`, `|: % |`, `| ... :|` plays Gm Gm Gm; the

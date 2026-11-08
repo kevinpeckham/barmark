@@ -1,7 +1,6 @@
 /** The tempo map (spec 3.7): steady tempos in the meter's beat, rit. and accel. ramps, fermatas. */
 import { beatsOf, type Meter } from "barmark";
-import { add, barQuarters, cmp, mul, q, sub, toNumber, ZERO } from "./quarters.js";
-import type { BarAt } from "./swing.js";
+import { add, type BarAt, barQuarters, cmp, mul, q, sub, toNumber, ZERO } from "./quarters.js";
 import type { MidiLoss, Performance, Quarters } from "./types.js";
 
 /** A played bar at its onset; `fermata` when a `...` follows it. */
@@ -40,9 +39,9 @@ const beatsIn = ({ bar, at }: TimedBar): { at: Quarters; meter: Meter }[] =>
 function runTempos(run: TimedBar[], assumed: number): Tempo[] {
 	const first = run[0] as TimedBar;
 	const last = run.at(-1) as TimedBar;
-	const from = first.bar.tempo ?? assumed;
 	const change = first.bar.tempoChange;
-	if (!change) return [{ at: first.at, qpm: qpmOf(from, first.bar.meter) }];
+	if (!change) return [{ at: first.at, qpm: qpmOf(first.bar.tempo ?? assumed, first.bar.meter) }];
+	const from = change.from ?? assumed;
 	const to = change.to ?? from * (change.kind === "rit" ? 0.8 : 1.2);
 	const beats = run.slice(0, -1).flatMap(beatsIn);
 	const ramp = beats.map(({ at, meter }, k) => ({
@@ -53,8 +52,8 @@ function runTempos(run: TimedBar[], assumed: number): Tempo[] {
 }
 
 /** The qpm in force at a point: the last tempo at or before it. */
-function inForce(tempos: Tempo[], at: Quarters): number {
-	let qpm = tempos[0]?.qpm ?? 120;
+function inForce(tempos: Tempo[], at: Quarters, assumed: number): number {
+	let qpm = tempos[0]?.qpm ?? assumed;
 	for (const t of tempos) if (cmp(t.at, at) <= 0) qpm = t.qpm;
 	return qpm;
 }
@@ -63,12 +62,12 @@ function inForce(tempos: Tempo[], at: Quarters): number {
  * A fermata's last beat at a third of the tempo in force there; the bar
  * after it has its own point, so the tempo returns there (spec 3.7).
  */
-function withFermatas(tempos: Tempo[], bars: TimedBar[]): Tempo[] {
+function withFermatas(tempos: Tempo[], bars: TimedBar[], assumed: number): Tempo[] {
 	const out = [...tempos];
 	for (const { bar, at, fermata } of bars) {
 		if (!fermata) continue;
 		const beat = sub(add(at, barQuarters(bar.meter)), beatQuarters(bar.meter));
-		const held = { at: beat, qpm: inForce(tempos, beat) / 3 };
+		const held = { at: beat, qpm: inForce(tempos, beat, assumed) / 3 };
 		const i = out.findIndex((t) => cmp(t.at, beat) >= 0);
 		if (i === -1) out.push(held);
 		else out.splice(i, cmp(out[i]?.at as Quarters, beat) === 0 ? 1 : 0, held);
@@ -85,6 +84,7 @@ export function tempoMap(
 	const points = withFermatas(
 		runsOf(bars).flatMap((run) => runTempos(run, assumed)),
 		bars,
+		assumed,
 	);
 	const steady = points.filter((t, i) => i === 0 || t.qpm !== points[i - 1]?.qpm);
 	const tempos = steady.length > 0 ? steady : [{ at: ZERO, qpm: assumed }];

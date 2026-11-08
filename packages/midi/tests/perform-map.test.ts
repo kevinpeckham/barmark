@@ -156,6 +156,9 @@ describe("perform: tempo, meters, keys, markers, words and lyrics", () => {
 			["solo", 0],
 			["fill", 4],
 		]);
+		// Words count the bar's slots, a `_` group as one: "x" is before E, on beat 2.
+		const grouped = play('| C_D "x" E F G |');
+		expect(grouped.tracks[0]?.words.map((w) => [w.text, n(w.at)])).toEqual([["x", 1]]);
 		// Words before the second eighth swing with it.
 		const swung = play('feel: swing\n| C "x" C C C C C C C |');
 		expect(swung.tracks[0]?.words.map((w) => [w.text, n(w.at)])).toEqual([["x", 2 / 3]]);

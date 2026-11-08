@@ -213,24 +213,34 @@ describe("perform: accents, hits, pushes, pedal and swing", () => {
 		]);
 	});
 
-	test("swing never makes a note of no length", () => {
-		// Sextuplets: the fourth (at 1/2) swings onto the fifth (at 2/3), or past it at 75%.
-		const sextuplets = "| C_D_E_F_G_A / / / |";
-		expect(attacks(`feel: swing\n${sextuplets}`)).toEqual([
+	test("a beat off the binary grid isn't swung", () => {
+		// Controller's ruling: sextuplets keep all six notes, straight, under any swing.
+		const sextuplets = "| C_D_E_F_G_A C C C |";
+		const straight = [
 			[0, 1 / 6],
 			[1 / 6, 1 / 6],
-			[1 / 3, 1 / 3],
+			[1 / 3, 1 / 6],
+			[1 / 2, 1 / 6],
 			[2 / 3, 1 / 6],
-			[5 / 6, 19 / 6],
-		]);
-		const wide = notesOf(perform(parseChart(`feel: swing 75%\n${sextuplets}`)));
-		expect(wide.every(([, , length]) => length > 0)).toBe(true);
-		expect(wide.filter(([pitch]) => pitch < 60).map(([, at]) => at)).toEqual([
+			[5 / 6, 1 / 6],
+		];
+		for (const feel of ["swing", "swing 75%"])
+			expect(attacks(`feel: ${feel}\n${sextuplets}`).slice(0, 6)).toEqual(straight);
+		// The other beats still swing: a triplet beat beside swung eighths.
+		expect(attacks("feel: swing\n| C_D_E C_D C C |").map(([at]) => at)).toEqual([
 			0,
-			1 / 6,
 			1 / 3,
 			2 / 3,
-			5 / 6,
+			1,
+			5 / 3,
+			2,
+			3,
+		]);
+		// Pedal, words and lyrics follow the same map: a mark on the sextuplets' fourth stays put.
+		const pedal = perform(parseChart("feel: swing\n| C_D_E_+F_G_A C C *C |")).tracks[0]?.pedal;
+		expect(pedal?.map((e) => [toNumber(e.at), e.down])).toEqual([
+			[0.5, true],
+			[3, false],
 		]);
 	});
 

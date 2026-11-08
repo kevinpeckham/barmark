@@ -1,5 +1,5 @@
 /** Exact times in quarter notes, and a bar's slots timed in them. */
-import { type Meter, memberShares, type SimpleSlot, type Slot } from "barmark";
+import { type Meter, memberShares, type PlayedBar, type SimpleSlot, type Slot } from "barmark";
 import type { Quarters } from "./types.js";
 
 /** The greatest common divisor of two whole numbers, by Euclid's loop; gcd(0, 0) is 1. */
@@ -16,6 +16,9 @@ export function q(n: number, d = 1): Quarters {
 	return { n: n / g + 0, d: d / g };
 }
 export const ZERO: Quarters = { n: 0, d: 1 };
+
+/** A played bar at its onset. */
+export type BarAt = { bar: PlayedBar; at: Quarters };
 export const add = (a: Quarters, b: Quarters) => q(a.n * b.d + b.n * a.d, a.d * b.d);
 export const sub = (a: Quarters, b: Quarters) => q(a.n * b.d - b.n * a.d, a.d * b.d);
 export const mul = (a: Quarters, b: Quarters) => q(a.n * b.n, a.d * b.d);

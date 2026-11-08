@@ -64,8 +64,9 @@ export function perform(parse: ChartParse, options: { tempo?: number } = {}): Pe
 	const tempo = tempoMap(timed, options);
 	const keys = keysOf(timed);
 	// Pushes land first, then swing moves every point once (3.6).
-	const { swing, losses } = swingMap(timed);
-	const line = swingLine(applyPushes(slots), swing);
+	const pushed = applyPushes(slots);
+	const { swing, losses } = swingMap(timed, pushed);
+	const line = swingLine(pushed, swing);
 	const swung = <T extends { at: Quarters }>(items: T[]) =>
 		items.map((e) => ({ ...e, at: swing(e.at) }));
 	return {

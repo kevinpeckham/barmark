@@ -1,6 +1,6 @@
 /** Key signatures (spec 3.7): the count MIDI writes, and where the key changes. */
 import type { Key, Mode } from "barmark";
-import type { BarAt } from "./swing.js";
+import type { BarAt } from "./quarters.js";
 import type { MidiLoss, Performance } from "./types.js";
 
 /** The letters and the modes along the circle of fifths, from F and from lydian (one fifth up from major). */

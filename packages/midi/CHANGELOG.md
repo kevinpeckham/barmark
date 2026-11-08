@@ -24,7 +24,8 @@ package uses [semantic versioning](https://semver.org/).
   lifting it; and swing (`swing`, `shuffle`, `swing 16`, with or without
   an amount) moving every second eighth (or sixteenth) after pushes, so a
   pushed "and of 4" swings. Compound meters aren't swung, with one
-  `swing-compound` loss.
+  `swing-compound` loss, and neither is a beat with a note off the
+  binary grid (sextuplets play straight, every note kept).
 - The performance's tempo map, meters, keys, markers, words and lyrics:
   tempo in quarter notes a minute from the meter's beat (6/8 at
   `tempo: 60` is 90), with a new tempo wherever a bar's differs, a meter
