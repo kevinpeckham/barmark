@@ -22,8 +22,9 @@ function gridAttributes(options: Omit<RenderOptions, "fontUrl">): string {
 
 /**
  * `<barmark-score>` drawn on the server: the grid, the Grid / Score switch and
- * the chart text, so the grid shows before any script runs. The score is
- * engraved by the element once it loads.
+ * the chart text, so the grid shows before any script runs. The switch checks
+ * Grid, since the grid is what shows; `view: "score"` is kept as the element's
+ * attribute, and the element switches to the score once it loads.
  */
 export function renderScoreHtml(text: string, options: ScoreOptions = {}): string {
 	const { view: asked, fontUrl, ...gridOptions } = options;
@@ -31,5 +32,5 @@ export function renderScoreHtml(text: string, options: ScoreOptions = {}): strin
 	const font = fontUrl ? `<style>${fontFaceCss(fontUrl)}</style>` : "";
 	const grid = renderChartUnwrapped(text, gridOptions);
 	const attrs = `${gridAttributes(gridOptions)}${view === "score" ? ' view="score"' : ""}`;
-	return `${font}<barmark-score${attrs}><template shadowrootmode="open">${scoreShell(grid, view)}</template><script type="text/barmark">${carry(text)}</script></barmark-score>`;
+	return `${font}<barmark-score${attrs}><template shadowrootmode="open">${scoreShell(grid, "grid")}</template><script type="text/barmark">${carry(text)}</script></barmark-score>`;
 }

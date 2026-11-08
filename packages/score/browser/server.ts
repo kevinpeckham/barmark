@@ -7,6 +7,7 @@
 import { join } from "node:path";
 import { fontFaceCss } from "@barmark/render";
 import { renderScoreHtml } from "../src/server.js";
+import { viewOf } from "../src/switch.js";
 
 const root = join(import.meta.dir, "../../..");
 
@@ -68,11 +69,11 @@ function scorePage(url: URL): Response {
 	return html(ELEMENT, Array.from({ length: count }, (_, i) => one(i)).join(""));
 }
 
-/** A server-drawn score; with `element`, the element's script loads and takes it over. */
+/** A server-drawn score, in `view` if given; with `element`, the element's script loads and takes it over. */
 const serverPage = (url: URL) =>
 	html(
 		`<style>${fontFaceCss("/render/fonts/Edwin-Roman.otf")}</style>${url.searchParams.has("element") ? ELEMENT : ""}`,
-		renderScoreHtml(CHART, { theme: "dark" }),
+		renderScoreHtml(CHART, { theme: "dark", view: viewOf(url.searchParams.get("view")) }),
 	);
 
 const STATIC: [string, string][] = [

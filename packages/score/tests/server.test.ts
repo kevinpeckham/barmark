@@ -55,8 +55,9 @@ describe("renderScoreHtml", () => {
 			`<!doctype html><body>${renderChart(chart, options)}`,
 		).document.querySelector("barmark-chart");
 		expect(attrsOf(host)).toEqual({ ...attrsOf(plain as Element), view: "score" });
+		// The grid is what shows before any script runs, so Grid is the checked radio; the upgrade switches.
 		const radios = [...inner.querySelectorAll('[role="radio"]')];
-		expect(radios.map((r) => r.getAttribute("aria-checked"))).toEqual(["false", "true"]);
+		expect(radios.map((r) => r.getAttribute("aria-checked"))).toEqual(["true", "false"]);
 	});
 
 	test("writes the font rule before the element when fontUrl is given", () => {

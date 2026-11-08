@@ -73,13 +73,26 @@ test("two scores, one engine request", async ({ page }) => {
 test("a server-drawn grid shows with JavaScript disabled", async ({ browser }) => {
 	const context = await browser.newContext({ javaScriptEnabled: false });
 	const page = await context.newPage();
-	await page.goto("/server");
+	// Asked for the score, it still draws the grid, and says so: Grid is the checked radio.
+	await page.goto("/server?view=score");
 	const el = page.locator("barmark-score");
+	await expect(el).toHaveAttribute("view", "score");
 	await expect(el.locator(".bms-grid .bm-chart")).toBeVisible();
+	await expect(el.locator(".bms-pane")).toBeHidden();
 	await expect(el.getByRole("radiogroup", { name: "View" })).toBeVisible();
 	await expect(el.getByRole("radio", { name: "Grid" })).toHaveAttribute("aria-checked", "true");
-	await expect(el.getByRole("radio", { name: "Score" })).toBeVisible();
+	await expect(el.getByRole("radio", { name: "Score" })).toHaveAttribute("aria-checked", "false");
 	await context.close();
+});
+
+test("a server-drawn score asked for the score shows it once the element loads", async ({
+	page,
+}) => {
+	await page.goto("/server?element&view=score");
+	const el = page.locator("barmark-score");
+	await expect(scoreSvg(el)).toBeVisible({ timeout: 20_000 });
+	await expect(el.getByRole("radio", { name: "Score" })).toHaveAttribute("aria-checked", "true");
+	await expect(el.locator(".bms-grid")).toBeHidden();
 });
 
 test("a server-drawn score switches once the element loads", async ({ page }) => {
