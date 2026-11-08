@@ -38,6 +38,16 @@ const CONTENTS: Record<PackageKey, { required: string[]; allowed: RegExp }> = {
 		required: ["dist/index.js", "dist/index.d.ts"],
 		allowed: /^dist\/.+\.(js|d\.ts)$/,
 	},
+	score: {
+		required: [
+			"dist/index.js",
+			"dist/index.d.ts",
+			"dist/element.js",
+			"dist/server.js",
+			"dist/worker.js",
+		],
+		allowed: /^dist\/.+\.(js|d\.ts)$/,
+	},
 	sync: {
 		required: [
 			"dist/index.js",

@@ -9,6 +9,23 @@ not here.
 
 ## Testing
 
+### linkedom is not a browser for custom elements (2026-11-08, @barmark/score)
+
+- **The symptom.** Writing `<barmark-score>`'s tests on linkedom, three
+  things behaved unlike a browser: switching to the score asked the
+  engine twice; a server-drawn element connected after `define` never
+  upgraded; and every engraving was asked for at width `undefined`.
+- **The cause.** linkedom's `MutationObserver` reports attribute changes
+  to an observer that asked only for `childList` and `characterData`, so
+  setting `view` looked like a new chart; its `customElements.define`
+  upgrades only elements already connected, not ones connected later;
+  and it has no layout, so `clientWidth` is `undefined`, not 0.
+- **The fix.** The element ignores `attributes` records and reads
+  `clientWidth || 0`, both harmless in a browser; the test connects the
+  server markup before importing the element. The browser behaviour
+  itself is Task 6's Playwright suite's to prove
+  (`packages/score/src/element.ts`, `packages/score/tests/element.test.ts`).
+
 ### The package gate failed for six tasks without anyone running it (2026-11-08, @barmark/midi)
 
 - **The symptom.** At Task 15, `bun run verify:package midi` failed:
@@ -788,6 +805,92 @@ and round-trip it through `format`.
 
 ## Tooling
 
+### Verovio beside Dorico, first run (2026-11-08, score)
+
+**Symptom:** `scripts/score-dorico.ts` exported four charts (Morning Song, Peaceful Dreams,
+Shenandoah and Amazing Grace's lead sheet) to MusicXML, and Verovio 6.4.1 (`@barmark/score`)
+and Dorico Elements 6.2 engraved the same file. We compared them by eye, the music only and
+not house style, and checked each difference against the MusicXML. Kevin's goal is a chart
+that renders "however Dorico renders [the] exported musicxml"; this run is advice, not a gate.
+The two agree on measure counts (16, 129, 5, 5), key and time signatures, every repeat
+(including `times="5"`), section names, the tempo (145), staves and clefs (treble-8 guitar,
+piano grand staff), the pitches and rhythms of both melodies, and both lyric verses with their
+hyphens and extender. What differs, most important first:
+1. *Dorico draws one part's chord symbols on every part* (Dorico). Morning Song's piano verse
+   is `G/B C Em D` in the XML and in Verovio; Dorico shows the guitar's `G C G D`, and puts the
+   guitar's `G C D G` over bars 9 to 12, where the piano rests and has no `<harmony>`.
+   Shenandoah's guitar pickup is `C`; Dorico shows the voice's `N.C.`. Its import seems to make
+   chord symbols global, so a chart whose parts play different changes loses them.
+2. *Verovio slashes the piano's left hand* (Verovio). `<measure-style number="1"><slash>` puts
+   staff 1 in slashes and staff 2 holds whole-bar rests; Dorico draws the rests, Verovio draws
+   slashes on both staves (Morning Song, bars 1 to 8 and 13 to 16).
+3. *Chord spelling* (export, then each engraver its own way). `<kind text>` already spells the
+   symbol and we also write the `<degree>` that means it: `7sus4` plus add 7, `5(7)` plus
+   subtract 3. MusicXML prints a degree unless `print-object="no"`, so Verovio shows
+   `D7sus4(7)` and `G5(7)(no3)`. Dorico ignores `text` and names the chord from kind and
+   degrees: `D7sus4`, but `C5` as `C(omit3)`, `G5(7)` as `G7(omit3)`, `A5` as `A(omit3)`.
+   The same notes, not the chart's spelling.
+4. *A pickup is a 1/4 bar* (export). The grammar calls a first bar in a one-bar meter (`[1/4]`)
+   a pickup, but the export writes `<time>` 1/4 then 4/4 (or 3/4) and no `implicit="yes"`, so
+   both print a 1/4 time signature and count the pickup as bar 1 (Shenandoah, Amazing Grace).
+5. *Dorico drops a mid-sentence "a"* (Dorico; our workaround is partial). Shenandoah's
+   description reads "every note  quarter." in Dorico. `ownText`'s no-break space covers a
+   leading "a" only. Dorico also draws this `placement="below"` text above the staff.
+6. *Smaller, both alike.* `×5` is a `<direction>` after the last note of bar 128, so both draw
+   it over bar 129, not at the repeat it counts (export). Measure `text` holds the chart's bar
+   numbers (Peaceful Dreams' second Verse reads 13 again, bar 129 is "81"); both ignore it and
+   number 1 to 129 (export, if those numbers matter). The description is a direction in every
+   part, so both show it twice (export). Shenandoah's "Acoustic Guitar" has `instrument-name`
+   Electric Guitar and MIDI program 28, which neither score shows (export). House style only:
+   Dorico's slash-region counts "(4)", "(8)", its "Gtr 1" for our `Gtr`, and a final barline
+   the XML does not write.
+**Cause:** 1 and 5 are Dorico's MusicXML import, 2 is Verovio's; 3, 4 and 6 are our export,
+where the XML says something an engraver may fairly read another way.
+**Fix:** none yet. Candidates, nearest the goal first: `print-object="no"` on a `<degree>` the
+kind text already spells (3); a first bar in a one-bar meter written `implicit="yes"` under
+the running time signature (4); `ownText` for every lone "a", not only a leading one (5); the
+`×5` placed so neither engraver reads it as bar 129's (6). For 1, look for a Dorico import
+option or per-part chord symbols by hand before changing the XML. For 2, try leaving
+`<measure-style>` out of a two-staff part (its notes already carry slash noteheads and
+`stem none`): if Dorico is unchanged and Verovio draws rests, do that; else report it upstream.
+**Where:** `scripts/score-dorico.ts` (`score-dorico-page.ts` draws the page);
+`packages/musicxml/src/harmony.ts` (degrees), `measure-xml.ts` (time, slash style),
+`directions.ts` (`ownText`).
+
+### Vite 7 pre-bundles `<barmark-score>` out of reach of its worker and font; Vite 8 does not (2026-11-08, @barmark/score)
+
+- **The symptom.** In a scratch Vite app installing the packed
+  `@barmark/score` 0.1.0 (with `barmark`, `@barmark/render` and
+  `@barmark/musicxml` packed beside it), Vite 7.3.7's `vite dev` drew the
+  grid but clicking Score showed "The score couldn't be drawn": the worker
+  (`node_modules/.vite/deps/worker.js?worker_file&type=module`) was a 404
+  and Edwin failed to decode ("OTS parsing error: invalid sfntVersion").
+  `vite build` failed outright: `Invalid value "iife" for option
+  "worker.format" - UMD and IIFE output formats are not supported for
+  code-splitting builds`. Vite 8.3.5 and `@voidzero-dev/vite-plus-core`
+  1.4.0 (what Stem Shovel runs as `vite`) engraved the score, with the font
+  loaded, in both `vite dev` and `vite build && vite preview`, with no
+  config at all.
+- **The cause.** Vite 7's esbuild pre-bundler moves `element.js` into
+  `node_modules/.vite/deps/` without rewriting its
+  `new URL("../../render/fonts/…", import.meta.url)` or
+  `new URL("./worker.js", import.meta.url)`, so they resolve inside the
+  deps folder: the worker isn't there, and the font path falls through to
+  the dev server's HTML fallback (a 200 of HTML, hence the decode error).
+  Vite 8's Rolldown pre-bundler rewrites both URLs to the package's own
+  files. Separately, Vite 7 builds workers as `iife` by default, which
+  cannot hold the worker's dynamic import of Verovio.
+- **The fix.** A README note, not a code change (Vite 8 already works, and
+  the font path is `@barmark/render`'s layout):
+  `optimizeDeps: { exclude: ["@barmark/score"] }` for dev and
+  `worker: { format: "es" }` for the build. Each was needed on its own
+  (dev still broke with only the format; the build still failed with only
+  the exclude), and both together are harmless on Vite 8 and vite-plus,
+  rechecked in dev and preview (`packages/score/README.md`, "Bundling the
+  worker"). The scratch app was not kept; to repeat it, `bun pm pack` the
+  four packages, install the tarballs with a pinned `vite`, put a
+  `<barmark-score>` on the page and click Score in Playwright in both modes.
+
 ### A script's own 1Password environment leaked into mac-bench (2026-11-08, scripts/dorico-midi.ts)
 
 - **The symptom.** `bun scripts/dorico-midi.ts` failed every job with
@@ -800,9 +903,9 @@ and round-trip it through `format`.
   found no `MAC_BENCH_TOKEN`. Running the wrapper from mac-bench's folder
   doesn't help: varlock prefers variables already set.
 - **The fix.** The script spawns mac-bench without `OP_ENV_ID` and
-  `OP_TOKEN` (`scripts/dorico-env.ts`), so mac-bench's `.env.local`
+  `OP_TOKEN` (`scripts/mac-bench.ts`), so mac-bench's `.env.local`
   decides. Any script that calls another varlock repo needs the same.
-- **Where.** `scripts/dorico-env.ts`, `scripts/dorico-midi.ts`.
+- **Where.** `scripts/mac-bench.ts`, `scripts/dorico-midi.ts`.
 
 ### The release gate failed on main because the checkout's packages were older than main (2026-11-08, barmark 0.21.0)
 
@@ -1651,6 +1754,69 @@ with `git archive HEAD | tar -x -C <scratch>`, then symlink the root
 relative), or use a separate `git worktree`. Task 13b's experiments ran
 this way.
 
+### What the import fixtures lose on the way to a score (2026-11-08, score)
+
+**Symptom:** `packages/score/tests/round-trip.test.ts` draws each
+`musicxml/tests/fixtures/import/*.musicxml` with Verovio, imports it to a
+chart, exports the chart (no `part`) and draws that, then counts measures,
+staves, notes, rests, harmonies and lyric verses in Verovio's MEI. Of 17
+fixtures (none refuses), `comping-guitar`, `dorico-comping-guitar` and
+`dorico-lead-sheet` come back identical; the other 14 differ. Kevin's goal is
+"close to the original", so each difference is pinned in `KNOWN`,
+`MEASURE_KNOWN` and `STAFF_KNOWN` (original, redrawn) and fails if it moves
+either way.
+**Cause**, by group. "Expected" follows from the grammar; "candidate" is a
+fix worth considering. Causes were read from the import diagnostics, the
+fixture's `.chart.md` and the exported MusicXML, then traced into the code.
+1. *Melody dropped, chords filled in* (`piano`, `dorico-piano`,
+   `melody-rest`, `melody-measure-rest`, `harmony-edges`: notes 24 to 12,
+   4 to 20, 5 to 28, rests 3 to 0). Import: "notes read as a melody and left
+   out", so the chart is chords only. Export: a chord-only line is drawn as
+   slash or voiced notes, so the note count goes up or down with no relation
+   to the original. Expected (a chord-only line has no melody); the melody
+   case is a candidate if a bar could keep its tune.
+2. *Parts with no chord symbols are dropped* (`band`, `dorico-band`: the bass,
+   notes 72 to 64 and 32, rests 8 to 0). Import warns "no chord symbols in
+   these parts, left out". Expected.
+3. *Parts that carry the same chords become one line* (`dorico-band` staves
+   4 to 1, harms 16 to 8; `six-guitars` staves 6 to 1, harms 18 to 3).
+   `import/rows.ts:136` `playingOf` calls a bar tutti when every part's first
+   line plays alone and all are alike; `import/write.ts:319-323` then leaves
+   out the `part:` header (`labelled` is false). Expected as far as the chart
+   goes: a tutti bar is one line in the grammar.
+4. *A keyboard changes staves* (`piano`, `dorico-piano` 2 to 1;
+   `part-enters`, `trading-fours` 2 to 3). Two causes. (i) `piano` and
+   `dorico-piano` have one part, so `write.ts:321` writes no `part:` line:
+   the name and the instrument are both lost and the export draws 1 staff.
+   (ii) `part-enters` and `trading-fours` have `<part-name>Piano` with no
+   instrument name or MIDI program, so `import/parts.ts:214` (`instrumentOf`)
+   returns null and no `instrument:` is written; the export then guesses a
+   two-staff keyboard from the word (`musicxml/src/instruments.ts`
+   `KEYBOARD_WORDS`, used at `score.ts:183`). Candidates: the export should
+   not infer a grand staff from a name when the chart's lines fit one staff,
+   and the import should keep a `part:` line for a lone two-staff part.
+5. *A pickup gains a no-chord symbol, an unreadable symbol loses its harmony*
+   (`hymn`, `dorico-hymn` harms 6 to 7; `lead-sheet` 7 to 6). Import writes
+   `N.C.` in the pickup, which the export draws as a `none` harmony the
+   original never had; `FTristan` becomes `?` plus words, which draws as text
+   and not a `<harmony>`. The second is expected (grammar: `?`); the first is
+   a candidate.
+6. *Four bars more* (`replay-holds`: measures 16 to 20, notes 137 to 160,
+   rests 35 to 71, harms 33 to 42). This is a `@barmark/musicxml 0.4.0`
+   fuzz export (`hand-written.test.ts:134`), not a MuseScore file, with repeats,
+   endings, To Coda and a segno. `import/repeats.ts` (`placeStructure`)
+   decides barmark can't hold those repeats, and `import/structure.ts`
+   (`readStructure`, lines 283-292) writes out the play order
+   `import/order.ts` works out, giving 20 literal bars with no repeat marks. Candidate; the extra bars
+   also account for the note, rest and harmony counts.
+**Fix:** none yet; the test pins the gap. To close a group, fix it, then
+update the table and this entry together.
+**Where:** `packages/score/tests/round-trip.test.ts`,
+`packages/score/tests/helpers/music.ts` (`musicOf`, test-only);
+`packages/musicxml/src/import/` (`rows.ts`, `write.ts`, `parts.ts`,
+`order.ts`, `repeats.ts`, `structure.ts`), `packages/musicxml/src/instruments.ts` and
+`packages/musicxml/src/score.ts`.
+
 ### Dorico's MIDI import of our exports, first full run (2026-11-08, midi)
 
 **Symptom:** the first full live run of `bun scripts/dorico-midi.ts`
@@ -1678,3 +1844,24 @@ becomes Acoustic Bass 1). It drops every section marker (MIDI marker
 events) and keeps only 2 of a rit.'s 15 tempo steps.
 **Tooling:** mac-bench's `dorico --midi` job drives the import; it needed
 three fixes to read Dorico's import window (see mac-bench's FINDINGS).
+
+### Vercel's security review read our test tooling as attack surface (2026-11-08, score)
+
+**Symptom:** the Vercel Security Review check failed on PR #223 with three
+Low findings, all in VM-only or test-only code: `scripts/score-dorico.ts`
+defaulted to a fixed `/tmp/score-dorico` and wrote through whatever sat at
+its file names (a planted symlink would be followed); the score suite's page
+server copied `?verovio-url=` into the element, so a crafted link could make
+its worker import any module; and its `?count=` was uncapped. **Cause:** we
+treated a dev server and a manual script as trusted by being local, but a
+shared `/tmp` and a listener on every interface are reachable by others.
+**Fix:** `scripts/out-dir.ts` (`outDir`: a new `mkdtemp` folder by default, a
+given one must be a real folder we own; `writeFresh`: remove what's there,
+then an exclusive create), tested in `packages/score/tests/out-dir.test.ts`;
+the page server binds `127.0.0.1`, takes only `theme`, `engine` (a name:
+`missing` or `data`, mapped to fixed URLs) and `count` (1 to 4), and answers
+400 to anything else (`score.pw.ts`, "the page server takes no module URL
+and caps count"). **Rule:** a script's default output goes in a fresh
+`mkdtemp` folder, as the other VM scripts already do; a test server binds
+loopback and never turns a query parameter into code to load. Fallow scores
+code only Playwright runs as untested, so its helpers stay small.

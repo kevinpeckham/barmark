@@ -24,6 +24,10 @@ key: D, time: 4/4, tempo: 145
   (chords, repeats, parts, melodies and lyrics) and imports a MusicXML or
   `.mxl` file back into a chart, so charts move to and from MuseScore,
   Dorico, Sibelius and Finale.
+- **[`@barmark/score`](packages/score/)** shows a chart as the bar grid or
+  as a full engraved score (Verovio, in a Web Worker): the
+  `<barmark-score>` web component, the heavier sibling of
+  `<barmark-chart>`, and `renderScoreHtml` for the server.
 - **[`@barmark/sync`](packages/sync/)** syncs a chart with a recording:
   it builds a chart from a chord detector's output (bar grid, chord runs,
   key, meter, sections) and a timing map that says when each played bar

@@ -23,6 +23,12 @@ export const PACKAGES = {
 		tagPrefix: "musicxml-v",
 		smoke: "scripts/smoke-musicxml.mjs",
 	},
+	score: {
+		dir: join(root, "packages/score"),
+		name: "@barmark/score",
+		tagPrefix: "score-v",
+		smoke: "scripts/smoke-score.mjs",
+	},
 	sync: {
 		dir: join(root, "packages/sync"),
 		name: "@barmark/sync",
