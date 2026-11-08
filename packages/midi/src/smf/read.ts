@@ -4,6 +4,7 @@
  * nothing is allocated from a length field before that length is checked
  * against the bytes left, so a hostile file costs time linear in its size.
  */
+import { createReport, type Report } from "../import/report.js";
 import type { MidiImportCode, MidiImportDiagnostic } from "../import/types.js";
 import { decodeText } from "./text.js";
 import type { Smf, SmfEvent } from "./types.js";
@@ -24,26 +25,6 @@ const TIME = 0x58;
 const KEY = 0x59;
 /** The meta events import reads (spec 5.1): text, copyright, track name, lyric, marker, end of track, tempo, time and key. */
 const KEPT_META = new Set([0x01, 0x02, TRACK_NAME, 0x05, 0x06, END_OF_TRACK, TEMPO, TIME, KEY]);
-
-type Severity = MidiImportDiagnostic["severity"];
-
-/** Diagnostics, each code reported once a track (once a file for codes without one). */
-function createReport() {
-	const list: MidiImportDiagnostic[] = [];
-	const seen = new Set<string>();
-	return {
-		list,
-		add(code: MidiImportCode, severity: Severity, message: string, track?: number) {
-			const key = `${code} ${track ?? ""}`;
-			if (seen.has(key)) return;
-			seen.add(key);
-			list.push(
-				track === undefined ? { severity, code, message } : { severity, code, message, track },
-			);
-		},
-	};
-}
-type Report = ReturnType<typeof createReport>;
 
 /** A position in the file that reads nothing at or past `end`. */
 type Cursor = { view: DataView; at: number; end: number };
@@ -94,7 +75,7 @@ const META_CHECKS: Record<number, (data: Uint8Array) => string | null> = {
 		const [n = 0, power = 0] = data;
 		return data.length >= 2 && n >= 1 && power >= 1 && power <= 4
 			? null
-			: `a time signature of ${n}/${2 ** power}, not over 2, 4, 8 or 16`;
+			: "a time signature of no beats, or not over 2, 4, 8 or 16";
 	},
 	[KEY]: (data) => {
 		const [sharps = 0, minor = 0] = data;
@@ -128,7 +109,7 @@ function payloadLength(t: Track): number | Stop {
 function keepMeta(t: Track, type: number, data: Uint8Array): "end" | null {
 	const invalid = META_CHECKS[type]?.(data) ?? null;
 	if (invalid !== null) {
-		t.report.add("meta-invalid", "warning", `${invalid}, ignored`, t.number);
+		t.report.add("meta-invalid", "warning", `${invalid}, ignored`, { track: t.number });
 		return null;
 	}
 	if (type === TRACK_NAME && t.name === null) t.name = decodeText(data);
@@ -218,12 +199,9 @@ function readTrack(t: Track, budget: Budget): boolean {
 		if (result === "end") break;
 		if (result === null) continue;
 		if (result.stop !== null)
-			t.report.add(
-				"bad-event",
-				"warning",
-				`${result.stop}; the rest of the track is skipped`,
-				t.number,
-			);
+			t.report.add("bad-event", "warning", `${result.stop}; the rest of the track is skipped`, {
+				track: t.number,
+			});
 		break;
 	}
 	return true;
@@ -248,10 +226,12 @@ type Header = { format: 0 | 1; ntracks: number; ppq: number; at: number };
 
 /** The header's fields and where the chunks start, or the error that stops the read. */
 function readHeader(view: DataView, report: Report): Header | SmfRead {
-	const isHeader = view.byteLength >= 14 && view.getUint32(0) === 0x4d546864;
-	const length = isHeader ? view.getUint32(4) : 0;
-	if (length < 6)
+	const hasId = view.byteLength >= 4 && view.getUint32(0) === 0x4d546864;
+	if (!hasId)
 		return fail(report, "not-midi", "not a MIDI file: it doesn't begin with an MThd header");
+	if (view.byteLength < 14 || view.getUint32(4) < 6)
+		return fail(report, "not-midi", "not a MIDI file: its MThd header is incomplete");
+	const length = view.getUint32(4);
 	const format = view.getUint16(8);
 	const division = view.getUint16(12);
 	const error = headerError(format, division);
@@ -311,7 +291,7 @@ function readChunk(r: Reading, at: number): number | SmfRead {
 	const { view, report } = r;
 	const track = r.tracks.length + 1;
 	if (view.byteLength - at < 8) {
-		report.add("truncated", "warning", "the file ends inside a chunk's header", track);
+		report.add("truncated", "warning", "the file ends inside a chunk's header");
 		return view.byteLength;
 	}
 	const start = at + 8;
@@ -323,15 +303,15 @@ function readChunk(r: Reading, at: number): number | SmfRead {
 			"truncated",
 			"warning",
 			"a chunk runs past the end of the file",
-			isTrack ? track : undefined,
+			isTrack ? { track } : {},
 		);
 	if (isTrack) return readTrackChunk(r, { view, at: start, end }, truncated) ?? end;
 	report.add("unknown-chunk", "info", "a chunk that isn't a track was skipped");
 	return end;
 }
 
-export function readSmf(bytes: Uint8Array): SmfRead {
-	const report = createReport();
+/** The file's tracks; its diagnostics go to `report` (the import's, when it passes one), which `diagnostics` is. */
+export function readSmf(bytes: Uint8Array, report: Report = createReport()): SmfRead {
 	if (bytes.length > LIMITS.bytes)
 		return fail(report, "too-large", "the file is larger than 16 MiB, the most import reads");
 	const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);

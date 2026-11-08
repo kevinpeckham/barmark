@@ -1,0 +1,78 @@
+/**
+ * The import's diagnostics. Each problem (a code, a track or none, and a
+ * message) is reported once; a repeat adds to its count and, while there
+ * are fewer than five, its bars, both stated in the message: "? written
+ * (7 times; bars 3, 1, 4, 7, 9 and more)". So a message names the kind of
+ * problem, never a value read from the file (a hostile file would make
+ * one diagnostic per value): bars and tracks go in `where`. The reader
+ * (`smf/read.ts`) reports through it too.
+ */
+import type { MidiImportCode, MidiImportDiagnostic } from "./types.js";
+
+/** Where a diagnostic points: a 1-based track chunk, a played bar of the chart. */
+export type Where = { track?: number | undefined; bar?: number | undefined };
+
+export type Report = {
+	add(
+		code: MidiImportCode,
+		severity: MidiImportDiagnostic["severity"],
+		message: string,
+		where?: Where,
+	): void;
+	/** The diagnostics, in the order first raised. */
+	readonly list: MidiImportDiagnostic[];
+};
+
+const FIRST_BARS = 5;
+
+/** One problem: its diagnostic, its first message, how often it came and its first bars. */
+type Entry = {
+	d: MidiImportDiagnostic;
+	message: string;
+	count: number;
+	bars: number[];
+	more: boolean;
+};
+
+/** "1", "1 and 2", "1, 2 and 3". */
+export function andList(items: string[]): string {
+	return items.length < 2
+		? (items[0] ?? "")
+		: `${items.slice(0, -1).join(", ")} and ${items[items.length - 1]}`;
+}
+
+function messageOf(e: Entry): string {
+	if (e.count === 1) return e.message;
+	const bars = e.bars.map(String);
+	if (e.more) bars.push("more");
+	return `${e.message} (${e.count} times${bars.length > 0 ? `; bars ${andList(bars)}` : ""})`;
+}
+
+function addBar(e: Entry, bar: number | undefined) {
+	if (bar === undefined || e.bars.includes(bar)) return;
+	if (e.bars.length < FIRST_BARS) e.bars.push(bar);
+	else e.more = true;
+}
+
+export function createReport(): Report {
+	const list: MidiImportDiagnostic[] = [];
+	const entries = new Map<string, Entry>();
+	return {
+		list,
+		add(code, severity, message, { track, bar } = {}) {
+			const key = `${code} ${track ?? ""} ${message}`;
+			let e = entries.get(key);
+			if (e === undefined) {
+				const d: MidiImportDiagnostic = { severity, code, message };
+				if (track !== undefined) d.track = track;
+				if (bar !== undefined) d.bar = bar;
+				e = { d, message, count: 0, bars: [], more: false };
+				entries.set(key, e);
+				list.push(d);
+			}
+			e.count++;
+			addBar(e, bar);
+			e.d.message = messageOf(e);
+		},
+	};
+}

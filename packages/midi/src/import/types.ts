@@ -36,3 +36,13 @@ export type MidiImportDiagnostic = {
 	/** The played bar of the chart written. */
 	bar?: number;
 };
+
+export type MidiImportOptions = {
+	/** The tracks that carry the harmony: 1-based numbers or track names (any case). Default: chosen (5.2). */
+	tracks?: (number | string)[];
+	/** Read lyric events into lyric rows (default true). */
+	lyrics?: boolean;
+	/** As sync's BuildOptions. */
+	simile?: boolean;
+	barsPerLine?: number;
+};
