@@ -19,9 +19,10 @@ for fixes).
 
 Points that are easy to miss:
 
-- After a `barmark`, `render` or `musicxml` release, RELEASING.md steps 13–14
-  follow (not after a `sync` or `midi` release, which the CLI does not use yet): a CLI patch on the new versions, then a PR in
-  `kevinpeckham/songs` raising its pinned CLI version.
+- After a `barmark`, `render`, `musicxml`, `sync` or `midi` release,
+  RELEASING.md steps 13–14 follow (the CLI bundles `sync` through `midi`):
+  a CLI patch on the new versions, then a PR in `kevinpeckham/songs`
+  raising its pinned CLI version.
 - When `@barmark/render` needs unreleased `barmark` changes, release
   `barmark` first: the render release check fails until the `barmark`
   version it depends on is on npm.

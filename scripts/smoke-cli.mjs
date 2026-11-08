@@ -30,7 +30,7 @@ const render = barmark("render", chart).stdout.includes("data:font/otf;base64,")
 const result = { version, check, render };
 console.log(JSON.stringify(result));
 const ok =
-	/^@barmark\/cli \d+\.\d+\.\d+ \(barmark \d+\.\d+\.\d+, @barmark\/render \d+\.\d+\.\d+, @barmark\/musicxml \d+\.\d+\.\d+\)$/.test(
+	/^@barmark\/cli \d+\.\d+\.\d+ \(barmark \d+\.\d+\.\d+, @barmark\/render \d+\.\d+\.\d+, @barmark\/musicxml \d+\.\d+\.\d+, @barmark\/midi \d+\.\d+\.\d+\)$/.test(
 		version,
 	) &&
 	check === 0 &&

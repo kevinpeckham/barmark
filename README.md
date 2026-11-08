@@ -30,7 +30,8 @@ key: D, time: 4/4, tempo: 145
   starts, with a checker and the lookups a player needs.
 - **[`@barmark/cli`](packages/cli/)**: the `barmark` command, to check,
   format, render and transpose `.chart.md` files, and to `import` a
-  MusicXML file or `export --musicxml` a chart, in a terminal or in CI.
+  MusicXML or MIDI file or `export --musicxml`/`--midi` a chart, in a
+  terminal or in CI.
 - **[barmark.dev](https://www.barmark.dev)** ([site/](site/)): try it live, and
   the syntax guide.
 

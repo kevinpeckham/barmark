@@ -61,7 +61,13 @@ for (const [name, range] of Object.entries(manifest.dependencies ?? {})) {
 
 // The CLI's binaries bundle the libraries from this checkout, so their code must be what was
 // released under the version they report: no change since each library's own tag.
-const RELEASED_CODE = { barmark: ["src"], render: ["src", "fonts"], musicxml: ["src"] } as const;
+const RELEASED_CODE = {
+	barmark: ["src"],
+	render: ["src", "fonts"],
+	musicxml: ["src"],
+	sync: ["src"],
+	midi: ["src"],
+} as const;
 if (pkg.key === "cli")
 	for (const [key, folders] of Object.entries(RELEASED_CODE)) {
 		const dep = PACKAGES[key as keyof typeof RELEASED_CODE];

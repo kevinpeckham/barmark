@@ -147,9 +147,9 @@ runs, and `verify:package cli` fails on anything else.
     After a `barmark` bump, check `site/bun.lock` holds one barmark:
     `grep '/barmark": \["barmark@' site/bun.lock` prints nothing, or
     delete the nested entries it finds and `bun install` again (FINDINGS).
-13. **Release the CLI** (after a `barmark` or `@barmark/render` release;
-    a `@barmark/sync` or `@barmark/midi` release needs no CLI release and
-    no `songs` bump, since the CLI does not use them yet):
+13. **Release the CLI** (after a `barmark`, `@barmark/render`,
+    `@barmark/musicxml`, `@barmark/sync` or `@barmark/midi` release; the
+    CLI bundles `@barmark/sync` through `@barmark/midi`):
     `@barmark/cli` pins the libraries exactly, so a library release
     reaches CLI users only through a CLI release. On a new branch, bump
     `packages/cli` (a patch, unless the CLI itself changed) with a
@@ -157,7 +157,8 @@ runs, and `verify:package cli` fails on anything else.
     release it with steps 1–11 (`pkg=cli`). Release the libraries first:
     the CLI's binaries bundle the libraries' code from the repository, so
     `verify:release cli` (and the release workflow) fail if
-    `packages/barmark/src`, `packages/render/src` or `packages/render/fonts`
+    `packages/barmark/src`, `packages/render/src`, `packages/render/fonts`,
+    `packages/musicxml/src`, `packages/sync/src` or `packages/midi/src`
     changed since their own tags. Its release workflow also
     attaches the binaries; check the release page lists all five and
     `Edwin-OFL.txt`. Then bump barmark.dev as in step 12: the site

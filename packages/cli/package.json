@@ -39,7 +39,8 @@
 	"dependencies": {
 		"barmark": "workspace:*",
 		"@barmark/render": "workspace:*",
-		"@barmark/musicxml": "workspace:*"
+		"@barmark/musicxml": "workspace:*",
+		"@barmark/midi": "workspace:*"
 	},
 	"scripts": {
 		"build": "rm -rf dist && tsc -p tsconfig.build.json",

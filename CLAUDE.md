@@ -129,8 +129,8 @@ Fallow, CI, Swamp), the grammar, `examples/`, the scripts and FINDINGS.md.
     `bun scripts/midi-fixtures.ts --check-export` puts three charts'
     exports through MuseScore on the VM only, never in CI
 - `packages/cli/`: `@barmark/cli`, the `barmark` command (`check`,
-  `format`, `part`, `render`, `transpose`, `export`, `import`), a thin
-  layer over the libraries, pinned to them exactly
+  `format`, `part`, `render`, `transpose`, `export`, `import`; MusicXML
+  and MIDI), a thin layer over the libraries, pinned to them exactly
   - each command is `(args, io) => Promise<number>` with injected I/O
     (`src/io.ts`); `cli.ts` is the Node bin, `binary.ts` the standalone
     binary (`bun scripts/compile.ts <target> <out>`, font and versions
@@ -181,6 +181,7 @@ cd site && bun run dev|build|check|test|test:browser   # barmark.dev
 - Releases follow `RELEASING.md` (the `/release` skill walks it). Each
   package is tagged on its own: `barmark-vX.Y.Z`, `render-vX.Y.Z`,
   `musicxml-vX.Y.Z`, `sync-vX.Y.Z`, `midi-vX.Y.Z`, `cli-vX.Y.Z`. A library release is followed by a CLI release and a
-  bump in `kevinpeckham/songs` (RELEASING.md steps 13–14); a `sync` or `midi` release needs neither (until the CLI uses midi).
+  bump in `kevinpeckham/songs` (RELEASING.md steps 13–14), a `sync` or
+  `midi` release included (the CLI bundles `sync` through `midi`).
 - `@barmark/render` never changes the music: anything musical (what `%`
   copies, bar numbers, what a replay plays) comes from the parser.
