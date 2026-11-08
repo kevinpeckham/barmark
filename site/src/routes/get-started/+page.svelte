@@ -46,11 +46,12 @@ const code = "font-mono text-accent";
 		<p class="max-w-prose opacity-80">
 			A Barmark chart is a plain-text file. Two packages read and draw it:
 			<code class={code}>barmark</code>, the parser, and <code class={code}>@barmark/render</code>, which
-			draws the bar grid as HTML or as a web component. <code class={code}>@barmark/musicxml</code> converts
-			charts to and from MusicXML, and <code class={code}>@barmark/sync</code> syncs a chart with a
-			recording. All four are ESM, with TypeScript types, and run in Node 20 or later, Bun, Deno and
-			the browser. <code class={code}>@barmark/score</code> shows a chart as a full score on a web page,
-			beside the grid. <code class={code}>@barmark/cli</code> puts them in the terminal, for checking
+			draws the bar grid as HTML or as a web component. <code class={code}>@barmark/score</code> shows the
+			same chart as a full score beside the grid, <code class={code}>@barmark/musicxml</code> converts charts
+			to and from MusicXML, and <code class={code}>@barmark/sync</code> syncs a chart with a recording. All
+			five are ESM, with TypeScript types. The other four run in Node 20 or later, Bun, Deno and the
+			browser; the score's element runs in the browser, and its <code class={code}>renderScoreHtml</code>
+			in Node or Bun. <code class={code}>@barmark/cli</code> puts them in the terminal, for checking
 			charts without writing any code.
 		</p>
 	</div>

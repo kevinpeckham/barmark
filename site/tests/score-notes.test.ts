@@ -8,6 +8,12 @@ import { SCORE_EXAMPLE, SCORE_NOTES } from "../src/lib/guide/score.ts";
 
 const count = (xml: string, re: RegExp) => (xml.match(re) ?? []).length;
 
+/** The named part's music: its `<part>` element, found by its `<part-name>`. */
+const part = (xml: string, name: string) => {
+	const id = new RegExp(`<score-part id="([^"]+)"><part-name>${name}</part-name>`).exec(xml)?.[1];
+	return id ? (new RegExp(`<part id="${id}">[\\s\\S]*?</part>`).exec(xml)?.[0] ?? "") : "";
+};
+
 /** What each row says the score draws, checked on the MusicXML the score engraves. */
 const CHECKS: Record<string, (xml: string) => boolean> = {
 	chords: (x) => count(x, /<harmony/g) === 4 && count(x, /<notehead>slash<\/notehead>/g) === 12,
@@ -38,11 +44,23 @@ const CHECKS: Record<string, (xml: string) => boolean> = {
 		x.includes("<part-name>Guitar</part-name>") &&
 		x.includes("<part-name>Bass</part-name>") &&
 		x.includes("<rest"),
-	instruments: (x) =>
-		x.includes("<staves>2</staves>") &&
-		x.includes("<transpose>") &&
-		// The trumpet's C is written as D.
-		x.includes("<root-step>D</root-step>"),
+	instruments: (x) => {
+		const piano = part(x, "Piano");
+		const guitar = part(x, "Guitar");
+		const bass = part(x, "Bass");
+		const trumpet = part(x, "Trumpet");
+		return (
+			piano.includes("<staves>2</staves>") &&
+			/<clef number="1"><sign>G<\/sign>[\s\S]*<clef number="2"><sign>F<\/sign>/.test(piano) &&
+			// The octave treble clef: a G clef sounding an octave down.
+			/<sign>G<\/sign><line>2<\/line><clef-octave-change>-1<\/clef-octave-change>/.test(guitar) &&
+			bass.includes("<sign>F</sign>") &&
+			!bass.includes("<sign>G</sign>") &&
+			trumpet.includes("<transpose>") &&
+			// The trumpet's C is written as D.
+			trumpet.includes("<root-step>D</root-step>")
+		);
+	},
 	melody: (x) =>
 		count(x, /<lyric /g) === 3 && count(x, /<harmony/g) === 2 && !x.includes("slash</notehead"),
 	"lyric-rows": (x) => x.includes("<part-name>Lyrics</part-name>") && count(x, /<lyric /g) === 5,

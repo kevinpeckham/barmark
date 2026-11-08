@@ -184,6 +184,9 @@ describe("Get Started, prerendered", () => {
 			"npx @barmark/cli check",
 		])
 			expect(page).toContain(line);
+		const intro = text(doc().querySelector("main h1")?.nextElementSibling) ?? "";
+		expect(intro).toContain("@barmark/score shows the same chart as a full score");
+		expect(intro).toContain("All five are ESM");
 	});
 	test("shows the sample chart rendered, and again as a score with its switch", () => {
 		expect(doc().querySelector("main barmark-chart template[shadowrootmode=open]")).not.toBeNull();

@@ -87,7 +87,7 @@ export const SCORE_NOTES: ScoreNote[] = [
 		drawn:
 			"A keyboard gets a grand staff, its first line on the upper staff and its second on the lower. A guitar reads in the octave treble clef, a bass in the bass clef, and a transposing instrument is written at its own pitch, chord symbols included.",
 		example:
-			"part: Pno = Piano, instrument: piano\npart: Tpt = Trumpet, instrument: trumpet in Bb\n\nPno.RH | C{E4 G4 C5} | G{D4 G4 B4} |\nPno.LH | {C3} | {G2} |\nTpt    | C | G |",
+			"part: Pno = Piano, instrument: piano\npart: Gtr = Guitar, instrument: electric guitar\npart: Bs = Bass, instrument: electric bass\npart: Tpt = Trumpet, instrument: trumpet in Bb\n\nPno.RH | C{E4 G4 C5} | G{D4 G4 B4} |\nPno.LH | {C3} | {G2} |\nGtr    | C | G |\nBs     | {C2} | {G1} |\nTpt    | C | G |",
 	},
 	{
 		id: "melody",
