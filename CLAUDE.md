@@ -127,7 +127,12 @@ Fallow, CI, Swamp), the grammar, `examples/`, the scripts and FINDINGS.md.
     `helpers/player.ts` hears it beat by beat against the chart;
     `export-scale.test.ts` checks a 1,000-bar export takes linear time.
     `bun scripts/midi-fixtures.ts --check-export` puts three charts'
-    exports through MuseScore on the VM only, never in CI
+    exports through MuseScore on the VM only, never in CI;
+    `bun scripts/dorico-midi.ts [--keep] [name…]` puts charts' exports
+    through Dorico's MIDI import (mac-bench `dorico --midi`, beside this
+    repo) and compares Dorico's MusicXML with what the file plays
+    (`scripts/dorico-compare.ts`, tested in `tests/dorico-compare.test.ts`),
+    VM only, never in CI
 - `packages/cli/`: `@barmark/cli`, the `barmark` command (`check`,
   `format`, `part`, `render`, `transpose`, `export`, `import`; MusicXML
   and MIDI), a thin layer over the libraries, pinned to them exactly
