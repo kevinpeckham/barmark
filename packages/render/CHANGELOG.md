@@ -6,6 +6,15 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.17.0] - 2026-11-08
+
+### Changed
+
+- **Requires `barmark` 0.20.0**, whose minor release a caret range
+  would not reach. An elided replay that a `Fine` or `To Coda` stops
+  before its cut bar now draws no cut mark, since barmark 0.20.0 cuts
+  nothing there.
+
 ## [0.16.2] - 2026-11-07
 
 ### Changed
@@ -422,7 +431,8 @@ that needs no script or as the `<barmark-chart>` web component. Requires
   zoom without sideways scrolling, the element renders and re-renders, and
   a screen reader hears "bar 9: D". Run them with `bun run test:browser`.
 
-[Unreleased]: https://github.com/kevinpeckham/barmark/compare/render-v0.16.2...HEAD
+[Unreleased]: https://github.com/kevinpeckham/barmark/compare/render-v0.17.0...HEAD
+[0.17.0]: https://github.com/kevinpeckham/barmark/compare/render-v0.16.2...render-v0.17.0
 [0.16.2]: https://github.com/kevinpeckham/barmark/compare/render-v0.16.1...render-v0.16.2
 [0.16.1]: https://github.com/kevinpeckham/barmark/compare/render-v0.16.0...render-v0.16.1
 [0.16.0]: https://github.com/kevinpeckham/barmark/compare/render-v0.15.1...render-v0.16.0
