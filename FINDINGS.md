@@ -1535,3 +1535,18 @@ text after a heading was compared with every line before it
 quoted word, and the import's self-check parses what it writes. The
 security report named one site; the class was "per word, look at all
 the words". Search for the class, not the line.
+
+### A mutation script in a shared worktree broke another agent's tests (2026-11-08, midi)
+
+**Symptom:** during the Task 12 fix round, a parallel implementer's
+tests in the same worktree failed for about three minutes, with
+`segments.ts` behaving in ways no commit explained.
+**Cause:** a mutation script rewrote `packages/midi/src/import/segments.ts`
+in place, ran the tests and restored it. Any other process reading the
+file during the run, such as a test run, a reviewer or a type check, saw
+the mutant.
+**Fix:** run mutants on a copy, never on the live file. Make the copy
+with `git archive HEAD | tar -x -C <scratch>`, then symlink the root
+`node_modules` and copy each package's `node_modules` (their links are
+relative), or use a separate `git worktree`. Task 13b's experiments ran
+this way.

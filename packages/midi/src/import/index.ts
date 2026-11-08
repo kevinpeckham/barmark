@@ -31,6 +31,14 @@ function optionsOf(o: unknown): MidiImportOptions {
 	return out;
 }
 
+/**
+ * Where a note counts for the grid's end: its end, less the 16th a
+ * legato release may ring past a bar line (so it adds no bar of N.C.);
+ * a note struck in a bar always keeps it.
+ */
+const lastHeard = (n: { start: number; end: number }, ppq: number) =>
+	Math.max(n.start + 1, n.end - ppq / 4);
+
 const failed = (report: Report) => report.list.some((d) => d.severity === "error");
 
 /** The chart, or "" once an error is reported. */
@@ -40,7 +48,7 @@ function chartOf(bytes: Uint8Array, options: MidiImportOptions, report: Report):
 	const notes = notesOf(smf, report);
 	const harmony = failed(report) ? [] : harmonyNotes(notes, names, options, report);
 	if (failed(report)) return "";
-	const last = harmony.reduce((end, n) => Math.max(end, n.end), 0);
+	const last = harmony.reduce((end, n) => Math.max(end, lastHeard(n, smf.ppq)), 0);
 	const read = gridOf(smf, last, report);
 	if (failed(report)) return "";
 	const grid = withWritablePickup(read);

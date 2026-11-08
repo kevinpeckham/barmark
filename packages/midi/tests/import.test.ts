@@ -69,6 +69,14 @@ describe("importMidi", () => {
 		expect(r.diagnostics).toEqual([]);
 	});
 
+	test("a last chord ringing up to a 16th past the bar line adds no bar (Task 13b)", () => {
+		const ringing = (tail: number) =>
+			CFGC().map((x) => (x.tick === 4 * BAR && "off" in x.e ? { ...x, tick: x.tick + tail } : x));
+		expect(read(file([], ringing(PPQ / 4))).text).toBe(
+			"time: 4/4, tempo: 120\n| C | F | G | C |\n",
+		);
+	});
+
 	test("the tempo is the file's, and sync's nominal clock raises nothing", () => {
 		const r = read(file([at(0, { tempo: 60 })], CFGC()));
 		expect(r.text).toBe("time: 4/4, tempo: 60\n| C | F | G | C |\n");
