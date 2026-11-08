@@ -1716,13 +1716,13 @@ fixture's `.chart.md` and the exported MusicXML, then traced into the code.
    and not a `<harmony>`. The second is expected (grammar: `?`); the first is
    a candidate.
 6. *Four bars more* (`replay-holds`: measures 16 to 20, notes 137 to 160,
-   rests 35 to 71, harms 33 to 42). This is a `@barmark/musicxml 0.4.0` fuzz
-   export (`hand-written.test.ts:134`), not a MuseScore file, with repeats,
+   rests 35 to 71, harms 33 to 42). This is a `@barmark/musicxml 0.4.0`
+   fuzz export (`hand-written.test.ts:134`), not a MuseScore file, with repeats,
    endings, To Coda and a segno. `import/repeats.ts` (`placeStructure`)
    decides barmark can't hold those repeats, and `import/structure.ts`
    (`readStructure`, lines 283-292) writes out the play order
-   `import/order.ts` works out, giving 20 literal bars with no repeat marks. Candidate; the extra bars also account for the
-   note, rest and harmony counts.
+   `import/order.ts` works out, giving 20 literal bars with no repeat marks. Candidate; the extra bars
+   also account for the note, rest and harmony counts.
 **Fix:** none yet; the test pins the gap. To close a group, fix it, then
 update the table and this entry together.
 **Where:** `packages/score/tests/round-trip.test.ts`,

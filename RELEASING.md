@@ -225,7 +225,7 @@ manual step before its first release (the same for `@barmark/cli`):
    musicxml)`) to the "main" ruleset's required checks.
 4. **The `npm` environment** (repository settings → Environments →
    npm → Deployment branches and tags): add a tag rule for the same
-   pattern (`cli-v*`, `musicxml-v*`). Without it the publish job is rejected at once,
+   pattern (`cli-v*`, `musicxml-v*`, `score-v*`). Without it the publish job is rejected at once,
    before any approval is asked for ("Tag … is not allowed to deploy to
    npm due to environment protection rules"), and nothing reaches npm;
    after adding it, rerun the failed jobs (`gh run rerun <id> --failed`).

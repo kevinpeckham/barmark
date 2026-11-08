@@ -66,12 +66,13 @@ That is the pattern Vite and webpack follow, so a bundler finds the worker
 and Verovio for you.
 
 Without a bundler, a page's import map does not reach a worker, so the
-worker's `import "verovio/wasm"` fails. Serve a bundled `worker.js` (one
-with Verovio inside it) in place of the package's, and/or set
-`verovio-url` to a Verovio module you host (for example
-`verovio/dist/verovio-module.mjs` from the `verovio` package). The URL
-is resolved against the page and must be http(s); anything else is
-refused and the score is not drawn.
+worker's bare imports (`verovio/esm`, `barmark`, `@barmark/musicxml`)
+fail. Serve a bundled `worker.js` at the package's URL. `verovio-url` can
+then point at a Verovio module you host (for example
+`verovio/dist/verovio-module.mjs` from the `verovio` package) instead of
+bundling the 7 MB inside the worker; it only changes where that module
+comes from. The URL is resolved against the page and must be http(s);
+anything else is refused and the score is not drawn.
 
 ### When the score can't be drawn
 
@@ -116,4 +117,10 @@ dark palette.
 This package is MIT. It uses [Verovio](https://github.com/rism-digital/verovio),
 which is LGPL-3.0-only, as an ordinary npm dependency, loaded unchanged at
 run time; its code is never copied into this package. barmark's own code
-keeps its own licence.
+stays MIT. Verovio's licence text is
+[COPYING.LESSER](https://github.com/rism-digital/verovio/blob/develop/COPYING.LESSER).
+
+A site that bundles the worker ships Verovio inside its bundle. Keeping
+Verovio a separate file (through `verovio-url`, or the bundler's own
+chunk) and keeping its notice is the easy way to meet the LGPL. This is
+not legal advice.
