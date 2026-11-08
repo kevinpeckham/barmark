@@ -4,9 +4,51 @@ import { expect, type Page, test } from "@playwright/test";
 const chartText = (page: Page, scope = "main") =>
 	page.evaluate(
 		(selector) =>
-			document.querySelector(`${selector} barmark-chart`)?.shadowRoot?.textContent ?? "",
+			document.querySelector(`${selector} :is(barmark-chart, barmark-score)`)?.shadowRoot
+				?.textContent ?? "",
 		scope,
 	);
+
+/** The score's SVG text in the first <barmark-score> under `scope`, "" until one is drawn. */
+const scoreText = (page: Page, scope = "main") =>
+	page.evaluate(
+		(selector) =>
+			document
+				.querySelector(`${selector} barmark-score`)
+				?.shadowRoot?.querySelector(".bms-score svg")?.textContent ?? "",
+		scope,
+	);
+
+/** The chord symbols the score's SVG draws, in order. */
+const scoreChords = (page: Page) =>
+	page.evaluate(() =>
+		[
+			...(document
+				.querySelector("main barmark-score")
+				?.shadowRoot?.querySelectorAll(".bms-score g.harm") ?? []),
+		].map((g) => g.textContent?.replace(/\s+/g, "") ?? ""),
+	);
+
+/** The chord names the grid draws, in order. */
+const gridChords = (page: Page) =>
+	page.evaluate(() =>
+		[
+			...(document
+				.querySelector("main :is(barmark-chart, barmark-score)")
+				?.shadowRoot?.querySelectorAll(".bm-chord") ?? []),
+		].map((c) => c.textContent ?? ""),
+	);
+
+/** Presses Score in the first chart's switch, repeated until the element has upgraded and shows it. */
+const pressScore = (page: Page, scope = "main") =>
+	expect(async () => {
+		await page
+			.locator(`${scope} barmark-score`)
+			.first()
+			.getByRole("radio", { name: "Score" })
+			.click();
+		await expect.poll(() => scoreText(page, scope), { timeout: 15_000 }).not.toBe("");
+	}).toPass({ timeout: 40_000 });
 
 const watchErrors = (page: Page) => {
 	const errors: string[] = [];
@@ -83,7 +125,9 @@ test.describe("home: the live editor", () => {
 			.poll(
 				() =>
 					page.evaluate(() =>
-						document.querySelector("main barmark-chart")?.shadowRoot?.textContent?.includes("Em"),
+						document
+							.querySelector("main :is(barmark-chart, barmark-score)")
+							?.shadowRoot?.textContent?.includes("Em"),
 					),
 				{
 					timeout: 5000,
@@ -119,7 +163,7 @@ test.describe("home: the live editor", () => {
 				...new Set(
 					[
 						...(document
-							.querySelector("main barmark-chart")
+							.querySelector("main :is(barmark-chart, barmark-score)")
 							?.shadowRoot?.querySelectorAll("[data-numeral]") ?? []),
 					].map((el) => el.getAttribute("data-numeral")),
 				),
@@ -352,7 +396,7 @@ test.describe("navigating inside the site", () => {
 	const unrendered = (page: Page) =>
 		page.evaluate(
 			() =>
-				[...document.querySelectorAll("main barmark-chart")].filter(
+				[...document.querySelectorAll("main :is(barmark-chart, barmark-score)")].filter(
 					(c) => !c.shadowRoot?.textContent?.trim(),
 				).length,
 		);
@@ -400,7 +444,7 @@ test.describe("in a browser without setHTMLUnsafe", () => {
 			.poll(() =>
 				page.evaluate(
 					() =>
-						[...document.querySelectorAll("main barmark-chart")].filter(
+						[...document.querySelectorAll("main :is(barmark-chart, barmark-score)")].filter(
 							(c) => !c.shadowRoot?.textContent?.trim(),
 						).length,
 				),
@@ -420,7 +464,8 @@ test("the chart wears the site's look: 15.5px chords, its colours and the Noto f
 	await expect.poll(() => chartText(page)).toContain("Words to sing");
 	await page.evaluate(() => document.fonts.ready);
 	const look = await page.evaluate(() => {
-		const root = document.querySelector("main barmark-chart")?.shadowRoot as ShadowRoot;
+		const root = document.querySelector("main :is(barmark-chart, barmark-score)")
+			?.shadowRoot as ShadowRoot;
 		const style = (sel: string) => getComputedStyle(root.querySelector(sel) as Element);
 		return {
 			chord: style(".bm-chord").fontSize,
@@ -453,13 +498,13 @@ test("the chart wears the site's look: 15.5px chords, its colours and the Noto f
 	expect(look.upright).toBe(true);
 });
 
-test("the editor drives one <barmark-chart> element through its text property", async ({
+test("the editor drives one <barmark-score> element through its text property", async ({
 	page,
 }) => {
 	const errors = watchErrors(page);
 	await page.goto("/");
-	await page.waitForFunction(() => customElements.get("barmark-chart"));
-	const chart = await page.evaluateHandle(() => document.querySelector("main barmark-chart"));
+	await page.waitForFunction(() => customElements.get("barmark-score"));
+	const chart = await page.evaluateHandle(() => document.querySelector("main barmark-score"));
 	await page
 		.getByRole("textbox", { name: "Barmark source of the chart" })
 		.fill("## Bridge\n| Ebm7 |");
@@ -516,7 +561,7 @@ test.describe("on a phone", () => {
 	}) => {
 		await page.goto("/");
 		const sizes = await page.evaluate(() => {
-			const chart = document.querySelector("main barmark-chart") as HTMLElement;
+			const chart = document.querySelector("main :is(barmark-chart, barmark-score)") as HTMLElement;
 			const body = chart.closest(".overflow-x-auto") as HTMLElement;
 			const rem = Number.parseFloat(getComputedStyle(document.documentElement).fontSize);
 			return {
@@ -538,10 +583,11 @@ test.describe("on a phone", () => {
 				.poll(() =>
 					page.evaluate(() => [
 						...new Set(
-							[...document.querySelectorAll("main barmark-chart")].flatMap((chart) =>
-								[...(chart.shadowRoot?.querySelectorAll(".bm-grid") ?? [])].map(
-									(g) => getComputedStyle(g).display,
-								),
+							[...document.querySelectorAll("main :is(barmark-chart, barmark-score)")].flatMap(
+								(chart) =>
+									[...(chart.shadowRoot?.querySelectorAll(".bm-grid") ?? [])].map(
+										(g) => getComputedStyle(g).display,
+									),
 							),
 						),
 					]),
@@ -697,5 +743,209 @@ test.describe("the FAQ", () => {
 		const nav = await questions(page).boundingBox();
 		const answer = await page.locator("main section").first().boundingBox();
 		expect(nav && answer && nav.y + nav.height <= answer.y).toBe(true);
+	});
+});
+
+test.describe("the score", () => {
+	const source = (page: Page) => page.getByRole("textbox", { name: "Barmark source of the chart" });
+	let errors: string[] = [];
+	test.beforeEach(({ page }) => {
+		errors = watchErrors(page);
+	});
+	test.afterEach(() => {
+		expect(errors).toEqual([]);
+	});
+
+	test("the home page loads Verovio only when Score is pressed, and draws the score as SVG", async ({
+		page,
+	}) => {
+		const engine: string[] = [];
+		page.on("request", (r) => {
+			if (/worker|verovio|wasm/i.test(r.url())) engine.push(r.url());
+		});
+		await page.goto("/");
+		await page.waitForFunction(() => customElements.get("barmark-score"));
+		await page.waitForLoadState("networkidle");
+		expect(engine).toEqual([]);
+		await pressScore(page);
+		expect(engine.length).toBeGreaterThan(0);
+		expect(await scoreText(page)).toContain("Peaceful Dreams");
+		const score = page.locator("main barmark-score");
+		await expect(score.getByRole("radio", { name: "Score" })).toBeChecked();
+		await expect(score.getByRole("img", { name: "Peaceful Dreams" })).toBeVisible();
+	});
+
+	test("the score follows the source as it is edited", async ({ page }) => {
+		await page.goto("/");
+		await pressScore(page);
+		await source(page).fill("# Changed Song\nkey: G\n| G | C |");
+		await expect.poll(() => scoreText(page), { timeout: 15_000 }).toContain("Changed Song");
+		await expect.poll(() => scoreChords(page)).toEqual(["G", "C"]);
+	});
+
+	test("the chord spelling is the grid's: Score sets it aside, Grid brings it back", async ({
+		page,
+	}) => {
+		await page.goto("/");
+		const spelling = page.getByRole("radiogroup", { name: "Chord spelling" });
+		await pressScore(page);
+		await expect(spelling.getByRole("radio", { name: "Nashville" })).toBeDisabled();
+		await page.locator("main barmark-score").getByRole("radio", { name: "Grid" }).click();
+		await expect(spelling.getByRole("radio", { name: "Nashville" })).toBeEnabled();
+	});
+
+	test("sharps and flats in the score's chord symbols are drawn: Verovio's font reaches the page", async ({
+		page,
+	}) => {
+		await page.goto(`/try?q=${encodeURIComponent("key: E\n| C#m7 | Bb |")}`);
+		await pressScore(page, "[data-reading]");
+		await expect
+			.poll(() =>
+				page.evaluate(async () => {
+					await document.fonts.ready;
+					return [...document.fonts].some((f) => f.family === "Leipzig" && f.status === "loaded");
+				}),
+			)
+			.toBe(true);
+		expect(await page.locator("style[data-verovio-font]").count()).toBe(1);
+	});
+
+	test("Try It's preview switches to Score and engraves again as you type", async ({ page }) => {
+		await page.goto(`/try?q=${encodeURIComponent("# Tried\n| D | A |")}`);
+		const box = page.getByRole("textbox", { name: "Barmark to read" });
+		await pressScore(page, "[data-reading]");
+		expect(await scoreText(page, "[data-reading]")).toContain("Tried");
+		await box.fill("# Retyped\n| D | A | G |");
+		await expect
+			.poll(() => scoreText(page, "[data-reading]"), { timeout: 15_000 })
+			.toContain("Retyped");
+	});
+
+	test.describe("on a phone", () => {
+		test.use({ viewport: { width: 360, height: 800 } });
+		test("the score scrolls inside its window, never the page", async ({ page }) => {
+			await page.goto("/");
+			await pressScore(page);
+			const [scroll, client] = await page.evaluate(() => [
+				document.documentElement.scrollWidth,
+				document.documentElement.clientWidth,
+			]);
+			expect(scroll).toBeLessThanOrEqual(client);
+		});
+	});
+});
+
+test.describe("the score without JavaScript", () => {
+	test.use({ javaScriptEnabled: false });
+	test("the home page shows the Grid / Score switch, on Grid, over the drawn grid", async ({
+		page,
+	}) => {
+		await page.goto("/");
+		const score = page.locator("main barmark-score");
+		await expect(score.getByRole("radio", { name: "Grid" })).toBeChecked();
+		await expect(score.getByRole("radio", { name: "Score" })).not.toBeChecked();
+		expect(await chartText(page)).toContain("Peaceful Dreams");
+	});
+});
+
+test.describe("the key", () => {
+	const source = (page: Page) => page.getByRole("textbox", { name: "Barmark source of the chart" });
+	const keyButton = (page: Page) => page.getByRole("button", { name: /^Key: / });
+	const menu = (page: Page) => page.getByRole("menu", { name: "Key" });
+	/** Opens the menu, repeated until the page's script has run. */
+	const open = (page: Page) =>
+		expect(async () => {
+			if (!(await menu(page).isVisible())) await keyButton(page).click();
+			await expect(menu(page)).toBeVisible({ timeout: 1_000 });
+		}).toPass({ timeout: 15_000 });
+	let errors: string[] = [];
+	test.beforeEach(({ page }) => {
+		errors = watchErrors(page);
+	});
+	test.afterEach(() => {
+		expect(errors).toEqual([]);
+	});
+
+	test("picking a key redraws the grid's chords, and the source stays as written", async ({
+		page,
+	}) => {
+		await page.goto("/");
+		await expect(keyButton(page)).toHaveAccessibleName("Key: D");
+		await source(page).fill("key: G\n| G | C |");
+		await expect(keyButton(page)).toHaveAccessibleName("Key: G");
+		await open(page);
+		const items = menu(page).getByRole("menuitemradio");
+		await expect(items).toHaveText([
+			"G (original)",
+			"Ab",
+			"A",
+			"Bb",
+			"B",
+			"C",
+			"Db",
+			"D",
+			"Eb",
+			"E",
+			"F",
+			"F#",
+		]);
+		await expect(menu(page).getByRole("menuitemradio", { name: "G (original)" })).toBeChecked();
+		await menu(page).getByRole("menuitemradio", { name: "A", exact: true }).click();
+		await expect(menu(page)).toBeHidden();
+		await expect(keyButton(page)).toHaveAccessibleName("Key: A");
+		await expect.poll(() => gridChords(page)).toEqual(["A", "D"]);
+		await expect(source(page)).toHaveValue("key: G\n| G | C |");
+	});
+
+	test("in Score view a new key engraves the score again", async ({ page }) => {
+		await page.goto("/");
+		await source(page).fill("# Moved\nkey: G\n| G | C |");
+		await pressScore(page);
+		await expect.poll(() => scoreChords(page)).toEqual(["G", "C"]);
+		await open(page);
+		await menu(page).getByRole("menuitemradio", { name: "A", exact: true }).click();
+		await expect.poll(() => scoreChords(page), { timeout: 15_000 }).toEqual(["A", "D"]);
+	});
+
+	test("a chart with no key offers distances", async ({ page }) => {
+		await page.goto("/");
+		await source(page).fill("| D | A |");
+		await expect(keyButton(page)).toHaveAccessibleName("Key: Original");
+		await open(page);
+		await expect(menu(page).getByRole("menuitemradio")).toHaveText([
+			"Original",
+			"Up 1",
+			"Up 2",
+			"Up 3",
+			"Up 4",
+			"Up 5",
+			"Up 6",
+			"Down 1",
+			"Down 2",
+			"Down 3",
+			"Down 4",
+			"Down 5",
+		]);
+		await menu(page).getByRole("menuitemradio", { name: "Up 2" }).click();
+		await expect(keyButton(page)).toHaveAccessibleName("Key: +2");
+		await expect.poll(() => gridChords(page)).toEqual(["E", "B"]);
+	});
+
+	test("works from the keyboard: arrows move, Enter picks, Escape closes", async ({ page }) => {
+		await page.goto("/");
+		await source(page).fill("key: G\n| G | C |");
+		await open(page);
+		await page.keyboard.press("Escape");
+		await expect(menu(page)).toBeHidden();
+		await expect(keyButton(page)).toBeFocused();
+		await page.keyboard.press("ArrowDown");
+		await expect(menu(page).getByRole("menuitemradio", { name: "G (original)" })).toBeFocused();
+		await page.keyboard.press("ArrowDown");
+		await expect(menu(page).getByRole("menuitemradio", { name: "Ab" })).toBeFocused();
+		await page.keyboard.press("Enter");
+		await expect(menu(page)).toBeHidden();
+		await expect(keyButton(page)).toHaveAccessibleName("Key: Ab");
+		await expect(keyButton(page)).toBeFocused();
+		await expect.poll(() => gridChords(page)).toEqual(["A♭", "D♭"]);
 	});
 });

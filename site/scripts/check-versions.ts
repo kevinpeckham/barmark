@@ -1,5 +1,5 @@
 /**
- * Fails when barmark.dev runs an older barmark, @barmark/render or
+ * Fails when barmark.dev runs an older barmark, @barmark/render, @barmark/score or
  * @barmark/cli (a dev dependency: Get Started's commands run against it, and
  * its CI example names its version) than the latest release tag: after a
  * release, bump site/package.json (RELEASING.md).
@@ -11,6 +11,7 @@ import { join } from "node:path";
 const PREFIXES: Record<string, string> = {
 	barmark: "barmark-v",
 	"@barmark/render": "render-v",
+	"@barmark/score": "score-v",
 	"@barmark/cli": "cli-v",
 };
 

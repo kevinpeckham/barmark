@@ -55,7 +55,7 @@ const code = "font-mono text-accent";
 		</p>
 		{@render chord(reading.chord)}
 	{:else if reading.kind === "chart"}
-		<ChartRender {text} label="The chart, rendered" />
+		<ChartRender {text} score label="The chart, rendered" />
 		{#if reading.diagnostics.length}
 			<ul class="flex flex-col gap-1 text-sm">
 				{#each reading.diagnostics as d, i (i)}

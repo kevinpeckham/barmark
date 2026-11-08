@@ -1,4 +1,5 @@
 import { renderChart } from "@barmark/render";
+import { renderScoreHtml } from "@barmark/score/server";
 
 // The site's charts never wrap: a section wider than its box keeps its rows, and the box scrolls.
 const options = { theme: "dark", rehearsalLetters: true, wrap: false } as const;
@@ -17,5 +18,22 @@ export function chartHtml(
 		return renderChart(text, chosen);
 	} catch {
 		return renderChart("", chosen);
+	}
+}
+
+/**
+ * The chart as `<barmark-score>` markup: the same grid, with the Grid / Score
+ * switch, and the chart's text carried for the score. Verovio is never
+ * imported here; the element engraves once a reader picks Score.
+ */
+export function scoreHtml(
+	text: string,
+	{ barNumbers = true }: { barNumbers?: boolean } = {},
+): string {
+	const chosen = { ...options, barNumbers };
+	try {
+		return renderScoreHtml(text, chosen);
+	} catch {
+		return renderScoreHtml("", chosen);
 	}
 }
