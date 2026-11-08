@@ -118,6 +118,22 @@ describe("cleanSvg", () => {
 		}
 	});
 
+	test("entity-coded values are dropped", () => {
+		for (const v of ["&#117;rl(http://e.com/x)", "url&#40;http://e.com/x)", "&#x75;rl(x)"]) {
+			expect([v, clean(`<svg><path fill="${v}" d="M0 0"/></svg>`)]).toEqual([
+				v,
+				'<svg><path d="M0 0"/></svg>',
+			]);
+		}
+		expect(clean('<svg><use xlink:href="#a&#x26;b"/></svg>')).toBe("<svg><use/></svg>");
+	});
+
+	test("a self-closing raw-text element fails closed", () => {
+		for (const name of ["style", "title", "script", "textarea", "xmp", "noscript"])
+			expect([name, clean(`<svg><${name}/>@import url(x)</svg>`)]).toEqual([name, null]);
+		expect(clean("<svg><style/>@import url(x)</svg>")).toBeNull();
+	});
+
 	test("these fail closed, not just clean", () => {
 		for (const name of ["unbalanced quote", "comment", "cdata", "stray <", "unterminated tag"]) {
 			const input = hostileCases.find(([n]) => n === name)?.[1] ?? "";

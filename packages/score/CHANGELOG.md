@@ -25,3 +25,6 @@ package uses [semantic versioning](https://semver.org/).
 
 - The dark theme reaches the notes: Verovio's inner `svg` carries
   `color="black"`, now overridden by the score's styles.
+
+- `cleanSvg` drops attributes whose value holds a character reference and
+  refuses a self-closing `style`, `title` or other raw-text element.

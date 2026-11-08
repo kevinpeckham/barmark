@@ -69,7 +69,28 @@ function fail(why: string): never {
 	throw new Unclean(`The score markup is not clean SVG: ${why}`);
 }
 
+/** Elements whose content the HTML parser reads as raw text, even when written `<x/>`. */
+const RAW_TEXT = new Set([
+	"style",
+	"script",
+	"title",
+	"textarea",
+	"xmp",
+	"iframe",
+	"noembed",
+	"noframes",
+	"noscript",
+	"plaintext",
+]);
+
+function refuseSelfClosingRawText(tag: Tag): void {
+	if (tag.selfClosing && RAW_TEXT.has(tag.name.toLowerCase()))
+		fail("a self-closing raw-text element");
+}
+
 function keepAttribute(name: string, value: string): boolean {
+	// Verovio writes no entities in attributes; a character reference could decode to `url(` or `javascript:`.
+	if (value.includes("&")) return false;
 	if ((name === "href" || name === "xlink:href") && !value.startsWith("#")) return false;
 	if (/url\(/i.test(value.replace(/url\(\s*#/gi, ""))) return false;
 	return true;
@@ -195,6 +216,7 @@ function readTag(svg: string, i: number, open: Open[], out: string[]): number {
 	if (!/[A-Za-z]/.test(svg[i + 1] ?? "")) fail("a < that starts no tag");
 	const emit = open.every((o) => o.emit);
 	const tag = readStartTag(svg, i);
+	refuseSelfClosingRawText(tag);
 	if (tag.name === "style" && !tag.selfClosing) return readStyle(svg, tag, emit, open, out);
 	const write = emit && tag.name in ALLOWED;
 	if (write) out.push(writeTag(tag));
