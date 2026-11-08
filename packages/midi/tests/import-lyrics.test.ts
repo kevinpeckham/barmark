@@ -326,6 +326,21 @@ describe("withLyrics", () => {
 		noErrors(r.text);
 	});
 
+	test("a chart whose bars aren't the grid's drops every verse", () => {
+		const report = createReport();
+		const chart = chartOf(1);
+		const events = [lyric(0, "a "), lyric(0, "b ")];
+		const text = withLyrics(
+			chart,
+			{ format: 1, ppq: PPQ, tracks: [[], events] },
+			grid4(2),
+			[],
+			report,
+		);
+		expect(text).toBe(chart);
+		expect(report.list.map((d) => d.code)).toEqual(["lyrics-dropped", "lyrics-dropped"]);
+	});
+
 	test("no lyric events leave the chart unchanged", () => {
 		const r = rows(2, [], [sung(0, BAR)]);
 		expect(r.text).toBe(r.chart);
