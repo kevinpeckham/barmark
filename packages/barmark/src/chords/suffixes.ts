@@ -11,7 +11,7 @@ import {
 	VALID_EXTENSIONS,
 } from "./vocabulary.js";
 
-export type Suffix = { suffix: string; intervals: Interval[]; tones: number };
+export type Suffix = { suffix: string; intervals: Interval[]; tones: number; parts: ChordParts };
 
 let suffixes: Map<string, Suffix[]> | null = null;
 
@@ -46,7 +46,7 @@ export function enumerateSuffixes(): Map<string, Suffix[]> {
 						continue;
 					const key = intervalSetKey(intervals);
 					const list = found.get(key) ?? [];
-					list.push({ suffix: printSuffix(parts), intervals, tones: tones.length });
+					list.push({ suffix: printSuffix(parts), intervals, tones: tones.length, parts });
 					found.set(key, list);
 				}
 			}

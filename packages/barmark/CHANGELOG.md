@@ -9,6 +9,19 @@ Releases follow the process in [RELEASING.md](RELEASING.md).
 
 ## [Unreleased]
 
+### Added
+
+- **`nameNotes(pitchClasses, bass, key)`** names a chord from the pitch
+  classes sounding over a bass, spelled for the key, or returns null when
+  none fits: the name grammar 4's linter may suggest for a note set, and
+  what `@barmark/midi`'s import will call. Every root is tried, with the
+  fifth supplied where it is missing; the fewest added tones, slash and
+  supplied fifth wins, ties going to triads, then sevenths, sixths, sus,
+  extended chords and added tones. `{G B F}` over G is `G7`, `{E G C}`
+  over E is `C/E`, `Am7/C`'s notes are `C6`; two pitch classes name only a
+  power chord (`E5`). A degree held both plain and altered (`b9` with `9`)
+  is a cluster, not a chord.
+
 ## [0.20.0] - 2026-11-08
 
 ### Changed

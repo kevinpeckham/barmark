@@ -6,6 +6,7 @@ import {
 	degreeOf,
 	harteToBarmark,
 	keyFromText,
+	nameNotes,
 	parseChart,
 	parseChord,
 	printKey,
@@ -27,6 +28,7 @@ describe("the README's claims hold", () => {
 		expect(c.ok && c.value.pitches).toEqual(["B", "D", "F", "A"]);
 		expect(c.ok && c.value.harte).toBe("B:hdim7");
 		expect(harteToBarmark("A:sus4(b7,9)")).toBe("A9sus4");
+		expect(nameNotes([7, 11, 2, 5], 11, null)).toBe("G7/B");
 		expect(transposeChart("key: D\n| D | A | Bm | G |", { to: "Eb" }).text).toBe(
 			"key: Eb\n| Eb | Bb | Cm | Ab |\n",
 		);

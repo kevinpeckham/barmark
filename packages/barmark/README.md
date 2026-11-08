@@ -41,6 +41,7 @@ import {
 	extractPart,
 	harteToBarmark,
 	keyFromText,
+	nameNotes,
 	parseChart,
 	parseChord,
 	printChart,
@@ -78,6 +79,7 @@ if (chord.ok) chord.value.pitches; // ["B", "D", "F", "A"]
 if (chord.ok) chord.value.harte; // "B:hdim7"
 
 harteToBarmark("A:sus4(b7,9)"); // "A9sus4"
+nameNotes([7, 11, 2, 5], 11, null); // "G7/B": a chord symbol for sounding pitch classes (0 = C) over a bass, spelled for a key; null when none fits
 ```
 
 ### Several parts
