@@ -9,6 +9,8 @@ Releases follow the process in [RELEASING.md](RELEASING.md).
 
 ## [Unreleased]
 
+## [0.21.0] - 2026-11-08
+
 ### Added
 
 - **`nameNotes(pitchClasses, bass, key)`** names a chord from the pitch
@@ -654,7 +656,8 @@ The first working release: the reference parser and printer for the
 
 - **A placeholder package that holds the `barmark` name** while the spec and parser are written.
 
-[Unreleased]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.20.0...HEAD
+[Unreleased]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.21.0...HEAD
+[0.21.0]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.20.0...barmark-v0.21.0
 [0.20.0]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.19.1...barmark-v0.20.0
 [0.19.1]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.19.0...barmark-v0.19.1
 [0.19.0]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.18.0...barmark-v0.19.0
