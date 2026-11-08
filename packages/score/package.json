@@ -1,0 +1,61 @@
+{
+	"name": "@barmark/score",
+	"version": "0.1.0",
+	"description": "Show a barmark chord chart as a full engraved score: MusicXML from @barmark/musicxml, engraved by Verovio.",
+	"type": "module",
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"import": "./dist/index.js"
+		},
+		"./element": {
+			"types": "./dist/element.d.ts",
+			"import": "./dist/element.js"
+		},
+		"./server": {
+			"types": "./dist/server.d.ts",
+			"import": "./dist/server.js"
+		}
+	},
+	"types": "./dist/index.d.ts",
+	"sideEffects": [
+		"./dist/element.js"
+	],
+	"files": [
+		"dist",
+		"CHANGELOG.md"
+	],
+	"engines": {
+		"node": ">=20"
+	},
+	"keywords": [
+		"barmark",
+		"chord-chart",
+		"music",
+		"score",
+		"engraving",
+		"verovio",
+		"musicxml"
+	],
+	"author": "Kevin Peckham",
+	"license": "MIT",
+	"homepage": "https://github.com/kevinpeckham/barmark/tree/main/packages/score#readme",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/kevinpeckham/barmark.git",
+		"directory": "packages/score"
+	},
+	"bugs": {
+		"url": "https://github.com/kevinpeckham/barmark/issues"
+	},
+	"dependencies": {
+		"@barmark/musicxml": "workspace:^",
+		"@barmark/render": "workspace:^",
+		"barmark": "workspace:^",
+		"verovio": "^6.4.1"
+	},
+	"scripts": {
+		"build": "rm -rf dist && tsc -p tsconfig.build.json",
+		"prepack": "bun run build"
+	}
+}
