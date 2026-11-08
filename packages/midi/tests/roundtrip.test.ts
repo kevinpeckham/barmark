@@ -14,11 +14,7 @@ describe("round trip", () => {
 		}
 	});
 
-	// todo until the Task 12 segmentation fix lands: fails on AT_A_GLANCE and its grammar block
-	// (`| {D2} | / | / | / |` then `| D |`: the four-bar bass lead-in swallows the D chord),
-	// peaceful-dreams (`C5` and `D5` after `D7sus4`: a chord whose notes are a subset of the one
-	// before starts no new chord) and three-parts (the guitar's `{D4 A4}` after `{E4 B4}` over D/F#)
-	test.todo("every chart sounds the same on every beat", () => {
+	test("every chart sounds the same on every beat", () => {
 		const charts: [string, string][] = [["at a glance", AT_A_GLANCE], ...corpus()];
 		const misses: string[] = [];
 		let unnamed = 0;

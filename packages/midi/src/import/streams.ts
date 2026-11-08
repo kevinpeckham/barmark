@@ -67,6 +67,29 @@ function pitchesOf(notes: Note[]): { median: number; low: number } {
 	return { median, low: pitches[Math.floor(pitches.length / LOW_SHARE)] ?? 0 };
 }
 
+/** The lowest stream: lowest at its 10th percentile, ties to the lower median, then file order. */
+function lowestOf<S extends { low: number; median: number }>(streams: S[]): S | undefined {
+	return streams.reduce<S | undefined>(
+		(low, s) =>
+			low === undefined || s.low < low.low || (s.low === low.low && s.median < low.median)
+				? s
+				: low,
+		undefined,
+	);
+}
+
+/**
+ * The bass line of `notes`: their lowest stream (as the harmony choice
+ * finds it) when it is a single line, else null. The chords' segments
+ * read its movement as the bass's, not as a chord's.
+ */
+export function bassLine(notes: Note[]): { track: number; channel: number } | null {
+	const lowest = lowestOf(streamsOf(notes).map((s) => ({ ...s, ...pitchesOf(s.notes) })));
+	return lowest && isMonophonic(lowest.notes)
+		? { track: lowest.track, channel: lowest.channel }
+		: null;
+}
+
 /** At most `MAX_NAMED` items named, then a count: "a, b, c and d", "a, …, h …and 2 more". */
 function namedList(items: string[]): string {
 	if (items.length <= MAX_NAMED) return andList(items);
@@ -100,9 +123,7 @@ function chosenByDefault(pitched: Note[], names: (string | null)[], report: Repo
 		);
 		return pitched;
 	}
-	const lowest = streams.reduce((low, s) =>
-		s.low < low.low || (s.low === low.low && s.median < low.median) ? s : low,
-	);
+	const lowest = lowestOf(streams);
 	const melodies = streams.filter((s) => s.mono && s !== lowest);
 	if (melodies.length === 0) return pitched;
 	const labels = melodies.map(

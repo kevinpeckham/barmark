@@ -38,11 +38,12 @@
 import { conventionalKey, type Key, keyFromText, nameNotes, spellPitch } from "barmark";
 import type { KeyAt } from "./directives.js";
 import { barAt, type Grid } from "./grid.js";
-import { type Note, pitchClassPoints } from "./notes.js";
+import type { Note } from "./notes.js";
 import type { Report } from "./report.js";
+import { bassLine } from "./streams.js";
 
-/** Notes starting within this many quarters (a 32nd) of each other are one attack. */
-const ATTACK = 1 / 8;
+/** Notes starting within this many quarters (a 16th) of the first are one attack: a chord whose notes are each played up to a 32nd early or late (Claude's ruling, 2026-11-08, from Task 13b's jitter test). */
+const ATTACK = 1 / 4;
 /** A pitch class under this share of the strongest one's weight is a passing tone. */
 const PASSING = 0.25;
 /** The most pitch classes a note set names when no chord does. */
@@ -62,11 +63,24 @@ type Segment = {
 
 type Cut = { at: number; harmony: boolean };
 
-/** Two or more harmony-voice notes struck together: what sounds above the bass line after them. */
-type Attack = { mask: number; top: number; end: number };
+/**
+ * Two or more harmony-voice notes struck together. `mask` is what the
+ * voices sound after them: the pitch classes struck and those held (to
+ * at least the first struck note's end); `held` the held ones alone;
+ * `lows` each stream's lowest pitch struck, `top` the highest's pitch
+ * class, `end` where the last struck stops.
+ */
+type Attack = { mask: number; held: number; lows: Map<number, number>; top: number; end: number };
 
-/** The notes starting within a 32nd of the first: `[from, to)` in the sorted notes. */
-type Group = { start: number; from: number; to: number; end: number; attack: Attack | null };
+/** The notes starting within the window of the first: `[from, to)` in the sorted notes; `bass` the pitch class of a bass note struck there. */
+type Group = {
+	start: number;
+	from: number;
+	to: number;
+	end: number;
+	attack: Attack | null;
+	bass: number | null;
+};
 
 const streamOf = (n: Note) => n.track * 16 + n.channel;
 const bit = (pitch: number) => 1 << (pitch % 12);
@@ -79,98 +93,163 @@ function groupsOf(notes: Note[], window: number): Group[] {
 		let j = i;
 		for (let n = notes[j]; n !== undefined && n.start < start + window; n = notes[++j])
 			end = Math.max(end, n.end);
-		groups.push({ start, from: i, to: j, end, attack: null });
+		groups.push({ start, from: i, to: j, end, attack: null, bass: null });
 		i = j;
 	}
 	return groups;
 }
 
-/**
- * The bass line: the stream (track and channel) that never strikes two
- * notes at once, lowest on average, when it lies below every stream that
- * plays chords; else none, and every note is a harmony voice.
- */
-function bassStreamOf(notes: Note[], groups: Group[]): number | null {
-	const stats = new Map<number, { sum: number; count: number; chordal: boolean }>();
-	for (const g of groups) {
-		const seen = new Set<number>();
-		for (const n of notes.slice(g.from, g.to)) {
-			const id = streamOf(n);
-			const st = stats.get(id) ?? { sum: 0, count: 0, chordal: false };
-			st.sum += n.pitch;
-			st.count++;
-			st.chordal ||= seen.has(id);
-			seen.add(id);
-			stats.set(id, st);
-		}
-	}
-	let bass: number | null = null;
-	let low = Number.POSITIVE_INFINITY;
-	let chordLow = Number.POSITIVE_INFINITY;
-	for (const [id, st] of stats) {
-		const mean = st.sum / st.count;
-		if (st.chordal) chordLow = Math.min(chordLow, mean);
-		else if (mean < low) [bass, low] = [id, mean];
-	}
-	return low < chordLow ? bass : null;
+/** The pitch classes of the pitches whose `latest` end reaches `stop`. */
+function heldMask(latest: number[], stop: number): number {
+	let mask = 0;
+	latest.forEach((end, pitch) => {
+		if (end >= stop) mask |= bit(pitch);
+	});
+	return mask;
+}
+
+function attackOf(upper: Note[], latest: number[]): Attack {
+	const firstStop = Math.min(...upper.map((n) => n.end));
+	const held = heldMask(latest, firstStop);
+	const mask = upper.reduce((m, n) => m | bit(n.pitch), held);
+	const lows = new Map<number, number>();
+	for (const n of upper) lows.set(streamOf(n), Math.min(lows.get(streamOf(n)) ?? 128, n.pitch));
+	const top = Math.max(...upper.map((n) => n.pitch)) % 12;
+	return { mask, held, lows, top, end: Math.max(...upper.map((n) => n.end)) };
 }
 
 /**
- * Marks each group whose harmony voices strike two or more notes. Its
- * sound is the pitch classes struck and those held (to at least the first
- * struck note's end), its top the highest struck.
+ * The bass note a group strikes: the bass line's lowest, or with no bass
+ * line an attack's lowest; none when a lower note still sounds (to at
+ * least the first struck note's end).
  */
-function markAttacks(notes: Note[], groups: Group[], bass: number | null) {
+function bassOf(struck: Note[], line: number | null, latest: number[], attack: Attack | null) {
+	const candidates =
+		line === null ? (attack ? struck : []) : struck.filter((n) => streamOf(n) === line);
+	if (candidates.length === 0) return null;
+	const low = Math.min(...candidates.map((n) => n.pitch));
+	const firstStop = Math.min(...struck.map((n) => n.end));
+	return latest.slice(0, low).some((end) => end >= firstStop) ? null : low % 12;
+}
+
+/**
+ * Marks each group's attack (two or more harmony-voice notes, the bass
+ * line's left out) and the bass note it strikes. `latest[p]` is the
+ * latest end of pitch `p` among notes started before, `upperLatest`
+ * the same for the harmony voices.
+ */
+function markGroups(notes: Note[], groups: Group[], line: number | null) {
 	const latest = new Array<number>(128).fill(Number.NEGATIVE_INFINITY);
+	const upperLatest = new Array<number>(128).fill(Number.NEGATIVE_INFINITY);
 	for (const g of groups) {
-		const upper = notes.slice(g.from, g.to).filter((n) => streamOf(n) !== bass);
-		if (upper.length >= 2) {
-			const firstStop = Math.min(...upper.map((n) => n.end));
-			let mask = 0;
-			for (const n of upper) mask |= bit(n.pitch);
-			latest.forEach((end, pitch) => {
-				if (end >= firstStop) mask |= bit(pitch);
-			});
-			const top = Math.max(...upper.map((n) => n.pitch));
-			g.attack = { mask, top: top % 12, end: Math.max(...upper.map((n) => n.end)) };
-		}
-		for (const n of upper) latest[n.pitch] = Math.max(latest[n.pitch] ?? 0, n.end);
+		const struck = notes.slice(g.from, g.to);
+		const upper = struck.filter((n) => streamOf(n) !== line);
+		if (upper.length >= 2) g.attack = attackOf(upper, upperLatest);
+		g.bass = bassOf(struck, line, latest, g.attack);
+		for (const n of struck) latest[n.pitch] = Math.max(latest[n.pitch] ?? 0, n.end);
+		for (const n of upper) upperLatest[n.pitch] = Math.max(upperLatest[n.pitch] ?? 0, n.end);
 	}
 }
 
+/** The chord being read: its attack's sound, each stream's lowest voice in it, and its bass's pitch class. */
+type Chord = { mask: number; lows: Map<number, number>; bass: number | null };
+
+/** Whether every stream striking `a` struck in the chord and now strikes above its lowest voice there. */
+const thinner = (chord: Chord, a: Attack) =>
+	[...a.lows].every(([id, low]) => low > (chord.lows.get(id) ?? 128));
+
 /**
- * Whether an attack changes the chord whose sound is `chord`: it adds a
- * pitch class, unless that is only its top note over the chord still
- * sounding (a melody note on a re-strike).
+ * Whether an attack changes the chord (Claude's ruling, 2026-11-08, fix
+ * round 2): any pitch class added or dropped. Two carry: a re-strike
+ * inside a bar that only drops notes, each stream striking above its own
+ * lowest voice in the chord (a thinner voicing), and a lone new top note
+ * over a chord all held from before (a melody note on a re-strike).
  */
-function changes(chord: number, a: Attack): boolean {
-	const added = a.mask & ~chord;
-	if (added === 0) return false;
-	return !(added === 1 << a.top && (chord & ~a.mask) === 0);
+function changes(chord: Chord, a: Attack, atLine: boolean): boolean {
+	const added = a.mask & ~chord.mask;
+	const dropped = chord.mask & ~a.mask;
+	if (added === 0) return dropped !== 0 && (atLine || !thinner(chord, a));
+	// all held means nothing dropped, since what is held sounds
+	const melody = added === 1 << a.top && (chord.mask & ~a.held) === 0;
+	return !melody;
+}
+
+/** Whether a bar line falls within `window` of `tick`. */
+function atBarLine(grid: Grid, tick: number, window: number): boolean {
+	const line = grid.bars[barAt(grid, tick + window) - 1]?.start;
+	return line !== undefined && line > tick - window;
 }
 
 /**
- * Where a change at `tick` starts: at the last bar line since the
- * harmony voices' last chord stopped (`reach`), when one falls in that
- * rest, since the change sounded there in the bass; else at `tick`.
+ * The cuts of a stretch with attacks. A bass leading in across a bar
+ * line reads alone (`leadIn`); the chord starts at the first attack's
+ * bar line, or with the stretch. Then a new chord where an attack
+ * changes it (`changes`), or where the bass moves to a new pitch class at
+ * a bar line under it; a change first heard after the voices rest
+ * starts where the bass so moved in the rest, else at its attack.
  */
-function changeAt(grid: Grid, reach: number, tick: number): number {
-	const line = grid.bars[barAt(grid, tick) - 1]?.start;
-	return line !== undefined && line >= reach ? line : tick;
-}
-
-/** A stretch with attacks: a chord from its start, a new one where an attack changes it. */
-function voiceCuts(stretch: Group[], grid: Grid, cuts: Cut[]) {
-	let chord: number | null = null;
-	let reach = Number.NEGATIVE_INFINITY;
-	for (const { attack: a, start } of stretch) {
-		if (a === null) continue;
-		if (chord === null || changes(chord, a)) {
-			if (chord !== null) cuts.push({ at: changeAt(grid, reach, start), harmony: true });
-			chord = a.mask;
-		}
-		reach = Math.max(reach, a.end);
+function voiceCuts(stretch: Group[], grid: Grid, window: number, cuts: Cut[]): number {
+	const begin = leadIn(stretch, grid, window, cuts);
+	const read: Reading = {
+		chord: null,
+		reach: Number.NEGATIVE_INFINITY,
+		moved: Number.NEGATIVE_INFINITY,
+	};
+	for (const g of stretch) {
+		const line = atBarLine(grid, g.start, window);
+		if (line) bassMove(read, g, cuts);
+		if (g.attack !== null) attack(read, g, g.attack, line, cuts);
 	}
+	return begin;
+}
+
+/** The chord being read, where its voices last stop, and where the bass last moved under it. */
+type Reading = { chord: Chord | null; reach: number; moved: number };
+
+/** At a bar line: the bass struck on a new pitch class under the chord cuts there. */
+function bassMove(read: Reading, g: Group, cuts: Cut[]) {
+	const bass = read.chord?.bass;
+	if (read.chord === null || bass == null || g.bass === null || g.bass === bass) return;
+	cuts.push({ at: g.start, harmony: true });
+	read.moved = g.start;
+	read.chord.bass = g.bass;
+}
+
+/** An attack: a new chord when it changes the one read (cut where the bass moved in a rest before it, else at it). */
+function attack(read: Reading, g: Group, a: Attack, line: boolean, cuts: Cut[]) {
+	const chord = read.chord;
+	if (chord !== null && !changes(chord, a, line)) keepLows(chord, a);
+	else {
+		if (chord !== null)
+			cuts.push({ at: read.moved >= read.reach ? read.moved : g.start, harmony: true });
+		read.chord = { mask: a.mask, lows: new Map(a.lows), bass: g.bass ?? chord?.bass ?? null };
+	}
+	read.reach = Math.max(read.reach, a.end);
+}
+
+/** A stream first striking in a carried chord: its lowest voice there is its own. */
+function keepLows(chord: Chord, a: Attack) {
+	for (const [id, low] of a.lows) if (!chord.lows.has(id)) chord.lows.set(id, low);
+}
+
+/**
+ * When a bar line falls after the stretch's start and at or before its
+ * first attack (or within the window after it), the chord starts there
+ * and what leads in before it reads note by note (13b's ruling: `| {D2}
+ * | / | / | / | D |`; an attack struck early, before the line, still cuts
+ * where struck); returns where the chord starts.
+ */
+function leadIn(stretch: Group[], grid: Grid, window: number, cuts: Cut[]): number {
+	const first = stretch.find((g) => g.attack !== null) as Group;
+	const start = (stretch[0] as Group).start;
+	const line = grid.bars[barAt(grid, first.start + window) - 1]?.start ?? start;
+	if (line <= start) return start;
+	lineCuts(
+		stretch.filter((g) => g.start < line),
+		cuts,
+	);
+	cuts.push({ at: line, harmony: true });
+	return line;
 }
 
 /** A stretch of single lines only: a cut at two notes struck together, or a note struck as all stop. */
@@ -183,28 +262,47 @@ function lineCuts(stretch: Group[], cuts: Cut[]) {
 	}
 }
 
+/** How a note is weighed: always, only while the chord's attack notes sound (`gated`), or as their gate. */
+type Weighed = { note: Note; gated: boolean; gate: boolean };
+
 /**
- * Where segments start, by stretches of sound (silence between them is
- * no harmony), and the notes weighed: a stretch whose harmony voices
- * strike chords changes chord only where they do (the bass line is
- * weighed only as each chord's bass); a stretch of single lines cuts as
- * they start.
+ * The notes weighed in a stretch. Single lines (a stretch without
+ * attacks, or a lead-in) always. Past a lead-in, the harmony voices only
+ * while two or more notes struck in its attacks sound: so a fill after
+ * a stab, or a pedal under it, doesn't rename the chord; the bass line
+ * not at all (each chord keeps its bass's pitch class).
  */
+function weighedIn(
+	notes: Note[],
+	stretch: Group[],
+	begin: number | null,
+	line: number | null,
+): Weighed[] {
+	const out: Weighed[] = [];
+	for (const g of stretch)
+		for (const note of notes.slice(g.from, g.to)) {
+			if (begin === null || g.start < begin) out.push({ note, gated: false, gate: false });
+			else if (streamOf(note) !== line) out.push({ note, gated: true, gate: g.attack !== null });
+		}
+	return out;
+}
+
+/** Where segments start, by stretches of sound (silence between them is no harmony), and the notes weighed. */
 function cutsOf(notes: Note[], window: number, grid: Grid) {
 	const groups = groupsOf(notes, window);
-	const bass = bassStreamOf(notes, groups);
-	markAttacks(notes, groups, bass);
+	const found = bassLine(notes);
+	const line = found && found.track * 16 + found.channel;
+	markGroups(notes, groups, line);
 	const cuts: Cut[] = [];
-	const weighed: Note[] = [];
+	const weighed: Weighed[] = [];
 	for (let g = 0; g < groups.length; ) {
 		const { stretch, reach } = stretchFrom(groups, g);
 		const voiced = stretch.some((x) => x.attack !== null);
 		cuts.push({ at: (stretch[0] as Group).start, harmony: true });
-		if (voiced) voiceCuts(stretch, grid, cuts);
-		else lineCuts(stretch, cuts);
+		const begin = voiced ? voiceCuts(stretch, grid, window, cuts) : null;
+		if (!voiced) lineCuts(stretch, cuts);
 		cuts.push({ at: reach, harmony: false });
-		for (const n of notes.slice(stretch[0]?.from, stretch.at(-1)?.to))
-			if (!voiced || streamOf(n) !== bass) weighed.push(n);
+		weighed.push(...weighedIn(notes, stretch, begin, line));
 		g += stretch.length;
 	}
 	return { cuts, weighed };
@@ -237,23 +335,69 @@ function segmentsOf(cuts: Cut[], from: number, to: number): Segment[] {
 	return segments;
 }
 
-/** Each segment's time per pitch class: one sweep over note starts and ends. */
-function weigh(notes: Note[], segments: Segment[]) {
-	const points = pitchClassPoints(notes);
-	const counts = new Array<number>(12).fill(0);
-	let k = 0;
-	let last = segments[0]?.start ?? 0;
-	const add = (to: number) => {
-		const weights = segments[k]?.weights;
-		if (weights === undefined) return;
-		for (let pc = 0; pc < 12; pc++)
-			weights[pc] = (weights[pc] ?? 0) + (counts[pc] ?? 0) * (to - last);
-		last = to;
+type Point = { at: number; pc: number; step: number; gated: boolean; gate: boolean };
+
+function pointsOf(weighed: Weighed[]): Point[] {
+	return weighed
+		.flatMap(({ note: n, gated, gate }) => [
+			{ at: n.start, pc: n.pitch % 12, step: 1, gated, gate },
+			{ at: n.end, pc: n.pitch % 12, step: -1, gated, gate },
+		])
+		.sort((a, b) => a.at - b.at);
+}
+
+/**
+ * Each segment's time per pitch class: one sweep over the weighed notes'
+ * starts and ends; gated notes count while two or more gate notes sound.
+ * A segment with nothing weighed (the bass moved under a chord whose
+ * voices rest) takes the sound of the segment before it.
+ */
+function weigh(weighed: Weighed[], segments: Segment[]) {
+	const sweep: Sweep = {
+		always: new Array<number>(12).fill(0),
+		gated: new Array<number>(12).fill(0),
+		gate: 0,
+		last: segments[0]?.start ?? 0,
 	};
-	for (const p of points) {
-		for (let s = segments[k]; s !== undefined && s.end <= p.at; s = segments[++k]) add(s.end);
-		if (p.at > last) add(p.at);
-		counts[p.pc] = (counts[p.pc] ?? 0) + p.step;
+	let k = 0;
+	for (const p of pointsOf(weighed)) {
+		k = sweepTo(segments, k, sweep, p.at);
+		const counts = p.gated ? sweep.gated : sweep.always;
+		counts[p.pc] = (counts[p.pc] as number) + p.step;
+		sweep.gate += p.gate ? p.step : 0;
+	}
+	carryWeights(segments);
+}
+
+/** Weighs every segment up to `at`, from segment `k`; returns the segment holding `at`. */
+function sweepTo(segments: Segment[], k: number, sweep: Sweep, at: number): number {
+	let i = k;
+	for (let s = segments[i]; s !== undefined && s.end <= at; s = segments[++i])
+		addTo(s, sweep, s.end);
+	const s = segments[i];
+	if (s !== undefined && at > sweep.last) addTo(s, sweep, at);
+	return i;
+}
+
+/** What sounds in the sweep: per pitch class, notes always weighed and gated ones; gate notes sounding; the tick weighed to. */
+type Sweep = { always: number[]; gated: number[]; gate: number; last: number };
+
+/** Adds to `s` what sounds from the sweep's last tick to `to`; gated notes only while the gate is open. */
+function addTo(s: Segment, sweep: Sweep, to: number) {
+	const open = sweep.gate >= 2 ? 1 : 0;
+	const span = to - sweep.last;
+	s.weights = s.weights.map(
+		(w, pc) => w + ((sweep.always[pc] as number) + open * (sweep.gated[pc] as number)) * span,
+	);
+	sweep.last = to;
+}
+
+/** A harmony segment with nothing weighed takes the weights of the harmony segment just before it. */
+function carryWeights(segments: Segment[]) {
+	for (const [i, s] of segments.entries()) {
+		const before = segments[i - 1];
+		if (s.harmony && before?.harmony && s.weights.every((w) => w === 0))
+			s.weights = [...before.weights];
 	}
 }
 

@@ -74,10 +74,8 @@ describe("property", () => {
 		expect(failed).toEqual([]);
 	});
 
-	// todo until the Task 12 segmentation fix lands: with each note-on up to ±60 ticks, one chord's
-	// notes spread up to a 16th, past the 32nd attack window, so its bass falls out of the first
-	// attack (`G/D`, `A/C#`, `Bm/D` for `G`, `A`, `Bm` in "sections" and the others)
-	test.todo("jitter and legato change nothing", () => {
+	// each note-on up to ±60 ticks spreads one chord's notes over a 16th: the attack window
+	test("jitter and legato change nothing", () => {
 		const failed: string[] = [];
 		for (const [name, chart] of GENERATOR_FORM) {
 			const out = exportMidi(chart);

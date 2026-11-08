@@ -11,13 +11,14 @@ import { readSmf } from "../src/smf/read.js";
 
 const PPQ = 480;
 const BAR = 1920;
-/** A 32nd note: the attack window. */
-const ATTACK = PPQ / 8;
+/** A 16th note: the attack window. */
+const ATTACK = PPQ / 4;
 
 const C2 = 36;
 const E2 = 40;
 const G2 = 43;
 const A2 = 45;
+const B2 = 47;
 const C3 = 48;
 const G3 = 55;
 const B3 = 59;
@@ -51,18 +52,8 @@ const chord = (pitches: number[], start: number, end: number): Note[] =>
 /** A key in force from `tick` (its scale isn't read here). */
 const keyAt = (tick: number, name: string): KeyAt => ({ tick, name, scale: new Set() });
 
-/** `count` different sounds: a bass and two to seven pitch classes above it. */
-function differentSounds(count: number): number[][] {
-	const sounds: number[][] = [];
-	for (let mask = 1; mask < 4096; mask++) {
-		const pcs = [...Array(12).keys()].filter((pc) => mask & (1 << pc));
-		if (pcs.length < 2 || pcs.length > 7) continue;
-		for (let bass = 0; bass < 12; bass++)
-			if (!pcs.includes(bass)) sounds.push([24 + bass, ...pcs.map((pc) => 60 + pc)]);
-		if (sounds.length >= count) break;
-	}
-	return sounds.slice(0, count);
-}
+/** The 1-based 4/4 bar holding `tick`. */
+const barOf = (tick: number) => Math.floor(tick / BAR) + 1;
 
 /** The runs over `bars` bars, by the harmony's start order. */
 function runs(harmony: Note[], bars = 1, keys: KeyAt[] = [], report: Report = createReport()) {
@@ -81,14 +72,14 @@ describe("chordRuns", () => {
 		);
 	});
 
-	test("a strum is one attack, its bass the lowest note struck within a 32nd", () => {
+	test("a strum is one attack, its bass the lowest note struck within a 16th", () => {
 		// struck from the top: the bass, C4, comes last
 		expect(runs([note(G4, 0, BAR), note(E4, 20, BAR), note(C4, 40, BAR)])).toEqual([
 			{ start: 0, end: BAR, symbol: "C" },
 		]);
 	});
 
-	test("two notes starting within a 32nd are an attack; a 32nd apart, they are not", () => {
+	test("two notes starting within a 16th are an attack; a 16th apart, they are not", () => {
 		// C2 C4 E4 G4 held two bars; F4 and A4 enter in bar 2 (C E F G A over C)
 		const enter = (gap: number) =>
 			symbols(
@@ -101,7 +92,7 @@ describe("chordRuns", () => {
 			);
 		expect(enter(ATTACK - 1)).toEqual(["C", "Fmaj9/C"]);
 		// each enters alone over the held chord, a melody note: no new chord, and over the two
-		// bars A (1,860 of C's 7,680) is passing
+		// bars A (1,800 of C's 7,680) is passing
 		expect(enter(ATTACK)).toEqual(["C(11)"]);
 	});
 
@@ -351,16 +342,31 @@ describe("chordRuns", () => {
 			expect(symbols(thinned)).toEqual(["Cmaj7"]);
 		});
 
-		test("a bass tied over the bar line is the bass of a change placed there", () => {
-			// as Dm7 to G7 above, but G2 enters on beat 4 and is held into bar 2
+		test("a change after a rest moves to the bar line only where the bass moved there", () => {
+			// G2 enters on beat 4 and is held to bar 2 beat 3: nothing moves at the bar line, so G7
+			// starts at its stab on beat 2, over the held G2
 			const tied = [
 				...walk([38, 41, 45]),
-				bassNote(G2, 1440, BAR + 480),
+				bassNote(G2, 1440, BAR + 960),
 				...stabs([F4, A4, 72]),
-				...walk([47, 50, 53], 1).map((n) => ({ ...n, start: n.start + 480, end: n.end + 480 })),
+				bassNote(B2, BAR + 960, BAR + 1440),
+				bassNote(53, BAR + 1440, 2 * BAR),
 				...stabs([B3 + 12, 74, 77], 1),
-			].filter((n) => n.end <= 2 * BAR);
-			expect(symbols(tied, 2)).toEqual(["Dm7", "G7"]);
+			];
+			expect(runs(tied, 2)).toEqual([
+				{ start: 0, end: BAR + 480, symbol: "Dm7" },
+				{ start: BAR + 480, end: 2 * BAR, symbol: "G7" },
+			]);
+			// a pedal C2 under a C stab (bar 1, beat 1) and a G stab (bar 2, beat 3): G/C on beat 3
+			const pedal = [
+				bassNote(C2, 0, 2 * BAR),
+				...chord([C4, E4, G4], 0, 480),
+				...chord([G3, B3, D4], BAR + 960, BAR + 1440),
+			];
+			expect(runs(pedal, 2)).toEqual([
+				{ start: 0, end: BAR + 960, symbol: "C" },
+				{ start: BAR + 960, end: 2 * BAR, symbol: "G(11)/C" },
+			]);
 		});
 
 		test("single lines with no chord struck cut where they strike together or start afresh", () => {
@@ -375,6 +381,177 @@ describe("chordRuns", () => {
 			// a broken chord from silence reads note by note (spec 5.5's known limit)
 			const broken = [C3, E4, G4].map((p, i) => note(p, i * 480, (i + 1) * 480));
 			expect(symbols(broken)).toEqual(["{C}", "{E}", "{G}", "N.C."]);
+		});
+
+		test("a re-strike that changes the voicing in any way is a new chord (fix round 2)", () => {
+			// Task 13b's: each chord struck from its bass, D5 and C5 after D7sus4
+			expect(symbols(fromChart("Pno | D7sus4 | D5 | C5 |"), 3)).toEqual(["D7sus4", "D5", "C5"]);
+			expect(symbols(fromChart("Pno | Am7 | C | G7 | G |"), 4)).toEqual(["Am7", "C", "G7", "G"]);
+			// a new top note, all struck again: C then C7, whatever the octave of the Bb
+			const top = [
+				...chord([C3, C4, E4, G4], 0, BAR),
+				...chord([C3, C4, E4, G4, 70], BAR, 2 * BAR),
+			];
+			expect(symbols(top, 2)).toEqual(["C", "C7"]);
+			// dropping only, struck from the bottom inside a bar: Cmaj7 then C
+			const inside = [...chord([C3, E4, G4, 71], 0, 960), ...chord([C3, E4, G4], 960, BAR)];
+			expect(symbols(inside)).toEqual(["Cmaj7", "C"]);
+			// Task 13b's: a guitar's dyad struck from its own lowest note over the piano's held D/F#
+			const piano = chord([42, 62, 66, 69], 0, BAR);
+			const guitar = (pitches: number[], start: number) =>
+				pitches.map((p) => ({ ...note(p, start, start + 480), track: 3 }));
+			const dyads = [...piano, ...guitar([E4, 71], 960), ...guitar([D4, A4], 1440)];
+			expect(runs(dyads)).toEqual([
+				{ start: 0, end: 960, symbol: "D/F#" },
+				{ start: 960, end: 1440, symbol: "D6/9/F#" },
+				{ start: 1440, end: BAR, symbol: "D/F#" },
+			]);
+		});
+
+		test("the bass moving to a new pitch class at a bar line under the same voicing is a new chord", () => {
+			// one track: C/E then C/G
+			const slash = [...chord([E2, C4, E4, G4], 0, BAR), ...chord([G2, C4, E4, G4], BAR, 2 * BAR)];
+			expect(symbols(slash, 2)).toEqual(["C/E", "C/G"]);
+			// a held pad over a bass line C | F: the slash at bar 2
+			const pad = [
+				...chord([C4, E4, G4], 0, 2 * BAR),
+				bassNote(C2, 0, BAR),
+				bassNote(41, BAR, 2 * BAR),
+			];
+			expect(runs(pad, 2).map((r) => [r.start, r.symbol])).toEqual([
+				[0, "C"],
+				[BAR, "C(11)/F"],
+			]);
+			// inside a bar the walking bass moves nothing (as above): one chord
+			expect(symbols([...walk([C2, E2, G2, A2]), ...chord([E4, G4, B3 + 12], 0, BAR)])).toEqual([
+				"Cmaj7",
+			]);
+		});
+
+		test("a stab's chord is named from what sounds with it, not a fill after it", () => {
+			// C stab a quarter, then C5 B4 A4 single notes (one track; then over a bass line)
+			const fill = [
+				...chord([C3, E4, G4], 0, 480),
+				note(72, 480, 960),
+				note(71, 960, 1440),
+				note(A4, 1440, BAR),
+			];
+			expect(symbols(fill)).toEqual(["C"]);
+			expect(symbols([bassNote(C2, 0, BAR), ...fill])).toEqual(["C"]);
+			// a pedal C2 on the chord's own track, under a quarter stab: still C
+			expect(symbols([note(C2, 0, BAR), ...chord([C4, E4, G4], 0, 480)])).toEqual(["C"]);
+		});
+
+		test("a bass leading in across a bar line reads alone (Task 13b)", () => {
+			// `| {D2} | / | / | / | D |`: the chord starts at its bar, the pedal before it reads alone
+			const intro = [note(38, 0, 4 * BAR), ...chord([50, 62, 66, 69], 4 * BAR, 5 * BAR)];
+			expect(runs(intro, 5)).toEqual([
+				{ start: 0, end: 4 * BAR, symbol: "{D}" },
+				{ start: 4 * BAR, end: 5 * BAR, symbol: "D" },
+			]);
+			// the voices entering on beat 2: the chord still starts at the bar line, over the held D2
+			const late = [note(38, 0, 5 * BAR), ...chord([62, 66, 69], 4 * BAR + 480, 5 * BAR)];
+			expect(runs(late, 5)).toEqual([
+				{ start: 0, end: 4 * BAR, symbol: "{D}" },
+				{ start: 4 * BAR, end: 5 * BAR, symbol: "D" },
+			]);
+		});
+
+		test("a grace note doesn't lose the bass line", () => {
+			// C2 E2, an F2 grace 30 ticks into G2 (two starts within the window), A2
+			const grace = [
+				bassNote(C2, 0, 480),
+				bassNote(E2, 480, 930),
+				bassNote(41, 930, 960),
+				bassNote(G2, 960, 1440),
+				bassNote(A2, 1440, BAR),
+			];
+			expect(symbols([...grace, ...chord([E4, G4, 71], 0, BAR)])).toEqual(["Cmaj7"]);
+			expect(symbols([...grace, ...stabs([E4, G4, 71])])).toEqual(["Cmaj7"]);
+		});
+
+		test("a thinner re-strike at a bar line is a new chord", () => {
+			// C3 held two bars; E4 G4 B4 then E4 G4 at bar 2, above the chord's lowest voice
+			const thin = [
+				note(C3, 0, 2 * BAR),
+				...chord([E4, G4, 71], 0, BAR),
+				...chord([E4, G4], BAR, 2 * BAR),
+			];
+			expect(symbols(thin, 2)).toEqual(["Cmaj7", "C"]);
+		});
+
+		test("a thinner voicing is judged per stream", () => {
+			// a guitar first strikes G4 B4 in the piano's carried Cmaj7, then B4 E5 above its own G4
+			// as the piano stops: carried. A guitar never heard in the chord striking E4 G4: a new one
+			const gtr = (pitches: number[], start: number, end: number) =>
+				pitches.map((p) => ({ ...note(p, start, end), track: 3 }));
+			const carried = [
+				...chord([C3, E4, G4, 71], 0, 960),
+				...gtr([G4, 71], 480, 960),
+				...gtr([71, E5], 960, BAR),
+			];
+			expect(symbols(carried)).toEqual(["Cmaj7"]);
+			const fresh = [...chord([C3, E4, G4, 71], 0, 960), ...gtr([E4, G4], 960, BAR)];
+			expect(runs(fresh).map((r) => r.start)).toEqual([0, 960]);
+		});
+
+		test("a bass struck a little off the bar line still moves the chord there", () => {
+			// a held C E G over E2, then G2 struck 40 ticks late
+			const late = [
+				...chord([C4, E4, G4], 0, 2 * BAR),
+				bassNote(E2, 0, BAR + 40),
+				bassNote(G2, BAR + 40, 2 * BAR),
+			];
+			expect(runs(late, 2).map((r) => [r.start, r.symbol])).toEqual([
+				[0, "C/E"],
+				[BAR + 40, "C/G"],
+			]);
+		});
+
+		test("a bass moving at a bar line while the voices rest keeps their chord", () => {
+			// a C stab, then the bass C2 to F2 at bar 2: the chord sounds on, over F
+			const rest = [
+				...chord([C4, E4, G4], 0, 480),
+				bassNote(C2, 0, BAR),
+				bassNote(41, BAR, 2 * BAR),
+			];
+			expect(symbols(rest, 2)).toEqual(["C", "C(11)/F"]);
+		});
+
+		test("the bass re-struck on its own pitch class moves nothing", () => {
+			// C2 struck each bar under a C stab, then a G stab on bar 2 beat 3: G starts there
+			const same = [
+				bassNote(C2, 0, BAR),
+				bassNote(C2, BAR, 2 * BAR),
+				...chord([C4, E4, G4], 0, 480),
+				...chord([G3, B3, D4], BAR + 960, BAR + 1440),
+			];
+			expect(runs(same, 2).map((r) => r.start)).toEqual([0, BAR + 960]);
+		});
+
+		test("a bass line note under a lower held note is no bass move", () => {
+			// the piano holds C2 and C E G, and B into bar 2; the bass line C1, then F2 at bar 2
+			// above the held C2: no move, one Cmaj7 (a cut at bar 2 would read B as passing there)
+			const piano = [
+				note(C2, 0, 2 * BAR),
+				...chord([C4, E4, G4], 0, 2 * BAR),
+				note(71, 0, BAR + 480),
+			];
+			const low = [...piano, bassNote(24, 0, BAR), bassNote(41, BAR, 2 * BAR)];
+			expect(symbols(low, 2)).toEqual(["Cmaj7"]);
+		});
+
+		test("a chord struck just before the bar line after a lead-in starts where struck", () => {
+			const early = [note(38, 0, 4 * BAR), ...chord([50, 62, 66, 69], 4 * BAR - 60, 5 * BAR)];
+			expect(runs(early, 5)).toEqual([
+				{ start: 0, end: 4 * BAR - 60, symbol: "{D}" },
+				{ start: 4 * BAR - 60, end: 5 * BAR, symbol: "D" },
+			]);
+		});
+
+		test("a written sustain pedal doesn't stop a chord changing", () => {
+			const pedalled = fromChart("Pno | +C | F | G | *C |");
+			expect(runs(pedalled, 4).map((r) => r.start)).toEqual([0, BAR, 2 * BAR, 3 * BAR]);
 		});
 
 		test("a single line above the chords is not the bass line", () => {
@@ -392,18 +569,22 @@ describe("chordRuns", () => {
 		});
 
 		test("at most 20,000 different names an import", () => {
-			// 20,001 sounds, each apart
-			const sounds = differentSounds(20_001);
-			const harmony = sounds.flatMap((pitches, i) => chord(pitches, i * 120, i * 120 + 100));
+			// one C held while the key changes 20,001 times: each key a different sound to name
+			const names = ["C", "G", "D", "A", "E", "F", "Bb", "Eb"];
+			const keys = Array.from({ length: 20_001 }, (_, i) => keyAt(i * 12, names[i % 8] as string));
+			const end = 20_001 * 12;
 			const report = createReport();
-			const bars = Math.ceil((sounds.length * 120) / BAR);
-			const out = runs(harmony, bars, [], report).filter((r) => r.symbol !== "N.C.");
-			expect(out.length).toBe(20_001);
+			const bars = Math.ceil(end / BAR);
+			const out = runs(chord([C4], 0, end), bars, keys, report);
+			// the first 20,000 named ({C}, merged), the last written ?
+			expect(out.slice(0, 2)).toEqual([
+				{ start: 0, end: 20_000 * 12, symbol: "{C}" },
+				{ start: 20_000 * 12, end, symbol: "?" },
+			]);
 			const capped = report.list.filter((d) => d.message.includes("20,000"));
-			expect(capped.map((d) => [d.code, d.bar])).toEqual([["chord-unnamed", bars]]);
-			expect(out.at(-1)?.symbol).toBe("?");
-			// one run capped, the last: the first 20,000 were named
-			expect(capped[0]?.message).not.toContain("times");
-		}, 60_000);
+			expect(capped.map((d) => [d.code, d.bar, d.message.includes("times")])).toEqual([
+				["chord-unnamed", barOf(20_000 * 12), false],
+			]);
+		});
 	});
 });

@@ -571,6 +571,10 @@ examples slot by slot.
   dropped. A bar spans its start up to but not including the next bar's
   start, so a note ending exactly on a bar line ends in the bar before
   it: ending at tick 1920 in 4/4 at 480, the grid ends at 1920.
+  A note ringing up to a 16th past a bar line (a legato release of the
+  last chord) ends there too, so it adds no bar of `N.C.`; a note struck
+  in a bar always keeps it (Claude's ruling, 2026-11-08, from Task 13b's
+  jitter test).
 - **A pickup:** the first bar is a pickup when it is shorter than the
   second and a time signature at the second bar changes the meter, as
   MuseScore writes one (1/4 then 3/4, section 8) and as the export writes
@@ -624,49 +628,76 @@ examples slot by slot.
 ### 5.5 Chords from notes: segments
 
 The harmony streams' notes are cut into **segments**, each one chord.
-**Chord boundaries come from the harmony voices, not the bass**
-(Claude's ruling, 2026-11-08, revising the first draft, under which a
-walking bass under off-beat comping read four symbols a bar, `Cmaj7
-{E} Cmaj7/G {A}`, and a melody note struck with a left-hand re-strike
-read as a new chord):
+**Chord boundaries come from the harmony voices; the bass line moves a
+chord only at a bar line** (Claude's ruling, 2026-11-08, fix round 2,
+revising round 1, whose carry merged real changes: `| C | C7 |`,
+`| Cmaj7 | C |` and Peaceful Dreams' `D7sus4` then `D5` each read one
+chord; round 1 had itself revised the first draft, under which a walking
+bass under off-beat comping read four symbols a bar):
 
 - **Stretches:** where every harmony note has stopped, a segment of
   **no harmony** begins; a note struck as the last one stops is no gap.
-- **The bass line** is the stream that never strikes two notes at once,
-  lowest on average, when it lies below every stream that plays chords
-  (MuseScore's piano: none, so every note is a harmony voice). Movement
-  in the bass line alone never starts a new chord.
+- **The bass line** is the harmony choice's lowest stream (5.2: lowest
+  at its 10th percentile, ties to the lower median) when it is a single
+  line (overlap under a tenth of its time), so a grace note or a slide
+  doesn't lose it; else none, and every note is a harmony voice
+  (MuseScore's piano). One helper, `bassLine` in `streams.ts`, serves
+  both.
 - An **attack** is two or more harmony-voice notes starting within a
-  32nd note of each other (a block chord, a strum, a stab). A stretch's
-  first chord starts with the stretch: a bass leading in belongs to the
-  chord the voices then play (`-- Fmaj7 -- Fmaj7` over `F2 A2 C3 D3` is
-  `Fmaj7` from beat 1). A later attack starts a new chord when it adds a
-  pitch class to the chord's sound (what the voices struck and still
-  hold at its start), unless the only one added is its top note while
-  the chord still sounds (a melody note on a re-strike: MuseScore's
-  `piano.mscx` bar 2 stays `Em`). A single note never starts a chord.
-  So a chord lasts until the voices' pitch-class set changes and carries
-  through their rests until they next sound; a change first heard after
-  such a rest starts at the last bar line in the rest, where the bass
-  moved to it (Dm7 to G7 as stabs on 2 and 4 over a walking bass changes
-  at the bar line, over G2, not on beat 2 over B2).
+  16th note of the first (a block chord, a strum, a stab, a chord whose
+  notes are each played up to a 32nd early or late: Claude's ruling,
+  2026-11-08, from Task 13b's jitter test). Its **sound** is the pitch
+  classes struck and those the voices still hold (to at least the first
+  struck note's end).
+- **A stretch's first chord** starts with the stretch, or, when a bar
+  line falls after the stretch starts and at or before its first attack,
+  at that bar line: what leads in before it reads note by note
+  (`| {D2} | / | / | / | D |` comes back as written; a ruling from Task
+  13b, accepted 2026-11-08).
+- **A later attack starts a new chord** when its sound differs from the
+  chord's in any way, a pitch class added or dropped. Two carry:
+  - inside a bar, a re-strike that only drops notes, each stream
+    striking above its own lowest voice in the chord (a thinner voicing:
+    Cmaj7 on beat 1, then E G on beat 3, stays `Cmaj7`; a guitar's dyad
+    over a piano's held chord is compared with the guitar's own notes);
+  - a lone new top note over a chord whose every pitch class is **held
+    from before**, not re-struck (a melody note: MuseScore's `piano.mscx`
+    bar 2 stays `Em`; `| C | C7 |` with the Bb on top re-strikes all, so
+    it cuts).
+  A written sustain pedal holds notes, but a changed sound still cuts.
+- **The bass:** where the bass line strikes a new pitch class **at a bar
+  line** (within the attack window of it) under the chord, a new chord
+  starts there, and `nameNotes` gives the slash (`C/E | C/G`, `Dm7 | F`,
+  `Cdim7 | Ebdim7`, a held pad over C F G C reads `C | C(11)/F | C/G |
+  C`). Inside a bar, the bass line moving never starts a chord (a
+  walking bass under held comping or off-beat stabs stays one chord).
+- **Rests:** a chord carries through its voices' rests until they next
+  strike. A change first heard after such a rest starts where the bass
+  moved at a bar line in the rest (Dm7 to G7 as stabs on 2 and 4 over a
+  walking bass changes at the bar line, over G2, not on beat 2 over B2);
+  where the bass didn't move, at the attack (a pedal C2 under a C stab
+  and a G stab on beat 3 of the next bar: `| C | / / G(11)/C / |`).
 - A stretch with no attack at all, single lines only, cuts where two
   notes start together or one starts as all others stop: it reads note
   by note.
 - **Different sounds** named an import are at most 20,000 (`nameNotes`
   costs up to a millisecond each, and a hostile file can make every
   segment different); past that, `?` with one `chord-unnamed`.
-- **What sounds in a segment:** each pitch class of the harmony voices
-  weighted by how long it sounds within the segment (the bass line counts
-  only as the chord's bass: its later notes under the chord are passing);
-  pitch classes under a quarter of the
-  strongest one's weight are passing tones, left out. The **bass** is the
-  lowest note struck at the segment's start (within the 32nd), or held
-  into it from before when it sounds at least until the first struck
-  note stops (a pedal point, a bass held under stabs); its pitch class
-  is always kept. So the tail of the chord before, played legato into
-  this one, is not its bass (Claude's ruling, 2026-11-08: a G2 held a
-  16th into a C chord made it `C/G`).
+- **What sounds in a segment:** each pitch class weighted by how long it
+  sounds within the segment. Past a stretch's lead-in, the harmony
+  voices count only while two or more notes struck in its attacks sound,
+  so single notes struck after a stab stops (a fill, `C` then `C5 B4
+  A4`) don't rename it; the bass line counts only as the chord's bass.
+  Single lines (a lead-in, a stretch without attacks) always count. A
+  segment where nothing counts (the bass moved at a bar line while the
+  voices rest) takes the sound of the one before it. Pitch classes under
+  a quarter of the strongest one's weight are passing tones, left out.
+  The **bass** is the lowest note struck at the segment's start (within
+  the window), or held into it from before when it sounds at least
+  until the first struck note stops (a pedal point, a bass held under
+  stabs); its pitch class is always kept. So the tail of the chord
+  before, played legato into this one, is not its bass (Claude's ruling,
+  2026-11-08: a G2 held a 16th into a C chord made it `C/G`).
 - **The name** comes from barmark's `nameNotes` (5.6). With none: a note
   set of the kept pitch classes when there are at most three (bass
   first, then upward, no octaves, spelled for the key), else `?`, warning
@@ -684,14 +715,15 @@ read as a new chord):
   sounding at the beat's start (sync 6.3): a chord pushed an eighth early
   ties its first beat and wins the next, so it comes back on the beat.
 
-The two numbers (a 32nd for an attack, a quarter of the strongest weight
+The two numbers (a 16th for an attack, a quarter of the strongest weight
 for a passing tone) are tuned against the fixtures; changing them is a
 FINDINGS entry. Known limits: a broken chord whose notes never overlap
 and start one at a time from silence reads note by note (each note a
-fresh start); a pedalled or held arpeggio reads as its chord. A change
-of inversion alone (the bass moving under the same voices) is no new
-chord, by the ruling above; a voice moving only its top note to a new
-pitch class over the chord still sounding is read as melody.
+fresh start); a pedalled or held arpeggio reads as its chord; under a
+written pedal the names are what the pedal holds (`| +C | F | G | *C |`
+reads `C | Fmaj9 | Dm13/F | C`, cut where written); a bass moving inside
+a bar under the same voices is no new chord; a voice moving only its top
+note to a new pitch class over a chord all held is read as melody.
 
 ### 5.6 Naming a chord: `nameNotes` in barmark
 

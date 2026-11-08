@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { type Note, notesOf } from "../src/import/notes.js";
 import { createReport } from "../src/import/report.js";
-import { harmonyNotes } from "../src/import/streams.js";
+import { bassLine, harmonyNotes } from "../src/import/streams.js";
 import type { MidiImportOptions } from "../src/import/types.js";
 import { readSmf, readSmfInto } from "../src/smf/read.js";
 import type { Smf } from "../src/smf/types.js";
@@ -565,5 +565,36 @@ describe("createReport", () => {
 		expect(r.diagnostics.map((d) => d.message)).toEqual([
 			"a key signature outside 7 flats to 7 sharps, major or minor, ignored (2 times)",
 		]);
+	});
+});
+
+describe("bassLine", () => {
+	const line = (track: number, pitches: number[], step = 480) =>
+		pitches.map((p, i) => note(track, p, i * step, (i + 1) * step));
+	const chords = (track: number, pitches: number[]) =>
+		[0, 1, 2, 3].flatMap((i) => pitches.map((p) => note(track, p, i * 480, (i + 1) * 480)));
+
+	test("the lowest stream, when it is a single line", () => {
+		const piano = chords(1, [48, 60, 64, 67]);
+		const bass = line(2, [36, 40, 43, 45]);
+		expect(bassLine([...piano, ...bass])).toEqual({ track: 2, channel: 0 });
+		// a chordal lowest stream is no bass line
+		expect(bassLine([...chords(1, [36, 60, 64]), ...line(2, [48, 50, 52, 53])])).toBe(null);
+	});
+
+	test("one grace note doesn't make it chordal (under 10% together)", () => {
+		// F2 a 30-tick grace overlapping G2's start by 10 ticks
+		const bass = [
+			...line(2, [36, 40]),
+			note(2, 41, 930, 970),
+			...line(2, [43, 45]).map((n) => ({ ...n, start: n.start + 960, end: n.end + 960 })),
+		];
+		expect(bassLine([...chords(1, [52, 55, 59]), ...bass])).toEqual({ track: 2, channel: 0 });
+	});
+
+	test("the lowest is chosen at its 10th percentile, as the harmony choice does", () => {
+		// a pad with one stray low hit is not lower than the bass line
+		const pad = [...chords(1, [55, 59, 62]), note(1, 24, 0, 30)];
+		expect(bassLine([...pad, ...line(2, [33, 35, 36, 38])])).toEqual({ track: 2, channel: 0 });
 	});
 });
