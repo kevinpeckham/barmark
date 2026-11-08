@@ -196,12 +196,26 @@ describe("withLyrics", () => {
 
 	test("holds and breaths", () => {
 		const r = rows(
-			3,
-			[lyric(0, "la "), lyric(3 * BEAT, "di ")],
-			// la sounds through beat 2; nothing on beat 3; di is held into bar 2.
-			[sung(0, 2 * BEAT), sung(3 * BEAT, BAR + BEAT)],
+			4,
+			[
+				lyric(0, "la "),
+				lyric(3 * BEAT, "di "),
+				lyric(3 * BAR, "do "),
+				lyric(3 * BAR + 3 * BEAT, "re "),
+			],
+			[
+				// la sounds through beat 2; nothing on beat 3; di is held into bar 2.
+				sung(0, 2 * BEAT),
+				sung(3 * BEAT, BAR + BEAT),
+				// Another track's note sounding through bar 3 holds nothing.
+				{ ...sung(2 * BAR, 3 * BAR), track: 3 },
+				// A note struck with no syllable of its own (beat 3) holds from its start.
+				sung(3 * BAR, 3 * BAR + BEAT),
+				sung(3 * BAR + 2 * BEAT, 3 * BAR + 3 * BEAT),
+				sung(3 * BAR + 3 * BEAT, 4 * BAR),
+			],
 		);
-		expect(r.text).toBe(expected(3, "lyrics: | la / -- di | / | -- |"));
+		expect(r.text).toBe(expected(4, "lyrics: | la / -- di | / | -- | do -- / re |"));
 	});
 
 	test("hostile syllables", () => {
@@ -260,6 +274,25 @@ describe("withLyrics", () => {
 		);
 		expect(wrong.text).toBe(expected(1, "lyrics: | Hap- py |"));
 		expect(wrong.diagnostics.map((d) => d.code)).toEqual(["lyrics-dropped"]);
+		// A syllable sung where none was placed fails too.
+		const extra = rows(2, [lyric(0, "a "), lyric(0, "b ")], [], (verse, row) =>
+			verse === 2 ? row.replace("--", "x") : row,
+		);
+		expect(extra.text).toBe(expected(2, "lyrics: | a | -- |"));
+		expect(extra.diagnostics.map((d) => d.message)).toEqual([
+			"the lyric rows of verse 2 failed the import's check and are left out",
+		]);
+		// An error on no row: the last verse goes first, then the next.
+		const stray = rows(1, events, [], (verse, row) => (verse === 1 ? `${row}\ntime: 99/0` : row));
+		expect(stray.text).toBe(stray.chart);
+		expect(stray.diagnostics.map((d) => d.message.match(/verse \d/)?.[0])).toEqual([
+			"verse 2",
+			"verse 1",
+		]);
+		// Rows that add a bar change the chart, so they fail even singing as placed.
+		const bar = rows(1, [lyric(0, "a ")], [], (_, row) => `${row}\n| C |`);
+		expect(bar.text).toBe(bar.chart);
+		expect(bar.diagnostics.map((d) => d.code)).toEqual(["lyrics-dropped"]);
 		// Every verse failing: the chart as it came, one warning a verse.
 		const all = rows(1, events, [], (_, row) => row.replace("|", "| {"));
 		expect(all.text).toBe(all.chart);
