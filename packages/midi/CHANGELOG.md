@@ -107,7 +107,7 @@ package uses [semantic versioning](https://semver.org/).
   assigned by order at each tick; when the number of lyrics at a tick
   varies, `lyrics-verses-uncertain` warns that verses may be mixed. A
   karaoke file with no lyric events gives its text events as lyrics.
-  Before a verse's first syllable a slot is `--`. At most 200,000 lyric
+  Before a verse's first syllable a slot is `--`. At most 20,000 lyric
   rows are written; later verses are left out (`lyrics-dropped`).
 - **`readSmf(bytes)`**: the Standard MIDI File reader import uses, with
   its diagnostics: format, division and tracks of absolute-tick events

@@ -180,7 +180,7 @@ is an error, and otherwise parses with no errors.
   while the track's notes sound, else `--` (also before a verse's first
   syllable); a breath shorter than that grid's slot is lost. Characters a
   row can't hold as a syllable (`|`, `"`, braces, `_`) are removed. At
-  most 200,000 rows are written. The chart is checked before it is
+  most 20,000 rows are written. The chart is checked before it is
   returned: a verse whose rows don't read back as placed is left out
   (`lyrics-dropped`), never the chords.
 - **Markers** become `## ` headings, on the bar line nearest them; two

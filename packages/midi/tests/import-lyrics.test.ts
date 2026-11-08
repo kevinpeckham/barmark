@@ -369,9 +369,9 @@ describe("withLyrics", () => {
 		noErrors(r.text);
 	});
 
-	test("at most 200,000 lyric rows: later verses are left out", () => {
-		// 100 verses each singing under 2,001 one-bar lines: the 100th would make 200,100 rows.
-		const lines = Array.from({ length: 2001 }, (_, i) => ({ bars: [i] }));
+	test("at most 20,000 lyric rows: later verses are left out", () => {
+		// 100 verses each singing under 201 one-bar lines: the 100th would make 20,100 rows.
+		const lines = Array.from({ length: 201 }, (_, i) => ({ bars: [i] }));
 		const sings = new Map(lines.map((_, i) => [i, { text: "a", sings: ["0 a"] }]));
 		const cells = new Map(Array.from({ length: 100 }, (_, v) => [v + 1, sings]));
 		let dropped = 0;

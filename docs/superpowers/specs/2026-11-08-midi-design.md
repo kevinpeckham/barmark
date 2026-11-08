@@ -870,7 +870,7 @@ which the grammar allows.
   tick). MIDI has no verse number, so a verse that holds where another
   sings takes the other's place; when the number of lyrics at a tick
   varies within the track, one `lyrics-verses-uncertain` warning says
-  verses may be mixed. At most 200,000 rows (a verse under a bar line)
+  verses may be mixed. At most 20,000 rows (a verse under a bar line)
   are written; later verses are left out (`lyrics-dropped`).
 - **Syllables:** a syllable continues its word (`-`) unless its text ends
   in whitespace, or the next syllable of its verse begins with
@@ -924,7 +924,7 @@ which the grammar allows.
 | `harmony-from-melody` | warning | only melody streams; used anyway |
 | `track-unknown` | warning | an `options.tracks` entry matching nothing |
 | `chord-unnamed` | warning | `?` written for unnameable notes |
-| `lyrics-dropped` | warning | the lyric rows failed the self-check, or past a bound of 5.8 |
+| `lyrics-dropped` | warning | the lyric rows failed the self-check, or past a bound of 5.8 (100 verses at a tick, 20,000 rows) |
 | `lyrics-verses-uncertain` | warning | the number of lyrics at a tick varies, so verses may be mixed (5.8) |
 | `unknown-chunk`, `drums-left-out`, `melody-left-out`, `tempo-ramp`, `tempo-in-bar`, `marker-dropped`, `lyrics-other-tracks` | info | as above |
 

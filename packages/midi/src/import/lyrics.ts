@@ -34,10 +34,11 @@ const MAX_VERSES = 100;
 
 /**
  * The most lyric rows written, a verse under a bar line each (the
- * coordinator's ruling, Task 14 fix round 1): 100 verses under 2,500
- * bar lines would take import half a minute; later verses are left out.
+ * coordinator's ruling, Task 14 fix round 1): a real song needs a few
+ * thousand at most, and 200,000 rows took 20 s and 4 GB; later verses
+ * are left out.
  */
-const MAX_ROWS = 200_000;
+const MAX_ROWS = 20_000;
 
 /** A lyric event's text at its tick, in its verse. */
 type Raw = { tick: number; verse: number; text: string };
