@@ -36,18 +36,36 @@ function rank(event: SmfEvent): number {
 	}
 }
 
-function eventBytes(event: SmfEvent): number[] {
+/** `n` itself when it is a whole number from 0 to `max`; a RangeError otherwise (the writer is internal). */
+function within(n: number, max: number, what: string): number {
+	if (!Number.isInteger(n) || n < 0 || n > max)
+		throw new RangeError(`SMF ${what} must be a whole number from 0 to ${max}: ${n}`);
+	return n;
+}
+const data = (n: number) => within(n, 0x7f, "data byte");
+const status = (base: number, channel: number) => base | within(channel, 15, "channel");
+
+/** The event's bytes, appended to `out` one by one: a payload is never spread into a call. */
+function writeEvent(event: SmfEvent, out: number[]): void {
 	switch (event.kind) {
 		case "on":
-			return [0x90 | event.channel, event.pitch, event.velocity];
 		case "off":
-			return [0x80 | event.channel, event.pitch, event.velocity];
+			out.push(
+				status(event.kind === "on" ? 0x90 : 0x80, event.channel),
+				data(event.pitch),
+				data(event.velocity),
+			);
+			return;
 		case "program":
-			return [0xc0 | event.channel, event.program];
+			out.push(status(0xc0, event.channel), data(event.program));
+			return;
 		case "control":
-			return [0xb0 | event.channel, event.control, event.value];
+			out.push(status(0xb0, event.channel), data(event.control), data(event.value));
+			return;
 		case "meta":
-			return [0xff, event.type, ...writeVlq(event.data.length), ...event.data];
+			out.push(0xff, within(event.type, 0x7f, "meta type"));
+			for (const byte of writeVlq(event.data.length)) out.push(byte);
+			for (const byte of event.data) out.push(byte);
 	}
 }
 
@@ -66,7 +84,8 @@ function trackBytes(track: SmfEvent[]): number[] {
 	const bytes: number[] = [];
 	let tick = 0;
 	for (const event of ordered(track)) {
-		bytes.push(...writeVlq(event.tick - tick), ...eventBytes(event));
+		for (const byte of writeVlq(event.tick - tick)) bytes.push(byte);
+		writeEvent(event, bytes);
 		tick = event.tick;
 	}
 	return bytes;
@@ -104,9 +123,21 @@ export function metaText(tick: number, type: number, text: string): SmfEvent {
 	return meta(tick, type, utf8.encode(text));
 }
 
-/** A tempo, in quarters a minute, as whole microseconds a quarter within SMF's 24 bits. */
+/**
+ * A tempo in quarters a minute as whole microseconds a quarter, clamped to
+ * SMF's 24 bits (1 to 0xffffff); `clamped` says it was out of range. A qpm
+ * of 0, below 0 or NaN is clamped to the slowest.
+ */
+export function tempoMicros(qpm: number): { micros: number; clamped: boolean } {
+	if (!(qpm > 0)) return { micros: 0xffffff, clamped: true };
+	const exact = Math.round(60_000_000 / qpm);
+	const micros = Math.min(0xffffff, Math.max(1, exact));
+	return { micros, clamped: micros !== exact };
+}
+
+/** A tempo meta event, in quarters a minute (clamped as `tempoMicros` says). */
 export function tempoMeta(tick: number, qpm: number): SmfEvent {
-	const micros = Math.min(0xffffff, Math.max(1, Math.round(60_000_000 / qpm)));
+	const { micros } = tempoMicros(qpm);
 	return meta(tick, 0x51, [(micros >> 16) & 0xff, (micros >> 8) & 0xff, micros & 0xff]);
 }
 

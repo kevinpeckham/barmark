@@ -11,6 +11,6 @@ npm install @barmark/midi
 
 Work in progress: nothing is exported yet.
 
-## Licence
+## License
 
 MIT

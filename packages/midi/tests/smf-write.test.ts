@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { parseMidi } from "midi-file";
 import type { Smf, SmfEvent } from "../src/smf/types.js";
 import { writeVlq } from "../src/smf/vlq.js";
-import { keyMeta, metaText, tempoMeta, timeMeta, writeSmf } from "../src/smf/write.js";
+import { keyMeta, metaText, tempoMeta, tempoMicros, timeMeta, writeSmf } from "../src/smf/write.js";
 
 const LYRIC = 0x05;
 const MARKER = 0x06;
@@ -46,6 +46,11 @@ describe("VLQ", () => {
 		expect(writeVlq(0x2000)).toEqual([0xc0, 0x00]);
 		expect(writeVlq(0x3fff)).toEqual([0xff, 0x7f]);
 		expect(writeVlq(0x0fffffff)).toEqual([0xff, 0xff, 0xff, 0x7f]);
+	});
+
+	test("VLQ takes only whole numbers from 0 to 0x0fffffff", () => {
+		for (const n of [-1, 0.5, 0x10000000, Number.NaN])
+			expect(() => writeVlq(n)).toThrow(RangeError);
 	});
 });
 
@@ -172,13 +177,67 @@ describe("writeSmf", () => {
 		]);
 	});
 
-	test("a long track writes (no argument-list limits)", () => {
+	test("an end-of-track given before the last event moves to the last event", () => {
+		const end: SmfEvent = { tick: 240, kind: "meta", type: 0x2f, data: new Uint8Array() };
+		const events =
+			readBack(writeSmf({ format: 0, ppq: 480, tracks: [[on(0, 60), end, off(960, 60)]] }))
+				.tracks[0] ?? [];
+		expect(events.map((e) => [e.tick, e.type])).toEqual([
+			[0, "noteOn"],
+			[960, "noteOff"],
+			[960, "endOfTrack"],
+		]);
+	});
+
+	test("channels and data bytes out of range are refused", () => {
+		const bad: SmfEvent[] = [
+			{ tick: 0, kind: "on", channel: 16, pitch: 60, velocity: 80 },
+			{ tick: 0, kind: "on", channel: -1, pitch: 60, velocity: 80 },
+			{ tick: 0, kind: "on", channel: 0, pitch: 128, velocity: 80 },
+			{ tick: 0, kind: "off", channel: 0, pitch: 60, velocity: 1.5 },
+			{ tick: 0, kind: "program", channel: 0, program: 128 },
+			{ tick: 0, kind: "control", channel: 0, control: 7, value: -1 },
+			{ tick: 0, kind: "meta", type: 0x80, data: new Uint8Array() },
+		];
+		for (const event of bad)
+			expect(() => writeSmf({ format: 0, ppq: 480, tracks: [[event]] })).toThrow(RangeError);
+	});
+
+	// Node throws on about 130,000 spread call arguments, Bun on about 1,000,000:
+	// a megabyte payload fails under both if any byte array is spread into a call.
+	test("a megabyte meta event writes (no argument-list limits)", () => {
+		const data = new Uint8Array(1_000_000).fill(0x61);
+		const bytes = writeSmf({
+			format: 0,
+			ppq: 480,
+			tracks: [[{ tick: 0, kind: "meta", type: 0x01, data }]],
+		});
+		// midi-file can't read it back (it spreads the text into String.fromCharCode), so check the bytes.
+		const body = [0x00, 0xff, 0x01, ...writeVlq(1_000_000)];
+		expect(body).toEqual([0x00, 0xff, 0x01, 0xbd, 0x84, 0x40]);
+		expect(bytes.length).toBe(14 + 8 + body.length + 1_000_000 + 4);
+		expect(Array.from(bytes.subarray(22, 28))).toEqual(body);
+		expect(bytes.subarray(28, 28 + 1_000_000).every((b) => b === 0x61)).toBe(true);
+		expect(hex(bytes.subarray(-4))).toBe("00ff2f00");
+	});
+
+	test("a track of 200,000 events writes", () => {
 		const track = Array.from({ length: 200_000 }, (_, i) =>
 			i % 2 ? off(i * 240, 60) : on(i * 240, 60),
 		);
 		const events = readBack(writeSmf({ format: 0, ppq: 480, tracks: [track] })).tracks[0] ?? [];
 		expect(events).toHaveLength(200_001);
 		expect(events.at(-1)).toEqual({ tick: 199_999 * 240, meta: true, type: "endOfTrack" });
+	});
+
+	test("tempo in whole microseconds a quarter, clamped to SMF's range", () => {
+		expect(tempoMicros(120)).toEqual({ micros: 500_000, clamped: false });
+		expect(tempoMicros(90)).toEqual({ micros: 666_667, clamped: false });
+		expect(tempoMicros(3)).toEqual({ micros: 0xffffff, clamped: true });
+		expect(tempoMicros(1e9)).toEqual({ micros: 1, clamped: true });
+		for (const qpm of [0, -60, Number.NaN]) expect(tempoMicros(qpm).clamped).toBe(true);
+		const slow = tempoMeta(0, 3);
+		expect(slow.kind === "meta" && Array.from(slow.data)).toEqual([0xff, 0xff, 0xff]);
 	});
 
 	test("text is UTF-8", () => {

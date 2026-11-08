@@ -284,6 +284,23 @@ showed the rule needed refining.
 
 ## Performance and robustness
 
+### Node refuses a spread Bun allows, so `bun test` couldn't see the limit (2026-11-08, @barmark/midi)
+
+- **The symptom.** The SMF writer appended each event with
+  `bytes.push(...eventBytes(event))`. Under `bun test` a 200,000-byte
+  text meta wrote; the built package under Node 22 threw `RangeError:
+  Maximum call stack size exceeded` from about 130,000 bytes (found in
+  review, not by a test).
+- **The cause.** Spread call arguments go on the stack, and the limit is
+  the engine's: about 130,000 in Node (V8), about 1,000,000 in Bun (JSC).
+  `midi-file` has the same limit reading text (`String.fromCharCode.apply`),
+  so it can't read back a megabyte meta event either.
+- **The fix.** `src/smf/write.ts` never spreads a payload into a call: it
+  pushes byte by byte and assembles chunks with `Uint8Array.set`. The test
+  writes a megabyte meta event, which fails under Bun too if anything
+  spreads, and checks its bytes directly rather than through `midi-file`.
+  Size a limit test past both engines' limits.
+
 ### Two DoS shapes the review's probes didn't build (2026-11-07, @barmark/sync)
 
 - **The symptom.** Vercel's review found two: 300 sections named
