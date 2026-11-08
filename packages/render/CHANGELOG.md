@@ -6,6 +6,14 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.17.1] - 2026-11-08
+
+### Changed
+
+- **Requires `barmark` 0.21.0** (its `PlayedBar.time` and `nameNotes`),
+  so an install never pairs this package with a barmark it was not
+  tested against. No change in behaviour.
+
 ## [0.17.0] - 2026-11-08
 
 ### Changed
@@ -431,7 +439,8 @@ that needs no script or as the `<barmark-chart>` web component. Requires
   zoom without sideways scrolling, the element renders and re-renders, and
   a screen reader hears "bar 9: D". Run them with `bun run test:browser`.
 
-[Unreleased]: https://github.com/kevinpeckham/barmark/compare/render-v0.17.0...HEAD
+[Unreleased]: https://github.com/kevinpeckham/barmark/compare/render-v0.17.1...HEAD
+[0.17.1]: https://github.com/kevinpeckham/barmark/compare/render-v0.17.0...render-v0.17.1
 [0.17.0]: https://github.com/kevinpeckham/barmark/compare/render-v0.16.2...render-v0.17.0
 [0.16.2]: https://github.com/kevinpeckham/barmark/compare/render-v0.16.1...render-v0.16.2
 [0.16.1]: https://github.com/kevinpeckham/barmark/compare/render-v0.16.0...render-v0.16.1

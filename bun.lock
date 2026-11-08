@@ -55,7 +55,7 @@
     },
     "packages/render": {
       "name": "@barmark/render",
-      "version": "0.17.0",
+      "version": "0.17.1",
       "dependencies": {
         "barmark": "workspace:^",
       },
