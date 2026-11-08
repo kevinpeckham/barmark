@@ -62,8 +62,8 @@ export function engraveChart(vrv: VerovioToolkit, text: string, options: Engrave
 	const exported = exportMusicXml(text);
 	if (!exported.ok)
 		return { ok: false, reason: refusal(exported.diagnostics), diagnostics: exported.diagnostics };
-	const engraved = engraveXml(vrv, exported.xml, options);
 	try {
+		const engraved = engraveXml(vrv, exported.xml, options);
 		return { ok: true, xml: exported.xml, pages: engraved.pages, svg: cleanSvg(engraved.svg) };
 	} catch (e) {
 		return { ok: false, reason: e instanceof Error ? e.message : String(e), diagnostics: [] };

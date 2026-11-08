@@ -30,8 +30,9 @@ First release.
   and switches once it loads. `decodeCarried` reads the text back.
 - `engraveChart` turns a chart into a full score (MusicXML from
   `@barmark/musicxml`, engraved by Verovio) as one SVG column, or says why
-  the chart will not export (a refusal about the whole chart does not read
-  "Line 0: …").
+  it cannot (a chart that will not export, a score Verovio cannot read or
+  one with no pages: `ok: false`, never a throw; a refusal about the whole
+  chart does not read "Line 0: …").
 - Safe, themed score markup: `cleanSvg` is an allow-list. A hand-written
   scanner keeps only the elements and attributes Verovio emits (and its own
   two stylesheets) and drops anything else with its content: scripts,

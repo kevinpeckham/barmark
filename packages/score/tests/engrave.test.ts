@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { exportMusicXml } from "@barmark/musicxml";
+import type { VerovioToolkit } from "verovio/esm";
 import { engraveChart } from "../src/index.js";
 import { loadToolkit } from "./helpers/toolkit.js";
 
@@ -73,5 +74,26 @@ describe("engraveChart", () => {
 		expect(pageWidth(100)).toBe(pageWidth(320));
 		expect(pageWidth(320)).toBe(800);
 		expect(pageWidth(800)).toBe(2000);
+	});
+
+	/** A toolkit that reads nothing (or reads a score of no pages), as Verovio does on a refusal. */
+	const stub = (loads: boolean, pages: number) =>
+		({
+			setOptions() {},
+			loadData: () => loads,
+			getPageCount: () => pages,
+			renderToSVG: () => "",
+		}) as unknown as VerovioToolkit;
+
+	test("a score Verovio cannot read is a refusal, not a throw", () => {
+		const r = engraveChart(stub(false, 1), read("morning-song.chart.md"), { width: 800 });
+		expect(r.ok).toBe(false);
+		if (!r.ok) expect(r.reason).toContain("could not read");
+	});
+
+	test("a score of no pages is a refusal, not a throw", () => {
+		const r = engraveChart(stub(true, 0), read("morning-song.chart.md"), { width: 800 });
+		expect(r.ok).toBe(false);
+		if (!r.ok) expect(r.reason).toContain("no pages");
 	});
 });
