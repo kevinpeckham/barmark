@@ -6,6 +6,14 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- **An elided replay that a `Fine` or `To Coda` stops early, after the
+  jump, plays up to the stop** (barmark's rule, grammar 6, Kevin's
+  decision of 2026-11-08):
+  `## Intro ->` replaying `| E7 | Fine |` after a `D.S. al Fine` now
+  exports and round-trips playing E7, as barmark plays it.
+
 ## [0.6.4] - 2026-11-07
 
 ### Fixed

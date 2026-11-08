@@ -145,6 +145,34 @@ describe("elision", () => {
 	});
 });
 
+describe("elision cuts the last written bar (grammar 6)", () => {
+	const FINE =
+		"## Intro\n| E7 | Fine |\n| Segno | G |\n| D.S. al Fine |\n\n## Intro ->\n\n## Bridge\n| C |";
+	test("a Fine before the cut bar stops the replay first: nothing is cut", () => {
+		const r = play(FINE);
+		expect(r.texts).toEqual(["E7", "G", "G", "E7"]);
+		expect(r.sections.map((s) => [s.name, s.elided])).toEqual([
+			["Intro", false],
+			["Intro", false],
+			["Intro", false],
+		]);
+		expect(errors(FINE)).toEqual([]);
+	});
+	test("a To Coda before the cut bar stops the replay first", () => {
+		const text =
+			"## A\n| C | To Coda | D |\n## B\n| Segno | E |\n## A ->\n## C\n| F | D.S. al Coda |\n## Coda\n| Coda | G |";
+		expect(play(text).texts).toEqual(["C", "D", "E", "C", "F", "E", "C", "G"]);
+	});
+	test("a Fine after the cut bar: the bar is reached, and cut", () => {
+		const text = "## A\n| C | D | Fine |\n## B\n| E |\n## A ->\n## C\n| F | D.C. al Fine |";
+		expect(play(text).texts).toEqual(["C", "D", "E", "C", "F", "C", "D"]);
+	});
+	test("the return after the jump cuts the last written bar of the replay", () => {
+		const text = "## A\n| C | D |\n## B\n| E |\n## A ->\n## Out\n| F | D.C. |";
+		expect(play(text).texts).toEqual(["C", "D", "E", "C", "F", "C", "D", "E", "C", "F"]);
+	});
+});
+
 describe("the expansion cap", () => {
 	test("a runaway repeat stops at the cap with one error", () => {
 		const start = performance.now();

@@ -490,6 +490,12 @@ export function expand(
 		times(h.repeat, h.line, out, (into) => playItems(itemsOf.get(s) ?? [], into));
 		return { replayOf: null, elided: false };
 	};
+	/** Whether `out` ends with the last bar written in `s` (grammar 6: what `->` cuts). */
+	const reachesEnd = (s: Section, out: ChartEvent[]) => {
+		const bars = s.lines.flatMap((l) => (l.kind === "bars" ? (resolved.get(l) ?? []) : []));
+		const last = bars.findLast((p) => p.kind === "bar");
+		return last?.kind === "bar" && flattenBars(out).at(-1)?.written === last.written;
+	};
 	/** A replay's bars into `out`, then its own lines; null when it replays nothing. */
 	const playReplay = (s: Section, h: SectionLine, out: ChartEvent[]): Heading | null => {
 		// A nameless heading is already an error; it has nothing to replay.
@@ -502,7 +508,8 @@ export function expand(
 		where.replay = h.line;
 		times(h.repeat, h.line, out, (into) => playItems(itemsOf.get(source) ?? [], into));
 		where.replay = null;
-		const elided = h.elided && removeLastBar(out);
+		// It cuts the last bar as written; play stopped before it (a Fine, a To Coda) never reaches it.
+		const elided = h.elided && reachesEnd(source, out) && removeLastBar(out);
 		// A replay heading stands for its bars: its own lines (directives) come after them.
 		playItems(itemsOf.get(s) ?? [], out);
 		return { replayOf: source.heading.line, elided };

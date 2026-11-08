@@ -47,12 +47,12 @@ test.each(CHARTS)("random chart %i plays the same after export and import", (_se
 	expect(printChart(back)).toBe(back);
 });
 
-// Found by this test (seeds 1827 and 3674), and a grammar question: barmark
-// cuts an elided replay's last bar from what it plays, so a Fine or To Coda
-// that ends the replay early (after the jump) takes the cut from a bar
-// before it: here the replay plays nothing. The export writes the replay's
-// bars as played, which carry no directions, so programs play on.
-test.todo("an elided replay that a Fine ends early", () => {
+// Found by this test (seeds 1827 and 3674, before the generator changed),
+// and a grammar question Kevin decided (2026-11-08, grammar 6): `->` cuts the
+// replay's last bar as written, so a Fine that ends the replay early (after
+// the jump) leaves the cut bar unreached, and the replay plays E7. barmark
+// used to cut the last bar played, here the only one.
+test("an elided replay that a Fine ends early", () => {
 	const text =
 		"## Intro\n| E7 | Fine |\n| Segno | G |\n| D.S. al Fine |\n\n## Intro ->\n\n## Bridge\n| C |\n";
 	expect(played(roundTrip(text))).toEqual(played(text));
