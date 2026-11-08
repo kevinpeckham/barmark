@@ -18,6 +18,13 @@ describe("the score", () => {
 		expect(r.ok).toBe(false);
 		expect(r.diagnostics).toEqual(parseChart("| H |").diagnostics);
 	});
+	test("a Coda with no bar after it is an error: no measure could carry it", () => {
+		const r = exportMusicXml("| C | To Coda | D | D.C. al Coda | Coda |");
+		expect(r.ok).toBe(false);
+		expect(r.diagnostics.map((d) => d.message)).toContain(
+			"Coda has no bar after it, so To Coda has nowhere to go on",
+		);
+	});
 	test("a title and a part name", () => {
 		const xml = xmlOf("# Morning & Night\npart: Gtr = Guitar\n| G |");
 		expect(xml).toContain("<work-title>Morning &amp; Night</work-title>");

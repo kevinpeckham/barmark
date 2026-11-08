@@ -614,6 +614,11 @@ the coda at `To Coda`, and plays to the end.
   `Segno`, `Coda`, `To Coda` and `Fine`. `D.S.` needs a `Segno` before it,
   `al Fine` a `Fine`, and `al Coda` a `To Coda` and a `Coda` after it. A
   `Segno`, `Coda`, `To Coda` or `Fine` that no jump uses is an **error**.
+- The `Coda` an `al Coda` goes on needs a bar after it: a bar written
+  later in the chart, or a later heading that replays one (a coda that is
+  the last chorus, `## Chorus` alone). A `Coda` with no bar after it is an
+  **error**, since `To Coda` would have nowhere to go on (and MusicXML no
+  measure to carry the sign).
 - This is the one exception to "the written order is the play order"
   (section 6), and it stays visible: the jump is written where it happens.
 
@@ -635,7 +640,8 @@ the coda at `To Coda`, and plays to the end.
 - A heading may carry any label, including numerals that tie it to outside
   data (`## II - Verse`). Matching uses the full text.
 - **Elision.** `->` at the end of a replay heading cuts the replay's last
-  bar: the next section's first bar lands where that bar would have been.
+  bar as written: the next section's first bar lands where that bar would
+  have been.
 
   ```
   ## Chorus ->
@@ -645,7 +651,12 @@ the coda at `To Coda`, and plays to the end.
 
   `->` is allowed only on a replay heading. A written-out section just leaves
   the bar out, because line length means nothing. It cuts exactly one bar,
-  and with `x N` only the last pass (`## Chorus x2 ->`). If the cut
+  the last bar written in the section it replays, and with `x N` only from
+  the last pass (`## Chorus x2 ->`). If play stops before that bar (a
+  `Fine` or `To Coda` in the replay, after the jump, 5.2), the cut bar is
+  never reached: the replay plays up to the stop and nothing is cut. A
+  stop right after the cut bar still cuts it, since the bar is reached.
+  If the cut
   occurrence comes first, write it out short and write the full version later
   under the same name: replays use the most recent section with that name.
   `→` is accepted for `->`.
@@ -1230,7 +1241,7 @@ keeps what cannot reduce:
 | error | a syllable on anything but a note set (a chord name, a voicing, `/`, `--`, `N.C.`, `?`), an empty syllable or an empty side of `~`, a `{` straight after a syllable |
 | error | an accent or a hit on anything but a chord or a note set |
 | error | a push with nothing played before it, longer than the slot before it, on `/`, `%` or `?`, inside a group, of three or more `<`, or after its accent (`^<D`) |
-| error | a second `D.C.` or `D.S.`, or a second `Segno`, `Coda`, `To Coda` or `Fine`; `D.S.` with no `Segno` before it; `al Fine` with no `Fine`; `al Coda` without a `To Coda` and a `Coda` after it; a `Segno`, `Coda`, `To Coda` or `Fine` that no jump uses |
+| error | a second `D.C.` or `D.S.`, or a second `Segno`, `Coda`, `To Coda` or `Fine`; `D.S.` with no `Segno` before it; `al Fine` with no `Fine`; `al Coda` without a `To Coda` and a `Coda` after it; the `Coda` of an `al Coda` with no bar after it; a `Segno`, `Coda`, `To Coda` or `Fine` that no jump uses |
 | error | empty section that references no earlier section (the message suggests writing its bars or removing the heading, or names the line where a later section of that name is written) |
 | error | `->` anywhere but the end of a replay heading |
 | error | `/` or `%` with nothing before it |
@@ -1299,7 +1310,7 @@ human to say whether the band was silent, and the structure line.
 | Pushes | v0.1 had no mark; pushes were written with groups (`/_G`). Superseded 2026-11-03, see "Push marks". |
 | Root in a note set | `!` after the note: `{D E! G}`. Optional; the first note stays the bass. |
 | Modes | `key:` accepts a mode name (`A mixolydian`). A bare root means major. |
-| Elision | `->` at the end of a replay heading cuts its last bar. Written sections omit the bar. |
+| Elision | `->` at the end of a replay heading cuts its last bar as written. Written sections omit the bar. |
 | Fades and vamps | `x ...`: an open repeat. Machine output records the count as open. |
 | Canonical printing | Spelling and layout only. Lines with errors and text lines print as written; a repeated chord name is kept. |
 | Repeat spellings | `x`, `X` and `×` all accepted; canonical `x`. |
@@ -1353,6 +1364,8 @@ human to say whether the band was silent, and the structure line.
 | Who sings, and against what | Claude's recommendation (2026-11-06): the first part with `instrument: voice`, else the first with syllables on its notes, sings on its first line with syllables, else its first with notes (a lead sheet's melody line); with no singer a row's words are the chart's. A row's syllable where the singing line starts no note warns, as MusicXML hangs syllables on notes, and so does a `:/` with nothing sung before it in play order. Another part's extract leaves the singer's rows out (7.7). |
 | Written bar numbers | Machine output gains `written` on each played bar (A.7), the bar's number as written, so a host can speak a printed score's measure numbers (issue #70: a correction editor for a score read). No change to what any chart means. |
 | `title:` | Kevin's ruling (2026-11-07, issue #173): `title: X` is a text line with a warning suggesting `# X`, as `meter:` suggests `time:` (7). No new syntax: a chart's title stays its `#` line, there is no `subtitle:`, and the printer prints the line as written. A converter doesn't read it as a title either; MusicXML carries it as text like any other line. |
+| What `->` cuts | Decided by Kevin (2026-11-08): `->` cuts the replay's last bar as written, from the last pass with `x N` (6); when a `Fine` or `To Coda` stops play before it, after the jump, the bar is never reached and the replay plays up to the stop. Found by the MusicXML round trip's property test: `## Intro` holding a `Fine`, replayed as `## Intro ->` after a `D.S. al Fine`, played nothing. Rejected: cutting the last bar played, which can cut a bar before a `Fine` and leave nothing. |
+| A `Coda` with no bar after it | Decided by Kevin (2026-11-08): an **error** (5.2, 9); the `Coda` an `al Coda` goes on needs a bar after it: a bar written later in the chart, or a later heading that replays one (the last chorus as the coda). It gives `To Coda` nowhere to go on, and MusicXML has no measure to carry the sign. Before, it parsed, played nothing after `To Coda` and the export dropped the sign. Rejected: a warning, which would leave the jump going nowhere. |
 
 ## Open questions
 
@@ -1486,7 +1499,7 @@ Each slot parses to one record:
 | `pitches` | spelled pitch classes, or pitches with octaves for note sets |
 | `bass` | spelled bass note: the slash bass, the first note of a set, otherwise the root |
 | `alteredOpen` | true for `7alt` |
-| `elided` | on a section occurrence: true when `->` cut its last bar |
+| `elided` | on a section occurrence: true when `->` cut its last bar (false when play stopped before that bar) |
 | `form` | on a section occurrence: which distinct section it plays, numbered from 0 in order of first appearance; a replay shares its written section's number, so hosts can label form (A, B, A, B, C) |
 | `parts` | on a chord: the canonical root, quality, extension, sus, tones (in canonical order) and bass its spelling is built from; empty for a note set |
 | `tempo` | on a played bar: the steady tempo, or empty when unknown |

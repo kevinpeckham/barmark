@@ -6,6 +6,17 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- **barmark's two new direction rules reach the export** (grammar 5.2
+  and 6, Kevin's decisions of 2026-11-08). A chart whose `al Coda` goes
+  on at a `Coda` with no bar after it (none written later, and no later
+  replay heading) is now an error, so the export refuses it rather than drop
+  the coda sign, which had no measure to go on. And an elided replay that
+  a `Fine` or `To Coda` stops early, after the jump, plays up to the stop:
+  `## Intro ->` replaying `| E7 | Fine |` after a `D.S. al Fine` now
+  exports and round-trips playing E7, as barmark plays it.
+
 ## [0.6.4] - 2026-11-07
 
 ### Fixed

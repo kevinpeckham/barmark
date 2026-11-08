@@ -9,6 +9,24 @@ Releases follow the process in [RELEASING.md](RELEASING.md).
 
 ## [Unreleased]
 
+### Changed
+
+- **`->` cuts the replay's last bar as written** (Kevin's decision,
+  2026-11-08, grammar 6). It used to cut the last bar played, so a
+  `Fine` or `To Coda` that stopped the replay early, after the jump, cut
+  a bar before the stop instead: `## Intro` holding `| E7 | Fine |`,
+  replayed as `## Intro ->` after a `D.S. al Fine`, played nothing. Now
+  the cut bar is the last one written in the replayed section (from the
+  last pass with `x N`); when play stops before it, it is never reached,
+  the replay plays up to the stop and its occurrence's `elided` is false.
+- **A `Coda` with no bar after it is an error** (Kevin's decision,
+  2026-11-08, grammar 5.2): "Coda has no bar after it, so To Coda has
+  nowhere to go on", on the `Coda`'s line. The `Coda` an `al Coda` goes
+  on needs a bar after it: a bar written later in the chart, or a later
+  heading that replays one (`## Chorus` alone, the last chorus as the
+  coda). Like every direction error, it drops the jump. Before, such a chart parsed cleanly and played
+  nothing after `To Coda`.
+
 ## [0.19.1] - 2026-11-07
 
 ### Fixed
