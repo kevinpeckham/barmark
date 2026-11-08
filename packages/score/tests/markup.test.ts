@@ -180,6 +180,15 @@ describe("scorePane", () => {
 		}
 	});
 
+	test("the score is an image named for the chart, or Score", () => {
+		const named = parseHTML(`<body>${scorePane(svg, "auto", 'Tom & "Jerry"')}</body>`).document;
+		const score = named.querySelector(".bms-score");
+		expect(score?.getAttribute("role")).toBe("img");
+		expect(score?.getAttribute("aria-label")).toBe('Tom & "Jerry"');
+		const plain = parseHTML(`<body>${scorePane(svg, "auto")}</body>`).document;
+		expect(plain.querySelector(".bms-score")?.getAttribute("aria-label")).toBe("Score");
+	});
+
 	test("the pane is cleaned", () => {
 		const out = scorePane('<svg onload="x()"><script>1</script></svg>', "auto");
 		expect(out).not.toMatch(/onload|script/);

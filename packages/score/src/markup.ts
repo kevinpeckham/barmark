@@ -235,7 +235,20 @@ export const scoreStyles = `.bms-score{padding:1rem;color:inherit;background:tra
 .bms-score-page svg{fill:currentColor}
 .bms-score-page svg svg{color:inherit}`;
 
-/** The cleaned pages in a themed pane: render's `.bm-chart` supplies the palette. */
-export function scorePane(svg: string, theme: ScoreTheme): string {
-	return `<div class="bm-chart" data-theme="${theme}"><div class="bms-score">${cleanSvg(svg)}</div></div>`;
+/** Text made safe for HTML content and quoted attribute values (`&` first, so nothing is escaped twice). */
+export const escapeHtml = (text: string) =>
+	text
+		.replaceAll("&", "&amp;")
+		.replaceAll("<", "&lt;")
+		.replaceAll(">", "&gt;")
+		.replaceAll('"', "&quot;")
+		.replaceAll("'", "&#39;");
+
+/**
+ * The cleaned pages in a themed pane: render's `.bm-chart` supplies the
+ * palette. The score is one image to assistive technology, named `label`
+ * (the chart's title, say), or "Score".
+ */
+export function scorePane(svg: string, theme: ScoreTheme, label = "Score"): string {
+	return `<div class="bm-chart" data-theme="${theme}"><div class="bms-score" role="img" aria-label="${escapeHtml(label)}">${cleanSvg(svg)}</div></div>`;
 }

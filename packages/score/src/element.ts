@@ -19,6 +19,7 @@ import {
 	inlineChartText,
 	optionsFromAttributes,
 } from "@barmark/render/element";
+import { parseChart } from "barmark";
 import type { Engine, EngraveReply } from "./engine.js";
 import { scorePane } from "./markup.js";
 import { decodeCarried, gridError, scoreShell } from "./shell.js";
@@ -50,6 +51,8 @@ function loadEngine(): Promise<Engine> {
 }
 
 const LOADING = "Loading score…";
+/** The score's accessible name when the chart has no title. */
+const UNTITLED = "Score";
 const NOTE = "The score couldn't be drawn";
 /** A width change smaller than this keeps the score as engraved. */
 const SLACK = 8;
@@ -136,7 +139,7 @@ function defineElement(): void {
 		/** The view last shown, null before the first: a change from it fires `viewchange`. */
 		#shown: ScoreView | null = null;
 		#failed = false;
-		#engraved: (Engraving & { svg: string }) | null = null;
+		#engraved: (Engraving & { svg: string; label: string }) | null = null;
 		/** The engraving and theme the pane holds, so an unchanged one is not written again. */
 		#revealed: { svg: string; theme: string } | null = null;
 		#asked: Engraving | null = null;
@@ -159,8 +162,10 @@ function defineElement(): void {
 			clearTimeout(this.#resizeTimer);
 		}
 		attributeChangedCallback(name: string, old: string | null, value: string | null) {
-			if (!this.isConnected || old === value || name === "verovio-url") return;
-			if (name === "view") this.#applyView();
+			if (!this.isConnected || old === value) return;
+			// A new URL may be the fix: the Score radio works again, as after a new chart.
+			if (name === "verovio-url") this.#clearFailure();
+			else if (name === "view") this.#applyView();
 			else if (name === "src") this.#chartChanged();
 			else this.#schedule();
 		}
@@ -246,7 +251,8 @@ function defineElement(): void {
 				if (!hydrating) this.#redraw(pane, grid.html, options);
 			} else {
 				const root = this.shadowRoot ?? this.attachShadow({ mode: "open" });
-				root.innerHTML = scoreShell(grid.html ?? renderChartUnwrapped("", options), this.view);
+				// Grid is checked, as the server draws it: #applyView checks the view actually shown.
+				root.innerHTML = scoreShell(grid.html ?? renderChartUnwrapped("", options), "grid");
 			}
 			this.#wire();
 		}
@@ -305,12 +311,8 @@ function defineElement(): void {
 				this.view = "grid";
 				return;
 			}
-			for (const r of this.#parts().radios) {
-				const on = r.getAttribute("data-view") === view;
-				r.setAttribute("aria-checked", String(on));
-				if (on) r.removeAttribute("tabindex");
-				else r.setAttribute("tabindex", "-1");
-			}
+			// A score waiting for its chart shows the grid, so Grid is the radio checked.
+			this.#check(view === "score" && this.#chart === undefined ? "grid" : view);
 			const was = this.#shown;
 			this.#shown = view;
 			if (was !== null && was !== view)
@@ -319,6 +321,16 @@ function defineElement(): void {
 				);
 			if (view === "score") this.#showScore();
 			else this.#showGrid();
+		}
+
+		/** Checks the radio for `view` and makes it the one Tab reaches. */
+		#check(view: ScoreView) {
+			for (const r of this.#parts().radios) {
+				const on = r.getAttribute("data-view") === view;
+				r.setAttribute("aria-checked", String(on));
+				if (on) r.removeAttribute("tabindex");
+				else r.setAttribute("tabindex", "-1");
+			}
 		}
 
 		#showGrid() {
@@ -333,7 +345,7 @@ function defineElement(): void {
 			if (this.#chart === undefined) return this.#showGrid();
 			if (this.#chart === null) return this.#fail("there is no chart to engrave");
 			const want = { text: this.#chart, width: this.clientWidth || 0 };
-			if (this.#engraved && same(this.#engraved, want)) return this.#reveal(this.#engraved.svg);
+			if (this.#engraved && same(this.#engraved, want)) return this.#reveal(this.#engraved);
 			if (same(this.#asked, want)) return this.#busy();
 			const url = verovioHref(this.getAttribute("verovio-url"), this.ownerDocument.baseURI);
 			if (url === null) return this.#fail(URL_REASON);
@@ -354,27 +366,28 @@ function defineElement(): void {
 			if (reply === null || ask !== this.#engraves) return;
 			this.#asked = null;
 			if (!reply.ok) return this.#fail(reply.reason);
-			this.#engraved = { ...want, svg: reply.svg };
-			if (this.view === "score") this.#reveal(reply.svg);
+			const label = parseChart(want.text).title ?? UNTITLED;
+			this.#engraved = { ...want, svg: reply.svg, label };
+			if (this.view === "score") this.#reveal(this.#engraved);
 		}
 
+		/** A score on its way: a shown one stays (busy) until the new one lands, else "Loading score…". */
 		#busy() {
 			const { grid, pane } = this.#parts();
 			if (!pane) return;
-			this.#revealed = null;
-			pane.textContent = LOADING;
+			if (this.#revealed === null) pane.textContent = LOADING;
 			pane.setAttribute("aria-busy", "true");
 			pane.toggleAttribute("hidden", false);
 			grid?.toggleAttribute("hidden", true);
 		}
 
-		#reveal(svg: string) {
+		#reveal({ svg, label }: { svg: string; label: string }) {
 			const { grid, pane } = this.#parts();
 			if (!pane) return;
 			const theme = optionsFromAttributes(this).theme ?? "auto";
 			if (this.#revealed?.svg !== svg || this.#revealed.theme !== theme) {
 				try {
-					pane.innerHTML = scorePane(svg, theme);
+					pane.innerHTML = scorePane(svg, theme, label);
 				} catch (e) {
 					return this.#fail(messageOf(e));
 				}

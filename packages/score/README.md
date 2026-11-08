@@ -40,7 +40,9 @@ builds on it). Importing the package root registers nothing.
 
 The chart comes from the `text` property, the `src` URL or a child
 `<script type="text/barmark">`, exactly as for `<barmark-chart>`. The score
-is engraved at the element's width and again after a resize.
+is engraved at the element's width and again after a resize; the score shown
+stays (with `aria-busy="true"`) until the new one is ready. To assistive
+technology the score is one image named for the chart's title, or "Score".
 
 | Attribute (property) | |
 |---|---|
@@ -72,7 +74,9 @@ then point at a Verovio module you host (for example
 `verovio/dist/verovio-module.mjs` from the `verovio` package) instead of
 bundling the 7 MB inside the worker; it only changes where that module
 comes from. The URL is resolved against the page and must be http(s);
-anything else is refused and the score is not drawn.
+anything else is refused and the score is not drawn. The first
+`verovio-url` that loads wins for the whole page: every element shares one
+worker, so a later or different URL is not loaded.
 
 ### When the score can't be drawn
 

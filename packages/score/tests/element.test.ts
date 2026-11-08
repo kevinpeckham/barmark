@@ -349,6 +349,80 @@ describe("<barmark-score>", () => {
 		expect(calls.map((c) => c.width)).toEqual([400, 600]);
 	});
 
+	test("a resize keeps the shown score, busy, until the new one lands", async () => {
+		let width = 400;
+		const el = document.createElement("barmark-score") as Score;
+		Object.defineProperty(el, "clientWidth", { get: () => width });
+		el.setAttribute("view", "score");
+		el.text = chart;
+		resizers.length = 0;
+		mounted.push(el);
+		document.body.append(el);
+		await flush();
+		calls[0]?.resolve({ id: 1, ok: true, svg: svg("first"), pages: 1 });
+		await flush();
+		const { pane, grid } = parts(el);
+		expect(pane.hasAttribute("aria-busy")).toBe(false);
+
+		width = 600;
+		for (const fire of resizers) fire();
+		await flush(40);
+		expect(calls.map((c) => c.width)).toEqual([400, 600]);
+		expect(pane.textContent).not.toContain("Loading score");
+		expect(pane.querySelector("g.first")).not.toBeNull();
+		expect(pane.getAttribute("aria-busy")).toBe("true");
+		expect(pane.hasAttribute("hidden")).toBe(false);
+		expect(grid.hasAttribute("hidden")).toBe(true);
+
+		calls[1]?.resolve({ id: 2, ok: true, svg: svg("wider"), pages: 1 });
+		await flush();
+		expect(pane.querySelector("g.wider")).not.toBeNull();
+		expect(pane.querySelector("g.first")).toBeNull();
+		expect(pane.hasAttribute("aria-busy")).toBe(false);
+	});
+
+	test("the drawn score is an image named for the chart's title", async () => {
+		const el = await make({ view: "score" });
+		calls[0]?.resolve({ id: 1, ok: true, svg: svg("first"), pages: 1 });
+		await flush();
+		const score = parts(el).pane.querySelector(".bms-score");
+		expect(score?.getAttribute("role")).toBe("img");
+		expect(score?.getAttribute("aria-label")).toBe("Song");
+
+		el.text = "| D |";
+		await flush();
+		calls[1]?.resolve({ id: 2, ok: true, svg: svg("untitled"), pages: 1 });
+		await flush();
+		expect(parts(el).pane.querySelector(".bms-score")?.getAttribute("aria-label")).toBe("Score");
+	});
+
+	test("a new verovio-url clears the failure", async () => {
+		const warn = spyOn(console, "warn").mockImplementation(() => {});
+		try {
+			const el = await make({ view: "score", "verovio-url": "data:text/javascript,1" });
+			expect(parts(el).note).not.toBeNull();
+			el.setAttribute("verovio-url", "/vrv/verovio.mjs");
+			await flush();
+			const { note, radios } = parts(el);
+			expect(note).toBeNull();
+			expect(radios[1]?.hasAttribute("aria-disabled")).toBe(false);
+			click(radios[1] as HTMLElement);
+			await flush();
+			expect(calls.map((c) => c.verovioUrl)).toEqual(["https://example.test/vrv/verovio.mjs"]);
+		} finally {
+			warn.mockRestore();
+		}
+	});
+
+	test("a score waiting for its chart checks Grid, the view shown", async () => {
+		const el = await make({ view: "score" }, null);
+		expect(el.view).toBe("score");
+		expect(checked(el)).toEqual([true, false]);
+		el.text = chart;
+		await flush();
+		expect(checked(el)).toEqual([false, true]);
+	});
+
 	test("upgrading server markup does not redraw the grid", async () => {
 		const host = served.host as Score;
 		const root = host.shadowRoot as ShadowRoot;

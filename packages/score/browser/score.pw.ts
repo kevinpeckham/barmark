@@ -167,7 +167,22 @@ test("resizing reflows the score", async ({ page }) => {
 	const height = () => el.locator(".bms-score").evaluate((e) => e.getBoundingClientRect().height);
 	const wide = { systems: await systems(), height: await height() };
 	expect(wide.systems).toBeGreaterThan(0);
+	// Whether the pane ever stops holding a score, or says it is loading, while it reflows.
+	await el.evaluate((host) => {
+		const pane = host.shadowRoot?.querySelector(".bms-pane");
+		if (!pane) throw new Error("no pane");
+		const seen = { blank: false, busy: false };
+		Object.assign(window, { reflow: seen });
+		new MutationObserver(() => {
+			if (!pane.querySelector(".bms-score svg") || pane.textContent?.includes("Loading score"))
+				seen.blank = true;
+			if (pane.getAttribute("aria-busy") === "true") seen.busy = true;
+		}).observe(pane, { childList: true, subtree: true, attributes: true, characterData: true });
+	});
 	await page.setViewportSize({ width: 480, height: 900 });
 	await expect.poll(systems, { timeout: 20_000 }).toBeGreaterThan(wide.systems);
 	expect(await height()).toBeGreaterThan(wide.height);
+	const reflow = await page.evaluate(() => (window as unknown as { reflow: object }).reflow);
+	expect(reflow).toEqual({ blank: false, busy: true });
+	await expect(el.locator(".bms-pane")).not.toHaveAttribute("aria-busy", "true");
 });

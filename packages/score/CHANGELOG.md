@@ -18,8 +18,15 @@ First release.
   against the page, http(s) only); a `viewchange` event follows the view. A
   `view="score"` set before the chart arrives waits for it. The score engine
   loads only on the first switch to the score, engraves at the element's
-  width (again after a resize), and shows "Loading score…" meanwhile; a score
-  that can't be drawn leaves the grid with a note by the switch. A shadow
+  width (again after a resize), and shows "Loading score…" meanwhile, the
+  first time; a re-engrave keeps the score shown, marked `aria-busy`, until
+  the new one lands, so a resize does not blank it. The drawn score is one
+  image (`role="img"`) named for the chart's title, or "Score". A score that
+  can't be drawn leaves the grid with a note by the switch; a new chart or a
+  new `verovio-url` lets the Score radio try again. While `view="score"`
+  waits for its chart, Grid is the radio checked, as the grid is what
+  shows. Every element on a page shares one worker, so the first
+  `verovio-url` that loads is the one used. A shadow
   root drawn by `renderScoreHtml` is taken over without redrawing the grid.
   Importing the package root registers no element.
 - `renderScoreHtml` (from `@barmark/score/server`, which never reaches
@@ -42,7 +49,9 @@ First release.
   `engraveChart` turns into `ok: false`. `scorePane` wraps the pages in
   render's `.bm-chart[data-theme]` so the score follows the palette (light,
   dark, auto, print), including the notes, which override Verovio's
-  `color="black"`; `scoreStyles` is the score's own layout.
+  `color="black"`; `scoreStyles` is the score's own layout. `scorePane`
+  takes the score's accessible name as an optional third argument (default
+  "Score").
 - A shared Verovio worker: `engine()` runs every score of a page through one
   module Worker that loads Verovio on first use, and for each element only
   the newest request is answered (`createEngine` takes any `WorkerLike`); a
