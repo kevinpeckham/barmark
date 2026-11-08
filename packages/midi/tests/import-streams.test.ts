@@ -1,0 +1,645 @@
+import { describe, expect, test } from "bun:test";
+import { type Note, notesOf } from "../src/import/notes.js";
+import { createReport } from "../src/import/report.js";
+import { bassLine, harmonyNotes } from "../src/import/streams.js";
+import type { MidiImportOptions } from "../src/import/types.js";
+import { readSmf, readSmfInto } from "../src/smf/read.js";
+import type { Smf } from "../src/smf/types.js";
+import { type Chunk, type Event, smf } from "./helpers/smf.js";
+
+/** The file the helper writes, read back. */
+function read(tracks: Chunk[]): { smf: Smf; names: (string | null)[] } {
+	const r = readSmf(smf({ tracks }));
+	if (r.smf === null) throw new Error(`no file: ${JSON.stringify(r.diagnostics)}`);
+	return { smf: r.smf, names: r.names };
+}
+
+function notesFrom(tracks: Chunk[]) {
+	const report = createReport();
+	return { notes: notesOf(read(tracks).smf, report), report };
+}
+
+function harmonyFrom(tracks: Chunk[], options: MidiImportOptions = {}) {
+	const report = createReport();
+	const file = read(tracks);
+	const notes = notesOf(file.smf, report);
+	return { harmony: harmonyNotes(notes, file.names, options, report), notes, report };
+}
+
+const note = (track: number, pitch: number, start: number, end: number, channel = 0): Note => ({
+	track,
+	channel,
+	pitch,
+	start,
+	end,
+});
+const codes = (report: ReturnType<typeof createReport>) =>
+	report.list.map((d) => [d.severity, d.code, d.track]);
+/** The harmony as (track, channel, pitch, start) rows, sorted. */
+const rows = (notes: Note[]) =>
+	notes
+		.map((n) => [n.track, n.channel, n.pitch, n.start])
+		.sort((a, b) => String(a).localeCompare(String(b)));
+
+/** An event at an absolute tick. */
+type At = { tick: number; e: Event };
+const at = (tick: number, e: Omit<Event, "dt">): At => ({ tick, e: { dt: 0, ...e } as Event });
+
+/** Notes on `channel`, `length` ticks apart, each held `overlap` ticks into the next. */
+function line(channel: number, pitches: number[], length = 480, overlap = 0): At[] {
+	return pitches.flatMap((pitch, i) => [
+		at(i * length, { on: [channel, pitch, 80] }),
+		at((i + 1) * length + overlap, { off: [channel, pitch] }),
+	]);
+}
+
+/** Chords on `channel`, each `length` ticks, one after another. */
+function chords(channel: number, voicings: number[][], length = 1920): At[] {
+	return voicings.flatMap((pitches, i) =>
+		pitches.flatMap((pitch) => [
+			at(i * length, { on: [channel, pitch, 80] }),
+			at((i + 1) * length, { off: [channel, pitch] }),
+		]),
+	);
+}
+
+/** A track of these events, as delta times; offs before ons at one tick. */
+function track(...parts: At[][]): Event[] {
+	const order = (e: Event) => ("off" in e ? 0 : 1);
+	const sorted = parts.flat().sort((a, b) => a.tick - b.tick || order(a.e) - order(b.e));
+	let last = 0;
+	return sorted.map(({ tick, e }) => {
+		const out = { ...e, dt: tick - last };
+		last = tick;
+		return out;
+	});
+}
+
+const C_E_G = [60, 64, 67];
+const MELODY = [67, 69, 67, 65, 67, 72, 67, 64]; // median G4
+const BASS = [36, 36, 43, 36, 31, 36, 38, 36]; // median C2
+
+describe("notesOf", () => {
+	test("pairs notes", () => {
+		const { notes, report } = notesFrom([
+			{
+				eot: false,
+				events: [
+					// on, off
+					{ dt: 0, on: [0, 60, 80] },
+					{ dt: 480, off: [0, 60] },
+					// on, then a zero-velocity on
+					{ dt: 0, on: [0, 62, 80] },
+					{ dt: 480, on: [0, 62, 0] },
+					// two ons of one pitch, then two offs: the second on ends the first
+					{ dt: 0, on: [0, 64, 80] },
+					{ dt: 240, on: [0, 64, 80] },
+					{ dt: 240, off: [0, 64] },
+					{ dt: 240, off: [0, 64] },
+					// a zero-length note
+					{ dt: 0, on: [0, 69, 80] },
+					{ dt: 0, off: [0, 69] },
+					// an on with no off: it ends at this track's last event (its end-of-track, at 2340)
+					{ dt: 0, on: [0, 67, 80] },
+					{ dt: 560, text: "end" },
+					{ dt: 100, meta: [0x2f, []] },
+				],
+			},
+			// a later track, so the file's last event is later than track 1's
+			[{ dt: 5000, text: "later" }],
+		]);
+		expect(notes).toEqual([
+			note(1, 60, 0, 480),
+			note(1, 62, 480, 960),
+			note(1, 64, 960, 1200),
+			note(1, 64, 1200, 1440),
+			note(1, 67, 1680, 2340),
+		]);
+		expect(report.list).toEqual([]);
+	});
+
+	test("an unended note on the track's last tick is zero-length, dropped", () => {
+		const { notes } = notesFrom([[{ dt: 480, on: [0, 60, 80] }]]);
+		expect(notes).toEqual([]);
+	});
+
+	test("notes pair by track, channel and pitch", () => {
+		const { notes } = notesFrom([
+			[
+				{ dt: 0, on: [0, 60, 80] },
+				{ dt: 0, on: [1, 60, 80] },
+				{ dt: 480, off: [1, 60] },
+				{ dt: 480, off: [0, 60] },
+			],
+			[
+				{ dt: 0, on: [0, 60, 80] },
+				{ dt: 240, off: [0, 60] },
+			],
+		]);
+		expect(notes).toEqual([note(1, 60, 0, 960), note(1, 60, 0, 480, 1), note(2, 60, 0, 240)]);
+	});
+
+	test("at one tick, a note-off comes before a note-on of its pitch, whatever the file order", () => {
+		const { notes } = notesFrom([
+			[
+				{ dt: 0, on: [0, 60, 80] },
+				{ dt: 0, on: [1, 62, 80] },
+				// the new note-on written before the old note-off, as a note-off and as a zero-velocity on
+				{ dt: 480, on: [0, 60, 80] },
+				{ dt: 0, on: [1, 62, 80] },
+				{ dt: 0, off: [0, 60] },
+				{ dt: 0, on: [1, 62, 0] },
+				{ dt: 480, off: [0, 60] },
+				{ dt: 0, off: [1, 62] },
+			],
+		]);
+		expect(notes).toEqual([
+			note(1, 60, 0, 480),
+			note(1, 62, 0, 480, 1),
+			note(1, 60, 480, 960),
+			note(1, 62, 480, 960, 1),
+		]);
+	});
+
+	test("at one tick, a re-strike of a note the pedal holds comes after the note-off too", () => {
+		const { notes } = notesFrom([
+			[
+				{ dt: 0, control: [0, 64, 127] },
+				{ dt: 0, on: [0, 60, 80] },
+				{ dt: 240, off: [0, 60] },
+				// held by the pedal, re-struck: the new note-on written before the note-off
+				{ dt: 240, on: [0, 60, 80] },
+				{ dt: 0, off: [0, 60] },
+				{ dt: 480, control: [0, 64, 0] },
+				{ dt: 480, off: [0, 60] },
+			],
+		]);
+		expect(notes).toEqual([note(1, 60, 0, 480), note(1, 60, 480, 1440)]);
+	});
+
+	test("at one tick, only note-ons move: a pedal pressed before a note-off still holds it", () => {
+		const { notes } = notesFrom([
+			[
+				{ dt: 0, on: [0, 60, 80] },
+				{ dt: 480, on: [0, 64, 80] },
+				{ dt: 0, control: [0, 64, 127] },
+				{ dt: 0, off: [0, 60] },
+				{ dt: 480, control: [0, 64, 0] },
+				{ dt: 0, off: [0, 64] },
+			],
+		]);
+		expect(notes).toEqual([note(1, 60, 0, 960), note(1, 64, 480, 960)]);
+	});
+
+	test("the sustain pedal holds released notes", () => {
+		const { notes } = notesFrom([
+			[
+				{ dt: 0, control: [0, 64, 127] },
+				...track(chords(0, [C_E_G], 480)),
+				// a re-strike of E at 960 ends the held E there
+				{ dt: 480, on: [0, 64, 80] },
+				{ dt: 480, off: [0, 64] },
+				{ dt: 480, control: [0, 64, 0] },
+				// after the pedal lifts, an off ends its note
+				{ dt: 0, on: [0, 72, 80] },
+				{ dt: 240, off: [0, 72] },
+			],
+		]);
+		expect(notes).toEqual([
+			note(1, 60, 0, 1920),
+			note(1, 64, 0, 960),
+			note(1, 67, 0, 1920),
+			note(1, 64, 960, 1920),
+			note(1, 72, 1920, 2160),
+		]);
+	});
+
+	test("the pedal is down at 64 and above, on its own channel", () => {
+		const { notes } = notesFrom([
+			[
+				{ dt: 0, control: [0, 64, 64] },
+				{ dt: 0, control: [1, 64, 127] },
+				{ dt: 0, control: [2, 64, 63] },
+				{ dt: 0, on: [0, 60, 80] },
+				{ dt: 0, on: [2, 62, 80] },
+				{ dt: 0, on: [3, 64, 80] },
+				{ dt: 480, off: [0, 60] },
+				{ dt: 0, off: [2, 62] },
+				{ dt: 0, off: [3, 64] },
+				// another controller neither lifts it nor presses it
+				{ dt: 240, control: [0, 7, 0] },
+				{ dt: 0, control: [3, 7, 127] },
+				{ dt: 240, control: [0, 64, 0] },
+			],
+		]);
+		expect(notes).toEqual([note(1, 60, 0, 960), note(1, 62, 0, 480, 2), note(1, 64, 0, 480, 3)]);
+	});
+
+	test("the pedal holds its channel on every track, as MuseScore writes a piano's two staves", () => {
+		const { notes } = notesFrom([
+			// the right hand: an arpeggio, one note at a time, on channel 1; a note on channel 2
+			[
+				{ dt: 0, on: [0, 60, 80] },
+				{ dt: 0, on: [1, 72, 80] },
+				{ dt: 240, off: [0, 60] },
+				{ dt: 0, off: [1, 72] },
+				{ dt: 0, on: [0, 64, 80] },
+				{ dt: 240, off: [0, 64] },
+				// after the left hand lifts at 1920, an off ends its note
+				{ dt: 1440, on: [0, 67, 80] },
+				{ dt: 240, off: [0, 67] },
+			],
+			// the left hand: the pedal, on channel 1 only, pressed a tick in, lifted at the bar line
+			[
+				{ dt: 1, control: [0, 64, 127] },
+				{ dt: 1919, control: [0, 64, 0] },
+			],
+		]);
+		expect(notes).toEqual([
+			note(1, 60, 0, 1920),
+			note(1, 72, 0, 240, 1),
+			note(1, 64, 240, 1920),
+			note(1, 67, 1920, 2160),
+		]);
+	});
+
+	test("at one tick, an earlier track's pedal comes before a later track's events", () => {
+		const { notes } = notesFrom([
+			// track 1 presses the pedal at 480, as track 2's note is released there
+			[
+				{ dt: 480, control: [0, 64, 127] },
+				{ dt: 480, control: [0, 64, 0] },
+			],
+			[
+				{ dt: 0, on: [0, 60, 80] },
+				{ dt: 480, off: [0, 60] },
+			],
+			// track 3 presses it again at 960, after track 1 lifts it: track 2's note ends at 960
+			[{ dt: 960, control: [0, 64, 127] }],
+		]);
+		expect(notes).toEqual([note(2, 60, 0, 960)]);
+	});
+
+	test("a pedal never lifted holds to the track's last event", () => {
+		const { notes } = notesFrom([
+			[
+				{ dt: 0, control: [0, 64, 127] },
+				{ dt: 0, on: [0, 60, 80] },
+				{ dt: 480, off: [0, 60] },
+				{ dt: 1000, text: "end" },
+			],
+		]);
+		expect(notes).toEqual([note(1, 60, 0, 1480)]);
+	});
+
+	test("past 500,000 notes: too-large, and no notes", () => {
+		const events = (count: number) => {
+			const track: Smf["tracks"][number] = [];
+			for (let i = 0; i < count; i++) {
+				track.push({ tick: i, kind: "on", channel: 0, pitch: 60, velocity: 80 });
+				track.push({ tick: i + 1, kind: "off", channel: 0, pitch: 60, velocity: 0 });
+			}
+			return { format: 1, ppq: 480, tracks: [track] } as Smf;
+		};
+		const ok = createReport();
+		expect(notesOf(events(500_000), ok)).toHaveLength(500_000);
+		expect(ok.list).toEqual([]);
+		const over = createReport();
+		expect(notesOf(events(500_001), over)).toEqual([]);
+		expect(codes(over)).toEqual([["error", "too-large", undefined]]);
+		expect(over.list[0]?.message).toContain("500,000 notes");
+	});
+});
+
+describe("harmonyNotes", () => {
+	test("drums are left out", () => {
+		const { harmony, report } = harmonyFrom([
+			track(chords(0, [C_E_G])),
+			track(line(9, [36, 38, 36, 38])),
+			track(line(9, [42, 42])),
+		]);
+		expect(harmony.every((n) => n.channel !== 9)).toBe(true);
+		expect(rows(harmony)).toEqual(rows(C_E_G.map((p) => note(1, p, 0, 1920))));
+		expect(codes(report)).toEqual([["info", "drums-left-out", undefined]]);
+		expect(report.list[0]?.message).toContain("tracks 2 and 3");
+	});
+
+	test("drums on one track name it", () => {
+		const { report } = harmonyFrom([track(chords(0, [C_E_G])), track(line(9, [36, 38]))]);
+		expect(codes(report)).toEqual([["info", "drums-left-out", 2]]);
+	});
+
+	test("melody streams are left out, the bass stays", () => {
+		const { harmony, notes, report } = harmonyFrom([
+			[{ dt: 0, name: "Voice" }, ...track(line(0, MELODY))],
+			track(chords(1, [C_E_G, C_E_G])),
+			track(line(2, BASS)),
+		]);
+		expect(rows(harmony)).toEqual(rows(notes.filter((n) => n.track !== 1)));
+		expect(harmony.some((n) => n.pitch === 36)).toBe(true);
+		expect(codes(report)).toEqual([["info", "melody-left-out", 1]]);
+		expect(report.list[0]?.message).toContain('track 1 ("Voice")');
+	});
+
+	test("every melody is named in one diagnostic", () => {
+		const { harmony, report } = harmonyFrom([
+			track(line(0, MELODY)),
+			track(chords(1, [C_E_G, C_E_G]), line(3, [76, 77, 79])),
+		]);
+		expect(new Set(harmony.map((n) => n.channel))).toEqual(new Set([1]));
+		expect(codes(report)).toEqual([["info", "melody-left-out", undefined]]);
+		expect(report.list[0]?.message).toContain("track 1");
+		expect(report.list[0]?.message).toContain("track 2, channel 4");
+	});
+
+	test("melody-left-out names at most eight streams, then a count", () => {
+		const melodies = Array.from({ length: 10 }, (_, i) => track(line(0, [72 + i, 74 + i])));
+		const { report } = harmonyFrom([track(chords(15, [C_E_G])), ...melodies]);
+		const message = report.list[0]?.message ?? "";
+		expect(message).toContain("track 9, channel 1");
+		expect(message).not.toContain("track 10,");
+		expect(message).toContain("…and 2 more");
+		const eight = harmonyFrom([track(chords(15, [C_E_G])), ...melodies.slice(0, 8)]);
+		expect(eight.report.list[0]?.message).toContain("track 8, channel 1 and track 9, channel 1");
+		expect(eight.report.list[0]?.message).not.toContain("more");
+	});
+
+	/** MuseScore's chord playback (F2 C4 E4 F4 A4, section 8) on channel 2 beside slash notes of `pitch` on channel 1, one a beat, each ending a tick early. */
+	const musescore = (pitch: number) =>
+		harmonyFrom([
+			track(
+				chords(1, [[41, 60, 64, 65, 69]]),
+				[0, 480, 960, 1440].flatMap((t) => [
+					at(t, { on: [0, pitch, 80] }),
+					at(t + 479, { off: [0, pitch] }),
+				]),
+			),
+		]);
+
+	test("MuseScore's slash notes are a melody: B4", () => {
+		const { harmony, report } = musescore(71);
+		expect(harmony.map((n) => n.pitch).sort()).toEqual([41, 60, 64, 65, 69]);
+		expect(codes(report)).toEqual([["info", "melody-left-out", 1]]);
+	});
+
+	test("MuseScore's slash notes are a melody: B3, below the chord's median", () => {
+		// The chord stream's lowest note (F2) is the lowest: it is the bass, and B is not added.
+		const { harmony, report } = musescore(59);
+		expect(harmony.map((n) => n.pitch).sort()).toEqual([41, 60, 64, 65, 69]);
+		expect(codes(report)).toEqual([["info", "melody-left-out", 1]]);
+	});
+
+	/** Monophonic notes of these pitches, a quarter each, on channel 1 of their own named track. */
+	const mono = (name: string, pitches: number[]): Chunk => [
+		{ dt: 0, name },
+		...track(line(0, pitches)),
+	];
+	const named = (name: string, ...parts: At[][]): Chunk => [{ dt: 0, name }, ...track(...parts)];
+
+	test("the bass is the stream lowest at its 10th percentile: a stray low hit on a pad doesn't make it the bass", () => {
+		// Pad chords E3-G4 with one C1 hit; a bass A1-G2; a lead from C5.
+		const pad = [52, 55, 59, 67];
+		const { harmony, report } = harmonyFrom([
+			named("Pad", chords(0, [pad, pad, pad, pad]), [
+				at(960, { on: [0, 24, 80] }),
+				at(1200, { off: [0, 24] }),
+			]),
+			mono("Bass", [33, 36, 38, 40, 43, 40, 38, 36]),
+			mono("Lead", [72, 74, 76, 77, 79, 77, 76, 74]),
+		]);
+		expect([...new Set(harmony.map((n) => n.track))].sort()).toEqual([1, 2]);
+		expect(codes(report)).toEqual([["info", "melody-left-out", 3]]);
+	});
+
+	test("a lead that dips once to C1 is not the bass", () => {
+		const piano = [45, 57, 60, 64];
+		const lead = [72, 74, 76, 77, 79, 77, 76, 74, 72, 74, 24, 77, 79, 77, 76, 74, 72];
+		const { harmony, report } = harmonyFrom([
+			named("Piano", chords(0, [piano, piano, piano, piano])),
+			mono("Lead", lead),
+		]);
+		expect(harmony.every((n) => n.track === 1)).toBe(true);
+		expect(codes(report)).toEqual([["info", "melody-left-out", 2]]);
+	});
+
+	test("a piano whose left hand reaches A1 once doesn't push out a bass on E2-E3", () => {
+		const bottoms = [45, 47, 48, 45, 43, 45, 47, 33];
+		const piano = bottoms.map((b) => [b, b + 12, 60, 64, 67]);
+		const { harmony, report } = harmonyFrom([
+			named("Piano", chords(0, piano, 480)),
+			mono("Bass", [40, 43, 45, 47, 52, 40, 43, 45]),
+		]);
+		expect(harmony.filter((n) => n.track === 2)).toHaveLength(8);
+		expect(report.list).toEqual([]);
+	});
+
+	test("a tie on the 10th percentile goes to the lower median, then to file order", () => {
+		const chordsAbove = track(chords(0, [[60, 64, 67, 72]]));
+		// Both lines reach C2; track 3's median (E2) is lower than track 2's (C3).
+		const median = harmonyFrom([
+			chordsAbove,
+			track(line(0, [36, 48, 48, 48])),
+			track(line(0, [36, 40, 40, 40])),
+		]);
+		expect(codes(median.report)).toEqual([["info", "melody-left-out", 2]]);
+		// The same line twice: the first in the file stays.
+		const order = harmonyFrom([
+			chordsAbove,
+			track(line(0, [36, 40, 40, 40])),
+			track(line(0, [36, 40, 40, 40])),
+		]);
+		expect(codes(order.report)).toEqual([["info", "melody-left-out", 3]]);
+	});
+
+	test("a monophonic stream above the lowest stream is a melody, with no bass part", () => {
+		// A tenor line at C4 over chords in octave 3: the chords have the lowest note.
+		const { harmony } = harmonyFrom([
+			track(chords(0, [[48, 52, 55]])),
+			track(line(1, [60, 62, 60, 59])),
+		]);
+		expect(harmony.map((n) => n.pitch).sort()).toEqual([48, 52, 55]);
+	});
+
+	test("monophonic is two notes together for under 10% of the sounding time", () => {
+		const low = track(
+			chords(0, [
+				[36, 40, 43],
+				[36, 40, 43],
+			]),
+		);
+		// Legato of 40 ticks a 480 tick note: overlap about 8%, a melody.
+		const legato = harmonyFrom([low, track(line(1, MELODY, 480, 40))]);
+		expect(legato.harmony.some((n) => n.channel === 1)).toBe(false);
+		// Of 60 ticks: about 12%, not a melody.
+		const blurred = harmonyFrom([low, track(line(1, MELODY, 480, 60))]);
+		expect(blurred.harmony.filter((n) => n.channel === 1)).toHaveLength(MELODY.length);
+		expect(blurred.report.list).toEqual([]);
+	});
+
+	test("only melody: used anyway", () => {
+		const { harmony, notes, report } = harmonyFrom([track(line(0, MELODY))]);
+		expect(harmony).toEqual(notes);
+		expect(codes(report)).toEqual([["warning", "harmony-from-melody", undefined]]);
+	});
+
+	test("only monophonic streams: all used, none left out", () => {
+		const { harmony, notes, report } = harmonyFrom([track(line(0, MELODY)), track(line(1, BASS))]);
+		expect(harmony).toEqual(notes);
+		expect(codes(report)).toEqual([["warning", "harmony-from-melody", undefined]]);
+	});
+
+	describe("options.tracks", () => {
+		const file = (): Chunk[] => [
+			[{ dt: 0, name: "Melody" }, ...track(line(0, MELODY))],
+			[{ dt: 0, name: "Piano" }, ...track(chords(0, [C_E_G]))],
+			[{ dt: 0, name: "Bass" }, ...track(line(0, BASS), line(9, [36, 38]))],
+		];
+		const tracksOf = (notes: Note[]) => [...new Set(notes.map((n) => n.track))].sort();
+
+		test("numbers and names (any case) choose tracks", () => {
+			for (const tracks of [[2], ["piano"], ["PIANO"], [" Piano "]]) {
+				const { harmony, report } = harmonyFrom(file(), { tracks });
+				expect(tracksOf(harmony)).toEqual([2]);
+				expect(report.list.filter((d) => d.code !== "drums-left-out")).toEqual([]);
+			}
+		});
+
+		test("a chosen melody track is the harmony, with no drums", () => {
+			const { harmony } = harmonyFrom(file(), { tracks: [1, "bass"] });
+			expect(tracksOf(harmony)).toEqual([1, 3]);
+			expect(harmony.some((n) => n.channel === 9)).toBe(false);
+		});
+
+		test("an unknown entry warns track-unknown; when none match, the default choice", () => {
+			const unknown = harmonyFrom(file(), { tracks: ["nope", 4, 0] });
+			expect(tracksOf(unknown.harmony)).toEqual([2, 3]);
+			const d = unknown.report.list.find((x) => x.code === "track-unknown");
+			expect(d?.severity).toBe("warning");
+			expect(d?.message).toContain('"nope", 4 and 0');
+			expect(unknown.report.list.filter((x) => x.code === "track-unknown")).toHaveLength(1);
+			expect(unknown.report.list.some((x) => x.code === "melody-left-out")).toBe(true);
+			const some = harmonyFrom(file(), { tracks: ["nope", 1] });
+			expect(tracksOf(some.harmony)).toEqual([1]);
+			expect(some.report.list.map((x) => x.code)).toContain("track-unknown");
+		});
+	});
+
+	test("no notes", () => {
+		const drums = harmonyFrom([track(line(9, [36, 38]))]);
+		expect(drums.harmony).toEqual([]);
+		expect(codes(drums.report)).toEqual([
+			["info", "drums-left-out", 1],
+			["error", "no-notes", undefined],
+		]);
+		const empty = harmonyFrom([[{ dt: 0, text: "nothing" }]]);
+		expect(codes(empty.report)).toEqual([["error", "no-notes", undefined]]);
+		const chosen = harmonyFrom([track(line(0, MELODY)), [{ dt: 0, name: "Empty" }]], {
+			tracks: [2],
+		});
+		expect(chosen.harmony).toEqual([]);
+		expect(codes(chosen.report)).toEqual([["error", "no-notes", undefined]]);
+		expect(chosen.report.list[0]?.message).toContain("options.tracks");
+		expect(chosen.report.list[0]?.message).not.toContain("channel 10");
+		expect(drums.report.list[1]?.message).toContain("channel 10");
+	});
+});
+
+describe("createReport", () => {
+	test("each problem (code, track and message) once, with a count and its first five bars", () => {
+		const report = createReport();
+		for (const bar of [3, 1, 3, 4, 7, 9, 12])
+			report.add("chord-unnamed", "warning", "? written", { bar });
+		report.add("bad-event", "warning", "junk", { track: 1 });
+		report.add("bad-event", "warning", "junk", { track: 2 });
+		report.add("bad-event", "warning", "more junk", { track: 2 });
+		report.add("bad-event", "warning", "junk", { track: 2 });
+		report.add("key-doubtful", "warning", "doubtful");
+		expect(report.list).toEqual([
+			{
+				severity: "warning",
+				code: "chord-unnamed",
+				message: "? written (7 times; bars 3, 1, 4, 7, 9 and more)",
+				bar: 3,
+			},
+			{ severity: "warning", code: "bad-event", message: "junk", track: 1 },
+			{ severity: "warning", code: "bad-event", message: "junk (2 times)", track: 2 },
+			{ severity: "warning", code: "bad-event", message: "more junk", track: 2 },
+			{ severity: "warning", code: "key-doubtful", message: "doubtful" },
+		]);
+	});
+
+	test("a code at a bar or two", () => {
+		const report = createReport();
+		report.add("tempo-in-bar", "info", "a stretch", { bar: 2 });
+		report.add("tempo-in-bar", "info", "a stretch", { bar: 5 });
+		report.add("meter-mid-bar", "warning", "cut", { bar: 4 });
+		// The first add has no bar; a later one's bar is recorded, and one bar is "bar".
+		report.add("key-doubtful", "warning", "late");
+		report.add("key-doubtful", "warning", "late", { bar: 4 });
+		expect(report.list).toEqual([
+			{
+				severity: "info",
+				code: "tempo-in-bar",
+				message: "a stretch (2 times; bars 2 and 5)",
+				bar: 2,
+			},
+			{ severity: "warning", code: "meter-mid-bar", message: "cut", bar: 4 },
+			{ severity: "warning", code: "key-doubtful", message: "late (2 times; bar 4)", bar: 4 },
+		]);
+	});
+
+	test("the reader reports into a report it is given", () => {
+		const report = createReport();
+		report.add("key-doubtful", "warning", "before");
+		const r = readSmfInto(smf({ tracks: [[{ dt: 0, key: [9, 0] }]] }), report);
+		expect(r.diagnostics).toBe(report.list);
+		expect(report.list.map((d) => d.code)).toEqual(["key-doubtful", "meta-invalid"]);
+	});
+
+	test("the reader counts through it", () => {
+		const r = readSmf(
+			smf({
+				tracks: [
+					[
+						{ dt: 0, key: [9, 0] },
+						{ dt: 0, key: [10, 0] },
+					],
+				],
+			}),
+		);
+		expect(r.diagnostics.map((d) => d.message)).toEqual([
+			"a key signature outside 7 flats to 7 sharps, major or minor, ignored (2 times)",
+		]);
+	});
+});
+
+describe("bassLine", () => {
+	const line = (track: number, pitches: number[], step = 480) =>
+		pitches.map((p, i) => note(track, p, i * step, (i + 1) * step));
+	const chords = (track: number, pitches: number[]) =>
+		[0, 1, 2, 3].flatMap((i) => pitches.map((p) => note(track, p, i * 480, (i + 1) * 480)));
+
+	test("the lowest stream, when it is a single line", () => {
+		const piano = chords(1, [48, 60, 64, 67]);
+		const bass = line(2, [36, 40, 43, 45]);
+		expect(bassLine([...piano, ...bass])).toEqual({ track: 2, channel: 0 });
+		// a chordal lowest stream is no bass line
+		expect(bassLine([...chords(1, [36, 60, 64]), ...line(2, [48, 50, 52, 53])])).toBe(null);
+	});
+
+	test("one grace note doesn't make it chordal (under 10% together)", () => {
+		// F2 a 30-tick grace overlapping G2's start by 10 ticks
+		const bass = [
+			...line(2, [36, 40]),
+			note(2, 41, 930, 970),
+			...line(2, [43, 45]).map((n) => ({ ...n, start: n.start + 960, end: n.end + 960 })),
+		];
+		expect(bassLine([...chords(1, [52, 55, 59]), ...bass])).toEqual({ track: 2, channel: 0 });
+	});
+
+	test("the lowest is chosen at its 10th percentile, as the harmony choice does", () => {
+		// a pad with one stray low hit is not lower than the bass line
+		const pad = [...chords(1, [55, 59, 62]), note(1, 24, 0, 30)];
+		expect(bassLine([...pad, ...line(2, [33, 35, 36, 38])])).toEqual({ track: 2, channel: 0 });
+	});
+});

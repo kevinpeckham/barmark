@@ -1,9 +1,13 @@
 import { beforeAll, describe, expect, test } from "bun:test";
-import { copyFileSync, mkdtempSync, writeFileSync } from "node:fs";
+import { copyFileSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { exportMidi } from "@barmark/midi";
 import { exportMusicXml } from "@barmark/musicxml";
-import { PEACEFUL_DREAMS } from "./charts.js";
+import { PEACEFUL_DREAMS, ROOT } from "./charts.js";
+
+const MIDI = join(ROOT, "packages/midi/tests/fixtures");
+
 import { mxl } from "./mxl.js";
 
 const PACKAGE = join(import.meta.dir, "..");
@@ -27,6 +31,7 @@ beforeAll(() => {
 	const exported = exportMusicXml("# Song\n\n| D |\n| G | C |\n");
 	if (!exported.ok) throw new Error("export failed");
 	writeFileSync(join(dir, "song.mxl"), mxl("score.musicxml", exported.xml));
+	copyFileSync(join(MIDI, "lead-sheet.mid"), join(dir, "lead-sheet.mid"));
 }, 60_000);
 
 describe("the compiled binary, with no node_modules beside it", () => {
@@ -36,7 +41,7 @@ describe("the compiled binary, with no node_modules beside it", () => {
 			((await Bun.file(join(PACKAGE, "..", p, "package.json")).json()) as { version: string })
 				.version;
 		expect(barmark("--version").out).toBe(
-			`@barmark/cli ${own.version} (barmark ${await lib("barmark")}, @barmark/render ${await lib("render")}, @barmark/musicxml ${await lib("musicxml")})\n`,
+			`@barmark/cli ${own.version} (barmark ${await lib("barmark")}, @barmark/render ${await lib("render")}, @barmark/musicxml ${await lib("musicxml")}, @barmark/midi ${await lib("midi")})\n`,
 		);
 	});
 	test("check reads a chart", () => {
@@ -53,5 +58,15 @@ describe("the compiled binary, with no node_modules beside it", () => {
 		const run = barmark("import", "song.mxl");
 		expect(run.code).toBe(0);
 		expect(run.out).toContain("| G | C |");
+	});
+	test("export --midi writes the file; import reads one", () => {
+		const want = exportMidi(readFileSync(PEACEFUL_DREAMS, "utf8"), { title: "peaceful-dreams" });
+		if (!want.ok) throw new Error("export failed");
+		const run = barmark("export", "--midi", "peaceful-dreams.chart.md", "--out", "pd.mid");
+		expect(run.code).toBe(0);
+		expect(new Uint8Array(readFileSync(join(dir, "pd.mid")))).toEqual(new Uint8Array(want.bytes));
+		const read = barmark("import", "lead-sheet.mid");
+		expect(read.code).toBe(0);
+		expect(read.out).toBe(readFileSync(join(MIDI, "lead-sheet.chart.md"), "utf8"));
 	});
 });

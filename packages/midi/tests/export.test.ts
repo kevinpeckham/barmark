@@ -3,13 +3,11 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { parseChart } from "barmark";
 import { type MidiEvent, parseMidi } from "midi-file";
-import { AT_A_GLANCE } from "../../barmark/tests/chart/fixtures.js";
-import { corpus, examples } from "../../musicxml/tests/charts.js";
-import { jumpChart } from "../../musicxml/tests/import/jump-charts.js";
 import { midiOf } from "../src/export/index.js";
 import { exportMidi, type MidiExportResult, VERSION } from "../src/index.js";
 import type { SmfEvent } from "../src/smf/types.js";
 import { ordered } from "../src/smf/write.js";
+import { CHARTS } from "./helpers/charts.js";
 import { chartByBeat, heardByBeat } from "./helpers/player.js";
 
 const MORNING_SONG = readFileSync(
@@ -42,17 +40,6 @@ const named = (track: ({ tick: number } & MidiEvent)[]) =>
 	track.find((e) => e.type === "trackName")?.text;
 const channelsOf = (track: ({ tick: number } & MidiEvent)[]) =>
 	new Set(track.flatMap((e) => ("channel" in e ? [e.channel] : [])));
-
-/** Every chart the player checks: the grammar's example, the examples, the corpus and the jump charts. */
-const CHARTS: [string, string][] = [
-	["at a glance", AT_A_GLANCE],
-	...examples,
-	...corpus(),
-	...Array.from({ length: 300 }, (_, i) => i + 1).flatMap((seed): [string, string][] => {
-		const text = jumpChart(seed);
-		return text === null ? [] : [[`jump chart ${seed}`, text]];
-	}),
-];
 
 describe("exportMidi", () => {
 	test("the version is the package's", () => {

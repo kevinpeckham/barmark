@@ -2,18 +2,18 @@
 
 MIDI for [barmark](https://barmark.dev) chord charts: export a chart's
 play order as a Standard MIDI File, to hear it in a sequencer or a
-notation program. So far it has been checked in MuseScore 4.7.6 (its MIDI
-import, read through the MusicXML it writes); other programs are
-untested. The performance core, chart to timed notes,
-is the `@barmark/midi/perform` subpath. (Import, a MIDI file to a chart,
-comes later.)
+notation program, and import a MIDI file as a chord chart. Export has
+been checked in MuseScore 4.7.6 (its MIDI import, read through the
+MusicXML it writes); other programs are untested. The performance core,
+chart to timed notes, is the `@barmark/midi/perform` subpath.
 
 ```sh
 npm install @barmark/midi
 ```
 
-It requires `barmark` 0.20.0 or later. It has no runtime MIDI library:
-the file is written by hand.
+It requires `barmark` 0.21.0 or later (import names chords with its
+`nameNotes`). It has no runtime MIDI library: the file is written and
+read by hand.
 
 ## Export
 
@@ -134,6 +134,166 @@ file uses 480 and rounds each time to the nearest tick, never a note to
 nothing (`ticks-rounded`). A pitch beyond MIDI's 0–127 moves by octaves
 into it, and a key beyond seven sharps or flats is written as its
 enharmonic. A chart too long for any division is an error.
+
+## Import
+
+```ts
+import { importMidi } from "@barmark/midi";
+
+const { text, diagnostics } = importMidi(bytes); // or importMidi(bytes, { tracks: [2, "Piano"] })
+if (text === "") console.error(diagnostics);
+```
+
+`importMidi` reads a format 0 or 1 file and writes a chord chart with
+`@barmark/sync`'s builder: canonical, in play order (no repeats), four
+bars a line. It never throws; `text` is `""` exactly when a diagnostic
+is an error, and otherwise parses with no errors.
+
+### What is read
+
+- **The chords** come from the notes that carry the harmony: drums
+  (channel 10) and single-note lines other than the lowest (a melody,
+  slash notes) are left out, unless `tracks` names the tracks to read.
+  Each chord is named from the pitch classes sounding (barmark's
+  `nameNotes`), else written as a note set of up to three notes, else
+  `?`; where nothing sounds, `N.C.`.
+- **Bars, key, meter and tempo** come from the file's time, key and
+  tempo events. A short first bar before a new meter is a pickup when it
+  is whole beats of the meter after it; otherwise it is a bar of its own
+  meter. A doubtful key signature is left out; a gradual tempo change is
+  written as its last tempo. A tempo or meter barmark can't write
+  (`tempo:` is 1 to 999, `time:` up to 32 beats) is dropped with a
+  diagnostic.
+- **Chords are read at beat resolution**, so a push on an off-beat (the
+  last eighth of a bar, say) is written on the next beat.
+- **Lyrics** become lyric rows under the bar lines (unless `lyrics:
+  false`): from the first track with lyric events, or in a karaoke
+  (`.kar`) file with none, its text events (the `@` lines left out, a
+  leading `\` or `/` read as a line break). MIDI has no verse number, so
+  **verses are assigned by order at each tick**: the first lyric at a
+  tick is verse 1, the second verse 2, and so on (up to 100). Where one
+  verse holds while another sings, the singing verse's syllable is read
+  as verse 1; when the number of lyrics at a tick varies, a
+  `lyrics-verses-uncertain` warning says verses may be mixed. A syllable
+  continues its word unless its text ends in a space or the next begins
+  with one; `‿` and MuseScore's elision character are an elision (`~`).
+  The bars run on to the last lyric, past the last chord if need be.
+  Each bar's syllables sit on the coarsest grid that holds them (the bar,
+  its beats, a beat in two, three or four), the slots between held (`/`)
+  while the track's notes sound, else `--` (also before a verse's first
+  syllable); a breath shorter than that grid's slot is lost. Characters a
+  row can't hold as a syllable (`|`, `"`, braces, `_`) are removed. At
+  most 20,000 rows are written. The chart is checked before it is
+  returned: a verse whose rows don't read back as placed is left out
+  (`lyrics-dropped`), never the chords.
+- **Markers** become `## ` headings, on the bar line nearest them; two
+  on one bar keep the first. **The title** is a format 0 file's track
+  name, or track 1's name when track 1 has no notes (a conductor track).
+  Names are tidied: a newline is a space, control and invisible
+  characters go, and a name that would read as something else (`x2`) is
+  repaired or dropped.
+
+- **MuseScore's files** read as they sound. MuseScore 4 plays its chord
+  symbols, on a channel of their own in the part's track (the bass in
+  octave 2 under the chord around middle C), and that is where the
+  chords come from. It plays slash notes as one pitch a beat (B3 or B4,
+  the staff's middle line) on the part's own channel: a single-note
+  line, left out like a melody, so C doesn't come back as Cmaj7. Its
+  rehearsal marks are markers (`## A`); its section names (staff text)
+  and its title aren't in the file at all. The sustain pedal holds every
+  note on its channel, whichever track it is in: MuseScore writes a
+  piano's two staves as two tracks on one channel, and the pedal in one
+  of them. Checked on MuseScore 4.7.6's files of a lead sheet,
+  a hymn with a pickup and two verses, a band, a comping guitar, a waltz,
+  a pedalled piano and a band with bass and drums.
+
+### What isn't read
+
+1. **Repeats, endings and jumps.** MIDI has none: the chart is the
+   file's play order written out (a bar repeated exactly comes back as
+   `%`, with `simile`).
+2. **Rhythm finer than a beat.** A push or an eighth-note change is
+   written on the beat it falls into, as the chord holding most of the
+   beat.
+3. **Rhythm figures.** Accents, hits, pushes, the pedal and swing aren't
+   written; silence is `N.C.`, never `--` (a file can't tell the band
+   stopped from the chord instruments stopping).
+4. **Gradual tempo changes and fermatas.** A ramp is written as its last
+   tempo (`tempo-ramp`); a tempo that changes inside a bar and is back
+   by the next is left out (`tempo-in-bar`).
+5. **Credits, words and text events**, other than the title, markers and
+   a karaoke file's lyrics; programs and instrument names.
+6. **Drums.** Channel 10 is never read (`drums-left-out`).
+7. **Melody lines, by design.** The import reads the harmony, so a
+   single-note line that isn't the lowest comes back only through the
+   chords it sounds in, or not at all: a melody or a `Vo.Mel` line, a
+   pedal-tone line, a chart's own `Pno.LH` single notes over a bass part
+   (`melody-left-out` names them). The lowest single-note line is a bass
+   line and gives the chords their bass.
+8. **Parts.** The whole file is one chord line: several parts are read
+   together, so a guitar's G over a piano's Em is `Em7`.
+9. **Inversions under a held chord.** The same upper voices over a new
+   bass inside a bar are one chord; a new bass at a bar line is a slash
+   chord.
+10. **Format 2 files and SMPTE time** (errors), and files past the
+    bounds: 16 MiB, 1,024 tracks, 2,000,000 events, 500,000 notes or
+    10,000 bars (`too-large`).
+
+### Options
+
+- `tracks`: the tracks to read the chords from, by 1-based number or
+  track name (any case, every track of that name), in place of the
+  default choice. Every pitched note on them counts, single-note lines
+  included (channel 10, the drums, is still left out), so naming a
+  MuseScore part's track reads its slash notes too and adds B to every
+  chord: leave `tracks` out for MuseScore's files.
+  An entry naming no track is a `track-unknown` warning; when none
+  match, the default choice is used.
+- `lyrics`: read lyrics (default true).
+- `simile`: write a bar that repeats the one before as `%` (default
+  true).
+- `barsPerLine`: bars a line (default 4).
+
+### Diagnostics
+
+Each diagnostic has a `code`, a `severity`, a `message`, and where it
+can, a `track` (1-based, in file order) and the played `bar` (a pickup
+is bar 1). A problem that repeats
+is reported once, with a count and its first bars.
+
+| Code | Severity | When |
+|---|---|---|
+| `not-midi` | error | no `MThd` header, or a division of 0 |
+| `format-2` | error | a format 2 file |
+| `smpte` | error | SMPTE time division: no beats to make bars from |
+| `too-large` | error | past a bound (above) |
+| `no-notes` | error | no pitched notes outside channel 10 |
+| `truncated` | warning | a chunk runs past the file, or the file ends inside a header; read to its end |
+| `track-count` | warning | the header's track count is wrong |
+| `bad-event` | warning | junk in a track; the rest of that track skipped |
+| `meta-invalid` | warning | a tempo, time or key signature barmark can't use, ignored |
+| `meter-mid-bar` | warning | a time signature inside a bar |
+| `key-doubtful` | warning | a key signature the notes don't fit, left out |
+| `harmony-from-melody` | warning | every line is a single line; all are read |
+| `track-unknown` | warning | a `tracks` entry naming no track |
+| `chord-unnamed` | warning | `?` written for notes with no name |
+| `lyrics-dropped` | warning | a verse that didn't read back as placed, or past 100 verses at a tick or 20,000 rows |
+| `lyrics-verses-uncertain` | warning | the number of lyrics at a tick varies, so verses may be mixed |
+| `unknown-chunk` | info | a chunk other than `MTrk`, skipped |
+| `drums-left-out` | info | channel 10's notes |
+| `melody-left-out` | info | the single-note lines left out of the harmony |
+| `tempo-ramp` | info | a gradual tempo change, written as its last tempo |
+| `tempo-in-bar` | info | a tempo that changes inside a bar and is back by the next, left out |
+| `marker-dropped` | info | a second marker on one bar |
+| `lyrics-other-tracks` | info | lyrics on tracks after the first with them, not read |
+
+Plus `@barmark/sync`'s builder's codes as they come: a section name it
+had to change, a key respelled, a meter or a tempo barmark can't write
+(`tempo:` is 1 to 999, `time:` up to 32 beats), dropped.
+
+`readSmf(bytes)` is the reader underneath: the file's format, division
+and tracks of absolute-tick events, each track's name, and its
+diagnostics.
 
 ## `@barmark/midi/perform`
 

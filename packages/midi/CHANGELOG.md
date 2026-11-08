@@ -6,6 +6,60 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- **`importMidi(bytes, options?)`**: a chord chart from a Standard MIDI
+  File (format 0 or 1), written by `@barmark/sync`'s builder, so it is
+  canonical, in play order, four bars a line. The chords come from the
+  harmony's notes, the bar grid, key, meter and tempo from the file's
+  meta events (a pickup when sync can write it as whole beats; otherwise
+  a bar of its own meter), markers become `## ` headings (two on one
+  bar keep the first, `marker-dropped`), and the title is a format 0
+  file's track name or a note-less track 1's. Options: `tracks` (the
+  harmony's tracks, by number or name), `simile` and `barsPerLine`.
+  It never throws: `text` is `""` exactly when a diagnostic is an error,
+  and otherwise parses with no errors. Each diagnostic has a code (the
+  import's own, or sync's), a message that carries no value read from
+  the file, and the played bar it concerns (a pickup is bar 1), counted
+  once with its first bars; a tempo or meter barmark can't write is
+  dropped with sync's diagnostic.
+- **`importMidi` reads lyrics** as lyric rows under the bar lines
+  (spec 5.8; `lyrics: false` reads none): the first track with lyric
+  events, events at one tick as verses 1, 2, … (up to 100; others
+  `lyrics-dropped`), other tracks with lyrics named once
+  (`lyrics-other-tracks`). Word ends from spaces (trailing, or leading
+  on the next syllable), `‿` as `~`; characters a row can't hold as a
+  syllable removed, so a syllable is one syllable or nothing. Each bar
+  takes the coarsest even grid that holds its syllables' onsets, with
+  `/` while the lyric track sounds and `--` where it doesn't. A
+  self-check reparses the chart and drops a verse whose rows don't read
+  back as placed (`lyrics-dropped`), keeping the chords and the other
+  verses. The bar grid runs to the last lyric. MuseScore's elision
+  character (U+E551, and SMuFL's U+E550, U+E552) is `~`. Verses are
+  assigned by order at each tick; when the number of lyrics at a tick
+  varies, `lyrics-verses-uncertain` warns that verses may be mixed. A
+  karaoke file with no lyric events gives its text events as lyrics.
+  Before a verse's first syllable a slot is `--`. At most 20,000 lyric
+  rows are written; later verses are left out (`lyrics-dropped`).
+- **Import checked on MuseScore's own files**: seven files MuseScore
+  4.7.6 wrote from scores of ours (a lead sheet, a hymn with a pickup
+  and two verses, a band, a comping guitar, a waltz, a pedalled piano
+  with no chord symbols, and a band with a bass line, sounding slash
+  notes and drums) import to charts read over by hand: the chord
+  symbols MuseScore plays, not its slash notes' B; the pickup; two
+  parts as one chord line; rehearsal marks as headings. The sustain
+  pedal holds every note on its channel, across tracks, as MuseScore
+  writes a piano's pedal in one staff's track only. The README
+  says what import reads and what it doesn't (melody lines, by design),
+  its options, and its diagnostics with their severities.
+- **`readSmf(bytes)`**: the Standard MIDI File reader import uses, with
+  its diagnostics: format, division and tracks of absolute-tick events
+  (notes, programs, controllers, the meta events barmark reads), each
+  track's name, and never a throw. Text is UTF-8, else windows-1252; a
+  newline or a tab becomes a space, other control characters, line and
+  paragraph separators, bidi controls and zero-width spaces are removed,
+  and text is cut at 200 characters with "…", never inside a character.
+
 ## [0.1.0] - 2026-11-08
 
 ### Added

@@ -3,8 +3,8 @@
 The `barmark` command: check, format, part, render, transpose, export and import
 [Barmark](https://www.barmark.dev) chord charts (`.chart.md` files) in a
 terminal or in CI. It runs the same `barmark` parser and `@barmark/render`
-renderer as barmark.dev, and `@barmark/musicxml` for MusicXML, at exact
-versions, so a chart means the same thing everywhere.
+renderer as barmark.dev, `@barmark/musicxml` for MusicXML and
+`@barmark/midi` for MIDI files, at exact versions, so a chart means the same thing everywhere.
 
 ## Install
 
@@ -35,6 +35,8 @@ dot-folders and symlinks. `-` reads from stdin.
 barmark check songs                      # errors and warnings, file:line
 barmark export --musicxml song.chart.md --out song.musicxml   # for MuseScore, Dorico…
 barmark import song.musicxml --out song.chart.md   # or a compressed song.mxl
+barmark export --midi song.chart.md --out song.mid   # for a DAW or a practice player
+barmark import song.mid --out song.chart.md        # chords named from the notes
 barmark check --strict --format github songs   # warnings fail too; PR annotations
 barmark format song.chart.md             # print it in standard form
 barmark format --write songs             # rewrite the files that change
@@ -65,6 +67,20 @@ part's name, abbreviation or id, ignoring case and punctuation) imports
 one part alone, its notes as note sets. It exits 0 when a chart came out,
 even with warnings, and 1 when none did or the `.mxl` is bad. It does not
 read stdin.
+
+`export --midi` writes a Standard MIDI File of the chart's play order
+(chords voiced on piano, the tempo map, markers and lyrics); `--out` is
+required, and `--part <label>` exports one part. What MIDI can't hold is
+listed on stderr as `song.chart.md: bar 9: warning: message`, such as an
+open repeat (`x ...`) played once. A chart with errors is not exported.
+
+`import` reads a MIDI file (`.mid` or `.midi`) as a chart too, naming a
+chord from the notes of the tracks that carry the harmony and turning
+lyric events into lyric rows. Its messages are listed on stderr as
+`song.mid: bar 12 (track 2): warning: message`. `--tracks 2,Piano`
+names the harmony's tracks by number or name (ignoring case) instead of
+letting the import choose. As for MusicXML, it exits 1 when no chart came
+out.
 
 ## Exit codes
 

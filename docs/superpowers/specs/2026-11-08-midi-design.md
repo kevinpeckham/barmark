@@ -151,7 +151,7 @@ The main JavaScript MIDI libraries, checked 2026-11-08:
 **Claude's call: a small hand-written reader and writer** (about 400
 lines with tests), because the importer needs what none of them gives:
 diagnostics for truncation, a bad header and junk events (not silent
-partial results); limits on sizes and counts; UTF-8 text with Latin-1
+partial results); limits on sizes and counts; UTF-8 text with windows-1252
 fallback and control characters removed; and a writer whose event order
 at one tick is ours to define (5.1, 3.2). The SMF format is small and
 fixed (1988), so there is nothing to keep up with.
@@ -505,8 +505,12 @@ examples slot by slot.
   signature whose denominator isn't 2, 4, 8 or 16 (barmark's `time:`),
   or a key signature outside −7..7 or 0..1 is ignored with a warning
   (`meta-invalid`).
-- **Text:** UTF-8 when the bytes are valid UTF-8, else Latin-1;
-  control characters removed; cut at 200 characters with "…".
+- **Text:** UTF-8 when the bytes are valid UTF-8, else windows-1252
+  (Claude's ruling, 2026-11-08: not strict Latin-1, since 0x80–0x9F
+  are the curly quotes, dashes and € Windows programs write, and
+  "don’t" must survive; the five bytes it leaves unassigned decode as
+  C1 controls and are removed); control characters removed; cut at 200
+  characters with "…".
 - **Bounds:** at most 16 MiB, 1,024 track chunks, 2,000,000 events,
   500,000 notes and 10,000 bars (`MAX_EXPANDED_BARS`), a pickup counted
   as a bar. Past any of them:
@@ -518,19 +522,39 @@ examples slot by slot.
 - **Notes:** a note-on and the next note-off of the same pitch on the
   same track and channel; a second note-on of a sounding pitch ends the
   first there (a re-strike). A note still sounding at the end ends at the
-  last event of its track. Zero-length notes are dropped.
+  last event of its track. Zero-length notes are dropped. At one tick, a
+  note-off (or zero-velocity note-on) comes before a re-strike of its
+  pitch whatever the file order, so a file that writes the new note-on
+  before the old note-off keeps both notes (Claude's ruling, 2026-11-08;
+  only a note-on of a pitch still sounding moves, so an on and an off of
+  a silent pitch at one tick stay a zero-length note, and nothing else
+  moves, so the pedal keeps its place).
 - **Sustain pedal:** controller 64 at 64 or more holds a released note
-  on its channel until the pedal lifts or the pitch is struck again.
+  on its channel, across tracks, until the pedal lifts or the pitch is
+  struck again (Claude's ruling, 2026-11-08: a controller belongs to the
+  channel, and tracks are only how the file is filed; MuseScore writes a
+  piano's two staves as two tracks on one channel with the pedal in one
+  staff's track only, and a sequencer holds both). The tracks are read
+  in one pass, merged by tick, then track, then file order, so at one
+  tick an earlier track's pedal comes first.
 - **Streams:** the notes of one track on one channel. Channel 10 is
   drums: left out (`drums-left-out`, info).
 - **Melody streams are left out of the harmony:** a stream that is
   monophonic (two or more of its notes sound together for less than 10%
-  of its sounding time) and isn't the lowest stream (by median pitch) is
-  a melody, a lead line or MuseScore's slash notes (which sound as one
-  repeated pitch, section 8). One `melody-left-out` info names them. The
-  lowest monophonic stream is a bass line and stays: it gives the bass.
-  If every pitched stream would be left out, all are used, warning
-  `harmony-from-melody`.
+  of its sounding time) and isn't the lowest stream is a melody, a lead
+  line or MuseScore's slash notes (which sound as one repeated pitch,
+  section 8). One `melody-left-out` info names them (eight at most,
+  then a count). The lowest stream is the one lowest at its 10th
+  percentile pitch (its pitches sorted, the one a tenth of the way up),
+  ties to the lower median pitch, then to file order (Claude's ruling,
+  2026-11-08, revised: not the lowest median, which made B3 slash notes
+  the bass beside MuseScore's chord playback, F2 C4 E4 F4 A4, whose
+  median is E4, and added B to every chord; and not the lowest note,
+  which let one stray low hit on a pad or a lead make it the bass and
+  leave the real bass line out). When
+  the lowest stream is monophonic it is a bass line and stays: it gives
+  the bass. When no stream is polyphonic (only melody streams), all are
+  used, warning `harmony-from-melody`.
 - **Melody lines are not part of the round trip, by design.** The
   harmony is what the import reads, so a chart's own single-note lines
   that aren't its lowest (a melody, a `Vo.Mel` line, a pedal-tone line, a
@@ -557,6 +581,10 @@ examples slot by slot.
   dropped. A bar spans its start up to but not including the next bar's
   start, so a note ending exactly on a bar line ends in the bar before
   it: ending at tick 1920 in 4/4 at 480, the grid ends at 1920.
+  A note ringing up to a 16th past a bar line (a legato release of the
+  last chord) ends there too, so it adds no bar of `N.C.`; a note struck
+  in a bar always keeps it (Claude's ruling, 2026-11-08, from Task 13b's
+  jitter test).
 - **A pickup:** the first bar is a pickup when it is shorter than the
   second and a time signature at the second bar changes the meter, as
   MuseScore writes one (1/4 then 3/4, section 8) and as the export writes
@@ -588,13 +616,26 @@ examples slot by slot.
   `time:` lines, not `[2/4]` (sync has no one-bar meters; the pickup is
   the exception).
 - **Tempo:** a bar's tempo is the qpm in force at its downbeat, in
-  grammar 2.1's beat (qpm ÷ the beat in quarters), rounded to two
-  decimals. A `tempo:` line is written where a bar's tempo differs from
+  grammar 2.1's beat (qpm ÷ the beat in quarters) of the meter the chart
+  writes the bar in, rounded to two decimals. A bar cut short by a
+  signature is written as a `time:` line in its own meter, which changes
+  the tempo unit, so it counts that meter's beat: a 6/8 bar at 90 qpm
+  cut at the fourth eighth is `time: 3/8, tempo: 180`, and plays at 90
+  on re-export (the final review's fix, 2026-11-08: it had counted the
+  signature in force, `tempo: 60`, three times too slow). A pickup is
+  written `[k/d]`, which keeps the unit of the `time:` in force (grammar
+  2.4, Kevin's decision 2026-11-08), so it counts the beat of the bar
+  after it. A `tempo:` line is written where a bar's tempo differs from
   the bar before's. A **ramp**, the downbeat tempo changing in the same
-  direction on two or more consecutive downbeats (so three or more bars),
-  writes only its final tempo, at its final bar (`tempo-ramp`, info): v1
-  writes no `rit.`/`accel.`. The export's ramp reaches its target at a
-  downbeat (3.7), so its target comes back exactly.
+  direction on two or more consecutive downbeats (so three or more bars)
+  **with the tempo moving inside each bar between them** (Claude's
+  ruling, 2026-11-08: tempos that change only at bar lines are steps the
+  chart wrote, `tempo: 100 | C | tempo: 110 | C | tempo: 120 | C |`, and
+  each is kept), writes only its final tempo, at its final bar
+  (`tempo-ramp`, info): v1 writes no `rit.`/`accel.`. The export's ramp
+  moves a beat at a time inside its bars and reaches its target at a
+  downbeat (3.7), so it is read as a ramp and its target comes back
+  exactly.
   A tempo that changes inside a bar and is back by the next downbeat (a
   fermata stretch) writes nothing (`tempo-in-bar`, info, with a count).
   The export's ramp and fermata therefore come back as a step and as
@@ -602,25 +643,158 @@ examples slot by slot.
 
 ### 5.5 Chords from notes: segments
 
-The harmony streams' notes are cut into **segments**, each one chord:
+The harmony streams' notes are cut into **segments**, each one chord.
+**Chord boundaries come from the harmony voices; the bass line moves a
+chord only at a bar line** (Claude's rulings, 2026-11-08: fix round 2
+revised round 1, whose carry merged real changes, `| C | C7 |`,
+`| Cmaj7 | C |` and Peaceful Dreams' `D7sus4` then `D5` each one chord;
+fix round 3 made the bass's move count when it strikes before the
+voices, the bass on 1 and the chord after it, as in a waltz, boom-chick,
+ballad, reggae skank, stride or off-beat jazz comping; fix round 5 made
+that hold however far the chord before rings past the bar line, read a
+bass in octaves or double stops as a bass, and placed a change heard
+after a rest at the last bar line the bass sounds through; the final fix
+pass bridged the silence beside a bass struck alone before its chord;
+round 1 had
+revised the first draft, under which a walking bass under off-beat
+comping read four symbols a bar):
 
-- A segment starts at an **attack**: a tick where two or more harmony
-  notes start within a 32nd note of each other (a block chord, a strum),
-  or where a note starts while no harmony note sounds (a fresh start). A
-  single note starting under held notes (a melody note in the right
-  hand, an arpeggio over a pedal, a walking bass under a held chord) does
-  not cut. Where every harmony note has stopped, a segment of **no
-  harmony** begins.
+- **Stretches:** where every harmony note has stopped, a segment of
+  **no harmony** begins; a note struck as the last one stops is no gap.
+  Nor is silence beside a **bass struck alone** (a lone note, the bass
+  line's note, or a bass figure) whose chord attack follows in the same
+  bar: the stretch goes on as if the bass had held, so a staccato
+  boom-chick, or MuseScore's notes each ending a tick early, reads as
+  the legato one does, `| C | F | G | C |` (Claude's ruling, 2026-11-08,
+  the final fix pass: a bass note struck alone and followed in the same
+  bar by a chord attack is that chord's bass whatever the silence
+  between; it had read `{C} C {G} C`, and a bass alone on the downbeat,
+  a rest, then its chord on beat 3 `| C | / N.C. F / |`, now `| C | F |`).
+  The silence before such a bass is bridged only when what sounded last
+  was struck in the same bar: a chord struck in the bar before, ringing
+  past the line, then a rest, is not carried into this bar
+  (`| N.C. / / C | N.C. F / / |`). A lone note after silence with no
+  chord attack after it in the bar still starts its own (`{G}`), and so
+  does one before a chord in the next bar. Cost (the ruling's): a single
+  note meant alone, with a rest and then a chord in its bar, reads as
+  part of the chord.
+- **The bass line** is the harmony choice's lowest stream (5.2: lowest
+  at its 10th percentile, ties to the lower median) when it is a single
+  line (overlap under a tenth of its time), so a grace note or a slide
+  doesn't lose it; else none, and every note is a harmony voice
+  (MuseScore's piano). One helper, `bassLine` in `streams.ts`, serves
+  both. With no bass line, a single note struck below a chord's voices
+  is its bass (stride, a one-track waltz): the voices are the notes its
+  attack struck above their widest gap when that is a fifth or more and
+  two or more notes lie above it (a bass with its octave or double stop
+  below the chord), else all it struck (fix round 5: an open voicing's
+  gap under its top note, C4 G4 E5, is no split, so a melody D5 struck
+  alone inside it is no bass; round 3 read `| C | D9sus4 |`). Two notes
+  struck alone, below the voices or an octave apart, with their chord
+  following in the same bar, are a **bass figure**, read like one note
+  (fix round 5: LH octaves under boom-chick, a bass track in octaves or
+  root–fifth double stops, a waltz's octave on 1 read `{C} C {G} C` and
+  `C5 C`); with no chord following in the bar they begin one themselves
+  (MuseScore's `piano-comping` bar 8: F2 F3 then a pedalled arpeggio,
+  one note at a time, `Fmaj7`).
+- An **attack** is two or more harmony-voice notes starting within a
+  16th note of the first (a block chord, a strum, a stab, a chord whose
+  notes are each played up to a 32nd early or late: Claude's ruling,
+  2026-11-08, from Task 13b's jitter test). Its **sound** is the pitch
+  classes struck and those the voices still hold (to at least the first
+  struck note's end).
+- **A stretch's first chord** starts with the stretch, or, when a bar
+  line falls after the stretch starts and at or before its first attack,
+  at that bar line: what leads in before it reads note by note
+  (`| {D2} | / | / | / | D |` comes back as written; a ruling from Task
+  13b, accepted 2026-11-08).
+- **A later attack starts a new chord** when its sound differs from the
+  chord's in any way, a pitch class added or dropped. Two carry:
+  - inside a bar, a re-strike that only drops notes, each stream
+    striking above its own lowest voice in the chord's voicing, struck
+    or held (a thinner voicing: Cmaj7 on beat 1, then E G on beat 3,
+    stays `Cmaj7`; over a held C3, E G B then E G stays `Cmaj7`; a
+    guitar's dyad over a piano's held chord is compared with the
+    guitar's own notes);
+  - a lone new top note over a chord whose every pitch class is **held
+    from before**, not re-struck, when the note is **shorter than half
+    the bar** (a melody note, which weighs nothing: MuseScore's
+    `piano.mscx` bar 2 stays `Em`, its A4 a beat of three; `| C | C7 |`
+    with the Bb on top re-strikes all, so it cuts). Held half the bar or
+    longer it is a chord tone and cuts (Claude's ruling, 2026-11-08, fix
+    round 5: a Bb4 a whole bar over a pad with the left hand re-struck
+    reads `| C | C7 |`, a half-note Bb4 from beat 3 `| C / C7 / |`;
+    round 3 had it weigh nothing however long, `| C | / |`. Cost: a
+    half-note melody 9th over a re-struck C names `C(9)` for that bar).
+  A written sustain pedal holds notes, but a changed sound still cuts.
+- **The bass at a bar line** (within the attack window of it): struck
+  on a new pitch class under voices still sounding (or with an attack),
+  a new chord starts there, and `nameNotes` gives the slash (`C/E |
+  C/G`, `Dm7 | F`, `Cdim7 | Ebdim7`, a held pad over C F G C reads `C |
+  C(11)/F | C/G | C`). **While the voices rest, the bass alone never
+  starts a chord** (Claude's ruling, 2026-11-08, fix round 3: a C stab,
+  a bass walking D F A C alone, then a G stab reads `| C | / | G |`, not
+  `D9sus4` for the walking bar). Inside a bar the bass never moves a
+  chord (a walking bass under held comping or off-beat stabs stays one
+  chord). A new chord's bass is the bass last struck, so a chord whose
+  attack comes after the bass (the bass on 1, the chord on 2) has it.
+- **Rests:** a chord carries through its voices' rests until they next
+  strike. Once the bass has struck a new pitch class at a bar line in
+  the rest, their next attack starts at the last bar line in the rest
+  that the bass sounds through, struck again (back on the chord's own
+  note included) or held: a change (a waltz's `| C | F |`, Dm7 to G7 as
+  stabs over a walking bass, both at the bar line; a C stab, the bass
+  walking G A B C then C2 again at bar 3, a Dm stab on bar 3 beat 3:
+  `| C | / | Dm7/C |`; F2 struck at bar 2 and tied through bar 3 under
+  a G stab on its beat 3: `| C | / | G7/F |`, fix round 5, which had
+  read `| C | G7sus2 | / |` and `| C | G7/F | / |`), or the same voicing
+  over a new bass (`| C | C/G |` in a reggae skank). The voices have
+  rested when their last notes stop before that attack, however far
+  they rang past the bar line (a legato release, or the sustain pedal
+  lifted after the next downbeat): the ring is weighed no further than
+  the bar line, so `| C | F | G | C |` played legato stays so (fix round
+  5; round 3 allowed a 16th, past which a waltz read `| C | / F / |`).
+  Where the bass didn't move at a bar line, at the attack (a pedal C2
+  under a C stab and a G stab on beat 3 of the next bar:
+  `| C | / / G(11)/C / |`; a bass anticipating its note on the and of 4
+  and holding it, likewise).
+- A stretch with no attack at all, single lines only, cuts where two
+  notes start together or one starts as all others stop: it reads note
+  by note.
+- **Different sounds** named an import are at most 20,000 (`nameNotes`
+  costs up to a millisecond each, and a hostile file can make every
+  segment different); past that, `?` with one `chord-unnamed`.
 - **What sounds in a segment:** each pitch class weighted by how long it
-  sounds within the segment; pitch classes under a quarter of the
-  strongest one's weight are passing tones, left out. The **bass** is the
-  lowest note sounding at the segment's start (within the 32nd); its
-  pitch class is always kept.
+  sounds within the segment, once however many octaves double it (fix
+  round 3: weighing notes made a doubled root outweigh the chord, LH G2
+  G3 under B D G read `{G}`). Past a stretch's lead-in, the harmony
+  voices count only while two or more notes struck in its attacks sound,
+  so single notes struck after a stab stops (a fill, `C` then `C5 B4
+  A4`) don't rename it; the bass line and a lone bass note count only as
+  the chord's bass, a carried melody note not at all. Single lines (a
+  lead-in, a stretch without attacks) always count. A segment where
+  nothing counts takes the sound of the one before it. Pitch classes
+  at a quarter of the strongest one's weight or under are passing tones,
+  left out; since a pitch class sounding throughout is the strongest, a
+  note must sound more than a quarter of the segment to be kept, so a
+  fill D5 E5 F5 E5 D5 over a held C reads `C`, and a pedal ringing C E G
+  a beat into an F bar reads `F` (Claude's ruling, 2026-11-08; it was
+  "under a quarter", which named those `C(9)` and `Fmaj9`).
+  The **bass** is the lowest note struck at the segment's start (within
+  the window), or held into it from before when it sounds at least
+  until the first struck note stops (a pedal point, a bass held under
+  stabs); its pitch class is always kept. So the tail of the chord
+  before, played legato into this one, is not its bass (Claude's ruling,
+  2026-11-08: a G2 held a 16th into a C chord made it `C/G`).
 - **The name** comes from barmark's `nameNotes` (5.6). With none: a note
   set of the kept pitch classes when there are at most three (bass
   first, then upward, no octaves, spelled for the key), else `?`, warning
-  `chord-unnamed` (the notes in the message; once, with a count and the
-  first few bars).
+  `chord-unnamed` (once, with a count and the first few bars; never the
+  notes, a value read from the file, since the report counts by message).
+  A chord is spelled for each key in force over it (the first from bar
+  1), as sync will write it (`conventionalKey`: chords under a `Cb`
+  signature are spelled in B); a chord carried over a key change is
+  spelled anew there.
 - **No harmony** is `N.C.`: the importer always says what sounds, so
   sync never writes `?` for a gap.
 - Each segment is a **chord run** (`{ start, end, symbol }`, nominal
@@ -629,11 +803,17 @@ The harmony streams' notes are cut into **segments**, each one chord:
   sounding at the beat's start (sync 6.3): a chord pushed an eighth early
   ties its first beat and wins the next, so it comes back on the beat.
 
-The two numbers (a 32nd for an attack, a quarter of the strongest weight
+The two numbers (a 16th for an attack, a quarter of the strongest weight
 for a passing tone) are tuned against the fixtures; changing them is a
-FINDINGS entry. Known limit: a broken chord whose notes never overlap
+FINDINGS entry. Known limits: a broken chord whose notes never overlap
 and start one at a time from silence reads note by note (each note a
-fresh start); a pedalled or held arpeggio reads as its chord.
+fresh start); a pedalled or held arpeggio reads as its chord; under a
+written pedal the names are what the pedal holds (`| +C | F | G | *C |`
+reads `C | Fmaj9 | Dm13/F | C`, cut where written); a bass moving inside
+a bar under the same voices is no new chord; a voice moving only its top
+note to a new pitch class over a chord all held, for less than half a
+bar, is read as melody; a two-note bass figure struck on beat 4 before
+the next bar's chord reads as a note set for that beat.
 
 ### 5.6 Naming a chord: `nameNotes` in barmark
 
@@ -696,7 +876,9 @@ Known residuals of the rule (kept, not named the way a musician would):
 Bb}` is `F7sus4/C`, `{C E G# D}` is `Eaug7/C` (the augmented triad's
 symmetry), `{C G B}` is `G(11)/C` (no `(no3)` in the table), and
 rootless shells such as `{E Bb D}` (`Bb(b5)/E`) are named rather than
-null.
+null. In import the bass line usually supplies the root, and then the
+shell names as written (`{E Bb D}` over C is `C9`, `{Bb E A}` over C is
+`C7(13)`); the residual arises only with no bass line under it.
 
 What the spike gave (key-less): every A.4 symbol on C comes back as
 itself except `C11` (`C9sus4`, the same notes), `C/Bb` (`C7/Bb`, the
@@ -740,28 +922,49 @@ words are "the chart's, sung or spoken over the band, on no melody",
 which the grammar allows.
 
 - **From** the first track (file order) with lyric events; other tracks
-  with lyrics are named in one info, `lyrics-other-tracks`.
+  with lyrics are named in one info, `lyrics-other-tracks`. A file with
+  no lyric events but a karaoke track (text events 0x01 with `@` header
+  lines, as `.kar` files write) reads that track's text events instead,
+  the `@` lines left out and a leading `\` or `/` (a line-break marker)
+  read as a word's end (Kevin's ruling via the coordinator, Task 14 fix
+  round 1).
 - **Verses:** lyric events at one tick are verses 1, 2, … in file order
-  (MuseScore writes two verses so, section 8, and so does the export).
+  (MuseScore writes two verses so, section 8, and so does the export),
+  up to 100; the rest are left out with a `lyrics-dropped` warning
+  (Claude's call, Task 14: barmark's parser and printer slow with the
+  rows under one bar line, and a hostile file can put every event at one
+  tick). MIDI has no verse number, so a verse that holds where another
+  sings takes the other's place; when the number of lyrics at a tick
+  varies within the track, one `lyrics-verses-uncertain` warning says
+  verses may be mixed. At most 20,000 rows (a verse under a bar line)
+  are written; later verses are left out (`lyrics-dropped`).
 - **Syllables:** a syllable continues its word (`-`) unless its text ends
   in whitespace, or the next syllable of its verse begins with
   whitespace (karaoke files put the space first); a trailing `-` is kept
-  as the continuation. `‿` becomes `~`. Characters a lyric row can't hold
+  as the continuation. `‿` and SMuFL's lyric elisions U+E550–U+E552
+  (MuseScore writes U+E551) become `~`. Characters a lyric row can't hold
   as a syllable (`|`, `"`, `{`, `}`, `_`, whitespace inside) are removed
   (whitespace inside becomes `~`); a syllable left empty, or reading as
   `/`, `--` or `-` alone, is skipped. Leading, trailing and doubled
   `~` are removed (`~a`, `a~`, `a~~b` would be errors), and so is a
   `/-` (an error in a row).
 - **Placement:** in each bar, the coarsest even grid that puts every
-  syllable's onset on a slot: the whole bar, then its beats, then each
-  beat in two, three or four (`_` groups). An onset finer than that moves
-  to the nearest point. Two syllables of one verse on one slot are joined
-  as an elision. A slot with no syllable is `/` when the lyric track's
-  own notes are sounding at its start, else `--`.
+  syllable's onset on a slot: the whole bar, then each divisor of its
+  beats (onsets on beats 1 and 3 of 4/4 are two slots), then its beats
+  each in two, three or four (`_` groups; a beat whose later slots all
+  hold is written as one slot). An onset finer than that moves to the
+  nearest point (of the grid nearest every onset, ties to the coarser);
+  one nearer the next bar line stays on the last slot; a breath shorter
+  than the grid's slot is lost. Two syllables of one verse on one slot
+  are joined as an elision. A slot with no syllable is `/` when the
+  lyric track's own notes are sounding at its start after the verse's
+  first syllable, else `--`.
 - **Rows:** sync writes no repeats, so played bars and written bars
   match one to one, `%` included. After the build, each bar line gets one
-  row per verse that has a syllable on it (`lyrics:`, `lyrics 2:`, …),
-  and the chart is printed again.
+  row per verse that has a syllable on it, and the chart is printed
+  again. A lone verse 1 is `lyrics:`; with more verses every row is
+  numbered (`lyrics 1:`, `lyrics 2:`, …), since grammar 7.7 makes an
+  unnumbered row among numbered ones an error.
 - **Self-check, per verse:** the chart must parse with no errors and
   its `PlayedBar.lyrics` must hold every syllable placed. On a failure
   the importer drops the failing verse's rows and checks again, verse by
@@ -787,7 +990,8 @@ which the grammar allows.
 | `harmony-from-melody` | warning | only melody streams; used anyway |
 | `track-unknown` | warning | an `options.tracks` entry matching nothing |
 | `chord-unnamed` | warning | `?` written for unnameable notes |
-| `lyrics-dropped` | warning | the lyric rows failed the self-check |
+| `lyrics-dropped` | warning | the lyric rows failed the self-check, or past a bound of 5.8 (100 verses at a tick, 20,000 rows) |
+| `lyrics-verses-uncertain` | warning | the number of lyrics at a tick varies, so verses may be mixed (5.8) |
 | `unknown-chunk`, `drums-left-out`, `melody-left-out`, `tempo-ramp`, `tempo-in-bar`, `marker-dropped`, `lyrics-other-tracks` | info | as above |
 
 Plus sync's `BuildCode`s as they come (most can't arise from this
@@ -858,7 +1062,8 @@ marks, read with a throwaway dumper:
   added to every chord (C + B is Cmaj7).
 - **Lyrics:** one lyric event per syllable, both verses at the same tick
   in verse order; no hyphens; a trailing space ends a word ("Hap",
-  "py "). An elision came out as "andI" (MuseScore's, not ours).
+  "py "). An elision is SMuFL's U+E551 between the syllables ("andI "),
+  which shows as "andI" where the font lacks it.
 - **A pickup** is a 1/4 time signature then 3/4 at the next bar.
 - **Rehearsal marks become markers** ("A"); section headings (bold
   words) don't. So MuseScore files bring no section names unless they
@@ -884,7 +1089,7 @@ Test first, per rule, in `packages/midi/tests/`.
   events as our reader gives; the reader on hand-built bytes for each
   rule of 5.1 (running status, zero-velocity note-on, format 0, SMPTE,
   format 2, a truncated chunk, a wrong track count, a five-byte VLQ, a
-  stray status byte, sysex, an unknown chunk, UTF-8 and Latin-1 text).
+  stray status byte, sysex, an unknown chunk, UTF-8 and windows-1252 text).
   A test helper builds files from readable event lists.
 - **Performance:** one test per row and rule of section 3 on small
   charts (each slot kind, the voicing, a bass part, holds across bars, a
@@ -1044,8 +1249,10 @@ for every open question, so each one below is **decided as recommended**
 16. Monophonic streams other than the lowest are melody and left out of
     the harmony; drums (channel 10) left out; `options.tracks` overrides.
 17. Segments cut at multi-note attacks and fresh starts; passing tones
-    under a quarter of the strongest weight dropped; the bass is the
-    lowest note at the segment's start.
+    at a quarter of the strongest weight or under dropped (fix round 4:
+    `w > PASSING * strongest` keeps a pitch class, so a note must sound
+    more than a quarter of the segment; it was "under a quarter"); the
+    bass is the lowest note at the segment's start.
 18. `nameNotes` in barmark, with the cost and tie rules of 5.6.
 19. No harmony is `N.C.`; unnameable notes are a note set (up to three
     pitch classes) or `?`.

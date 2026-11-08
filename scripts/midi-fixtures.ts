@@ -1,20 +1,43 @@
 /**
- * MuseScore checks for @barmark/midi. `--check-export` exports Peaceful
+ * MuseScore files for @barmark/midi, on the VM only, where
+ * `~/.local/bin/mscore` runs MuseScore 4's AppImage under `xvfb-run`
+ * (FINDINGS.md); CI reads the checked-in files and never needs MuseScore.
+ *
+ * With no flag it regenerates the import fixtures, then runs the export
+ * check. Each `.mscx` score we wrote (the musicxml package's import
+ * fixtures and the midi package's own) is converted by MuseScore to `.mid`
+ * under packages/midi/tests/fixtures/, and each `.mid`'s import written
+ * beside it as its expected `.chart.md`, to read over by hand before
+ * committing.
+ *
+ * `--check-export` runs the export check alone: it exports Peaceful
  * Dreams, Morning Song and the lead sheet to `.mid` in a temporary folder,
- * has MuseScore 4 convert each to MusicXML, and checks every part of what
- * it wrote has as many measures as the chart has played bars. It runs on
- * the VM only, where `~/.local/bin/mscore` runs MuseScore's AppImage under
- * `xvfb-run` (FINDINGS.md); CI never needs MuseScore. Pass `--keep` to keep
- * the files, to open them in MuseScore by hand.
+ * has MuseScore convert each to MusicXML, and checks every part of what it
+ * wrote has as many measures as the chart has played bars. Pass `--keep`
+ * to keep those files, to open them in MuseScore by hand.
  */
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { parseChart } from "../packages/barmark/src/index.js";
-import { exportMidi } from "../packages/midi/src/index.js";
+import { exportMidi, importMidi } from "../packages/midi/src/index.js";
 import { convert, requireMscore } from "./mscore.js";
 
 const ROOT = new URL("../", import.meta.url);
+const OUT = fileURLToPath(new URL("packages/midi/tests/fixtures/", ROOT));
+const MUSICXML = fileURLToPath(new URL("packages/musicxml/tests/fixtures/import/", ROOT));
+
+/** Each fixture and the folder of the `.mscx` it is made from. */
+const SOURCES: [string, string][] = [
+	["lead-sheet", MUSICXML],
+	["band", MUSICXML],
+	["hymn", MUSICXML],
+	["comping-guitar", MUSICXML],
+	["piano", MUSICXML],
+	["piano-comping", OUT],
+	["bass-and-chords", OUT],
+];
 
 /** The charts exported, by the name their files get. */
 const CHARTS: [string, string][] = [
@@ -22,6 +45,18 @@ const CHARTS: [string, string][] = [
 	["morning-song", "examples/morning-song.chart.md"],
 	["lead-sheet", "packages/musicxml/tests/fixtures/import/lead-sheet.chart.md"],
 ];
+
+/** Each score through MuseScore to `.mid`, and the chart each imports to. */
+function regenerate(): void {
+	for (const [name, dir] of SOURCES) {
+		const mid = `${OUT}${name}.mid`;
+		convert(`${dir}${name}.mscx`, mid);
+		const { text, diagnostics } = importMidi(new Uint8Array(readFileSync(mid)));
+		if (text === "") throw new Error(`${name}: ${diagnostics.map((d) => d.message).join("; ")}`);
+		writeFileSync(`${OUT}${name}.chart.md`, text);
+		console.log(`${name}.mid, ${name}.chart.md (${diagnostics.map((d) => d.code).join(", ")})`);
+	}
+}
 
 /** Each `<part>`'s measure count in a MusicXML file. */
 const measuresPerPart = (xml: string): number[] =>
@@ -68,7 +103,6 @@ function checkExport(): void {
 	}
 }
 
-if (!process.argv.includes("--check-export"))
-	throw new Error("usage: bun scripts/midi-fixtures.ts --check-export [--keep]");
 requireMscore();
+if (!process.argv.includes("--check-export")) regenerate();
 checkExport();

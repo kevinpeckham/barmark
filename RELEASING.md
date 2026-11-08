@@ -71,6 +71,15 @@ dependant reads charts with the old rules. Release each as a patch
 ("Requires `barmark` X.Y.0") right after the `barmark` release, then bump
 the site to the new `barmark` and renderer.
 
+**Likewise, a `@barmark/sync` minor release needs a `@barmark/midi`
+patch** ("Requires `@barmark/sync` X.Y.0"), since `@barmark/midi`
+depends on it with a caret, and only then the CLI (step 13). Otherwise
+the CLI's binaries bundle the new `sync` while an npm install of the
+same CLI gets the old one through `@barmark/midi`'s range.
+`verify:release cli` checks this: each bundled library's dependency
+ranges, as packed at its tag, must admit the versions the binaries
+bundle beside it.
+
 ## Checks
 
 The same scripts run in three places; `<pkg>` is `barmark`, `render`, `musicxml`, `sync`, `midi` or `cli`:
@@ -147,18 +156,26 @@ runs, and `verify:package cli` fails on anything else.
     After a `barmark` bump, check `site/bun.lock` holds one barmark:
     `grep '/barmark": \["barmark@' site/bun.lock` prints nothing, or
     delete the nested entries it finds and `bun install` again (FINDINGS).
-13. **Release the CLI** (after a `barmark` or `@barmark/render` release;
-    a `@barmark/sync` or `@barmark/midi` release needs no CLI release and
-    no `songs` bump, since the CLI does not use them yet):
+13. **Release the CLI** (after a `barmark`, `@barmark/render`,
+    `@barmark/musicxml`, `@barmark/sync` or `@barmark/midi` release; the
+    CLI bundles `@barmark/sync` through `@barmark/midi`; after a `barmark`
+    or `@barmark/sync` minor, release the caret dependants' patches first,
+    as above: after a `sync` minor, a `@barmark/midi` patch "Requires
+    `@barmark/sync` X.Y.0"):
     `@barmark/cli` pins the libraries exactly, so a library release
     reaches CLI users only through a CLI release. On a new branch, bump
     `packages/cli` (a patch, unless the CLI itself changed) with a
-    CHANGELOG line "Uses barmark A.B.C and @barmark/render D.E.F", and
+    CHANGELOG line "Uses barmark A.B.C, @barmark/render D.E.F,
+    @barmark/musicxml G.H.I and @barmark/midi J.K.L" (naming the ones
+    that changed), and
     release it with steps 1–11 (`pkg=cli`). Release the libraries first:
     the CLI's binaries bundle the libraries' code from the repository, so
     `verify:release cli` (and the release workflow) fail if
-    `packages/barmark/src`, `packages/render/src` or `packages/render/fonts`
-    changed since their own tags. Its release workflow also
+    `packages/barmark/src`, `packages/render/src`, `packages/render/fonts`,
+    `packages/musicxml/src`, `packages/sync/src` or `packages/midi/src`
+    changed since their own tags, or if a library's dependency range at
+    its tag does not admit the version bundled beside it (verify:release
+    only). Its release workflow also
     attaches the binaries; check the release page lists all five and
     `Edwin-OFL.txt`. Then bump barmark.dev as in step 12: the site
     installs the CLI as a dev dependency (`bun add --dev --exact

@@ -4,7 +4,7 @@
  * end-of-track at the end of every track.
  */
 import type { Meter } from "barmark";
-import type { Smf, SmfEvent } from "./types.js";
+import { KEY, type Smf, type SmfEvent, TEMPO, TIME } from "./types.js";
 import { writeVlq } from "./vlq.js";
 
 /** The build's `lib` is ESNext alone, so the platform's TextEncoder is typed here (FINDINGS, 2026-11-05). */
@@ -138,15 +138,15 @@ export function tempoMicros(qpm: number): { micros: number; clamped: boolean } {
 /** A tempo meta event, in quarters a minute (clamped as `tempoMicros` says). */
 export function tempoMeta(tick: number, qpm: number): SmfEvent {
 	const { micros } = tempoMicros(qpm);
-	return meta(tick, 0x51, [(micros >> 16) & 0xff, (micros >> 8) & 0xff, micros & 0xff]);
+	return meta(tick, TEMPO, [(micros >> 16) & 0xff, (micros >> 8) & 0xff, micros & 0xff]);
 }
 
 /** A time signature: the denominator as a power of two, `clicks` MIDI clocks a click, 8 32nds a quarter. */
 export function timeMeta(tick: number, meter: Meter, clicks: number): SmfEvent {
-	return meta(tick, 0x58, [meter.n, Math.log2(meter.d), clicks, 8]);
+	return meta(tick, TIME, [meter.n, Math.log2(meter.d), clicks, 8]);
 }
 
 /** A key signature: sharps (positive) or flats (negative), and major or minor. */
 export function keyMeta(tick: number, fifths: number, minor: boolean): SmfEvent {
-	return meta(tick, 0x59, [fifths & 0xff, minor ? 1 : 0]);
+	return meta(tick, KEY, [fifths & 0xff, minor ? 1 : 0]);
 }

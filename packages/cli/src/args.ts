@@ -26,3 +26,13 @@ export function oneOf<V extends string>(flag: string, value: string, allowed: re
 	const list = `${allowed.slice(0, -1).join(", ")} or ${allowed.at(-1)}`;
 	throw new UsageError(`--${flag} must be ${list}, not "${value}"`);
 }
+
+/** `--semitones -2`: join a negative number to its flag, which parseArgs would read as a flag. */
+export const joinNegative = (args: string[], flag: string) =>
+	args.flatMap((arg, i) =>
+		arg === flag && /^-\d/.test(args[i + 1] ?? "")
+			? [`${flag}=${args[i + 1]}`]
+			: i > 0 && args[i - 1] === flag && /^-\d/.test(arg)
+				? []
+				: [arg],
+	);

@@ -2,7 +2,10 @@ import { beforeAll, describe, expect, test } from "bun:test";
 import { cpSync, mkdtempSync, readdirSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { FIXTURES } from "./charts.js";
+import { exportMidi } from "@barmark/midi";
+import { FIXTURES, ROOT } from "./charts.js";
+
+const MIDI = join(ROOT, "packages/midi/tests/fixtures");
 
 const PACKAGE = join(import.meta.dir, "..");
 const BIN = join(PACKAGE, "dist/cli.js");
@@ -21,6 +24,7 @@ beforeAll(() => {
 	dir = mkdtempSync(join(tmpdir(), "barmark-node-"));
 	for (const f of readdirSync(FIXTURES).filter((f) => f.endsWith(".chart.md")))
 		cpSync(join(FIXTURES, f), join(dir, f));
+	cpSync(join(MIDI, "lead-sheet.mid"), join(dir, "lead-sheet.mid"));
 }, 120_000);
 
 describe("the built bin under Node", () => {
@@ -34,8 +38,19 @@ describe("the built bin under Node", () => {
 		const version = (name: string) =>
 			JSON.parse(readFileSync(join(PACKAGE, "..", name, "package.json"), "utf8")).version;
 		expect(barmark("--version").out).toBe(
-			`@barmark/cli ${version("cli")} (barmark ${version("barmark")}, @barmark/render ${version("render")}, @barmark/musicxml ${version("musicxml")})\n`,
+			`@barmark/cli ${version("cli")} (barmark ${version("barmark")}, @barmark/render ${version("render")}, @barmark/musicxml ${version("musicxml")}, @barmark/midi ${version("midi")})\n`,
 		);
+	});
+	test("export --midi writes the file; import reads one", () => {
+		const text = readFileSync(join(dir, "peaceful-dreams.chart.md"), "utf8");
+		const want = exportMidi(text, { title: "peaceful-dreams" });
+		if (!want.ok) throw new Error("export failed");
+		const run = barmark("export", "--midi", "peaceful-dreams.chart.md", "--out", "pd.mid");
+		expect(run.code).toBe(0);
+		expect(new Uint8Array(readFileSync(join(dir, "pd.mid")))).toEqual(new Uint8Array(want.bytes));
+		const read = barmark("import", "lead-sheet.mid");
+		expect(read.code).toBe(0);
+		expect(read.out).toBe(readFileSync(join(MIDI, "lead-sheet.chart.md"), "utf8"));
 	});
 	test("render embeds Edwin", () => {
 		const { code, out } = barmark("render", "peaceful-dreams.chart.md");

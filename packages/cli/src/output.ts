@@ -5,12 +5,14 @@ import { basename, dirname, join, resolve } from "node:path";
 import { type Io, UsageError } from "./io.js";
 
 export function writeOutput(text: string, out: string | undefined, io: Io): void {
-	if (out === undefined) {
-		io.stdout(text);
-		return;
-	}
+	if (out === undefined) io.stdout(text);
+	else writeFile(out, text, io);
+}
+
+/** Text or bytes to the file named by --out; `Io` stays text-only, so bytes never reach stdout. */
+export function writeFile(out: string, data: string | Uint8Array, io: Io): void {
 	try {
-		writeFileSync(resolve(io.cwd, out), text);
+		writeFileSync(resolve(io.cwd, out), data);
 	} catch {
 		throw new UsageError(`cannot write ${out}`);
 	}

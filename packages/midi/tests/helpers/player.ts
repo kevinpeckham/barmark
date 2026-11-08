@@ -21,12 +21,12 @@ import {
 import { type MidiEvent, parseMidi } from "midi-file";
 
 /** How far into a beat it is heard: a 64th note, in quarters. */
-const LISTEN = 1 / 16;
-const EPSILON = 1e-9;
+export const LISTEN = 1 / 16;
+export const EPSILON = 1e-9;
 
-const heard = (pcs: Iterable<number>) => [...new Set(pcs)].sort((a, b) => a - b).join(" ");
+export const heard = (pcs: Iterable<number>) => [...new Set(pcs)].sort((a, b) => a - b).join(" ");
 /** A bar's beats in quarters from its start, as grammar 2.1 counts them: dotted quarters in 6/8, 9/8, 12/8. */
-const beatOnsets = (n: number, d: number) => {
+export const beatOnsets = (n: number, d: number) => {
 	const beats = beatsOf({ n, d });
 	return Array.from({ length: beats }, (_, i) => (i * (4 * n)) / d / beats);
 };
@@ -75,7 +75,7 @@ export function heardByBeat(bytes: Uint8Array): string[] {
 }
 
 /** A slot on a line, at its onset and with its length in quarters; `sound` null for silence, undefined for a hold. */
-type Heard = { at: number; length: number; slot: SimpleSlot; sound?: number[] | null };
+export type Heard = { at: number; length: number; slot: SimpleSlot; sound?: number[] | null };
 
 const STEPS: Record<string, number> = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
 /** A spelled note's pitch class: its letter and every sharp or flat after it; an octave doesn't matter. */
@@ -120,7 +120,7 @@ const PUSH = { eighth: 1 / 2, sixteenth: 1 / 4 };
  * long as that slot stays on the beat (the controller's ruling: no
  * written chord is taken whole).
  */
-function pushed(line: Heard[]): Heard[] {
+export function pushed(line: Heard[]): Heard[] {
 	const out: Heard[] = [];
 	for (const h of line) {
 		const giver = out.at(-1);
@@ -138,7 +138,7 @@ function pushed(line: Heard[]): Heard[] {
 const partBarsOf = (bar: PlayedBar): PartBar[] => bar.parts ?? [bar.tacet ? null : bar];
 
 /** Each line's slots in play order, by part and line name; a line not playing in a bar rests there. */
-function linesOf(parse: ChartParse): Map<string, { bass: boolean; slots: Heard[] }> {
+export function linesOf(parse: ChartParse): Map<string, { bass: boolean; slots: Heard[] }> {
 	const lines = new Map<string, { bass: boolean; slots: Heard[] }>();
 	const named = (pb: PartBar, i: number) =>
 		pb ? (pb.lines ?? [{ name: parse.parts[i]?.lines?.[0] ?? "", slots: pb.slots }]) : [];

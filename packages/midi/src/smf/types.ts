@@ -6,5 +6,10 @@ export type SmfEvent = { tick: number } & (
 	| { kind: "meta"; type: number; data: Uint8Array }
 );
 
+/** The meta event types barmark reads a value from: tempo, time signature, key signature. */
+export const TEMPO = 0x51;
+export const TIME = 0x58;
+export const KEY = 0x59;
+
 /** A Standard MIDI File: its format, its division (ticks a quarter) and its tracks. */
 export type Smf = { format: 0 | 1; ppq: number; tracks: SmfEvent[][] };

@@ -1,7 +1,13 @@
 /** What a command touches outside itself, injected so tests run commands in-process. */
 
 /** The versions `--version` reports: this package and the libraries it runs. */
-export type Versions = { cli: string; barmark: string; render: string; musicxml: string };
+export type Versions = {
+	cli: string;
+	barmark: string;
+	render: string;
+	musicxml: string;
+	midi: string;
+};
 
 export type Io = {
 	stdout: (text: string) => void;

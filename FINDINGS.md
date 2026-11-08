@@ -9,6 +9,52 @@ not here.
 
 ## Testing
 
+### The package gate failed for six tasks without anyone running it (2026-11-08, @barmark/midi)
+
+- **The symptom.** At Task 15, `bun run verify:package midi` failed:
+  the Node smoke test wanted the main entry to export exactly
+  `exportMidi` and `VERSION`, and it had gained `importMidi` and
+  `readSmf` in Tasks 9 to 13.
+- **The cause.** `scripts/smoke-midi.mjs` pins the entry's exports, which
+  is its point, but the plan runs the package gate only at the end of
+  each phase, and `bun test` doesn't run it.
+- **The fix.** The smoke test now expects the four exports and imports
+  the file it exported. A task that adds a public export runs
+  `verify:package` for its package.
+
+### Reporting each code once a track hid distinct problems (2026-11-08, @barmark/midi)
+
+- **The symptom.** A track with a tempo of 0, a time signature of 7/32
+  and a key of 9 sharps reported only the tempo: the dropped key, which
+  changes every chord's spelling, went unmentioned.
+- **The cause.** The SMF reader kept one diagnostic per (code, track)
+  and its first message, so three different `meta-invalid` problems
+  collapsed into one.
+- **The fix.** One counted report for the whole import,
+  `packages/midi/src/import/report.ts`, which the reader reports into:
+  each problem is a (code, track, message), repeats counted with their
+  first five bars. A message never carries a per-event value read from
+  the file (the time signature's message no longer prints its numbers),
+  or a hostile file could raise one diagnostic per value; a message
+  raised once per track or per import may name tracks, eight at most.
+
+### A malformed-file test can fail for an earlier reason than the rule it names (2026-11-08, @barmark/midi)
+
+- **The symptom.** The SMF reader's `not-midi` tests passed with the
+  `MThd` id check deleted, and with a header length of 4 accepted; the
+  truncated-file test passed with a `bad-event` wrongly reported for an
+  event cut by the end of the file.
+- **The cause.** The hand-built bytes were shorter than 14, so the
+  reader refused them for being too short before it ever looked at the
+  id or the length; and the "100 bytes short" file was cut exactly on an
+  event boundary, so no event was ever half read.
+- **The fix.** Mutation runs over every rule of `packages/midi/src/smf/read.ts`
+  (deleting or bending each check and seeing a test fail) found all
+  three; the tests now use files that are otherwise good (a whole header
+  after a `MTrk` id, a short header in a long enough file, a cut inside
+  an event). For hostile-input tests, make the input fail only the rule
+  under test, and mutate the rule to prove it.
+
 ### A plan's charts don't parse until something parses them; barmark's syllable times are floats (2026-11-08, @barmark/midi)
 
 - **The symptom.** Task 4 of the MIDI plan wrote `| @B C |` and
@@ -457,6 +503,28 @@ order, not just the written marks.
 
 ## Design
 
+### A passing tone at exactly a quarter of the chord named a 9th (2026-11-08, @barmark/midi import)
+
+- **The symptom.** A fill of eighths D5 E5 F5 E5 D5 from beat 2 over a
+  held C triad read `C(9)`, and a C chord's pedal ringing one beat into
+  an F bar read `Fmaj9` (Task 12 fix round 3's probes); each is a chart
+  no one would write.
+- **The cause.** Spec 5.5's passing-tone rule dropped a pitch class
+  sounding *under* a quarter of the strongest one's weight
+  (`w >= PASSING * strongest` kept it). The fill's D sounds 480 of the
+  bar's 1,920 ticks, the pedal's C E G one beat of four: exactly a
+  quarter, so each was kept. Common figures land on the threshold
+  exactly, because they are made of the beat the bar is made of.
+- **The fix.** `keptOf` in `packages/midi/src/import/segments.ts` keeps
+  a pitch class only when `w > PASSING * strongest`: a tone at a quarter
+  or under is passing, so a note must sound more than a quarter of the
+  segment to be a chord tone (Claude's ruling, fix round 4, 2026-11-08;
+  spec 5.5, "Claude's calls" 17). `import-segments.test.ts` pins both
+  sides (481 ticks of A over a C bar is `C6`, 480 is `C`), the fill and
+  the pedal. Cost: a real added tone held exactly a quarter of its chord
+  is dropped. Spec 5.5 makes a change of either tuned number (the 16th
+  attack window, the quarter) a FINDINGS entry; this is that entry.
+
 ### Half-length bars skewed a derived tempo (2026-11-07, @barmark/sync)
 
 - **The symptom.** Built from Stem Shovel's ChordMini grids, Letter Lands
@@ -719,6 +787,41 @@ when two rules each define "first", test a chart that tells them apart,
 and round-trip it through `format`.
 
 ## Tooling
+
+### MuseScore pedals one staff's track, and its slash notes sound only when a file asks (2026-11-08, midi import fixtures)
+
+- **The symptom.** Writing the import's real files
+  (`bun scripts/midi-fixtures.ts`), four things weren't as expected. (1)
+  The pedalled piano (`packages/midi/tests/fixtures/piano-comping.mscx`)
+  came out of MuseScore 4.7.6 as two tracks, one a staff, both on
+  channel 1, with controller 64 only in the left hand's track (the staff
+  the pedal line is on), pressed two ticks after the downbeat and, at a
+  change, lifted a tick after the next note-on. (2) The musicxml
+  fixtures' slash notes didn't sound at all, though spec 8 says MuseScore
+  plays slashes as B3 or B4. (3) `importMidi(bytes, { tracks: [1] })` on
+  the band with bass and drums read `Cmaj7`, `F(#11)`, `Am(9)` for C, F,
+  Am. (4) The lead sheet's `FTristan`, a chord symbol MuseScore can't
+  parse, sounds as F2 and F4 only, and imports as `{F}`.
+- **The cause.** (1) MuseScore writes the pedal where the spanner is;
+  a sequencer holds both staves (one channel), but the import held a
+  released note only on the pedal's own track (`src/import/notes.ts`),
+  so a right-hand arpeggio (bar 8 of the fixture) read as `{F}`, not
+  `Fmaj7`. (2) Our hand-written `.mscx`
+  slashes carry `<play>0</play>`; a MusicXML file's slashes, as Dorico
+  writes them, come into MuseScore as notes that play (`dorico-band`
+  sounds B3 and B4 on two parts), which is what spec 8 saw. (3) `tracks` reads every note of the named
+  tracks, and a MuseScore part's track holds its slash notes (B3) beside its chord-symbol
+  playback. (4) MuseScore plays an unparsed symbol as its root.
+- **The fix.** (1) The pedal holds its channel on every track (spec 5.2,
+  Claude's ruling): `notesOf` reads the tracks in one pass, merged by
+  tick, then track, then file order, with the pedal per channel. (2) `bass-and-chords.mscx` writes
+  its slashes without `<play>0</play>`, so one fixture has sounding
+  slashes, left out as a melody (`melody-left-out`). (3) The README says
+  to leave `tracks` out for MuseScore's files. (4) As intended: one pitch
+  class is a note set. To learn `.mscx` syntax for a pedal, a slash
+  chord's bass (`<bass>` on the line of fifths), a rehearsal mark or a
+  drum kit, write the smallest MusicXML with it and have MuseScore
+  convert it (`mscore -o x.mscx x.musicxml`).
 
 ### MuseScore's MIDI import keeps one text event a tick, and makes credits a lyric (2026-11-08, midi export)
 
@@ -1502,3 +1605,18 @@ text after a heading was compared with every line before it
 quoted word, and the import's self-check parses what it writes. The
 security report named one site; the class was "per word, look at all
 the words". Search for the class, not the line.
+
+### A mutation script in a shared worktree broke another agent's tests (2026-11-08, midi)
+
+**Symptom:** during the Task 12 fix round, a parallel implementer's
+tests in the same worktree failed for about three minutes, with
+`segments.ts` behaving in ways no commit explained.
+**Cause:** a mutation script rewrote `packages/midi/src/import/segments.ts`
+in place, ran the tests and restored it. Any other process reading the
+file during the run, such as a test run, a reviewer or a type check, saw
+the mutant.
+**Fix:** run mutants on a copy, never on the live file. Make the copy
+with `git archive HEAD | tar -x -C <scratch>`, then symlink the root
+`node_modules` and copy each package's `node_modules` (their links are
+relative), or use a separate `git worktree`. Task 13b's experiments ran
+this way.

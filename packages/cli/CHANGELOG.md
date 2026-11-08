@@ -6,8 +6,26 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- **`barmark export --midi <chart> --out <file.mid>`** writes a Standard
+  MIDI File of the chart's play order with `@barmark/midi`. `--out` is
+  required (a usage error without it, as is giving `--midi` and
+  `--musicxml` together); `--part <label>` exports one part. What MIDI
+  can't hold goes to stderr as `file: bar N: warning: message`; a chart
+  with errors writes nothing.
+- **`barmark import <file.mid|.midi>`** reads a MIDI file as a chart.
+  Its diagnostics go to stderr as `file: bar N (track T): severity:
+  message`, control characters shown as U+FFFD; it exits 1 when no chart
+  came out. `--tracks 2,Piano` names the tracks that carry the harmony,
+  by number (from 1) or name; `--tracks` with a MusicXML score, or
+  `--part` with a MIDI file, is a usage error.
+- **`--version`** lists `@barmark/midi`.
+
 ### Changed
 
+- `barmark export` with no format now says `give a format: --musicxml or
+  --midi`.
 - **The npm homepage is https://www.barmark.dev**, not the package's
   folder on GitHub.
 
