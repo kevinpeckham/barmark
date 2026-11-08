@@ -8,6 +8,8 @@ package uses [semantic versioning](https://semver.org/).
 
 ### Changed
 
+- **Requires `barmark` 0.20.0**, whose minor release a caret range
+  would not reach.
 - **barmark's two new direction rules reach the export** (grammar 5.2
   and 6, Kevin's decisions of 2026-11-08). A chart whose `al Coda` goes
   on at a `Coda` with no bar after it (none written later, and no later
