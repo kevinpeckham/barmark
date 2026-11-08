@@ -39,6 +39,7 @@
       "name": "@barmark/midi",
       "version": "0.1.0",
       "dependencies": {
+        "@barmark/sync": "workspace:^",
         "barmark": "workspace:^",
       },
       "devDependencies": {

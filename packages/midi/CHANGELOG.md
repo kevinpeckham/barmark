@@ -76,3 +76,25 @@ package uses [semantic versioning](https://semver.org/).
   tacet part or a resting line sounds nothing; the pedal is on every
   track of its part; lyrics go to the singing line's track and, with
   words, move with a pushed note.
+- **`importMidi(bytes, options?)`**: a chord chart from a Standard MIDI
+  File (format 0 or 1), written by `@barmark/sync`'s builder, so it is
+  canonical, in play order, four bars a line. The chords come from the
+  harmony's notes, the bar grid, key, meter and tempo from the file's
+  meta events (a pickup when sync can write it as whole beats; otherwise
+  a bar of its own meter), markers become `## ` headings (two on one
+  bar keep the first, `marker-dropped`), and the title is a format 0
+  file's track name or a note-less track 1's. Options: `tracks` (the
+  harmony's tracks, by number or name), `simile` and `barsPerLine`.
+  It never throws: `text` is `""` exactly when a diagnostic is an error,
+  and otherwise parses with no errors. Each diagnostic has a code (the
+  import's own, or sync's), a message that carries no value read from
+  the file, and the played bar it concerns (a pickup is bar 1), counted
+  once with its first bars; a tempo or meter barmark can't write is
+  dropped with sync's diagnostic.
+- **`readSmf(bytes)`**: the Standard MIDI File reader import uses, with
+  its diagnostics: format, division and tracks of absolute-tick events
+  (notes, programs, controllers, the meta events barmark reads), each
+  track's name, and never a throw. Text is UTF-8, else windows-1252; a
+  newline or a tab becomes a space, other control characters, line and
+  paragraph separators, bidi controls and zero-width spaces are removed,
+  and text is cut at 200 characters with "…", never inside a character.

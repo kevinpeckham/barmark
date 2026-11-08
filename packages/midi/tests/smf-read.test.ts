@@ -572,9 +572,24 @@ describe("text", () => {
 
 	test("control characters removed", () => {
 		expect(decodeText(new TextEncoder().encode("a\u0007b"))).toBe("ab");
-		expect(decodeText(new TextEncoder().encode("\u001b[31mred\u007f\u0085\nx\t"))).toBe("[31mredx");
+		expect(decodeText(new TextEncoder().encode("\u001b[31mred\u007f\u0085x"))).toBe("[31mredx");
 		// 0x81 has no windows-1252 character: it decodes as the C1 control U+0081, removed
 		expect(decodeText(Uint8Array.from([0x61, 0x81, 0x62, 0xe9]))).toBe("abé");
+	});
+
+	test("a newline or a tab is a space before the other control characters go", () => {
+		expect(decodeText(new TextEncoder().encode("Intro\n| C |"))).toBe("Intro | C |");
+		expect(decodeText(new TextEncoder().encode("a\tb\r\nc\u000bd\u000ce"))).toBe("a b  c d e");
+	});
+
+	test("separators, bidi controls and zero-width spaces removed", () => {
+		const hidden = [0x2028, 0x2029, 0x202a, 0x202e, 0x2066, 0x2069, 0x200b]
+			.map((c) => `x${String.fromCharCode(c)}`)
+			.join("");
+		expect(decodeText(new TextEncoder().encode(hidden))).toBe("xxxxxxx");
+		// a joiner inside an emoji sequence stays
+		const family = String.fromCodePoint(0x1f468, 0x200d, 0x1f469);
+		expect(decodeText(new TextEncoder().encode(family))).toBe(family);
 	});
 
 	test("cut at 200 characters with …", () => {
@@ -588,6 +603,17 @@ describe("text", () => {
 		expect(decodeText(new TextEncoder().encode(`${"\u0007".repeat(50)}${"x".repeat(200)}`))).toBe(
 			"x".repeat(200),
 		);
+	});
+
+	test("the cut never splits a character from its combining marks", () => {
+		const accent = String.fromCharCode(0x0301);
+		// code points 199 and 200 are an e and its accent: both go
+		const text = `${"x".repeat(198)}e${accent}${"y".repeat(10)}`;
+		expect(decodeText(new TextEncoder().encode(text))).toBe(`${"x".repeat(198)}…`);
+		// a flag is two code points, one character
+		const flag = String.fromCodePoint(0x1f1eb, 0x1f1f7);
+		const flags = decodeText(new TextEncoder().encode(`x${flag.repeat(150)}`));
+		expect(flags).toBe(`x${flag.repeat(99)}…`);
 	});
 
 	test("track names", () => {

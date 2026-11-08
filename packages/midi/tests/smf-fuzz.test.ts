@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
+import { parseChart, printChart } from "barmark";
 import { mulberry32 } from "../../sync/tests/helpers/fuzz.js";
-import { exportMidi } from "../src/index.js";
+import { exportMidi, importMidi } from "../src/index.js";
 import { readSmf } from "../src/smf/read.js";
 import type { SmfEvent } from "../src/smf/types.js";
 import { CHARTS } from "./helpers/charts.js";
@@ -166,6 +167,32 @@ test("2,000 seeded mutations never throw", () => {
 	}
 	expect(failures).toEqual([]);
 });
+
+/** What import promises for any bytes: no internal error; "" exactly on an error, else a chart that parses cleanly and prints unchanged. */
+function importBroken(bytes: Uint8Array): string | null {
+	const r = importMidi(bytes);
+	const internal = r.diagnostics.find((d) => d.message.startsWith("internal error"));
+	if (internal) return internal.message;
+	const failed = r.diagnostics.some((d) => d.severity === "error");
+	if (failed) return r.text === "" ? null : "text with an error";
+	if (r.text === "") return "no text and no error";
+	const errors = parseChart(r.text).diagnostics.filter((d) => d.severity === "error");
+	if (errors.length > 0) return `the chart has errors: ${errors[0]?.message}`;
+	return printChart(r.text) === r.text ? null : "the chart doesn't print unchanged";
+}
+
+test("2,000 seeded mutations import to a valid chart or an error", () => {
+	const failures: string[] = [];
+	for (let seed = 1; seed <= 2000; seed++) {
+		const r = mulberry32(seed);
+		let bytes = BASES[int(r, BASES.length)] ?? new Uint8Array();
+		for (let n = 1 + int(r, 3); n > 0; n--)
+			bytes = (MUTATIONS[int(r, MUTATIONS.length)] ?? ((_, b) => b))(r, bytes);
+		const problem = importBroken(bytes);
+		if (problem !== null) failures.push(`seed ${seed}: ${problem}`);
+	}
+	expect(failures).toEqual([]);
+}, 120_000);
 
 test("random bytes never throw", () => {
 	const failures: string[] = [];

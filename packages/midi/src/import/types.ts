@@ -1,7 +1,8 @@
+import type { BuildCode } from "@barmark/sync";
+
 /**
- * The import's diagnostics (spec section 2 and 5.9). Sync's `BuildCode`s
- * join `MidiImportCode` when the import hands its bars to sync's builder
- * (Task 13).
+ * The import's diagnostics (spec section 2 and 5.9), and sync's
+ * `BuildCode`s as its builder raises them.
  */
 export type MidiImportCode =
 	| "not-midi"
@@ -25,7 +26,8 @@ export type MidiImportCode =
 	| "tempo-ramp"
 	| "tempo-in-bar"
 	| "marker-dropped"
-	| "lyrics-other-tracks";
+	| "lyrics-other-tracks"
+	| BuildCode;
 
 export type MidiImportDiagnostic = {
 	severity: "error" | "warning" | "info";
@@ -46,3 +48,5 @@ export type MidiImportOptions = {
 	simile?: boolean;
 	barsPerLine?: number;
 };
+
+export type MidiImportResult = { text: string; diagnostics: MidiImportDiagnostic[] };

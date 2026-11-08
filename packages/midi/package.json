@@ -43,6 +43,7 @@
 		"url": "https://github.com/kevinpeckham/barmark/issues"
 	},
 	"dependencies": {
+		"@barmark/sync": "workspace:^",
 		"barmark": "workspace:^"
 	},
 	"devDependencies": {

@@ -2,11 +2,10 @@
 
 MIDI for [barmark](https://barmark.dev) chord charts: export a chart's
 play order as a Standard MIDI File, to hear it in a sequencer or a
-notation program. So far it has been checked in MuseScore 4.7.6 (its MIDI
-import, read through the MusicXML it writes); other programs are
-untested. The performance core, chart to timed notes,
-is the `@barmark/midi/perform` subpath. (Import, a MIDI file to a chart,
-comes later.)
+notation program, and import a MIDI file as a chord chart. Export has
+been checked in MuseScore 4.7.6 (its MIDI import, read through the
+MusicXML it writes); other programs are untested. The performance core,
+chart to timed notes, is the `@barmark/midi/perform` subpath.
 
 ```sh
 npm install @barmark/midi
@@ -133,6 +132,56 @@ file uses 480 and rounds each time to the nearest tick, never a note to
 nothing (`ticks-rounded`). A pitch beyond MIDI's 0–127 moves by octaves
 into it, and a key beyond seven sharps or flats is written as its
 enharmonic. A chart too long for any division is an error.
+
+## Import
+
+```ts
+import { importMidi } from "@barmark/midi";
+
+const { text, diagnostics } = importMidi(bytes); // or importMidi(bytes, { tracks: [2, "Piano"] })
+if (text === "") console.error(diagnostics);
+```
+
+`importMidi` reads a format 0 or 1 file and writes a chord chart with
+`@barmark/sync`'s builder: canonical, in play order (no repeats), four
+bars a line. It never throws; `text` is `""` exactly when a diagnostic
+is an error, and otherwise parses with no errors.
+
+- **The chords** come from the notes that carry the harmony: drums
+  (channel 10) and single-note lines other than the lowest (a melody,
+  slash notes) are left out, unless `tracks` names the tracks to read.
+  Each chord is named from the pitch classes sounding (barmark's
+  `nameNotes`), else written as a note set of up to three notes, else
+  `?`; where nothing sounds, `N.C.`.
+- **Bars, key, meter and tempo** come from the file's time, key and
+  tempo events. A short first bar before a new meter is a pickup when it
+  is whole beats of the meter after it; otherwise it is a bar of its own
+  meter. A doubtful key signature is left out; a gradual tempo change is
+  written as its last tempo. A tempo or meter barmark can't write
+  (`tempo:` is 1 to 999, `time:` up to 32 beats) is dropped with a
+  diagnostic.
+- **Markers** become `## ` headings, on the bar line nearest them; two
+  on one bar keep the first. **The title** is a format 0 file's track
+  name, or track 1's name when track 1 has no notes (a conductor track).
+  Names are tidied: a newline is a space, control and invisible
+  characters go, and a name that would read as something else (`x2`) is
+  repaired or dropped.
+
+Options: `tracks` (1-based numbers or track names, any case), `simile`
+(write a repeated bar as `%`, default true) and `barsPerLine` (default
+4). Each diagnostic has a `code`, a `severity`, a `message`, and where it
+can, a `track` (1-based, in file order) and the played `bar` (a pickup is
+bar 1). A problem that repeats is reported once, with a count and its
+first bars. The codes are the import's (`not-midi`, `format-2`, `smpte`,
+`too-large`, `no-notes`, `truncated`, `track-count`, `bad-event`,
+`meta-invalid`, `meter-mid-bar`, `key-doubtful`, `harmony-from-melody`,
+`track-unknown`, `chord-unnamed`, `drums-left-out`, `melody-left-out`,
+`tempo-ramp`, `tempo-in-bar`, `marker-dropped`, and for lyrics
+`lyrics-dropped`, `lyrics-other-tracks`) and sync's builder's.
+
+`readSmf(bytes)` is the reader underneath: the file's format, division
+and tracks of absolute-tick events, each track's name, and its
+diagnostics.
 
 ## `@barmark/midi/perform`
 

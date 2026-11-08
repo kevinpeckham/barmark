@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import { type Change, directivesOf } from "../src/import/directives.js";
+import type { Change } from "@barmark/sync";
+import { directivesOf } from "../src/import/directives.js";
 import { gridOf } from "../src/import/grid.js";
 import type { Note } from "../src/import/notes.js";
 import { createReport, type Report } from "../src/import/report.js";

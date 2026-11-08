@@ -18,14 +18,12 @@
  *   moves inside a bar and is back by the next downbeat writes nothing
  *   (`tempo-in-bar`).
  */
+import type { Change } from "@barmark/sync";
 import { beatsOf, type Meter } from "barmark";
 import { KEY, type Smf, TEMPO } from "../smf/types.js";
 import { barAt, type Grid, type MetaAt, metaOf, signaturesOf } from "./grid.js";
 import { type Note, pitchClassPoints } from "./notes.js";
 import type { Report } from "./report.js";
-
-/** Sync's `Change`, structurally (sync becomes a dependency with `importMidi`). */
-export type Change = { kind: "key" | "meter" | "tempo"; start: number; value: string | number };
 
 export type Directives = {
 	key: string | null;
