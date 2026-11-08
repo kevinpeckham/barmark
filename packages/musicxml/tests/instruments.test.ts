@@ -63,6 +63,18 @@ describe("the export", () => {
 		expect(xml).toContain("<instrument-name>Electric Guitar</instrument-name>");
 		expect(xml).toContain("<midi-program>28</midi-program>");
 	});
+	test("an acoustic guitar sounds as one: barmark's listed acoustic guitar", () => {
+		// Shenandoah's "Acoustic Guitar" was exported as Electric Guitar, program 28.
+		const guessed = xmlOf("part: Gtr = Acoustic Guitar\n| C |");
+		const named = xmlOf("part: Gtr = Gtr, instrument: acoustic guitar\n| C |");
+		for (const xml of [guessed, named]) {
+			expect(xml).toContain("<instrument-name>Acoustic guitar</instrument-name>");
+			expect(xml).toContain("<midi-program>26</midi-program>");
+			expect(xml).toContain("<clef-octave-change>-1</clef-octave-change>");
+		}
+		expect(instrumentOf({ name: "Acoustic Guitar 2" })?.program).toBe(26);
+		expect(instrumentOf({ name: "Guitar" })?.program).toBe(28);
+	});
 	test("a guitar's slashes sit on its staff's middle line", () => {
 		const [m = ""] = measures(xmlOf("part: Guitar\n| C |"));
 		expect(pitch(notes(m)[0] ?? "")).toBe("B3");

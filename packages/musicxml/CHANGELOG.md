@@ -39,6 +39,13 @@ package uses [semantic versioning](https://semver.org/).
   is now held to the next word by a no-break space: Dorico read
   Shenandoah's "every note a quarter." as "every note  quarter.", taking
   the "a" for the one in "a tempo". barmark's own "a tempo" stays plain.
+- **A part named for an acoustic guitar is one.** A part whose name holds
+  "guitar" was always guessed an electric guitar (MIDI program 28), so
+  Shenandoah's "Acoustic Guitar" was exported as "Electric Guitar". A
+  guitar named acoustic is now barmark's listed acoustic guitar
+  (`instrument-name` "Acoustic guitar", program 26), as if `instrument:
+  acoustic guitar` named it; `@barmark/midi` takes the same program from
+  the same table.
 
 ## [0.7.1] - 2026-11-08
 
