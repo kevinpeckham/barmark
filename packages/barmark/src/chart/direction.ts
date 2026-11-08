@@ -85,6 +85,16 @@ function missingMarks(jump: Mark, plan: JumpPlan, first: Map<string, Mark>): str
 	return wants.filter(([missing]) => missing).map(([, what]) => `${name} has ${what}`);
 }
 
+/** Whether a bar is written after `m`: on its line, or on any later one. */
+function barAfter(lines: Line[], m: Mark): boolean {
+	return lines.some((l) => {
+		if (l.kind === "invalid") return l.line > m.line && l.written > 0;
+		if (l.kind !== "bars" || l.line < m.line) return false;
+		const cells = l.line === m.line ? l.cells.slice(m.cell + 1) : l.cells;
+		return cells.some((c) => c.kind === "slots" || c.kind === "simile");
+	});
+}
+
 /** The marks no jump uses: each is an error. */
 function unusedMarks(plan: JumpPlan | null, first: Map<string, Mark>): Mark[] {
 	const used: Record<string, boolean> = {
@@ -113,6 +123,9 @@ export function planJump(lines: Line[], error: Report): JumpPlan | null {
 	const plan = jump?.direction.kind === "jump" ? jump.direction : null;
 	if (jump && plan)
 		problems.push(...missingMarks(jump, plan, first).map((m): [Mark, string] => [jump, m]));
+	const coda = first.get("coda");
+	if (coda && !barAfter(lines, coda))
+		problems.push([coda, "Coda has no bar after it, so To Coda has nowhere to go on"]);
 	for (const m of unusedMarks(plan, first))
 		problems.push([m, `${printDirection(m.direction)}: no jump uses it`]);
 	for (const [m, message] of problems) error(m.line, message, printDirection(m.direction));

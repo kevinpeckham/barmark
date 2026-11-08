@@ -614,6 +614,10 @@ the coda at `To Coda`, and plays to the end.
   `Segno`, `Coda`, `To Coda` and `Fine`. `D.S.` needs a `Segno` before it,
   `al Fine` a `Fine`, and `al Coda` a `To Coda` and a `Coda` after it. A
   `Segno`, `Coda`, `To Coda` or `Fine` that no jump uses is an **error**.
+- A `Coda` needs at least one bar after it, anywhere later in the chart in
+  written order; a `Coda` with no bar after it is an **error**, since
+  `To Coda` would have nowhere to go on (and MusicXML no measure to carry
+  the sign).
 - This is the one exception to "the written order is the play order"
   (section 6), and it stays visible: the jump is written where it happens.
 
@@ -1234,7 +1238,7 @@ keeps what cannot reduce:
 | error | a syllable on anything but a note set (a chord name, a voicing, `/`, `--`, `N.C.`, `?`), an empty syllable or an empty side of `~`, a `{` straight after a syllable |
 | error | an accent or a hit on anything but a chord or a note set |
 | error | a push with nothing played before it, longer than the slot before it, on `/`, `%` or `?`, inside a group, of three or more `<`, or after its accent (`^<D`) |
-| error | a second `D.C.` or `D.S.`, or a second `Segno`, `Coda`, `To Coda` or `Fine`; `D.S.` with no `Segno` before it; `al Fine` with no `Fine`; `al Coda` without a `To Coda` and a `Coda` after it; a `Segno`, `Coda`, `To Coda` or `Fine` that no jump uses |
+| error | a second `D.C.` or `D.S.`, or a second `Segno`, `Coda`, `To Coda` or `Fine`; `D.S.` with no `Segno` before it; `al Fine` with no `Fine`; `al Coda` without a `To Coda` and a `Coda` after it; a `Coda` with no bar after it; a `Segno`, `Coda`, `To Coda` or `Fine` that no jump uses |
 | error | empty section that references no earlier section (the message suggests writing its bars or removing the heading, or names the line where a later section of that name is written) |
 | error | `->` anywhere but the end of a replay heading |
 | error | `/` or `%` with nothing before it |
@@ -1358,6 +1362,7 @@ human to say whether the band was silent, and the structure line.
 | Written bar numbers | Machine output gains `written` on each played bar (A.7), the bar's number as written, so a host can speak a printed score's measure numbers (issue #70: a correction editor for a score read). No change to what any chart means. |
 | `title:` | Kevin's ruling (2026-11-07, issue #173): `title: X` is a text line with a warning suggesting `# X`, as `meter:` suggests `time:` (7). No new syntax: a chart's title stays its `#` line, there is no `subtitle:`, and the printer prints the line as written. A converter doesn't read it as a title either; MusicXML carries it as text like any other line. |
 | What `->` cuts | Decided by Kevin (2026-11-08): `->` cuts the replay's last bar as written, from the last pass with `x N` (6); when a `Fine` or `To Coda` stops play before it, after the jump, the bar is never reached and the replay plays up to the stop. Found by the MusicXML round trip's property test: `## Intro` holding a `Fine`, replayed as `## Intro ->` after a `D.S. al Fine`, played nothing. Rejected: cutting the last bar played, which can cut a bar before a `Fine` and leave nothing. |
+| A `Coda` with no bar after it | Decided by Kevin (2026-11-08): an **error** (5.2, 9); a `Coda` needs at least one bar after it, anywhere later in written order. It gives `To Coda` nowhere to go on, and MusicXML has no measure to carry the sign. Before, it parsed, played nothing after `To Coda` and the export dropped the sign. Rejected: a warning, which would leave the jump going nowhere. |
 
 ## Open questions
 

@@ -238,6 +238,21 @@ describe("directions: errors", () => {
 		expect(messages("| C | To Coda | D | D.C. al Coda |")[0]).toContain("no Coda after");
 		expect(messages("| Coda | C | To Coda | D | D.C. al Coda |")[0]).toContain("no Coda after");
 	});
+	test("a Coda needs a bar after it, anywhere later in the chart", () => {
+		const text = "| C | To Coda | D | D.C. al Coda |\n## Coda\n| G | Coda |";
+		const coda = errors(text).filter((d) => d.message.includes("no bar after it"));
+		expect(coda).toHaveLength(1);
+		expect(coda[0]?.line).toBe(3);
+		expect(coda[0]?.token).toBe("Coda");
+		expect(messages("| C | To Coda | D | D.C. al Coda | Coda |\n| E |")).toEqual([]);
+		expect(messages("| C | To Coda | D | D.C. al Coda | Coda |\n## Coda\n| E |")).toEqual([]);
+		expect(messages("| C | To Coda | D | D.C. al Coda | Coda | ... |\n| % |")).toEqual([]);
+	});
+	test("a Coda with only marks after it is an error, and the jump is not taken", () => {
+		const text = "| C | To Coda | D | D.C. al Coda | Coda | ... |\ntext\n| @A |";
+		expect(messages(text).filter((m) => m.includes("no bar after it"))).toHaveLength(1);
+		expect(play("| C | To Coda | D | D.C. al Coda | Coda |").texts).toEqual(["C", "D"]);
+	});
 	test("a mark no jump uses", () => {
 		expect(messages("| C | Fine |")[0]).toContain("no jump uses");
 		expect(messages("| Segno | C | D.C. |")[0]).toContain("no jump uses");
@@ -257,6 +272,11 @@ describe("printing", () => {
 		expect(printChart("| 𝄋 | C | to coda | d.s.  al  coda |\n| 𝄌 | D |")).toBe(
 			"| Segno | C | To Coda | D.S. al Coda |\n| Coda | D |\n",
 		);
+	});
+	test("a Coda's line with no bar after it prints as written, as every line with an error does", () => {
+		const text = "| C | to coda | D | d.c. al coda | 𝄌 |\n";
+		expect(printChart(text)).toBe(text);
+		expect(printChart(`${text}| E |\n`)).toBe("| C | To Coda | D | D.C. al Coda | Coda |\n| E |\n");
 	});
 	test("a direction cell doesn't shift the beats used to reduce the bars after it", () => {
 		const text = "time: 3/4\n| Segno | G / / D / / | D.S. |\n";
