@@ -805,6 +805,58 @@ and round-trip it through `format`.
 
 ## Tooling
 
+### Verovio beside Dorico, first run (2026-11-08, score)
+
+**Symptom:** `scripts/score-dorico.ts` exported four charts (Morning Song, Peaceful Dreams,
+Shenandoah and Amazing Grace's lead sheet) to MusicXML, and Verovio 6.4.1 (`@barmark/score`)
+and Dorico Elements 6.2 engraved the same file. We compared them by eye, the music only and
+not house style, and checked each difference against the MusicXML. Kevin's goal is a chart
+that renders "however Dorico renders [the] exported musicxml"; this run is advice, not a gate.
+The two agree on measure counts (16, 129, 5, 5), key and time signatures, every repeat
+(including `times="5"`), section names, the tempo (145), staves and clefs (treble-8 guitar,
+piano grand staff), the pitches and rhythms of both melodies, and both lyric verses with their
+hyphens and extender. What differs, most important first:
+1. *Dorico draws one part's chord symbols on every part* (Dorico). Morning Song's piano verse
+   is `G/B C Em D` in the XML and in Verovio; Dorico shows the guitar's `G C G D`, and puts the
+   guitar's `G C D G` over bars 9 to 12, where the piano rests and has no `<harmony>`.
+   Shenandoah's guitar pickup is `C`; Dorico shows the voice's `N.C.`. Its import seems to make
+   chord symbols global, so a chart whose parts play different changes loses them.
+2. *Verovio slashes the piano's left hand* (Verovio). `<measure-style number="1"><slash>` puts
+   staff 1 in slashes and staff 2 holds whole-bar rests; Dorico draws the rests, Verovio draws
+   slashes on both staves (Morning Song, bars 1 to 8 and 13 to 16).
+3. *Chord spelling* (export, then each engraver its own way). `<kind text>` already spells the
+   symbol and we also write the `<degree>` that means it: `7sus4` plus add 7, `5(7)` plus
+   subtract 3. MusicXML prints a degree unless `print-object="no"`, so Verovio shows
+   `D7sus4(7)` and `G5(7)(no3)`. Dorico ignores `text` and names the chord from kind and
+   degrees: `D7sus4`, but `C5` as `C(omit3)`, `G5(7)` as `G7(omit3)`, `A5` as `A(omit3)`.
+   The same notes, not the chart's spelling.
+4. *A pickup is a 1/4 bar* (export). The grammar calls a first bar in a one-bar meter (`[1/4]`)
+   a pickup, but the export writes `<time>` 1/4 then 4/4 (or 3/4) and no `implicit="yes"`, so
+   both print a 1/4 time signature and count the pickup as bar 1 (Shenandoah, Amazing Grace).
+5. *Dorico drops a mid-sentence "a"* (Dorico; our workaround is partial). Shenandoah's
+   description reads "every note  quarter." in Dorico. `ownText`'s no-break space covers a
+   leading "a" only. Dorico also draws this `placement="below"` text above the staff.
+6. *Smaller, both alike.* `×5` is a `<direction>` after the last note of bar 128, so both draw
+   it over bar 129, not at the repeat it counts (export). Measure `text` holds the chart's bar
+   numbers (Peaceful Dreams' second Verse reads 13 again, bar 129 is "81"); both ignore it and
+   number 1 to 129 (export, if those numbers matter). The description is a direction in every
+   part, so both show it twice (export). Shenandoah's "Acoustic Guitar" has `instrument-name`
+   Electric Guitar and MIDI program 28, which neither score shows (export). House style only:
+   Dorico's slash-region counts "(4)", "(8)", its "Gtr 1" for our `Gtr`, and a final barline
+   the XML does not write.
+**Cause:** 1 and 5 are Dorico's MusicXML import, 2 is Verovio's; 3, 4 and 6 are our export,
+where the XML says something an engraver may fairly read another way.
+**Fix:** none yet. Candidates, nearest the goal first: `print-object="no"` on a `<degree>` the
+kind text already spells (3); a first bar in a one-bar meter written `implicit="yes"` under
+the running time signature (4); `ownText` for every lone "a", not only a leading one (5); the
+`×5` placed so neither engraver reads it as bar 129's (6). For 1, look for a Dorico import
+option or per-part chord symbols by hand before changing the XML. For 2, try leaving
+`<measure-style>` out of a two-staff part (its notes already carry slash noteheads and
+`stem none`): if Dorico is unchanged and Verovio draws rests, do that; else report it upstream.
+**Where:** `scripts/score-dorico.ts` (`score-dorico-page.ts` draws the page);
+`packages/musicxml/src/harmony.ts` (degrees), `measure-xml.ts` (time, slash style),
+`directions.ts` (`ownText`).
+
 ### Vite 7 pre-bundles `<barmark-score>` out of reach of its worker and font; Vite 8 does not (2026-11-08, @barmark/score)
 
 - **The symptom.** In a scratch Vite app installing the packed
