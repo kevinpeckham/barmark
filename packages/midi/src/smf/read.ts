@@ -3,6 +3,8 @@
  * is a diagnostic. Every read is checked against the end of its chunk, and
  * nothing is allocated from a length field before that length is checked
  * against the bytes left, so a hostile file costs time linear in its size.
+ * It reports into the import's counted report (`../import/report.ts`):
+ * the one place the reader reaches into `import/`, besides its types.
  */
 import { createReport, type Report } from "../import/report.js";
 import type { MidiImportCode, MidiImportDiagnostic } from "../import/types.js";

@@ -4,8 +4,9 @@
  * default a monophonic stream (two or more of its notes sounding together
  * for under 10% of its sounding time) is a melody, a lead line or
  * MuseScore's slash notes, and is left out, unless it is the lowest
- * stream, the one whose lowest note is lowest (ties: the lower median,
- * then file order): then it is a bass line and stays. When no stream is
+ * stream, the one lowest at its 10th percentile pitch (ties: the lower
+ * median, then file order), so one stray low note doesn't decide it:
+ * then it is a bass line and stays. When no stream is
  * polyphonic, every stream is used. `options.tracks` names the harmony
  * tracks instead.
  */
@@ -17,6 +18,10 @@ import type { MidiImportOptions } from "./types.js";
 const DRUMS = 9;
 /** A stream is monophonic when two notes sound together for less than this share of its sounding time. */
 const POLYPHONY = 0.1;
+/** A stream's low is its pitch a tenth of the way up (1 / LOW_SHARE), not its lowest note. */
+const LOW_SHARE = 10;
+/** The most streams or tracks a diagnostic names before it counts the rest. */
+const MAX_NAMED = 8;
 
 type Stream = { track: number; channel: number; notes: Note[] };
 
@@ -51,12 +56,21 @@ function isMonophonic(notes: Note[]): boolean {
 	return together < POLYPHONY * sounding;
 }
 
-function median(notes: Note[]): number {
+/** A stream's median pitch, and its low: the pitch a tenth of the way up its sorted pitches. */
+function pitchesOf(notes: Note[]): { median: number; low: number } {
 	const pitches = notes.map((n) => n.pitch).sort((a, b) => a - b);
 	const mid = pitches.length >> 1;
-	return pitches.length % 2 === 1
-		? (pitches[mid] ?? 0)
-		: ((pitches[mid - 1] ?? 0) + (pitches[mid] ?? 0)) / 2;
+	const median =
+		pitches.length % 2 === 1
+			? (pitches[mid] ?? 0)
+			: ((pitches[mid - 1] ?? 0) + (pitches[mid] ?? 0)) / 2;
+	return { median, low: pitches[Math.floor(pitches.length / LOW_SHARE)] ?? 0 };
+}
+
+/** At most `MAX_NAMED` items named, then a count: "a, b, c and d", "a, …, h …and 2 more". */
+function namedList(items: string[]): string {
+	if (items.length <= MAX_NAMED) return andList(items);
+	return `${items.slice(0, MAX_NAMED).join(", ")} …and ${items.length - MAX_NAMED} more`;
 }
 
 const nameOf = (names: (string | null)[], track: number) => {
@@ -75,8 +89,7 @@ function chosenByDefault(pitched: Note[], names: (string | null)[], report: Repo
 	const streams = streamsOf(pitched).map((s) => ({
 		...s,
 		mono: isMonophonic(s.notes),
-		median: median(s.notes),
-		low: s.notes.reduce((low, n) => Math.min(low, n.pitch), 127),
+		...pitchesOf(s.notes),
 	}));
 	if (streams.length === 0) return [];
 	if (streams.every((s) => s.mono)) {
@@ -98,7 +111,7 @@ function chosenByDefault(pitched: Note[], names: (string | null)[], report: Repo
 	report.add(
 		"melody-left-out",
 		"info",
-		`single-note lines left out of the harmony: ${andList(labels)}`,
+		`single-note lines left out of the harmony: ${namedList(labels)}`,
 		{ track: oneTrack(melodies) },
 	);
 	const left = new Set(melodies.map((s) => `${s.track} ${s.channel}`));
@@ -152,7 +165,7 @@ export function harmonyNotes(
 		report.add(
 			"drums-left-out",
 			"info",
-			`the drums (channel 10) on ${tracks.length === 1 ? "track" : "tracks"} ${andList(tracks)} are left out`,
+			`the drums (channel 10) on ${tracks.length === 1 ? "track" : "tracks"} ${namedList(tracks)} are left out`,
 			{ track: oneTrack(drums) },
 		);
 	}
@@ -163,6 +176,12 @@ export function harmonyNotes(
 			? chosenByDefault(pitched, names, report)
 			: pitched.filter((n) => chosen.has(n.track));
 	if (harmony.length === 0)
-		report.add("no-notes", "error", "there are no notes to read chords from outside channel 10");
+		report.add(
+			"no-notes",
+			"error",
+			chosen === null
+				? "there are no notes to read chords from outside channel 10"
+				: "the tracks options.tracks chose have no notes to read chords from",
+		);
 	return harmony;
 }

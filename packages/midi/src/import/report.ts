@@ -2,10 +2,12 @@
  * The import's diagnostics. Each problem (a code, a track or none, and a
  * message) is reported once; a repeat adds to its count and, while there
  * are fewer than five, its bars, both stated in the message: "? written
- * (7 times; bars 3, 1, 4, 7, 9 and more)". So a message names the kind of
- * problem, never a value read from the file (a hostile file would make
- * one diagnostic per value): bars and tracks go in `where`. The reader
- * (`smf/read.ts`) reports through it too.
+ * (7 times; bars 3, 1, 4, 7, 9 and more)", or "(2 times; bar 4)". So a
+ * message never carries a per-event value read from the file (a hostile
+ * file would make one diagnostic per value): bars and tracks go in
+ * `where`. A message raised once per track or once per import may name
+ * tracks (a list of them is capped). The reader (`smf/read.ts`) reports
+ * through it too.
  */
 import type { MidiImportCode, MidiImportDiagnostic } from "./types.js";
 
@@ -45,11 +47,13 @@ function messageOf(e: Entry): string {
 	if (e.count === 1) return e.message;
 	const bars = e.bars.map(String);
 	if (e.more) bars.push("more");
-	return `${e.message} (${e.count} times${bars.length > 0 ? `; bars ${andList(bars)}` : ""})`;
+	const word = bars.length === 1 ? "bar" : "bars";
+	return `${e.message} (${e.count} times${bars.length > 0 ? `; ${word} ${andList(bars)}` : ""})`;
 }
 
 function addBar(e: Entry, bar: number | undefined) {
 	if (bar === undefined || e.bars.includes(bar)) return;
+	e.d.bar ??= bar;
 	if (e.bars.length < FIRST_BARS) e.bars.push(bar);
 	else e.more = true;
 }
@@ -65,7 +69,6 @@ export function createReport(): Report {
 			if (e === undefined) {
 				const d: MidiImportDiagnostic = { severity, code, message };
 				if (track !== undefined) d.track = track;
-				if (bar !== undefined) d.bar = bar;
 				e = { d, message, count: 0, bars: [], more: false };
 				entries.set(key, e);
 				list.push(d);

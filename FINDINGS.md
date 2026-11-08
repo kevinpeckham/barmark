@@ -20,9 +20,10 @@ not here.
 - **The fix.** One counted report for the whole import,
   `packages/midi/src/import/report.ts`, which the reader reports into:
   each problem is a (code, track, message), repeats counted with their
-  first five bars. A message names the kind of problem and never a value
-  read from the file (the time signature's message no longer prints its
-  numbers), or a hostile file could raise one diagnostic per value.
+  first five bars. A message never carries a per-event value read from
+  the file (the time signature's message no longer prints its numbers),
+  or a hostile file could raise one diagnostic per value; a message
+  raised once per track or per import may name tracks, eight at most.
 
 ### A malformed-file test can fail for an earlier reason than the rule it names (2026-11-08, @barmark/midi)
 

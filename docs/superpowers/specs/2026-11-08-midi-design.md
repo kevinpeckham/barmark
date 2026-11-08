@@ -533,11 +533,15 @@ examples slot by slot.
   monophonic (two or more of its notes sound together for less than 10%
   of its sounding time) and isn't the lowest stream is a melody, a lead
   line or MuseScore's slash notes (which sound as one repeated pitch,
-  section 8). One `melody-left-out` info names them. The lowest stream
-  is the one whose lowest note is lowest, ties to the lower median pitch,
-  then to file order (Claude's ruling, 2026-11-08: not the lowest median,
-  which made B3 slash notes the bass beside MuseScore's chord playback,
-  F2 C4 E4 F4 A4, whose median is E4, and added B to every chord). When
+  section 8). One `melody-left-out` info names them (eight at most,
+  then a count). The lowest stream is the one lowest at its 10th
+  percentile pitch (its pitches sorted, the one a tenth of the way up),
+  ties to the lower median pitch, then to file order (Claude's ruling,
+  2026-11-08, revised: not the lowest median, which made B3 slash notes
+  the bass beside MuseScore's chord playback, F2 C4 E4 F4 A4, whose
+  median is E4, and added B to every chord; and not the lowest note,
+  which let one stray low hit on a pad or a lead make it the bass and
+  leave the real bass line out). When
   the lowest stream is monophonic it is a bass line and stays: it gives
   the bass. When no stream is polyphonic (only melody streams), all are
   used, warning `harmony-from-melody`.

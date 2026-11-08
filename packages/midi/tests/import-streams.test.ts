@@ -307,6 +307,18 @@ describe("harmonyNotes", () => {
 		expect(report.list[0]?.message).toContain("track 2, channel 4");
 	});
 
+	test("melody-left-out names at most eight streams, then a count", () => {
+		const melodies = Array.from({ length: 10 }, (_, i) => track(line(0, [72 + i, 74 + i])));
+		const { report } = harmonyFrom([track(chords(15, [C_E_G])), ...melodies]);
+		const message = report.list[0]?.message ?? "";
+		expect(message).toContain("track 9, channel 1");
+		expect(message).not.toContain("track 10,");
+		expect(message).toContain("…and 2 more");
+		const eight = harmonyFrom([track(chords(15, [C_E_G])), ...melodies.slice(0, 8)]);
+		expect(eight.report.list[0]?.message).toContain("track 8, channel 1 and track 9, channel 1");
+		expect(eight.report.list[0]?.message).not.toContain("more");
+	});
+
 	/** MuseScore's chord playback (F2 C4 E4 F4 A4, section 8) on channel 2 beside slash notes of `pitch` on channel 1, one a beat, each ending a tick early. */
 	const musescore = (pitch: number) =>
 		harmonyFrom([
@@ -332,17 +344,51 @@ describe("harmonyNotes", () => {
 		expect(codes(report)).toEqual([["info", "melody-left-out", 1]]);
 	});
 
-	test("the bass is the stream with the lowest note, not the lowest median", () => {
-		// A line at C5 that dips once to C2, beside chords at C3 C4 E4 G4: the line has the lowest note.
+	/** Monophonic notes of these pitches, a quarter each, on channel 1 of their own named track. */
+	const mono = (name: string, pitches: number[]): Chunk => [
+		{ dt: 0, name },
+		...track(line(0, pitches)),
+	];
+	const named = (name: string, ...parts: At[][]): Chunk => [{ dt: 0, name }, ...track(...parts)];
+
+	test("the bass is the stream lowest at its 10th percentile: a stray low hit on a pad doesn't make it the bass", () => {
+		// Pad chords E3-G4 with one C1 hit; a bass A1-G2; a lead from C5.
+		const pad = [52, 55, 59, 67];
 		const { harmony, report } = harmonyFrom([
-			track(chords(0, [[48, ...C_E_G]])),
-			track(line(1, [72, 72, 36, 72, 72])),
+			named("Pad", chords(0, [pad, pad, pad, pad]), [
+				at(960, { on: [0, 24, 80] }),
+				at(1200, { off: [0, 24] }),
+			]),
+			mono("Bass", [33, 36, 38, 40, 43, 40, 38, 36]),
+			mono("Lead", [72, 74, 76, 77, 79, 77, 76, 74]),
 		]);
-		expect(harmony.filter((n) => n.track === 2)).toHaveLength(5);
+		expect([...new Set(harmony.map((n) => n.track))].sort()).toEqual([1, 2]);
+		expect(codes(report)).toEqual([["info", "melody-left-out", 3]]);
+	});
+
+	test("a lead that dips once to C1 is not the bass", () => {
+		const piano = [45, 57, 60, 64];
+		const lead = [72, 74, 76, 77, 79, 77, 76, 74, 72, 74, 24, 77, 79, 77, 76, 74, 72];
+		const { harmony, report } = harmonyFrom([
+			named("Piano", chords(0, [piano, piano, piano, piano])),
+			mono("Lead", lead),
+		]);
+		expect(harmony.every((n) => n.track === 1)).toBe(true);
+		expect(codes(report)).toEqual([["info", "melody-left-out", 2]]);
+	});
+
+	test("a piano whose left hand reaches A1 once doesn't push out a bass on E2-E3", () => {
+		const bottoms = [45, 47, 48, 45, 43, 45, 47, 33];
+		const piano = bottoms.map((b) => [b, b + 12, 60, 64, 67]);
+		const { harmony, report } = harmonyFrom([
+			named("Piano", chords(0, piano, 480)),
+			mono("Bass", [40, 43, 45, 47, 52, 40, 43, 45]),
+		]);
+		expect(harmony.filter((n) => n.track === 2)).toHaveLength(8);
 		expect(report.list).toEqual([]);
 	});
 
-	test("a tie on the lowest note goes to the lower median, then to file order", () => {
+	test("a tie on the 10th percentile goes to the lower median, then to file order", () => {
 		const chordsAbove = track(chords(0, [[60, 64, 67, 72]]));
 		// Both lines reach C2; track 3's median (E2) is lower than track 2's (C3).
 		const median = harmonyFrom([
@@ -447,6 +493,9 @@ describe("harmonyNotes", () => {
 		});
 		expect(chosen.harmony).toEqual([]);
 		expect(codes(chosen.report)).toEqual([["error", "no-notes", undefined]]);
+		expect(chosen.report.list[0]?.message).toContain("options.tracks");
+		expect(chosen.report.list[0]?.message).not.toContain("channel 10");
+		expect(drums.report.list[1]?.message).toContain("channel 10");
 	});
 });
 
@@ -479,6 +528,9 @@ describe("createReport", () => {
 		report.add("tempo-in-bar", "info", "a stretch", { bar: 2 });
 		report.add("tempo-in-bar", "info", "a stretch", { bar: 5 });
 		report.add("meter-mid-bar", "warning", "cut", { bar: 4 });
+		// The first add has no bar; a later one's bar is recorded, and one bar is "bar".
+		report.add("key-doubtful", "warning", "late");
+		report.add("key-doubtful", "warning", "late", { bar: 4 });
 		expect(report.list).toEqual([
 			{
 				severity: "info",
@@ -487,6 +539,7 @@ describe("createReport", () => {
 				bar: 2,
 			},
 			{ severity: "warning", code: "meter-mid-bar", message: "cut", bar: 4 },
+			{ severity: "warning", code: "key-doubtful", message: "late (2 times; bar 4)", bar: 4 },
 		]);
 	});
 
