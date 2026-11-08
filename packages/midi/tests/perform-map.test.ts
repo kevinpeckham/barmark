@@ -30,10 +30,25 @@ describe("perform: tempo, meters, keys, markers, words and lyrics", () => {
 		// A [3/4] bar in 6/8 lasts two dotted quarters at the same speed.
 		expect(tempos(play("time: 6/8, tempo: 60\n| C | [3/4] D | E |"))).toEqual([[0, 90]]);
 		// A rit. steps a dotted quarter at a time through it, the target held in 6/8's beat.
-		const rit = "time: 6/8, tempo: 60\n| C |\ntempo: rit. to 40\n| [3/4] C | C |";
-		expect(
-			tempos(play(rit)).map(([at, qpm]) => [at, Math.round((qpm as number) * 1e6) / 1e6]),
-		).toEqual([
+		const rounded = (text: string) =>
+			tempos(play(text)).map(([at, qpm]) => [at, Math.round((qpm as number) * 1e6) / 1e6]);
+		const ramp = (bars: string) =>
+			rounded(`time: 6/8, tempo: 60\n| C |\ntempo: rit. to 40\n${bars}`);
+		expect(ramp("| [3/4] C | C |")).toEqual([
+			[0, 90],
+			[3, 80],
+			[4.5, 70],
+			[6, 60],
+		]);
+		// A [5/8] bar holds a beat and a half: a step at each beat that starts in it.
+		expect(ramp("| [5/8] C | C |")).toEqual([
+			[0, 90],
+			[3, 80],
+			[4.5, 70],
+			[5.5, 60],
+		]);
+		// The target on a one-bar meter's bar is still in 6/8's beat.
+		expect(ramp("| C | [3/4] C |")).toEqual([
 			[0, 90],
 			[3, 80],
 			[4.5, 70],
