@@ -32,6 +32,13 @@ const LYRIC = 0x05;
  */
 const MAX_VERSES = 100;
 
+/**
+ * The most lyric rows written, a verse under a bar line each (the
+ * coordinator's ruling, Task 14 fix round 1): 100 verses under 2,500
+ * bar lines would take import half a minute; later verses are left out.
+ */
+const MAX_ROWS = 200_000;
+
 /** A lyric event's text at its tick, in its verse. */
 type Raw = { tick: number; verse: number; text: string };
 
@@ -56,8 +63,59 @@ function groupBy<T>(items: T[], keyOf: (item: T) => number): Map<number, T[]> {
 	return out;
 }
 
-const isLyric = (e: SmfEvent): e is SmfEvent & { kind: "meta" } =>
-	e.kind === "meta" && e.type === LYRIC;
+const TEXT = 0x01;
+
+const isMeta =
+	(type: number) =>
+	(e: SmfEvent): e is SmfEvent & { kind: "meta" } =>
+		e.kind === "meta" && e.type === type;
+const isLyric = isMeta(LYRIC);
+const isText = isMeta(TEXT);
+
+/** A karaoke (.kar) header line: `@T` title, `@L` language and the like. */
+const isHeader = (e: SmfEvent & { kind: "meta" }) => decodeText(e.data).startsWith("@");
+
+/**
+ * Where the lyrics are: the lyric events (0x05) of the first track with
+ * any; or, in a file with none, a karaoke file's text events (0x01) of
+ * the first track with `@` header lines, the headers left out. `texts`
+ * are their decoded texts by tick, file order; `others` the other tracks
+ * that have lyrics.
+ */
+function lyricSource(smf: Smf): LyricSource | null {
+	const lyric = smf.tracks.flatMap((events, i) => (events.some(isLyric) ? [i + 1] : []));
+	if (lyric.length > 0) return sourceOf(smf, lyric, isLyric, (text) => text);
+	const karaoke = smf.tracks.flatMap((events, i) =>
+		events.filter(isText).some(isHeader) ? [i + 1] : [],
+	);
+	// A leading \ or / marks a new line, and so a word's end: a space.
+	return sourceOf(smf, karaoke, isText, (text) =>
+		text.startsWith("@") ? null : text.replace(/^[\\/]/, " "),
+	);
+}
+
+type LyricSource = { track: number; others: number[]; texts: { tick: number; text: string }[] };
+
+/** The first of `tracks`, its events of a kind as texts (`read` null leaves one out), and the others. */
+function sourceOf(
+	smf: Smf,
+	tracks: number[],
+	kind: (e: SmfEvent) => e is SmfEvent & { kind: "meta" },
+	read: (text: string) => string | null,
+): LyricSource | null {
+	const [track, ...others] = tracks;
+	if (track === undefined) return null;
+	const texts = (smf.tracks[track - 1] ?? []).filter(kind).flatMap((e) => {
+		const text = read(decodeText(e.data));
+		return text === null ? [] : [{ tick: e.tick, text }];
+	});
+	return { track, others, texts };
+}
+
+/** The tick of the last lyric, or -1 when the file has none: the grid runs to it (spec 5.3). */
+export function lastLyric(smf: Smf): number {
+	return lyricSource(smf)?.texts.at(-1)?.tick ?? -1;
+}
 
 /** The other tracks with lyrics, named once. */
 function reportOthers(track: number, others: number[], report: Report) {
@@ -71,26 +129,43 @@ function reportOthers(track: number, others: number[], report: Report) {
 	);
 }
 
-/** The lyric events of the first track with any, as verses: at one tick, verses 1, 2, … in file order. */
+/**
+ * Verses by order at a tick (spec 5.8): MIDI has no verse number. When
+ * the number of lyrics at a tick varies, a verse that holds where another
+ * sings takes the other's place, so the import warns.
+ */
+function reportUncertain(raws: Raw[], track: number, report: Report) {
+	const counts = new Set<number>();
+	raws.forEach((e, i) => {
+		if (raws[i + 1]?.tick !== e.tick) counts.add(e.verse);
+	});
+	if (counts.size > 1)
+		report.add(
+			"lyrics-verses-uncertain",
+			"warning",
+			"the number of lyrics at a tick varies, and verses are told apart only by their order at each tick, so verses may be mixed",
+			{ track },
+		);
+}
+
+/** The lyrics as verses: at one tick, verses 1, 2, … in file order, up to `MAX_VERSES`. */
 function lyricEvents(smf: Smf, report: Report): { track: number; events: Raw[] } | null {
-	const [track, ...others] = smf.tracks.flatMap((events, i) =>
-		events.some(isLyric) ? [i + 1] : [],
-	);
-	if (track === undefined) return null;
+	const source = lyricSource(smf);
+	if (source === null) return null;
+	const { track, others, texts } = source;
 	reportOthers(track, others, report);
-	const events: Raw[] = [];
+	const all: Raw[] = [];
 	let at = { tick: -1, verse: 0 };
-	for (const e of (smf.tracks[track - 1] ?? []).filter(isLyric)) {
-		at = { tick: e.tick, verse: at.tick === e.tick ? at.verse + 1 : 1 };
-		if (at.verse <= MAX_VERSES) events.push({ ...at, text: decodeText(e.data) });
-		else
-			report.add(
-				"lyrics-dropped",
-				"warning",
-				`verses past ${MAX_VERSES} at one tick are left out`,
-				{ track },
-			);
+	for (const { tick, text } of texts) {
+		at = { tick, verse: at.tick === tick ? at.verse + 1 : 1 };
+		all.push({ ...at, text });
 	}
+	reportUncertain(all, track, report);
+	const events = all.filter((e) => e.verse <= MAX_VERSES);
+	for (let n = all.length - events.length; n > 0; n--)
+		report.add("lyrics-dropped", "warning", `verses past ${MAX_VERSES} at one tick are left out`, {
+			track,
+		});
 	return { track, events };
 }
 
@@ -100,7 +175,8 @@ function lyricEvents(smf: Smf, report: Report): { track: number; events: Raw[] }
  */
 function tidy(text: string): { body: string; hyphen: boolean } {
 	let body = text
-		.replace(/‿/g, "~")
+		// The undertie, and SMuFL's lyric elisions (MuseScore writes U+E551).
+		.replace(/[‿\uE550-\uE552]/g, "~")
 		.replace(/[|"{}_]/g, "")
 		.trim()
 		.replace(/\s+/g, "~");
@@ -187,8 +263,12 @@ function beatToken(members: string[]): string {
 
 type BarSpan = { start: number; length: number; meter: Meter };
 
-/** One verse's cell in a bar: its syllables on the bar's grid, the other slots held or breathing. */
-function cellOf(syllables: Sung[], bar: BarSpan, sounding: (tick: number) => boolean): Cell {
+/**
+ * One verse's cell in a bar: its syllables on the bar's grid, the other
+ * slots held or breathing. `held` says whether a slot's tick is held: the
+ * lyric track sounds there, after the verse's first syllable.
+ */
+function cellOf(syllables: Sung[], bar: BarSpan, held: (tick: number) => boolean): Cell {
 	const beats = beatsOf(bar.meter);
 	const k = slotsFor(
 		syllables.map((s) => s.tick - bar.start),
@@ -205,7 +285,7 @@ function cellOf(syllables: Sung[], bar: BarSpan, sounding: (tick: number) => boo
 	const whole = bar.meter.n / bar.meter.d;
 	const sings: string[] = [];
 	const tokens = slots.map((s, j) => {
-		if (s === undefined) return sounding(bar.start + (j * bar.length) / k) ? "/" : "--";
+		if (s === undefined) return held(bar.start + (j * bar.length) / k) ? "/" : "--";
 		const token = `${s.body}${s.continues ? "-" : ""}`;
 		sings.push(`${Math.round(((j * whole) / k) * 1e9)} ${token}`);
 		return token;
@@ -253,13 +333,13 @@ function placeVerse(
 	inBar: Map<number, Sung[]>,
 	spans: BarSpan[],
 	lines: { bars: number[] }[],
-	sounding: (tick: number) => boolean,
+	held: (tick: number) => boolean,
 ): Map<number, Cell> {
 	const cells = new Map<number, Cell>();
 	for (const { bars } of lines.filter((l) => l.bars.some((i) => inBar.has(i))))
 		for (const i of bars) {
 			const span = spans[i];
-			if (span) cells.set(i, cellOf(inBar.get(i) ?? [], span, sounding));
+			if (span) cells.set(i, cellOf(inBar.get(i) ?? [], span, held));
 		}
 	return cells;
 }
@@ -273,10 +353,29 @@ function placeAll(
 ): Map<number, Map<number, Cell>> {
 	const out = new Map<number, Map<number, Cell>>();
 	for (const [verse, syllables] of verses) {
-		const cells = placeVerse(byBar(syllables, spans), spans, lines, sounding);
+		const first = syllables[0]?.tick ?? 0;
+		const held = (tick: number) => tick > first && sounding(tick);
+		const cells = placeVerse(byBar(syllables, spans), spans, lines, held);
 		if (cells.size > 0) out.set(verse, cells);
 	}
 	return out;
+}
+
+/** The verses, in order, while their rows (a verse under a bar line) number at most `MAX_ROWS`; `drop` for each past. */
+export function withinRows(
+	verses: number[],
+	cells: Map<number, Map<number, Cell>>,
+	lines: { bars: number[] }[],
+	drop: () => void,
+): number[] {
+	let rows = 0;
+	return verses.filter((verse) => {
+		const own = cells.get(verse);
+		rows += lines.filter((l) => l.bars.some((i) => own?.has(i))).length;
+		if (rows <= MAX_ROWS) return true;
+		drop();
+		return false;
+	});
 }
 
 /** The chart with each kept verse's rows under the bar lines it sings on, printed. */
@@ -397,7 +496,20 @@ export function withLyrics(
 	const lines = barLinesOf(bars);
 	const sounding = soundingOf(notes.filter((n) => n.track === lyrics.track));
 	const cells = placeAll(verses, spans, lines, sounding);
-	let kept = [...cells.keys()].sort((a, b) => a - b);
+	let kept = withinRows(
+		[...cells.keys()].sort((a, b) => a - b),
+		cells,
+		lines,
+		() =>
+			report.add(
+				"lyrics-dropped",
+				"warning",
+				`verses past ${MAX_ROWS.toLocaleString("en-US")} lyric rows are left out`,
+				{
+					track: lyrics.track,
+				},
+			),
+	);
 	while (kept.length > 0) {
 		const text = withRows(chart, lines, cells, kept, seam);
 		const verse = failing(text, cells, kept, grid.bars.length);

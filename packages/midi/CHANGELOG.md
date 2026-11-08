@@ -102,7 +102,13 @@ package uses [semantic versioning](https://semver.org/).
   `/` while the lyric track sounds and `--` where it doesn't. A
   self-check reparses the chart and drops a verse whose rows don't read
   back as placed (`lyrics-dropped`), keeping the chords and the other
-  verses.
+  verses. The bar grid runs to the last lyric. MuseScore's elision
+  character (U+E551, and SMuFL's U+E550, U+E552) is `~`. Verses are
+  assigned by order at each tick; when the number of lyrics at a tick
+  varies, `lyrics-verses-uncertain` warns that verses may be mixed. A
+  karaoke file with no lyric events gives its text events as lyrics.
+  Before a verse's first syllable a slot is `--`. At most 200,000 lyric
+  rows are written; later verses are left out (`lyrics-dropped`).
 - **`readSmf(bytes)`**: the Standard MIDI File reader import uses, with
   its diagnostics: format, division and tracks of absolute-tick events
   (notes, programs, controllers, the meta events barmark reads), each

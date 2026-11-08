@@ -5,7 +5,7 @@ import { type ChartParse, parseChart, printChart, type Syllable } from "barmark"
 import { AMAZING_GRACE } from "../../musicxml/tests/charts.js";
 import { mulberry32 } from "../../sync/tests/helpers/fuzz.js";
 import type { Grid } from "../src/import/grid.js";
-import { withLyrics } from "../src/import/lyrics.js";
+import { withinRows, withLyrics } from "../src/import/lyrics.js";
 import type { Note } from "../src/import/notes.js";
 import { createReport } from "../src/import/report.js";
 import { exportMidi, importMidi } from "../src/index.js";
@@ -133,11 +133,14 @@ describe("withLyrics", () => {
 			lyric(BAR, "a"),
 			lyric(BAR + 2 * BEAT, "b- "),
 			lyric(2 * BAR, "c "),
-			lyric(2 * BAR + 2 * BEAT, "the‿end "),
+			lyric(2 * BAR + BEAT, "the‿end "),
+			// MuseScore's elisions are SMuFL characters (U+E550–U+E552).
+			lyric(2 * BAR + 2 * BEAT, "and\uE551I "),
+			lyric(2 * BAR + 3 * BEAT, "a\uE550b\uE552c "),
 			// The last syllable ends its word.
 			lyric(3 * BAR, "last"),
 		]);
-		expect(r.text).toBe(expected(4, "lyrics: | hel lo | a- b- | c the~end | last |"));
+		expect(r.text).toBe(expected(4, "lyrics: | hel lo | a- b- | c the~end and~I a~b~c | last |"));
 	});
 
 	test("placement on the coarsest grid", () => {
@@ -216,6 +219,11 @@ describe("withLyrics", () => {
 			],
 		);
 		expect(r.text).toBe(expected(4, "lyrics: | la / -- di | / | -- | do -- / re |"));
+	});
+
+	test("before a verse's first syllable a sounding note is a breath, not a hold", () => {
+		const r = rows(2, [lyric(BAR + 2 * BEAT, "la ")], [sung(0, 2 * BAR)]);
+		expect(r.text).toBe(expected(2, "lyrics: | -- | -- la |"));
 	});
 
 	test("hostile syllables", () => {
@@ -341,8 +349,10 @@ describe("withLyrics", () => {
 					);
 			const out = rows(4, events, [sung(0, BAR), sung(2 * BAR + 7, 3 * BAR - 5)]);
 			const errors = parseChart(out.text).diagnostics.filter((d) => d.severity === "error");
-			if (out.diagnostics.length > 0 || errors.length > 0 || printChart(out.text) !== out.text)
-				failures.push(`seed ${seed}: ${JSON.stringify([out.diagnostics, errors])}`);
+			// Verses vary in number at a tick here, so that warning is expected.
+			const others = out.diagnostics.filter((d) => d.code !== "lyrics-verses-uncertain");
+			if (others.length > 0 || errors.length > 0 || printChart(out.text) !== out.text)
+				failures.push(`seed ${seed}: ${JSON.stringify([others, errors])}`);
 		}
 		expect(failures).toEqual([]);
 	});
@@ -357,6 +367,20 @@ describe("withLyrics", () => {
 			["lyrics-dropped", "warning", "verses past 100 at one tick are left out (2 times)"],
 		]);
 		noErrors(r.text);
+	});
+
+	test("at most 200,000 lyric rows: later verses are left out", () => {
+		// 100 verses each singing under 2,001 one-bar lines: the 100th would make 200,100 rows.
+		const lines = Array.from({ length: 2001 }, (_, i) => ({ bars: [i] }));
+		const sings = new Map(lines.map((_, i) => [i, { text: "a", sings: ["0 a"] }]));
+		const cells = new Map(Array.from({ length: 100 }, (_, v) => [v + 1, sings]));
+		let dropped = 0;
+		const kept = withinRows([...cells.keys()], cells, lines, () => dropped++);
+		expect(kept).toEqual(Array.from({ length: 99 }, (_, v) => v + 1));
+		expect(dropped).toBe(1);
+		// A verse counts only the bar lines it sings under.
+		const sparse = new Map([[1, new Map([[0, { text: "a", sings: ["0 a"] }]])]]);
+		expect(withinRows([1], sparse, lines, () => dropped++)).toEqual([1]);
 	});
 
 	test("a chart whose bars aren't the grid's drops every verse", () => {
@@ -424,6 +448,83 @@ describe("importMidi's lyrics", () => {
 		expect(other[0]?.severity).toBe("info");
 		expect(other[0]?.track).toBe(4);
 		expect(other[0]?.message).toContain("track 4");
+	});
+
+	test("the grid runs to the last lyric: a vocal tail past the last chord keeps its bars", () => {
+		const chart =
+			"time: 4/4, tempo: 120\n| C | G | N.C. | N.C. |\nlyrics: | one two three four | five six sev- en | eight nine ten e- | lev- en end / |\n";
+		const out = exportMidi(chart);
+		if (!out.ok) throw new Error("export failed");
+		const back = importMidi(out.bytes);
+		noErrors(back.text);
+		expect(parseChart(back.text).bars).toHaveLength(4);
+		expect(verses(parseChart(back.text))).toEqual(verses(parseChart(chart)));
+		// lyrics: false reads no lyric, so the grid ends with the chords.
+		expect(parseChart(importMidi(out.bytes, { lyrics: false }).text).bars).toHaveLength(2);
+	});
+
+	test("verses told by order at a tick: a varying count warns", () => {
+		// Verse 1 holds where verse 2 sings, so at those ticks verse 2's syllable is the only one, read as verse 1.
+		const chart =
+			"time: 4/4, tempo: 120\n| C | G |\nlyrics 1: | glo- / ri- a | men / / / |\nlyrics 2: | one two three four | five six sev- en |\n";
+		const out = exportMidi(chart);
+		if (!out.ok) throw new Error("export failed");
+		const back = importMidi(out.bytes);
+		noErrors(back.text);
+		const uncertain = back.diagnostics.filter((d) => d.code === "lyrics-verses-uncertain");
+		expect(uncertain.map((d) => [d.severity, d.track])).toEqual([["warning", 2]]);
+		// The same count at every tick: no warning.
+		const even = exportMidi(
+			"time: 4/4, tempo: 120\n| C | G |\nlyrics 1: | a b | c d |\nlyrics 2: | e f | g h |\n",
+		);
+		if (!even.ok) throw new Error("export failed");
+		expect(importMidi(even.bytes).diagnostics.map((d) => d.code)).not.toContain(
+			"lyrics-verses-uncertain",
+		);
+	});
+
+	test("MuseScore's hymn: its elision character is ~", () => {
+		const bytes = new Uint8Array(readFileSync(new URL("fixtures/hymn.mid", import.meta.url)));
+		const r = importMidi(bytes);
+		noErrors(r.text);
+		expect(r.text).toContain("heart / and~I");
+		expect(r.diagnostics.map((d) => d.code)).toEqual(["melody-left-out"]);
+	});
+
+	test("a karaoke file's text events are its lyrics", () => {
+		const kar = smf({
+			format: 1,
+			ppq: PPQ,
+			tracks: [
+				track([at(0, { tempo: 120 }), at(0, { time: [4, 4] })]),
+				track([...held([48, 64, 67], 0, BAR, 0), ...held([53, 60, 65, 69], BAR, 2 * BAR, 0)]),
+				track([
+					at(0, { text: "@KMIDI KARAOKE FILE" }),
+					at(0, { text: "@LENGL" }),
+					at(0, { text: "@TMy Song" }),
+					at(0, { text: "\\Hel" }),
+					at(PPQ, { text: "lo " }),
+					at(2 * PPQ, { text: "/world " }),
+					at(BAR, { text: "\\next" }),
+					...held([72], 0, 2 * BAR, 1),
+				]),
+			],
+		});
+		const r = importMidi(kar);
+		noErrors(r.text);
+		expect(r.text).toBe(
+			printChart("time: 4/4, tempo: 120\n| C | F |\nlyrics: | Hel- lo world / | next |\n"),
+		);
+		// Text events in a track with no @ line are not lyrics.
+		const plain = smf({
+			format: 1,
+			ppq: PPQ,
+			tracks: [
+				track([at(0, { tempo: 120 }), at(0, { time: [4, 4] })]),
+				track([...held([48, 64, 67], 0, BAR, 0), at(0, { text: "solo" })]),
+			],
+		});
+		expect(importMidi(plain).text).toBe("time: 4/4, tempo: 120\n| C |\n");
 	});
 
 	test("lyrics: false writes none", () => {

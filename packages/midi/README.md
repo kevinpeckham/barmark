@@ -164,16 +164,25 @@ is an error, and otherwise parses with no errors.
 - **Chords are read at beat resolution**, so a push on an off-beat (the
   last eighth of a bar, say) is written on the next beat.
 - **Lyrics** become lyric rows under the bar lines (unless `lyrics:
-  false`): from the first track with lyric events, events at one tick
-  being verses 1, 2, … (up to 100). A syllable continues its word unless
-  its text ends in a space or the next begins with one; `‿` is an
-  elision (`~`). Each bar's syllables sit on the coarsest grid that
-  holds them (the bar, its beats, a beat in two, three or four), the
-  slots between held (`/`) while the track's notes sound, else `--`.
-  Characters a row can't hold as a syllable (`|`, `"`, braces, `_`) are
-  removed. The chart is checked before it is returned: a verse whose rows
-  don't read back as placed is left out (`lyrics-dropped`), never the
-  chords.
+  false`): from the first track with lyric events, or in a karaoke
+  (`.kar`) file with none, its text events (the `@` lines left out, a
+  leading `\` or `/` read as a line break). MIDI has no verse number, so
+  **verses are assigned by order at each tick**: the first lyric at a
+  tick is verse 1, the second verse 2, and so on (up to 100). Where one
+  verse holds while another sings, the singing verse's syllable is read
+  as verse 1; when the number of lyrics at a tick varies, a
+  `lyrics-verses-uncertain` warning says verses may be mixed. A syllable
+  continues its word unless its text ends in a space or the next begins
+  with one; `‿` and MuseScore's elision character are an elision (`~`).
+  The bars run on to the last lyric, past the last chord if need be.
+  Each bar's syllables sit on the coarsest grid that holds them (the bar,
+  its beats, a beat in two, three or four), the slots between held (`/`)
+  while the track's notes sound, else `--` (also before a verse's first
+  syllable); a breath shorter than that grid's slot is lost. Characters a
+  row can't hold as a syllable (`|`, `"`, braces, `_`) are removed. At
+  most 200,000 rows are written. The chart is checked before it is
+  returned: a verse whose rows don't read back as placed is left out
+  (`lyrics-dropped`), never the chords.
 - **Markers** become `## ` headings, on the bar line nearest them; two
   on one bar keep the first. **The title** is a format 0 file's track
   name, or track 1's name when track 1 has no notes (a conductor track).
@@ -192,7 +201,8 @@ first bars. The codes are the import's (`not-midi`, `format-2`, `smpte`,
 `meta-invalid`, `meter-mid-bar`, `key-doubtful`, `harmony-from-melody`,
 `track-unknown`, `chord-unnamed`, `drums-left-out`, `melody-left-out`,
 `tempo-ramp`, `tempo-in-bar`, `marker-dropped`, and for lyrics
-`lyrics-dropped`, `lyrics-other-tracks`) and sync's builder's.
+`lyrics-dropped`, `lyrics-verses-uncertain`, `lyrics-other-tracks`) and
+sync's builder's.
 
 `readSmf(bytes)` is the reader underneath: the file's format, division
 and tracks of absolute-tick events, each track's name, and its

@@ -11,7 +11,7 @@ import { readSmfInto } from "../smf/read.js";
 import { detectionsOf, mapBuild, withWritablePickup } from "./build.js";
 import { directivesOf } from "./directives.js";
 import { type Grid, gridOf } from "./grid.js";
-import { withLyrics } from "./lyrics.js";
+import { lastLyric, withLyrics } from "./lyrics.js";
 import { sectionsOf, titleOf } from "./markers.js";
 import { notesOf } from "./notes.js";
 import { createReport, type Report } from "./report.js";
@@ -64,7 +64,9 @@ function chartOf(bytes: Uint8Array, options: MidiImportOptions, report: Report):
 	const notes = notesOf(smf, report);
 	const harmony = failed(report) ? [] : harmonyNotes(notes, names, options, report);
 	if (failed(report)) return "";
-	const last = harmony.reduce((end, n) => Math.max(end, lastHeard(n, smf.ppq)), 0);
+	// The grid ends with the last harmony note, or one past the last lyric (spec 5.3).
+	const lyric = options.lyrics === false ? -1 : lastLyric(smf);
+	const last = harmony.reduce((end, n) => Math.max(end, lastHeard(n, smf.ppq)), lyric + 1);
 	const read = gridOf(smf, last, report);
 	if (failed(report)) return "";
 	const grid = withWritablePickup(read);

@@ -832,17 +832,27 @@ words are "the chart's, sung or spoken over the band, on no melody",
 which the grammar allows.
 
 - **From** the first track (file order) with lyric events; other tracks
-  with lyrics are named in one info, `lyrics-other-tracks`.
+  with lyrics are named in one info, `lyrics-other-tracks`. A file with
+  no lyric events but a karaoke track (text events 0x01 with `@` header
+  lines, as `.kar` files write) reads that track's text events instead,
+  the `@` lines left out and a leading `\` or `/` (a line-break marker)
+  read as a word's end (Kevin's ruling via the coordinator, Task 14 fix
+  round 1).
 - **Verses:** lyric events at one tick are verses 1, 2, … in file order
   (MuseScore writes two verses so, section 8, and so does the export),
   up to 100; the rest are left out with a `lyrics-dropped` warning
   (Claude's call, Task 14: barmark's parser and printer slow with the
   rows under one bar line, and a hostile file can put every event at one
-  tick).
+  tick). MIDI has no verse number, so a verse that holds where another
+  sings takes the other's place; when the number of lyrics at a tick
+  varies within the track, one `lyrics-verses-uncertain` warning says
+  verses may be mixed. At most 200,000 rows (a verse under a bar line)
+  are written; later verses are left out (`lyrics-dropped`).
 - **Syllables:** a syllable continues its word (`-`) unless its text ends
   in whitespace, or the next syllable of its verse begins with
   whitespace (karaoke files put the space first); a trailing `-` is kept
-  as the continuation. `‿` becomes `~`. Characters a lyric row can't hold
+  as the continuation. `‿` and SMuFL's lyric elisions U+E550–U+E552
+  (MuseScore writes U+E551) become `~`. Characters a lyric row can't hold
   as a syllable (`|`, `"`, `{`, `}`, `_`, whitespace inside) are removed
   (whitespace inside becomes `~`); a syllable left empty, or reading as
   `/`, `--` or `-` alone, is skipped. Leading, trailing and doubled
@@ -854,11 +864,11 @@ which the grammar allows.
   each in two, three or four (`_` groups; a beat whose later slots all
   hold is written as one slot). An onset finer than that moves to the
   nearest point (of the grid nearest every onset, ties to the coarser);
-  one nearer the next bar line stays on the last slot. A syllable after
-  the grid's end (whose bars come from the harmony) is not placed. Two
-  syllables of one verse on one slot are joined as an elision. A slot
-  with no syllable is `/` when the lyric track's own notes are sounding
-  at its start, else `--`.
+  one nearer the next bar line stays on the last slot; a breath shorter
+  than the grid's slot is lost. Two syllables of one verse on one slot
+  are joined as an elision. A slot with no syllable is `/` when the
+  lyric track's own notes are sounding at its start after the verse's
+  first syllable, else `--`.
 - **Rows:** sync writes no repeats, so played bars and written bars
   match one to one, `%` included. After the build, each bar line gets one
   row per verse that has a syllable on it, and the chart is printed
@@ -890,7 +900,8 @@ which the grammar allows.
 | `harmony-from-melody` | warning | only melody streams; used anyway |
 | `track-unknown` | warning | an `options.tracks` entry matching nothing |
 | `chord-unnamed` | warning | `?` written for unnameable notes |
-| `lyrics-dropped` | warning | the lyric rows failed the self-check |
+| `lyrics-dropped` | warning | the lyric rows failed the self-check, or past a bound of 5.8 |
+| `lyrics-verses-uncertain` | warning | the number of lyrics at a tick varies, so verses may be mixed (5.8) |
 | `unknown-chunk`, `drums-left-out`, `melody-left-out`, `tempo-ramp`, `tempo-in-bar`, `marker-dropped`, `lyrics-other-tracks` | info | as above |
 
 Plus sync's `BuildCode`s as they come (most can't arise from this
@@ -961,7 +972,8 @@ marks, read with a throwaway dumper:
   added to every chord (C + B is Cmaj7).
 - **Lyrics:** one lyric event per syllable, both verses at the same tick
   in verse order; no hyphens; a trailing space ends a word ("Hap",
-  "py "). An elision came out as "andI" (MuseScore's, not ours).
+  "py "). An elision is SMuFL's U+E551 between the syllables ("andI "),
+  which shows as "andI" where the font lacks it.
 - **A pickup** is a 1/4 time signature then 3/4 at the next bar.
 - **Rehearsal marks become markers** ("A"); section headings (bold
   words) don't. So MuseScore files bring no section names unless they

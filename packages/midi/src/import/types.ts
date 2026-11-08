@@ -27,6 +27,7 @@ export type MidiImportCode =
 	| "tempo-in-bar"
 	| "marker-dropped"
 	| "lyrics-other-tracks"
+	| "lyrics-verses-uncertain"
 	| BuildCode;
 
 export type MidiImportDiagnostic = {
