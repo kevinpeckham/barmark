@@ -193,7 +193,13 @@ runs, and `verify:package cli` fails on anything else.
     its tag does not admit the version bundled beside it (verify:release
     only). Its release workflow also
     attaches the binaries; check the release page lists all five,
-    `Edwin-OFL.txt`, `Verovio-LGPL-3.0.txt` and `Verovio-GPL-3.0.txt`. Then bump barmark.dev as in step 12: the site
+    `Edwin-OFL.txt`, `Verovio-LGPL-3.0.txt` and `Verovio-GPL-3.0.txt`.
+    End its release notes with a "Third-party software" paragraph: "The
+    binaries bundle Verovio X.Y.Z (© Laurent Pugin and others,
+    LGPL-3.0-only), unmodified; its licence is attached, and its source is
+    at https://github.com/rism-digital/verovio/tree/version-X.Y.Z. To
+    rebuild them with another Verovio, see the CLI README's License
+    section." Then bump barmark.dev as in step 12: the site
     installs the CLI as a dev dependency (`bun add --dev --exact
     @barmark/cli@X.Y.Z`), because Get Started's commands are tested
     against it and its CI example shows that version.

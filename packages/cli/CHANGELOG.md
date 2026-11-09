@@ -6,6 +6,11 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Technical
+
+- **The README gives Verovio's copyright and source**, and how to build with
+  another Verovio (LGPL-3.0).
+
 ## [0.9.0] - 2026-11-09
 
 ### Added

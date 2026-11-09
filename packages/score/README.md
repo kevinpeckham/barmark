@@ -137,10 +137,13 @@ is the export unchanged.
 This package is MIT. It uses [Verovio](https://github.com/rism-digital/verovio),
 which is LGPL-3.0-only, as an ordinary npm dependency, loaded unchanged at
 run time; its code is never copied into this package. barmark's own code
-stays MIT. Verovio's licence text is
+stays MIT. Verovio © Laurent Pugin and others; its licence text is
 [COPYING.LESSER](https://github.com/rism-digital/verovio/blob/develop/COPYING.LESSER).
 
 A site that bundles the worker ships Verovio inside its bundle. Keeping
 Verovio a separate file (through `verovio-url`, or the bundler's own
-chunk) and keeping its notice is the easy way to meet the LGPL. This is
-not legal advice.
+chunk) and keeping its notice is the easy way to meet the LGPL. If it is
+bundled into one file with the worker instead (Vite 8 does this), credit it
+with its copyright and licence, host or link the LGPL and GPL texts, and
+link your site's source so a visitor can rebuild it with another Verovio;
+barmark.dev does all three in its footer. This is not legal advice.
