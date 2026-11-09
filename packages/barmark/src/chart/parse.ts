@@ -1,5 +1,5 @@
 import { readDocument } from "./document.js";
-import { expand, flattenBars, type Sing } from "./expand.js";
+import { expand, flattenBars, type Sing, workFor } from "./expand.js";
 import { projectPart, projectPartLines } from "./parts.js";
 import { pedalWarnings } from "./pedal.js";
 import type {
@@ -27,7 +27,11 @@ function mergeReports(each: ChartDiagnostic[][]): ChartDiagnostic[] {
 	const most = new Map<string, ChartDiagnostic[]>();
 	for (const list of each) {
 		const mine = new Map<string, ChartDiagnostic[]>();
-		for (const d of list) mine.set(keyOf(d), [...(mine.get(keyOf(d)) ?? []), d]);
+		for (const d of list) {
+			const known = mine.get(keyOf(d));
+			if (known) known.push(d);
+			else mine.set(keyOf(d), [d]);
+		}
 		for (const [k, ds] of mine) if (ds.length > (most.get(k)?.length ?? 0)) most.set(k, ds);
 	}
 	return [...most.values()].flat();
@@ -91,11 +95,13 @@ function stepAt(each: ChartEvent[][]): number {
 export function zipEvents(
 	each: ChartEvent[][],
 	report: (d: ChartDiagnostic) => void,
+	/** A part that stopped at a limit falls out of step because it stopped: the stop says so. */
+	stopped = false,
 ): ChartEvent[] {
 	const [lead = []] = each;
 	const apart = stepAt(each);
 	const at = lead[apart] ?? lead[lead.length - 1];
-	if (apart >= 0 && at)
+	if (apart >= 0 && at && !stopped)
 		report({
 			line: lineOf(at),
 			severity: "error",
@@ -119,24 +125,34 @@ export function zipEvents(
 				events: zipEvents(
 					peers.map((p) => (p.kind === "open" ? p.events : e.events)),
 					report,
+					stopped,
 				),
 			};
 		return e;
 	});
 }
 
-/** One played stream: a part, or one of its lines (grammar 7.6); `part` indexes the parts shown. */
-type Stream = { part: number; label: string; name: string | null };
+/** One played stream: a part, or one of its lines (grammar 7.6); `part` indexes the parts shown, `index` the streams. */
+type Stream = { part: number; label: string; name: string | null; index: number };
 
 /** How a stream's line is labelled in its messages: `Pno.RH`, or the part's label for its bare line. */
 const lineLabel = (label: string, name: string | null) => (name ? `${label}.${name}` : label);
 
 const streamsOf = (shown: DeclaredPart[]): Stream[] =>
-	shown.flatMap((p, part): Stream[] =>
-		p.lines?.length
-			? p.lines.map((name) => ({ part, label: p.label ?? "", name }))
-			: [{ part, label: p.label ?? "", name: null }],
-	);
+	shown
+		.flatMap((p, part): Omit<Stream, "index">[] =>
+			p.lines?.length
+				? p.lines.map((name) => ({ part, label: p.label ?? "", name }))
+				: [{ part, label: p.label ?? "", name: null }],
+		)
+		.map((s, index) => ({ ...s, index }));
+
+/** Each shown part's streams, gathered once rather than looked for in every bar. */
+function byPart(streams: Stream[], shown: DeclaredPart[]): Stream[][] {
+	const out: Stream[][] = shown.map(() => []);
+	for (const s of streams) out[s.part]?.push(s);
+	return out;
+}
 
 /** A part's share of a bar from its streams' shares: its first playing line leads (grammar 7.6). */
 function partOf(p: DeclaredPart, own: [Stream, PartBar][]): PartBar {
@@ -156,12 +172,12 @@ function partOf(p: DeclaredPart, own: [Stream, PartBar][]): PartBar {
 }
 
 /** A zipped bar of streams as a bar of parts; with one part shown, its lines sit on the bar itself. */
-function foldBar(bar: PlayedBar, streams: Stream[], shown: DeclaredPart[]): PlayedBar {
+function foldBar(bar: PlayedBar, streams: Stream[][], shown: DeclaredPart[]): PlayedBar {
 	const each = bar.parts ?? [];
 	const parts = shown.map((p, i) =>
 		partOf(
 			p,
-			streams.flatMap((s, j): [Stream, PartBar][] => (s.part === i ? [[s, each[j] ?? null]] : [])),
+			(streams[i] ?? []).map((s): [Stream, PartBar] => [s, each[s.index] ?? null]),
 		),
 	);
 	const { parts: _p, words: _w, tacet: _t, ...shared } = bar;
@@ -174,7 +190,11 @@ function foldBar(bar: PlayedBar, streams: Stream[], shown: DeclaredPart[]): Play
 	return lead?.lines ? { ...alone, lines: lead.lines } : alone;
 }
 
-function foldEvents(events: ChartEvent[], streams: Stream[], shown: DeclaredPart[]): ChartEvent[] {
+function foldEvents(
+	events: ChartEvent[],
+	streams: Stream[][],
+	shown: DeclaredPart[],
+): ChartEvent[] {
 	return events.map((e) => {
 		if (e.kind === "bar") return { kind: "bar", bar: foldBar(e.bar, streams, shown) };
 		if (e.kind === "open") return { ...e, events: foldEvents(e.events, streams, shown) };
@@ -197,22 +217,35 @@ function linedPedalWarnings(events: ChartEvent[], shown: DeclaredPart[]): ChartD
 	);
 }
 
+/** Each part's streams, in order, by its label lower-cased. */
+function streamsByLabel(streams: Stream[]): Map<string, Stream[]> {
+	const by = new Map<string, Stream[]>();
+	for (const s of streams) {
+		const label = s.label.toLowerCase();
+		const known = by.get(label);
+		if (known) known.push(s);
+		else by.set(label, [s]);
+	}
+	return by;
+}
+
 /** The stream a voice sings on: its singing line, else its part's first; the first shown for the chart's words. */
-function singingStream(streams: Stream[], singer: Singer | null): number {
+function singingStream(by: Map<string, Stream[]>, singer: Singer | null): number {
 	const label = singer?.label?.toLowerCase();
 	if (label === undefined) return 0;
-	const own = (s: Stream) => s.label.toLowerCase() === label;
-	const at = streams.findIndex(
-		(s) => own(s) && (s.name ?? "").toLowerCase() === singer?.sings?.toLowerCase(),
-	);
-	return at >= 0 ? at : streams.findIndex(own);
+	const own = by.get(label) ?? [];
+	const sings = singer?.sings?.toLowerCase();
+	const line = own.find((s) => (s.name ?? "").toLowerCase() === sings);
+	return (line ?? own[0])?.index ?? -1;
 }
 
 /** Each stream's words: the voices singing on it, together. */
 function singsOn(streams: Stream[], voices: Voice[]): (Sing | undefined)[] {
-	return streams.map((_, i) =>
-		together(voices.filter((v) => singingStream(streams, v.singer) === i).map((v) => v.sing)),
-	);
+	// Streams indexed once: finding each voice's stream by a scan costs streams times voices.
+	const by = streamsByLabel(streams);
+	const on: Sing[][] = streams.map(() => []);
+	for (const v of voices) on[singingStream(by, v.singer)]?.push(v.sing);
+	return on.map(together);
 }
 
 /**
@@ -225,7 +258,7 @@ function playStreams(lines: Line[], parts: DeclaredPart[], shown: DeclaredPart[]
 	const sings = singsOn(streams, voices);
 	const played = streams.map((s, i) =>
 		expand(
-			projectPart(lines, parts, s.label, s.name),
+			projectPart(lines, parts, s.label, s.name, workFor(streams.length)),
 			lineLabel(s.label, s.name),
 			streams.length,
 			s.name === null,
@@ -233,23 +266,25 @@ function playStreams(lines: Line[], parts: DeclaredPart[], shown: DeclaredPart[]
 		),
 	);
 	const diagnostics = mergeReports(played.map((p) => p.diagnostics));
+	const stopped = played.some((p) => p.stopped);
 	const zipped = zipEvents(
 		played.map((p) => p.events),
 		(d) => diagnostics.push(d),
+		stopped,
 	);
-	const events = foldEvents(zipped, streams, shown);
+	const events = foldEvents(zipped, byPart(streams, shown), shown);
 	diagnostics.push(...linedPedalWarnings(events, shown));
-	return { events, sections: played[0]?.sections ?? [], diagnostics };
+	return { events, sections: played[0]?.sections ?? [], diagnostics, stopped };
 }
 
 const lined = (parts: DeclaredPart[]) => parts.some((p) => p.lines?.length);
 
 type Doc = ReturnType<typeof readDocument>;
 
-/** What the voices found as they sang (grammar 7.7), once playing is done. */
-function sungChecks(voices: Voice[]): ChartDiagnostic[] {
+/** What the voices found as they sang (grammar 7.7), once playing is done; past a stop, not what it left unsung. */
+function sungChecks(voices: Voice[], stopped: boolean): ChartDiagnostic[] {
 	return voices.flatMap((v) => {
-		v.finish();
+		v.finish(stopped);
 		return v.diagnostics;
 	});
 }
@@ -276,12 +311,12 @@ export function parseChart(text: string): ChartParse {
 			...doc.diagnostics,
 			...voice.diagnostics,
 			...played.diagnostics,
-			...sungChecks(voice.voices),
+			...sungChecks(voice.voices, played.stopped),
 		]),
 	};
 }
 
-type Played = Pick<ReturnType<typeof expand>, "events" | "sections" | "diagnostics">;
+type Played = Pick<ReturnType<typeof expand>, "events" | "sections" | "diagnostics" | "stopped">;
 
 /** What an extract holds and plays: one of the part's lines, the part with its lines, or the part. */
 function extractOf(
@@ -345,7 +380,7 @@ export function extractPart(text: string, label: string, lineName?: string): Cha
 		diagnostics: sortDiagnostics([
 			...[...doc.diagnostics, ...voice.diagnostics].filter((d) => kept.has(d.line)),
 			...played.diagnostics,
-			...sungChecks(voices),
+			...sungChecks(voices, played.stopped),
 		]),
 	};
 }

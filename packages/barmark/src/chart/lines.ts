@@ -47,10 +47,17 @@ function nameLines(
 	return { lines: out, names };
 }
 
+/** Push `item` onto the list at `key`, starting it if new: a copy per item would cost the list squared. */
+function pushAt<K, T>(map: Map<K, T[]>, key: K, ...items: T[]) {
+	const known = map.get(key);
+	if (known) known.push(...items);
+	else map.set(key, items);
+}
+
 /** A system's lines by part, in written order. */
 function byPart(system: Labelled[]): Map<string, Labelled[]> {
 	const out = new Map<string, Labelled[]>();
-	for (const l of system) out.set(l.part ?? "", [...(out.get(l.part ?? "") ?? []), l]);
+	for (const l of system) pushAt(out, l.part ?? "", l);
 	return out;
 }
 
@@ -59,13 +66,20 @@ function byPart(system: Labelled[]): Map<string, Labelled[]> {
  * writing two or more of them writes them, then any others in the order
  * they first appear.
  */
-function scoreOrder(names: Map<string, string[]>, systems: Labelled[][]): Map<string, string[]> {
+function scoreOrder(
+	names: Map<string, string[]>,
+	systems: Map<string, Labelled[]>[],
+): Map<string, string[]> {
+	// Each part's first system writing two or more of its lines, found in one pass over the systems.
+	const full = new Map<string, string[]>();
+	for (const system of systems)
+		for (const [part, own] of system) {
+			const named = own.flatMap((l) => l.lineName ?? []);
+			if (named.length > 1 && !full.has(part)) full.set(part, named);
+		}
 	const out = new Map<string, string[]>();
 	for (const [part, all] of names) {
-		const full = systems
-			.map((s) => (byPart(s).get(part) ?? []).flatMap((l) => l.lineName ?? []))
-			.find((n) => n.length > 1);
-		const first = full ?? [];
+		const first = full.get(part) ?? [];
 		out.set(part, [...first, ...all.filter((n) => !first.includes(n))]);
 	}
 	return out;
@@ -75,13 +89,12 @@ function scoreOrder(names: Map<string, string[]>, systems: Labelled[][]): Map<st
  * Each part's bare lines written beside its named lines in a system: the
  * bare line is then the part's first line, its name "" (grammar 7.6).
  */
-function bareBeside(systems: Labelled[][]): Map<string, Labelled[]> {
+function bareBeside(systems: Map<string, Labelled[]>[]): Map<string, Labelled[]> {
 	const out = new Map<string, Labelled[]>();
 	for (const system of systems)
-		for (const [part, own] of byPart(system)) {
+		for (const [part, own] of system) {
 			const bare = own.filter((l) => l.lineName === undefined);
-			if (bare.length && bare.length < own.length)
-				out.set(part, [...(out.get(part) ?? []), ...bare]);
+			if (bare.length && bare.length < own.length) pushAt(out, part, ...bare);
 		}
 	return out;
 }
@@ -143,9 +156,11 @@ export function checkLines(
 	const systems = new Map<number, Labelled[]>();
 	for (const l of named.lines)
 		if (isLabelled(l) && l.system !== undefined && !failed.has(l.line))
-			systems.set(l.system, [...(systems.get(l.system) ?? []), l]);
-	const bare = bareBeside([...systems.values()]);
-	const order = withBare(scoreOrder(named.names, [...systems.values()]), bare, report);
+			pushAt(systems, l.system, l);
+	// Each system's lines by part, once: not once for every part.
+	const parted = [...systems.values()].map(byPart);
+	const bare = bareBeside(parted);
+	const order = withBare(scoreOrder(named.names, parted), bare, report);
 	for (const system of systems.values())
 		checkSystem(
 			system.filter((l) => !failed.has(l.line)),
