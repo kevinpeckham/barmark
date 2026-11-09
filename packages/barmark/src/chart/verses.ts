@@ -1,15 +1,17 @@
 import { isBar } from "./barLine.js";
 import type { BarSource, Sing } from "./expand.js";
-import { slotTimes } from "./shares.js";
+import { perWritten, slotTimes } from "./shares.js";
 import type {
 	ChartDiagnostic,
 	DeclaredPart,
 	Line,
 	LyricSlot,
+	Meter,
 	PlayedBar,
 	PlayedLyrics,
 	PlayedSyllable,
 	SimpleSlot,
+	Slot,
 	Syllable,
 } from "./types.js";
 
@@ -191,20 +193,21 @@ function singingRows(group: Group, notes: boolean, diagnostics: ChartDiagnostic[
 const near = (a: number, b: number) => Math.abs(a - b) < 1e-9;
 
 /** The syllables sung on a bar's notes (grammar 4.3), at their notes' onsets. */
-function onNotes(bar: PlayedBar): PlayedSyllable[] {
-	return slotTimes(bar.slots, bar.meter).flatMap(({ slot, at }) =>
+function onNotes(slots: Slot[], meter: Meter): PlayedSyllable[] {
+	return slotTimes(slots, meter).flatMap(({ slot, at }) =>
 		slot.kind === "chord" && slot.syllable ? [{ at, syllable: slot.syllable, note: true }] : [],
 	);
 }
 
 /** Where the bar's notes start. */
-const noteOnsets = (bar: PlayedBar): number[] =>
-	slotTimes(bar.slots, bar.meter).flatMap(({ slot, at }) => (isNote(slot) ? [at] : []));
+const noteOnsets = (slots: Slot[], meter: Meter): number[] =>
+	slotTimes(slots, meter).flatMap(({ slot, at }) => (isNote(slot) ? [at] : []));
 
 const HELD: Syllable = { kind: "held" };
 
 /** What a row holds as a cell begins: a syllable, nothing after a breath, or nothing yet (its verse has sung nothing). */
 type Held = "sung" | "breath" | "start";
+const HELD_INDEX: Record<Held, number> = { sung: 0, breath: 1, start: 2 };
 
 /**
  * A row's cell as played: each syllable at its beat, on a note when one
@@ -216,13 +219,13 @@ type Held = "sung" | "breath" | "start";
  */
 function onBeats(
 	cell: LyricSlot[],
-	bar: PlayedBar,
+	meter: Meter,
 	onsets: number[],
 	held: Held,
 ): { syllables: PlayedSyllable[]; orphan: boolean; ends: Held } {
 	let state = held;
 	let orphan = false;
-	const syllables = slotTimes(cell, bar.meter).flatMap(({ slot, at }): PlayedSyllable[] => {
+	const syllables = slotTimes(cell, meter).flatMap(({ slot, at }): PlayedSyllable[] => {
 		const note = onsets.some((o) => near(o, at));
 		if (slot.kind === "syllable") {
 			state = "sung";
@@ -235,28 +238,23 @@ function onBeats(
 	return { syllables, orphan, ends: state };
 }
 
-/** What a row holds as its cell `i` begins from its own cells: its last syllable or breath before, or "start" with none. */
-function heldAt(row: LyricsLine, i: number): Held {
-	const before = row.cells
-		.slice(0, i)
-		.flat()
-		.flatMap((s) => (s.kind === "group" ? s.members : [s]))
-		.filter((s) => s.kind !== "hold");
-	const last = before.at(-1);
-	return last === undefined ? "start" : last.kind === "breath" ? "breath" : "sung";
+/** What a row holds as each of its cells begins, from its own cells: its last syllable or breath before, or "start" with none. */
+function heldBefore(row: LyricsLine): Held[] {
+	let state: Held = "start";
+	return row.cells.map((cell) => {
+		const at = state;
+		for (const s of cell.flatMap((x) => (x.kind === "group" ? x.members : [x])))
+			if (s.kind !== "hold") state = s.kind === "breath" ? "breath" : "sung";
+		return at;
+	});
 }
 
-/**
- * The verses a pass sings: outside a repeat every verse; on pass N verse
- * N, or a lone verse 1 on every pass. A lone `lyrics N:` (N ≥ 2) sings on
- * pass N only (decided by Kevin, 2026-11-06).
- */
-function forPass<T extends { verse: number }>(verses: T[], pass: number | null): T[] {
-	if (pass === null) return verses;
-	const own = verses.filter((v) => v.verse === pass);
-	if (own.length) return own;
-	return verses.every((v) => v.verse === 1) ? verses : [];
-}
+/** Whether a cell sings the same whatever is held as it begins: it opens with a syllable or a breath. */
+const opensFresh = (cell: LyricSlot[]) => {
+	const first = cell[0];
+	const head = first?.kind === "group" ? first.members[0] : first;
+	return head?.kind === "syllable" || head?.kind === "breath";
+};
 
 const textOf = (s: PlayedSyllable) =>
 	s.syllable.kind === "sung" ? s.syllable.parts.join("~") : "/";
@@ -279,7 +277,49 @@ type Candidate = {
 	/** What the row's cell leaves held, and whether a `/` in it over a new note had nothing to hold. */
 	ends?: Held;
 	orphan?: boolean;
+	/** For the notes' syllables: whether the first is a `:/`, and whether any is sung. */
+	opensHeld?: boolean;
+	sings?: boolean;
 };
+
+/**
+ * The rows over a bar line, read once for every pass (grammar 7.7): in
+ * verse order, by verse, and whether every row is verse 1 (which then
+ * sings on every pass).
+ */
+type Verses = {
+	ordered: LyricsLine[];
+	byVerse: Map<number, LyricsLine[]>;
+	allOne: boolean;
+	/** "verses 2 and 3", without and with the notes' verse 1, once asked. */
+	named: [string?, string?];
+};
+
+function versesIn(rows: LyricsLine[]): Verses {
+	const verse = (r: LyricsLine) => r.verse ?? 1;
+	const ordered = [...rows].sort((a, b) => verse(a) - verse(b));
+	const byVerse = new Map<number, LyricsLine[]>();
+	for (const r of ordered) byVerse.set(verse(r), [...(byVerse.get(verse(r)) ?? []), r]);
+	return { ordered, byVerse, allOne: rows.every((r) => verse(r) === 1), named: [] };
+}
+
+/**
+ * Which of a bar's verses a pass sings: outside a repeat every verse; on
+ * pass N verse N, or a lone verse 1 on every pass. A lone `lyrics N:`
+ * (N ≥ 2) sings on pass N only (decided by Kevin, 2026-11-06). `notes`
+ * is whether the bar's notes sing verse 1; the rows chosen follow them.
+ */
+function forPass(
+	verses: Verses,
+	notes: boolean,
+	pass: number | null,
+): { notes: boolean; rows: LyricsLine[] } {
+	const every = { notes, rows: verses.ordered };
+	if (pass === null) return every;
+	const own = { notes: notes && pass === 1, rows: verses.byVerse.get(pass) ?? [] };
+	if (own.notes || own.rows.length) return own;
+	return verses.allOne ? every : { notes: false, rows: [] };
+}
 
 const HOLDS_NOTHING = ":/ holds the syllable before it, and none is sung before it";
 
@@ -293,6 +333,8 @@ function warner(diagnostics: ChartDiagnostic[]) {
 	};
 }
 
+const NO_ROWS: LyricsLine[] = [];
+
 /**
  * The words each played bar sings (grammar 4.3, 7.7), for `expand` to
  * attach as it plays the line that sings: the syllables on its notes
@@ -302,6 +344,10 @@ function warner(diagnostics: ChartDiagnostic[]) {
  * starts, a `:/` with nothing sung before it to hold, and a pass that
  * sings nothing where other passes sing, warn. `finish`, after playing,
  * warns of each numbered row never sung.
+ *
+ * A bar played again shares what its first play read (its notes' and its
+ * rows' syllables, by the written slots, the meter and what each row
+ * holds as it begins): a pass costs only the verses it sings.
  */
 function singing(
 	rows: Rows,
@@ -315,62 +361,111 @@ function singing(
 	/** What each verse's rows left held, in play order: a row starting with `/` holds on from it. */
 	const ends = new Map<number, Held>();
 	let heard = false;
-	/** A row's verse in a bar, its syllables on the beats. */
-	const fromRow = (
-		row: LyricsLine,
-		bar: PlayedBar,
-		from: BarSource,
-		onsets: number[],
-	): Candidate => {
+	/**
+	 * What a written bar's slots, in one meter, give every play of it: its
+	 * notes' verse (null when they carry no syllables), where its notes
+	 * start, each row's cell (by the row, then its cell and what it holds
+	 * as it begins), and the rows already read over it.
+	 */
+	const writtenBar = perWritten((slots: Slot[], meter: Meter) => {
+		const syllables = onNotes(slots, meter);
+		const notes: Candidate | null = syllables.length
+			? {
+					verse: 1,
+					row: null,
+					lyrics: { verse: 1, ...part, syllables },
+					opensHeld: syllables[0]?.syllable.kind === "held",
+					sings: syllables.some((s) => s.syllable.kind === "sung"),
+				}
+			: null;
+		return {
+			meter,
+			notes,
+			onsets: melody ? noteOnsets(slots, meter) : [],
+			cells: new Map<LyricsLine, Map<number, Candidate>>(),
+			checked: new Map<LyricsLine[], Set<number>>(),
+		};
+	});
+	type Written = ReturnType<typeof writtenBar>;
+	const held = new WeakMap<LyricsLine, Held[]>();
+	const heldAt = (row: LyricsLine, i: number): Held => {
+		let each = held.get(row);
+		if (!each) {
+			each = heldBefore(row);
+			held.set(row, each);
+		}
+		return each[i] ?? "start";
+	};
+	const verses = new WeakMap<LyricsLine[], Verses>();
+	const versesOver = (own: LyricsLine[]): Verses => {
+		let v = verses.get(own);
+		if (!v) {
+			v = versesIn(own);
+			verses.set(own, v);
+		}
+		return v;
+	};
+	/** A row's cell read over a written bar, from what it holds as it begins: a syllable where no note starts warns. */
+	const readRow = (row: LyricsLine, w: Written, at: number, begins: Held): Candidate => {
 		const verse = row.verse ?? 1;
-		const own = heldAt(row, from.bar);
-		const held = own === "start" ? (ends.get(verse) ?? "start") : own;
-		const cell = onBeats(row.cells[from.bar] ?? [], bar, onsets, held);
-		const syllables = cell.syllables;
-		const missed = melody ? syllables.find((s) => !s.note) : undefined;
+		const cell = onBeats(row.cells[at] ?? [], w.meter, w.onsets, begins);
+		const missed = melody ? cell.syllables.find((s) => !s.note) : undefined;
 		if (missed)
 			warn(row.line, `"${textOf(missed)}" falls where the voice starts no note`, textOf(missed));
-		return {
-			verse,
-			row,
-			lyrics: { verse, ...part, syllables },
-			ends: cell.ends,
-			orphan: cell.orphan,
-		};
+		const lyrics = { verse, ...part, syllables: cell.syllables };
+		return { verse, row, lyrics, ends: cell.ends, orphan: cell.orphan };
 	};
-	/** The bar's verses before a pass picks: its notes' and its rows'. */
-	const candidates = (bar: PlayedBar, from: BarSource): Candidate[] => {
-		const replayed = from.replay === null ? undefined : rows.get(rowKey(from.replay, from.line));
-		const own = replayed ?? rows.get(rowKey(null, from.line)) ?? [];
-		const onsets = melody ? noteOnsets(bar) : [];
-		const out = own.map((row) => fromRow(row, bar, from, onsets));
-		const notes = replayed || !who ? [] : onNotes(bar);
-		if (notes.length)
-			out.unshift({ verse: 1, row: null, lyrics: { verse: 1, ...part, syllables: notes } });
-		return out.sort((a, b) => a.verse - b.verse);
+	/** The cells already read of a row over a written bar. */
+	const readOver = (row: LyricsLine, w: Written): Map<number, Candidate> => {
+		const found = w.cells.get(row);
+		if (found) return found;
+		const made = new Map<number, Candidate>();
+		w.cells.set(row, made);
+		return made;
+	};
+	/** A row's verse in a bar, its syllables on the beats: read once for each thing it can begin holding. */
+	const fromRow = (row: LyricsLine, w: Written, at: number): Candidate => {
+		const own = heldAt(row, at);
+		const begins = own === "start" ? (ends.get(row.verse ?? 1) ?? "start") : own;
+		const key = at * 4 + (opensFresh(row.cells[at] ?? []) ? 3 : HELD_INDEX[begins]);
+		const read = readOver(row, w);
+		const found = read.get(key);
+		if (found) return found;
+		const made = readRow(row, w, at, begins);
+		read.set(key, made);
+		return made;
+	};
+	/** The first time a bar line's bar plays over these slots, every row's cell is read, sung or not, for its warnings. */
+	const checkRows = (own: LyricsLine[], w: Written, at: number) => {
+		const seen = w.checked.get(own) ?? new Set<number>();
+		w.checked.set(own, seen);
+		if (seen.has(at)) return;
+		seen.add(at);
+		for (const row of own) fromRow(row, w, at);
 	};
 	/** A `:/` holds the syllable sung before it, in play order. */
-	const hold = (bar: PlayedBar, notes: Candidate | undefined) => {
-		for (const s of notes?.lyrics.syllables ?? []) {
-			if (s.syllable.kind === "sung") heard = true;
-			else if (!heard) warn(bar.line, HOLDS_NOTHING, ":/");
-		}
+	const hold = (bar: PlayedBar, notes: Candidate | null) => {
+		if (notes?.opensHeld && !heard) warn(bar.line, HOLDS_NOTHING, ":/");
+		if (notes?.sings) heard = true;
 	};
 	/** On a pass that sings none of a bar's several verses, say so. */
-	const silent = (all: Candidate[], from: BarSource) =>
+	const silent = (over: Verses, notes: boolean, from: BarSource) => {
+		const i = notes ? 1 : 0;
+		over.named[i] ??= versesNamed([
+			...(notes ? [1] : []),
+			...over.ordered.map((r) => r.verse ?? 1),
+		]);
 		warn(
 			from.line,
-			`pass ${from.pass} of this repeat sings nothing: its bars have ${versesNamed(all.map((c) => c.verse))}`,
+			`pass ${from.pass} of this repeat sings nothing: its bars have ${over.named[i]}`,
 			"lyrics",
 		);
+	};
 	/** Each written bar's notes' syllables, by their line, and whether a pass sang them. */
 	const notes = new Map<string, { line: number; sung: boolean }>();
-	const noteNotes = (bar: PlayedBar, from: BarSource, all: Candidate[], chosen: Candidate[]) => {
-		const own = all.find((c) => c.row === null);
-		if (!own) return;
+	const noteNotes = (bar: PlayedBar, from: BarSource, sungHere: boolean) => {
 		const key = `${from.line}:${from.bar}`;
-		const sungHere = chosen.includes(own) || notes.get(key)?.sung === true;
-		notes.set(key, { line: bar.line, sung: sungHere });
+		notes.set(key, { line: bar.line, sung: sungHere || notes.get(key)?.sung === true });
 	};
 	/** A row's verse as a pass sings it: the row is sung, leaves its state held, and warns of a hold with nothing to hold. */
 	const sungRow = ({ row, verse, ends: left, orphan }: Candidate) => {
@@ -379,16 +474,37 @@ function singing(
 		if (left) ends.set(verse, left);
 		if (orphan) warn(row.line, HOLDS_NOTHING, "/");
 	};
-	const sing: Sing = (bar, from) => {
-		const all = candidates(bar, from);
-		const chosen = forPass(all, from.pass);
-		if (all.length && !chosen.length) silent(all, from);
-		noteNotes(bar, from, all, chosen);
-		hold(
-			bar,
-			chosen.find((c) => c.row === null),
-		);
+	/** The rows over a played bar: under its replay heading when that writes rows for its line, else as written. */
+	const rowsOver = (from: BarSource): { own: LyricsLine[]; replayed: boolean } => {
+		const replayed = from.replay === null ? undefined : rows.get(rowKey(from.replay, from.line));
+		return { own: replayed ?? rows.get(rowKey(null, from.line)) ?? NO_ROWS, replayed: !!replayed };
+	};
+	/** The verses a pass sings: the notes' first, then the rows'. */
+	const choose = (
+		pick: ReturnType<typeof forPass>,
+		mine: Candidate | null,
+		w: Written,
+		at: number,
+	) => {
+		const chosen = pick.rows.map((row) => fromRow(row, w, at));
+		return pick.notes && mine ? [mine, ...chosen] : chosen;
+	};
+	/** What a pass leaves behind: a silent pass warns, the notes' verse is marked sung or not, holds and rows move on. */
+	const played = (bar: PlayedBar, from: BarSource, mine: Candidate | null, chosen: Candidate[]) => {
+		const notesSung = mine !== null && chosen[0] === mine;
+		if (mine) noteNotes(bar, from, notesSung);
+		hold(bar, notesSung ? mine : null);
 		for (const c of chosen) sungRow(c);
+	};
+	const sing: Sing = (bar, from) => {
+		const { own, replayed } = rowsOver(from);
+		const w = writtenBar(bar.slots, bar.meter);
+		checkRows(own, w, from.bar);
+		const mine = replayed || !who ? null : w.notes;
+		const over = versesOver(own);
+		const chosen = choose(forPass(over, mine !== null, from.pass), mine, w, from.bar);
+		if ((mine || own.length) && !chosen.length) silent(over, mine !== null, from);
+		played(bar, from, mine, chosen);
 		return chosen.length ? chosen.map((c) => c.lyrics) : undefined;
 	};
 	const finish = () => {

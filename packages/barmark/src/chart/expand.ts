@@ -2,7 +2,7 @@ import { type JumpPlan, planJump } from "./direction.js";
 import { beatsOf } from "./directives.js";
 import { pedalWarnings } from "./pedal.js";
 import { type Entry, type Item, pairRepeats } from "./repeats.js";
-import { slotTimes } from "./shares.js";
+import { perWritten, slotTimes } from "./shares.js";
 import type {
 	ChartDiagnostic,
 	ChartEvent,
@@ -101,6 +101,32 @@ function pushProblem(push: Push, before: number | null): string | null {
 	return PUSH_LENGTH[push] > before + 1e-9
 		? `${push === "eighth" ? "an eighth" : "a sixteenth"} push is longer than the slot before it`
 		: null;
+}
+
+/**
+ * A bar's pushes as its slots time them: the first slot (whose push takes
+ * its time from the bar before), the problems of the others, each once in
+ * order, and the last slot's length; null when the bar has no slots.
+ */
+type Pushes = {
+	first: { push?: Push } | null;
+	inner: [Push, string][];
+	last: number | null;
+};
+
+function pushesIn(slots: Slot[], meter: Meter): Pushes {
+	const timed: { slot: SimpleSlot & { push?: Push }; length: number }[] = slotTimes(slots, meter);
+	const inner = new Map<string, Push>();
+	timed.forEach(({ slot }, i) => {
+		const prior = timed[i - 1];
+		const problem = prior && slot.push && pushProblem(slot.push, prior.length);
+		if (problem && slot.push && !inner.has(problem)) inner.set(problem, slot.push);
+	});
+	return {
+		first: timed[0]?.slot ?? null,
+		inner: [...inner].map(([problem, push]) => [push, problem]),
+		last: timed.at(-1)?.length ?? null,
+	};
 }
 
 const normalize = (name: string) => name.toLowerCase().replace(/\s+/g, " ").trim();
@@ -374,21 +400,19 @@ export function expand(
 	/** How long the slot played just before is, in whole notes; null after a fermata or at the start. */
 	const before: { length: number | null } = { length: null };
 	const pushReported = new Set<string>();
+	const report = (line: number, problem: string | null | undefined, push: Push | undefined) => {
+		const key = `${line}\u0000${problem}`;
+		if (!problem || pushReported.has(key)) return;
+		pushReported.add(key);
+		error(line, problem, PUSH_MARKS[push ?? "eighth"]);
+	};
+	const pushesOf = perWritten(pushesIn);
 	/** Each push takes its time from the slot played just before it (grammar 2.8). */
 	const checkPushes = (bar: PlayedBar) => {
-		const timed: { slot: SimpleSlot & { push?: Push }; length: number }[] = slotTimes(
-			bar.slots,
-			bar.meter,
-		);
-		for (const { slot, length } of timed) {
-			const problem = slot.push && pushProblem(slot.push, before.length);
-			const key = `${bar.line}\u0000${problem}`;
-			if (problem && !pushReported.has(key)) {
-				pushReported.add(key);
-				error(bar.line, problem, PUSH_MARKS[slot.push ?? "eighth"]);
-			}
-			before.length = length;
-		}
+		const { first, inner, last } = pushesOf(bar.slots, bar.meter);
+		if (first?.push) report(bar.line, pushProblem(first.push, before.length), first.push);
+		for (const [push, problem] of inner) report(bar.line, problem, push);
+		if (last !== null) before.length = last;
 	};
 	const emit = (p: Played, line: number, out: ChartEvent[]) => {
 		if (stopped()) return;

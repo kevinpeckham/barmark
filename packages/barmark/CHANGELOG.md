@@ -14,6 +14,23 @@ Releases follow the process in [RELEASING.md](RELEASING.md).
 - **The npm homepage is https://www.barmark.dev**, not the package's
   folder on GitHub.
 
+### Fixed
+
+- **A bar played many times no longer costs its size on every play.** A
+  shared chart of one bar with thousands of lyric syllables, notes or
+  slots, repeated thousands of times, made the parse copy every syllable
+  for every play (lyrics) and walk every slot of every play twice (the
+  pedal warnings, through a matrix of every slot of every played bar):
+  seconds to minutes and over a gigabyte from a few kilobytes. A played
+  bar now shares its written bar's data: two plays of one bar return the
+  same `slots`, `words` and `lyrics[].syllables` arrays (and the same
+  `PlayedLyrics` object), which a caller must not mutate; each written
+  bar's syllables, pushes and pedal effect are read once per meter it
+  plays in. The parse costs the written chart plus the played bars, never
+  their product. The parse's data is otherwise unchanged; `pedalStates`
+  still builds its matrix for callers that want it, but `parseChart`
+  doesn't call it.
+
 ## [0.21.0] - 2026-11-08
 
 ### Added
