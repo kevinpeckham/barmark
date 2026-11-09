@@ -6,6 +6,14 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- **A pickup is bar 0** (barmark's grammar 2.4). The gutter draws no
+  number on a row that starts with the pickup, and the screen-reader
+  text says "pickup" where it said "bar 1"; the bars after it are
+  numbered from 1. `RowModel.barNumber` is `0` on such a row. Charts
+  without a pickup render exactly as before.
+
 ## [0.17.1] - 2026-11-08
 
 ### Changed

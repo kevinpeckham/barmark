@@ -292,7 +292,8 @@ function systemHtml(
 /** The left column: the bar number, and in a system the part's label. */
 function gutterHtml(row: Row, settings: Settings, part?: PartRow): string {
 	if (!settings.gutter) return "";
-	const number = settings.barNumbers && (!part || part.first) ? (row.barNumber ?? "") : "";
+	const shown = settings.barNumbers && (!part || part.first) && row.barNumber !== 0;
+	const number = shown ? (row.barNumber ?? "") : "";
 	const label = part
 		? `<span class="bm-part-label" part="part-label">${escapeHtml(part.label)}</span>`
 		: "";
