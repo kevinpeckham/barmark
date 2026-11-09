@@ -37,6 +37,14 @@ Releases follow the process in [RELEASING.md](RELEASING.md).
   other; reading a labelled line re-listed the declared parts; finding
   who sings read every bar line once per part. 600 one-bar parts (19 KB)
   took about 9 s, 1,500 several minutes; now 0.1 s and 0.9 s.
+- **The verses a bar sings count toward the expansion's budget.** Outside
+  a repeat a bar sings every verse written over it, so 1,560 verses under
+  one bar replayed 5,000 times (55 KB) made 7.8 million verse references
+  (1.3 s, 61 MB). Each verse a written bar sings when it plays again now
+  counts as work (its first play's are as many as are written), and a
+  chart past the budget stops with the usual `expansion stopped` error:
+  now 0.1 s and 2 MB. Real charts use a tiny share of it: the examples
+  and fixtures at most 153 of 100,000.
 
 ## [0.21.0] - 2026-11-08
 

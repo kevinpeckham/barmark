@@ -414,6 +414,19 @@ export function expand(
 		for (const [push, problem] of inner) report(bar.line, problem, push);
 		if (last !== null) before.length = last;
 	};
+	/**
+	 * The verses a written bar sings when it plays again: work, since many
+	 * verses replayed many times would otherwise multiply. Its first play's
+	 * are as many as are written, so they cost nothing more.
+	 */
+	const sungBefore = new Set<Played>();
+	const replayedVerses = (p: Played, bar: PlayedBar): number => {
+		if (!sungBefore.has(p)) {
+			sungBefore.add(p);
+			return 0;
+		}
+		return bar.lyrics?.length ?? 0;
+	};
 	const emit = (p: Played, line: number, out: ChartEvent[]) => {
 		if (stopped()) return;
 		if (p.kind === "direction") return direct(p.direction);
@@ -427,7 +440,10 @@ export function expand(
 		count++;
 		const bar = barOf(p, line);
 		checkPushes(bar);
-		out.push({ kind: "bar", bar: sung(bar, p, line) });
+		const played = sung(bar, p, line);
+		work += replayedVerses(p, played);
+		if (work > maxWork) return stop(line);
+		out.push({ kind: "bar", bar: played });
 	};
 	/** Play `body` `repeat` times into `out`; an open repeat plays one pass inside an open event. */
 	const times = (

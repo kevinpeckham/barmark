@@ -71,3 +71,37 @@ describe("parse time grows with written size plus plays, not their product", () 
 			TIMEOUT,
 		);
 });
+
+describe("the verses a bar sings count toward the expansion's budget", () => {
+	/** One bar under `rows` verses, then `replays` plain replays of its section: each replay sings every verse. */
+	const replayed = (rows: number, replays: number) =>
+		[
+			"## A",
+			"| C |",
+			...Array.from({ length: rows }, (_, v) => `lyrics ${v + 1}: | la |`),
+			...Array(replays).fill("## A"),
+		].join("\n");
+	const sungVerses = (text: string) => {
+		const p = parseChart(text);
+		return {
+			verses: p.bars.reduce((n, b) => n + (b.lyrics?.length ?? 0), 0),
+			stopped: p.diagnostics.some((d) => d.message.startsWith("expansion stopped")),
+		};
+	};
+	test("many verses replayed many times stop at the budget instead of singing them all", () => {
+		// 1,560 verses × 5,001 plays would be 7.8 million verse references.
+		const { verses, stopped } = sungVerses(replayed(1560, 5000));
+		expect(stopped).toBe(true);
+		expect(verses).toBeLessThanOrEqual(100_000);
+	});
+	test("a hymn of 100 verses, replayed, sings them all", () => {
+		const hymn = [
+			"## Verse",
+			"| G | C | D | G |",
+			...Array.from({ length: 100 }, (_, v) => `lyrics ${v + 1}: | la | la | la | la |`),
+			"## Verse",
+			"## Verse",
+		].join("\n");
+		expect(sungVerses(hymn)).toEqual({ verses: 1200, stopped: false });
+	});
+});
