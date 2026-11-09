@@ -987,3 +987,15 @@ test.describe("the key", () => {
 		await expect.poll(() => gridChords(page)).toEqual(["A♭", "D♭"]);
 	});
 });
+
+test("the footer's Verovio licence and its GPL are served as text", async ({ page, request }) => {
+	await page.goto("/");
+	const href = await page.locator("footer a", { hasText: "LGPL-3.0" }).getAttribute("href");
+	expect(href).toBe("/licenses/Verovio-LGPL-3.0.txt");
+	for (const path of [href ?? "", "/licenses/Verovio-GPL-3.0.txt"]) {
+		const res = await request.get(path);
+		expect([path, res.status()]).toEqual([path, 200]);
+		expect(res.headers()["content-type"]).toContain("text/plain");
+		expect(await res.text()).toContain("GENERAL PUBLIC LICENSE");
+	}
+});

@@ -6,7 +6,7 @@ import { exportMusicXml, importMusicXml } from "@barmark/musicxml";
 import { renderScoreHtml } from "@barmark/score/server";
 import { barAt, chartFromDetections, secondsAtBar } from "@barmark/sync";
 import { parseChart, printChart, transposeChart } from "barmark";
-import { LINKS } from "../src/lib/site.ts";
+import { FILES, LINKS } from "../src/lib/site.ts";
 import {
 	CLI_CI,
 	SAMPLE_CHART,
@@ -351,7 +351,7 @@ describe("licences", () => {
 			const hrefs = [...page(path).querySelectorAll("footer a")].map((a) => a.getAttribute("href"));
 			expect(hrefs).toContain(LINKS.license);
 			expect(hrefs).toContain(LINKS.specLicense);
-			expect(hrefs).toContain(LINKS.verovio);
-			expect(hrefs).toContain(LINKS.verovioLicense);
+			expect(hrefs).toContain(LINKS.verovioBundled);
+			expect(hrefs).toContain(FILES.verovioLgpl);
 		});
 });

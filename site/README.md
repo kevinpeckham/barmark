@@ -25,6 +25,9 @@ bun run test:browser   # Playwright: live editing, the guide, no JavaScript, pho
 - `src/lib/demo.chart.md`: the home page's chart, drawn by
   `<barmark-score>` (Grid / Score switch; Verovio loads only on Score)
   with a Key menu (`src/lib/key.ts`, as Stem Shovel's, not remembered).
+- `static/licenses/`: Verovio's LGPL-3.0 and GPL-3.0 texts, copied from
+  `packages/cli/licenses/`; the footer credits Verovio, links them and
+  this folder's source, since the score's worker bundles Verovio.
 - `src/lib/guide/score.ts`: the guide's "In the score" rows; each example
   is exported and engraved with Verovio in `tests/score-notes.test.ts`.
 - `uno.config.ts`: theme, shortcuts and fonts. Edwin comes from
