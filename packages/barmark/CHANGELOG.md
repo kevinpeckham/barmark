@@ -9,6 +9,12 @@ Releases follow the process in [RELEASING.md](RELEASING.md).
 
 ## [Unreleased]
 
+## [0.22.0] - 2026-11-09
+
+A grammar change: a chart's pickup is bar 0 (2.4), which now defines a
+pickup. Charts without a pickup read and number as before. Implements the
+[grammar v0.1 draft](https://github.com/kevinpeckham/barmark/blob/main/docs/grammar-v0.1-draft.md).
+
 ### Added
 
 - **`ChartParse.pickup`**: true when the chart's first written bar is a
@@ -754,7 +760,8 @@ The first working release: the reference parser and printer for the
 
 - **A placeholder package that holds the `barmark` name** while the spec and parser are written.
 
-[Unreleased]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.21.0...HEAD
+[Unreleased]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.22.0...HEAD
+[0.22.0]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.21.0...barmark-v0.22.0
 [0.21.0]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.20.0...barmark-v0.21.0
 [0.20.0]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.19.1...barmark-v0.20.0
 [0.19.1]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.19.0...barmark-v0.19.1
