@@ -65,7 +65,10 @@ Releases follow the process in [RELEASING.md](RELEASING.md).
   stopped after 64 bars: the bars played again sing too many verses
   (98,280)"; both numbers count only the bars output, so a bar a
   replay's `->` cuts is not counted, and a bar the budget stops is
-  neither sung nor checked): now 0.1 s and 2 MB. Repeats that play too much with no
+  neither sung nor checked): now 0.1 s and 2 MB. Once play stops at any
+  limit, the stop is the only report of what it cut short: no "the parts
+  fall out of step" for a part that stopped early, and no "verse N is
+  never sung" for verses the stop left unsung. Repeats that play too much with no
   bars to count (fermatas) now say "expansion stopped after N bars: its
   repeats play too many times", not the bar cap's "expansion stopped at
   10000 bars", which is kept for the bar cap itself. Real charts use a tiny share of it: the examples

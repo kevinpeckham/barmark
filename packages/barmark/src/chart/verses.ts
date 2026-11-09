@@ -396,7 +396,7 @@ const NO_ROWS: LyricsLine[] = [];
 function singing(
 	rows: Rows,
 	who: Singer | null,
-): { sing: Sing; diagnostics: ChartDiagnostic[]; finish: () => void } {
+): { sing: Sing; diagnostics: ChartDiagnostic[]; finish: (stopped?: boolean) => void } {
 	const diagnostics: ChartDiagnostic[] = [];
 	const warn = warner(diagnostics);
 	const melody = who?.sings !== undefined;
@@ -579,8 +579,10 @@ function singing(
 		return (pick.notes && mine ? 1 : 0) + pick.rows.length;
 	};
 	const sing: Sing = Object.assign(singBar, { verses: versesHere });
-	const finish = () => {
+	/** After playing: word the silent passes, then warn of verses never sung, unless a stop left them unsung. */
+	const finish = (stopped = false) => {
 		wordSilences();
+		if (stopped) return;
 		for (const n of notes.values())
 			if (!n.sung) warn(n.line, "verse 1 is never sung: no pass of its repeat is pass 1", "lyrics");
 		const unsung = new Set(

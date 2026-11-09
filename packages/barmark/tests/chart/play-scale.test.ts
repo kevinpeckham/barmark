@@ -125,7 +125,7 @@ describe("the verses a bar sings count toward the expansion's budget", () => {
 			`expansion stopped after ${p.bars.length} bars: the bars played again sing too many verses (${sung.toLocaleString("en-US")})`,
 		]);
 	});
-	test("a bar the budget stops is not sung: the verses only it would sing are never sung", () => {
+	test("a bar the budget stops is not sung, and the stop alone is reported", () => {
 		// 100 parts may each do 1,000 work. Two replays sing 300 verses each; the third replay's own 400 rows don't fit.
 		const parts = Array.from({ length: 100 }, (_, i) => `part: P${i} = Piano`);
 		const system = Array.from({ length: 100 }, (_, i) => `P${i} | C |`);
@@ -142,16 +142,10 @@ describe("the verses a bar sings count toward the expansion's budget", () => {
 			...rows(400, "x"),
 		].join("\n");
 		const p = parseChart(chart);
-		const last = 100 + 1 + 100 + 300 + 3 + 1;
 		expect(p.bars).toHaveLength(3);
-		expect(
-			p.diagnostics.filter((d) => d.message.startsWith("expansion stopped")).map((d) => d.message),
-		).toEqual(["expansion stopped after 3 bars: the bars played again sing too many verses (600)"]);
-		expect(p.diagnostics).toContainEqual(
-			expect.objectContaining({
-				line: last,
-				message: "verse 1 is never sung: no pass of its repeat is pass 1",
-			}),
-		);
+		// The stop explains the rest: the singing part falling out of step and the rows it left unsung.
+		expect(p.diagnostics.map((d) => d.message)).toEqual([
+			"expansion stopped after 3 bars: the bars played again sing too many verses (600)",
+		]);
 	});
 });

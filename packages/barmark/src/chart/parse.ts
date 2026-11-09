@@ -91,11 +91,13 @@ function stepAt(each: ChartEvent[][]): number {
 export function zipEvents(
 	each: ChartEvent[][],
 	report: (d: ChartDiagnostic) => void,
+	/** A part that stopped at a limit falls out of step because it stopped: the stop says so. */
+	stopped = false,
 ): ChartEvent[] {
 	const [lead = []] = each;
 	const apart = stepAt(each);
 	const at = lead[apart] ?? lead[lead.length - 1];
-	if (apart >= 0 && at)
+	if (apart >= 0 && at && !stopped)
 		report({
 			line: lineOf(at),
 			severity: "error",
@@ -119,6 +121,7 @@ export function zipEvents(
 				events: zipEvents(
 					peers.map((p) => (p.kind === "open" ? p.events : e.events)),
 					report,
+					stopped,
 				),
 			};
 		return e;
@@ -246,23 +249,25 @@ function playStreams(lines: Line[], parts: DeclaredPart[], shown: DeclaredPart[]
 		),
 	);
 	const diagnostics = mergeReports(played.map((p) => p.diagnostics));
+	const stopped = played.some((p) => p.stopped);
 	const zipped = zipEvents(
 		played.map((p) => p.events),
 		(d) => diagnostics.push(d),
+		stopped,
 	);
 	const events = foldEvents(zipped, byPart(streams, shown), shown);
 	diagnostics.push(...linedPedalWarnings(events, shown));
-	return { events, sections: played[0]?.sections ?? [], diagnostics };
+	return { events, sections: played[0]?.sections ?? [], diagnostics, stopped };
 }
 
 const lined = (parts: DeclaredPart[]) => parts.some((p) => p.lines?.length);
 
 type Doc = ReturnType<typeof readDocument>;
 
-/** What the voices found as they sang (grammar 7.7), once playing is done. */
-function sungChecks(voices: Voice[]): ChartDiagnostic[] {
+/** What the voices found as they sang (grammar 7.7), once playing is done; past a stop, not what it left unsung. */
+function sungChecks(voices: Voice[], stopped: boolean): ChartDiagnostic[] {
 	return voices.flatMap((v) => {
-		v.finish();
+		v.finish(stopped);
 		return v.diagnostics;
 	});
 }
@@ -289,12 +294,12 @@ export function parseChart(text: string): ChartParse {
 			...doc.diagnostics,
 			...voice.diagnostics,
 			...played.diagnostics,
-			...sungChecks(voice.voices),
+			...sungChecks(voice.voices, played.stopped),
 		]),
 	};
 }
 
-type Played = Pick<ReturnType<typeof expand>, "events" | "sections" | "diagnostics">;
+type Played = Pick<ReturnType<typeof expand>, "events" | "sections" | "diagnostics" | "stopped">;
 
 /** What an extract holds and plays: one of the part's lines, the part with its lines, or the part. */
 function extractOf(
@@ -358,7 +363,7 @@ export function extractPart(text: string, label: string, lineName?: string): Cha
 		diagnostics: sortDiagnostics([
 			...[...doc.diagnostics, ...voice.diagnostics].filter((d) => kept.has(d.line)),
 			...played.diagnostics,
-			...sungChecks(voices),
+			...sungChecks(voices, played.stopped),
 		]),
 	};
 }

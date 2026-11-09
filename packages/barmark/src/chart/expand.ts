@@ -216,6 +216,8 @@ export function expand(
 	events: ChartEvent[];
 	sections: SectionOccurrence[];
 	diagnostics: ChartDiagnostic[];
+	/** Whether play stopped at a limit: what follows from that alone goes unreported. */
+	stopped: boolean;
 } {
 	const diagnostics: ChartDiagnostic[] = [];
 	const maxBars = barsFor(share);
@@ -670,5 +672,5 @@ export function expand(
 		};
 	});
 	if (pedal) diagnostics.push(...pedalWarnings(flattenBars(events)));
-	return { events, sections: sectionsOut, diagnostics };
+	return { events, sections: sectionsOut, diagnostics, stopped: capped };
 }
