@@ -14,6 +14,8 @@ package uses [semantic versioning](https://semver.org/).
   now drops a degree that is not printed before Verovio reads the
   MusicXML (with `@barmark/musicxml`'s next release, which hides a degree
   its kind text already spells). `Engraved.xml` is the export unchanged.
+  The pass is linear (a single `indexOf` scan, no backtracking regex), so a
+  hostile MusicXML given to `engraveXml` cannot stall it.
 - **The Grid / Score switch follows the element's `theme`.** It sits
   outside the grid's themed `.bm-chart`, and render's `:host{all:initial}`
   reset its colour and font, so on a dark page it was black text in the

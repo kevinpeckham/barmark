@@ -1921,3 +1921,11 @@ and caps count"). **Rule:** a script's default output goes in a fresh
 `mkdtemp` folder, as the other VM scripts already do; a test server binds
 loopback and never turns a query parameter into code to load. Fallow scores
 code only Playwright runs as untested, so its helpers stay small.
+
+**Again on #225 (2026-11-09):** a Medium finding on library code this time:
+`@barmark/score`'s hidden-degree strip was `replace(/<degree print-object="no">[\s\S]*?<\/degree>/g)`,
+run on whatever XML `engraveXml` is given; many openers with no closer rescan the rest of the
+input once each (200,000 openers ran past 120 s). Now one `indexOf` pass (`forVerovio`,
+`packages/score/tests/for-verovio.test.ts`, 200,000 openers in milliseconds). **Rule:** a lazy
+`[\s\S]*?` between two markers on caller-supplied text is quadratic when the closer can be
+missing; scan with `indexOf`.
