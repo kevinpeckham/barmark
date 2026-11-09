@@ -17,7 +17,7 @@ import { type Budget, spend } from "./budget.js";
 import { crosses, lengthsIn, type MeasureEvents, type SoundEvent } from "./events.js";
 import { type Sung, sungAtOf } from "./lyrics.js";
 import { measureXml, placeIn } from "./measure-xml.js";
-import { type Measure, writtenMeasures } from "./measures.js";
+import { firstWritten, type Measure, writtenMeasures } from "./measures.js";
 import {
 	barLength,
 	cmp,
@@ -49,15 +49,15 @@ function rowsOf(lines: Line[]): Placed[] {
 	});
 }
 
-/** Each written bar's place in its bar line, by its written number: the row's cell for it. */
-function cellsOf(lines: Line[]): Map<number, number> {
+/** Each written bar's place in its bar line, by its written number (the parser's, from `firstWritten`): the row's cell for it. */
+function cellsOf(parse: ChartParse): Map<number, number> {
 	const out = new Map<number, number>();
-	let written = 0;
-	for (const l of lines) {
+	let written = firstWritten(parse);
+	for (const l of parse.lines) {
 		if (l.kind !== "bars") continue;
 		let cell = 0;
 		for (const c of l.cells)
-			if (c.kind === "slots" || c.kind === "simile") out.set(++written, cell++);
+			if (c.kind === "slots" || c.kind === "simile") out.set(written++, cell++);
 	}
 	return out;
 }
@@ -71,7 +71,7 @@ type Rows = { parse: ChartParse; rows: Placed[]; cells: Map<number, number> };
 const rowsIn = (parse: ChartParse): Rows => ({
 	parse,
 	rows: rowsOf(parse.lines),
-	cells: cellsOf(parse.lines),
+	cells: cellsOf(parse),
 });
 
 /** What the rows say of a played bar: each verse's cell, from its replay's rows if it has any, else from the rows under its line. */

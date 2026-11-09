@@ -113,3 +113,21 @@ test("every verse's syllables are compared, each by its onset in the bar", () =>
 	expect(wrong).toContain("ma");
 	expect(wrong).toContain("mo");
 });
+
+test("a chart that opens with a pickup: the importer's first bar is written bar 0", () => {
+	const src: Source = {
+		parts: [part("G", ["A", "B", "C"])],
+		labels: ["G"],
+		bars: Array.from({ length: 3 }, (_, i) => ({ ...bar(i), measure: `${i}` })),
+		meters: [
+			{ n: 1, d: 4 },
+			{ n: 4, d: 4 },
+			{ n: 4, d: 4 },
+		],
+		previous: [],
+	};
+	expect(mismatches(parseChart("| [1/4] A | B | C |\n"), src, [0, 1, 2])).toEqual([]);
+	expect(mismatches(parseChart("| [1/4] A | B |\n"), src, [0, 1, 2])).toEqual([
+		"written bar 2 (measure 2) never plays",
+	]);
+});

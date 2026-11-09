@@ -14,6 +14,7 @@ import {
 	type SimpleSlot,
 	type Slot,
 } from "barmark";
+import { firstWritten } from "../measures.js";
 import type { Losses } from "./losses.js";
 import { ownCell, type Source } from "./rows.js";
 import { sungKey } from "./verses.js";
@@ -97,15 +98,17 @@ function linePlayed(part: PartBar, name: string | null, l: number): Slot[] | nul
 
 /**
  * Where the written chart plays something other than what the importer
- * meant: `written` maps each written bar (from 1, as `PlayedBar.written`
- * counts) to its bar in `src.bars`.
+ * meant: `written` maps each written bar, in written order, to its bar in
+ * `src.bars`; the first is `PlayedBar.written`'s first number (`firstWritten`:
+ * 0 for a pickup).
  */
 export function mismatches(parse: ChartParse, src: Source, written: number[]): string[] {
 	const out: string[] = [];
 	const cache = new Map<string, string>();
 	const played = new Set<number>();
+	const first = firstWritten(parse);
 	for (const bar of parse.bars) {
-		const i = written[bar.written - 1];
+		const i = written[bar.written - first];
 		if (i === undefined) {
 			out.push(`bar ${bar.written} plays, but the importer wrote ${written.length}`);
 			continue;
@@ -125,7 +128,7 @@ export function mismatches(parse: ChartParse, src: Source, written: number[]): s
 	if (parse.bars.length < MAX_EXPANDED_BARS)
 		written.forEach((i, k) => {
 			if (!played.has(i))
-				out.push(`written bar ${k + 1} (measure ${src.bars[i]?.measure}) never plays`);
+				out.push(`written bar ${k + first} (measure ${src.bars[i]?.measure}) never plays`);
 		});
 	return out;
 }
@@ -175,8 +178,9 @@ export function verseMismatches(
 ): string[] {
 	const got = new Map<number, Set<string>>();
 	const passes = new Map<number, number>();
+	const first = firstWritten(parse);
 	for (const bar of parse.bars) {
-		const i = written[bar.written - 1];
+		const i = written[bar.written - first];
 		if (i === undefined) continue;
 		passes.set(i, (passes.get(i) ?? 0) + 1);
 		const set = got.get(i) ?? new Set<string>();
