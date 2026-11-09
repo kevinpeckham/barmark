@@ -560,7 +560,7 @@ function singing(
 		hold(bar, notesSung ? mine : null);
 		for (const c of chosen) sungRow(c);
 	};
-	const sing: Sing = (bar, from) => {
+	const singBar = (bar: PlayedBar, from: BarSource): PlayedBar["lyrics"] => {
 		const { own, replayed } = rowsOver(from);
 		const w = writtenBar(bar.slots, bar.meter);
 		checkRows(own, w, from.bar);
@@ -571,6 +571,14 @@ function singing(
 		played(bar, from, mine, chosen);
 		return chosen.length ? chosen.map((c) => c.lyrics) : undefined;
 	};
+	/** How many verses a bar would sing here, with no effect on what is sung or warned. */
+	const versesHere = (bar: PlayedBar, from: BarSource): number => {
+		const { own, replayed } = rowsOver(from);
+		const mine = replayed || !who ? null : writtenBar(bar.slots, bar.meter).notes;
+		const pick = forPass(versesOver(own), mine !== null, from.pass);
+		return (pick.notes && mine ? 1 : 0) + pick.rows.length;
+	};
+	const sing: Sing = Object.assign(singBar, { verses: versesHere });
 	const finish = () => {
 		wordSilences();
 		for (const n of notes.values())
@@ -623,8 +631,11 @@ export function voicesIn(voices: Voice[], part: DeclaredPart, lineName?: string)
 /** Several voices' words on one line (verse order, then the voices' order), or none. */
 export function together(sings: Sing[]): Sing | undefined {
 	if (sings.length < 2) return sings[0];
-	return (bar, from) => {
-		const all = sings.flatMap((sing) => sing(bar, from) ?? []);
+	const sing = (bar: PlayedBar, from: BarSource) => {
+		const all = sings.flatMap((s) => s(bar, from) ?? []);
 		return all.length ? all.sort((a, b) => a.verse - b.verse) : undefined;
 	};
+	const verses = (bar: PlayedBar, from: BarSource) =>
+		sings.reduce((n, s) => n + s.verses(bar, from), 0);
+	return Object.assign(sing, { verses });
 }

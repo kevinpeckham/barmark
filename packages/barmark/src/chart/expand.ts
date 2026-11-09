@@ -29,8 +29,15 @@ import type {
  * unknown), and the line of the replay heading it plays under, if any.
  */
 export type BarSource = { line: number; bar: number; pass: number | null; replay: number | null };
-/** The words a played bar sings, given where it comes from; undefined when none. */
-export type Sing = (bar: PlayedBar, from: BarSource) => PlayedBar["lyrics"];
+/**
+ * The words a played bar sings, given where it comes from; undefined when
+ * none. `verses` says how many it would sing, with no other effect, so the
+ * budget is checked before a bar is sung.
+ */
+export type Sing = {
+	(bar: PlayedBar, from: BarSource): PlayedBar["lyrics"];
+	verses(bar: PlayedBar, from: BarSource): number;
+};
 
 /** Nested repeats multiply; expansion stops here rather than run away. */
 export const MAX_EXPANDED_BARS = 10_000;
@@ -175,17 +182,18 @@ export function flattenBars(events: ChartEvent[]): PlayedBar[] {
 	);
 }
 
-/** Remove the last bar, looking inside a final open pass and past a final fermata. */
-function removeLastBar(events: ChartEvent[]): boolean {
+/** Remove the last bar, looking inside a final open pass and past a final fermata; the bar removed, or null. */
+function removeLastBar(events: ChartEvent[]): PlayedBar | null {
 	for (let i = events.length - 1; i >= 0; i--) {
 		const e = events[i];
 		if (e?.kind === "bar") {
 			events.splice(i, 1);
-			return true;
+			return e.bar;
 		}
-		if (e?.kind === "open" && removeLastBar(e.events)) return true;
+		const inner = e?.kind === "open" ? removeLastBar(e.events) : null;
+		if (inner) return inner;
 	}
-	return false;
+	return null;
 }
 
 /**
@@ -368,12 +376,14 @@ export function expand(
 	const checked = new Set<Played>();
 	/** Verses sung by bars playing again: work, counted for the message. */
 	let againSung = 0;
+	/** Bars a replay's `->` cut after they played: `count` counts them, the output doesn't. */
+	let cutBars = 0;
 	/** Stop playing, saying why: the bar cap, the verses sung again, repeats that play too much, or a part's lines. */
 	const stop = (line: number, why: "bars" | "verses" | "work" | "lines" = "work") => {
 		capped = true;
 		const what = (): string => {
 			if (why === "bars") return `expansion stopped at ${maxBars} bars`;
-			const after = `expansion stopped after ${count} bars`;
+			const after = `expansion stopped after ${count - cutBars} bars`;
 			if (why === "verses")
 				return `${after}: the bars played again sing too many verses (${againSung.toLocaleString("en-US")})`;
 			if (why === "lines") return `${after}: each of ${share} parts reads at most ${maxWork} lines`;
@@ -407,7 +417,6 @@ export function expand(
 	/** A bar as played now; in a one-bar meter it also carries the `time:` in force (grammar 2.4). */
 	const barOf = (p: Extract<Played, { kind: "bar" }>, line: number): PlayedBar => {
 		const meter = p.meter ?? state.time;
-		checkSlots(p, meter, line);
 		const { key, tempo, change: tempoChange, feel, swingPercent } = state;
 		return {
 			index: 0,
@@ -427,9 +436,15 @@ export function expand(
 			...(p.tacet && { tacet: p.tacet }),
 		};
 	};
+	/** Where a played bar comes from, for its words (grammar 7.7). */
+	const sourceOf = (p: Extract<Played, { kind: "bar" }>, line: number): BarSource => ({
+		line,
+		bar: p.bar,
+		...where,
+	});
 	/** The bar with the words it sings here, if any (grammar 7.7). */
 	const sung = (bar: PlayedBar, p: Extract<Played, { kind: "bar" }>, line: number): PlayedBar => {
-		const lyrics = sing?.(bar, { line, bar: p.bar, ...where });
+		const lyrics = sing?.(bar, sourceOf(p, line));
 		return lyrics ? { ...bar, lyrics } : bar;
 	};
 	/** How long the slot played just before is, in whole notes; null after a fermata or at the start. */
@@ -450,17 +465,29 @@ export function expand(
 		if (last !== null) before.length = last;
 	};
 	/**
-	 * The verses a written bar sings when it plays again: work, since many
-	 * verses replayed many times would otherwise multiply. Its first play's
-	 * are as many as are written, so they cost nothing more.
+	 * The verses a written bar would sing playing again here: work, since
+	 * many verses replayed many times would otherwise multiply. Its first
+	 * play's are as many as are written, so they cost nothing more. Asked
+	 * before the bar is sung, so a bar the budget stops sings nothing.
 	 */
 	const sungBefore = new Set<Played>();
-	const replayedVerses = (p: Played, bar: PlayedBar): number => {
-		if (!sungBefore.has(p)) {
-			sungBefore.add(p);
-			return 0;
-		}
-		return bar.lyrics?.length ?? 0;
+	const replayedVerses = (p: Extract<Played, { kind: "bar" }>, bar: PlayedBar, line: number) =>
+		sungBefore.has(p) ? (sing?.verses(bar, sourceOf(p, line)) ?? 0) : 0;
+	/** Each output bar's charge for its verses, so a bar `->` cuts gives its charge back to the message. */
+	const charged = new WeakMap<PlayedBar, number>();
+	/** A bar as played and sung: its checks and its words, once the budget has room for it. */
+	const playBar = (p: Extract<Played, { kind: "bar" }>, line: number): PlayedBar | null => {
+		const bar = barOf(p, line);
+		const again = replayedVerses(p, bar, line);
+		if (work + again > maxWork) return null;
+		work += again;
+		againSung += again;
+		sungBefore.add(p);
+		checkSlots(p, bar.meter, line);
+		checkPushes(bar);
+		const played = sung(bar, p, line);
+		if (again) charged.set(played, again);
+		return played;
 	};
 	const emit = (p: Played, line: number, out: ChartEvent[]) => {
 		if (stopped()) return;
@@ -472,17 +499,9 @@ export function expand(
 			return void out.push({ kind: "fermata", line });
 		}
 		if (count >= maxBars) return stop(line, "bars");
+		const played = playBar(p, line);
+		if (!played) return stop(line, "verses");
 		count++;
-		const bar = barOf(p, line);
-		checkPushes(bar);
-		const played = sung(bar, p, line);
-		const again = replayedVerses(p, played);
-		work += again;
-		if (work > maxWork) {
-			count--;
-			return stop(line, "verses");
-		}
-		againSung += again;
 		out.push({ kind: "bar", bar: played });
 	};
 	/** Play `body` `repeat` times into `out`; an open repeat plays one pass inside an open event. */
@@ -593,7 +612,13 @@ export function expand(
 		times(h.repeat, h.line, out, (into) => playItems(itemsOf.get(source) ?? [], into));
 		where.replay = null;
 		// It cuts the last bar as written; play stopped before it (a Fine, a To Coda) never reaches it.
-		const elided = h.elided && reachesEnd(source, out) && removeLastBar(out);
+		const cut = h.elided && reachesEnd(source, out) ? removeLastBar(out) : null;
+		if (cut) {
+			// The message counts what is output: the cut bar and its verses are not.
+			cutBars++;
+			againSung -= charged.get(cut) ?? 0;
+		}
+		const elided = cut !== null;
 		// A replay heading stands for its bars: its own lines (directives) come after them.
 		playItems(itemsOf.get(s) ?? [], out);
 		return { replayOf: source.heading.line, elided };
