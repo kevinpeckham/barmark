@@ -80,8 +80,8 @@ barmark 0.22.0 (grammar, `ChartParse.pickup`, `written`); then
 change: minors); `@barmark/sync` 0.3.0, then `@barmark/midi` 0.3.0 (it
 carets sync); `@barmark/score` a patch ("Requires …"); `@barmark/cli` a
 minor; then `kevinpeckham/songs` (no chart there has a pickup) and
-barmark.dev. Stem Shovel's follow-up is the handoff
-`~/projects/_handoffs/2026-11-09-barmark-pickup-bar-zero-for-stem-shovel.md`:
+barmark.dev. Stem Shovel's follow-up is
+kevinpeckham/stem-shovel#16:
 its ruler, transport and draft details show `index` as bar numbers and
 must map to `written`.
 
