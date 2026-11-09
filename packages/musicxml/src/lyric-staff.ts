@@ -14,7 +14,7 @@ import type {
 	SimpleSlot,
 } from "barmark";
 import { crosses, lengthsIn, type MeasureEvents, type SoundEvent } from "./events.js";
-import { type Sung, sungAt } from "./lyrics.js";
+import { type Sung, sungAtOf } from "./lyrics.js";
 import { measureXml, placeIn } from "./measure-xml.js";
 import { type Measure, writtenMeasures } from "./measures.js";
 import {
@@ -102,6 +102,16 @@ function tokensOf(cell: LyricSlot[], length: Frac): Token[] {
 
 type Segment = { at: Frac; length: Frac; kind: "attack" | "held" | "rest" };
 
+/** A fraction's key: fractions are kept in lowest terms, so equal onsets share one. */
+const onsetKey = (at: Frac) => `${at.n}/${at.d}`;
+
+/** A verse's tokens by onset, the first at each: one lookup an onset, where a scan of the row made a crowded bar quadratic. */
+function kindsByOnset(tokens: Token[]): Map<string, Token["kind"]> {
+	const out = new Map<string, Token["kind"]>();
+	for (const t of tokens) if (!out.has(onsetKey(t.at))) out.set(onsetKey(t.at), t.kind);
+	return out;
+}
+
 /**
  * The staff's rhythm in a bar, from every verse's row: a new slash where
  * any verse sings a syllable, held while any holds one, a rest where all
@@ -112,10 +122,11 @@ function segmentsOf(verses: Token[][], length: Frac, carried: boolean): Segment[
 		.sort(cmp)
 		.filter((at, i, all) => i === 0 || cmp(at, all[i - 1] as Frac) !== 0);
 	const sounding = verses.map(() => carried);
+	const kinds = verses.map(kindsByOnset);
 	return starts.map((at, i) => {
 		let attack = false;
-		verses.forEach((tokens, v) => {
-			const kind = tokens.find((t) => cmp(t.at, at) === 0)?.kind;
+		kinds.forEach((byOnset, v) => {
+			const kind = byOnset.get(onsetKey(at));
 			if (kind === "syllable") attack = sounding[v] = true;
 			else if (kind === "breath") sounding[v] = false;
 		});
@@ -158,6 +169,7 @@ function tie(before: SoundEvent, e: SoundEvent): void {
 
 /** A bar's segments as events, each syllable on the slash its onset starts. */
 function eventsFrom(segments: Segment[], sung: Sung[]): SoundEvent[] {
+	const sungAt = sungAtOf(sung);
 	const out: SoundEvent[] = [];
 	for (const s of segments) {
 		const last = out[out.length - 1];
@@ -165,7 +177,7 @@ function eventsFrom(segments: Segment[], sung: Sung[]): SoundEvent[] {
 		const next =
 			s.kind !== "attack" && last && sounds(last) === slash
 				? holdOn(last, s)
-				: eventOf(slash, s.length, s.kind === "attack" ? sungAt(sung, s.at) : []);
+				: eventOf(slash, s.length, s.kind === "attack" ? sungAt(s.at) : []);
 		if (next) out.push(next);
 	}
 	return out;
