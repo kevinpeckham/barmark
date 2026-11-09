@@ -10,20 +10,25 @@ const direction = (types: string, sound = "", placement = "above") =>
  * A mark of the whole score (a heading, a rehearsal mark, tempo, feel, a
  * jump), written in the top part only: Dorico ignores MusicXML 4.0's
  * `system` and shows a mark written in every part over every staff.
- * `system="only-top"` stays for the programs that read it.
+ * `system="only-top"` stays for the programs that read it. `offset` (in
+ * divisions) moves it from where it is written.
  */
-export const scoreDirection = (types: string, sound = "") =>
+export const scoreDirection = (types: string, sound = "", offset?: number) =>
 	el("direction", { placement: "above", system: "only-top" }, [
 		el("direction-type", {}, types),
+		offset === undefined ? "" : text("offset", offset),
 		sound,
 	]);
 
 /**
- * Text from the chart, with a leading word "a" held to the next by a no-break
- * space: Dorico reads a lone "a" as the article in "a tempo" and drops it
- * ("A" vanishes, "A section" shows "section").
+ * Text from the chart, with every word "a" held to the next by a no-break
+ * space: Dorico reads a lone "a" as the article in "a tempo" and drops it,
+ * at the start ("A" vanishes, "A section" shows "section") and mid-sentence
+ * ("every note a quarter." shows "every note  quarter."). A word is
+ * whatever whitespace delimits, and the whitespace after an "a" (a tab too)
+ * becomes the no-break space, so "a.k.a." and "(a)" are written as they are.
  */
-export const ownText = (s: string) => s.replace(/^([Aa])(?: |$)/, "$1\u00a0");
+export const ownText = (s: string) => s.replace(/(?<!\S)([Aa])(?:\s|$)/g, "$1\u00a0");
 
 export const wordsXml = (words: string) => direction(text("words", ownText(words)));
 

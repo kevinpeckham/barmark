@@ -54,8 +54,11 @@ const STYLE_TEMPLATE =
 const FONT_FACE =
 	/^@font-face \{\s*font-family: 'Leipzig';\s*src: url\(data:application\/font-woff2;charset=utf-8;base64,[A-Za-z0-9+/=]+\) format\('woff2'\);\s*font-weight: normal;\s*font-style: normal;\s*\}$/;
 
+/** Whether a stylesheet is Verovio's embedded Leipzig face, exactly (and nothing else). */
+export const isLeipzigFace = (css: string) => FONT_FACE.test(css);
+
 function isVerovioStyle(css: string): boolean {
-	if (FONT_FACE.test(css)) return true;
+	if (isLeipzigFace(css)) return true;
 	const id = STYLE_ID.exec(css)?.[1];
 	return id !== undefined && css === STYLE_TEMPLATE.replaceAll("@", id);
 }

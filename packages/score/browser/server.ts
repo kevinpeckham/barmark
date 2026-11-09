@@ -23,6 +23,11 @@ key: G, time: 4/4
 | Am7 | D7 | G | G |
 `;
 
+/** Charts the pages draw, by name: `sharps` has accidentals and a tempo mark, Leipzig's glyphs. */
+const CHARTS: Record<string, string> = {
+	sharps: "# Sharps\ntempo: 120\n| C#m7 | Bb | F#7 | Ebmaj7 |\n",
+};
+
 /*
  * A document's import map does not reach a module worker, and worker.js
  * imports bare specifiers (verovio/*, barmark, @barmark/musicxml). So
@@ -65,18 +70,27 @@ const ENGINES: Record<string, string> = {
 	data: "data:text/javascript,export default async () => ({})",
 };
 const MAX_COUNT = 4;
-const ALLOWED = new Set(["theme", "engine", "count"]);
+const ALLOWED = new Set(["theme", "engine", "count", "chart"]);
 
 const inRange = (n: number) => Number.isInteger(n) && n >= 1 && n <= MAX_COUNT;
-const engineOk = (e: string | null) => e === null || Object.hasOwn(ENGINES, e);
-const countOk = (c: string | null) => inRange(Number(c ?? "1"));
+const named = (table: Record<string, string>, name: string | null) =>
+	name === null || Object.hasOwn(table, name);
 
-/** Why the query is refused, or null: only known parameters, a named engine, a small count. */
+/** Each check on the query, with what it says when the query fails it. */
+const CHECKS: [(p: URLSearchParams) => boolean, (p: URLSearchParams) => string][] = [
+	(() => {
+		const unknown = (p: URLSearchParams) => [...p.keys()].find((k) => !ALLOWED.has(k));
+		return [(p) => !unknown(p), (p) => `unknown parameter: ${unknown(p)}`];
+	})(),
+	[(p) => named(ENGINES, p.get("engine")), (p) => `unknown engine: ${p.get("engine")}`],
+	[(p) => named(CHARTS, p.get("chart")), (p) => `unknown chart: ${p.get("chart")}`],
+	[(p) => inRange(Number(p.get("count") ?? "1")), () => `count must be 1 to ${MAX_COUNT}`],
+];
+
+/** Why the query is refused, or null: only known parameters, a named engine and chart, a small count. */
 function refusal(p: URLSearchParams): string | null {
-	const unknown = [...p.keys()].find((k) => !ALLOWED.has(k));
-	if (unknown) return `unknown parameter: ${unknown}`;
-	if (!engineOk(p.get("engine"))) return `unknown engine: ${p.get("engine")}`;
-	return countOk(p.get("count")) ? null : `count must be 1 to ${MAX_COUNT}`;
+	const failed = CHECKS.find(([ok]) => !ok(p));
+	return failed ? failed[1](p) : null;
 }
 
 const attr = (name: string, value: string | null | undefined) =>
@@ -86,14 +100,19 @@ const attr = (name: string, value: string | null | undefined) =>
 const attrsOf = (p: URLSearchParams) =>
 	attr("theme", p.get("theme")) + attr("verovio-url", ENGINES[p.get("engine") ?? ""]);
 
+/** The chart `chart` names, or the sixteen bars. */
+const chartOf = (p: URLSearchParams) => CHARTS[p.get("chart") ?? ""] ?? CHART;
+
+/** The i-th `<barmark-score>` of a page, with these attributes and chart. */
+const scoreElement = (attrs: string, chart: string) => (i: number) =>
+	`<barmark-score id="s${i}"${attrs}><script type="text/barmark">${chart}</script></barmark-score>`;
+
 /** `count` elements (1 to MAX_COUNT, default 1), each with `theme` and the named `engine`'s verovio-url when given. */
 function scorePage(url: URL): Response {
 	const p = url.searchParams;
 	const why = refusal(p);
 	if (why) return new Response(why, { status: 400 });
-	const attrs = attrsOf(p);
-	const one = (i: number) =>
-		`<barmark-score id="s${i}"${attrs}><script type="text/barmark">${CHART}</script></barmark-score>`;
+	const one = scoreElement(attrsOf(p), chartOf(p));
 	const count = Number(p.get("count") ?? "1");
 	return html(ELEMENT, Array.from({ length: count }, (_, i) => one(i)).join(""));
 }

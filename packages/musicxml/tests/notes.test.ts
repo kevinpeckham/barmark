@@ -49,17 +49,35 @@ describe("notes", () => {
 		expect(ms[1]).toContain('<slash type="stop"/>');
 		expect(ms[2]).toContain('<slash type="start" use-stems="no"/>');
 	});
+	test("a part that doesn't start in slashes says so in its first measure", () => {
+		// Verovio carries slash style on from the part before.
+		const xml = xmlOf("part: Gtr = Guitar\npart: Bs = Bass\nGtr | G | C |\n| D | G |");
+		const [first = "", second = ""] = measures(xml, "P2");
+		expect(first).toContain('<measure-style><slash type="stop"/></measure-style>');
+		expect(second).not.toContain("<measure-style");
+		// Only a slashed part before it needs the stop: a slash-free score has no slash element.
+		expect(xmlOf("| {C E G} | {D F A} |")).not.toContain("<slash");
+		// A part before that never leaves slash style on: no stop either.
+		const before = xmlOf(
+			"part: Bs = Bass\npart: Gtr = Guitar\nBs | {C2} | {D2} |\n## B\nGtr | D | G |",
+		);
+		expect(measures(before, "P1").join("")).not.toContain("<slash");
+		const [gtr1 = "", , gtr3 = ""] = measures(before, "P2");
+		expect(gtr1).not.toContain("<slash");
+		expect(gtr3).toContain('<slash type="start"');
+	});
 	test("slash style stops in a part's tacet bars", () => {
+		// A one-staff part: a keyboard's two staves write no slash style (staves.test.ts).
 		const chart =
-			"part: Gtr = Guitar\npart: Pno = Piano\n\nGtr | G | C |\nPno | G | C |\nGtr | D | G |\n| C |";
-		const [gtr9, pno9, pno13] = [
+			"part: Gtr = Guitar\npart: Bs = Bass\n\nGtr | G | C |\nBs | G | C |\nGtr | D | G |\n| C |";
+		const [gtr9, bs9, bs13] = [
 			measures(xmlOf(chart), "P1")[2],
 			measures(xmlOf(chart), "P2")[2],
 			measures(xmlOf(chart), "P2")[4],
 		];
-		expect(pno9).toContain('<rest measure="yes"/>');
-		expect(pno9).toContain('<slash type="stop"/>');
-		expect(pno13).toContain('<slash type="start" use-stems="no"/>');
+		expect(bs9).toContain('<rest measure="yes"/>');
+		expect(bs9).toContain('<slash type="stop"/>');
+		expect(bs13).toContain('<slash type="start" use-stems="no"/>');
 		expect(gtr9).not.toContain("<slash ");
 	});
 	test("a voicing is the harmony over its notes", () => {

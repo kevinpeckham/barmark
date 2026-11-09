@@ -14,7 +14,7 @@ const fixtures = readdirSync(dir)
 type Field = keyof Music;
 // fixture -> field -> [original, redrawn]; see FINDINGS.md "What the import fixtures lose".
 const KNOWN: Record<string, Partial<Record<Field, [number, number]>>> = {
-	"band.musicxml": { notes: [72, 64], rests: [8, 0] },
+	"band.musicxml": { notes: [72, 64] },
 	"dorico-band.musicxml": { notes: [72, 32], rests: [8, 0], harms: [16, 8] },
 	"dorico-hymn.musicxml": { harms: [6, 7] },
 	"dorico-piano.musicxml": { notes: [24, 12] },
@@ -23,11 +23,11 @@ const KNOWN: Record<string, Partial<Record<Field, [number, number]>>> = {
 	"lead-sheet.musicxml": { harms: [7, 6] },
 	"melody-measure-rest.musicxml": { notes: [4, 20], rests: [3, 0] },
 	"melody-rest.musicxml": { notes: [4, 20], rests: [3, 0] },
-	"part-enters.musicxml": { notes: [12, 48] },
+	"part-enters.musicxml": { notes: [12, 48], rests: [4, 12] },
 	"piano.musicxml": { notes: [24, 12] },
-	"replay-holds.musicxml": { notes: [137, 160], rests: [35, 71], harms: [33, 42] },
+	"replay-holds.musicxml": { notes: [137, 160], rests: [35, 73], harms: [33, 42] },
 	"six-guitars.musicxml": { notes: [18, 9], harms: [18, 3] },
-	"trading-fours.musicxml": { notes: [8, 32], rests: [8, 12] },
+	"trading-fours.musicxml": { notes: [8, 32], rests: [8, 16] },
 };
 // Fixtures whose import or export refuses: recorded, never skipped.
 const REFUSED: Record<string, string> = {};

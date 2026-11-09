@@ -18,6 +18,7 @@
 			"@barmark/render": ["./packages/render/src/index.ts"],
 			"@barmark/render/element": ["./packages/render/src/element.ts"],
 			"@barmark/musicxml": ["./packages/musicxml/src/index.ts"],
+			"@barmark/score": ["./packages/score/src/index.ts"],
 			"@barmark/sync": ["./packages/sync/src/index.ts"],
 			"@barmark/sync/timing": ["./packages/sync/src/timing/index.ts"],
 			"@barmark/midi": ["./packages/midi/src/index.ts"],

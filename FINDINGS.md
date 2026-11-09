@@ -364,6 +364,30 @@ showed the rule needed refining.
 
 ## Performance and robustness
 
+### A bundled 7 MB module is parsed at every start of a compiled binary (2026-11-08, cli)
+
+- **The symptom.** Adding `render --score` put Verovio (`verovio/wasm`, a
+  7.4 MB single-file module with the wasm inlined) into the CLI's binary,
+  and every command got slower, not just `--score`. linux-x64, this VM
+  (timings noisy, three runs each): `--version` 0.12 s / 67 MB RSS before
+  Verovio, 0.17–0.29 s / 92–95 MB with it; `check` on Morning Song
+  0.17 s / 72 MB before, 0.18–0.21 s / 100 MB with it.
+- **The cause.** Under Node the CLI imports Verovio with a dynamic
+  `import()` on the first score, so nothing else loads it. `bun build
+  --compile` follows that literal `import()` into the one start bundle, and
+  the binary parses all of it at launch (`bun build src/binary.ts` emitted a
+  14.5 MB `binary.js`).
+- **The fix.** The binary embeds the module as a file (`import … from
+  "verovio/wasm" with { type: "file" }`, as it embeds Edwin) and imports it
+  by that path only when a score is drawn; the command gets the module
+  through `Io.verovio` (`packages/cli/src/binary.ts`, `node-io.ts`,
+  `score.ts`). After: `--version` 0.12–0.15 s / 68 MB, `check` 0.15–0.18 s /
+  73 MB, back to before; `render --score` 0.8–1.1 s / 240 MB, as with the
+  module bundled (0.8 s); binary 102.5 MB (95.1 MB before Verovio,
+  109.2 MB bundled in). `packages/cli/tests/binary.test.ts` ("the binary's
+  start bundle") keeps the start bundle under 2 MB with Verovio emitted
+  beside it.
+
 ### Node refuses a spread Bun allows, so `bun test` couldn't see the limit (2026-11-08, @barmark/midi)
 
 - **The symptom.** The SMF writer appended each event with
@@ -805,6 +829,22 @@ and round-trip it through `format`.
 
 ## Tooling
 
+### Verovio's npm package carries no licence text (2026-11-08, cli)
+
+**Symptom:** bundling Verovio into the CLI's binaries for `render
+--score`, we went to attach its licence as the release attaches Edwin's
+(`Edwin-OFL.txt`, copied from `@barmark/render`'s `fonts/`), and there was
+nothing to copy: `verovio@6.4.1` publishes only `README.md`,
+`package.json` and `dist/`. **Cause:** its `files` is `["dist"]`; the
+licence (`COPYING.LESSER`, and the GPL it builds on, `COPYING`) lives only
+in the GitHub repository. **Fix:** `packages/cli/licenses/` holds both, as
+Verovio's tag `version-6.4.1` has them (they differ from Debian's copies
+only in whitespace); the release workflow's binaries job copies them
+beside the binaries as `Verovio-LGPL-3.0.txt` and `Verovio-GPL-3.0.txt`,
+and `packages/cli/tests/licences.test.ts` keeps both the files and the
+copy step. An npm install needs nothing from us: Verovio arrives as its
+own package.
+
 ### Verovio beside Dorico, first run (2026-11-08, score)
 
 **Symptom:** `scripts/score-dorico.ts` exported four charts (Morning Song, Peaceful Dreams,
@@ -853,9 +893,59 @@ the running time signature (4); `ownText` for every lone "a", not only a leading
 option or per-part chord symbols by hand before changing the XML. For 2, try leaving
 `<measure-style>` out of a two-staff part (its notes already carry slash noteheads and
 `stem none`): if Dorico is unchanged and Verovio draws rests, do that; else report it upstream.
+Fixed (2026-11-08, `fix/score-export`; Dorico re-run 2026-11-09, 4 of 4 PDFs): 2, 3, 4, 5 and three of 6.
+(3) A `<degree>` is `print-object="no"` when the root and kind text, read as a chord symbol,
+name exactly the chord (`textSpells` in `harmony.ts`); every barmark chord's text does, so in
+practice all its degrees are hidden, and they still mean the chord. Verovio 6.4.1 ignores
+`print-object` on a degree (`ConvertDegreeToText` in its `iomusxml.cpp` appends every one), so
+`@barmark/score` drops a hidden degree before Verovio reads the file (`forVerovio` in
+`packages/score/src/engrave.ts`); Verovio now draws `D7sus4` and `G5(7)`. (2) A two-staff part
+writes no slash style, and a part after one that left slash style on writes `<slash
+type="stop"/>` in its first measure unless it starts in slashes: Verovio ignores
+`measure-style`'s `number` and keeps its slash state from one part to the next (one reader-wide
+`m_slash`), so the guitar's slash style alone turned the piano's lower-staff rests into
+slashes. Verovio now draws the rests (`engrave.test.ts`). Dorico used the piano's
+`<measure-style>` for a slash region on its upper staff (FINDINGS 2026-11-04, "slash
+regions"; the "(4)" and "(8)" counts); the piano's slashes are now plain stemless
+slash-notehead notes there, which may show as notes, not a region. (4) The pickup is measure 0,
+`implicit="yes"`, under the running `<time>`, numbering from 1 after it, as MuseScore writes
+one (`opensWithPickup` in `measure-xml.ts`); a first bar whose length would read back as
+another meter in the running beat (`[1/4]` in 6/8) or that a one-bar meter follows keeps its own
+`<time>`. Verovio draws one 4/4 and a measure 0 (`metcon="false"`). (5) `ownText` holds every
+whitespace-delimited "a"/"A" to the next word. (6) `×N` (and "repeat as needed") carries an
+`<offset>` back to its bar's last beat (Verovio's tstamp 4, not 5); the description (lead text)
+is written in the top part only; a guitar named acoustic is barmark's listed acoustic guitar
+(program 26, as `@barmark/midi`'s table). Left: 1 (Dorico), measure `text`, and the
+description's `placement="below"` drawn above in Dorico.
+*Dorico re-run (2026-11-09):* hidden degrees change nothing there (`D7sus4`, `C(omit3)`,
+`G7(omit3)` as before, so Dorico still reads kind and every degree, printed or not); the piano's
+upper staff shows stemless slashes and its lower staff whole-bar rests, the "(4)" count now on
+the guitar only; `×5` sits over bar 128, the repeat it counts; Shenandoah opens 4/4 with an
+uncounted pickup, an "Acoustic Guitar", the description once, and "every note a quarter." whole.
 **Where:** `scripts/score-dorico.ts` (`score-dorico-page.ts` draws the page);
 `packages/musicxml/src/harmony.ts` (degrees), `measure-xml.ts` (time, slash style),
 `directions.ts` (`ownText`).
+
+### Verovio prints hidden chord degrees and carries slash style across parts (2026-11-08, score)
+
+**Symptom:** after the export marked a degree its kind text already spells
+`print-object="no"`, Verovio still drew `D7sus4(7)`; and after a two-staff
+piano stopped writing `<measure-style number="1"><slash>`, Verovio still drew
+its lower staff's whole-bar rests as four slashes. **Cause:** Verovio 6.4.1's
+MusicXML reader (`src/iomusxml.cpp`, read at the `version-6.4.1` tag):
+`ConvertDegreeToText` appends every `<degree>` and never reads `print-object`;
+and slash style is one member, `m_slash`, set by any `measure-style/slash`
+whatever its `number`, never reset at a new part, which turns any
+`<rest measure="yes"/>` into beat slashes while it is on. So the guitar's slash
+style ran on into the piano. **Fix:** `@barmark/score` drops a hidden degree
+before Verovio reads the file (`forVerovio`, `packages/score/src/engrave.ts`);
+a part's first measure writes `<slash type="stop"/>` when the part before left
+slash style on and it doesn't start in slashes itself (a two-staff part never does),
+so no part inherits the one before's, and a slash-free chart writes no slash element (`slashStyleXml`, `packages/musicxml/src/measure-xml.ts`). A one-staff part
+after a slashed one (`Gtr | G | C |` then a tutti `| D | G |`: the bass's opening
+rest drew as four slashes) was caught in review and fixed the same day; it moved
+the score round trip's `replay-holds` rests from 71 to 73. Both Verovio behaviours
+are still worth reporting upstream.
 
 ### Vite 7 pre-bundles `<barmark-score>` out of reach of its worker and font; Vite 8 does not (2026-11-08, @barmark/score)
 
@@ -1616,7 +1706,9 @@ barmark's export writes a `[1/4]` pickup as a short first measure in a
 (MuseScore's mark for a pickup); the import read that back as
 `time: 1/4` then `time: 3/4`, so Amazing Grace never came back as
 written. The import now reads both shapes as a pickup
-(`settleFirstPickup` in `import/read.ts`).
+(`settleFirstPickup` in `import/read.ts`). Since 2026-11-08 the export writes
+MuseScore's shape (`opensWithPickup` in `measure-xml.ts`), except for a
+first bar the implicit shape would read back as another meter.
 
 ### A lyric row ends its system (grammar 7.7), and examples feed several tests (2026-11-06, examples)
 
@@ -1777,7 +1869,11 @@ fixture's `.chart.md` and the exported MusicXML, then traced into the code.
    case is a candidate if a bar could keep its tune.
 2. *Parts with no chord symbols are dropped* (`band`, `dorico-band`: the bass,
    notes 72 to 64 and 32, rests 8 to 0). Import warns "no chord symbols in
-   these parts, left out". Expected.
+   these parts, left out". Expected. (2026-11-08: `band`'s rests are 8 again,
+   and `part-enters` 4 to 12, `trading-fours` 8 to 16: the re-export's
+   two-staff piano writes no slash style any more, so Verovio draws its
+   lower staff's whole-bar rests instead of slashing them; FINDINGS "Verovio
+   beside Dorico, first run", item 2.)
 3. *Parts that carry the same chords become one line* (`dorico-band` staves
    4 to 1, harms 16 to 8; `six-guitars` staves 6 to 1, harms 18 to 3).
    `import/rows.ts:136` `playingOf` calls a bar tutti when every part's first
@@ -1865,3 +1961,11 @@ and caps count"). **Rule:** a script's default output goes in a fresh
 `mkdtemp` folder, as the other VM scripts already do; a test server binds
 loopback and never turns a query parameter into code to load. Fallow scores
 code only Playwright runs as untested, so its helpers stay small.
+
+**Again on #225 (2026-11-09):** a Medium finding on library code this time:
+`@barmark/score`'s hidden-degree strip was `replace(/<degree print-object="no">[\s\S]*?<\/degree>/g)`,
+run on whatever XML `engraveXml` is given; many openers with no closer rescan the rest of the
+input once each (200,000 openers ran past 120 s). Now one `indexOf` pass (`forVerovio`,
+`packages/score/tests/for-verovio.test.ts`, 200,000 openers in milliseconds). **Rule:** a lazy
+`[\s\S]*?` between two markers on caller-supplied text is quadratic when the closer can be
+missing; scan with `indexOf`.

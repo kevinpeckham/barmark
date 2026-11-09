@@ -83,6 +83,13 @@ const listed = (info: InstrumentInfo): Instrument => ({
 	staves: info.staves,
 });
 
+const acoustic = instrumentInfo("acoustic guitar");
+/**
+ * A guitar named acoustic is barmark's listed acoustic guitar, as if `instrument:`
+ * named it, so its sound and program are the instrument table's, as `@barmark/midi`'s are.
+ */
+const ACOUSTIC_GUITAR: Instrument = acoustic ? { ...listed(acoustic), kind: "guitar" } : GUITAR;
+
 /**
  * The part's instrument: the one `instrument:` names, or the one its name
  * suggests, or null. A `clef:` makes it one staff in that clef.
@@ -102,6 +109,6 @@ function guessed(part: Part | null): Instrument | null {
 	const words: string[] = (part?.name ?? "").toLowerCase().match(/[a-z]+/g) ?? [];
 	if (words.includes("bass"))
 		return words.every((w) => w === "bass" || BASS_WORDS.has(w)) ? BASS : null;
-	if (words.includes("guitar")) return GUITAR;
+	if (words.includes("guitar")) return words.includes("acoustic") ? ACOUSTIC_GUITAR : GUITAR;
 	return words.some((w) => KEYBOARD_WORDS.has(w)) ? KEYBOARD : null;
 }

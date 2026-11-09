@@ -8,7 +8,7 @@ Commands:
   format <paths…>      Print or rewrite charts in standard form
   import <file>        Read a MusicXML score or a MIDI file as a chart
   part <label> <file>  Print one part of a chart of several
-  render <file>        Write a chart as a standalone HTML page
+  render <file>        Write a chart as a standalone HTML page (--score: a full score)
   transpose <file>     Print a chart in another key
 
 Options:
@@ -53,16 +53,24 @@ Charts in standard form. With one chart and no option, prints it.
 `,
 	render: `Usage: barmark render <file> [options]
 
-A standalone HTML page of the chart, with the Edwin font embedded.
+A standalone HTML page of the chart's bar grid, with the Edwin font
+embedded. With --score, a page of the full engraved score instead
+(Verovio, built in): open it in a browser, and print to PDF from there.
+A chart that won't engrave writes nothing; the reason goes to stderr.
 
   --out <file>             Write to a file instead of stdout
   --theme auto|light|dark  Colors (default auto: follows the reader's system)
+  --part <label>           Draw only this part
+  --score                  The full score instead of the grid
+  --width <px>             With --score: the width to engrave at, 320 to
+                           40000 (default 900)
+
+The grid only:
   --numerals nashville|roman
                            Show chords as degrees of the key
   --no-bar-numbers         Hide bar numbers
   --rehearsal-letters      Letter each section A, B, C…
   --no-wrap                Keep each row on one line
-  --part <label>           Draw only this part
   --diagnostics            List the chart's problems below it
   --font-url <url>         Link the font instead of embedding it
 `,

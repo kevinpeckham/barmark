@@ -173,8 +173,8 @@ jobs:
           npm install --ignore-scripts "${NAME}@${VERSION}"
           cp "$GITHUB_WORKSPACE/${SMOKE}" smoke.mjs
           node smoke.mjs "${NAME}" "$GITHUB_WORKSPACE/examples/peaceful-dreams.chart.md"
-  # @barmark/cli only: the standalone binaries (Bun's compiler, the font and
-  # versions embedded), smoke-tested on Linux x64. Built read-only from the
+  # @barmark/cli only: the standalone binaries (Bun's compiler, the font,
+  # Verovio and the versions embedded), smoke-tested on Linux x64. Built read-only from the
   # tagged commit after the npm publish, so a release never carries
   # binaries for a version npm refused.
   binaries:
@@ -203,6 +203,9 @@ jobs:
             bun scripts/compile.ts "$target" "$out"
           done
           cp ../render/fonts/OFL.txt "$RUNNER_TEMP/bin/Edwin-OFL.txt"
+          # The binaries bundle Verovio (LGPL-3.0-only): its licence and the GPL it builds on.
+          cp licenses/Verovio-LGPL-3.0.txt "$RUNNER_TEMP/bin/Verovio-LGPL-3.0.txt"
+          cp licenses/Verovio-GPL-3.0.txt "$RUNNER_TEMP/bin/Verovio-GPL-3.0.txt"
       - name: Run the Linux binary on Peaceful Dreams
         env:
           VERSION: ${{ needs.verify.outputs.version }}
@@ -210,6 +213,7 @@ jobs:
           bin="$RUNNER_TEMP/bin/barmark-linux-x64"
           "$bin" --version | grep -q "^@barmark/cli ${VERSION} "
           "$bin" check examples/peaceful-dreams.chart.md
+          "$bin" render --score examples/peaceful-dreams.chart.md | grep -q 'role="img"'
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: binaries
@@ -229,7 +233,7 @@ jobs:
         with:
           name: binaries
           path: bin
-      - name: Attach the binaries and the font licence
+      - name: Attach the binaries and the font's and Verovio's licences
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh release upload "${GITHUB_REF_NAME}" bin/* --clobber --repo "${{ github.repository }}"

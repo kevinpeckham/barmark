@@ -19,8 +19,9 @@ for fixes).
 
 Points that are easy to miss:
 
-- After a `barmark`, `render`, `musicxml`, `sync` or `midi` release,
-  RELEASING.md steps 13–14 follow (the CLI bundles `sync` through `midi`):
+- After a `barmark`, `render`, `musicxml`, `score`, `sync` or `midi`
+  release, RELEASING.md steps 13–14 follow (the CLI bundles `sync`
+  through `midi`, and `score` with Verovio):
   a CLI patch on the new versions, then a PR in `kevinpeckham/songs`
   raising its pinned CLI version. After a `sync` minor, release a `midi`
   patch ("Requires `@barmark/sync` X.Y.0") first, then the CLI, as a

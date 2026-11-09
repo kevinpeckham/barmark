@@ -35,3 +35,22 @@ export function staleRanges(
 		return problem ? [problem] : [];
 	});
 }
+
+/**
+ * A problem line when the CLI's exact pin of `dep` (Verovio, which it imports
+ * itself) is not what `lib`'s range at its tag admits: npm users would get two
+ * copies, and the binaries one the library never declared. Null when they agree.
+ */
+export function pinProblem(
+	lib: { name: string; tag: string },
+	dep: string,
+	range: string | undefined,
+	pin: string | undefined,
+): string | null {
+	if (range === undefined)
+		return `${lib.name} at ${lib.tag} does not depend on ${dep}, which @barmark/cli pins at ${pin}`;
+	if (pin === undefined)
+		return `@barmark/cli does not pin ${dep}, which ${lib.name} at ${lib.tag} depends on (${range})`;
+	if (Bun.semver.satisfies(pin, range)) return null;
+	return `@barmark/cli pins ${dep} ${pin}, which ${lib.name} at ${lib.tag} (${dep} ${range}) does not admit: pin a version both agree on`;
+}

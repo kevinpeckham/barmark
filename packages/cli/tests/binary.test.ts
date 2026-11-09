@@ -1,5 +1,12 @@
 import { beforeAll, describe, expect, test } from "bun:test";
-import { copyFileSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import {
+	copyFileSync,
+	mkdtempSync,
+	readdirSync,
+	readFileSync,
+	statSync,
+	writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { exportMidi } from "@barmark/midi";
@@ -36,12 +43,15 @@ beforeAll(() => {
 
 describe("the compiled binary, with no node_modules beside it", () => {
 	test("--version names the workspace versions", async () => {
-		const own = (await Bun.file(join(PACKAGE, "package.json")).json()) as { version: string };
+		const own = (await Bun.file(join(PACKAGE, "package.json")).json()) as {
+			version: string;
+			dependencies: Record<string, string>;
+		};
 		const lib = async (p: string) =>
 			((await Bun.file(join(PACKAGE, "..", p, "package.json")).json()) as { version: string })
 				.version;
 		expect(barmark("--version").out).toBe(
-			`@barmark/cli ${own.version} (barmark ${await lib("barmark")}, @barmark/render ${await lib("render")}, @barmark/musicxml ${await lib("musicxml")}, @barmark/midi ${await lib("midi")})\n`,
+			`@barmark/cli ${own.version} (barmark ${await lib("barmark")}, @barmark/render ${await lib("render")}, @barmark/musicxml ${await lib("musicxml")}, @barmark/score ${await lib("score")}, @barmark/midi ${await lib("midi")}, verovio ${own.dependencies.verovio})\n`,
 		);
 	});
 	test("check reads a chart", () => {
@@ -53,6 +63,19 @@ describe("the compiled binary, with no node_modules beside it", () => {
 	});
 	test("render embeds the font", () => {
 		expect(barmark("render", "peaceful-dreams.chart.md").out).toContain("data:font/otf;base64,");
+	});
+	test("render --score engraves the score with the Verovio inside it", () => {
+		const { code, out, err } = barmark(
+			"render",
+			"--score",
+			"peaceful-dreams.chart.md",
+			"--out",
+			"pd.html",
+		);
+		expect({ code, out, err }).toEqual({ code: 0, out: "", err: "" });
+		const page = readFileSync(join(dir, "pd.html"), "utf8");
+		expect(page).toContain('role="img"');
+		expect(page).toContain("<svg");
 	});
 	test("import unpacks a .mxl (deflate-raw)", () => {
 		const run = barmark("import", "song.mxl");
@@ -68,5 +91,20 @@ describe("the compiled binary, with no node_modules beside it", () => {
 		const read = barmark("import", "lead-sheet.mid");
 		expect(read.code).toBe(0);
 		expect(read.out).toBe(readFileSync(join(MIDI, "lead-sheet.chart.md"), "utf8"));
+	});
+});
+
+describe("the binary's start bundle", () => {
+	test("leaves Verovio out, as a file loaded on the first score", () => {
+		const out = mkdtempSync(join(tmpdir(), "barmark-bundle-"));
+		const build = Bun.spawnSync(
+			["bun", "build", "src/binary.ts", "--target=bun", "--minify", "--outdir", out],
+			{ cwd: PACKAGE },
+		);
+		expect(build.exitCode).toBe(0);
+		const files = readdirSync(out);
+		expect(files.some((f) => /^verovio-module.*\.mjs$/.test(f))).toBe(true);
+		// Without Verovio (about 7.4 MB) the start bundle is the libraries alone.
+		expect(statSync(join(out, "binary.js")).size).toBeLessThan(2_000_000);
 	});
 });

@@ -35,6 +35,21 @@ describe("play order", () => {
 		expect(xmlOf("|: G | C :| x2\n| D |")).not.toContain("×");
 		expect(xmlOf("|: G | C :|\n| D |")).not.toContain("×");
 	});
+	test("the ×N stands over the repeat's last beat, not after its barline", () => {
+		// Written after the notes with no offset, Verovio and Dorico drew it over the next bar.
+		const xml = plays("|: G | C :| x5\n| D |");
+		const divisions = Number(/<divisions>(\d+)<\/divisions>/.exec(xml)?.[1]);
+		const [, second = "", third = ""] = measures(xml);
+		expect(second).toContain(
+			`<words>×5</words></direction-type><offset>${-divisions}</offset></direction>`,
+		);
+		expect(third).not.toContain("×");
+		const sixEight = measures(plays("time: 6/8\n|: G | C :| x3\n| D |"))[1] ?? "";
+		const d68 = Number(
+			/<divisions>(\d+)<\/divisions>/.exec(xmlOf("time: 6/8\n|: G | C :| x3\n| D |"))?.[1],
+		);
+		expect(sixEight).toContain(`<offset>${(-3 * d68) / 2}</offset>`);
+	});
 	test("endings", () => {
 		const xml = plays("|: G | C |\n|1 D :|\n|2 G |");
 		const ms = measures(xml);
