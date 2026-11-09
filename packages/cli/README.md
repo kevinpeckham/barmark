@@ -3,8 +3,9 @@
 The `barmark` command: check, format, part, render, transpose, export and import
 [Barmark](https://www.barmark.dev) chord charts (`.chart.md` files) in a
 terminal or in CI. It runs the same `barmark` parser and `@barmark/render`
-renderer as barmark.dev, `@barmark/musicxml` for MusicXML and
-`@barmark/midi` for MIDI files, at exact versions, so a chart means the same thing everywhere.
+renderer as barmark.dev, `@barmark/musicxml` for MusicXML,
+`@barmark/score` (with Verovio) for full scores and `@barmark/midi` for
+MIDI files, at exact versions, so a chart means the same thing everywhere.
 
 ## Install
 
@@ -43,6 +44,7 @@ barmark format --write songs             # rewrite the files that change
 barmark format --check songs             # list them and fail, for CI
 barmark part Bass song.chart.md          # one part of a chart of several
 barmark render song.chart.md --out song.html   # a standalone page, font included
+barmark render --score song.chart.md --out song.html   # the full engraved score
 barmark transpose song.chart.md --to E   # or --semitones -2
 ```
 
@@ -51,8 +53,25 @@ takes the renderer's options as flags: `--theme auto|light|dark`,
 `--numerals nashville|roman`, `--no-bar-numbers`, `--rehearsal-letters`,
 `--no-wrap`, `--diagnostics`, `--part <label>` to draw one part, and `--font-url <url>` to link the font
 instead of embedding it. `barmark <command> --help` lists each command's
-flags; `barmark --version` prints the versions of the CLI and its
-libraries.
+flags; `barmark --version` prints the versions of the CLI, its
+libraries and Verovio.
+
+`render --score` writes a standalone page of the full engraved score
+instead of the bar grid: the drawing `<barmark-score>` shows, the chart
+exported to MusicXML and engraved by [Verovio](https://www.verovio.org),
+which the CLI carries (nothing else to install). The output is HTML: open
+it in a browser, and print it to PDF from there. `--theme` colours it as
+it does the grid, `--part <label>` engraves that part alone, and
+`--width <px>` sets the width it is laid out for (320 to 40000; default
+900, a comfortable reading width: the page scales the score to fit the
+window or the paper, so the width decides how many bars go on a line,
+not how big the page is). The grid's own flags (`--numerals`,
+`--no-bar-numbers`, `--rehearsal-letters`, `--no-wrap`, `--diagnostics`,
+`--font-url`) are usage errors with `--score`, and `--width` is one
+without it. A chart that won't engrave (one with errors, or no bars)
+writes nothing: the reason goes to stderr as `song.chart.md: Line 5:
+message`, and the exit code is 1. The score's text is set in Verovio's own
+fonts, so Edwin is not embedded.
 
 `export --musicxml` writes MusicXML 4.0 that notation programs open and
 play in the chart's order; `--part <label>` exports one part. A chart
@@ -108,3 +127,13 @@ version turns that into a pull request you review.
 MIT. `render` embeds Edwin, which `@barmark/render` ships under the SIL
 Open Font License (`fonts/OFL.txt` there; the binaries' release carries it
 as `Edwin-OFL.txt`).
+
+`render --score` uses [Verovio](https://github.com/rism-digital/verovio),
+which is LGPL-3.0-only. From npm, Verovio is an ordinary dependency
+(through `@barmark/score`), installed and loaded unchanged. The standalone
+binaries bundle it unmodified, at the version this package pins; the
+release carries
+its licence as `Verovio-LGPL-3.0.txt` and the GPL it builds on as
+`Verovio-GPL-3.0.txt`. The binaries are built from this repository's
+source with `bun scripts/compile.ts`, so they can be rebuilt with another
+Verovio. barmark's own code stays MIT.

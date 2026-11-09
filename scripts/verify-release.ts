@@ -9,7 +9,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { PACKAGES, type PackageKey, packageArg, run } from "./lib.js";
-import { staleRanges } from "./packed-range.js";
+import { pinProblem, staleRanges } from "./packed-range.js";
 
 const json = process.argv.includes("--json");
 const allowDirty = process.argv.includes("--allow-dirty");
@@ -90,6 +90,7 @@ const RELEASED_CODE = {
 	barmark: ["src"],
 	render: ["src", "fonts"],
 	musicxml: ["src"],
+	score: ["src"],
 	sync: ["src"],
 	midi: ["src"],
 } as const;
@@ -108,6 +109,25 @@ if (pkg.key === "cli")
 				);
 			problems.push(...rangeProblems(key as PackageKey, depTag));
 		}
+	}
+
+// Outside packages the CLI imports itself and pins exactly, each with the library that declares it:
+// the pin must be what that library's range at its tag admits, or npm users get a second copy.
+const PINNED = { verovio: "score" } as const satisfies Record<string, PackageKey>;
+if (pkg.key === "cli")
+	for (const [dep, key] of Object.entries(PINNED)) {
+		const lib = PACKAGES[key];
+		const libTag = `${lib.tagPrefix}${localManifest(key).version}`;
+		if (run(["git", "rev-parse", "--quiet", "--verify", `refs/tags/${libTag}`]).code !== 0)
+			continue; // reported above
+		const range = manifestAt(libTag, key).dependencies?.[dep];
+		const problem = pinProblem(
+			{ name: lib.name, tag: libTag },
+			dep,
+			range,
+			localManifest("cli").dependencies?.[dep],
+		);
+		if (problem) problems.push(problem);
 	}
 
 const branch = run(["git", "branch", "--show-current"]).out;

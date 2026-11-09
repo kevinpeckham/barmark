@@ -364,6 +364,30 @@ showed the rule needed refining.
 
 ## Performance and robustness
 
+### A bundled 7 MB module is parsed at every start of a compiled binary (2026-11-08, cli)
+
+- **The symptom.** Adding `render --score` put Verovio (`verovio/wasm`, a
+  7.4 MB single-file module with the wasm inlined) into the CLI's binary,
+  and every command got slower, not just `--score`. linux-x64, this VM
+  (timings noisy, three runs each): `--version` 0.12 s / 67 MB RSS before
+  Verovio, 0.17–0.29 s / 92–95 MB with it; `check` on Morning Song
+  0.17 s / 72 MB before, 0.18–0.21 s / 100 MB with it.
+- **The cause.** Under Node the CLI imports Verovio with a dynamic
+  `import()` on the first score, so nothing else loads it. `bun build
+  --compile` follows that literal `import()` into the one start bundle, and
+  the binary parses all of it at launch (`bun build src/binary.ts` emitted a
+  14.5 MB `binary.js`).
+- **The fix.** The binary embeds the module as a file (`import … from
+  "verovio/wasm" with { type: "file" }`, as it embeds Edwin) and imports it
+  by that path only when a score is drawn; the command gets the module
+  through `Io.verovio` (`packages/cli/src/binary.ts`, `node-io.ts`,
+  `score.ts`). After: `--version` 0.12–0.15 s / 68 MB, `check` 0.15–0.18 s /
+  73 MB, back to before; `render --score` 0.8–1.1 s / 240 MB, as with the
+  module bundled (0.8 s); binary 102.5 MB (95.1 MB before Verovio,
+  109.2 MB bundled in). `packages/cli/tests/binary.test.ts` ("the binary's
+  start bundle") keeps the start bundle under 2 MB with Verovio emitted
+  beside it.
+
 ### Node refuses a spread Bun allows, so `bun test` couldn't see the limit (2026-11-08, @barmark/midi)
 
 - **The symptom.** The SMF writer appended each event with
@@ -804,6 +828,22 @@ when two rules each define "first", test a chart that tells them apart,
 and round-trip it through `format`.
 
 ## Tooling
+
+### Verovio's npm package carries no licence text (2026-11-08, cli)
+
+**Symptom:** bundling Verovio into the CLI's binaries for `render
+--score`, we went to attach its licence as the release attaches Edwin's
+(`Edwin-OFL.txt`, copied from `@barmark/render`'s `fonts/`), and there was
+nothing to copy: `verovio@6.4.1` publishes only `README.md`,
+`package.json` and `dist/`. **Cause:** its `files` is `["dist"]`; the
+licence (`COPYING.LESSER`, and the GPL it builds on, `COPYING`) lives only
+in the GitHub repository. **Fix:** `packages/cli/licenses/` holds both, as
+Verovio's tag `version-6.4.1` has them (they differ from Debian's copies
+only in whitespace); the release workflow's binaries job copies them
+beside the binaries as `Verovio-LGPL-3.0.txt` and `Verovio-GPL-3.0.txt`,
+and `packages/cli/tests/licences.test.ts` keeps both the files and the
+copy step. An npm install needs nothing from us: Verovio arrives as its
+own package.
 
 ### Verovio beside Dorico, first run (2026-11-08, score)
 

@@ -150,12 +150,15 @@ Fallow, CI, Swamp), the grammar, `examples/`, the scripts and FINDINGS.md.
     (`scripts/dorico-compare.ts`, tested in `tests/dorico-compare.test.ts`),
     VM only, never in CI
 - `packages/cli/`: `@barmark/cli`, the `barmark` command (`check`,
-  `format`, `part`, `render`, `transpose`, `export`, `import`; MusicXML
+  `format`, `part`, `render` (`--score`: the full score, Verovio
+  in-process, `src/score.ts`), `transpose`, `export`, `import`; MusicXML
   and MIDI), a thin layer over the libraries, pinned to them exactly
+  (`verovio` too); `licenses/` holds Verovio's LGPL and GPL, which the
+  release attaches beside the binaries
   - each command is `(args, io) => Promise<number>` with injected I/O
     (`src/io.ts`); `cli.ts` is the Node bin, `binary.ts` the standalone
-    binary (`bun scripts/compile.ts <target> <out>`, font and versions
-    embedded)
+    binary (`bun scripts/compile.ts <target> <out>`, font, Verovio and
+    versions embedded)
   - `tests/`: commands in-process, plus the built bin under Node and a
     compiled binary
 - `scripts/score-dorico.ts [outdir]`: `@barmark/score`'s Verovio engraving
@@ -208,14 +211,13 @@ cd site && bun run dev|build|check|test|test:browser   # barmark.dev
 - Releases follow `RELEASING.md` (the `/release` skill walks it). Each
   package is tagged on its own: `barmark-vX.Y.Z`, `render-vX.Y.Z`,
   `musicxml-vX.Y.Z`, `score-vX.Y.Z`, `sync-vX.Y.Z`, `midi-vX.Y.Z`, `cli-vX.Y.Z`. A library release is followed by a CLI release and a
-  bump in `kevinpeckham/songs` (RELEASING.md steps 13–14), a `sync` or
-  `midi` release included (the CLI bundles `sync` through `midi`). After
+  bump in `kevinpeckham/songs` (RELEASING.md steps 13–14), a `sync`,
+  `midi` or `score` release included (the CLI bundles `sync` through
+  `midi`, and `score` with Verovio). After
   a `sync` minor, a `midi` patch ("Requires `@barmark/sync` X.Y.0") comes
   first, then the CLI, as a `barmark` minor's caret dependants do.
   `score` depends on `barmark`, `@barmark/render` and `@barmark/musicxml`
   with carets, so a release of any of them may need a `score` patch
-  raising that dependency, as `midi` follows `sync`. The CLI does not
-  bundle `score`: a `score` release is followed by no CLI release and no
-  `songs` bump.
+  raising that dependency, as `midi` follows `sync`, and then the CLI.
 - `@barmark/render` never changes the music: anything musical (what `%`
   copies, bar numbers, what a replay plays) comes from the parser.

@@ -3,11 +3,11 @@ import { COMMANDS, main } from "../src/main.js";
 import { fakeIo } from "./io.js";
 
 describe("main", () => {
-	test("--version lists @barmark/midi", async () => {
+	test("--version lists @barmark/score, @barmark/midi and Verovio", async () => {
 		const io = fakeIo();
 		expect(await main(["--version"], io)).toBe(0);
 		expect(io.out()).toBe(
-			"@barmark/cli 0.1.0 (barmark 9.9.9, @barmark/render 8.8.8, @barmark/musicxml 7.7.7, @barmark/midi 6.6.6)\n",
+			"@barmark/cli 0.1.0 (barmark 9.9.9, @barmark/render 8.8.8, @barmark/musicxml 7.7.7, @barmark/score 5.5.5, @barmark/midi 6.6.6, verovio 4.4.4)\n",
 		);
 	});
 	test("no command prints help to stderr and exits 2", async () => {
@@ -49,7 +49,7 @@ describe("main", () => {
 		const flags: Record<string, string[]> = {
 			check: ["--strict", "--format"],
 			format: ["--write", "--check"],
-			render: ["--out", "--theme", "--numerals", "--font-url"],
+			render: ["--out", "--theme", "--numerals", "--font-url", "--score", "--width"],
 			transpose: ["--to", "--semitones", "--out"],
 		};
 		for (const [command, names] of Object.entries(flags)) {
