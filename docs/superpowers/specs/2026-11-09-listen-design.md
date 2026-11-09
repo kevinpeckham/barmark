@@ -1,6 +1,7 @@
 # @barmark/listen: a recording to a chart, and a chart to a recording: design
 
-**Status:** the approach was approved by Kevin on 2026-11-09, in reply to Stem
+**Status:** approved by Kevin on 2026-11-09 (the approach, then this design's
+five questions, §14). The approach was approved in reply to Stem
 Shovel's brief (`stem-shovel/docs/barmark-brief-chart-from-recording-2026-11-09.md`).
 His decisions are posted on kevinpeckham/stem-shovel#17 and are marked
 **Kevin's decision (2026-11-09)** below. My own choices are marked
@@ -985,7 +986,13 @@ release.
 - **Extended harmony:** if extensions thin the harmonic histogram,
   `beatChords` could compare roots and qualities only.
 
-## 14. Questions only Kevin can answer (with my recommendation)
+## 14. Kevin's answers
+
+**Decided by Kevin (2026-11-09): yes to all five recommendations below.**
+Where the text says "Recommendation", read "Decided"; the design calls
+they touch (`not-same-piece` refusing maps, `onUnplaced` refusing by
+default, the §7 pickup reading, the sync `[k/8]` patch before compound-meter
+pickups, `rehashTiming`'s meter check) are now decisions.
 
 1. **Should "not the same piece" refuse a timing map?** Today the app keeps
    an aligned map when the fit passes (the ratio ≥ 1.5 among its rules).
