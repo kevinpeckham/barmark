@@ -64,7 +64,7 @@ describe("builder diagnostics say the written number", () => {
 		expect(r.timing?.bars.map((b) => b.bar)).toEqual([1, 2, 3, 4]);
 	});
 
-	test("a gap in the pickup itself is at bar 0, the next bar 1", () => {
+	test("a gap in the pickup itself is at bar 0", () => {
 		const r = chartFromDetections({
 			grid: { bars: [1, 3, 5] },
 			meter: "4/4",
