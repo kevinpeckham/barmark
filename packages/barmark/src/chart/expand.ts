@@ -346,9 +346,17 @@ export function expand(
 	let openDepth = 0;
 	const nestedOpen = new Set<number>();
 	const checked = new Set<Played>();
-	const stop = (line: number) => {
+	/** Verses sung by bars playing again: work, counted for the message. */
+	let againSung = 0;
+	/** Stop playing, saying why: the bar cap, the verses sung again, or repeats that play too much. */
+	const stop = (line: number, why: "bars" | "verses" | "work" = "work") => {
 		capped = true;
-		error(line, `expansion stopped at ${maxBars} bars`, "x");
+		const what = {
+			bars: `expansion stopped at ${maxBars} bars`,
+			verses: `expansion stopped after ${count} bars: the bars played again sing too many verses (${againSung.toLocaleString("en-US")})`,
+			work: `expansion stopped after ${count} bars: its repeats play too many times`,
+		};
+		error(line, what[why], "x");
 	};
 	let sectionName: string | null = null;
 	/** The pass of the repeat being played, and the replay heading being played, for the words (grammar 7.7). */
@@ -436,13 +444,18 @@ export function expand(
 			before.length = null;
 			return void out.push({ kind: "fermata", line });
 		}
-		if (count >= maxBars) return stop(line);
+		if (count >= maxBars) return stop(line, "bars");
 		count++;
 		const bar = barOf(p, line);
 		checkPushes(bar);
 		const played = sung(bar, p, line);
-		work += replayedVerses(p, played);
-		if (work > maxWork) return stop(line);
+		const again = replayedVerses(p, played);
+		work += again;
+		if (work > maxWork) {
+			count--;
+			return stop(line, "verses");
+		}
+		againSung += again;
 		out.push({ kind: "bar", bar: played });
 	};
 	/** Play `body` `repeat` times into `out`; an open repeat plays one pass inside an open event. */

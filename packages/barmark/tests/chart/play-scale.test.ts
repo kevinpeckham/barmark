@@ -93,6 +93,12 @@ describe("the verses a bar sings count toward the expansion's budget", () => {
 		const { verses, stopped } = sungVerses(replayed(1560, 5000));
 		expect(stopped).toBe(true);
 		expect(verses).toBeLessThanOrEqual(100_000);
+		const why = parseChart(replayed(1560, 5000)).diagnostics.filter((d) =>
+			d.message.startsWith("expansion stopped"),
+		);
+		expect(why.map((d) => d.message)).toEqual([
+			"expansion stopped after 64 bars: the bars played again sing too many verses (98,280)",
+		]);
 	});
 	test("a hymn of 100 verses, replayed, sings them all", () => {
 		const hymn = [

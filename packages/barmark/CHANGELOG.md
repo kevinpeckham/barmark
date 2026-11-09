@@ -51,8 +51,12 @@ Releases follow the process in [RELEASING.md](RELEASING.md).
   one bar replayed 5,000 times (55 KB) made 7.8 million verse references
   (1.3 s, 61 MB). Each verse a written bar sings when it plays again now
   counts as work (its first play's are as many as are written), and a
-  chart past the budget stops with the usual `expansion stopped` error:
-  now 0.1 s and 2 MB. Real charts use a tiny share of it: the examples
+  chart past the budget stops with an error that says so ("expansion
+  stopped after 64 bars: the bars played again sing too many verses
+  (98,280)"): now 0.1 s and 2 MB. Repeats that play too much with no
+  bars to count (fermatas) now say "expansion stopped after N bars: its
+  repeats play too many times", not the bar cap's "expansion stopped at
+  10000 bars", which is kept for the bar cap itself. Real charts use a tiny share of it: the examples
   and fixtures at most 153 of 100,000.
 
 ## [0.21.0] - 2026-11-08
