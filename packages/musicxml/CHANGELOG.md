@@ -6,6 +6,8 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-11-09
+
 ### Added
 
 - **`maxLength`: a budget for the MusicXML written.** `exportMusicXml(text,
@@ -17,6 +19,8 @@ package uses [semantic versioning](https://semver.org/).
 
 ### Changed
 
+- **Requires `barmark` 0.22.0** (a pickup is bar 0, `ChartParse.pickup`),
+  whose minor release a caret range would not reach.
 - **Measure numbers follow barmark's numbers; a pickup is measure 0, text
   0.** barmark 0.22 numbers a chart's pickup bar 0 (grammar 2.4: the
   first written bar, in a one-bar meter shorter, by value, than the meter
@@ -624,7 +628,8 @@ and each grammar example's sounding notes and chord symbols.
 - **Errors:** a chart with errors, or with no bars, returns its
   diagnostics and no XML; characters XML can't hold are left out.
 
-[Unreleased]: https://github.com/kevinpeckham/barmark/compare/musicxml-v0.7.2...HEAD
+[Unreleased]: https://github.com/kevinpeckham/barmark/compare/musicxml-v0.8.0...HEAD
+[0.8.0]: https://github.com/kevinpeckham/barmark/compare/musicxml-v0.7.2...musicxml-v0.8.0
 [0.7.2]: https://github.com/kevinpeckham/barmark/compare/musicxml-v0.7.1...musicxml-v0.7.2
 [0.7.1]: https://github.com/kevinpeckham/barmark/compare/musicxml-v0.7.0...musicxml-v0.7.1
 [0.7.0]: https://github.com/kevinpeckham/barmark/compare/musicxml-v0.6.4...musicxml-v0.7.0
