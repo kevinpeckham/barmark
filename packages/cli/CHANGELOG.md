@@ -6,6 +6,8 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-11-09
+
 ### Added
 
 - **`barmark render --score <chart>`** writes a standalone HTML page of
@@ -23,6 +25,14 @@ package uses [semantic versioning](https://semver.org/).
 - **`--version`** lists `@barmark/score` and Verovio.
 - The binaries' release carries Verovio's licence (`Verovio-LGPL-3.0.txt`,
   `Verovio-GPL-3.0.txt`) beside `Edwin-OFL.txt`.
+
+### Changed
+
+- **Uses** @barmark/musicxml 0.7.2 and @barmark/score 0.1.1 (with Verovio
+  6.4.1). `barmark export --musicxml` writes a pickup as an implicit
+  measure 0, a chord's degrees hidden when its kind text spells them, no
+  slash style on a keyboard's staves, the description in the top part
+  only, `×N` over the bar it ends, and an acoustic guitar as one.
 
 ## [0.8.0] - 2026-11-08
 
@@ -287,7 +297,8 @@ The first release of the `barmark` command. Uses `barmark` 0.8.0 and
 - **The `barmark` command:** `check`, `format`, `render` and `transpose`
   for `.chart.md` files, on npm and as standalone binaries.
 
-[Unreleased]: https://github.com/kevinpeckham/barmark/compare/cli-v0.8.0...HEAD
+[Unreleased]: https://github.com/kevinpeckham/barmark/compare/cli-v0.9.0...HEAD
+[0.9.0]: https://github.com/kevinpeckham/barmark/compare/cli-v0.8.0...cli-v0.9.0
 [0.8.0]: https://github.com/kevinpeckham/barmark/compare/cli-v0.7.0...cli-v0.8.0
 [0.7.0]: https://github.com/kevinpeckham/barmark/compare/cli-v0.6.6...cli-v0.7.0
 [0.6.6]: https://github.com/kevinpeckham/barmark/compare/cli-v0.6.5...cli-v0.6.6
