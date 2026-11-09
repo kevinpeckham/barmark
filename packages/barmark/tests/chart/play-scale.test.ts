@@ -53,18 +53,19 @@ describe("a played bar shares its written bar's data", () => {
 });
 
 describe("parse time grows with written size plus plays, not their product", () => {
-	// Ten times the slots and ten times the plays: linear is ten times as long, the product a hundred.
-	for (const [shape, chart] of [
-		["slots with the pedal", pedalled],
-		["a lyric row's syllables", worded],
-		["a melody's syllables", melodic],
+	// Ten times the written and ten times the plays: linear is ten times as long, the product a hundred.
+	// Each small side takes at least 5 ms, so a pause in one run can't swing the ratio.
+	for (const [shape, chart, written, plays] of [
+		["slots with the pedal", pedalled, 300, 300],
+		["a lyric row's syllables", worded, 6000, 100],
+		["a melody's syllables", melodic, 300, 300],
 	] as const)
 		test(
 			shape,
 			() => {
-				const small = timed(chart(300, 300));
-				const large = timed(chart(3000, 3000));
-				expect(parseChart(chart(3000, 3000)).bars).toHaveLength(3000);
+				const small = timed(chart(written, plays));
+				const large = timed(chart(written * 10, plays * 10));
+				expect(parseChart(chart(written * 10, plays * 10)).bars).toHaveLength(plays * 10);
 				expect(large / small).toBeLessThan(30);
 			},
 			TIMEOUT,
