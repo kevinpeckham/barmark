@@ -2,17 +2,36 @@ import { describe, expect, test } from "bun:test";
 import { parseChart } from "../../src/index.js";
 import { barText } from "./fixtures.js";
 
-const fast = (text: string) => {
-	const start = performance.now();
+/** The best of three parses of `text`, after one to warm up. */
+function timed(text: string): number {
 	parseChart(text);
-	return performance.now() - start;
-};
+	let ms = Number.POSITIVE_INFINITY;
+	for (let run = 0; run < 3; run++) {
+		const start = performance.now();
+		parseChart(text);
+		ms = Math.min(ms, performance.now() - start);
+	}
+	return ms;
+}
 
 describe("long whitespace runs parse in linear time", () => {
-	const run = " ".repeat(100_000);
-	test("after the last pipe", () => expect(fast(`| D | A${run}B`)).toBeLessThan(100));
-	test("in a heading", () => expect(fast(`## V${run}B\n| D |`)).toBeLessThan(100));
-	test("inside a cell", () => expect(fast(`| D${run}A |`)).toBeLessThan(100));
+	/** `lines` lines, each with a run of `spaces` spaces where `make` puts it. */
+	const chart = (make: (run: string) => string, lines: number, spaces: number) =>
+		Array(lines)
+			.fill(make(" ".repeat(spaces)))
+			.join("\n");
+	// Four times the run: linear is four times as long, a scan that backtracks over the run sixteen.
+	// Each small side takes at least 5 ms; a heading is cheap to read, so it takes more lines.
+	for (const [where, make, lines] of [
+		["after the last pipe", (run: string) => `| D | A${run}B`, 20],
+		["in a heading", (run: string) => `## V${run}B\n| D |`, 100],
+		["inside a cell", (run: string) => `| D${run}A |`, 20],
+	] as const)
+		test(where, () => {
+			const small = timed(chart(make, lines, 2000));
+			const large = timed(chart(make, lines, 8000));
+			expect(large / small).toBeLessThan(8);
+		});
 	test("repeat tails still read", () => {
 		expect(parseChart("| D | x 2 ").bars).toHaveLength(2);
 		expect(parseChart("## V   x3\n| D |").bars).toHaveLength(3);
@@ -59,10 +78,8 @@ describe("% repeats the previous bar exactly", () => {
 describe("many quoted words in one cell parse in linear time", () => {
 	const cell = (n: number) => `| C ${Array.from({ length: n }, (_, i) => `"w${i}"`).join(" ")} |`;
 	// Best of three after a warm-up; the small size is big enough that timer noise doesn't set the ratio.
-	const best = (text: string) => Math.min(fast(text), fast(text), fast(text));
 	test("ten times the words, nowhere near a hundred times as long", () => {
-		best(cell(4000));
-		const ratio = best(cell(40_000)) / best(cell(4000));
+		const ratio = timed(cell(40_000)) / timed(cell(4000));
 		expect(ratio).toBeLessThan(25);
 	}, 30_000);
 	test("the words still read, each before its slot", () => {

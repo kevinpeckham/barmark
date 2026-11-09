@@ -26,8 +26,86 @@ Releases follow the process in [RELEASING.md](RELEASING.md).
   a pickup are numbered as before. `index`, the play position, does not
   change, so times keyed by it stay valid.
 
+- **A line's passes that sing nothing are one warning.** "pass 3 of this
+  repeat sings nothing: its bars have verses 1 and 2" stays as it was for
+  one pass; several are now listed together, a run of three or more as a
+  range ("passes 1 and 3–9 of this repeat sing nothing: …"), and a list
+  past five items shows four and counts the rest ("verses 1, 2, 3, 4 and
+  2496 more"). 2,500 verses over a bar played 10,000 times gave 7,500
+  warnings of about 14 KB each (105 million characters, which the site
+  rendered as one list); now one of 92 characters.
+
 - **The npm homepage is https://www.barmark.dev**, not the package's
   folder on GitHub.
+
+### Fixed
+
+- **A bar played many times no longer costs its size on every play.** A
+  shared chart of one bar with thousands of lyric syllables, notes or
+  slots, repeated thousands of times, made the parse copy every syllable
+  for every play (lyrics) and walk every slot of every play twice (the
+  pedal warnings, through a matrix of every slot of every played bar):
+  seconds to minutes and over a gigabyte from a few kilobytes. A played
+  bar now shares its written bar's data: two plays of one bar return the
+  same `slots`, `words` and `lyrics[].syllables` arrays (and the same
+  `PlayedLyrics` object), which a caller must not mutate; each written
+  bar's syllables, pushes and pedal effect are read once per meter it
+  plays in. The parse costs the written chart plus the played bars, never
+  their product. The parse's data is otherwise unchanged; `pedalStates`
+  still builds its matrix for callers that want it, but `parseChart`
+  doesn't call it.
+- **A chart of many parts parses in time near linear in its size, not
+  cubic.** Each part's projection scanned the whole system for its own
+  line at every line it projected, and rebuilt the systems by copying;
+  choosing a system's reference line compared every line with every
+  other; reading a labelled line re-listed the declared parts; finding
+  who sings read every bar line once per part, and gathered the lyric
+  rows by copying their list for each row; folding a bar looked for each
+  part's streams among all of them. 600 one-bar parts in one system
+  (19 KB) took about 9 s; at 50 KB, 1,500 such parts took minutes (now
+  0.9 s), 1,383 parts under 1,383 verses 18 s (now 1.3 s). And each part
+  read every line of the chart although it may play only its share of
+  the bars: 3,227 parts resting through 2,000 systems one part writes
+  took 19 s, 2,113 parts under 6,339 tutti lines 27 s (now 1.1 s each).
+  A part of a chart of several now reads at most ten times its share of
+  the bars in lines; one that stops there says so ("expansion stopped
+  after 0 bars: each of 1000 parts reads at most 100 lines"). Real charts
+  read every line: four parts may each read 25,000.
+  A third review, and an audit of every loop over parts, voices, lines,
+  systems, rows and played bars, found more of the same: each part's
+  voice was looked for among every voice and every stream (1,979 parts
+  each singing, 50 KB: 59 s, now 0.3 s); a part's own line was looked up
+  again at every line of its system, and every part walked every line of
+  the chart (800 parts of four lines: 3.3 s, now 0.7 s; 777 parts of two
+  lines in two systems: 1.9 s, now 0.6 s), and the parts' score order
+  read every system once per part; a lyric row under a replay heading
+  was copied onto every part's line of the replayed system (1,354 parts
+  and 1,354 replays, each with its own row: 3.8 s, now 0.3 s), and so was
+  each row's list of covered lines. Printing a 10,000-bar line counted
+  its bars again for every bar (2.2 s, now 0.5 s). A test now parses each
+  of these shapes at eight times the parts and fails if it takes twenty
+  times as long.
+- **The verses a bar sings count toward the expansion's budget.** Outside
+  a repeat a bar sings every verse written over it, so 1,560 verses under
+  one bar replayed 5,000 times (55 KB) made 7.8 million verse references
+  (1.3 s, 61 MB). Each verse a written bar sings when it plays again now
+  counts as work (its first play's are as many as are written), and a
+  chart past the budget stops with an error that says so ("expansion
+  stopped after 64 bars: the bars played again sing too many verses
+  (98,280)"; both numbers count only the bars output, so a bar a
+  replay's `->` cuts is not counted, and a bar the budget stops is
+  neither sung nor checked): now 0.1 s and 2 MB. Once play stops at any
+  limit, the stop is the only report of what it cut short: no "the parts
+  fall out of step" for a part that stopped early, and no "verse N is
+  never sung" for verses the stop left unsung: a row play never reached,
+  or reached in a repeat with passes enough for its verse. A verse its
+  repeat can never reach is still reported (`lyrics 3:` under `x2`), stop
+  or not. A part whose play ended at `Fine`, after the jump, reports no
+  stop for the lines past its share, which it would never have played. Repeats that play too much with no
+  bars to count (fermatas) now say "expansion stopped after N bars: its
+  repeats play too many times", not the bar cap's "expansion stopped at
+  10000 bars", which is kept for the bar cap itself. Real charts use a tiny share of it: the examples
+  and fixtures at most 153 of 100,000.
 
 ## [0.21.0] - 2026-11-08
 

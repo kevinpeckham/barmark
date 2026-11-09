@@ -2002,3 +2002,65 @@ bounded where it is made, by a budget the writer charges as it writes; an estima
 is only an early refusal;
 and work for a page in a worker is cancellable and bounded, since `postMessage` can't take a
 job back, with a download's budget kept apart from the work's.
+
+**Again (2026-11-09, barmark): source × plays.** Two Low findings on barmark.dev's Try It, which
+parses a shared `?q=` link on load. Its guards (50,000 characters, 10,000 played bars) bound each
+factor, not their product. (1) Lyrics: `verses.ts` built fresh `{ at, syllable, note }` objects on
+every play, so one chord under 3,000 syllables `x10000` made 30 million objects from 6 KB (7 s,
+1.7 GB). (2) Pedal: `pedalWarnings`, run on every parse, walked every slot of every played bar
+through `pedalStates`' matrix; one bar of 12,000 slots `x10000` took 36 s. The audit found the
+same shape in `checkPushes` (`slotTimes` on every play), the notes' syllables and onsets, and in
+`@barmark/render` (`singsOnNotes` read every syllable of every played bar). **Fix:** `perWritten`
+(`shares.ts`) remembers what a written bar's slots give in a meter; `singing` reads each row's
+cell once per what it holds as it begins, and a pass touches only the verses it sings;
+`pedalWarnings` streams, each written bar's effect walked once from up and once from down;
+render's lookup is a `WeakMap` on the shared syllables. Now 54 ms (lyrics) and 0.6 s (pedal),
+heap flat. `packages/barmark/tests/chart/play-scale.test.ts` checks the sharing by identity and
+the time ratio (ten times the written and the plays, under thirty times as long);
+`render/tests/scale.test.ts` the layout. **Rule:** a played bar shares its written bar's data;
+per-play cost is O(1) beyond what differs by pass. Look for the class: anything in the expansion
+that maps over a bar's slots or syllables runs once per play.
+
+**Then, the review of the fix (2026-11-09):** three more products reachable from `?q=`. (1) Verse
+rows × plain replays: outside a repeat a bar sings every verse, so 1,560 rows under a section
+replayed 5,000 times made 7.8 million verse references (1.3 s, 61 MB); the verses a written bar
+sings when it plays again now count toward `expand`'s `work` budget (its first play's are bounded
+by the source), so it stops with the existing error (0.1 s, 2 MB; real charts use at most 153 of
+100,000). (2) Parts were cubic: each stream scanned its system for its own line at every line it
+projected (`ownLine`), and the systems, the reference line's vote, the declared labels and the
+singers' lines were each rebuilt or rescanned per part. 600 one-bar parts (19 KB) took 9 s; now
+0.1 s, and 1,500 parts 0.9 s (`parts-scale.test.ts`). That figure was one bar per part only: a
+second review found the same class one layer on. Lyric rows were gathered by copying their list
+per row (1,383 parts under 1,383 verses, 18 s), and every part read every line although it may
+play only its share of the 10,000 bars (3,227 parts resting through 2,000 systems, 19 s; 2,113
+parts under 6,339 tutti lines, 27 s). Now each part reads at most its share of the work in lines,
+and its projection stops building there (all three about 1 s at 50 KB). The same review found that a budget's
+message and side effects must follow the output: the verse stop named bars a `->` had cut, and the
+bar it stopped had already been checked and sung. A budget is checked before the work it guards,
+with a question that has no effect (`Sing.verses`), and its message counts what is output. (3) Diagnostics: each silent pass of a
+2,500-verse bar played 10,000 times warned separately, naming every verse: 7,500 warnings, 105
+million characters, all rendered by the site. Now one warning per line with its passes as ranges
+and long lists cut short. Also: a ratio test's small side must take milliseconds (the lyric
+row's took 0.7 ms, so one pause could fail it), and checking the old code fails it must finish
+(60,000 syllables × 6,000 plays ran past five minutes; 6,000 × 100 against ten times both fails
+at 96×). **Rule:** the output is attack surface too: a diagnostic repeated per play, or one that
+lists everything, multiplies like the data does.
+
+**And a third review (2026-11-09):** the same class, one layer on again. Every part singing
+(`a |{C4}:la|`, one line each) found each stream's voices by asking every voice for its stream,
+which scanned the streams: streams × voices × streams, 59 s at 50 KB. A part's own line was looked
+up again at every line of its system; each part walked every line of the chart (only its own and
+the shared ones can play in it); the score order rebuilt every system's by-part map once per
+part; a row under a replay heading was copied onto every line of the replayed system, rows × parts.
+Fixing the three named shapes one at a time would have left the rest, so this round listed every
+loop in `packages/barmark/src` that nests over parts, voices, lines, systems, rows or played bars,
+with its bound at 50 KB and 10,000 bars, and gave each one past O(source + played bars) an index
+built once (a `Map` by label, a `WeakMap` by array identity, a list shared per unit, a lookup
+memoized as played). The audit found eight more, among them printing (a 10,000-bar line counted
+its bars again per bar, 2.2 s) and the lyric rows' `covers` (one copy per row). One test,
+`many parts times anything` in `parts-scale.test.ts`, builds each worst shape at 200 and 1,600
+parts and fails past 20× (linear measures up to 9×; the old code 38× to 441×). **Rule:** after
+two reviews of one class, stop fixing instances: list the nested loops and their bounds, then index
+every one that multiplies two inputs. Suppressing what a stop explains must be just as exact: dropping
+every "never sung" after a stop hid a real one (verse 3 under `x2`); the rows a stop cut off are
+those never reached, or reached in a repeat with passes enough for their verse (`BarSource.passes`).

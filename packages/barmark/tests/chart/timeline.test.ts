@@ -83,4 +83,10 @@ describe("the expansion cap covers every part", () => {
 		expect(q.bars.length).toBeLessThanOrEqual(2500);
 		expect(q.diagnostics.map((d) => d.message)).toContain("expansion stopped at 2500 bars");
 	});
+	test("repeats that play no bars stop at the work budget, and say so", () => {
+		const q = parseChart("## A x100\n| ... | x10000\n");
+		expect(q.diagnostics.filter((d) => d.message.startsWith("expansion stopped"))).toMatchObject([
+			{ line: 2, message: "expansion stopped after 0 bars: its repeats play too many times" },
+		]);
+	});
 });

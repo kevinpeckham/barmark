@@ -14,6 +14,15 @@ package uses [semantic versioning](https://semver.org/).
   numbered from 1. `RowModel.barNumber` is `0` on such a row. Charts
   without a pickup render exactly as before.
 
+### Fixed
+
+- **A bar played many times, or one with many notes and syllables, lays
+  out in linear time.** Deciding whether a chart with no parts sings read
+  every syllable of every played bar (now once per written bar, with a
+  `barmark` whose plays share their syllables), and placing a singing
+  bar's syllables under its slots scanned every slot for each syllable
+  (now a binary search).
+
 ## [0.17.1] - 2026-11-08
 
 ### Changed
