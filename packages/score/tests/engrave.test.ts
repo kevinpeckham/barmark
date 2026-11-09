@@ -173,6 +173,15 @@ describe("engraveChart", () => {
 		expect(engraveChart(vrv, text, { width: 800, maxCost: cost }).ok).toBe(true);
 	});
 
+	test("the export stops at the length limit: a score past it is never written whole", () => {
+		const text = `## A x500\n|: "${"&".repeat(1800)}" C :| x2\n`;
+		const start = performance.now();
+		const r = engraveChart(vrv, text, { width: 800, maxCost: Infinity, maxXmlLength: 100_000 });
+		// The whole export takes some 400 ms and writes 9 MB.
+		expect(performance.now() - start).toBeLessThan(150);
+		expect(r).toMatchObject({ ok: false, reason: "The score is too large to draw" });
+	});
+
 	test("MusicXML too long to draw is refused too", () => {
 		expect(MAX_XML_LENGTH).toBe(50_000_000);
 		const r = engraveChart(vrv, read("morning-song.chart.md"), { width: 800, maxXmlLength: 100 });
@@ -201,6 +210,8 @@ describe("scoreCost", () => {
 			`${Array.from({ length: 30 }, (_, i) => `part: P${i} = Piano`).join("\n")}\nP0 | C | D |\n`,
 			`## A x50\n|: ${many(8, "{C4 E4 G4 B4 D5 F5 A5 C6}")} :| x2\n`,
 			`## A x50\n|: ${many(8, "Cmaj13#11/G")} :| x2\n`,
+			// A part's declared lines rest where only one plays.
+			"part: P = Piano\nP.A | {C4} |\nP.B | {C3} |\nP.C | {C2} |\nP.D | {C1} |\n## B x50\nP.A |: {C4} :| x2\n",
 		];
 		for (const text of shapes) {
 			const r = exportMusicXml(text);

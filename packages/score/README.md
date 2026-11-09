@@ -129,17 +129,16 @@ if (result.ok) document.body.innerHTML = result.svg;
 else console.warn(result.reason);
 ```
 
-A chart whose score would cost more than 50,000,000 (`MAX_SCORE_COST`) is
-refused before it is exported, with the reason "The score is too large to
-draw": a short chart with repeats can play thousands of bars, and writing
-them all out could take gigabytes. `scoreCost` estimates the bytes of
-MusicXML the score writes, never fewer: every played bar's measure in every
-declared part (a tacet part's rests too), each slot, pitch, chord degree,
-syllable and words with the length of its text, and each bar's heading,
-in one pass over the play order. A long lead sheet costs about half a
-million. MusicXML over 50,000,000 characters (`MAX_XML_LENGTH`) is refused
-the same way before Verovio reads it. Pass `maxCost` or `maxXmlLength` to
-set either.
+A score is refused with the reason "The score is too large to draw" when
+its MusicXML would pass 50,000,000 characters (`MAX_XML_LENGTH`): the
+export stops writing there. A short chart with repeats can play thousands
+of bars, and writing them all out could take gigabytes. Before exporting,
+`scoreCost` estimates the MusicXML's bytes in one pass over the play order
+(every played bar's measure in every declared part, a tacet part's rests
+too, each slot, pitch, chord degree, syllable and words with the length of
+its text, and each bar's heading), and a chart over 50,000,000
+(`MAX_SCORE_COST`) is refused without exporting. A long lead sheet costs
+about half a million. Pass `maxXmlLength` or `maxCost` to set either.
 
 The SVG is cleaned with an allow-list (`cleanSvg`) before it is returned;
 `scorePane` and `scoreStyles` wrap it so it follows the grid's light and

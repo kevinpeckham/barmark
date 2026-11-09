@@ -1986,7 +1986,10 @@ whose `scoreCost` (an estimate of the MusicXML's bytes, never under it: measures
 declared part, tacet too, slots, pitches, syllables and the escaped length of every text, times
 its plays) is over 50,000,000, and MusicXML over 50,000,000 characters after. A note count
 alone was not enough (a second review): long escaped words on few notes, or many tacet parts,
-cost as much. The engine gives the worker one job at a time, drops superseded requests still
+cost as much, and a third review found more the estimate missed (a part's silent lines, text
+lines). A size estimate chases the writer; bound the writer itself: `exportMusicXml` takes
+`maxLength` and stops at the first measure past it (`tooLarge`), which `engraveChart` sets to
+50,000,000, keeping `scoreCost` only as a cheap early refusal. The engine gives the worker one job at a time, drops superseded requests still
 waiting, and cuts off (terminate, fresh worker loading the Verovio the first one did) a job
 whose Verovio load runs past `LOAD_DEADLINE_MS` (60 s), or whose engraving, timed from the
 worker's `Ready`, runs past `JOB_DEADLINE_MS` (20 s) or past `SUPERSEDED_GRACE_MS` (3 s) once
@@ -1995,6 +1998,7 @@ superseded; a crash fails only its own job. Tested with a fake worker and fake t
 slow 7 MB download against it (a second review again). **Rule:** any code a shared link reaches is
 attack surface: a per-item `find`/`filter` over a bar, row or play order is quadratic in what
 an author can write, so index it once; output a short input can multiply (repeats) is
-budgeted before it is made, by what it will cost to write, not by a count of one kind of thing;
+bounded where it is made, by a budget the writer charges as it writes; an estimate made beforehand
+is only an early refusal;
 and work for a page in a worker is cancellable and bounded, since `postMessage` can't take a
 job back, with a download's budget kept apart from the work's.

@@ -20,7 +20,7 @@ export type EngraveOptions = {
 	scale?: number;
 	/** The most the score may cost (`scoreCost`, about the bytes of MusicXML it writes); default `MAX_SCORE_COST`. */
 	maxCost?: number;
-	/** The longest MusicXML engraved, in characters; default `MAX_XML_LENGTH`. */
+	/** The longest MusicXML engraved, in characters: the export stops writing past it; default `MAX_XML_LENGTH`. */
 	maxXmlLength?: number;
 };
 
@@ -32,7 +32,7 @@ export type EngraveOptions = {
  */
 export const MAX_SCORE_COST = 50_000_000;
 
-/** The longest MusicXML handed to Verovio, in characters: a second guard, on what the export wrote. */
+/** The longest MusicXML handed to Verovio, in characters: the export stops writing past it (`maxLength`). */
 export const MAX_XML_LENGTH = 50_000_000;
 
 const TOO_LARGE = "The score is too large to draw";
@@ -103,7 +103,11 @@ function barCost(bar: PlayedBar, parts: number): number {
  * About how many bytes of MusicXML a score of the chart writes: every
  * played bar's measure in every declared part (tacet ones too), each
  * slot, pitch, degree, syllable and words, with the length of its text,
- * and its heading. One pass over the play order.
+ * and its heading. One pass over the play order, cheap enough to refuse a
+ * chart before exporting it. It is an early gate, not the bound: it
+ * leaves out what is rarely large (a part's silent lines, text lines), and
+ * the export's own `maxLength` budget, which `engraveChart` sets, is what
+ * keeps the MusicXML within `MAX_XML_LENGTH`.
  */
 export function scoreCost(parse: ChartParse): number {
 	const parts = Math.max(1, parse.parts.length);
@@ -184,17 +188,17 @@ function refusal(diagnostics: ChartDiagnostic[]): string {
 
 /**
  * A chart as a full score, or why it cannot be one. A chart that would
- * cost more than `maxCost` is refused before it is exported, and
- * MusicXML longer than `maxXmlLength` before Verovio reads it.
+ * cost more than `maxCost` is refused before it is exported, and the
+ * export stops writing MusicXML longer than `maxXmlLength`.
  */
 export function engraveChart(vrv: VerovioToolkit, text: string, options: EngraveOptions): Engraved {
 	if (scoreCost(parseChart(text)) > (options.maxCost ?? MAX_SCORE_COST))
 		return { ok: false, reason: TOO_LARGE, diagnostics: [] };
-	const exported = exportMusicXml(text);
+	// The export's own budget is the bound: it stops writing at the limit.
+	const exported = exportMusicXml(text, { maxLength: options.maxXmlLength ?? MAX_XML_LENGTH });
+	if (!exported.ok && exported.tooLarge) return { ok: false, reason: TOO_LARGE, diagnostics: [] };
 	if (!exported.ok)
 		return { ok: false, reason: refusal(exported.diagnostics), diagnostics: exported.diagnostics };
-	if (exported.xml.length > (options.maxXmlLength ?? MAX_XML_LENGTH))
-		return { ok: false, reason: TOO_LARGE, diagnostics: [] };
 	try {
 		const engraved = engraveXml(vrv, exported.xml, options);
 		return { ok: true, xml: exported.xml, pages: engraved.pages, svg: cleanSvg(engraved.svg) };
