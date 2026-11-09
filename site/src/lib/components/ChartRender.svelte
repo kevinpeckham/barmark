@@ -2,7 +2,6 @@
 import { onMount, untrack } from "svelte";
 import { chartHtml, scoreHtml } from "#lib/chart.js";
 import { transposed } from "#lib/key.js";
-import { keepScoreFont } from "#lib/score-font.js";
 
 type Numerals = "nashville" | "roman";
 type View = "grid" | "score";
@@ -63,20 +62,9 @@ onMount(() => {
 	// After navigating inside the site, Svelte inserts {@html} without the
 	// parser, so the declarative shadow root never attached: give the element its text.
 	if (!chart().shadowRoot) draw();
-	let stopFont = () => {};
-	const changed = (e: Event) => {
-		const view = (e as CustomEvent<{ view: View }>).detail.view;
-		if (view === "score") {
-			stopFont();
-			stopFont = keepScoreFont(chart());
-		}
-		onviewchange?.(view);
-	};
+	const changed = (e: Event) => onviewchange?.((e as CustomEvent<{ view: View }>).detail.view);
 	host.addEventListener("viewchange", changed);
-	return () => {
-		host.removeEventListener("viewchange", changed);
-		stopFont();
-	};
+	return () => host.removeEventListener("viewchange", changed);
 });
 
 let spelled = untrack(() => numerals);
@@ -120,7 +108,7 @@ $effect(() => {
 <div
 	bind:this={host}
 	hidden={tooLong}
-	class="barmark-look min-w-0 {asScore ? 'score-host' : ''}"
+	class="barmark-look min-w-0"
 	role={label ? "region" : undefined}
 	aria-label={label}
 >

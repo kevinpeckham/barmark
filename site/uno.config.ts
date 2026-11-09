@@ -79,9 +79,6 @@ export default defineConfig({
 				'[--barmark-text-font:"Noto_Serif",Georgia,serif] [--barmark-label-font:"Noto_Sans",system-ui,sans-serif]',
 			].join(" "),
 		],
-		// <barmark-score>'s Grid / Score switch sits outside the chart's palette and inherits the
-		// host's colour and font (its :host resets them to black serif, which an outside rule overrides).
-		["score-host", "[&_barmark-score]:(text-ink font-sans text-sm)"],
 		["home-page-x-padding", "px-4 sm:px-6 md:px-7 lg:px-8 xl:px-24 2xl:px-48"],
 		[
 			"marketing-headline",

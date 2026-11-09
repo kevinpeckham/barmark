@@ -27,8 +27,6 @@ bun run test:browser   # Playwright: live editing, the guide, no JavaScript, pho
   with a Key menu (`src/lib/key.ts`, as Stem Shovel's, not remembered).
 - `src/lib/guide/score.ts`: the guide's "In the score" rows; each example
   is exported and engraved with Verovio in `tests/score-notes.test.ts`.
-- `src/lib/score-font.ts`: copies Verovio's Leipzig font face out of the
-  score's shadow root, where Chromium ignores it (@barmark/score 0.1.0).
 - `uno.config.ts`: theme, shortcuts and fonts. Edwin comes from
   `@barmark/render` through `presetWebFonts`; `scripts/fonts.ts` copies
   the file into `static/fonts/` before `dev` and `build`.

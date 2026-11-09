@@ -773,6 +773,11 @@ test.describe("the score", () => {
 		const score = page.locator("main barmark-score");
 		await expect(score.getByRole("radio", { name: "Score" })).toBeChecked();
 		await expect(score.getByRole("img", { name: "Peaceful Dreams" })).toBeVisible();
+		// Chord symbols as the chart spells them.
+		const chords = await scoreChords(page);
+		expect(chords.slice(0, 2)).toEqual(["D7sus4", "D7sus4"]);
+		expect(chords).toContain("G5(7)");
+		expect(chords.filter((c) => c.includes("no3"))).toEqual([]);
 	});
 
 	test("the score follows the source as it is edited", async ({ page }) => {
@@ -794,7 +799,7 @@ test.describe("the score", () => {
 		await expect(spelling.getByRole("radio", { name: "Nashville" })).toBeEnabled();
 	});
 
-	test("sharps and flats in the score's chord symbols are drawn: Verovio's font reaches the page", async ({
+	test("sharps and flats in the score's chord symbols are drawn: the element brings Verovio's font", async ({
 		page,
 	}) => {
 		await page.goto(`/try?q=${encodeURIComponent("key: E\n| C#m7 | Bb |")}`);
@@ -807,7 +812,40 @@ test.describe("the score", () => {
 				}),
 			)
 			.toBe(true);
-		expect(await page.locator("style[data-verovio-font]").count()).toBe(1);
+		// The package registers it, once; no site code copies it.
+		expect(await page.locator("head style[data-barmark-score-font]").count()).toBe(1);
+		expect(await page.locator("style[data-verovio-font]").count()).toBe(0);
+		// The sharp is a Leipzig glyph between C and m7, drawn with a width of its own.
+		const sharp = await page.evaluate(() => {
+			const glyph = document
+				.querySelector("[data-reading] barmark-score")
+				?.shadowRoot?.querySelector(
+					'.bms-score g.harm tspan[font-family="Leipzig"]',
+				) as SVGTextContentElement | null;
+			return glyph ? glyph.getComputedTextLength() : 0;
+		});
+		expect(sharp).toBeGreaterThan(0);
+		// SMuFL's chord-symbol sharp and flat (csymAccidentalSharp, csymAccidentalFlat).
+		expect(await scoreChords(page)).toEqual(["C\uEA66m7", "B\uEA64"]);
+	});
+
+	test("the Grid / Score switch is legible on the dark page, themed by the element itself", async ({
+		page,
+	}) => {
+		await page.goto("/");
+		await page.waitForFunction(() => customElements.get("barmark-score"));
+		const looks = await page.evaluate(() => {
+			const root = document.querySelector("main barmark-score")?.shadowRoot;
+			const lum = (color: string) => {
+				const [r, g, b] = (color.match(/[\d.]+/g) ?? []).map(Number);
+				return (0.2126 * (r ?? 0) + 0.7152 * (g ?? 0) + 0.0722 * (b ?? 0)) / 255;
+			};
+			return [...(root?.querySelectorAll(".bms-switch [data-view]") ?? [])].map((b) =>
+				lum(getComputedStyle(b).color),
+			);
+		});
+		expect(looks.length).toBe(2);
+		for (const l of looks) expect(l).toBeGreaterThan(0.7);
 	});
 
 	test("Try It's preview switches to Score and engraves again as you type", async ({ page }) => {
