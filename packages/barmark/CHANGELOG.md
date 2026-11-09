@@ -9,7 +9,22 @@ Releases follow the process in [RELEASING.md](RELEASING.md).
 
 ## [Unreleased]
 
+### Added
+
+- **`ChartParse.pickup`**: true when the chart's first written bar is a
+  pickup (grammar 2.4: in a one-bar meter shorter, by value, than the
+  meter in force at the next written bar, and that bar not short itself).
+  **`opensWithPickup(bars)`** gives the same answer from played bars
+  alone. The grammar now defines a pickup.
+
 ### Changed
+
+- **A pickup is bar 0** (grammar 2.4): in a chart that opens with one,
+  every played bar's `written` is one less than before, so bar 1 is the
+  first full bar, as notation and the MusicXML export number it; a repeat,
+  replay or D.C. that plays the pickup again shows 0 too. Charts without
+  a pickup are numbered as before. `index`, the play position, does not
+  change, so times keyed by it stay valid.
 
 - **The npm homepage is https://www.barmark.dev**, not the package's
   folder on GitHub.

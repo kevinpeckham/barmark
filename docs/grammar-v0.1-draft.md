@@ -242,6 +242,29 @@ a minute), like the bars after it, not at 60 eighths; a `[3/4]` bar in 6/8
 lasts two dotted quarters at that same speed. A `time:` line is different:
 after it, `tempo:` counts the new meter's beat (2.1).
 
+The chart's first written bar is a **pickup** when it is in a one-bar
+meter shorter than the meter in force at the next written bar, compared
+by value, and that next bar is not short itself. Fermatas are skipped;
+a `%` is a written bar.
+
+```
+time: 4/4
+| [1/4] G | C | D |
+```
+
+```
+| [1/4] D |
+time: 3/4
+| G | C |
+```
+
+Both open with a pickup: the second into 3/4. `| [2/4] G | % | D |` (two
+2/4 bars) and `| [1/4] G | [2/4] C | D |` (two short bars) do not, and
+neither does a chart that is only one short bar, a short bar after `...`
+or at a later section, or any bar but the first written bar. A pickup
+inside `|:` is allowed: every pass plays it. A pickup is bar 0; the bar
+after it is bar 1. Every replay of it is bar 0 too.
+
 ### 2.5 Rehearsal marks
 
 `@` and a label, alone in a cell, is a **rehearsal mark** on the bar after
@@ -339,7 +362,7 @@ A push brings a slot in early, the way a band anticipates a downbeat:
 - Writing the push out (`| C / / /_G | / |`, 2.2) still works and means
   what it says: G attacks on the "and" of 4 and the next bar holds it.
 - Errors: a push with nothing played before it (the chart's first slot,
-  or the first after `...`; write a pickup bar), a push longer than the
+  or the first after `...`; write a short bar), a push longer than the
   slot it takes its time from, a push on `/`, `%` or `?`, a push inside a
   `_` group, three or more `<`, and a mark written before the push
   (`^<D`; the message suggests `<^D`).
@@ -1387,6 +1410,7 @@ human to say whether the band was silent, and the structure line.
 | What `->` cuts | Decided by Kevin (2026-11-08): `->` cuts the replay's last bar as written, from the last pass with `x N` (6); when a `Fine` or `To Coda` stops play before it, after the jump, the bar is never reached and the replay plays up to the stop. Found by the MusicXML round trip's property test: `## Intro` holding a `Fine`, replayed as `## Intro ->` after a `D.S. al Fine`, played nothing. Rejected: cutting the last bar played, which can cut a bar before a `Fine` and leave nothing. |
 | Tempo in a one-bar meter | Decided by Kevin (2026-11-08): a one-bar meter keeps the tempo unit of the `time:` in force; `tempo:` counts the beat of the running meter `time:` set, so a short or odd bar never changes speed (2.4). In `time: 6/8, tempo: 60` a `[2/8]` pickup plays at 60 dotted quarters a minute, and a `[3/4]` bar lasts two of them. After a `time:` line the tempo counts the new meter's beat, as before (2.1). Rejected: the bracketed meter's own beat, which changes speed at a pickup. Machine output gains `time` on a played bar in a one-bar meter (A.7), and an extracted part's tacet stand-in for a `%` takes the meter of the bar it copies (7.4). |
 | A `Coda` with no bar after it | Decided by Kevin (2026-11-08): an **error** (5.2, 9); the `Coda` an `al Coda` goes on needs a bar after it: a bar written later in the chart, or a later heading that replays one (the last chorus as the coda). It gives `To Coda` nowhere to go on, and MusicXML has no measure to carry the sign. Before, it parsed, played nothing after `To Coda` and the export dropped the sign. Rejected: a warning, which would leave the jump going nowhere. |
+| Pickup | Decided by Kevin (2026-11-09): the chart's first written bar is a pickup when it is in a one-bar meter shorter, by value, than the meter in force at the next written bar, and that bar is not short itself (2.4); it is bar 0, so bar 1 is the first full bar, as notation numbers it. Before, the pickup was bar 1 and the MusicXML export already wrote measure 0. `index`, the play position, does not change, so saved timing maps keep working. Machine output gains `pickup` on the parse (A.7). Rejected: renumbering `index` too (every saved map would answer one bar off with an unchanged hash); a literal 0 in the bar-grid gutter. |
 
 ## Open questions
 
@@ -1527,7 +1551,8 @@ Each slot parses to one record:
 | `time` | on a played bar in a one-bar meter (2.4): the meter of the `time:` in force, whose beat `tempo` counts; absent on any other bar |
 | `tempoChange` | on a played bar inside a rit. or accel.: its `kind` (`rit` or `accel`), `from` (the steady tempo) and `to` (the target, or empty when open); empty outside one |
 | `swingPercent` | on a played bar and a directive: the swing amount in force (50 to 75), or empty for the bare word (66.7) and for `straight` |
-| `written` | on a played bar: its number as written, counting each written bar once in written order (`%` included, `...` not). A repeat or replay plays its bars under the numbers they were written with, and a bar line dropped for an error still counts its bars, so the numbers after it hold |
+| `written` | on a played bar: its number as written, 0 for a pickup (2.4), else counting each written bar once in written order from 1 (`%` included, `...` not). A repeat or replay plays its bars under the numbers they were written with, and a bar line dropped for an error still counts its bars, so the numbers after it hold |
+| `pickup` | on the parse: true when the chart's first written bar is a pickup (2.4), written bar 0; `opensWithPickup` gives the same from the played bars |
 | `rehearsal` | a cell in the parse tree that is a mark (2.5), with its `label`; on a played bar, the label of the mark just before it, or absent |
 | `words` | on a cell and a played bar: each `text` with `at`, the slot it sits before (the slot count for after the last), or absent when none |
 | `ending` | on a bar line in the parse tree: the passes an ending plays on (`[1]`, `[1, 2, 3]`), or empty |
