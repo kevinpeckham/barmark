@@ -132,6 +132,7 @@ type Bracket = { from: number; nested: boolean; body: number; endings: number; p
 type Walk = {
 	parse: ChartParse;
 	out: Measure[];
+	/** The written number of the last bar written: the parser's numbers (`PlayedBar.written`). */
 	written: number;
 	firstPlay: Map<number, PlayedBar>;
 	fermatas: Set<number>;
@@ -463,6 +464,9 @@ function textLine(w: Walk, line: string): void {
 	else w.pending.text.push(t);
 }
 
+/** The written number of a chart's first written bar: 0 for a pickup (grammar 2.4), else 1. */
+export const firstWritten = (parse: Pick<ChartParse, "pickup">): number => (parse.pickup ? 0 : 1);
+
 /** The bars as written, in written order, with the marks that play them in play order. */
 export function writtenMeasures(parse: ChartParse): Measure[] {
 	const firstPlay = new Map<number, PlayedBar>();
@@ -470,7 +474,7 @@ export function writtenMeasures(parse: ChartParse): Measure[] {
 	const w: Walk = {
 		parse,
 		out: [],
-		written: 0,
+		written: firstWritten(parse) - 1,
 		firstPlay,
 		fermatas: fermataBars(parse.events),
 		texts: new Map(),

@@ -137,7 +137,7 @@ describe("sections", () => {
 		expect(codes(r)).toContain("section-collision");
 	});
 
-	test("a collision names the bar as the chart numbers it, pickup included", () => {
+	test("a collision names the bar by its written number, the pickup being 0", () => {
 		const r = chartFromDetections({
 			grid: { bars: [1, 3, 5, 7] },
 			meter: "4/4",
@@ -149,7 +149,7 @@ describe("sections", () => {
 			],
 		});
 		const d = r.diagnostics.find((x) => x.code === "section-collision");
-		expect(d?.bar).toBe(3);
+		expect(d?.bar).toBe(2);
 	});
 
 	test("a section at the grid's end is after-last-bar", () => {
@@ -561,7 +561,7 @@ describe("changes", () => {
 
 describe("pickup", () => {
 	const G = (start: number, end: number) => run(start, end, "G:maj");
-	test("a pickup bar is written on the first line and is bar 1 of the map", () => {
+	test("a pickup bar is written on the first line (bar 0) and is bar 1 of the map", () => {
 		const r = chartFromDetections({
 			grid: { bars: [1, 3, 5] },
 			meter: "4/4",

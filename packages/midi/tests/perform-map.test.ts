@@ -73,7 +73,7 @@ describe("perform: tempo, meters, keys, markers, words and lyrics", () => {
 		const assumed = play("| C |");
 		expect(tempos(assumed)).toEqual([[0, 120]]);
 		expect(assumed.losses.filter((l) => l.code === "tempo-assumed")).toEqual([
-			{ code: "tempo-assumed", message: expect.any(String), bar: 1 },
+			{ code: "tempo-assumed", message: expect.any(String), bar: 1, written: 1 },
 		]);
 		expect(tempos(play("| C |", { tempo: 90 }))).toEqual([[0, 90]]);
 		expect(lossCodes(play("tempo: 100\n| C |"))).toEqual([]);
@@ -173,7 +173,7 @@ describe("perform: tempo, meters, keys, markers, words and lyrics", () => {
 			[12, "A", "mixolydian"],
 		]);
 		expect(keys.losses.filter((l) => l.code === "mode")).toEqual([
-			{ code: "mode", message: expect.any(String), bar: 4 },
+			{ code: "mode", message: expect.any(String), bar: 4, written: 4 },
 		]);
 		expect(play("| C |").keys).toEqual([]);
 	});
@@ -246,7 +246,9 @@ describe("perform: tempo, meters, keys, markers, words and lyrics", () => {
 	test("open repeat", () => {
 		const p = play("tempo: 100\n| C |\n| G | x ...");
 		expect(p.bars.map((b) => b.index)).toEqual([1, 2]);
-		expect(p.losses).toEqual([{ code: "open-repeat", message: expect.any(String), bar: 2 }]);
+		expect(p.losses).toEqual([
+			{ code: "open-repeat", message: expect.any(String), bar: 2, written: 2 },
+		]);
 	});
 
 	test("credits and title", () => {

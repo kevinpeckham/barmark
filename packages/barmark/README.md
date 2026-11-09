@@ -58,6 +58,7 @@ chart.title; // "Example Song"
 chart.parts; // [{ label: "Gtr", name: "Electric Guitar 1" }] from part: Gtr = Electric Guitar 1, in score order
 chart.credits; // { composer: ["Kevin Peckham"], lyricist: [], arranger: [], copyright: [] } from composer: Kevin Peckham
 chart.bars; // every bar in play order: its number as written, slots, section, key, meter (and in a one-bar meter the time: meter, whose beat tempo counts), tempo, feel (and swingPercent)
+chart.pickup; // true when the first written bar is a pickup (time: 4/4 then | [1/4] G | C |): it is bar 0
 chart.sections; // each section as played, with its first and last bar
 chart.diagnostics; // errors and warnings, each with a line number
 
@@ -195,9 +196,11 @@ an object. It has two kinds of field:
   - `events` is play order with fermatas and an open repeat kept as
     events.
   - `bars` is the same flattened to one `PlayedBar` per measure played,
-    repeats, endings, jumps and replays spelled out. A bar's `index` counts
-    in play order; `written` is the number a band reads on the page, the
-    same on every pass. Each bar carries its slots, section, key, meter,
+    repeats, endings, jumps and replays spelled out. A bar's `index` is
+    its position in play order, not a bar number; `written` is the number
+    a band reads on the page, the same on every pass. A pickup (grammar
+    2.4: a short first bar before a full one) is bar 0, and `pickup` says
+    the chart has one; otherwise bars count from 1. Each bar carries its slots, section, key, meter,
     tempo, feel and, when sung, each verse's syllables (`lyrics`).
   - `sections` is each section as played, with its first and last bar and
     `form` (which distinct section it is; replays share their section's
@@ -220,7 +223,8 @@ package's minor versions: 0.17.0, for example, added the `break` and
   diagnostics with `severity: "error"`; store `printChart(text)` to keep
   one spelling of each chart.
 - **Times in a recording** belong beside the chart, not in it: key them
-  by `PlayedBar.index`, which names the same bar however the chart is
+  by `PlayedBar.index`, the play position (not the bar number, which
+  is `written`), which names the same bar however the chart is
   reformatted or its repeats are spelled (`|: :|` or `x2`), until the
   music itself changes. An open repeat (`x ...`) plays its bars once in
   `bars`, so its later passes have no index of their own.

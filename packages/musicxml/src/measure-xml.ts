@@ -22,7 +22,6 @@ import {
 	barLength,
 	beatLength,
 	beatPieces,
-	cmp,
 	type Frac,
 	frac,
 	meterValues,
@@ -40,8 +39,10 @@ export type MeasureContext = {
 	index: number;
 	previous: Measure | null;
 	next: Measure | null;
-	/** The part opens with a pickup (`opensWithPickup`): its first measure is measure 0, implicit. */
+	/** The part opens with a pickup (barmark's written bar 0, grammar 2.4): its measures are numbered from 0. */
 	pickup: boolean;
+	/** The pickup is one MusicXML can say (`sayablePickup`): measure 0 is `implicit`, under the meter it leads into. */
+	implicit: boolean;
 	/** This bar's clef, and the bar before's (null for the first). */
 	clef: { now: Clef; before: Clef | null };
 	/** How far the part is written above where it sounds (a bass's octave; barmark's grammar 7.3). */
@@ -99,30 +100,31 @@ function keyXml(m: Measure, prev: Measure | null, written: WrittenInterval): str
 	]);
 }
 
+/** The meter in force at a measure: the `time:` meter under a one-bar meter, else its own. */
+const inForce = (m: Measure): Meter => m.time ?? m.meter;
+
 /**
- * Whether a part's first measure is a pickup MusicXML can say: a one-bar meter shorter
- * than the `time:` meter (grammar 2.4), then a bar in that meter, and a length a reader
- * counting the running meter's beat reads back as the same meter. An implicit measure has
- * no meter of its own, so `[1/4]` in 6/8, which would read back `[2/8]`, keeps its own
- * time signature, as does `| [2/4] G | % |`, two bars of 2/4.
+ * Whether a part's pickup (its first measure, barmark's written bar 0) is one MusicXML
+ * can say: an implicit measure has no meter of its own, so a reader counts its length
+ * in the beat of the meter it leads into. `[1/4]` in 6/8, which would read back `[2/8]`,
+ * is not: it keeps its own time signature.
  */
-function opensWithPickup([first, second]: Measure[]): boolean {
-	if (!first?.time || second?.time) return false;
-	const length = barLength(first.meter);
-	const back = pickupMeter(length, first.time);
-	return (
-		cmp(length, barLength(first.time)) < 0 && back?.n === first.meter.n && back.d === first.meter.d
-	);
+function sayablePickup([first, second]: Measure[]): boolean {
+	if (first?.shown !== 0 || !second) return false;
+	const back = pickupMeter(barLength(first.meter), inForce(second));
+	return back?.n === first.meter.n && back.d === first.meter.d;
 }
 
-/** The meter a measure's time signature shows: a pickup shows the running meter. */
-const shownMeter = (m: Measure, index: number, pickup: boolean): Meter =>
-	pickup && index === 0 ? (m.time ?? m.meter) : m.meter;
+/** The meter a measure's time signature shows: an implicit pickup shows the meter it leads into. */
+const shownMeter = (m: Measure, ctx: Pick<MeasureContext, "index" | "implicit" | "next">): Meter =>
+	ctx.implicit && ctx.index === 0 && ctx.next ? inForce(ctx.next) : m.meter;
 
 /** The time signature, when it is the first or a change. */
 function timeXml(m: Measure, ctx: MeasureContext): string {
-	const meter = shownMeter(m, ctx.index, ctx.pickup);
-	const prev = ctx.previous && shownMeter(ctx.previous, ctx.index - 1, ctx.pickup);
+	const meter = shownMeter(m, ctx);
+	const prev =
+		ctx.previous &&
+		shownMeter(ctx.previous, { index: ctx.index - 1, implicit: ctx.implicit, next: m });
 	if (prev && prev.n === meter.n && prev.d === meter.d) return "";
 	return el("time", {}, [text("beats", meter.n), text("beat-type", meter.d)]);
 }
@@ -500,17 +502,23 @@ function rightBarlineXml(marks: Marks): string {
 	]);
 }
 
-/** A measure's place among a part's measures: its index, the measures either side, and whether the part opens with a pickup. */
+/**
+ * A measure's place among a part's measures: its index, the measures either side, and
+ * whether the part opens with a pickup, barmark's written bar 0 (`ChartParse.pickup`).
+ */
 export const placeIn = (measures: Measure[], index: number) => ({
 	index,
 	previous: measures[index - 1] ?? null,
 	next: measures[index + 1] ?? null,
-	pickup: opensWithPickup(measures),
+	pickup: measures[0]?.shown === 0,
+	implicit: sayablePickup(measures),
 });
 
-/** A measure's number and, for a pickup, `implicit`: MuseScore numbers its pickup 0. */
-const numbering = ({ index, pickup }: MeasureContext) =>
-	pickup ? { number: index, ...(index === 0 ? { implicit: "yes" } : {}) } : { number: index + 1 };
+/** A measure's number and, for a pickup MusicXML can say, `implicit`: MuseScore numbers its pickup 0. */
+const numbering = ({ index, pickup, implicit }: MeasureContext) =>
+	pickup
+		? { number: index, ...(index === 0 && implicit ? { implicit: "yes" } : {}) }
+		: { number: index + 1 };
 
 export function measureXml(bar: MeasureEvents, ctx: MeasureContext): string {
 	const m = bar.measure;

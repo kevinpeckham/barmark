@@ -909,7 +909,7 @@ slashes. Verovio now draws the rests (`engrave.test.ts`). Dorico used the piano'
 regions"; the "(4)" and "(8)" counts); the piano's slashes are now plain stemless
 slash-notehead notes there, which may show as notes, not a region. (4) The pickup is measure 0,
 `implicit="yes"`, under the running `<time>`, numbering from 1 after it, as MuseScore writes
-one (`opensWithPickup` in `measure-xml.ts`); a first bar whose length would read back as
+one (`opensWithPickup` in `measure-xml.ts`, since 2026-11-09 `sayablePickup`); a first bar whose length would read back as
 another meter in the running beat (`[1/4]` in 6/8) or that a one-bar meter follows keeps its own
 `<time>`. Verovio draws one 4/4 and a measure 0 (`metcon="false"`). (5) `ownText` holds every
 whitespace-delimited "a"/"A" to the next word. (6) `×N` (and "repeat as needed") carries an
@@ -1707,7 +1707,7 @@ barmark's export writes a `[1/4]` pickup as a short first measure in a
 `time: 1/4` then `time: 3/4`, so Amazing Grace never came back as
 written. The import now reads both shapes as a pickup
 (`settleFirstPickup` in `import/read.ts`). Since 2026-11-08 the export writes
-MuseScore's shape (`opensWithPickup` in `measure-xml.ts`), except for a
+MuseScore's shape (`opensWithPickup` in `measure-xml.ts`, since 2026-11-09 `sayablePickup`), except for a
 first bar the implicit shape would read back as another meter.
 
 ### A lyric row ends its system (grammar 7.7), and examples feed several tests (2026-11-06, examples)

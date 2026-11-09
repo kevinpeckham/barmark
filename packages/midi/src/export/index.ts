@@ -54,9 +54,11 @@ function fold(pitch: number): number {
 const foldFifths = (fifths: number) =>
 	fifths > 7 ? fifths - 12 : fifths < -7 ? fifths + 12 : fifths;
 
-/** The played bar a time falls in, for a loss. */
-const barAt = (p: Performance, at: Quarters): number =>
-	(p.bars.findLast((b) => cmp(b.at, at) <= 0) ?? p.bars[0])?.index ?? 1;
+/** The played bar a time falls in, for a loss: its play position and written number. */
+const barAt = (p: Performance, at: Quarters): { bar: number; written: number } => {
+	const found = p.bars.findLast((b) => cmp(b.at, at) <= 0) ?? p.bars[0];
+	return { bar: found?.index ?? 1, written: found?.written ?? 1 };
+};
 
 const sameMeter = (a: Meter | undefined, b: Meter) => a?.n === b.n && a?.d === b.d;
 
@@ -132,7 +134,7 @@ function fileLosses(
 		losses.push({
 			code: "tempo-range",
 			message: `a tempo of ${clamped.qpm} quarters a minute is beyond what MIDI can hold: clamped`,
-			bar: barAt(p, clamped.at),
+			...barAt(p, clamped.at),
 		});
 	if (shared)
 		losses.push({
@@ -144,7 +146,7 @@ function fileLosses(
 		losses.push({
 			code: "ticks-rounded",
 			message: `a rhythm needs more ticks a quarter than the file can have (32,640, fewer in a long chart): it plays at ${rounded.ppq}, rounded to the nearest tick`,
-			bar: barAt(p, rounded.at),
+			...barAt(p, rounded.at),
 		});
 	return losses;
 }

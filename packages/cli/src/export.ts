@@ -9,9 +9,14 @@ import { type Io, UsageError } from "./io.js";
 import { onlyChart, writeFile, writeOutput } from "./output.js";
 import { textLine } from "./report.js";
 
-/** `file: bar N: warning: message`, as `check` prints its findings; a loss with no bar has no place. */
+/**
+ * `file: bar N: warning: message`, as `check` prints its findings; N is the
+ * bar's written number (a pickup is 0), not its play position. A loss with no
+ * bar has no place.
+ */
 export function lossLine(path: string, loss: MidiLoss): string {
-	return `${path}: ${loss.bar === undefined ? "" : `bar ${loss.bar}: `}warning: ${loss.message}`;
+	const bar = loss.written ?? loss.bar;
+	return `${path}: ${bar === undefined ? "" : `bar ${bar}: `}warning: ${loss.message}`;
 }
 
 const diagnosticLine = (path: string, d: ChartDiagnostic) =>

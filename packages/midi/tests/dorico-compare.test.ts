@@ -158,9 +158,9 @@ const PERF = (tracks: PerformedTrack[]): Performance => ({
 	title: "T",
 	credits: { composer: [], lyricist: [], arranger: [], copyright: [] },
 	bars: [
-		{ index: 1, at: { n: 0, d: 1 }, meter: { n: 4, d: 4 } },
-		{ index: 2, at: { n: 4, d: 1 }, meter: { n: 4, d: 4 } },
-		{ index: 3, at: { n: 8, d: 1 }, meter: { n: 2, d: 4 } },
+		{ index: 1, written: 1, at: { n: 0, d: 1 }, meter: { n: 4, d: 4 } },
+		{ index: 2, written: 2, at: { n: 4, d: 1 }, meter: { n: 4, d: 4 } },
+		{ index: 3, written: 3, at: { n: 8, d: 1 }, meter: { n: 2, d: 4 } },
 	],
 	tempos: [
 		{ at: { n: 0, d: 1 }, qpm: 120 },
@@ -287,9 +287,9 @@ describe("a pickup, as MusicXML writes it", () => {
 	const pickupPerf = (): Performance => ({
 		...PERF([track("Chart", [])]),
 		bars: [
-			{ index: 1, at: { n: 0, d: 1 }, meter: { n: 1, d: 4 } },
-			{ index: 2, at: { n: 1, d: 1 }, meter: { n: 3, d: 4 } },
-			{ index: 3, at: { n: 4, d: 1 }, meter: { n: 3, d: 4 } },
+			{ index: 1, written: 0, at: { n: 0, d: 1 }, meter: { n: 1, d: 4 } },
+			{ index: 2, written: 1, at: { n: 1, d: 1 }, meter: { n: 3, d: 4 } },
+			{ index: 3, written: 2, at: { n: 4, d: 1 }, meter: { n: 3, d: 4 } },
 		],
 		end: { n: 7, d: 1 },
 	});
@@ -343,9 +343,9 @@ describe("a pickup, as MusicXML writes it", () => {
 		const perf: Performance = {
 			...pickupPerf(),
 			bars: [
-				{ index: 1, at: { n: 0, d: 1 }, meter: { n: 2, d: 8 } },
-				{ index: 2, at: { n: 1, d: 1 }, meter: { n: 4, d: 4 } },
-				{ index: 3, at: { n: 5, d: 1 }, meter: { n: 4, d: 4 } },
+				{ index: 1, written: 0, at: { n: 0, d: 1 }, meter: { n: 2, d: 8 } },
+				{ index: 2, written: 1, at: { n: 1, d: 1 }, meter: { n: 4, d: 4 } },
+				{ index: 3, written: 2, at: { n: 5, d: 1 }, meter: { n: 4, d: 4 } },
 			],
 		};
 		const xml = score([

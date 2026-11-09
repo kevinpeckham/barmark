@@ -6,6 +6,15 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- **Builder diagnostics use written bar numbers.** `BuildDiagnostic.bar` is
+  the bar's number in the chart built: a pickup is 0 and the bar after it 1
+  (it was the play position, and collisions were shifted by one). The
+  timing map, `chartHash`, `barAt`, `secondsAtBar` and confidence records
+  are unchanged and still key on the play position, so saved maps stay valid.
+- `checkTimingMap` messages about map entries say "map bar N".
+
 ## [0.2.1] - 2026-11-08
 
 ### Changed

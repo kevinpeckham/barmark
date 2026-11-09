@@ -96,7 +96,7 @@ function isPickup(grid: Grid, sigs: Walk["sigs"]): boolean {
 	);
 }
 
-/** The 1-based bar holding `tick` (binary search); a pickup is bar 1. */
+/** The 1-based grid bar holding `tick` (binary search), the first bar being 1 even when it is a pickup: the report writes it as the chart does. */
 export function barAt(grid: Grid, tick: number): number {
 	let lo = 0;
 	let hi = grid.bars.length - 1;

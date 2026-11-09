@@ -91,7 +91,8 @@ read stdin.
 (chords voiced on piano, the tempo map, markers and lyrics); `--out` is
 required, and `--part <label>` exports one part. What MIDI can't hold is
 listed on stderr as `song.chart.md: bar 9: warning: message`, such as an
-open repeat (`x ...`) played once. A chart with errors is not exported.
+open repeat (`x ...`) played once. Bars are numbered as the chart
+numbers them: a pickup is bar 0, here and in `import`. A chart with errors is not exported.
 
 `import` reads a MIDI file (`.mid` or `.midi`) as a chart too, naming a
 chord from the notes of the tracks that carry the harmony and turning

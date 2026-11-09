@@ -32,7 +32,7 @@ export function importLine(path: string, d: ImportDiagnostic): string {
 	);
 }
 
-/** `file: bar N (track T): severity: message`, as `importLine` prints a score's. */
+/** `file: bar N (track T): severity: message`; N is a written number, a pickup 0, as `importLine` prints a score's. */
 export function midiLine(path: string, d: MidiImportDiagnostic): string {
 	return line(
 		path,

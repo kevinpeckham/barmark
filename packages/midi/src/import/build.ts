@@ -4,8 +4,9 @@
  * nominal clock, a quarter as half a second (`tick / ppq / 2`), and the
  * real tempo explicitly; its `tempo-grid-disagree` is then an artefact
  * and is dropped, and so are `path` and `at`, which are nominal. Sync
- * numbers bars as the import does (the pickup is bar 1), since the grid's
- * bars are its bars one for one.
+ * numbers its bars as the chart does (the pickup is bar 0) and the import's
+ * report does too; the grid's bars are its bars one for one, from the
+ * first full bar as 1.
  */
 import type { BuildDiagnostic, Detections } from "@barmark/sync";
 import { beatsOf, type Meter, parseMeter } from "barmark";
@@ -137,7 +138,13 @@ export function mapBuild(
 		message: PLAIN[d.code] ?? d.message,
 	};
 	const at = startOf(d.path, input);
-	const bar = d.bar ?? (at === undefined ? undefined : barOfNominal(grid, at));
+	// Sync numbers the pickup 0; the report takes the grid's numbers and makes them the chart's.
+	const bar =
+		d.bar === undefined
+			? at === undefined
+				? undefined
+				: barOfNominal(grid, at)
+			: d.bar + (grid.pickup ? 1 : 0);
 	if (bar !== undefined) out.bar = bar;
 	return out;
 }

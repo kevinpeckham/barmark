@@ -205,7 +205,9 @@ function removeLastBar(events: ChartEvent[]): PlayedBar | null {
 
 /**
  * Turn the written chart into the bars in play order: sections and their
- * replays, repeats, directive changes, `%` and elision.
+ * replays, repeats, directive changes, `%` and elision. Its bars count
+ * `written` from 1, a pickup included; `parseChart` and `extractPart`
+ * renumber a pickup to 0 (grammar 2.4).
  */
 /**
  * `label` names the part a projected chart is (grammar 7.4), for its

@@ -15,8 +15,33 @@ package uses [semantic versioning](https://semver.org/).
   builds more than the limit, and never throws. A short chart whose repeats
   are written out can otherwise write gigabytes. Unset, nothing changes.
 
+### Changed
+
+- **Measure numbers follow barmark's numbers; a pickup is measure 0, text
+  0.** barmark 0.22 numbers a chart's pickup bar 0 (grammar 2.4: the
+  first written bar, in a one-bar meter shorter, by value, than the meter
+  in force at the next written bar, which is not itself short). The
+  export reads the parser's answer (`ChartParse.pickup`) instead of
+  deciding on its own, and each measure's `text` is the bar's `written`
+  number: the pickup is `number="0" text="0"` (it was `text="1"`), the
+  bar after it `number="1" text="1"`. A pickup into a `time:` line
+  (`| [1/4] D |` then `time: 3/4`) shows the 3/4 it leads into, not the
+  4/4 before it. A pickup whose length a reader of an implicit
+  measure would count another way (`[1/4]` in 6/8 reads back `[2/8]`) is
+  measure 0 without `implicit`, keeping its own time signature. Lyric
+  rows under the bars stay on their measures.
+
 ### Fixed
 
+- **A chart that is only one short bar is not a pickup.** `| [1/4] G |`
+  exported a lone measure 0, `implicit`; it is now measure 1 in its own
+  1/4.
+- **The import's self-check is quiet on a score that opens with a
+  pickup.** With barmark 0.22's numbers, importing MuseScore's or
+  Dorico's pickup scores reported "importer bug: bar 0 plays, but the
+  importer wrote …" and every bar one off, because the self-check
+  numbered the importer's bars from 1; it now counts them from the
+  parser's first number.
 - **A crowded bar exports in linear time.** A bar with thousands of
   syllables, notes or words, inside repeats written out many times, took
   time quadratic in what the bar holds: each onset scanned the bar's whole
