@@ -829,6 +829,23 @@ and round-trip it through `format`.
 
 ## Tooling
 
+### A batch of releases lost one: a newer waiting run cancels the older (2026-11-09, render, musicxml and sync releases)
+
+- **The symptom.** Three GitHub releases created back to back
+  (`render-v0.18.0`, `musicxml-v0.8.0`, `sync-v0.3.0`) started three
+  release runs; musicxml's ended `cancelled` without running a job, while
+  render's waited for approval and sync's sat pending.
+- **The cause.** `release.yml` has `concurrency: { group: release,
+  cancel-in-progress: false }`. GitHub keeps one run in progress and one
+  pending per group; a newer pending run cancels the older pending one.
+  A run waiting for the `npm` approval is still in progress, so the
+  queue stays full until it is approved.
+- **The fix.** `gh run rerun <id>` on the cancelled run once the run ahead
+  of it has started, so it isn't cancelled again. Create one release at a
+  time, the next only when the previous run is running or done, not
+  while one is pending.
+- **Where.** RELEASING.md step 9; `.github/workflows/release.yml`.
+
 ### Verovio's npm package carries no licence text (2026-11-08, cli)
 
 **Symptom:** bundling Verovio into the CLI's binaries for `render
