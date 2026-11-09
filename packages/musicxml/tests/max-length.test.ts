@@ -29,6 +29,12 @@ const timed = <T>(f: () => T): [T, number] => {
 	return [out, performance.now() - start];
 };
 
+/** The quickest of three runs, so one garbage-collection pause doesn't decide a ratio. */
+const fastest = <T>(f: () => T): [T, number] => {
+	const runs = [timed(f), timed(f), timed(f)];
+	return runs.reduce((a, b) => (b[1] < a[1] ? b : a));
+};
+
 describe("maxLength", () => {
 	test(
 		"unset, or past the score's length, changes nothing",
@@ -61,10 +67,10 @@ describe("maxLength", () => {
 		test(
 			`${name}: stops writing at the limit, well before the whole score`,
 			() => {
-				const [full, whole] = timed(() => exportMusicXml(text));
+				const [full, whole] = fastest(() => exportMusicXml(text));
 				if (!full.ok) throw new Error(full.diagnostics[0]?.message);
 				expect(full.xml.length).toBeGreaterThan(1_500_000);
-				const [cut, early] = timed(() => exportMusicXml(text, { maxLength: 100_000 }));
+				const [cut, early] = fastest(() => exportMusicXml(text, { maxLength: 100_000 }));
 				expect(cut).toMatchObject({ ok: false, tooLarge: true });
 				// A twentieth of the score written at most: well under half the time, the measures' text never built.
 				expect(early).toBeLessThan(whole / 2);
