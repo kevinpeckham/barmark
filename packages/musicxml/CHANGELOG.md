@@ -6,6 +6,60 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+
+- **A chord's degrees are not printed when its kind text already spells
+  them.** `<kind text="7sus4">` with an added 7, or `text="5(7)"` with a
+  subtracted 3, now writes each such `<degree>` with `print-object="no"`,
+  so a program that prints the text and then the degrees no longer shows
+  `D7sus4(7)` or `G5(7)(no3)`. The degrees are still written, so the
+  chord means the same notes to a program that reads kind and degrees
+  (and to the import). A kind text that does not name the whole chord
+  leaves its degrees printed.
+- **A keyboard's lower staff is not drawn in slashes.** A two-staff part
+  no longer writes `<measure-style number="1"><slash>`: Verovio applied it
+  to both staves and drew the lower staff's whole-bar rest as slashes. Its
+  slash notes already carry slash noteheads and no stems.
+- **No part inherits the slash style of the part before it.** A part
+  after one that left slash style on, and that doesn't start in slashes
+  itself, now writes `<slash type="stop"/>` in its first measure (a
+  slash-free chart writes no slash element): Verovio carries slash style
+  from one part to the next,
+  and drew a bass's opening whole-bar rest, after a slashed guitar, as
+  four slashes.
+- **A pickup is written as a pickup.** A first bar in a one-bar meter
+  shorter than the `time:` meter, followed by a bar in that meter
+  (`time: 3/4` then `| [1/4] C | D |`), is now measure 0 with
+  `implicit="yes"`, under the running time signature, as MuseScore writes
+  one; the measures after it are numbered from 1. It used to be measure 1
+  with a `<time>` of 1/4 and then the running meter, so Verovio and Dorico
+  printed a 1/4 time signature and counted the pickup as bar 1. A first
+  bar MusicXML's pickup can't say keeps its own time signature: one whose
+  length would read back as another meter in the running meter's beat
+  (`[1/4]` in 6/8 reads `[2/8]`), and one followed by another one-bar
+  meter (`| [2/4] G | % |`). The import reads either shape back as the
+  same pickup.
+- **Every lone word "a" in chart text survives Dorico.** A heading's,
+  text line's or description's word "a" anywhere, not only at the start,
+  is now held to the next word by a no-break space: Dorico read
+  Shenandoah's "every note a quarter." as "every note  quarter.", taking
+  the "a" for the one in "a tempo". barmark's own "a tempo" stays plain.
+- **A part named for an acoustic guitar is one.** A part whose name holds
+  "guitar" was always guessed an electric guitar (MIDI program 28), so
+  Shenandoah's "Acoustic Guitar" was exported as "Electric Guitar". A
+  guitar named acoustic is now barmark's listed acoustic guitar
+  (`instrument-name` "Acoustic guitar", program 26), as if `instrument:
+  acoustic guitar` named it; `@barmark/midi` takes the same program from
+  the same table.
+- **The description is written once.** The text before a chart's first
+  heading (Shenandoah's description) is now a direction in the top part
+  only, like the score's marks, not in every part, where every engraver
+  showed it once per part. A part exported alone (`part`) still writes it.
+- **A repeat's `×N` stands over the bar it ends.** The count (and "repeat
+  as needed") was a direction after the bar's last note, at its closing
+  barline, so Verovio and Dorico both drew Peaceful Dreams' `×5` over the
+  next bar. It now carries an `<offset>` back to the bar's last beat.
+
 ## [0.7.1] - 2026-11-08
 
 ### Fixed

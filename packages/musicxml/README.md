@@ -67,8 +67,9 @@ A `score-partwise` file, one part per `part:` (a chart with none is one
 part, "Chart"), at concert pitch except where an instrument transposes:
 
 - **Chords** are `<harmony>` symbols over slash notes, with barmark's own
-  spelling shown and `<degree>`s that make the exact chord. barmark never
-  invents a melody.
+  spelling shown and `<degree>`s that make the exact chord, unprinted
+  (`print-object="no"`) where the spelling already says them. barmark
+  never invents a melody.
 - **Note sets and voicings** (`{C E G}`, `Cmaj7{E3 G3 B3}`) are real
   notes; a part whose notes sit low gets a bass clef. A marked root
   (`E3!`) is kept as a `<?barmark root?>` processing instruction on its
@@ -77,7 +78,7 @@ part, "Chart"), at concert pitch except where an instrument transposes:
   playback sound; a transposing one (trumpet in B♭, alto and tenor sax)
   is written at its pitch with a `<transpose>`. `clef:` fixes a clef,
   alto included. Without either, the instrument is guessed from the
-  part's name.
+  part's name ("Acoustic Guitar" is barmark's acoustic guitar).
 - **Part lines** (`Pno.RH`, `Pno.LH`): a keyboard's hands on its two
   staves, a third and fourth line as second voices; a one-staff part's
   lines as voices.
@@ -89,7 +90,9 @@ part, "Chart"), at concert pitch except where an instrument transposes:
   `D.C.` and `D.S.` are MusicXML repeats and jumps, so playback follows
   the chart. A replayed section is written out in full; so is a repeated
   section that holds repeats of its own. Measures show barmark's written
-  bar numbers.
+  bar numbers. A first bar in a one-bar meter shorter than the `time:`
+  (`[1/4]`) is a pickup: measure 0, `implicit`, under the running time
+  signature.
 - **Directives:** key, time, tempo (a metronome mark), rit. and accel.,
   and the feel (MusicXML 4.0 swing).
 - **Lyrics:** syllables on notes (`{G4}:maz-`) are `<lyric>`s on their
@@ -102,8 +105,9 @@ part, "Chart"), at concert pitch except where an instrument transposes:
   measure.
 - **Text:** section headings, rehearsal marks, words on bars, and every
   text line (free-text lyrics, `###` notes) as words, so nothing written is lost.
-  In a score of several parts, headings, rehearsal marks, tempo, feel and
-  jumps are written once, over the top part.
+  In a score of several parts, the description (the text before the
+  first heading), headings, rehearsal marks, tempo, feel and jumps are
+  written once, over the top part.
 - **Credits:** the title as the work's title; composers, lyricists,
   arrangers and copyright lines as the file's creators and rights.
 

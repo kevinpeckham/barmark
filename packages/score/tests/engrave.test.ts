@@ -40,11 +40,78 @@ describe("engraveChart", () => {
 		expect(count(measure, /class="staff"/g)).toBe(staves);
 	});
 
+	test("a piano's slash bar: slashes on the upper staff, a rest on the lower", () => {
+		// Verovio slashed both staves of a grand staff from <measure-style number="1">.
+		const r = engraveChart(vrv, read("morning-song.chart.md"), { width: 800 });
+		if (!r.ok) throw new Error(r.reason);
+		const system = r.svg.split('class="system"')[1] ?? "";
+		const measure = system.split('class="measure"')[1] ?? "";
+		// Guitar, then the piano's two staves; the last runs on to the measure's own marks.
+		const [, upper = "", lower = ""] = measure.split('class="staff"').slice(1);
+		expect(count(upper, /class="note"/g)).toBe(4);
+		expect(count(lower, /class="beatRpt"/g)).toBe(0);
+		expect(count(lower, /class="note"/g)).toBe(0);
+		expect(count(lower, /class="(mRest|rest)"/g)).toBe(1);
+	});
+
+	test("a pickup is drawn as one: no time signature of its own, numbered 0", () => {
+		engraveChart(vrv, read("shenandoah.chart.md"), { width: 800 });
+		const mei = vrv.getMEI();
+		const meters = [...mei.matchAll(/<meterSig [^>]*count="(\d+)" unit="(\d+)"/g)].map(
+			(m) => `${m[1]}/${m[2]}`,
+		);
+		expect(new Set(meters)).toEqual(new Set(["4/4"]));
+		expect(mei).toMatch(/<measure [^>]*metcon="false" n="0">/);
+	});
+
+	test("a repeat's ×N is drawn in the bar it ends, not the next", () => {
+		engraveChart(vrv, "|: G | C :| x5\n| D |", { width: 800 });
+		const mei = vrv.getMEI();
+		const bars = mei.split("<measure ").slice(1);
+		expect(bars[1]).toContain("×5");
+		expect(bars[2]).not.toContain("×5");
+		const tstamp = Number(
+			/<dir [^>]*tstamp="([\d.]+)"[^>]*>(?:(?!<\/dir>)[\s\S])*×5/.exec(bars[1] ?? "")?.[1],
+		);
+		expect(tstamp).toBe(4);
+	});
+
+	test("a part after a slashed one draws its own whole-bar rest, not slashes", () => {
+		// Verovio carries slash style on from the part before.
+		const r = engraveChart(vrv, "part: Gtr = Guitar\npart: Bs = Bass\nGtr | G | C |\n| D | G |", {
+			width: 800,
+		});
+		if (!r.ok) throw new Error(r.reason);
+		const system = r.svg.split('class="system"')[1] ?? "";
+		const measure = system.split('class="measure"')[1] ?? "";
+		const [, bass = ""] = measure.split('class="staff"').slice(1);
+		expect(count(bass, /class="beatRpt"/g)).toBe(0);
+		expect(count(bass, /class="(mRest|rest)"/g)).toBe(1);
+	});
+
 	test("as many measures as the export", () => {
 		const r = engraveChart(vrv, read("morning-song.chart.md"), { width: 800 });
 		if (!r.ok) throw new Error(r.reason);
 		const firstPart = r.xml.split(/<part /)[1]?.split("</part>")[0] ?? "";
 		expect(count(r.svg, /class="measure"/g)).toBe(count(firstPart, /<measure /g));
+	});
+
+	/** Every chord symbol Verovio drew, as its text. */
+	const harms = (svg: string) =>
+		[...svg.matchAll(/class="harm"[\s\S]*?<\/g>/g)].map((m) =>
+			m[0].replace(/<[^>]+>|\s|class="harm">/g, ""),
+		);
+
+	test("a degree the export hides is not drawn after the kind text", () => {
+		// Verovio 6.4 appends every <degree>, print-object="no" or not: D7sus4(7), G5(7)(no3).
+		const r = engraveChart(vrv, read("peaceful-dreams.chart.md"), { width: 800 });
+		if (!r.ok) throw new Error(r.reason);
+		expect(r.xml).toContain('<degree print-object="no">');
+		const drawn = new Set(harms(r.svg));
+		expect(drawn).toContain("D7sus4");
+		expect(drawn).toContain("G5(7)");
+		expect([...drawn].filter((h) => h.includes(")("))).toEqual([]);
+		expect([...drawn].filter((h) => h.endsWith("sus4(7)"))).toEqual([]);
 	});
 
 	test("refuses a chart that does not export", () => {

@@ -6,6 +6,31 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+
+- **A chord symbol is drawn as the chart spells it.** Verovio 6.4 appends
+  every `<degree>` to the kind text, `print-object="no"` or not, so
+  `D7sus4` was drawn `D7sus4(7)` and `G5(7)` as `G5(7)(no3)`. The score
+  now drops a degree that is not printed before Verovio reads the
+  MusicXML (with `@barmark/musicxml`'s next release, which hides a degree
+  its kind text already spells). `Engraved.xml` is the export unchanged.
+  The pass is linear (a single `indexOf` scan, no backtracking regex), so a
+  hostile MusicXML given to `engraveXml` cannot stall it.
+- **The Grid / Score switch follows the element's `theme`.** It sits
+  outside the grid's themed `.bm-chart`, and render's `:host{all:initial}`
+  reset its colour and font, so on a dark page it was black text in the
+  browser's serif. It now takes render's ink and rule for `theme="dark"`,
+  for `auto` (or no theme) under a dark colour scheme, and light ones
+  otherwise and in print, honouring `--barmark-ink` and `--barmark-rule`,
+  in render's label font (`--barmark-label-font`). A page no longer has to
+  colour the host itself.
+- **Chord accidentals and the tempo's note draw in Chromium.** Verovio
+  declares its Leipzig font (the ♯, ♭ and ♩) inside the score's SVG, in the
+  shadow root, where Chromium never registers a font face, so `C♯m7` drew
+  as `C m7`. The element now copies that face, once per document, into a
+  `<style data-barmark-score-font>` in the head. A page that copied it
+  itself can drop the copy.
+
 ## [0.1.0] - 2026-11-08
 
 First release.
