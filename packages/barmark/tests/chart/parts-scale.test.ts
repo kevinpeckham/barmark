@@ -32,3 +32,18 @@ test("four times the parts, at most 32 times as long: quadratic is 16, cubic 64"
 	expect(parseChart(parts(600)).bars[0]?.parts).toHaveLength(600);
 	expect(large / small).toBeLessThan(32);
 }, 120_000);
+
+/** `n` parts in one system with `n` verses under it. */
+const sungParts = (n: number) =>
+	[
+		...Array.from({ length: n }, (_, i) => `part: P${i} = Piano`),
+		...Array.from({ length: n }, (_, i) => `P${i} | C |`),
+		...Array.from({ length: n }, (_, v) => `lyrics ${v + 1}: | la |`),
+	].join("\n");
+
+test("many parts with many verses: five times both, under 25 times as long (quadratic), not 125", () => {
+	const small = timed(sungParts(150));
+	const large = timed(sungParts(750));
+	expect(parseChart(sungParts(750)).bars[0]?.lyrics).toHaveLength(750);
+	expect(large / small).toBeLessThan(25);
+}, 120_000);

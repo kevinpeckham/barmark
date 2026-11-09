@@ -177,12 +177,16 @@ function versesOf(
 	for (const group of groupsOf(lines)) {
 		const covered = (group.rows[0]?.covers ?? []).flatMap((n) => bars.get(n) ?? []);
 		const sungOnNotes = covered.some((l) => owners.has(l.line) && hasSyllables(l));
+		const barsIn = covered.map((l) => l.cells.filter(isBar).length);
 		for (const row of singingRows(group, sungOnNotes, diagnostics))
-			for (const l of covered)
-				if (l.cells.filter(isBar).length === row.cells.length) {
-					const key = rowKey(group.replay, l.line);
-					rows.set(key, [...(rows.get(key) ?? []), row]);
-				}
+			covered.forEach((l, i) => {
+				if (barsIn[i] !== row.cells.length) return;
+				// In place: a copy per row would cost the rows squared over every covered line.
+				const key = rowKey(group.replay, l.line);
+				const sung = rows.get(key);
+				if (sung) sung.push(row);
+				else rows.set(key, [row]);
+			});
 	}
 	return { rows, diagnostics };
 }

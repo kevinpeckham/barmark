@@ -148,7 +148,10 @@ function systemsOf(lines: Line[]): Map<number, System> {
 		}
 		system.lines.push(l);
 		const key = l.part?.toLowerCase();
-		if (key !== undefined) system.byPart.set(key, [...(system.byPart.get(key) ?? []), l]);
+		if (key === undefined) continue;
+		const own = system.byPart.get(key);
+		if (own) own.push(l);
+		else system.byPart.set(key, [l]);
 	}
 	for (const system of systems.values()) system.reference = referenceOf(system.lines);
 	systemsKnown.set(lines, systems);
