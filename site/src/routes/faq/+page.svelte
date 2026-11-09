@@ -291,7 +291,9 @@ onMount(() => {
 					lyrics as notes, each part on a staff of its own (a piano on two), with the chart's sections,
 					repeats, endings, key, meter and tempo. Its <code class={code}>&lt;barmark-score&gt;</code> element
 					shows the bar grid with a Grid / Score switch above it; the home page's chart and
-					<a href="/try" class={link}>Try It</a> have one.
+					<a href="/try" class={link}>Try It</a> have one. From the terminal,
+					<code class={code}>npx @barmark/cli render --score song.chart.md --out song.html</code> writes the
+					score as a page to open in a browser and print to PDF.
 				</p>
 				<p>
 					The score adds no music of its own. A chart of chord names stays chord names over slashes: no
@@ -317,7 +319,8 @@ onMount(() => {
 					<a href={LINKS.verovio} class={link}>Verovio</a>, an open-source music engraver, licensed under
 					the <a href={LINKS.verovioLicense} class={link}>LGPL-3.0</a>.
 					<code class={code}>@barmark/score</code> uses it as an ordinary npm dependency, loaded unchanged
-					when a score is drawn. None of its code is copied into Barmark's packages, which stay MIT.
+					when a score is drawn. None of its code is copied into Barmark's packages, which stay MIT. The
+					CLI's standalone binaries carry Verovio unmodified, with its licence in the release.
 				</p>
 			</section>
 

@@ -131,6 +131,12 @@ describe("the commands Get Started shows", () => {
 		expect(run(line("transpose"), dir).stdout.toString()).toContain("|: E | B | C#m | A :|");
 		run(line("render"), dir);
 		expect(existsSync(join(dir, "example-song.html"))).toBe(true);
+		const score = USE_CLI.split("\n").find((l) => l.includes(" render --score ")) ?? "";
+		expect(score).toContain("--out example-song-score.html");
+		expect(run(score, dir).exitCode).toBe(0);
+		const page = readFileSync(join(dir, "example-song-score.html"), "utf8");
+		expect(page).toContain("<svg");
+		expect(page).toContain("Example Song");
 		run(line("export"), dir);
 		expect(readFileSync(join(dir, "example-song.musicxml"), "utf8")).toContain("<score-partwise");
 		expect(run(line("import"), dir).exitCode).toBe(0);
@@ -182,6 +188,9 @@ describe("Get Started, prerendered", () => {
 			"renderChart(",
 			"parseChart(",
 			"npx @barmark/cli check",
+			"render --score",
+			"--width",
+			"Verovio-LGPL-3.0.txt",
 		])
 			expect(page).toContain(line);
 		const intro = text(doc().querySelector("main h1")?.nextElementSibling) ?? "";
@@ -264,6 +273,7 @@ describe("the FAQ, prerendered", () => {
 			"Does the score match Dorico or MuseScore?",
 		);
 		expect(answer("score-dorico")).toContain("MusicXML");
+		expect(answer("score")).toContain("render --score");
 	});
 	test("links to Stem Shovel, the code and the licence", () => {
 		const hrefs = [...doc().querySelectorAll("main a")].map((a) => a.getAttribute("href"));

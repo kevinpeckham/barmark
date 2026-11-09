@@ -148,6 +148,7 @@ export const USE_CLI = `npx @barmark/cli check songs          # every .chart.md 
 npx @barmark/cli format --write songs # rewrite them in standard form
 npx @barmark/cli transpose example-song.chart.md --to E
 npx @barmark/cli render example-song.chart.md --out example-song.html
+npx @barmark/cli render --score example-song.chart.md --out example-song-score.html  # the full score
 npx @barmark/cli export --musicxml example-song.chart.md --out example-song.musicxml
 npx @barmark/cli import example-song.musicxml --out imported.chart.md  # a MusicXML score as a chart`;
 

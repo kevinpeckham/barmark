@@ -159,6 +159,10 @@ const code = "font-mono text-accent";
 			unchanged. A site that bundles the score ships Verovio inside its bundle; the README says how to keep
 			it a separate file and its notice.
 		</p>
+		<p class="max-w-prose opacity-80">
+			Without a web page, <a href="#terminal" class={link}>the CLI</a>'s
+			<code class={code}>render --score</code> writes the same score as a page to print.
+		</p>
 		<p class="text-sm opacity-80">
 			Every attribute, the worker and the licence are in the
 			<a href={LINKS.scoreReadme} class={link}>score package's README</a>.
@@ -187,13 +191,22 @@ const code = "font-mono text-accent";
 		<p class="max-w-prose opacity-80">
 			<code class={code}>@barmark/cli</code> is the <code class={code}>barmark</code> command. It
 			checks a folder of charts and names each problem by file and line, rewrites charts in their
-			standard form, transposes them, renders one as a page that opens in any browser, and exports one
-			as MusicXML for MuseScore, Dorico or Sibelius. It runs
+			standard form, transposes them, renders one as a page that opens in any browser (the bar grid, or
+			the full score), and exports one as MusicXML for MuseScore, Dorico or Sibelius. It runs
 			with <code class={code}>npx</code> on Node 20.6 or later, with nothing to install; without Node,
 			download a standalone binary from its
 			<a href={LINKS.cliReleases} class={link}>GitHub releases</a>.
 		</p>
 		<Code title="Terminal" code={USE_CLI} />
+		<p class="max-w-prose opacity-80">
+			<code class={code}>render --score</code> writes a standalone HTML page of the full engraved score,
+			the one <code class={code}>&lt;barmark-score&gt;</code> shows: open it in a browser and print it to
+			PDF from there. <code class={code}>--width</code> sets the width it is laid out for (320 to 40000
+			pixels, 900 by default), which decides how many bars go on a line, and
+			<code class={code}>--part</code> engraves one part alone. Verovio is built into the CLI and its
+			standalone binaries, so there is nothing else to install; it is LGPL-3.0, and the binaries' release
+			carries its licence as <code class={code}>Verovio-LGPL-3.0.txt</code>.
+		</p>
 		<p class="max-w-prose opacity-80">
 			In CI it keeps a repository of charts readable: a chart with a mistake fails the build, and on
 			GitHub each problem is marked on its line in the pull request. Pin the version, so a new release
