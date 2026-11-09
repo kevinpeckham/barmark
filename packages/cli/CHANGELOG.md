@@ -6,6 +6,13 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- **Bar numbers in `export --midi` and `import` messages follow the
+  chart**: a chart's pickup is bar 0 and the first full bar is bar 1, as
+  in the barmark grammar (2.4). A loss in the first full bar after a pickup
+  was reported as `bar 2`.
+
 ### Technical
 
 - **The README gives Verovio's copyright and source**, and how to build with
