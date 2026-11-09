@@ -49,8 +49,19 @@ export function singerOf(l: BarsLine, parse: ChartParse): string | null {
 	return same(name, p.sings) ? (p.label ?? "") : null;
 }
 
+/** Whether a verse's syllables sit on notes, read once for each written bar however often it plays. */
+const noted = new WeakMap<PlayedSyllable[], boolean>();
+function onNote(syllables: PlayedSyllable[]): boolean {
+	let known = noted.get(syllables);
+	if (known === undefined) {
+		known = syllables.some((s) => s.note);
+		noted.set(syllables, known);
+	}
+	return known;
+}
+
 /** Whether a chart with no parts sings: its verse 1 sits on notes. */
-const onNotes = (b: PlayedBar) => (b.lyrics ?? []).some((v) => v.syllables.some((s) => s.note));
+const onNotes = (b: PlayedBar) => (b.lyrics ?? []).some((v) => onNote(v.syllables));
 
 /** `onNotes` over the chart, worked out once a parse: asked for each line, it would read every bar each time. */
 const sang = new WeakMap<ChartParse, boolean>();
@@ -112,6 +123,19 @@ function slotStarts(slots: Slot[]): number[] {
 	return starts;
 }
 
+/** The last of the ascending `starts` at or before `at` (within a rounding error), or -1: a binary search, so a bar of many notes and syllables isn't their product. */
+function lastStartBy(starts: number[], at: number): number {
+	let lo = 0;
+	let hi = starts.length;
+	while (lo < hi) {
+		const mid = (lo + hi) >> 1;
+		const start = starts[mid] ?? 0;
+		if (start < at || near(start, at)) lo = mid + 1;
+		else hi = mid;
+	}
+	return lo - 1;
+}
+
 /** A verse's syllables in a bar under its slots: each on the slot sounding at its onset. */
 function underSlots(cell: CellModel, landing: Landing, key: string, verse: number): Syllable[][] {
 	if (cell.kind !== "slots" || !landing) return [];
@@ -122,8 +146,7 @@ function underSlots(cell: CellModel, landing: Landing, key: string, verse: numbe
 	const out: Syllable[][] = starts.map(() => []);
 	const length = barLength(landing.bar.meter);
 	for (const s of sung) {
-		const i = starts.findLastIndex((at) => at < s.at / length || near(at, s.at / length));
-		out[Math.max(0, i)]?.push(s.syllable);
+		out[Math.max(0, lastStartBy(starts, s.at / length))]?.push(s.syllable);
 	}
 	return out;
 }
