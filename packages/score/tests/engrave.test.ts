@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { exportMusicXml } from "@barmark/musicxml";
 import { parseChart } from "barmark";
 import type { VerovioToolkit } from "verovio/esm";
-import { engraveChart, MAX_WRITTEN_NOTES, MAX_XML_LENGTH, writtenNotes } from "../src/index.js";
+import { engraveChart, MAX_SCORE_COST, MAX_XML_LENGTH, scoreCost } from "../src/index.js";
 import { loadToolkit } from "./helpers/toolkit.js";
 
 const vrv = await loadToolkit();
@@ -166,9 +166,11 @@ describe("engraveChart", () => {
 	});
 
 	test("a score too large to draw is refused, with the element's reason", () => {
-		const r = engraveChart(vrv, "| C D_E |\n", { width: 800, maxNotes: 2 });
+		const text = "| C D_E |\n";
+		const cost = scoreCost(parseChart(text));
+		const r = engraveChart(vrv, text, { width: 800, maxCost: cost - 1 });
 		expect(r).toMatchObject({ ok: false, reason: "The score is too large to draw" });
-		expect(engraveChart(vrv, "| C D_E |\n", { width: 800, maxNotes: 3 }).ok).toBe(true);
+		expect(engraveChart(vrv, text, { width: 800, maxCost: cost }).ok).toBe(true);
 	});
 
 	test("MusicXML too long to draw is refused too", () => {
@@ -178,37 +180,74 @@ describe("engraveChart", () => {
 	});
 });
 
-describe("writtenNotes", () => {
-	const notes = (text: string) => writtenNotes(parseChart(text));
+describe("scoreCost", () => {
+	const cost = (text: string) => scoreCost(parseChart(text));
+	const many = (n: number, slot: string) => Array.from({ length: n }, () => slot).join(" ");
+	const home = readFileSync(join(import.meta.dir, "../../../site/src/lib/demo.chart.md"), "utf8");
+	const gtrPno =
+		"part: Gtr = Guitar\npart: Pno = Piano\n\n| G | C |\nGtr | G | C | D | G |\nPno | G/B | C | D | G |\nGtr | Em | C | D | G |\n| C | G |";
 
-	test("every played bar's slots, a group's members each", () => {
-		expect(notes("| C D_E |\n")).toBe(3);
-		expect(notes("| C | x3\n")).toBe(3);
-		expect(notes("|: C D :| x2\n")).toBe(4);
+	test("is never less than the MusicXML the export writes", () => {
+		const shapes = [
+			...charts.map(read),
+			home,
+			gtrPno,
+			`## A x10\n|: C :| x2\nlyrics: | ${many(200, "la")} |\n`,
+			`part: Vo = Voice, instrument: voice\n## A x10\nVo |: ${many(200, '"w" {C4}:la')} :| x2\n`,
+			`## A x50\n|: "${"x".repeat(1500)}" C :| x2\n`,
+			`## A x50\n|: "${"&".repeat(1500)}" C :| x2\n`,
+			`## ${"x".repeat(1500)} x50\n|: C :| x2\n`,
+			`## A x50\n|: C :| x2\nlyrics: | ${"x".repeat(1500)} |\n`,
+			`${Array.from({ length: 30 }, (_, i) => `part: P${i} = Piano`).join("\n")}\nP0 | C | D |\n`,
+			`## A x50\n|: ${many(8, "{C4 E4 G4 B4 D5 F5 A5 C6}")} :| x2\n`,
+			`## A x50\n|: ${many(8, "Cmaj13#11/G")} :| x2\n`,
+		];
+		for (const text of shapes) {
+			const r = exportMusicXml(text);
+			if (!r.ok) throw new Error(r.diagnostics[0]?.message);
+			expect(cost(text)).toBeGreaterThanOrEqual(r.xml.length);
+		}
 	});
 
-	test("every part's and every line's, and the lyric syllables", () => {
-		const parts = "part: A = Piano\npart: B = Bass\nA | C D |\nB | {C2} |\n";
-		expect(notes(parts)).toBe(3);
-		const lines = "part: P = Piano\nP.RH | {C4} {D4} |\nP.LH | {C3} |\n";
-		expect(notes(lines)).toBe(3);
-		expect(notes("| C |\nlyrics: | la la la |\n")).toBe(4);
+	test("counts every declared part's measure in every bar, a tacet part's rests too", () => {
+		const declared = (n: number) =>
+			`${Array.from({ length: n }, (_, i) => `part: P${i} = Piano`).join("\n")}\nP0 | C | x300\n`;
+		expect(cost(declared(30)) - cost(declared(1))).toBeGreaterThanOrEqual(29 * 300 * 500);
+		const r = engraveChart(vrv, declared(30), { width: 800, maxCost: cost(declared(1)) * 5 });
+		expect(r).toMatchObject({ ok: false, reason: "The score is too large to draw" });
 	});
 
-	test("the examples and the site's home chart are far under the limit", () => {
-		const home = readFileSync(join(import.meta.dir, "../../../site/src/lib/demo.chart.md"), "utf8");
-		for (const text of [...charts.map(read), home])
-			expect(notes(text)).toBeLessThan(MAX_WRITTEN_NOTES / 20);
-		expect(MAX_WRITTEN_NOTES).toBe(50_000);
+	test("counts the length of what is written, escaped, as many times as it is played", () => {
+		const words = (w: string) => cost(`## A x100\n|: "${w}" C :| x2\n`);
+		expect(words("x".repeat(1001)) - words("x")).toBe(200 * 1000);
+		expect(words("&".repeat(1001)) - words("&")).toBe(200 * 6000);
+		const heading = (h: string) => cost(`## ${h} x100\n|: C :| x2\n`);
+		expect(heading("x".repeat(1001)) - heading("x")).toBe(200 * 1000);
+		const sung = (t: string) => cost(`## A x100\n|: C :| x2\nlyrics: | ${t} |\n`);
+		expect(sung("x".repeat(1001)) - sung("x")).toBe(200 * 1000);
 	});
 
-	test("the finding's chart is refused before its export, in a moment", () => {
-		const cell = Array.from({ length: 1000 }, () => "la").join(" ");
-		const text = `## A x500\n|: C :| x2\nlyrics: | ${cell} |\n`;
+	test("the examples, the site's home chart and Try It's are far under the budget", () => {
+		for (const text of [...charts.map(read), home, gtrPno])
+			expect(cost(text)).toBeLessThan(MAX_SCORE_COST / 50);
+		expect(MAX_SCORE_COST).toBe(50_000_000);
+	});
+
+	const refusedQuickly = (text: string) => {
+		expect(text.length).toBeLessThan(2_000);
 		const start = performance.now();
 		const r = engraveChart(vrv, text, { width: 800 });
-		// Its export alone takes some twenty seconds and writes 370 MB.
 		expect(performance.now() - start).toBeLessThan(2_000);
 		expect(r).toMatchObject({ ok: false, reason: "The score is too large to draw" });
+	};
+
+	test("the finding's chart is refused before its export, in a moment", () => {
+		// Its export alone takes some twenty seconds and writes 370 MB.
+		refusedQuickly(`## A x500\n|: C :| x2\nlyrics: | ${many(500, "la")} |\n`);
+	});
+
+	test("a link of few notes and long escaped words is refused before its export", () => {
+		// About 9,000 bytes of words a bar, written out 10,000 times: some 90 MB.
+		refusedQuickly(`## A x5000\n|: "${"&".repeat(1800)}" C :| x2\n`);
 	});
 });

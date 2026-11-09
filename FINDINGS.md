@@ -1979,12 +1979,22 @@ played thousands of times copied its list of passes each time. And the score wor
 computing requests whose element had moved on, with no deadline, so one slow job blocked every
 later score on the page. **Fix:** each lookup indexed once per bar (`sungAtOf`, maps by onset
 and slot, binary search), tested by `packages/musicxml/tests/export-scale.test.ts` (eight times
-the syllables, at most sixteen times the time; the old code took 20 to 36); the finding's chart
-went from about 40 s to 21 s, the rest being the 370 MB of MusicXML it really writes. The engine
-gives the worker one job at a time, drops superseded requests still waiting, cuts off a
-superseded job after `SUPERSEDED_GRACE_MS` and any job after `JOB_DEADLINE_MS` (terminate,
-fresh worker, which loads the Verovio the first one did), tested with a fake worker and fake
-timers in `packages/score/tests/engine.test.ts`. **Rule:** any code a shared link reaches is
+one crowded bar of 2,000 and of 16,000 items, at most sixteen times the time; about seven now,
+22 to 44 on the old code); the finding's chart went from about 40 s to 21 s, the rest being the
+370 MB of MusicXML it really writes. So `engraveChart` now refuses, before exporting, a score
+whose `scoreCost` (an estimate of the MusicXML's bytes, never under it: measures of every
+declared part, tacet too, slots, pitches, syllables and the escaped length of every text, times
+its plays) is over 50,000,000, and MusicXML over 50,000,000 characters after. A note count
+alone was not enough (a second review): long escaped words on few notes, or many tacet parts,
+cost as much. The engine gives the worker one job at a time, drops superseded requests still
+waiting, and cuts off (terminate, fresh worker loading the Verovio the first one did) a job
+whose Verovio load runs past `LOAD_DEADLINE_MS` (60 s), or whose engraving, timed from the
+worker's `Ready`, runs past `JOB_DEADLINE_MS` (20 s) or past `SUPERSEDED_GRACE_MS` (3 s) once
+superseded; a crash fails only its own job. Tested with a fake worker and fake timers in
+`packages/score/tests/engine.test.ts`. Timing a job from `postMessage` would have counted a
+slow 7 MB download against it (a second review again). **Rule:** any code a shared link reaches is
 attack surface: a per-item `find`/`filter` over a bar, row or play order is quadratic in what
-an author can write, so index it once; and work for a page in a worker is cancellable and
-bounded, since `postMessage` can't take a job back.
+an author can write, so index it once; output a short input can multiply (repeats) is
+budgeted before it is made, by what it will cost to write, not by a count of one kind of thing;
+and work for a page in a worker is cancellable and bounded, since `postMessage` can't take a
+job back, with a download's budget kept apart from the work's.

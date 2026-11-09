@@ -19,8 +19,8 @@ export {
 	engraveChart,
 	engraveXml,
 	LAYOUT,
-	MAX_WRITTEN_NOTES,
+	MAX_SCORE_COST,
 	MAX_XML_LENGTH,
-	writtenNotes,
+	scoreCost,
 } from "./engrave.js";
 export { cleanSvg, type ScoreTheme, scorePane, scoreStyles } from "./markup.js";
