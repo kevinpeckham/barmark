@@ -264,7 +264,8 @@ export function parseChart(text: string): ChartParse {
 			? playStreams(doc.lines, doc.parts, doc.parts, voice.voices)
 			: expand(doc.lines, undefined, 1, true, together(voice.voices.map((v) => v.sing)));
 	const [part = null] = doc.part ? withSings([doc.part], voice.all) : [];
-	const pickup = numberFromPickup(played.events);
+	const bars = flattenBars(played.events);
+	const pickup = numberFromPickup(bars);
 	return {
 		title: doc.title,
 		part,
@@ -272,7 +273,7 @@ export function parseChart(text: string): ChartParse {
 		credits: doc.credits,
 		lines: doc.lines,
 		events: played.events,
-		bars: flattenBars(played.events),
+		bars,
 		pickup,
 		sections: played.sections,
 		diagnostics: sortDiagnostics([
@@ -328,7 +329,8 @@ export function extractPart(text: string, label: string, lineName?: string): Cha
 	const extract = part ? extractOf(doc, part, voices, lineName) : null;
 	if (!part || !extract) return null;
 	const { played } = extract;
-	const pickup = numberFromPickup(played.events);
+	const bars = flattenBars(played.events);
+	const pickup = numberFromPickup(bars);
 	// The lyric rows are their owner's, or the chart's when no part sings (grammar 7.7).
 	const rows = voices.some((v) => v.singer === voice.owner);
 	const lines = rows ? extract.lines : extract.lines.filter((l) => l.kind !== "lyrics");
@@ -344,7 +346,7 @@ export function extractPart(text: string, label: string, lineName?: string): Cha
 		credits: doc.credits,
 		lines,
 		events: played.events,
-		bars: flattenBars(played.events),
+		bars,
 		pickup,
 		sections: played.sections,
 		diagnostics: sortDiagnostics([

@@ -49,6 +49,12 @@ describe("a pickup (grammar 2.4)", () => {
 		expect(written(text)).toEqual([0, 1]);
 	});
 
+	test("a fermata before the first bar is skipped too", () => {
+		const text = "| ... | [1/4] G | C |";
+		expect(pickup(text)).toBe(true);
+		expect(written(text)).toEqual([0, 1]);
+	});
+
 	test("inside a repeat: every pass plays bar 0", () => {
 		const text = "|: [1/4] G | C :|";
 		expect(pickup(text)).toBe(true);
@@ -91,6 +97,12 @@ describe("a pickup (grammar 2.4)", () => {
 			expect(pickup("| [1/4] G | x[ |\n| [1/4] G | C |")).toBe(false);
 			expect(written("| [1/4] G | x[ |\n| [1/4] G | C |")).toEqual([3, 4]);
 		});
+
+		test("a second written bar on an error line: no pickup, numbers as written", () => {
+			const text = "| [1/4] G |\n| C | x[ |\n| C |";
+			expect(pickup(text)).toBe(false);
+			expect(written(text)).toEqual([1, 4]);
+		});
 	});
 
 	test("several parts with one tacet in the first system share the pickup", () => {
@@ -106,6 +118,9 @@ describe("a pickup (grammar 2.4)", () => {
 		const reparsed = parseChart(printPart(text, "Bs") ?? "");
 		expect(reparsed.pickup).toBe(true);
 		expect(reparsed.bars.map((b) => b.written)).toEqual([0, 1, 2, 3, 4]);
+		const guitar = extractPart(text, "Gtr");
+		expect(guitar?.pickup).toBe(true);
+		expect(guitar?.bars.map((b) => b.written)).toEqual([0, 1, 2, 3, 4]);
 	});
 
 	test("opensWithPickup reads played bars alone", () => {

@@ -200,7 +200,8 @@ export type PlayedBar = {
 	 */
 	index: number;
 	/**
-	 * The bar's number as written: 0 for a pickup (grammar 2.4), else
+	 * The bar's number as written, as `parseChart` and `extractPart` number
+	 * it (`expand` counts from 1): 0 for a pickup (grammar 2.4), else
 	 * counting from 1, each written bar once (`%` included, fermatas not) in
 	 * written order: a repeat or replay plays its bars under the numbers they
 	 * were written with.

@@ -244,8 +244,10 @@ after it, `tempo:` counts the new meter's beat (2.1).
 
 The chart's first written bar is a **pickup** when it is in a one-bar
 meter shorter than the meter in force at the next written bar, compared
-by value, and that next bar is not short itself. Fermatas are skipped;
-a `%` is a written bar.
+by value, and that next bar is not itself in a one-bar meter shorter
+than the `time:` in force (two short bars in a row open no pickup). A
+**short bar** is one in a one-bar meter shorter than the `time:` in
+force. Fermatas are skipped; a `%` is a written bar.
 
 ```
 time: 4/4
@@ -362,10 +364,10 @@ A push brings a slot in early, the way a band anticipates a downbeat:
 - Writing the push out (`| C / / /_G | / |`, 2.2) still works and means
   what it says: G attacks on the "and" of 4 and the next bar holds it.
 - Errors: a push with nothing played before it (the chart's first slot,
-  or the first after `...`; write a short bar), a push longer than the
-  slot it takes its time from, a push on `/`, `%` or `?`, a push inside a
-  `_` group, three or more `<`, and a mark written before the push
-  (`^<D`; the message suggests `<^D`).
+  or the first after `...`; write a short bar before it, 2.4), a push
+  longer than the slot it takes its time from, a push on `/`, `%` or
+  `?`, a push inside a `_` group, three or more `<`, and a mark written
+  before the push (`^<D`; the message suggests `<^D`).
 
 ### 2.9 Sustain pedal
 
@@ -1410,7 +1412,7 @@ human to say whether the band was silent, and the structure line.
 | What `->` cuts | Decided by Kevin (2026-11-08): `->` cuts the replay's last bar as written, from the last pass with `x N` (6); when a `Fine` or `To Coda` stops play before it, after the jump, the bar is never reached and the replay plays up to the stop. Found by the MusicXML round trip's property test: `## Intro` holding a `Fine`, replayed as `## Intro ->` after a `D.S. al Fine`, played nothing. Rejected: cutting the last bar played, which can cut a bar before a `Fine` and leave nothing. |
 | Tempo in a one-bar meter | Decided by Kevin (2026-11-08): a one-bar meter keeps the tempo unit of the `time:` in force; `tempo:` counts the beat of the running meter `time:` set, so a short or odd bar never changes speed (2.4). In `time: 6/8, tempo: 60` a `[2/8]` pickup plays at 60 dotted quarters a minute, and a `[3/4]` bar lasts two of them. After a `time:` line the tempo counts the new meter's beat, as before (2.1). Rejected: the bracketed meter's own beat, which changes speed at a pickup. Machine output gains `time` on a played bar in a one-bar meter (A.7), and an extracted part's tacet stand-in for a `%` takes the meter of the bar it copies (7.4). |
 | A `Coda` with no bar after it | Decided by Kevin (2026-11-08): an **error** (5.2, 9); the `Coda` an `al Coda` goes on needs a bar after it: a bar written later in the chart, or a later heading that replays one (the last chorus as the coda). It gives `To Coda` nowhere to go on, and MusicXML has no measure to carry the sign. Before, it parsed, played nothing after `To Coda` and the export dropped the sign. Rejected: a warning, which would leave the jump going nowhere. |
-| Pickup | Decided by Kevin (2026-11-09): the chart's first written bar is a pickup when it is in a one-bar meter shorter, by value, than the meter in force at the next written bar, and that bar is not short itself (2.4); it is bar 0, so bar 1 is the first full bar, as notation numbers it. Before, the pickup was bar 1 and the MusicXML export already wrote measure 0. `index`, the play position, does not change, so saved timing maps keep working. Machine output gains `pickup` on the parse (A.7). Rejected: renumbering `index` too (every saved map would answer one bar off with an unchanged hash); a literal 0 in the bar-grid gutter. |
+| Pickup | Decided by Kevin (2026-11-09): the chart's first written bar is a pickup when it is in a one-bar meter shorter, by value, than the meter in force at the next written bar, and that next bar is not itself in a one-bar meter shorter than the `time:` in force, so two short bars in a row open no pickup (2.4); it is bar 0, so bar 1 is the first full bar, as notation numbers it. Before, the pickup was bar 1 and the MusicXML export already wrote measure 0. `index`, the play position, does not change, so saved timing maps keep working. Machine output gains `pickup` on the parse (A.7). Rejected: renumbering `index` too (every saved map would answer one bar off with an unchanged hash); a literal 0 in the bar-grid gutter. |
 
 ## Open questions
 
