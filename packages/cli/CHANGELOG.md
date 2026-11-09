@@ -6,8 +6,15 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-11-09
+
 ### Changed
 
+- **Uses** barmark 0.22.0, @barmark/render 0.18.0, @barmark/musicxml
+  0.8.0, @barmark/score 0.2.0 (with Verovio 6.4.1) and @barmark/midi 0.3.0
+  and, through it, @barmark/sync 0.3.0: a pickup is bar 0 everywhere
+  (`render`, `export`, `import`), and the libraries' fixes for very large
+  or crowded charts.
 - **Bar numbers in `export --midi` and `import` messages follow the
   chart**: a chart's pickup is bar 0 and the first full bar is bar 1, as
   in the barmark grammar (2.4). A loss in the first full bar after a pickup
@@ -309,7 +316,8 @@ The first release of the `barmark` command. Uses `barmark` 0.8.0 and
 - **The `barmark` command:** `check`, `format`, `render` and `transpose`
   for `.chart.md` files, on npm and as standalone binaries.
 
-[Unreleased]: https://github.com/kevinpeckham/barmark/compare/cli-v0.9.0...HEAD
+[Unreleased]: https://github.com/kevinpeckham/barmark/compare/cli-v0.10.0...HEAD
+[0.10.0]: https://github.com/kevinpeckham/barmark/compare/cli-v0.9.0...cli-v0.10.0
 [0.9.0]: https://github.com/kevinpeckham/barmark/compare/cli-v0.8.0...cli-v0.9.0
 [0.8.0]: https://github.com/kevinpeckham/barmark/compare/cli-v0.7.0...cli-v0.8.0
 [0.7.0]: https://github.com/kevinpeckham/barmark/compare/cli-v0.6.6...cli-v0.7.0
