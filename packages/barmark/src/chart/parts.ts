@@ -19,13 +19,19 @@ function copyAlong(cells: Cell[], before: Meter | null, out: Copied): Meter | nu
 	return meter;
 }
 
+/** Each chart's copied meters, worked out once however many parts are projected from it. */
+const copiedOf = new WeakMap<Line[], Copied>();
+
 /**
  * What each `%` copies its meter from: the bar before it on its part's
  * line (a part's line, or a tutti line, which every part plays), across
  * line breaks, so a stand-in for it is a bar of the same length.
  */
 function copiedMeters(lines: Line[]): Copied {
+	const known = copiedOf.get(lines);
+	if (known) return known;
 	const out: Copied = new Map();
+	copiedOf.set(lines, out);
 	const last = new Map<string, Meter | null>();
 	let tutti: Meter | null = null;
 	for (const l of lines) {
@@ -72,8 +78,8 @@ const referenceOf = (system: Labelled[]) =>
  * part's own line when it has one that errs, so its error stays its own,
  * or else the reference line, which has none.
  */
-function standIn(system: Labelled[], at: Labelled, copied: Copied): Line {
-	const ref = referenceOf(system);
+function standIn(system: System, at: Labelled, copied: Copied): Line {
+	const ref = system.reference;
 	if (!ref) return unread(at);
 	const { part: _p, system: _s, dropped: _d, ...rest } = ref;
 	return { ...rest, line: at.line, cells: ref.cells.map(standInCell(copied)) };
@@ -98,16 +104,25 @@ const plays = (l: Labelled | undefined) => l?.kind === "bars" && !l.dropped;
  */
 type Stream = { key: string; name: string | null; first: boolean; copied: Copied };
 
+/**
+ * A system's lines, each part's lines among them (by lowercased label),
+ * and the line its structure is read from: each stream looks up its own
+ * lines instead of scanning the system.
+ */
+type System = {
+	lines: Labelled[];
+	byPart: Map<string, Labelled[]>;
+	reference: BarsLine | undefined;
+};
+
 /** The stream's own line in a system, if written; a bare line dropped from a part's lines is none of them (grammar 7.6). */
-const ownLine = (system: Labelled[], s: Stream) =>
-	system.find(
-		(m) =>
-			m.part?.toLowerCase() === s.key &&
-			(s.name === null
-				? true
-				: m.lineName === undefined
-					? s.first && !(m.kind === "bars" && m.dropped)
-					: m.lineName.toLowerCase() === s.name.toLowerCase()),
+const ownLine = (system: System, s: Stream) =>
+	(system.byPart.get(s.key) ?? []).find((m) =>
+		s.name === null
+			? true
+			: m.lineName === undefined
+				? s.first && !(m.kind === "bars" && m.dropped)
+				: m.lineName.toLowerCase() === s.name.toLowerCase(),
 	);
 
 /** A tutti line as a stream other than its part's first hears it: tacet. */
@@ -117,25 +132,43 @@ const restingTutti = (l: Line, copied: Copied): Line =>
 const inSystem = (l: Line): l is Labelled & { system: number } =>
 	(l.kind === "bars" || l.kind === "invalid") && l.system !== undefined;
 
-function systemsOf(lines: Line[]): Map<number, Labelled[]> {
-	const systems = new Map<number, Labelled[]>();
-	for (const l of lines)
-		if (inSystem(l)) systems.set(l.system, [...(systems.get(l.system) ?? []), l]);
+/** Each chart's systems, indexed once however many parts are projected from it. */
+const systemsKnown = new WeakMap<Line[], Map<number, System>>();
+
+function systemsOf(lines: Line[]): Map<number, System> {
+	const known = systemsKnown.get(lines);
+	if (known) return known;
+	const systems = new Map<number, System>();
+	for (const l of lines) {
+		if (!inSystem(l)) continue;
+		let system = systems.get(l.system);
+		if (!system) {
+			system = { lines: [], byPart: new Map(), reference: undefined };
+			systems.set(l.system, system);
+		}
+		system.lines.push(l);
+		const key = l.part?.toLowerCase();
+		if (key !== undefined) system.byPart.set(key, [...(system.byPart.get(key) ?? []), l]);
+	}
+	for (const system of systems.values()) system.reference = referenceOf(system.lines);
+	systemsKnown.set(lines, systems);
 	return systems;
 }
 
+const NO_SYSTEM: System = { lines: [], byPart: new Map(), reference: undefined };
+
 /** What one line becomes in the stream's chart: itself, its unlabelled self, a stand-in, or nothing. */
-function projectLine(l: Line, s: Stream, systems: Map<number, Labelled[]>): Line | null {
+function projectLine(l: Line, s: Stream, systems: Map<number, System>): Line | null {
 	if (l.kind === "part") return l.label?.toLowerCase() === s.key ? l : null;
-	if (inSystem(l)) return projectSystemLine(l, s, systems.get(l.system) ?? []);
+	if (inSystem(l)) return projectSystemLine(l, s, systems.get(l.system) ?? NO_SYSTEM);
 	return s.first ? l : restingTutti(l, s.copied);
 }
 
 /** A system's line in one stream's chart: its own line, a stand-in where it rests, or nothing. */
-function projectSystemLine(l: Labelled, s: Stream, system: Labelled[]): Line | null {
+function projectSystemLine(l: Labelled, s: Stream, system: System): Line | null {
 	const own = ownLine(system, s);
 	if (own === l && plays(l)) return unlabelled(l);
-	const at = own ?? referenceOf(system) ?? system[0];
+	const at = own ?? system.reference ?? system.lines[0];
 	return at === l ? standIn(system, l, s.copied) : null;
 }
 
@@ -167,6 +200,13 @@ export function projectPart(
 	return lines.map((l) => projectLine(l, s, systems)).filter((l): l is Line => l !== null);
 }
 
+/** A system's line in a part's extract: its own lines as written, or one stand-in where it doesn't play. */
+function extractSystemLine(l: Labelled, key: string, system: System, copied: Copied): Line | null {
+	const own = system.byPart.get(key) ?? [];
+	if (own.length) return own.includes(l) ? l : null;
+	return (system.reference ?? system.lines[0]) === l ? standIn(system, l, copied) : null;
+}
+
 /** One part's lines kept as written, labels and all, with a stand-in for each system it doesn't play: what an extract prints (grammar 7.6). */
 export function projectPartLines(lines: Line[], label: string): Line[] {
 	const key = label.toLowerCase();
@@ -176,11 +216,7 @@ export function projectPartLines(lines: Line[], label: string): Line[] {
 		.map((l): Line | null => {
 			if (l.kind === "part") return l.label?.toLowerCase() === key ? l : null;
 			if (!inSystem(l)) return l;
-			const system = systems.get(l.system) ?? [];
-			const own = system.filter((m) => m.part?.toLowerCase() === key);
-			if (own.length) return own.includes(l) ? l : null;
-			const at = referenceOf(system) ?? system[0];
-			return at === l ? standIn(system, l, copied) : null;
+			return extractSystemLine(l, key, systems.get(l.system) ?? NO_SYSTEM, copied);
 		})
 		.filter((l): l is Line => l !== null);
 }

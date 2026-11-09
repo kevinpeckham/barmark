@@ -30,6 +30,13 @@ Releases follow the process in [RELEASING.md](RELEASING.md).
   their product. The parse's data is otherwise unchanged; `pedalStates`
   still builds its matrix for callers that want it, but `parseChart`
   doesn't call it.
+- **A chart of many parts parses in time quadratic in its parts, not
+  cubic.** Each part's projection scanned the whole system for its own
+  line at every line it projected, and rebuilt the systems by copying;
+  choosing a system's reference line compared every line with every
+  other; reading a labelled line re-listed the declared parts; finding
+  who sings read every bar line once per part. 600 one-bar parts (19 KB)
+  took about 9 s, 1,500 several minutes; now 0.1 s and 0.9 s.
 
 ## [0.21.0] - 2026-11-08
 

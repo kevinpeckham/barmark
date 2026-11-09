@@ -69,12 +69,23 @@ function singersOf(lines: Line[], parts: DeclaredPart[]): { owner: Singer | null
 		return { owner, all: owner ? [owner] : [] };
 	}
 	const alone = parts.length === 1;
-	const sung = (p: DeclaredPart) => linesOf(p, bars, alone).some(hasSyllables);
+	// Each part's lines found once, not by reading every bar line for every part.
+	const byPart = new Map<string, BarsLine[]>();
+	for (const l of bars) {
+		const key = l.part?.toLowerCase();
+		if (key === undefined) continue;
+		const own = byPart.get(key);
+		if (own) own.push(l);
+		else byPart.set(key, [l]);
+	}
+	const ownLines = (p: DeclaredPart) =>
+		alone ? linesOf(p, bars, true) : (byPart.get((p.label ?? "\u0000").toLowerCase()) ?? []);
+	const sung = (p: DeclaredPart) => ownLines(p).some(hasSyllables);
 	const first = parts.find((p) => p.instrument === "voice") ?? parts.find(sung);
 	const all = parts
 		.filter((p) => p === first || sung(p))
 		.map((part): Singer => {
-			const sings = singingLine(part, linesOf(part, bars, alone));
+			const sings = singingLine(part, ownLines(part));
 			return {
 				part,
 				...(part.label && { label: part.label }),

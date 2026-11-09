@@ -89,14 +89,24 @@ function numberSystems(lines: Line[]): Line[] {
  */
 function referenceLines(lines: Line[]): Map<number, BarsLine> {
 	const bySystem = new Map<number, BarsLine[]>();
-	for (const l of lines)
-		if (l.kind === "bars" && l.system !== undefined)
-			bySystem.set(l.system, [...(bySystem.get(l.system) ?? []), l]);
+	for (const l of lines) {
+		if (l.kind !== "bars" || l.system === undefined) continue;
+		const members = bySystem.get(l.system);
+		if (members) members.push(l);
+		else bySystem.set(l.system, [l]);
+	}
 	const refs = new Map<number, BarsLine>();
 	for (const [system, members] of bySystem) {
-		const votes = (l: BarsLine) => members.filter((m) => structureOf(m) === structureOf(l)).length;
-		const best = members.reduce((a, b) => (votes(b) > votes(a) ? b : a));
-		refs.set(system, best);
+		// Each structure counted once, not each line against every other.
+		const shapes = members.map(structureOf);
+		const votes = new Map<string, number>();
+		for (const shape of shapes) votes.set(shape, (votes.get(shape) ?? 0) + 1);
+		let best = 0;
+		shapes.forEach((shape, i) => {
+			if ((votes.get(shape) ?? 0) > (votes.get(shapes[best] ?? "") ?? 0)) best = i;
+		});
+		const ref = members[best];
+		if (ref) refs.set(system, ref);
 	}
 	return refs;
 }
