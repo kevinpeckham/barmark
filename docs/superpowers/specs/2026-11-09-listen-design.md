@@ -230,11 +230,14 @@ name finds the study. The range is what validation accepts (§5.3).
 | `SECTION_NOVELTY_SPANS` | `[8, 16]` | non-empty, whole numbers ≥ 1 | Study 31 | grid: section witness |
 | `PLACEMENT_FIRST_SOUND_SLACK_BEATS` | `0.25` | [0, 1) beats | Study 31c | grid: placement and pickup |
 
-### 5.2 Six set by the app, not by a study
+### 5.2 Seven set by the app or the design, not by a study
 
-These are hard-coded in the app's modules, outside the constants file. They
+Six are hard-coded in the app's modules, outside the constants file. They
 come over as options too, so that no number is hidden. Their doc comments
-say "set in the app, not by a study" (design call):
+say "set in the app, not by a study" (design call). The seventh,
+`PICKUP_MAX_BAR_FRACTION`, is new with the pickup (§7). Its doc comment
+says "set in the design, not by a study", and Study 34's pickup slot is to
+confirm or move it:
 
 | Constant | Default | Range | From | Read by |
 | --- | --- | --- | --- | --- |
@@ -244,6 +247,7 @@ say "set in the app, not by a study" (design call):
 | `HEDGE_LOCAL_COST_FACTOR` | `2` | ≥ 1 | `utils/alignedPlacements.ts` (`2 * localMedian`) | align: placements |
 | `DTW_MAX_CELLS` | `150_000_000` | whole number ≥ 1 | `audio/chartAlignment.ts` `MAX_CELLS` | align: `too-long` |
 | `MAX_GRID_BARS` | `2000` | whole number ≥ 1 | `audio/chartlessGrid.ts` `MAX_BARS` (the app's `ChartDraftSchema` limit) | grid: `grid-truncated` |
+| `PICKUP_MAX_BAR_FRACTION` | `0.5` | (0, 1] | this design, after the app's review (2026-11-09) | grid: the longest pickup reported, as a share of the bar (§7) |
 
 ### 5.3 How options work
 
@@ -347,6 +351,11 @@ type GridInput = {
 	declared: Declared;
 	/** The song's own start of bar one, when a person set it: the vote is skipped. */
 	startAt?: number | null;
+	/**
+	 * Whether the recording starts on a bar line (a DAW export). Default true, the app's behavior.
+	 * False sets the time-zero witness's weight to 0: a phone capture or a cut does not.
+	 */
+	startsOnBarLine?: boolean;
 };
 
 type Witness = {
@@ -397,6 +406,18 @@ findGrid(input: GridInput, options?: ListenOptions):
   `DOWNBEAT_OFF_COMB_MARGIN`. An undecided vote is a `downbeat-undecided`
   refusal carrying the full reading, so a page can say why bar one was not
   placed.
+- **`startsOnBarLine: false`** (design call, after the app's review) is the
+  remedy for a recording that is not a DAW export, with no new math. On
+  such a recording time zero snaps to some lattice beat about half the
+  time, and that beat is the downbeat one time in `beatsPerBar`. When the
+  other two witnesses abstain, time zero alone decides: its weight 2 meets
+  `DOWNBEAT_MIN_SCORE` and the off-comb margin. It is the main way a public
+  tool would save a wrong chart. `false` is the same as
+  `DOWNBEAT_WEIGHTS.timeZero: 0`, without the host knowing the weight. The
+  default and every bench number are unchanged. The README says so in
+  one line: "If the recording may not start on a bar line (a phone
+  capture, a clip), pass `startsOnBarLine: false`." The pipeline passes
+  it through.
 - `features.duration` is the recording's length, and `features.firstSound`
   is the first sound.
 
@@ -442,9 +463,10 @@ type Alignment = {
  */
 type Fit = { bar1: number; medianBar: number; declaredBar: number; ratio: number };
 
-type Placements = {                       // the app's AlignedPlacements, unchanged
+type Placements = {                       // the app's AlignedPlacements, but tempo in barmark's beat
 	sections: { name: string; start: number; hedged: boolean }[];
 	keyChanges: { at: number; key: string; hedged: boolean }[];
+	/** `bpm` in grammar 2.1's beat, like `Declared.tempo`; the app converts to its bottom-note unit. */
 	tempoChanges: { at: number; bpm: number; hedged: boolean }[];
 };
 
@@ -473,14 +495,28 @@ alignChart(input: AlignInput, options?: ListenOptions):
   plays its first member; a note set (a rootless record) holds, as the
   app's `chordPitchClasses` returned null for it; an empty bar holds.
   The app's `SPELLINGS` table, which rewrote older charts' spellings before
-  `parseChord`, is dropped: barmark text is already barmark.
+  `parseChord`, is dropped: barmark text is already barmark. barmark 0.21
+  does not read seven of the forms it rewrote: `CM7`, `CSus4`, `CmMaj7`,
+  `CmM7`, `C69`, `C(7)sus4`, and a Unicode minus. A stored chart that still
+  carries one gets a `?` slot that holds, with a warning. The app runs
+  `db:chart-check` on every stage before adoption and fixes what it lists.
+  Whether barmark should read any of them is a grammar question (§13).
 - **Bar seconds** follow barmark's own tempo rule: `tempo:` counts the beat
   of the `time:` meter in force (`bar.time ?? bar.meter`), and a bar lasts
   its own meter's length in that beat. This is the rule `@barmark/midi`'s
-  `perform` uses (`quarters.ts`), and it gives the app's seconds for every
-  chart the app keeps (6/8 at `tempo: 40` is 3 s, as the app's 6/8 at 120
-  eighths). rit. and accel. are read at the steady tempo, as the app's
-  adapter reads them.
+  `perform` uses (`quarters.ts`). It differs from the app before
+  `1e120b2e`: there the adapter handed a chart's own `tempo:` (grammar
+  2.1's beat) to a rule that counts the numerator. That gave 9.0 s for a
+  6/8 bar at `tempo: 40`, where barmark's rule gives 3.0 s. The app fixed
+  its adapter at `1e120b2e`, and the package's values are the asserted
+  ones (§11.3): 6/8 at `tempo: 40` is 3.0 s a bar, 12/8 at `tempo: 60` is
+  4.0 s, and a `[6/8]` bar in 4/4 at `tempo: 120` is 1.5 s. rit. and
+  accel. are read at the steady tempo, as the app's adapter reads them.
+- **A tempo change** is placed where a played bar's `tempo` (grammar 2.1's
+  beat) differs from the bar before. A one-bar meter of another bottom
+  note (a `[6/8]` bar in 4/4) changes the bottom-note bpm without changing
+  the tempo, so it is not reported as a tempo change. The app met this
+  trap.
 - **The order:** read the chart's bars, then compute the render's frame
   count from the bar seconds and check `DTW_MAX_CELLS` (§10). Only then
   render and warp. Re-phase with the comb: a flat envelope is `no-period`.
@@ -524,6 +560,8 @@ type RecordingChart = {
 	/** The builder's own diagnostics, unchanged. */
 	diagnostics: BuildDiagnostic[];
 	grid: PlacedGrid | null;               // null when built on the declared grid
+	/** The comb, the witnesses and the scores, whether or not the grid was placed (null only for no-period). */
+	reading: GridReading | null;
 	/** The features used, so a caller can cache them. */
 	features: Features;
 };
@@ -550,7 +588,9 @@ chartFromRecording(input: RecordingInput, options?: ListenOptions & FeatureOptio
   placement failure). With `onUnplaced: "declared"` the pipeline builds on
   the declared grid instead: bar one at `startAt ?? 0`, the declared bar,
   to the recording's end. It adds `bar-one-unplaced` naming the refusal it
-  replaced. Input and option refusals are never replaced. The app and the
+  replaced, and `reading` still carries the witnesses and the scores: the
+  app shows them, and the bench uses the vote margin as its confidence
+  proxy. Input and option refusals are never replaced. The app and the
   bench do this today, and Study 34 counts it as "the pipeline's own
   choice".
 - One call is all a public tool or the bench needs. The app can keep
@@ -572,25 +612,34 @@ j = floor((firstSound − a) / beat + PLACEMENT_FIRST_SOUND_SLACK_BEATS)   // 0 
   `1 − slack` (0.75) beat past `a`, so `a` can be up to 0.75 beat before
   0:00. Then it is clamped to 0, with `bar-one-clamped`, as the app clamps
   it today.
-- `j ≥ 1`: the first sound comes `beatsPerBar − j` beats before the next
-  downbeat. That is **a pickup** (**Kevin's decision (2026-11-09)**: "when
-  the first sound comes before bar one by less than a bar"). Bar one is
+- `j ≥ 1` and `beatsPerBar − j ≤ PICKUP_MAX_BAR_FRACTION × beatsPerBar`
+  (at most half a bar by default): the first sound comes `beatsPerBar − j`
+  beats before the next downbeat. That is **a pickup** (**Kevin's decision
+  (2026-11-09)**, bounded after the app's review, §14 Q3). Bar one is
   `a + period`, and `grid.bars` starts there. `pickup = { start:
   max(0, a + j × beat), beats: beatsPerBar − j }`, with a `pickup` warning.
-- With `startAt` (byStart) the same reading applies around the bar one the
-  start gives. If the first sound is more than the slack and less than a
-  bar before it, that is a pickup, found the same way. A bar or more
-  before it gives `sound-before-start` and no pickup (design call: a
-  person's start of bar one wins, and the intro is theirs to chart).
+- `j ≥ 1` with a longer lead-in, such as an entrance on beat 2 of a 4/4
+  bar: no pickup. Bar one is `a` with its opening silence, as the app
+  places it and as a band writes it (a first bar with a rest). The bench's
+  bar-one truths in Studies 31c to 32b were scored this way.
+- With `startAt` (byStart) the **unbounded** rule applies around the bar
+  one the start gives. A person has said where bar one is, so any sound
+  more than the slack and less than a bar before it is a pickup, found the
+  same way. A bar or more before it gives `sound-before-start` and no
+  pickup (design call: a person's start of bar one wins, and the intro is
+  theirs to chart).
 
 **What moves.** The bar lines stay where the app puts them, but **bar one
 does not**. For every decided grid whose first sound comes 0.75 beat or
-more into the placed bar (`j ≥ 1`), the app's bar 1 (the bar from `a`,
+more into the placed bar (`j ≥ 1`) and leaves at most half a bar before
+the next downbeat, the app's bar 1 (the bar from `a`,
 clamped at 0:00 or opening in silence) becomes the pickup, starting at the
 first sound's beat. The written bar 1 is then the next bar, one bar later
 than the app's. The silent beats before the pickup leave the grid. This
-is my reading of Kevin's decision (design call, §14 Q3), and it is a
-listed difference (§11.3).
+is Kevin's decision as bounded after the app's review (§14 Q3), and it is
+a listed difference (§11.3). On the app's four dev songs with stems the
+first sound falls in the first half beat (`j = 0`), so it moves nothing
+there.
 
 **What the builder writes.** The pipeline passes `pickup: { start }` to
 `chartFromDetections`. sync's `readPickup` re-derives the length from
@@ -650,9 +699,14 @@ reasons say why it might not.
    text: refined })` before it is returned.
 
 **The confidence record** keys played bars and slots. It is kept when
-every played bar has the same slot count. Otherwise it is dropped
-(`confidenceDropped: true`) and the map is still kept: a spelling fix keeps
-slots, and a regrouped bar does not.
+every played bar has the same slot count. The count is taken on the
+played slots barmark resolves (`PlayedBar.slots` after `parseChart`), not
+on the text, so `%`, a hold written out or a repeat sign written instead
+of its bars count the same as the bars they play. Otherwise it is dropped
+(`confidenceDropped: true`) and the map is still kept: a spelling fix or
+a change of shorthand keeps the slots, and a regrouped bar does not. The
+app's refinement rewrites in the account's own style and changes
+shorthand often.
 
 **Where:** `packages/sync/src/timing/rehash.ts`, exported from both
 `@barmark/sync` and `@barmark/sync/timing`. It needs only `parseChart` and
@@ -881,9 +935,13 @@ clean, use `bun test`.
    duration. The plan spells out each case.
 4. **Equivalence with the app.** `scripts/listen-equivalence.ts` runs on
    the VM only, never in CI, like `musescore-fixtures.ts` and
-   `detection-fixtures.ts`. It imports the app's pure modules read-only
-   from `~/projects/stem-shovel/src/lib/` (Bun resolves the app's `#lib/*`
-   from its `package.json` `imports`). It runs them and the package on
+   `detection-fixtures.ts`. It runs against a `git worktree` of
+   stem-shovel at the commit it records, never the live checkout, which
+   changes under it, and it never writes there. It imports the app's pure
+   modules read-only from that worktree's `src/lib/` (Bun resolves the
+   app's `#lib/*` from its `package.json` `imports`). The commit must be
+   at or after `1e120b2e`, where the app's compound-meter tempo was
+   fixed. It runs them and the package on
    every app fixture plus a seeded set of synthetic songs (4/4, 3/4, 6/8,
    tempos 60 to 224, pickups, mid-bar starts, flat harmony). It writes the
    app's outputs, numbers and labels only, to
@@ -902,10 +960,15 @@ differs is a porting bug, and the goldens make it a failing test.
 | Difference | Why |
 | --- | --- |
 | Pickups (§7): with `j ≥ 1`, the app's bar 1 becomes the pickup, starting at the first sound's beat; the written bar 1 moves one bar later | Kevin's pickup decision |
+| Pickups longer than `PICKUP_MAX_BAR_FRACTION` of a bar keep the app's bar 1 (no difference); only shorter ones move | §7's bound |
 | `pickup-dropped` in compound meters, where the grid stays as the app's | sync writes whole dotted-quarter pickups only |
+| Compound-meter bar seconds from a chart's own `tempo:` (6/8 at 40 = 3.0 s, 12/8 at 60 = 4.0 s, `[6/8]` in 4/4 at 120 = 1.5 s), asserted on the package's values | The app was wrong before `1e120b2e`; goldens come from that commit or later, so they agree, and the cases are also asserted on their own |
+| `startsOnBarLine: false` | New input; the app's default (true) is unchanged |
+| `RecordingChart.reading` with `onUnplaced: "declared"` | New field |
+| `Placements.tempoChanges[].bpm` in grammar 2.1's beat; one-bar meters are not tempo changes | The app used its bottom-note unit; it converts at adoption |
 | `no-period` in the grid and the alignment | The app voted on noise, or reported a silent envelope as a wrong chart |
 | `grid-truncated` warning | The app truncated silently |
-| `not-same-piece` refuses the map | §14 Q1 |
+| `not-same-piece` refuses new maps | §14 Q1 |
 | `alignChart` without `declared`: the fit uses the chart's median bar | A public tool has no song; the app passes `declared` |
 | `chords` without `frames`: the frame count is the largest run end | `ChordRuns` has no total; the app passes it |
 | The map's `recording.duration` is the recording's length | The app passes the grid's end |
@@ -938,9 +1001,19 @@ differs is a porting bug, and the goldens make it a failing test.
    `chartlessGridInBrowser` does today.
 6. Replace the inline re-hash in `remote/songs.remote.ts` with
    `rehashTiming`, and show its message on the card.
-7. Run `bun run db:chart-check` on every stage, then ship. Before the
-   stricter map gate ships, it counts how many saved aligned maps
-   `not-same-piece` would have refused (§14 Q1).
+7. Run `bun run db:chart-check` on every stage, then ship. It also lists
+   stored charts with the seven spellings barmark 0.21 does not read
+   (§6.3), to fix before adoption. The stricter map gate applies to new
+   alignments only. Saved maps stay as they are, and no count is a
+   precondition, because a saved map stores no ratio or local cost
+   (§14 Q1).
+8. **Reason names.** The app's names map onto the package's: `no-input` →
+   `invalid-input`, `undecided` → `downbeat-undecided`, `no-fit` →
+   `nothing-fits`. `no-period` is new. `unavailable` stays the app's own,
+   for its workers.
+9. Convert `Placements.tempoChanges[].bpm` from grammar 2.1's beat to the
+   song's unit, and pass `startsOnBarLine` where a recording is not a DAW
+   export.
 
 `analysis.ts` keeps its detectors and its key detection's `fft`.
 
@@ -985,6 +1058,13 @@ release.
   one band. A new default is a minor that names the study.
 - **Extended harmony:** if extensions thin the harmonic histogram,
   `beatChords` could compare roots and qualities only.
+- **The pickup bound:** `PICKUP_MAX_BAR_FRACTION` 0.5 is the design's, and
+  the study's pickup song confirms or moves it.
+- **A grammar question, Kevin's, not the study's:** should barmark read
+  `CM7`, `CSus4`, `CmMaj7`, `CmM7`, `C69`, `C(7)sus4` and a Unicode minus?
+  *Recommendation:* read none in the grammar. Keep spellings unambiguous,
+  and let `db:chart-check` move stored charts once. If one form is
+  wanted, `C69` → `C6/9` is the safest.
 
 ## 14. Kevin's answers
 
@@ -994,16 +1074,32 @@ they touch (`not-same-piece` refusing maps, `onUnplaced` refusing by
 default, the §7 pickup reading, the sync `[k/8]` patch before compound-meter
 pickups, `rehashTiming`'s meter check) are now decisions.
 
+**Amended after the app's review (2026-11-09, stem-shovel#17), Kevin to
+confirm the third:**
+
+- Q1: the gate applies to new alignments. Saved maps stay as they are, and
+  no count is a precondition: a saved map stores no ratio or local cost, so
+  counting would mean re-aligning every song from its audio. If Kevin
+  wants the number, an optional script after the package ships can do it
+  (decode each mix, run `alignChart`, count `not-same-piece`).
+- Q2: unchanged. `RecordingChart.reading` now survives
+  `onUnplaced: "declared"`.
+- **Q3: yes, bounded at half a bar** (amended after the app's review;
+  Kevin to confirm). A pickup is reported only when it is at most
+  `PICKUP_MAX_BAR_FRACTION` (0.5) of a bar. A longer lead-in keeps the
+  app's bar 1 with its opening silence. With `startAt` set by a person,
+  the unbounded rule stands.
+- Q5: unchanged, with the slot count taken on barmark's played slots
+  (§8).
+
 1. **Should "not the same piece" refuse a timing map?** Today the app keeps
    an aligned map when the fit passes (the ratio ≥ 1.5 among its rules).
    The same-piece gate (ratio ≥ 1.6 and median local cost ≤ 0.3) only
    hedges placements. Study 16's wrong pairing scored 1.74, so it passes
    the fit's ratio. *Recommendation: yes.* The map is refused with
    `not-same-piece` as well as the fit's reasons. It is stricter than the
-   app by exactly the Study 16 case, which is S34-G1's concern. Before the
-   app ships it, `db:chart-check` counts how many existing aligned maps the
-   stricter gate would refuse, so the cost is known, not guessed.
-   `weak-fit` (1.5) then never fires alone, and I'd keep it only as a
+   app by exactly the Study 16 case, which is S34-G1's concern. It applies
+   to new alignments; saved maps stay (amended above). `weak-fit` (1.5) then never fires alone, and I'd keep it only as a
    reason name for the bench.
 2. **What should the pipeline do when the grid cannot be placed?** That is
    an undecided vote, a flat envelope or bar one past the end.
@@ -1015,7 +1111,8 @@ pickups, `rehashTiming`'s meter check) are now decisions.
    0.75 beat or more into the placed bar, the app's bar 1 becomes the
    pickup and the written bar 1 moves one bar later. The silent beats
    before the pickup leave the grid, and the other bar lines stay put.
-   *Recommendation: yes.*
+   *Recommendation: yes.* **Decided: yes, bounded at half a bar (amended
+   after the app's review; Kevin to confirm).**
 4. **Should sync write eighth-note pickups in compound meters?** Today
    `readPickup` builds whole dotted quarters, so a 1-eighth pickup in 6/8
    is ignored and a 2- or 4-eighth one comes out the wrong length. Grammar
