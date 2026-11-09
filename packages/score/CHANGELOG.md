@@ -6,6 +6,24 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-11-09
+
+### Added
+
+- **Limits on what a score may cost, exported.** `EngraveOptions.maxCost`
+  and `maxXmlLength`, `scoreCost`, `MAX_SCORE_COST` and `MAX_XML_LENGTH`
+  (`engraveChart`), and `createEngine`'s options `grace`, `loadDeadline`
+  and `deadline` with their defaults `SUPERSEDED_GRACE_MS`,
+  `LOAD_DEADLINE_MS` and `JOB_DEADLINE_MS`, and the `EngineOptions`,
+  `Ready` and `WorkerMessage` types. What they bound is under Fixed.
+
+### Changed
+
+- **Requires `barmark` 0.22.0, `@barmark/render` 0.18.0 and
+  `@barmark/musicxml` 0.8.0**, whose minor releases a caret range would
+  not reach. Grid and Score now number a pickup alike: bar 0, with the
+  first full bar 1.
+
 ### Fixed
 
 - **A score too large to draw is refused, not attempted.** A short chart
@@ -128,6 +146,7 @@ First release.
   needs no config; Vite 7 needs `optimizeDeps.exclude` and
   `worker.format: "es"`.
 
-[Unreleased]: https://github.com/kevinpeckham/barmark/compare/score-v0.1.1...HEAD
+[Unreleased]: https://github.com/kevinpeckham/barmark/compare/score-v0.2.0...HEAD
+[0.2.0]: https://github.com/kevinpeckham/barmark/compare/score-v0.1.1...score-v0.2.0
 [0.1.1]: https://github.com/kevinpeckham/barmark/compare/score-v0.1.0...score-v0.1.1
 [0.1.0]: https://github.com/kevinpeckham/barmark/releases/tag/score-v0.1.0
