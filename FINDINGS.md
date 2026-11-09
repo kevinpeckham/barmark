@@ -1969,3 +1969,21 @@ input once each (200,000 openers ran past 120 s). Now one `indexOf` pass (`forVe
 `packages/score/tests/for-verovio.test.ts`, 200,000 openers in milliseconds). **Rule:** a lazy
 `[\s\S]*?` between two markers on caller-supplied text is quadratic when the closer can be
 missing; scan with `indexOf`.
+
+**Again (2026-11-09, barmark): source × plays.** Two Low findings on barmark.dev's Try It, which
+parses a shared `?q=` link on load. Its guards (50,000 characters, 10,000 played bars) bound each
+factor, not their product. (1) Lyrics: `verses.ts` built fresh `{ at, syllable, note }` objects on
+every play, so one chord under 3,000 syllables `x10000` made 30 million objects from 6 KB (7 s,
+1.7 GB). (2) Pedal: `pedalWarnings`, run on every parse, walked every slot of every played bar
+through `pedalStates`' matrix; one bar of 12,000 slots `x10000` took 36 s. The audit found the
+same shape in `checkPushes` (`slotTimes` on every play), the notes' syllables and onsets, and in
+`@barmark/render` (`singsOnNotes` read every syllable of every played bar). **Fix:** `perWritten`
+(`shares.ts`) remembers what a written bar's slots give in a meter; `singing` reads each row's
+cell once per what it holds as it begins, and a pass touches only the verses it sings;
+`pedalWarnings` streams, each written bar's effect walked once from up and once from down;
+render's lookup is a `WeakMap` on the shared syllables. Now 54 ms (lyrics) and 0.6 s (pedal),
+heap flat. `packages/barmark/tests/chart/play-scale.test.ts` checks the sharing by identity and
+the time ratio (ten times the written and the plays, under thirty times as long);
+`render/tests/scale.test.ts` the layout. **Rule:** a played bar shares its written bar's data;
+per-play cost is O(1) beyond what differs by pass. Look for the class: anything in the expansion
+that maps over a bar's slots or syllables runs once per play.
