@@ -1,6 +1,6 @@
 import * as esm from "verovio/esm";
 import { VerovioToolkit } from "verovio/esm";
-import type { Reply, Request } from "./engine.js";
+import type { Ready, Reply, Request, WorkerMessage } from "./engine.js";
 import { engraveChart } from "./engrave.js";
 
 type Toolkit = VerovioToolkit;
@@ -52,6 +52,23 @@ const toolkit = toolkitLoader(async (verovioUrl: string | undefined): Promise<To
 	return new VerovioToolkit(module as ConstructorParameters<typeof VerovioToolkit>[0]);
 });
 
+/**
+ * The toolkit for `request`, saying it is `Ready` (and where it came
+ * from) once loaded, before the job is engraved: the engine starts the
+ * job's deadline then, so a slow download is not counted against it.
+ */
+export function withReady<T>(
+	loader: ReturnType<typeof toolkitLoader<T>>,
+	request: Request,
+	post: (ready: Ready) => void,
+): () => Promise<T> {
+	return async () => {
+		const toolkit = await loader.ready(request.verovioUrl);
+		post({ id: request.id, loaded: loader.loaded() ?? {} });
+		return toolkit;
+	};
+}
+
 /** Answer one request. Never throws: a failure is a reply with its reason. */
 export async function handle(request: Request, loaded: () => Promise<Toolkit>): Promise<Reply> {
 	const { id, text, width } = request;
@@ -68,7 +85,7 @@ export async function handle(request: Request, loaded: () => Promise<Toolkit>): 
 const scope = globalThis as unknown as {
 	WorkerGlobalScope?: new () => unknown;
 	onmessage: ((e: { data: Request }) => void) | null;
-	postMessage(reply: Reply): void;
+	postMessage(message: WorkerMessage): void;
 };
 // Only a worker global answers messages: importing this in a page or a test has no effect.
 if (
@@ -76,9 +93,11 @@ if (
 	globalThis instanceof scope.WorkerGlobalScope
 ) {
 	scope.onmessage = async (e) => {
-		const { verovioUrl } = e.data;
-		const reply = await handle(e.data, () => toolkit.ready(verovioUrl));
-		const loaded = toolkit.loaded();
-		scope.postMessage(loaded ? { ...reply, loaded } : reply);
+		scope.postMessage(
+			await handle(
+				e.data,
+				withReady(toolkit, e.data, (r) => scope.postMessage(r)),
+			),
+		);
 	};
 }

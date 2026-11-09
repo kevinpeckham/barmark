@@ -10,15 +10,19 @@ package uses [semantic versioning](https://semver.org/).
 
 - **A slow score no longer holds up every later one.** The worker takes
   one job at a time; a request its element has since replaced is never
-  sent, and one already running is cut off (the worker is terminated and
-  a fresh one takes the requests still waiting) once it has run
-  `SUPERSEDED_GRACE_MS` (1 s), so a quick job still finishes and keeps
-  the loaded Verovio. A job that runs past `JOB_DEADLINE_MS` (20 s) is
-  cut off too, and its request rejects with "The score engine failed", so
-  the element shows its note. Both are `createEngine` options
-  (`deadline`, `grace`). A fresh worker loads the Verovio the first one
-  loaded (its reply now says which, as `loaded`), so the first
-  `verovio-url` that loads still wins for the page.
+  sent, and one already engraving is cut off (the worker is terminated and
+  a fresh one takes the requests still waiting) once it has engraved for
+  `SUPERSEDED_GRACE_MS` (3 s), so a normal job still finishes and keeps
+  the loaded Verovio. A job still loading Verovio is never cut for this.
+  Loading Verovio has `LOAD_DEADLINE_MS` (60 s, for a 7 MB download on a
+  slow line) and engraving `JOB_DEADLINE_MS` (20 s, from the worker's new
+  `Ready` message); past either the job is cut off and its request rejects
+  with "The score engine failed", so the element shows its note. A worker
+  that crashes fails only the job it was on; the requests still waiting
+  run on a fresh one. All three are `createEngine` options (`grace`,
+  `loadDeadline`, `deadline`). A fresh worker loads the Verovio the first
+  one loaded (its `Ready` says which), so the first `verovio-url` that
+  loads still wins for the page.
 
 ### Technical
 
