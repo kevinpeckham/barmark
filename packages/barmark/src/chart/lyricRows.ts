@@ -3,6 +3,7 @@ import { readSyllable } from "./syllable.js";
 import type { ChartDiagnostic, Line, LyricSlot } from "./types.js";
 
 type LyricsLine = Extract<Line, { kind: "lyrics" }>;
+type BarsLine = Extract<Line, { kind: "bars" }>;
 type Covered = Extract<Line, { kind: "bars" | "invalid" }>;
 /** What a lyric row lies under: one bar line, or a labelled system's lines (grammar 7.4). */
 type Unit = Covered[];
@@ -102,11 +103,22 @@ const normalize = (name: string) => name.toLowerCase().replace(/\s+/g, " ").trim
 
 const plural = (n: number, what: string) => `${n} ${what}${n === 1 ? "" : "s"}`;
 
+/** Each unit's reference line and its bar count, found once however many rows lie under it. */
+const referenceOf = new WeakMap<Unit, { ref: BarsLine; n: number } | null>();
+
+function unitReference(unit: Unit): { ref: BarsLine; n: number } | null {
+	if (referenceOf.has(unit)) return referenceOf.get(unit) ?? null;
+	const ref = unit.find((l): l is BarsLine => l.kind === "bars" && !l.dropped);
+	const found = ref ? { ref, n: ref.cells.filter(isBar).length } : null;
+	referenceOf.set(unit, found);
+	return found;
+}
+
 /** Why a row can't lie under a unit, or null: its bar count must be the unit's. */
 function countProblem(row: LyricsLine, unit: Unit): string | null {
-	const ref = unit.find((l) => l.kind === "bars" && !l.dropped);
-	if (ref?.kind !== "bars") return null;
-	const n = ref.cells.filter(isBar).length;
+	const found = unitReference(unit);
+	if (!found) return null;
+	const { ref, n } = found;
 	if (row.cells.length === n) return null;
 	return `this lyric row has ${plural(row.cells.length, "bar")}; the bar line it covers has ${n} (line ${ref.line})`;
 }
@@ -183,6 +195,8 @@ function placeRows(s: Section, definitions: Map<string, Unit[]>): Placed[] {
 export function attachLyrics(lines: Line[]): { lines: Line[]; diagnostics: ChartDiagnostic[] } {
 	const diagnostics: ChartDiagnostic[] = [];
 	const covers = new Map<Line, number[]>();
+	// One list of lines for each unit, shared by its rows: a copy per row costs the rows times the unit's lines.
+	const linesOf = new Map<Unit, number[]>();
 	const definitions = new Map<string, Unit[]>();
 	const placed = sectionsOf(lines).flatMap((s) => placeRows(s, definitions));
 	// A row with an error of its own (kept as text) only holds its place.
@@ -190,11 +204,10 @@ export function attachLyrics(lines: Line[]): { lines: Line[]; diagnostics: Chart
 		if (row.kind !== "lyrics") continue;
 		const why = unit ? countProblem(row, unit) : problem;
 		if (why) diagnostics.push({ line: row.line, severity: "error", message: why, token: "lyrics" });
-		if (unit)
-			covers.set(
-				row,
-				unit.map((l) => l.line),
-			);
+		if (!unit) continue;
+		const own = linesOf.get(unit) ?? unit.map((l) => l.line);
+		linesOf.set(unit, own);
+		covers.set(row, own);
 	}
 	const out = lines.map((l) => (l.kind === "lyrics" ? { ...l, covers: covers.get(l) ?? [] } : l));
 	return { lines: out, diagnostics };

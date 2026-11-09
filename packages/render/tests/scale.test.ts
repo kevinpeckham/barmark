@@ -28,3 +28,15 @@ const systems = (count: number) =>
 test("a long chart of parts and lyric rows lays out in linear time: each line finds its own bars", () => {
 	expect(timed(systems(2000)) / timed(systems(200))).toBeLessThan(20);
 }, 60_000);
+
+/** Ten times the written slots or syllables and ten times the plays: linear is ten times as long, the product a hundred. */
+const played = {
+	"a lyric row's syllables": (n: number) => `| C | x${n}\nlyrics: | ${"la ".repeat(n)}|\n`,
+	"a melody's syllables": (n: number) => `| ${"{C4}:la ".repeat(n)}| x${n}\n`,
+	"slots with the pedal": (n: number) => `| +C ${"C ".repeat(n - 2)}*C | x${n}\n`,
+};
+
+for (const [shape, chart] of Object.entries(played))
+	test(`one bar of many ${shape} played many times lays out in time linear in the two, not their product`, () => {
+		expect(timed(chart(5000)) / timed(chart(500))).toBeLessThan(20);
+	}, 60_000);

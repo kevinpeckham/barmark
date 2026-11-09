@@ -361,6 +361,32 @@ describe("verses in play order (spec sections 3 and 4)", () => {
 		]);
 		expect(sung(parseChart(chart).bars).slice(4)).toEqual([[], []]);
 	});
+	test("a line's silent passes are one warning, its passes listed with runs as ranges", () => {
+		const message = (chart: string) =>
+			warnings(chart)
+				.filter((d) => d.message.includes("sing nothing"))
+				.map((d) => d.message);
+		expect(message("| C | x4\nlyrics 2: | la |\n")).toEqual([
+			"passes 1, 3 and 4 of this repeat sing nothing: its bars have verse 2",
+		]);
+		expect(message("| C | x9\nlyrics 2: | la |\n")).toEqual([
+			"passes 1 and 3\u20139 of this repeat sing nothing: its bars have verse 2",
+		]);
+		const verses = (ns: number[]) => ns.map((n) => `lyrics ${n}: | la |`).join("\n");
+		// Past five, a list shows four and counts the rest.
+		expect(message(`| C | x11\n${verses([2, 4, 6, 8, 10])}\n`)).toEqual([
+			"passes 1, 3, 5, 7 and 2 more of this repeat sing nothing: its bars have verses 2, 4, 6, 8 and 10",
+		]);
+	});
+	test("a long list of verses is cut short, and many silent passes stay one warning (a Vercel review)", () => {
+		const many = Array.from({ length: 2500 }, (_, v) => `lyrics ${v + 1}: | la |`).join("\n");
+		const silent = parseChart(`| C | x10000\n${many}\n`).diagnostics.filter((d) =>
+			d.message.includes("sing nothing"),
+		);
+		expect(silent.map((d) => d.message)).toEqual([
+			"passes 2501\u201310000 of this repeat sing nothing: its bars have verses 1, 2, 3, 4 and 2496 more",
+		]);
+	});
 	test("a chart with no voice part keeps a lyric row's words, with no part", () => {
 		const chart =
 			"part: G = Guitar\npart: P = Piano\nG | C | D |\nP | Em | F |\nlyrics: | la | o |\n";
