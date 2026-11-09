@@ -15,7 +15,7 @@
  */
 import type { MidiImportCode, MidiImportDiagnostic } from "./types.js";
 
-/** Where a diagnostic points: a 1-based track chunk, a played bar of the chart. */
+/** Where a diagnostic points: a 1-based track chunk, the chart's bar: a grid number until `writtenBars` runs, then its written number. */
 export type Where = { track?: number | undefined; bar?: number | undefined };
 
 export type Report = {

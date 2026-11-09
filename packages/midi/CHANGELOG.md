@@ -11,7 +11,7 @@ package uses [semantic versioning](https://semver.org/).
 - **`MidiLoss.written`**: the written number of the bar a loss happened in
   (0 for a pickup), beside `bar`, which keeps its meaning, the play
   position (`PlayedBar.index`, repeated bars counted). `Performance.bars`
-  gains `written` too.
+  gains `written` too (required: a `Performance` built by hand needs it).
 
 ### Changed
 
