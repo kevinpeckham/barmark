@@ -1987,3 +1987,20 @@ the time ratio (ten times the written and the plays, under thirty times as long)
 `render/tests/scale.test.ts` the layout. **Rule:** a played bar shares its written bar's data;
 per-play cost is O(1) beyond what differs by pass. Look for the class: anything in the expansion
 that maps over a bar's slots or syllables runs once per play.
+
+**Then, the review of the fix (2026-11-09):** three more products reachable from `?q=`. (1) Verse
+rows × plain replays: outside a repeat a bar sings every verse, so 1,560 rows under a section
+replayed 5,000 times made 7.8 million verse references (1.3 s, 61 MB); the verses a written bar
+sings when it plays again now count toward `expand`'s `work` budget (its first play's are bounded
+by the source), so it stops with the existing error (0.1 s, 2 MB; real charts use at most 153 of
+100,000). (2) Parts were cubic: each stream scanned its system for its own line at every line it
+projected (`ownLine`), and the systems, the reference line's vote, the declared labels and the
+singers' lines were each rebuilt or rescanned per part. 600 one-bar parts (19 KB) took 9 s; now
+0.1 s, and 1,500 parts 0.9 s (`parts-scale.test.ts`). (3) Diagnostics: each silent pass of a
+2,500-verse bar played 10,000 times warned separately, naming every verse: 7,500 warnings, 105
+million characters, all rendered by the site. Now one warning per line with its passes as ranges
+and long lists cut short. Also: a ratio test's small side must take milliseconds (the lyric
+row's took 0.7 ms, so one pause could fail it), and checking the old code fails it must finish
+(60,000 syllables × 6,000 plays ran past five minutes; 6,000 × 100 against ten times both fails
+at 96×). **Rule:** the output is attack surface too: a diagnostic repeated per play, or one that
+lists everything, multiplies like the data does.
