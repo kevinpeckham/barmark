@@ -853,7 +853,7 @@ the running time signature (4); `ownText` for every lone "a", not only a leading
 option or per-part chord symbols by hand before changing the XML. For 2, try leaving
 `<measure-style>` out of a two-staff part (its notes already carry slash noteheads and
 `stem none`): if Dorico is unchanged and Verovio draws rests, do that; else report it upstream.
-Fixed (2026-11-08, `fix/score-export`, Dorico not yet re-run): 2, 3, 4, 5 and three of 6.
+Fixed (2026-11-08, `fix/score-export`; Dorico re-run 2026-11-09, 4 of 4 PDFs): 2, 3, 4, 5 and three of 6.
 (3) A `<degree>` is `print-object="no"` when the root and kind text, read as a chord symbol,
 name exactly the chord (`textSpells` in `harmony.ts`); every barmark chord's text does, so in
 practice all its degrees are hidden, and they still mean the chord. Verovio 6.4.1 ignores
@@ -877,6 +877,11 @@ whitespace-delimited "a"/"A" to the next word. (6) `×N` (and "repeat as needed"
 is written in the top part only; a guitar named acoustic is barmark's listed acoustic guitar
 (program 26, as `@barmark/midi`'s table). Left: 1 (Dorico), measure `text`, and the
 description's `placement="below"` drawn above in Dorico.
+*Dorico re-run (2026-11-09):* hidden degrees change nothing there (`D7sus4`, `C(omit3)`,
+`G7(omit3)` as before, so Dorico still reads kind and every degree, printed or not); the piano's
+upper staff shows stemless slashes and its lower staff whole-bar rests, the "(4)" count now on
+the guitar only; `×5` sits over bar 128, the repeat it counts; Shenandoah opens 4/4 with an
+uncounted pickup, an "Acoustic Guitar", the description once, and "every note a quarter." whole.
 **Where:** `scripts/score-dorico.ts` (`score-dorico-page.ts` draws the page);
 `packages/musicxml/src/harmony.ts` (degrees), `measure-xml.ts` (time, slash style),
 `directions.ts` (`ownText`).
