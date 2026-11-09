@@ -1970,6 +1970,39 @@ input once each (200,000 openers ran past 120 s). Now one `indexOf` pass (`forVe
 `[\s\S]*?` between two markers on caller-supplied text is quadratic when the closer can be
 missing; scan with `indexOf`.
 
+**Again on the site PR (2026-11-09):** a Low DoS finding: Try It's Score takes a chart from a
+shared link, and a 3 KB chart (a thousand-syllable lyric row inside nested repeats played a
+thousand times) stayed under the site's size and bar guards but made the MusicXML export scan
+the bar's whole row once per onset (`lyric-staff.ts`, `lyrics.ts`'s `sungAt`); the same shape
+hid in words per slot, beam groups per value and a bare line's marks per event, and a bar line
+played thousands of times copied its list of passes each time. And the score worker kept
+computing requests whose element had moved on, with no deadline, so one slow job blocked every
+later score on the page. **Fix:** each lookup indexed once per bar (`sungAtOf`, maps by onset
+and slot, binary search), tested by `packages/musicxml/tests/export-scale.test.ts` (eight times
+one crowded bar of 2,000 and of 16,000 items, at most sixteen times the time; about seven now,
+22 to 44 on the old code); the finding's chart went from about 40 s to 21 s, the rest being the
+370 MB of MusicXML it really writes. So `engraveChart` now refuses, before exporting, a score
+whose `scoreCost` (an estimate of the MusicXML's bytes, never under it: measures of every
+declared part, tacet too, slots, pitches, syllables and the escaped length of every text, times
+its plays) is over 50,000,000, and MusicXML over 50,000,000 characters after. A note count
+alone was not enough (a second review): long escaped words on few notes, or many tacet parts,
+cost as much, and a third review found more the estimate missed (a part's silent lines, text
+lines). A size estimate chases the writer; bound the writer itself: `exportMusicXml` takes
+`maxLength` and stops at the first measure past it (`tooLarge`), which `engraveChart` sets to
+50,000,000, keeping `scoreCost` only as a cheap early refusal. The engine gives the worker one job at a time, drops superseded requests still
+waiting, and cuts off (terminate, fresh worker loading the Verovio the first one did) a job
+whose Verovio load runs past `LOAD_DEADLINE_MS` (60 s), or whose engraving, timed from the
+worker's `Ready`, runs past `JOB_DEADLINE_MS` (20 s) or past `SUPERSEDED_GRACE_MS` (3 s) once
+superseded; a crash fails only its own job. Tested with a fake worker and fake timers in
+`packages/score/tests/engine.test.ts`. Timing a job from `postMessage` would have counted a
+slow 7 MB download against it (a second review again). **Rule:** any code a shared link reaches is
+attack surface: a per-item `find`/`filter` over a bar, row or play order is quadratic in what
+an author can write, so index it once; output a short input can multiply (repeats) is
+bounded where it is made, by a budget the writer charges as it writes; an estimate made beforehand
+is only an early refusal;
+and work for a page in a worker is cancellable and bounded, since `postMessage` can't take a
+job back, with a download's budget kept apart from the work's.
+
 **Again (2026-11-09, barmark): source × plays.** Two Low findings on barmark.dev's Try It, which
 parses a shared `?q=` link on load. Its guards (50,000 characters, 10,000 played bars) bound each
 factor, not their product. (1) Lyrics: `verses.ts` built fresh `{ at, syllable, note }` objects on
