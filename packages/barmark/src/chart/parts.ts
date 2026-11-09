@@ -188,6 +188,8 @@ export function projectPart(
 	parts: DeclaredPart[],
 	label: string,
 	lineName: string | null = null,
+	/** Past this many lines the part reads no more (`expand`'s share of the work), so none past it is built. */
+	limit = Number.POSITIVE_INFINITY,
 ): Line[] {
 	if (!parts.length) return lines;
 	const key = label.toLowerCase();
@@ -200,7 +202,14 @@ export function projectPart(
 		copied: copiedMeters(lines),
 	};
 	const systems = systemsOf(lines);
-	return lines.map((l) => projectLine(l, s, systems)).filter((l): l is Line => l !== null);
+	const out: Line[] = [];
+	for (const l of lines) {
+		const projected = projectLine(l, s, systems);
+		if (projected) out.push(projected);
+		// One past the limit, so the reader knows there was more.
+		if (out.length > limit) break;
+	}
+	return out;
 }
 
 /** A system's line in a part's extract: its own lines as written, or one stand-in where it doesn't play. */

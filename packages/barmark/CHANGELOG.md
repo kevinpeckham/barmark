@@ -39,13 +39,23 @@ Releases follow the process in [RELEASING.md](RELEASING.md).
   their product. The parse's data is otherwise unchanged; `pedalStates`
   still builds its matrix for callers that want it, but `parseChart`
   doesn't call it.
-- **A chart of many parts parses in time quadratic in its parts, not
+- **A chart of many parts parses in time near linear in its size, not
   cubic.** Each part's projection scanned the whole system for its own
   line at every line it projected, and rebuilt the systems by copying;
   choosing a system's reference line compared every line with every
   other; reading a labelled line re-listed the declared parts; finding
-  who sings read every bar line once per part. 600 one-bar parts (19 KB)
-  took about 9 s, 1,500 several minutes; now 0.1 s and 0.9 s.
+  who sings read every bar line once per part, and gathered the lyric
+  rows by copying their list for each row; folding a bar looked for each
+  part's streams among all of them. 600 one-bar parts in one system
+  (19 KB) took about 9 s; at 50 KB, 1,500 such parts took minutes (now
+  0.9 s), 1,383 parts under 1,383 verses 18 s (now 1.3 s). And each part
+  read every line of the chart although it may play only its share of
+  the bars: 3,227 parts resting through 2,000 systems one part writes
+  took 19 s, 2,113 parts under 6,339 tutti lines 27 s (now 1.1 s each).
+  A part of a chart of several now reads at most ten times its share of
+  the bars in lines; one that stops there says so ("expansion stopped
+  after 0 bars: each of 1000 parts reads at most 100 lines"). Real charts
+  read every line: four parts may each read 25,000.
 - **The verses a bar sings count toward the expansion's budget.** Outside
   a repeat a bar sings every verse written over it, so 1,560 verses under
   one bar replayed 5,000 times (55 KB) made 7.8 million verse references

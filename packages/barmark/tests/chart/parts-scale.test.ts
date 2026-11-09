@@ -47,3 +47,39 @@ test("many parts with many verses: five times both, under 25 times as long (quad
 	expect(parseChart(sungParts(750)).bars[0]?.lyrics).toHaveLength(750);
 	expect(large / small).toBeLessThan(25);
 }, 120_000);
+
+/** `n` parts, all resting while the first writes `lines` one-bar systems. */
+const resting = (n: number, lines: number) =>
+	[
+		...Array.from({ length: n }, (_, i) => `part: P${i} = Piano`),
+		...Array.from({ length: lines }, () => "P0 | C |"),
+	].join("\n");
+/** `n` parts and `lines` tutti lines, which every part plays. */
+const tutti = (n: number, lines: number) =>
+	[
+		...Array.from({ length: n }, (_, i) => `part: P${i} = Piano`),
+		...Array(lines).fill("| C |"),
+	].join("\n");
+
+// Each part may play only its share of the bars, so it reads only its share of the lines: five times
+// the parts and five times the lines cost about five times as long, not their product (25; 16 to 20
+// measured before the fix).
+for (const [shape, chart] of [
+	["parts resting through one part's systems", resting],
+	["parts playing many tutti lines", tutti],
+] as const)
+	test(`${shape}: five times both, under 10 times as long`, () => {
+		const small = timed(chart(400, 400));
+		const large = timed(chart(2000, 2000));
+		expect(large / small).toBeLessThan(10);
+	}, 120_000);
+
+test("a part past its share of the lines stops, and says so", () => {
+	// 1,000 parts may each play 10 bars, so each reads 100 lines; these 150 text lines come first.
+	const chart = `${Array.from({ length: 1000 }, (_, i) => `part: P${i} = Piano`).join("\n")}\n${"words\n".repeat(150)}| C |`;
+	expect(
+		parseChart(chart)
+			.diagnostics.filter((d) => d.message.startsWith("expansion stopped"))
+			.map((d) => d.message),
+	).toEqual(["expansion stopped after 0 bars: each of 1000 parts reads at most 100 lines"]);
+});

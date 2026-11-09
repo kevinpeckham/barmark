@@ -1,5 +1,5 @@
 import { readDocument } from "./document.js";
-import { expand, flattenBars, type Sing } from "./expand.js";
+import { expand, flattenBars, type Sing, workFor } from "./expand.js";
 import { projectPart, projectPartLines } from "./parts.js";
 import { pedalWarnings } from "./pedal.js";
 import type {
@@ -125,18 +125,27 @@ export function zipEvents(
 	});
 }
 
-/** One played stream: a part, or one of its lines (grammar 7.6); `part` indexes the parts shown. */
-type Stream = { part: number; label: string; name: string | null };
+/** One played stream: a part, or one of its lines (grammar 7.6); `part` indexes the parts shown, `index` the streams. */
+type Stream = { part: number; label: string; name: string | null; index: number };
 
 /** How a stream's line is labelled in its messages: `Pno.RH`, or the part's label for its bare line. */
 const lineLabel = (label: string, name: string | null) => (name ? `${label}.${name}` : label);
 
 const streamsOf = (shown: DeclaredPart[]): Stream[] =>
-	shown.flatMap((p, part): Stream[] =>
-		p.lines?.length
-			? p.lines.map((name) => ({ part, label: p.label ?? "", name }))
-			: [{ part, label: p.label ?? "", name: null }],
-	);
+	shown
+		.flatMap((p, part): Omit<Stream, "index">[] =>
+			p.lines?.length
+				? p.lines.map((name) => ({ part, label: p.label ?? "", name }))
+				: [{ part, label: p.label ?? "", name: null }],
+		)
+		.map((s, index) => ({ ...s, index }));
+
+/** Each shown part's streams, gathered once rather than looked for in every bar. */
+function byPart(streams: Stream[], shown: DeclaredPart[]): Stream[][] {
+	const out: Stream[][] = shown.map(() => []);
+	for (const s of streams) out[s.part]?.push(s);
+	return out;
+}
 
 /** A part's share of a bar from its streams' shares: its first playing line leads (grammar 7.6). */
 function partOf(p: DeclaredPart, own: [Stream, PartBar][]): PartBar {
@@ -156,12 +165,12 @@ function partOf(p: DeclaredPart, own: [Stream, PartBar][]): PartBar {
 }
 
 /** A zipped bar of streams as a bar of parts; with one part shown, its lines sit on the bar itself. */
-function foldBar(bar: PlayedBar, streams: Stream[], shown: DeclaredPart[]): PlayedBar {
+function foldBar(bar: PlayedBar, streams: Stream[][], shown: DeclaredPart[]): PlayedBar {
 	const each = bar.parts ?? [];
 	const parts = shown.map((p, i) =>
 		partOf(
 			p,
-			streams.flatMap((s, j): [Stream, PartBar][] => (s.part === i ? [[s, each[j] ?? null]] : [])),
+			(streams[i] ?? []).map((s): [Stream, PartBar] => [s, each[s.index] ?? null]),
 		),
 	);
 	const { parts: _p, words: _w, tacet: _t, ...shared } = bar;
@@ -174,7 +183,11 @@ function foldBar(bar: PlayedBar, streams: Stream[], shown: DeclaredPart[]): Play
 	return lead?.lines ? { ...alone, lines: lead.lines } : alone;
 }
 
-function foldEvents(events: ChartEvent[], streams: Stream[], shown: DeclaredPart[]): ChartEvent[] {
+function foldEvents(
+	events: ChartEvent[],
+	streams: Stream[][],
+	shown: DeclaredPart[],
+): ChartEvent[] {
 	return events.map((e) => {
 		if (e.kind === "bar") return { kind: "bar", bar: foldBar(e.bar, streams, shown) };
 		if (e.kind === "open") return { ...e, events: foldEvents(e.events, streams, shown) };
@@ -225,7 +238,7 @@ function playStreams(lines: Line[], parts: DeclaredPart[], shown: DeclaredPart[]
 	const sings = singsOn(streams, voices);
 	const played = streams.map((s, i) =>
 		expand(
-			projectPart(lines, parts, s.label, s.name),
+			projectPart(lines, parts, s.label, s.name, workFor(streams.length)),
 			lineLabel(s.label, s.name),
 			streams.length,
 			s.name === null,
@@ -237,7 +250,7 @@ function playStreams(lines: Line[], parts: DeclaredPart[], shown: DeclaredPart[]
 		played.map((p) => p.events),
 		(d) => diagnostics.push(d),
 	);
-	const events = foldEvents(zipped, streams, shown);
+	const events = foldEvents(zipped, byPart(streams, shown), shown);
 	diagnostics.push(...linedPedalWarnings(events, shown));
 	return { events, sections: played[0]?.sections ?? [], diagnostics };
 }

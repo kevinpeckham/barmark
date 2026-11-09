@@ -35,6 +35,25 @@ export type Sing = (bar: PlayedBar, from: BarSource) => PlayedBar["lyrics"];
 /** Nested repeats multiply; expansion stops here rather than run away. */
 export const MAX_EXPANDED_BARS = 10_000;
 
+/** The bars one of `share` parts may play: its share of the cap. */
+const barsFor = (share: number) => Math.max(1, Math.floor(MAX_EXPANDED_BARS / share));
+/**
+ * The work one of `share` parts may do: ten times its bars. A part of a
+ * chart of several also reads at most this many lines, so the parts
+ * times the lines never multiply.
+ */
+export const workFor = (share: number) => barsFor(share) * 10;
+
+/**
+ * The lines one of several parts reads: its share of the work, since the
+ * parts times the lines would otherwise multiply; and the first it
+ * doesn't read, if any. A chart of one part reads every line.
+ */
+function shareOf(lines: Line[], share: number, most: number): { readable: Line[]; unread?: Line } {
+	const unread = share > 1 ? lines[most] : undefined;
+	return unread ? { readable: lines.slice(0, most), unread } : { readable: lines };
+}
+
 type BarsLine = Extract<Line, { kind: "bars" }>;
 
 /** A slot without its syllable: `%` copies a bar's notes, not its words (grammar 4.3). */
@@ -191,9 +210,10 @@ export function expand(
 	diagnostics: ChartDiagnostic[];
 } {
 	const diagnostics: ChartDiagnostic[] = [];
-	const maxBars = Math.max(1, Math.floor(MAX_EXPANDED_BARS / share));
+	const maxBars = barsFor(share);
 	// Repeats of bodies that play no bars (fermatas only) are bounded too.
-	const maxWork = maxBars * 10;
+	const maxWork = workFor(share);
+	const { readable, unread } = shareOf(lines, share, maxWork);
 	// The return after a jump plays sections again: it reports only what the first pass did not.
 	const reported = new Set<string>();
 	let again = false;
@@ -205,7 +225,7 @@ export function expand(
 	};
 
 	const sections: Section[] = [{ heading: null, lines: [] }];
-	for (const l of lines) {
+	for (const l of readable) {
 		if (l.kind === "section") sections.push({ heading: l, lines: [] });
 		else if (l.kind !== "title") sections.at(-1)?.lines.push(l);
 	}
@@ -285,7 +305,7 @@ export function expand(
 
 	// Pair |: and :| within each section, with any endings.
 	const itemsOf = new Map(sections.map((s) => [s, pairRepeats(s.lines, error)]));
-	const plan: JumpPlan | null = planJump(lines, error);
+	const plan: JumpPlan | null = planJump(readable, error);
 
 	const start = (): {
 		key: Key | null;
@@ -348,15 +368,22 @@ export function expand(
 	const checked = new Set<Played>();
 	/** Verses sung by bars playing again: work, counted for the message. */
 	let againSung = 0;
-	/** Stop playing, saying why: the bar cap, the verses sung again, or repeats that play too much. */
-	const stop = (line: number, why: "bars" | "verses" | "work" = "work") => {
+	/** Stop playing, saying why: the bar cap, the verses sung again, repeats that play too much, or a part's lines. */
+	const stop = (line: number, why: "bars" | "verses" | "work" | "lines" = "work") => {
 		capped = true;
-		const what = {
-			bars: `expansion stopped at ${maxBars} bars`,
-			verses: `expansion stopped after ${count} bars: the bars played again sing too many verses (${againSung.toLocaleString("en-US")})`,
-			work: `expansion stopped after ${count} bars: its repeats play too many times`,
+		const what = (): string => {
+			if (why === "bars") return `expansion stopped at ${maxBars} bars`;
+			const after = `expansion stopped after ${count} bars`;
+			if (why === "verses")
+				return `${after}: the bars played again sing too many verses (${againSung.toLocaleString("en-US")})`;
+			if (why === "lines") return `${after}: each of ${share} parts reads at most ${maxWork} lines`;
+			return `${after}: its repeats play too many times`;
 		};
-		error(line, what[why], "x");
+		error(line, what(), "x");
+	};
+	/** A part that stopped reading its lines before play stopped says so. */
+	const readAll = (next: Line | undefined) => {
+		if (next && !capped) stop(next.line, "lines");
 	};
 	let sectionName: string | null = null;
 	/** The pass of the repeat being played, and the replay heading being played, for the words (grammar 7.7). */
@@ -600,6 +627,7 @@ export function expand(
 		phase = plan.to === "start" ? "return" : "seek segno";
 		playSections();
 	}
+	readAll(unread);
 
 	flattenBars(events).forEach((b, i) => {
 		b.index = i + 1;
