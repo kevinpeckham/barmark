@@ -56,6 +56,20 @@ Releases follow the process in [RELEASING.md](RELEASING.md).
   the bars in lines; one that stops there says so ("expansion stopped
   after 0 bars: each of 1000 parts reads at most 100 lines"). Real charts
   read every line: four parts may each read 25,000.
+  A third review, and an audit of every loop over parts, voices, lines,
+  systems, rows and played bars, found more of the same: each part's
+  voice was looked for among every voice and every stream (1,979 parts
+  each singing, 50 KB: 59 s, now 0.3 s); a part's own line was looked up
+  again at every line of its system, and every part walked every line of
+  the chart (800 parts of four lines: 3.3 s, now 0.7 s; 777 parts of two
+  lines in two systems: 1.9 s, now 0.6 s), and the parts' score order
+  read every system once per part; a lyric row under a replay heading
+  was copied onto every part's line of the replayed system (1,354 parts
+  and 1,354 replays, each with its own row: 3.8 s, now 0.3 s), and so was
+  each row's list of covered lines. Printing a 10,000-bar line counted
+  its bars again for every bar (2.2 s, now 0.5 s). A test now parses each
+  of these shapes at eight times the parts and fails if it takes twenty
+  times as long.
 - **The verses a bar sings count toward the expansion's budget.** Outside
   a repeat a bar sings every verse written over it, so 1,560 verses under
   one bar replayed 5,000 times (55 KB) made 7.8 million verse references

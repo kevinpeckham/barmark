@@ -27,7 +27,11 @@ function mergeReports(each: ChartDiagnostic[][]): ChartDiagnostic[] {
 	const most = new Map<string, ChartDiagnostic[]>();
 	for (const list of each) {
 		const mine = new Map<string, ChartDiagnostic[]>();
-		for (const d of list) mine.set(keyOf(d), [...(mine.get(keyOf(d)) ?? []), d]);
+		for (const d of list) {
+			const known = mine.get(keyOf(d));
+			if (known) known.push(d);
+			else mine.set(keyOf(d), [d]);
+		}
 		for (const [k, ds] of mine) if (ds.length > (most.get(k)?.length ?? 0)) most.set(k, ds);
 	}
 	return [...most.values()].flat();
@@ -213,22 +217,35 @@ function linedPedalWarnings(events: ChartEvent[], shown: DeclaredPart[]): ChartD
 	);
 }
 
+/** Each part's streams, in order, by its label lower-cased. */
+function streamsByLabel(streams: Stream[]): Map<string, Stream[]> {
+	const by = new Map<string, Stream[]>();
+	for (const s of streams) {
+		const label = s.label.toLowerCase();
+		const known = by.get(label);
+		if (known) known.push(s);
+		else by.set(label, [s]);
+	}
+	return by;
+}
+
 /** The stream a voice sings on: its singing line, else its part's first; the first shown for the chart's words. */
-function singingStream(streams: Stream[], singer: Singer | null): number {
+function singingStream(by: Map<string, Stream[]>, singer: Singer | null): number {
 	const label = singer?.label?.toLowerCase();
 	if (label === undefined) return 0;
-	const own = (s: Stream) => s.label.toLowerCase() === label;
-	const at = streams.findIndex(
-		(s) => own(s) && (s.name ?? "").toLowerCase() === singer?.sings?.toLowerCase(),
-	);
-	return at >= 0 ? at : streams.findIndex(own);
+	const own = by.get(label) ?? [];
+	const sings = singer?.sings?.toLowerCase();
+	const line = own.find((s) => (s.name ?? "").toLowerCase() === sings);
+	return (line ?? own[0])?.index ?? -1;
 }
 
 /** Each stream's words: the voices singing on it, together. */
 function singsOn(streams: Stream[], voices: Voice[]): (Sing | undefined)[] {
-	return streams.map((_, i) =>
-		together(voices.filter((v) => singingStream(streams, v.singer) === i).map((v) => v.sing)),
-	);
+	// Streams indexed once: finding each voice's stream by a scan costs streams times voices.
+	const by = streamsByLabel(streams);
+	const on: Sing[][] = streams.map(() => []);
+	for (const v of voices) on[singingStream(by, v.singer)]?.push(v.sing);
+	return on.map(together);
 }
 
 /**

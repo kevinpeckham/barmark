@@ -2012,3 +2012,20 @@ row's took 0.7 ms, so one pause could fail it), and checking the old code fails 
 (60,000 syllables × 6,000 plays ran past five minutes; 6,000 × 100 against ten times both fails
 at 96×). **Rule:** the output is attack surface too: a diagnostic repeated per play, or one that
 lists everything, multiplies like the data does.
+
+**And a third review (2026-11-09):** the same class, one layer on again. Every part singing
+(`a |{C4}:la|`, one line each) found each stream's voices by asking every voice for its stream,
+which scanned the streams: streams × voices × streams, 59 s at 50 KB. A part's own line was looked
+up again at every line of its system; each part walked every line of the chart (only its own and
+the shared ones can play in it); the score order rebuilt every system's by-part map once per
+part; a row under a replay heading was copied onto every line of the replayed system, rows × parts.
+Fixing the three named shapes one at a time would have left the rest, so this round listed every
+loop in `packages/barmark/src` that nests over parts, voices, lines, systems, rows or played bars,
+with its bound at 50 KB and 10,000 bars, and gave each one past O(source + played bars) an index
+built once (a `Map` by label, a `WeakMap` by array identity, a list shared per unit, a lookup
+memoized as played). The audit found eight more, among them printing (a 10,000-bar line counted
+its bars again per bar, 2.2 s) and the lyric rows' `covers` (one copy per row). One test,
+`many parts times anything` in `parts-scale.test.ts`, builds each worst shape at 200 and 1,600
+parts and fails past 20× (linear measures up to 9×; the old code 38× to 441×). **Rule:** after
+two reviews of one class, stop fixing instances: list the nested loops and their bounds, then index
+every one that multiplies two inputs.

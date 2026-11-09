@@ -223,9 +223,28 @@ const labelsOf = (p: DeclaredPart) => [
 	...(p.lines ?? []).map((n) => (n ? `${p.label}.${n}` : (p.label ?? ""))),
 ];
 
+/** The parts' places by label (the first of each) and their widest label, found once for every system printed. */
+const partsKnown = new WeakMap<
+	DeclaredPart[],
+	{ at: Map<string | undefined, number>; width: number }
+>();
+
+function partsIndex(parts: DeclaredPart[]): { at: Map<string | undefined, number>; width: number } {
+	const known = partsKnown.get(parts);
+	if (known) return known;
+	const at = new Map<string | undefined, number>();
+	parts.forEach((p, i) => {
+		if (!at.has(p.label)) at.set(p.label, i);
+	});
+	const width = Math.max(...parts.flatMap(labelsOf).map((label) => label.length));
+	const made = { at, width };
+	partsKnown.set(parts, made);
+	return made;
+}
+
 /** Score order: by part, then by the part's line, a bare line first. */
 function scoreOf(l: BarsLine, parsed: ChartParse): number {
-	const at = parsed.parts.findIndex((p) => p.label === l.part);
+	const at = partsIndex(parsed.parts).at.get(l.part) ?? -1;
 	const line = l.lineName === undefined ? -1 : (parsed.parts[at]?.lines ?? []).indexOf(l.lineName);
 	return at * 10 + line + 1;
 }
@@ -296,9 +315,7 @@ function alignSystem(
 ): Map<number, string> {
 	const system = block.lines as BarsLine[];
 	const labelled = system[0]?.system !== undefined;
-	const width = labelled
-		? Math.max(...parsed.parts.flatMap(labelsOf).map((label) => label.length))
-		: 0;
+	const width = labelled ? partsIndex(parsed.parts).width : 0;
 	const sorted = labelled
 		? [...system].sort((a, b) => scoreOf(a, parsed) - scoreOf(b, parsed))
 		: system;
@@ -324,7 +341,7 @@ type Block = { lines: Line[]; rows: LyricsLine[] };
  */
 const isUnder = (r: LyricsLine, headings: number[]) => {
 	if (!r.covers.length) return false;
-	const last = Math.max(...r.covers);
+	const last = lastOf(r.covers);
 	let lo = 0;
 	let hi = headings.length;
 	while (lo < hi) {
@@ -334,6 +351,17 @@ const isUnder = (r: LyricsLine, headings: number[]) => {
 	}
 	return !((headings[lo] ?? Number.POSITIVE_INFINITY) < r.line);
 };
+
+/** The last line a row covers; rows share one list per unit, so it is found once for all of them. */
+const lastKnown = new WeakMap<number[], number>();
+function lastOf(covers: number[]): number {
+	let last = lastKnown.get(covers);
+	if (last === undefined) {
+		last = Math.max(...covers);
+		lastKnown.set(covers, last);
+	}
+	return last;
+}
 
 /** The block a bar line is in: its system's, or its own. */
 const blockKey = (l: Line) =>
@@ -355,10 +383,20 @@ function blocksOf(lines: Line[]): Block[] {
 	for (const l of lines.filter(inSystem)) blockFor(blocks, l).lines.push(l);
 	const byLine = new Map(lines.map((l) => [l.line, l]));
 	const headings = lines.flatMap((l) => (l.kind === "section" ? [l.line] : []));
+	// Rows share one list of covered lines per unit: its first kept line is found once.
+	const firstOf = new Map<number[], Line | undefined>();
+	const firstKept = (covers: number[]) => {
+		if (!firstOf.has(covers))
+			firstOf.set(
+				covers,
+				covers.map((n) => byLine.get(n)).find((l) => l !== undefined),
+			);
+		return firstOf.get(covers);
+	};
 	for (const r of lines) {
 		if (r.kind !== "lyrics" || !isUnder(r, headings)) continue;
 		// An extracted part keeps only some of a system's lines.
-		const first = r.covers.map((n) => byLine.get(n)).find((l) => l !== undefined);
+		const first = firstKept(r.covers);
 		if (!first) continue;
 		const block = blockFor(blocks, first);
 		if (!block.lines.length) block.lines.push(first);
@@ -394,15 +432,19 @@ function systemTexts(
 
 /** Each line's beat counts on its first play, every part's lines included. */
 function beatsOfLines(parsed: ChartParse): Beats {
-	const byLine = new Map(parsed.lines.map((l) => [l.line, l]));
+	// Each line's bar count, once: counting it again for every bar played costs the line's bars squared.
+	const cellsOf = new Map(
+		parsed.lines.map((l) => [l.line, l.kind === "bars" ? l.cells.filter(isBar).length : 0]),
+	);
 	const firstPlay = new Map<number, number[]>();
 	for (const b of parsed.bars) {
 		const lines = new Set([b.line, ...(b.parts ?? []).flatMap((p) => (p ? [p.line] : []))]);
 		for (const line of lines) {
-			const l = byLine.get(line);
 			const meters = firstPlay.get(line) ?? [];
-			const cells = l?.kind === "bars" ? l.cells.filter(isBar).length : 0;
-			if (meters.length < cells) firstPlay.set(line, [...meters, beatsOf(b.meter)]);
+			if (meters.length < (cellsOf.get(line) ?? 0)) {
+				meters.push(beatsOf(b.meter));
+				firstPlay.set(line, meters);
+			}
 		}
 	}
 	return (l: Line) => {

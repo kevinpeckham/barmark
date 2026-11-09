@@ -102,7 +102,15 @@ const plays = (l: Labelled | undefined) => l?.kind === "bars" && !l.dropped;
  * part writes lines (grammar 7.6). `first` says the line is the part's
  * first, which also plays the part's bare lines and the tutti lines.
  */
-type Stream = { key: string; name: string | null; first: boolean; copied: Copied };
+type Stream = {
+	key: string;
+	/** The line's name, lower-cased. */
+	name: string | null;
+	first: boolean;
+	copied: Copied;
+	/** Its own line in each system, found once: every line of a system asks for it. */
+	own: Map<System, Labelled | undefined>;
+};
 
 /**
  * A system's lines, each part's lines among them (by lowercased label),
@@ -116,14 +124,21 @@ type System = {
 };
 
 /** The stream's own line in a system, if written; a bare line dropped from a part's lines is none of them (grammar 7.6). */
-const ownLine = (system: System, s: Stream) =>
+const findOwn = (system: System, s: Stream) =>
 	(system.byPart.get(s.key) ?? []).find((m) =>
 		s.name === null
 			? true
 			: m.lineName === undefined
 				? s.first && !(m.kind === "bars" && m.dropped)
-				: m.lineName.toLowerCase() === s.name.toLowerCase(),
+				: m.lineName.toLowerCase() === s.name,
 	);
+
+function ownLine(system: System, s: Stream): Labelled | undefined {
+	if (s.own.has(system)) return s.own.get(system);
+	const own = findOwn(system, s);
+	s.own.set(system, own);
+	return own;
+}
 
 /** A tutti line as a stream other than its part's first hears it: tacet. */
 const restingTutti = (l: Line, copied: Copied): Line =>
@@ -160,6 +175,71 @@ function systemsOf(lines: Line[]): Map<number, System> {
 
 const NO_SYSTEM: System = { lines: [], byPart: new Map(), reference: undefined };
 
+/** The line a system's stand-ins are written at, for a part that has no line of its own there. */
+const anchorOf = (system: System): Labelled | undefined => system.reference ?? system.lines[0];
+
+/**
+ * The lines that can play in some stream, by index: those every stream
+ * reads (outside any system, and each system's anchor) and each part's
+ * own (its declaration and its lines, by lowercased label). Any other
+ * line projects to nothing, so a stream reads only these, not the chart.
+ */
+type Reading = { common: number[]; byPart: Map<string, number[]> };
+
+const readingKnown = new WeakMap<Line[], Reading>();
+
+/** The part a line belongs to, by lowercased label; undefined for a line every stream reads. */
+const partKey = (l: Line) =>
+	l.kind === "part"
+		? (l.label?.toLowerCase() ?? "")
+		: inSystem(l)
+			? l.part?.toLowerCase()
+			: undefined;
+
+function readingOf(lines: Line[], systems: Map<number, System>): Reading {
+	const known = readingKnown.get(lines);
+	if (known) return known;
+	const reading: Reading = { common: [], byPart: new Map() };
+	lines.forEach((l, i) => {
+		const anchored = inSystem(l) && anchorOf(systems.get(l.system) ?? NO_SYSTEM) === l;
+		if (anchored || (l.kind !== "part" && !inSystem(l))) reading.common.push(i);
+		const key = partKey(l);
+		if (key === undefined) return;
+		const own = reading.byPart.get(key);
+		if (own) own.push(i);
+		else reading.byPart.set(key, [i]);
+	});
+	readingKnown.set(lines, reading);
+	return reading;
+}
+
+/** Two ascending lists of indices merged, each index once. */
+function* inOrder(a: number[], b: number[]): Generator<number> {
+	let i = 0;
+	let j = 0;
+	while (i < a.length || j < b.length) {
+		const at = Math.min(a[i] ?? Number.POSITIVE_INFINITY, b[j] ?? Number.POSITIVE_INFINITY);
+		if (a[i] === at) i++;
+		if (b[j] === at) j++;
+		yield at;
+	}
+}
+
+const labelsKnown = new WeakMap<DeclaredPart[], Map<string, DeclaredPart>>();
+
+/** The declared parts by lowercased label, the first of each; indexed once however many parts are projected. */
+function partsByLabel(parts: DeclaredPart[]): Map<string, DeclaredPart> {
+	const known = labelsKnown.get(parts);
+	if (known) return known;
+	const by = new Map<string, DeclaredPart>();
+	for (const p of parts) {
+		const key = p.label?.toLowerCase();
+		if (key !== undefined && !by.has(key)) by.set(key, p);
+	}
+	labelsKnown.set(parts, by);
+	return by;
+}
+
 /** What one line becomes in the stream's chart: itself, its unlabelled self, a stand-in, or nothing. */
 function projectLine(l: Line, s: Stream, systems: Map<number, System>): Line | null {
 	if (l.kind === "part") return l.label?.toLowerCase() === s.key ? l : null;
@@ -171,7 +251,7 @@ function projectLine(l: Line, s: Stream, systems: Map<number, System>): Line | n
 function projectSystemLine(l: Labelled, s: Stream, system: System): Line | null {
 	const own = ownLine(system, s);
 	if (own === l && plays(l)) return unlabelled(l);
-	const at = own ?? system.reference ?? system.lines[0];
+	const at = own ?? anchorOf(system);
 	return at === l ? standIn(system, l, s.copied) : null;
 }
 
@@ -193,18 +273,19 @@ export function projectPart(
 ): Line[] {
 	if (!parts.length) return lines;
 	const key = label.toLowerCase();
-	const part = parts.find((p) => p.label?.toLowerCase() === key);
-	const first = part?.lines?.[0];
+	const first = partsByLabel(parts).get(key)?.lines?.[0];
 	const s: Stream = {
 		key,
-		name: lineName,
+		name: lineName?.toLowerCase() ?? null,
 		first: lineName === null || lineName === first,
 		copied: copiedMeters(lines),
+		own: new Map(),
 	};
 	const systems = systemsOf(lines);
+	const { common, byPart } = readingOf(lines, systems);
 	const out: Line[] = [];
-	for (const l of lines) {
-		const projected = projectLine(l, s, systems);
+	for (const i of inOrder(common, byPart.get(key) ?? [])) {
+		const projected = projectLine(lines[i] as Line, s, systems);
 		if (projected) out.push(projected);
 		// One past the limit, so the reader knows there was more.
 		if (out.length > limit) break;
@@ -216,7 +297,7 @@ export function projectPart(
 function extractSystemLine(l: Labelled, key: string, system: System, copied: Copied): Line | null {
 	const own = system.byPart.get(key) ?? [];
 	if (own.length) return own.includes(l) ? l : null;
-	return (system.reference ?? system.lines[0]) === l ? standIn(system, l, copied) : null;
+	return anchorOf(system) === l ? standIn(system, l, copied) : null;
 }
 
 /** One part's lines kept as written, labels and all, with a stand-in for each system it doesn't play: what an extract prints (grammar 7.6). */

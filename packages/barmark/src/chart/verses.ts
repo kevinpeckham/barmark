@@ -103,14 +103,24 @@ function singerLines(singer: Singer | null, bars: BarsLine[], parts: number): Ba
 
 /** The parts as the parse reports them: each that sings with the line it sings on. */
 export function withSings(parts: DeclaredPart[], singers: Singer[]): DeclaredPart[] {
+	const by = new Map<DeclaredPart | null, Singer>();
+	for (const x of singers) if (!by.has(x.part)) by.set(x.part, x);
 	return parts.map((p) => {
-		const sings = singers.find((x) => x.part === p)?.sings;
+		const sings = by.get(p)?.sings;
 		return sings === undefined ? p : { ...p, sings };
 	});
 }
 
-/** Rows by what they cover: the replay heading they are written under ("" for none) and a covered line. */
-type Rows = Map<string, LyricsLine[]>;
+/**
+ * The rows that sing: `over` gives those over a bar line under a replay
+ * heading (null for none), or undefined; `all` is every row over some
+ * line, in written order.
+ */
+type Rows = {
+	over: (replay: number | null, line: number) => LyricsLine[] | undefined;
+	all: LyricsLine[];
+};
+const NO_SINGING_ROWS: Rows = { over: () => undefined, all: [] };
 const rowKey = (replay: number | null, line: number) => `${replay ?? ""}:${line}`;
 
 /** The rows over one set of bars, in one place: written under them, or under one replay heading. */
@@ -141,13 +151,13 @@ const MIXED =
 /** Why a row can't sing in its group, or null (grammar 7.7): every syllable is written once. */
 function rowProblem(
 	row: LyricsLine,
-	group: Group,
+	numbered: boolean,
 	sungOnNotes: boolean,
 	seen: Map<number, number>,
 ): string | null {
 	const verse = row.verse ?? 1;
 	if (sungOnNotes && verse === 1) return NOTES_SING;
-	if (row.verse === null && group.rows.some((r) => r.verse !== null)) return MIXED;
+	if (row.verse === null && numbered) return MIXED;
 	const before = seen.get(verse);
 	if (before === undefined) return null;
 	return row.verse === null
@@ -169,34 +179,105 @@ function versesOf(
 	parts: number,
 ): { rows: Rows; diagnostics: ChartDiagnostic[] } {
 	const diagnostics: ChartDiagnostic[] = [];
-	const rows: Rows = new Map();
 	const all = lines.filter((l): l is BarsLine => l.kind === "bars");
 	const bars = new Map(all.map((l) => [l.line, l]));
 	// Only the owner's syllables are the rows' verse 1; another part's are its own.
 	const owners = new Set(singerLines(owner, all, parts).map((l) => l.line));
-	for (const group of groupsOf(lines)) {
-		const covered = (group.rows[0]?.covers ?? []).flatMap((n) => bars.get(n) ?? []);
-		const sungOnNotes = covered.some((l) => owners.has(l.line) && hasSyllables(l));
-		const barsIn = covered.map((l) => l.cells.filter(isBar).length);
-		for (const row of singingRows(group, sungOnNotes, diagnostics))
-			covered.forEach((l, i) => {
-				if (barsIn[i] !== row.cells.length) return;
-				// In place: a copy per row would cost the rows squared over every covered line.
-				const key = rowKey(group.replay, l.line);
-				const sung = rows.get(key);
-				if (sung) sung.push(row);
-				else rows.set(key, [row]);
-			});
-	}
-	return { rows, diagnostics };
+	const units = coveredUnits(bars, owners);
+	const singingAt = new Map<string, { order: number; unit: Unit; rows: LyricsLine[] }>();
+	const stored: LyricsLine[] = [];
+	groupsOf(lines).forEach((group, order) => {
+		const unit = units(group.rows[0]?.covers ?? []);
+		const rows = singingRows(group, unit.sungOnNotes(), diagnostics);
+		for (const row of rows) if (unit.counts.has(row.cells.length)) stored.push(row);
+		singingAt.set(rowKey(group.replay, unit.id), { order, unit, rows });
+	});
+	// Looked up as played, once each: a row is never copied onto every line it covers,
+	// which would cost the rows under replay headings times the lines replayed.
+	const known = new Map<string, LyricsLine[] | undefined>();
+	const over = (replay: number | null, line: number) => {
+		const key = rowKey(replay, line);
+		if (!known.has(key)) known.set(key, rowsAt(singingAt, units.at(line), replay, line));
+		return known.get(key);
+	};
+	return { rows: { over, all: stored }, diagnostics };
+}
+
+/** The bar lines a row covers, kept once however many rows (under however many replay headings) cover them. */
+type Unit = {
+	id: number;
+	/** Each covered bar line's bar count. */
+	barsAt: Map<number, number>;
+	counts: Set<number>;
+	/** Whether the owner's notes over these bars carry syllables. */
+	sungOnNotes: () => boolean;
+};
+
+/** The units rows cover, each built once, and those covering each line. */
+function coveredUnits(bars: Map<number, BarsLine>, owners: Set<number>) {
+	const byFirst = new Map<number, { covers: number[]; unit: Unit }[]>();
+	const atLine = new Map<number, Unit[]>();
+	let made = 0;
+	const make = (covers: number[]): Unit => {
+		const covered = covers.flatMap((n) => bars.get(n) ?? []);
+		const barsAt = new Map(covered.map((l) => [l.line, l.cells.filter(isBar).length]));
+		let notes: boolean | undefined;
+		const unit: Unit = {
+			id: made++,
+			barsAt,
+			counts: new Set(barsAt.values()),
+			sungOnNotes: () => {
+				notes ??= covered.some((l) => owners.has(l.line) && hasSyllables(l));
+				return notes;
+			},
+		};
+		for (const line of barsAt.keys()) {
+			const known = atLine.get(line);
+			if (known) known.push(unit);
+			else atLine.set(line, [unit]);
+		}
+		return unit;
+	};
+	const units = (covers: number[]): Unit => {
+		const first = covers[0] ?? -1;
+		const same = byFirst.get(first) ?? [];
+		const found = same.find((u) => u.covers === covers || sameLines(u.covers, covers));
+		if (found) return found.unit;
+		const unit = make(covers);
+		same.push({ covers, unit });
+		byFirst.set(first, same);
+		return unit;
+	};
+	return Object.assign(units, { at: (line: number) => atLine.get(line) ?? [] });
+}
+
+const sameLines = (a: number[], b: number[]) =>
+	a.length === b.length && a.every((n, i) => n === b[i]);
+
+/** The rows over a line under a replay heading: each covering unit's, in written order, those with its bar count. */
+function rowsAt(
+	singingAt: Map<string, { order: number; unit: Unit; rows: LyricsLine[] }>,
+	units: Unit[],
+	replay: number | null,
+	line: number,
+): LyricsLine[] | undefined {
+	const groups = units
+		.flatMap((u) => singingAt.get(rowKey(replay, u.id)) ?? [])
+		.sort((a, b) => a.order - b.order);
+	const rows = groups.flatMap((g) =>
+		g.rows.filter((r) => r.cells.length === g.unit.barsAt.get(line)),
+	);
+	return rows.length ? rows : undefined;
 }
 
 /** A group's rows that sing, each other with its error. */
 function singingRows(group: Group, notes: boolean, diagnostics: ChartDiagnostic[]): LyricsLine[] {
 	const sungOnNotes = group.replay === null && notes;
 	const seen = new Map<number, number>();
+	// Asked once for the group, not again for each of its rows.
+	const numbered = group.rows.some((r) => r.verse !== null);
 	return group.rows.filter((row) => {
-		const problem = rowProblem(row, group, sungOnNotes, seen);
+		const problem = rowProblem(row, numbered, sungOnNotes, seen);
 		if (problem)
 			diagnostics.push({ line: row.line, severity: "error", message: problem, token: "lyrics" });
 		else seen.set(row.verse ?? 1, row.line);
@@ -343,7 +424,11 @@ function versesIn(rows: LyricsLine[]): Verses {
 	const verse = (r: LyricsLine) => r.verse ?? 1;
 	const ordered = [...rows].sort((a, b) => verse(a) - verse(b));
 	const byVerse = new Map<number, LyricsLine[]>();
-	for (const r of ordered) byVerse.set(verse(r), [...(byVerse.get(verse(r)) ?? []), r]);
+	for (const r of ordered) {
+		const known = byVerse.get(verse(r));
+		if (known) known.push(r);
+		else byVerse.set(verse(r), [r]);
+	}
 	return { ordered, byVerse, allOne: rows.every((r) => verse(r) === 1), named: [] };
 }
 
@@ -540,8 +625,8 @@ function singing(
 	};
 	/** The rows over a played bar: under its replay heading when that writes rows for its line, else as written. */
 	const rowsOver = (from: BarSource): { own: LyricsLine[]; replayed: boolean } => {
-		const replayed = from.replay === null ? undefined : rows.get(rowKey(from.replay, from.line));
-		return { own: replayed ?? rows.get(rowKey(null, from.line)) ?? NO_ROWS, replayed: !!replayed };
+		const replayed = from.replay === null ? undefined : rows.over(from.replay, from.line);
+		return { own: replayed ?? rows.over(null, from.line) ?? NO_ROWS, replayed: !!replayed };
 	};
 	/** The verses a pass sings: the notes' first, then the rows'. */
 	const choose = (
@@ -585,9 +670,7 @@ function singing(
 		if (stopped) return;
 		for (const n of notes.values())
 			if (!n.sung) warn(n.line, "verse 1 is never sung: no pass of its repeat is pass 1", "lyrics");
-		const unsung = new Set(
-			[...rows.values()].flat().filter((r) => r.verse !== null && !sung.has(r)),
-		);
+		const unsung = new Set(rows.all.filter((r) => r.verse !== null && !sung.has(r)));
 		for (const r of unsung)
 			warn(
 				r.line,
@@ -615,7 +698,7 @@ export function voicesOf(
 	const singers = owner ? all : [null];
 	const voices = singers.map((singer) => ({
 		singer,
-		...singing(singer === owner ? verses.rows : new Map(), singer),
+		...singing(singer === owner ? verses.rows : NO_SINGING_ROWS, singer),
 	}));
 	return { voices, all, owner, diagnostics: verses.diagnostics };
 }

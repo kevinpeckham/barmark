@@ -26,6 +26,8 @@ function checkParts(lines: Line[], diagnostics: ChartDiagnostic[]): Part[] {
 	if (declared.length < 2) return declared.map(partOf);
 	const seen = new Map<string, string>();
 	const parts: Part[] = [];
+	// Where each declaration is, found once: finding it again for every bad one costs the lines times the bad ones.
+	let at: Map<Line, number> | undefined;
 	for (const l of declared) {
 		const problem = partProblem(l, seen);
 		if (!problem) {
@@ -34,7 +36,9 @@ function checkParts(lines: Line[], diagnostics: ChartDiagnostic[]): Part[] {
 		}
 		const text = l.label ? `part: ${l.label} = ${l.name}` : `part: ${l.name}`;
 		diagnostics.push({ line: l.line, severity: "error", token: text, ...problem });
-		lines[lines.indexOf(l)] = { kind: "text", line: l.line, text };
+		at ??= new Map(lines.map((m, i) => [m, i]));
+		const i = at.get(l);
+		if (i !== undefined) lines[i] = { kind: "text", line: l.line, text };
 	}
 	return parts;
 }

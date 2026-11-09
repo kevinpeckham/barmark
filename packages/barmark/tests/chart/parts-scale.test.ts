@@ -4,7 +4,7 @@
  * one-bar parts, 19 KB, took 9 s; each stream scanned every system line
  * for every line it projected).
  */
-import { expect, test } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import { parseChart } from "../../src/chart/parse.js";
 
 /** `n` declared parts, each writing one bar, in one system. */
@@ -82,4 +82,75 @@ test("a part past its share of the lines stops, and says so", () => {
 			.diagnostics.filter((d) => d.message.startsWith("expansion stopped"))
 			.map((d) => d.message),
 	).toEqual(["expansion stopped after 0 bars: each of 1000 parts reads at most 100 lines"]);
+});
+
+/** `n` parts declared, `P0` to `P{n-1}`, with `= instrument`. */
+const declared = (n: number, instrument = "Piano") =>
+	Array.from({ length: n }, (_, i) => `part: P${i} = ${instrument}`);
+/** One system of `n` parts, each line `bars`. */
+const system = (n: number, bars = "| C |", name = "") =>
+	Array.from({ length: n }, (_, i) => `P${i}${name} ${bars}`);
+
+/**
+ * The worst shapes found by review, each many parts times something else:
+ * the parse must grow with the source and the bars played, never with
+ * their product. Eight times the parts (and what they multiply), and a
+ * generous bound: linear is eight times as long (up to 9 measured), a
+ * product sixty-four (40 to 46 measured before the fix, 2026-11-09).
+ */
+const shapes: [string, (n: number) => string][] = [
+	["every part sings", (n) => [...declared(n), ...system(n, "| {C4}:la |")].join("\n")],
+	["every part is a voice", (n) => [...declared(n, "Voice"), ...system(n)].join("\n")],
+	[
+		"parts in four systems",
+		(n) => [...declared(n), ...system(n), ...system(n), ...system(n), ...system(n)].join("\n"),
+	],
+	[
+		"parts with two lines, in two systems",
+		(n) =>
+			[
+				...declared(n, "Piano, lines: RH LH"),
+				...system(n, "| C |", ".RH"),
+				...system(n, "| C |", ".LH"),
+			].join("\n"),
+	],
+	[
+		"parts under rows, replayed",
+		(n) =>
+			[
+				"## A",
+				...declared(n),
+				...system(n),
+				...Array.from({ length: n }, (_, v) => `lyrics ${v + 1}: | la |`),
+				...Array(n).fill("## A"),
+			].join("\n"),
+	],
+	[
+		"parts replayed, each replay with its own row",
+		(n) =>
+			["## A", ...declared(n), ...system(n), ...Array(n).fill("## A\nlyrics: | la |")].join("\n"),
+	],
+	[
+		"parts through sections of %",
+		(n) =>
+			[
+				...declared(n),
+				...Array.from({ length: 8 }, (_, s) =>
+					[`## S${s}`, ...system(n, "| C | % | % |")].join("\n"),
+				),
+			].join("\n"),
+	],
+	[
+		"parts and many text lines",
+		(n) => [...declared(n), ...Array(2 * n).fill("words here"), ...system(n)].join("\n"),
+	],
+];
+
+describe("many parts times anything parses in time linear in the source", () => {
+	for (const [shape, chart] of shapes)
+		test(`${shape}: eight times as big, under twenty times as long`, () => {
+			const small = timed(chart(200));
+			const large = timed(chart(1600));
+			expect(large / small).toBeLessThan(20);
+		}, 120_000);
 });
