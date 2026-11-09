@@ -13,6 +13,7 @@ import type {
 	SectionOccurrence,
 	SimpleSlot,
 } from "barmark";
+import { type Budget, spend } from "./budget.js";
 import { crosses, lengthsIn, type MeasureEvents, type SoundEvent } from "./events.js";
 import { type Sung, sungAtOf } from "./lyrics.js";
 import { measureXml, placeIn } from "./measure-xml.js";
@@ -248,23 +249,31 @@ export function lyricScorePart(id: string): string {
 	]);
 }
 
-/** The lyric staff's `<part>`, from a parse whose lyrics have no melody to sit on; `carried`: the part before left slash style on. */
-export function lyricPartXml(parse: ChartParse, id: string, carried = false): string {
+/** The lyric staff's `<part>`, from a parse whose lyrics have no melody to sit on; `carried`: the part before left slash style on; each measure charged to `budget`. */
+export function lyricPartXml(
+	parse: ChartParse,
+	id: string,
+	carried = false,
+	budget?: Budget,
+): string {
 	const bars = staffBars(parse);
 	const measures = bars.map((b) => b.measure);
 	const divisions = divisionsFor(lengthsIn(bars));
 	const xml = bars.map((bar, index) =>
-		measureXml(bar, {
-			divisions,
-			...placeIn(measures, index),
-			slashed: { now: false, before: index > 0 ? false : null, carried },
-			clef: { now: "rhythm", before: index > 0 ? "rhythm" : null },
-			rhythmic: true,
-			written: { diatonic: 0, chromatic: 0 },
-			staves: 1,
-			score: false,
-			...(index === 0 ? { lyricRow: true as const } : {}),
-		}),
+		spend(
+			budget,
+			measureXml(bar, {
+				divisions,
+				...placeIn(measures, index),
+				slashed: { now: false, before: index > 0 ? false : null, carried },
+				clef: { now: "rhythm", before: index > 0 ? "rhythm" : null },
+				rhythmic: true,
+				written: { diatonic: 0, chromatic: 0 },
+				staves: 1,
+				score: false,
+				...(index === 0 ? { lyricRow: true as const } : {}),
+			}),
+		),
 	);
 	return el("part", { id }, xml);
 }
