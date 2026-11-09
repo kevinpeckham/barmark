@@ -1969,3 +1969,22 @@ input once each (200,000 openers ran past 120 s). Now one `indexOf` pass (`forVe
 `packages/score/tests/for-verovio.test.ts`, 200,000 openers in milliseconds). **Rule:** a lazy
 `[\s\S]*?` between two markers on caller-supplied text is quadratic when the closer can be
 missing; scan with `indexOf`.
+
+**Again on the site PR (2026-11-09):** a Low DoS finding: Try It's Score takes a chart from a
+shared link, and a 3 KB chart (a thousand-syllable lyric row inside nested repeats played a
+thousand times) stayed under the site's size and bar guards but made the MusicXML export scan
+the bar's whole row once per onset (`lyric-staff.ts`, `lyrics.ts`'s `sungAt`); the same shape
+hid in words per slot, beam groups per value and a bare line's marks per event, and a bar line
+played thousands of times copied its list of passes each time. And the score worker kept
+computing requests whose element had moved on, with no deadline, so one slow job blocked every
+later score on the page. **Fix:** each lookup indexed once per bar (`sungAtOf`, maps by onset
+and slot, binary search), tested by `packages/musicxml/tests/export-scale.test.ts` (eight times
+the syllables, at most sixteen times the time; the old code took 20 to 36); the finding's chart
+went from about 40 s to 21 s, the rest being the 370 MB of MusicXML it really writes. The engine
+gives the worker one job at a time, drops superseded requests still waiting, cuts off a
+superseded job after `SUPERSEDED_GRACE_MS` and any job after `JOB_DEADLINE_MS` (terminate,
+fresh worker, which loads the Verovio the first one did), tested with a fake worker and fake
+timers in `packages/score/tests/engine.test.ts`. **Rule:** any code a shared link reaches is
+attack surface: a per-item `find`/`filter` over a bar, row or play order is quadratic in what
+an author can write, so index it once; and work for a page in a worker is cancellable and
+bounded, since `postMessage` can't take a job back.
