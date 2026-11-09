@@ -172,12 +172,18 @@ function speakDirection(d: Direction): string {
 	return `${d.to === "start" ? "da capo" : "dal segno"}${d.al ? ` al ${d.al}` : ""}`;
 }
 
+/** What a bar is called aloud: "pickup" for bar 0, "bar" with no number, else "bar 9". */
+export function barLabel(barNumber: number | null): string {
+	if (barNumber === 0) return "pickup";
+	return barNumber === null ? "bar" : `bar ${barNumber}`;
+}
+
 /** "bar 9: G, hold, D, hold"; a pickup (bar 0) says "pickup"; a fermata is held until cued. With `numerals`, each chord's degree comes first. */
 export function speakBar(barNumber: number | null, cell: CellModel, numerals = false): string {
 	if (cell.kind === "fermata") return "fermata: hold until cued";
 	if (cell.kind === "direction") return speakDirection(cell.direction);
 	if (cell.kind === "rehearsal") return `rehearsal ${cell.label}`;
-	const bar = barNumber === 0 ? "pickup" : `bar${barNumber === null ? "" : ` ${barNumber}`}`;
+	const bar = barLabel(barNumber);
 	if (cell.simile) return `${bar}: each part repeats its bar before`;
 	const meter = cell.meter ? `, in ${cell.meter.n}/${cell.meter.d}` : "";
 	const cut = cell.cut ? ", cut on this pass" : "";

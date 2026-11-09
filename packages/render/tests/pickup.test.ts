@@ -3,6 +3,7 @@ import { parseHTML } from "linkedom";
 import { layoutChart, renderChartUnwrapped } from "../src/index.js";
 import { speakBar } from "../src/speech.js";
 import type { BlockItem, CellModel } from "../src/types.js";
+import { AMAZING_GRACE } from "./fixtures.js";
 
 type Row = Extract<BlockItem, { kind: "row" }>;
 
@@ -39,6 +40,39 @@ describe("a pickup row", () => {
 		expect(html).toContain(">pickup, in 1/4: G<");
 		expect(html).toContain(">bar 1: C<");
 		expect(html).toContain(">bar 2: D<");
+	});
+});
+
+const TACET = `part: Vox = Voice
+part: Gtr = Guitar
+time: 4/4
+
+Vox | [1/4] G | C |
+
+Vox | D | G |
+Gtr | D | G |`;
+
+describe("a pickup in a system", () => {
+	test("a part's tacet there is spoken as the pickup", () => {
+		const html = renderChartUnwrapped(TACET);
+		expect(html).toContain(">pickup: tacet<");
+		expect(html).not.toContain("bar 0");
+	});
+});
+
+describe("Amazing Grace", () => {
+	const grace = layoutChart(AMAZING_GRACE).blocks.flatMap((b) => b.items);
+	const html = renderChartUnwrapped(AMAZING_GRACE);
+
+	test("its first row is bar 0 with a blank gutter", () => {
+		expect((grace[0] as { barNumber: number | null }).barNumber).toBe(0);
+		expect(gutters(html)[0]).toBe("Vox"); // the part label alone, no number
+	});
+
+	test("it is spoken as the pickup, then bar 1", () => {
+		expect(html).toContain("pickup, in 1/4: no chord");
+		expect(html).toContain("bar 1: ");
+		expect(html).not.toContain("bar 0");
 	});
 });
 
