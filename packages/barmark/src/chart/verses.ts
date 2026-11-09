@@ -270,15 +270,44 @@ const opensFresh = (cell: LyricSlot[]) => {
 const textOf = (s: PlayedSyllable) =>
 	s.syllable.kind === "sung" ? s.syllable.parts.join("~") : "/";
 
-/** "1 and 2", "1, 2 and 3". */
-const listOf = (ns: number[]) =>
-	ns.length < 2 ? `${ns[0] ?? ""}` : `${ns.slice(0, -1).join(", ")} and ${ns.at(-1)}`;
+/** A list cut short: past five items, four and how many more (`more` counts the rest). */
+const SHOWN = 4;
+
+/** "1 and 2", "1, 2 and 3"; past five, "1, 2, 3, 4 and 7 more". */
+function listOf(items: string[], more: (rest: string[]) => number = (rest) => rest.length): string {
+	if (items.length > SHOWN + 1)
+		return `${items.slice(0, SHOWN).join(", ")} and ${more(items.slice(SHOWN))} more`;
+	return items.length < 2
+		? (items[0] ?? "")
+		: `${items.slice(0, -1).join(", ")} and ${items.at(-1)}`;
+}
 
 /** "verse 2", "verses 1 and 2": each verse once. */
 const versesNamed = (ns: number[]) => {
-	const each = [...new Set(ns)];
+	const each = [...new Set(ns)].map(String);
 	return `${each.length === 1 ? "verse" : "verses"} ${listOf(each)}`;
 };
+
+/** Passes in order, a run of three or more as a range: "1, 3 and 5\u20139". */
+function passesNamed(passes: number[]): string {
+	const runs: [number, number][] = [];
+	for (const p of passes) {
+		const last = runs.at(-1);
+		if (last && p === last[1] + 1) last[1] = p;
+		else runs.push([p, p]);
+	}
+	const items = runs.flatMap(([a, b]) =>
+		b - a >= 2 ? [`${a}\u2013${b}`] : a === b ? [`${a}`] : [`${a}`, `${b}`],
+	);
+	const count = (item: string) => {
+		const [a = 0, b = a] = item.split("\u2013").map(Number);
+		return b - a + 1;
+	};
+	const list = listOf(items, (rest) => rest.reduce((n, item) => n + count(item), 0));
+	return passes.length === 1
+		? `pass ${list} of this repeat sings`
+		: `passes ${list} of this repeat sing`;
+}
 
 /** A verse a bar could sing, and the row that writes it (null for its notes' syllables). */
 type Candidate = {
@@ -459,6 +488,11 @@ function singing(
 		if (notes?.opensHeld && !heard) warn(bar.line, HOLDS_NOTHING, ":/");
 		if (notes?.sings) heard = true;
 	};
+	/** Each line's passes that sing none of its verses: one warning, pushed at the first and worded once playing is done. */
+	const silences = new Map<
+		string,
+		{ passes: Set<number>; named: string; warning: ChartDiagnostic }
+	>();
 	/** On a pass that sings none of a bar's several verses, say so. */
 	const silent = (over: Verses, notes: boolean, from: BarSource) => {
 		const i = notes ? 1 : 0;
@@ -466,11 +500,26 @@ function singing(
 			...(notes ? [1] : []),
 			...over.ordered.map((r) => r.verse ?? 1),
 		]);
-		warn(
-			from.line,
-			`pass ${from.pass} of this repeat sings nothing: its bars have ${over.named[i]}`,
-			"lyrics",
-		);
+		const named = over.named[i];
+		const key = `${from.line}\u0000${named}`;
+		let found = silences.get(key);
+		if (!found) {
+			const warning: ChartDiagnostic = {
+				line: from.line,
+				severity: "warning",
+				message: "",
+				token: "lyrics",
+			};
+			diagnostics.push(warning);
+			found = { passes: new Set(), named, warning };
+			silences.set(key, found);
+		}
+		found.passes.add(from.pass ?? 0);
+	};
+	/** Word each silent-pass warning from all its passes. */
+	const wordSilences = () => {
+		for (const { passes, named, warning } of silences.values())
+			warning.message = `${passesNamed([...passes].sort((a, b) => a - b))} nothing: its bars have ${named}`;
 	};
 	/** Each written bar's notes' syllables, by their line, and whether a pass sang them. */
 	const notes = new Map<string, { line: number; sung: boolean }>();
@@ -519,6 +568,7 @@ function singing(
 		return chosen.length ? chosen.map((c) => c.lyrics) : undefined;
 	};
 	const finish = () => {
+		wordSilences();
 		for (const n of notes.values())
 			if (!n.sung) warn(n.line, "verse 1 is never sung: no pass of its repeat is pass 1", "lyrics");
 		const unsung = new Set(

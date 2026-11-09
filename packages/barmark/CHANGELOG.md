@@ -11,6 +11,15 @@ Releases follow the process in [RELEASING.md](RELEASING.md).
 
 ### Changed
 
+- **A line's passes that sing nothing are one warning.** "pass 3 of this
+  repeat sings nothing: its bars have verses 1 and 2" stays as it was for
+  one pass; several are now listed together, a run of three or more as a
+  range ("passes 1 and 3–9 of this repeat sing nothing: …"), and a list
+  past five items shows four and counts the rest ("verses 1, 2, 3, 4 and
+  2496 more"). 2,500 verses over a bar played 10,000 times gave 7,500
+  warnings of about 14 KB each (105 million characters, which the site
+  rendered as one list); now one of 92 characters.
+
 - **The npm homepage is https://www.barmark.dev**, not the package's
   folder on GitHub.
 
