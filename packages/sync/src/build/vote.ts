@@ -64,7 +64,7 @@ export function voteSlots(bars: BarSpan[], runs: SymbolRun[], report: Report): s
 			if (symbol === null && !gap)
 				report.warning("no-chord-detected", "No chord was detected here; written as ?", {
 					at: slot.start,
-					bar: b + 1,
+					bar: bars[0]?.pickup === true ? b : b + 1,
 				});
 			gap = symbol === null;
 			symbols.push(symbol ?? "?");

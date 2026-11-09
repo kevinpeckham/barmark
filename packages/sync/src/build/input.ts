@@ -199,10 +199,6 @@ export function readInput(d: unknown, report: Report): Input | null {
 	const pickup = readPickup(d.pickup, bars, report);
 	if (pickup) {
 		bars.unshift(pickup);
-		// Collisions were numbered by grid bar; the chart counts the pickup first.
-		for (const x of report.list)
-			if (x.bar !== undefined && (x.code === "section-collision" || x.code === "change-collision"))
-				x.bar += 1;
 	}
 	const confidence: Input["confidence"] = {
 		sections: pickup ? shifted(sections.confidence) : sections.confidence,

@@ -80,7 +80,7 @@ export type BuildDiagnostic = {
 	/** Where in the input: "chords.runs[12]", "changes[3]", "grid.bars". */
 	path?: string;
 	at?: Seconds;
-	/** The played bar it concerns, in the chart written. */
+	/** The bar's written number in the chart built (a pickup is 0, the next bar 1). */
 	bar?: number;
 };
 

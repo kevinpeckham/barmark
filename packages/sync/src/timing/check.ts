@@ -83,7 +83,7 @@ function checkEntryShape(e: unknown, path: string, chartBars: number | null, r: 
 		r,
 		isBarNumber(o.bar) && (chartBars === null || o.bar <= chartBars),
 		`${path}.bar`,
-		`bar must be a whole number from 1 to ${chartBars ?? "chart.bars"}`,
+		`map bar must be a whole number from 1 to ${chartBars ?? "chart.bars"}`,
 	);
 	const start = expect(r, isNum(o.start), `${path}.start`, "start must be a number of seconds");
 	const end = expect(r, optional(o.end, isNum), `${path}.end`, "end must be a number of seconds");
@@ -154,7 +154,7 @@ function checkAgainstChart(map: TimingMap, text: string, given: ChartParse | und
 		if (e.beats.length !== want)
 			r.error(
 				`bars[${i}].beats`,
-				`bar ${e.bar} is ${played.meter.n}/${played.meter.d}: expected ${want} beats after the start, got ${e.beats.length}`,
+				`map bar ${e.bar} is ${played.meter.n}/${played.meter.d}: expected ${want} beats after the start, got ${e.beats.length}`,
 			);
 	});
 	const named = new Set(map.bars.map((e) => e.bar));
@@ -162,7 +162,7 @@ function checkAgainstChart(map: TimingMap, text: string, given: ChartParse | und
 	if (missing.length > 0)
 		r.warning(
 			"bars",
-			`the map never names bar${missing.length > 1 ? "s" : ""} ${missing.join(", ")}`,
+			`the map never names map bar${missing.length > 1 ? "s" : ""} ${missing.join(", ")}`,
 		);
 }
 
