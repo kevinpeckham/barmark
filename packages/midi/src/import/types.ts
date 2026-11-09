@@ -36,7 +36,7 @@ export type MidiImportDiagnostic = {
 	message: string;
 	/** 1-based track chunk, in file order. */
 	track?: number;
-	/** The played bar of the chart written. */
+	/** The written number of the chart's bar: a pickup is bar 0, the first full bar 1 (with no pickup, the first bar is 1). */
 	bar?: number;
 };
 

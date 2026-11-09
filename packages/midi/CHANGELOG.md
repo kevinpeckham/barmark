@@ -6,6 +6,20 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- **`MidiLoss.written`**: the written number of the bar a loss happened in
+  (0 for a pickup), beside `bar`, which keeps its meaning, the play
+  position (`PlayedBar.index`, repeated bars counted). `Performance.bars`
+  gains `written` too.
+
+### Changed
+
+- **`importMidi` numbers its diagnostics' `bar` as the chart it writes
+  does**: a pickup is bar 0 and the first full bar 1 (it was the pickup as
+  bar 1). With no pickup the numbers are unchanged. Sync's diagnostics
+  already number so.
+
 ## [0.2.0] - 2026-11-08
 
 ### Added
