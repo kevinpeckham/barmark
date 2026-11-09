@@ -1996,7 +1996,15 @@ by the source), so it stops with the existing error (0.1 s, 2 MB; real charts us
 100,000). (2) Parts were cubic: each stream scanned its system for its own line at every line it
 projected (`ownLine`), and the systems, the reference line's vote, the declared labels and the
 singers' lines were each rebuilt or rescanned per part. 600 one-bar parts (19 KB) took 9 s; now
-0.1 s, and 1,500 parts 0.9 s (`parts-scale.test.ts`). (3) Diagnostics: each silent pass of a
+0.1 s, and 1,500 parts 0.9 s (`parts-scale.test.ts`). That figure was one bar per part only: a
+second review found the same class one layer on. Lyric rows were gathered by copying their list
+per row (1,383 parts under 1,383 verses, 18 s), and every part read every line although it may
+play only its share of the 10,000 bars (3,227 parts resting through 2,000 systems, 19 s; 2,113
+parts under 6,339 tutti lines, 27 s). Now each part reads at most its share of the work in lines,
+and its projection stops building there (all three about 1 s at 50 KB). The same review found that a budget's
+message and side effects must follow the output: the verse stop named bars a `->` had cut, and the
+bar it stopped had already been checked and sung. A budget is checked before the work it guards,
+with a question that has no effect (`Sing.verses`), and its message counts what is output. (3) Diagnostics: each silent pass of a
 2,500-verse bar played 10,000 times warned separately, naming every verse: 7,500 warnings, 105
 million characters, all rendered by the site. Now one warning per line with its passes as ranges
 and long lists cut short. Also: a ratio test's small side must take milliseconds (the lyric
