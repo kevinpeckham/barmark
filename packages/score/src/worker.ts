@@ -24,12 +24,26 @@ export function loadOnce<A, T>(load: (arg: A) => Promise<T>): (arg: A) => Promis
 }
 
 /**
- * The page's one Verovio toolkit, loaded on first use and reused. By
- * default the package's own `verovio/wasm`; when a request carries
- * `verovioUrl` that module is imported instead. The first request whose
- * load succeeds wins for the worker's life: later URLs are ignored.
+ * A worker's one Verovio toolkit, loaded on first use and reused, and
+ * where it came from once loaded (no `verovioUrl`: the package's own), so
+ * the engine can give a replacement worker the same. The first load that
+ * succeeds wins for the worker's life: later URLs are ignored.
  */
-const ready = loadOnce(async (verovioUrl: string | undefined): Promise<Toolkit> => {
+export function toolkitLoader<T>(load: (verovioUrl: string | undefined) => Promise<T>) {
+	let loaded: { verovioUrl?: string } | undefined;
+	const ready = loadOnce(async (verovioUrl: string | undefined) => {
+		const toolkit = await load(verovioUrl);
+		loaded = verovioUrl === undefined ? {} : { verovioUrl };
+		return toolkit;
+	});
+	return { ready, loaded: () => loaded };
+}
+
+/**
+ * By default the package's own `verovio/wasm`; when a request carries
+ * `verovioUrl` that module is imported instead.
+ */
+const toolkit = toolkitLoader(async (verovioUrl: string | undefined): Promise<Toolkit> => {
 	const m: { default: () => Promise<unknown> } = verovioUrl
 		? await import(/* @vite-ignore */ verovioUrl)
 		: await import("verovio/wasm");
@@ -63,6 +77,8 @@ if (
 ) {
 	scope.onmessage = async (e) => {
 		const { verovioUrl } = e.data;
-		scope.postMessage(await handle(e.data, () => ready(verovioUrl)));
+		const reply = await handle(e.data, () => toolkit.ready(verovioUrl));
+		const loaded = toolkit.loaded();
+		scope.postMessage(loaded ? { ...reply, loaded } : reply);
 	};
 }

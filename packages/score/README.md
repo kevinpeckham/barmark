@@ -94,8 +94,10 @@ worker, so a later or different URL is not loaded.
 ### When the score can't be drawn
 
 If Verovio fails to load, or rejects the MusicXML, or the chart will not
-export, the grid stays and a note by the switch says "The score couldn't
-be drawn". The reason goes to the console.
+export, or engraving runs past 20 seconds, the grid stays and a note by
+the switch says "The score couldn't be drawn". The reason goes to the
+console. A score an element no longer wants (its chart or width changed)
+is dropped, and cut off after a second if the worker is already on it.
 
 ## On the server
 
