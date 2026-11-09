@@ -6,6 +6,27 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- **`maxLength`: a budget for the MusicXML written.** `exportMusicXml(text,
+  { maxLength })` charges each measure as it is written and stops at the
+  first one past the limit, answering `{ ok: false, tooLarge: true }` with
+  a diagnostic ("the MusicXML would be longer than N characters"); it never
+  builds more than the limit, and never throws. A short chart whose repeats
+  are written out can otherwise write gigabytes. Unset, nothing changes.
+
+### Fixed
+
+- **A crowded bar exports in linear time.** A bar with thousands of
+  syllables, notes or words, inside repeats written out many times, took
+  time quadratic in what the bar holds: each onset scanned the bar's whole
+  lyric row or syllable list, each slot the bar's words, each value the
+  bar's beams and each event a bare line's marks. A 3 KB chart (a
+  thousand-syllable lyric row played a thousand times) took about 40
+  seconds of the scans alone. Each is now one indexed lookup, and a bar
+  line played thousands of times no longer copies its list of passes
+  each time. The MusicXML written is unchanged.
+
 ## [0.7.2] - 2026-11-09
 
 ### Fixed

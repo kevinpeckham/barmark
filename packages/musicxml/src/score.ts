@@ -7,6 +7,7 @@ import {
 	extractPart,
 	parseChart,
 } from "barmark";
+import { type Budget, spend, TooLarge } from "./budget.js";
 import { clefPlan } from "./clefs.js";
 import {
 	applyHolds,
@@ -32,11 +33,18 @@ export type MusicXmlOptions = {
 	part?: string;
 	/** The title for a chart that has none (the CLI gives the file name). */
 	title?: string;
+	/**
+	 * The longest MusicXML to write, in characters. The export stops at the
+	 * first measure past it and answers `tooLarge`, never having built more;
+	 * unset, there is no limit. A measure is built whole before it is counted,
+	 * so one very large measure can pass the limit by its own size.
+	 */
+	maxLength?: number;
 };
 
 export type MusicXmlResult =
 	| { ok: true; xml: string; diagnostics: ChartDiagnostic[] }
-	| { ok: false; diagnostics: ChartDiagnostic[] };
+	| { ok: false; diagnostics: ChartDiagnostic[]; tooLarge?: true };
 
 const DOCTYPE =
 	'<!DOCTYPE score-partwise PUBLIC "-//Recordare//DTD MusicXML 4.0 Partwise//EN" "http://www.musicxml.org/dtds/partwise.dtd">';
@@ -169,6 +177,7 @@ function partXml(
 	source: PartSource,
 	i: number,
 	carried: boolean,
+	budget?: Budget,
 ): { xml: string; slashes: boolean } {
 	const { first, streams, bare, bars, rhythmicBars, beside } = partBars(source);
 	const lined = (source.part?.lines?.length ?? 0) > 0;
@@ -184,30 +193,33 @@ function partXml(
 		streams.flatMap((s) => lengthsIn([...s.bars, ...(bare?.bars ?? [])])),
 	);
 	const xml = bars.map((bar, index) =>
-		measureXml(bar, {
-			divisions,
-			...placeIn(measures, index),
-			slashed: { ...around(slashedBars, index, true), carried },
-			clef: around(clefs, index, "G"),
-			rhythmic: rhythmicBars[index] ?? false,
-			written,
-			staves,
-			score: i === 0,
-			...(lined
-				? { lines: [bar.events, ...streams.slice(1).map((s) => s.bars[index]?.events ?? [])] }
-				: {}),
-			...(beside[index] ? { bare: beside[index] } : {}),
-		}),
+		spend(
+			budget,
+			measureXml(bar, {
+				divisions,
+				...placeIn(measures, index),
+				slashed: { ...around(slashedBars, index, true), carried },
+				clef: around(clefs, index, "G"),
+				rhythmic: rhythmicBars[index] ?? false,
+				written,
+				staves,
+				score: i === 0,
+				...(lined
+					? { lines: [bar.events, ...streams.slice(1).map((s) => s.bars[index]?.events ?? [])] }
+					: {}),
+				...(beside[index] ? { bare: beside[index] } : {}),
+			}),
+		),
 	);
 	return { xml: el("part", { id: `P${i + 1}` }, xml), slashes: leavesSlashes(slashedBars, staves) };
 }
 
 /** Every part's `<part>` in score order, each told whether the part before left slash style on. */
-function partsXml(sources: PartSource[]): { xml: string[]; slashes: boolean } {
+function partsXml(sources: PartSource[], budget?: Budget): { xml: string[]; slashes: boolean } {
 	const out: string[] = [];
 	let slashes = false;
 	sources.forEach((source, i) => {
-		const part = partXml(source, i, slashes);
+		const part = partXml(source, i, slashes, budget);
 		out.push(part.xml);
 		slashes = part.slashes;
 	});
@@ -258,18 +270,56 @@ const noPart = (label: string): ChartDiagnostic => ({
 	token: label,
 });
 
-/** A chart as MusicXML 4.0, or its diagnostics when it has an error. Never throws. */
+const tooLarge = (limit: number): MusicXmlResult => ({
+	ok: false,
+	tooLarge: true,
+	diagnostics: [
+		{
+			line: 0,
+			severity: "error",
+			message: `the MusicXML would be longer than ${limit} characters`,
+			token: "",
+		},
+	],
+});
+
+/**
+ * A chart as MusicXML 4.0, or its diagnostics when it has an error, or
+ * `tooLarge` past `maxLength`. Never throws.
+ */
 export function exportMusicXml(chart: string, options: MusicXmlOptions = {}): MusicXmlResult {
+	const limit = options.maxLength;
+	if (limit === undefined) return writeMusicXml(chart, options);
+	try {
+		const r = writeMusicXml(chart, options, { left: limit });
+		return r.ok && r.xml.length > limit ? tooLarge(limit) : r;
+	} catch (e) {
+		if (e instanceof TooLarge) return tooLarge(limit);
+		throw e;
+	}
+}
+
+/** The parse and the parts to write, or why there are none. */
+function sourcesFor(
+	chart: string,
+	options: MusicXmlOptions,
+): { parse: ChartParse; sources: PartSource[] } | { failed: ChartDiagnostic[] } {
 	const parse = parseChart(chart);
-	if (parse.diagnostics.some((d) => d.severity === "error"))
-		return { ok: false, diagnostics: parse.diagnostics };
-	if (parse.bars.length === 0) return { ok: false, diagnostics: [NO_BARS, ...parse.diagnostics] };
+	if (parse.diagnostics.some((d) => d.severity === "error")) return { failed: parse.diagnostics };
+	if (parse.bars.length === 0) return { failed: [NO_BARS, ...parse.diagnostics] };
 	const wanted = options.part?.toLowerCase();
 	const sources = partsOf(parse, chart).filter(
 		(s) => !wanted || s.part?.label?.toLowerCase() === wanted,
 	);
 	if (options.part && sources.length === 0)
-		return { ok: false, diagnostics: [noPart(options.part), ...parse.diagnostics] };
+		return { failed: [noPart(options.part), ...parse.diagnostics] };
+	return { parse, sources };
+}
+
+function writeMusicXml(chart: string, options: MusicXmlOptions, budget?: Budget): MusicXmlResult {
+	const read = sourcesFor(chart, options);
+	if ("failed" in read) return { ok: false, diagnostics: read.failed };
+	const { parse, sources } = read;
 	const title = parse.title ?? options.title;
 	// A lyric row with no melody is a staff of its own, after the parts; a part exported alone leaves it out.
 	const words = options.part ? undefined : lyricSource(sources);
@@ -279,8 +329,11 @@ export function exportMusicXml(chart: string, options: MusicXmlOptions = {}): Mu
 		identificationXml(parse.credits),
 		el("part-list", {}, [...sources.map(scorePart), words ? lyricScorePart(wordsId) : ""]),
 	];
-	const written = partsXml(sources);
-	const parts = [...written.xml, words ? lyricPartXml(words, wordsId, written.slashes) : ""];
+	const written = partsXml(sources, budget);
+	const parts = [
+		...written.xml,
+		words ? lyricPartXml(words, wordsId, written.slashes, budget) : "",
+	];
 	const xml = `<?xml version="1.0" encoding="UTF-8"?>\n${DOCTYPE}\n${el("score-partwise", { version: "4.0" }, [...head, ...parts])}\n`;
 	return { ok: true, xml, diagnostics: parse.diagnostics };
 }

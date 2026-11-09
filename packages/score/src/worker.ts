@@ -1,6 +1,6 @@
 import * as esm from "verovio/esm";
 import { VerovioToolkit } from "verovio/esm";
-import type { Reply, Request } from "./engine.js";
+import type { Ready, Reply, Request, WorkerMessage } from "./engine.js";
 import { engraveChart } from "./engrave.js";
 
 type Toolkit = VerovioToolkit;
@@ -24,12 +24,26 @@ export function loadOnce<A, T>(load: (arg: A) => Promise<T>): (arg: A) => Promis
 }
 
 /**
- * The page's one Verovio toolkit, loaded on first use and reused. By
- * default the package's own `verovio/wasm`; when a request carries
- * `verovioUrl` that module is imported instead. The first request whose
- * load succeeds wins for the worker's life: later URLs are ignored.
+ * A worker's one Verovio toolkit, loaded on first use and reused, and
+ * where it came from once loaded (no `verovioUrl`: the package's own), so
+ * the engine can give a replacement worker the same. The first load that
+ * succeeds wins for the worker's life: later URLs are ignored.
  */
-const ready = loadOnce(async (verovioUrl: string | undefined): Promise<Toolkit> => {
+export function toolkitLoader<T>(load: (verovioUrl: string | undefined) => Promise<T>) {
+	let loaded: { verovioUrl?: string } | undefined;
+	const ready = loadOnce(async (verovioUrl: string | undefined) => {
+		const toolkit = await load(verovioUrl);
+		loaded = verovioUrl === undefined ? {} : { verovioUrl };
+		return toolkit;
+	});
+	return { ready, loaded: () => loaded };
+}
+
+/**
+ * By default the package's own `verovio/wasm`; when a request carries
+ * `verovioUrl` that module is imported instead.
+ */
+const toolkit = toolkitLoader(async (verovioUrl: string | undefined): Promise<Toolkit> => {
 	const m: { default: () => Promise<unknown> } = verovioUrl
 		? await import(/* @vite-ignore */ verovioUrl)
 		: await import("verovio/wasm");
@@ -37,6 +51,23 @@ const ready = loadOnce(async (verovioUrl: string | undefined): Promise<Toolkit> 
 	enableLog(LOG_OFF, module);
 	return new VerovioToolkit(module as ConstructorParameters<typeof VerovioToolkit>[0]);
 });
+
+/**
+ * The toolkit for `request`, saying it is `Ready` (and where it came
+ * from) once loaded, before the job is engraved: the engine starts the
+ * job's deadline then, so a slow download is not counted against it.
+ */
+export function withReady<T>(
+	loader: ReturnType<typeof toolkitLoader<T>>,
+	request: Request,
+	post: (ready: Ready) => void,
+): () => Promise<T> {
+	return async () => {
+		const toolkit = await loader.ready(request.verovioUrl);
+		post({ id: request.id, loaded: loader.loaded() ?? {} });
+		return toolkit;
+	};
+}
 
 /** Answer one request. Never throws: a failure is a reply with its reason. */
 export async function handle(request: Request, loaded: () => Promise<Toolkit>): Promise<Reply> {
@@ -54,7 +85,7 @@ export async function handle(request: Request, loaded: () => Promise<Toolkit>): 
 const scope = globalThis as unknown as {
 	WorkerGlobalScope?: new () => unknown;
 	onmessage: ((e: { data: Request }) => void) | null;
-	postMessage(reply: Reply): void;
+	postMessage(message: WorkerMessage): void;
 };
 // Only a worker global answers messages: importing this in a page or a test has no effect.
 if (
@@ -62,7 +93,11 @@ if (
 	globalThis instanceof scope.WorkerGlobalScope
 ) {
 	scope.onmessage = async (e) => {
-		const { verovioUrl } = e.data;
-		scope.postMessage(await handle(e.data, () => ready(verovioUrl)));
+		scope.postMessage(
+			await handle(
+				e.data,
+				withReady(toolkit, e.data, (r) => scope.postMessage(r)),
+			),
+		);
 	};
 }

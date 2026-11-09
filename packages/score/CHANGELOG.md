@@ -6,6 +6,38 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+
+- **A score too large to draw is refused, not attempted.** A short chart
+  with repeats can play thousands of bars, and writing a crowded one out
+  took gigabytes of MusicXML (and a phone's tab). The export now stops
+  writing at `MAX_XML_LENGTH` (50,000,000 characters, `@barmark/musicxml`'s
+  new `maxLength`), and before it, as a cheap early refusal, `engraveChart`
+  estimates the score's size (`scoreCost`: every played bar's measure in
+  every declared part, tacet ones too, each slot, pitch, chord degree,
+  syllable and words with the length of its escaped text, and each bar's
+  heading, in one pass) and refuses more than `MAX_SCORE_COST`
+  (50,000,000) unexported. Either way the reason is "The score is too
+  large to draw", so the element shows its note. `EngraveOptions.maxCost`
+  and `maxXmlLength` set them. Needs the `@barmark/musicxml` release that
+  adds `maxLength`.
+
+- **A slow score no longer holds up every later one.** The worker takes
+  one job at a time; a request its element has since replaced is never
+  sent, and one already engraving is cut off (the worker is terminated and
+  a fresh one takes the requests still waiting) once it has engraved for
+  `SUPERSEDED_GRACE_MS` (3 s), so a normal job still finishes and keeps
+  the loaded Verovio. A job still loading Verovio is never cut for this.
+  Loading Verovio has `LOAD_DEADLINE_MS` (60 s, for a 7 MB download on a
+  slow line) and engraving `JOB_DEADLINE_MS` (20 s, from the worker's new
+  `Ready` message); past either the job is cut off and its request rejects
+  with "The score engine failed", so the element shows its note. A worker
+  that crashes fails only the job it was on; the requests still waiting
+  run on a fresh one. All three are `createEngine` options (`grace`,
+  `loadDeadline`, `deadline`). A fresh worker loads the Verovio the first
+  one loaded (its `Ready` says which), so the first `verovio-url` that
+  loads still wins for the page.
+
 ### Technical
 
 - **The README gives Verovio's copyright and source**, and how to build with

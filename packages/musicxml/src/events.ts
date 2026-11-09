@@ -5,7 +5,7 @@
  * bar before.
  */
 import type { Articulation, Push, SimpleSlot, Slot } from "barmark";
-import { type Sung, sungAt } from "./lyrics.js";
+import { type Sung, sungAtOf } from "./lyrics.js";
 import type { Measure } from "./measures.js";
 import { noteSetOf, type Pitch, soundOf } from "./notes.js";
 import type { PedalMark } from "./pedal.js";
@@ -82,13 +82,24 @@ function memberLengths(slot: Frac, members: SimpleSlot[]): Frac[] {
 	return members.map((_, j) => times(slot, frac(j === dotted ? 3 : 1, 4)));
 }
 
+/** A measure's words by the slot they precede, read once: a bar may hold thousands. */
+function wordsBySlot(m: Measure): (at: number) => string[] {
+	const bySlot = new Map<number, string[]>();
+	for (const w of m.words) {
+		const at = bySlot.get(w.at);
+		if (at) at.push(w.text);
+		else bySlot.set(w.at, [w.text]);
+	}
+	return (at) => [...(bySlot.get(at) ?? [])];
+}
+
 /** A measure's events in order, each with the syllables sung on its note; a tacet measure has none. */
 export function eventsOf(m: Measure): MeasureEvents {
-	const wordsAt = (at: number) => m.words.filter((w) => w.at === at).map((w) => w.text);
-	const onNotes = m.lyrics.filter((s) => s.note);
+	const wordsAt = wordsBySlot(m);
+	const sungAt = sungAtOf(m.lyrics.filter((s) => s.note));
 	let at = ZERO;
 	const timed = (slot: SimpleSlot, length: Frac, words: string[]) => {
-		const e = simple(slot, length, words, sungAt(onNotes, at));
+		const e = simple(slot, length, words, sungAt(at));
 		at = plus(at, length);
 		return e;
 	};
@@ -288,7 +299,7 @@ export function applyHolds(bars: MeasureEvents[]): MeasureEvents[] {
 		if (bar.events.length === 0) before = null;
 		const kept: SoundEvent[] = [];
 		for (const e of bar.events) {
-			if (before && hold(before, e, kept.includes(before)) === "merged") continue;
+			if (before && hold(before, e, kept[kept.length - 1] === before) === "merged") continue;
 			kept.push(e);
 			before = e;
 		}
