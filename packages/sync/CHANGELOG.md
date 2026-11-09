@@ -6,8 +6,12 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-11-09
+
 ### Changed
 
+- **Requires `barmark` 0.22.0** (a pickup is bar 0, `ChartParse.pickup`),
+  whose minor release a caret range would not reach.
 - **Builder diagnostics use written bar numbers.** `BuildDiagnostic.bar` is
   the bar's number in the chart built: a pickup is 0 and the bar after it 1
   (it was the play position, and collisions were shifted by one). The
@@ -62,7 +66,8 @@ exports: `keyFromText`, `conventionalKey`, `printKey`, `spellPitch`).
   times the runs' own confidence; `?` is 0), and the confidences the input
   gave for `key`, `meter`, `tempo` and `sections`. The shape may change.
 
-[Unreleased]: https://github.com/kevinpeckham/barmark/compare/sync-v0.2.1...HEAD
+[Unreleased]: https://github.com/kevinpeckham/barmark/compare/sync-v0.3.0...HEAD
+[0.3.0]: https://github.com/kevinpeckham/barmark/compare/sync-v0.2.1...sync-v0.3.0
 [0.2.1]: https://github.com/kevinpeckham/barmark/compare/sync-v0.2.0...sync-v0.2.1
 [0.2.0]: https://github.com/kevinpeckham/barmark/compare/sync-v0.1.0...sync-v0.2.0
 [0.1.0]: https://github.com/kevinpeckham/barmark/releases/tag/sync-v0.1.0
