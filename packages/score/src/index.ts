@@ -13,5 +13,14 @@ export {
 	type WorkerLike,
 	type WorkerMessage,
 } from "./engine.js";
-export { type Engraved, type EngraveOptions, engraveChart, engraveXml, LAYOUT } from "./engrave.js";
+export {
+	type Engraved,
+	type EngraveOptions,
+	engraveChart,
+	engraveXml,
+	LAYOUT,
+	MAX_WRITTEN_NOTES,
+	MAX_XML_LENGTH,
+	writtenNotes,
+} from "./engrave.js";
 export { cleanSvg, type ScoreTheme, scorePane, scoreStyles } from "./markup.js";

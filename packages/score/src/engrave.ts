@@ -1,5 +1,11 @@
 import { exportMusicXml } from "@barmark/musicxml";
-import type { ChartDiagnostic } from "barmark";
+import {
+	type ChartDiagnostic,
+	type ChartParse,
+	type PlayedBar,
+	parseChart,
+	type Slot,
+} from "barmark";
 import type { VerovioToolkit } from "verovio/esm";
 import { cleanSvg } from "./markup.js";
 
@@ -8,7 +14,45 @@ export type EngraveOptions = {
 	width: number;
 	/** Verovio's scale (default 40). */
 	scale?: number;
+	/** The most notes the score may write out (`writtenNotes`); default `MAX_WRITTEN_NOTES`. */
+	maxNotes?: number;
+	/** The longest MusicXML engraved, in characters; default `MAX_XML_LENGTH`. */
+	maxXmlLength?: number;
 };
+
+/**
+ * The most notes a score may write out before it is refused, unexported:
+ * a short chart with repeats can play thousands of bars, and writing each
+ * out would take gigabytes. A long lead sheet writes a few thousand.
+ */
+export const MAX_WRITTEN_NOTES = 50_000;
+
+/** The longest MusicXML handed to Verovio, in characters: a second guard, on what the export wrote. */
+export const MAX_XML_LENGTH = 50_000_000;
+
+const TOO_LARGE = "The score is too large to draw";
+
+const slotNotes = (slots: Slot[]) =>
+	slots.reduce((n, s) => n + (s.kind === "group" ? s.members.length : 1), 0);
+
+/** A part's (or a single-part chart's) share of a bar: each line's slots, else its own. */
+const lineNotes = (bar: { slots: Slot[]; lines?: { slots: Slot[] }[] }) =>
+	bar.lines ? bar.lines.reduce((n, l) => n + slotNotes(l.slots), 0) : slotNotes(bar.slots);
+
+function barNotes(bar: PlayedBar): number {
+	const played = bar.parts
+		? bar.parts.reduce((n, p) => n + (p ? lineNotes(p) : 0), 0)
+		: lineNotes(bar);
+	return played + (bar.lyrics ?? []).reduce((n, l) => n + l.syllables.length, 0);
+}
+
+/**
+ * How many notes a score of the chart writes, at most: every played bar's
+ * slots in every part and line (a group's members each) and its sung
+ * syllables. One pass over the play order.
+ */
+export const writtenNotes = (parse: ChartParse): number =>
+	parse.bars.reduce((n, bar) => n + barNotes(bar), 0);
 
 export type Engraved =
 	| { ok: true; svg: string; pages: number; xml: string }
@@ -82,11 +126,19 @@ function refusal(diagnostics: ChartDiagnostic[]): string {
 	return first.line > 0 ? `Line ${first.line}: ${first.message}` : first.message;
 }
 
-/** A chart as a full score, or why it cannot be one. */
+/**
+ * A chart as a full score, or why it cannot be one. A chart that would
+ * write more than `maxNotes` notes is refused before it is exported, and
+ * MusicXML longer than `maxXmlLength` before Verovio reads it.
+ */
 export function engraveChart(vrv: VerovioToolkit, text: string, options: EngraveOptions): Engraved {
+	if (writtenNotes(parseChart(text)) > (options.maxNotes ?? MAX_WRITTEN_NOTES))
+		return { ok: false, reason: TOO_LARGE, diagnostics: [] };
 	const exported = exportMusicXml(text);
 	if (!exported.ok)
 		return { ok: false, reason: refusal(exported.diagnostics), diagnostics: exported.diagnostics };
+	if (exported.xml.length > (options.maxXmlLength ?? MAX_XML_LENGTH))
+		return { ok: false, reason: TOO_LARGE, diagnostics: [] };
 	try {
 		const engraved = engraveXml(vrv, exported.xml, options);
 		return { ok: true, xml: exported.xml, pages: engraved.pages, svg: cleanSvg(engraved.svg) };

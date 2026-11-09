@@ -2,8 +2,9 @@ import { describe, expect, test } from "bun:test";
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { exportMusicXml } from "@barmark/musicxml";
+import { parseChart } from "barmark";
 import type { VerovioToolkit } from "verovio/esm";
-import { engraveChart } from "../src/index.js";
+import { engraveChart, MAX_WRITTEN_NOTES, MAX_XML_LENGTH, writtenNotes } from "../src/index.js";
 import { loadToolkit } from "./helpers/toolkit.js";
 
 const vrv = await loadToolkit();
@@ -162,5 +163,52 @@ describe("engraveChart", () => {
 		const r = engraveChart(stub(true, 0), read("morning-song.chart.md"), { width: 800 });
 		expect(r.ok).toBe(false);
 		if (!r.ok) expect(r.reason).toContain("no pages");
+	});
+
+	test("a score too large to draw is refused, with the element's reason", () => {
+		const r = engraveChart(vrv, "| C D_E |\n", { width: 800, maxNotes: 2 });
+		expect(r).toMatchObject({ ok: false, reason: "The score is too large to draw" });
+		expect(engraveChart(vrv, "| C D_E |\n", { width: 800, maxNotes: 3 }).ok).toBe(true);
+	});
+
+	test("MusicXML too long to draw is refused too", () => {
+		expect(MAX_XML_LENGTH).toBe(50_000_000);
+		const r = engraveChart(vrv, read("morning-song.chart.md"), { width: 800, maxXmlLength: 100 });
+		expect(r).toMatchObject({ ok: false, reason: "The score is too large to draw" });
+	});
+});
+
+describe("writtenNotes", () => {
+	const notes = (text: string) => writtenNotes(parseChart(text));
+
+	test("every played bar's slots, a group's members each", () => {
+		expect(notes("| C D_E |\n")).toBe(3);
+		expect(notes("| C | x3\n")).toBe(3);
+		expect(notes("|: C D :| x2\n")).toBe(4);
+	});
+
+	test("every part's and every line's, and the lyric syllables", () => {
+		const parts = "part: A = Piano\npart: B = Bass\nA | C D |\nB | {C2} |\n";
+		expect(notes(parts)).toBe(3);
+		const lines = "part: P = Piano\nP.RH | {C4} {D4} |\nP.LH | {C3} |\n";
+		expect(notes(lines)).toBe(3);
+		expect(notes("| C |\nlyrics: | la la la |\n")).toBe(4);
+	});
+
+	test("the examples and the site's home chart are far under the limit", () => {
+		const home = readFileSync(join(import.meta.dir, "../../../site/src/lib/demo.chart.md"), "utf8");
+		for (const text of [...charts.map(read), home])
+			expect(notes(text)).toBeLessThan(MAX_WRITTEN_NOTES / 20);
+		expect(MAX_WRITTEN_NOTES).toBe(50_000);
+	});
+
+	test("the finding's chart is refused before its export, in a moment", () => {
+		const cell = Array.from({ length: 1000 }, () => "la").join(" ");
+		const text = `## A x500\n|: C :| x2\nlyrics: | ${cell} |\n`;
+		const start = performance.now();
+		const r = engraveChart(vrv, text, { width: 800 });
+		// Its export alone takes some twenty seconds and writes 370 MB.
+		expect(performance.now() - start).toBeLessThan(2_000);
+		expect(r).toMatchObject({ ok: false, reason: "The score is too large to draw" });
 	});
 });

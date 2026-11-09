@@ -8,6 +8,17 @@ package uses [semantic versioning](https://semver.org/).
 
 ### Fixed
 
+- **A score too large to draw is refused, not attempted.** A short chart
+  with repeats can play thousands of bars, and writing a crowded one out
+  took gigabytes of MusicXML (and a phone's tab). `engraveChart` now
+  counts the notes the score would write (`writtenNotes`: every played
+  bar's slots in every part and line, a group's members each, and its
+  sung syllables, in one pass) and refuses more than `MAX_WRITTEN_NOTES`
+  (50,000) before exporting, and MusicXML over `MAX_XML_LENGTH`
+  (50,000,000 characters) before Verovio reads it, both with the reason
+  "The score is too large to draw", so the element shows its note.
+  `EngraveOptions.maxNotes` and `maxXmlLength` set them.
+
 - **A slow score no longer holds up every later one.** The worker takes
   one job at a time; a request its element has since replaced is never
   sent, and one already engraving is cut off (the worker is terminated and

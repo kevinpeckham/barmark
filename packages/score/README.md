@@ -94,11 +94,12 @@ worker, so a later or different URL is not loaded.
 ### When the score can't be drawn
 
 If Verovio fails to load, or rejects the MusicXML, or the chart will not
-export, or Verovio takes over 60 seconds to load or 20 seconds to
-engrave, the grid stays and a note by the switch says "The score couldn't
-be drawn". The reason goes to the console. A score an element no longer
-wants (its chart or width changed) is dropped, and cut off after three
-seconds if the worker is already engraving it.
+export or is too large to draw (see "Engraving directly"), or Verovio
+takes over 60 seconds to load or 20 seconds to engrave, the grid stays and
+a note by the switch says "The score couldn't be drawn". The reason goes
+to the console. A score an element no longer wants (its chart or width
+changed) is dropped, and cut off after three seconds if the worker is
+already engraving it.
 
 ## On the server
 
@@ -127,6 +128,15 @@ const result = engraveChart(vrv, chartText, { width: 800 });
 if (result.ok) document.body.innerHTML = result.svg;
 else console.warn(result.reason);
 ```
+
+A chart that would write out more than 50,000 notes (`MAX_WRITTEN_NOTES`:
+every played bar's slots in every part and line, a group's members each,
+and its sung syllables, as `writtenNotes` counts them) is refused before it
+is exported, with the reason "The score is too large to draw": a short
+chart with repeats can play thousands of bars, and writing them all out
+would take gigabytes. MusicXML over 50,000,000 characters
+(`MAX_XML_LENGTH`) is refused the same way before Verovio reads it. Pass
+`maxNotes` or `maxXmlLength` to set either.
 
 The SVG is cleaned with an allow-list (`cleanSvg`) before it is returned;
 `scorePane` and `scoreStyles` wrap it so it follows the grid's light and
