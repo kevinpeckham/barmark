@@ -6,6 +6,8 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-11-09
+
 ### Added
 
 - **`MidiLoss.written`**: the written number of the bar a loss happened in
@@ -15,6 +17,8 @@ package uses [semantic versioning](https://semver.org/).
 
 ### Changed
 
+- **Requires `@barmark/sync` 0.3.0 and `barmark` 0.22.0**, whose minor
+  releases a caret range would not reach.
 - **`importMidi` numbers its diagnostics' `bar` as the chart it writes
   does**: a pickup is bar 0 and the first full bar 1 (it was the pickup as
   bar 1). With no pickup the numbers are unchanged. Sync's diagnostics
@@ -157,6 +161,7 @@ package uses [semantic versioning](https://semver.org/).
   bar, shorter than one, from its downbeat). Needs barmark 0.21.0
   (`PlayedBar.time`).
 
-[Unreleased]: https://github.com/kevinpeckham/barmark/compare/midi-v0.2.0...HEAD
+[Unreleased]: https://github.com/kevinpeckham/barmark/compare/midi-v0.3.0...HEAD
+[0.3.0]: https://github.com/kevinpeckham/barmark/compare/midi-v0.2.0...midi-v0.3.0
 [0.2.0]: https://github.com/kevinpeckham/barmark/compare/midi-v0.1.0...midi-v0.2.0
 [0.1.0]: https://github.com/kevinpeckham/barmark/releases/tag/midi-v0.1.0

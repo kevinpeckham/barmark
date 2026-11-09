@@ -157,7 +157,11 @@ runs, and `verify:package cli` fails on anything else.
    ```
 9. **Release:** `gh release create <pkg>-vX.Y.Z --title "<npm name> X.Y.Z"
    --notes-file <notes>`, with the version's CHANGELOG section as the
-   notes. This starts the release workflow.
+   notes. This starts the release workflow. Releasing several packages,
+   create one release at a time: release runs share a concurrency group
+   that keeps one running and one pending, and a newer pending run
+   cancels the older one, so start the next only when the previous run
+   is running or done (FINDINGS 2026-11-09).
 10. **Approve** the publish when GitHub asks (the run's "Review
     deployments" button, or `gh run view`), after the verify job passes.
 11. **Confirm:** the workflow's `confirm` job installs the new version
