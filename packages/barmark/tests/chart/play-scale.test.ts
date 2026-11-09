@@ -125,6 +125,27 @@ describe("the verses a bar sings count toward the expansion's budget", () => {
 			`expansion stopped after ${p.bars.length} bars: the bars played again sing too many verses (${sung.toLocaleString("en-US")})`,
 		]);
 	});
+	test("a verse its repeat never reaches is still reported when a later stop cuts play", () => {
+		// Verse 3 under `x2` is never sung, stop or not; the stop comes thousands of bars later.
+		const chart = ["## A", "| C | x2", "lyrics 2: | la |", "lyrics 3: | li |", "## B", "| D |"]
+			.concat(Array(10_001).fill("## B"))
+			.join("\n");
+		const messages = parseChart(chart).diagnostics.map((d) => `${d.line}: ${d.message}`);
+		expect(messages).toContain("4: verse 3 is never sung: no pass of its repeat is pass 3");
+		expect(messages).toContain("6: expansion stopped at 10000 bars");
+	});
+
+	test("a verse the stop cut off before its pass is not reported", () => {
+		// 2,000 parts may each play 5 bars: pass 2 of the x3 is cut, so verse 3's pass never came.
+		const parts = Array.from({ length: 2000 }, (_, i) => `part: P${i} = Piano`);
+		const chart = [...parts, "| C | C | C | x3", "lyrics 3: | a | b | c |"].join("\n");
+		const messages = parseChart(chart).diagnostics.map((d) => d.message);
+		expect(messages).toEqual([
+			"expansion stopped at 5 bars",
+			"passes 1 and 2 of this repeat sing nothing: its bars have verse 3",
+		]);
+	});
+
 	test("a bar the budget stops is not sung, and the stop alone is reported", () => {
 		// 100 parts may each do 1,000 work. Two replays sing 300 verses each; the third replay's own 400 rows don't fit.
 		const parts = Array.from({ length: 100 }, (_, i) => `part: P${i} = Piano`);

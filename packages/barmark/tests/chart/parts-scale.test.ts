@@ -84,6 +84,19 @@ test("a part past its share of the lines stops, and says so", () => {
 	).toEqual(["expansion stopped after 0 bars: each of 1000 parts reads at most 100 lines"]);
 });
 
+test("a part whose play ended at Fine reports no stop for the lines it did not read", () => {
+	// 1,000 parts read at most 100 lines each; play ends at Fine, before the words past them.
+	const chart = [
+		...Array.from({ length: 1000 }, (_, i) => `part: P${i} = Piano`),
+		"| C | Fine |",
+		"| D | D.C. al Fine |",
+		...Array(150).fill("words"),
+	].join("\n");
+	const p = parseChart(chart);
+	expect(p.diagnostics.map((d) => d.message)).toEqual([]);
+	expect(p.bars.map((b) => b.slots.length)).toEqual([1, 1, 1]);
+});
+
 /** `n` parts declared, `P0` to `P{n-1}`, with `= instrument`. */
 const declared = (n: number, instrument = "Piano") =>
 	Array.from({ length: n }, (_, i) => `part: P${i} = ${instrument}`);

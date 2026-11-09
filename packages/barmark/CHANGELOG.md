@@ -82,7 +82,11 @@ Releases follow the process in [RELEASING.md](RELEASING.md).
   neither sung nor checked): now 0.1 s and 2 MB. Once play stops at any
   limit, the stop is the only report of what it cut short: no "the parts
   fall out of step" for a part that stopped early, and no "verse N is
-  never sung" for verses the stop left unsung. Repeats that play too much with no
+  never sung" for verses the stop left unsung: a row play never reached,
+  or reached in a repeat with passes enough for its verse. A verse its
+  repeat can never reach is still reported (`lyrics 3:` under `x2`), stop
+  or not. A part whose play ended at `Fine`, after the jump, reports no
+  stop for the lines past its share, which it would never have played. Repeats that play too much with no
   bars to count (fermatas) now say "expansion stopped after N bars: its
   repeats play too many times", not the bar cap's "expansion stopped at
   10000 bars", which is kept for the bar cap itself. Real charts use a tiny share of it: the examples

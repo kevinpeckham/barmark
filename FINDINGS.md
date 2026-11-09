@@ -2028,4 +2028,6 @@ its bars again per bar, 2.2 s) and the lyric rows' `covers` (one copy per row). 
 `many parts times anything` in `parts-scale.test.ts`, builds each worst shape at 200 and 1,600
 parts and fails past 20× (linear measures up to 9×; the old code 38× to 441×). **Rule:** after
 two reviews of one class, stop fixing instances: list the nested loops and their bounds, then index
-every one that multiplies two inputs.
+every one that multiplies two inputs. Suppressing what a stop explains must be just as exact: dropping
+every "never sung" after a stop hid a real one (verse 3 under `x2`); the rows a stop cut off are
+those never reached, or reached in a repeat with passes enough for their verse (`BarSource.passes`).

@@ -487,6 +487,8 @@ function singing(
 	const melody = who?.sings !== undefined;
 	const part = who?.label === undefined ? {} : { part: who.label };
 	const sung = new Set<LyricsLine>();
+	/** The rows over each played bar, with the most passes their repeat played there. */
+	const reached = new Map<LyricsLine[], number>();
 	/** What each verse's rows left held, in play order: a row starting with `/` holds on from it. */
 	const ends = new Map<number, Held>();
 	let heard = false;
@@ -647,6 +649,7 @@ function singing(
 	};
 	const singBar = (bar: PlayedBar, from: BarSource): PlayedBar["lyrics"] => {
 		const { own, replayed } = rowsOver(from);
+		reached.set(own, Math.max(reached.get(own) ?? 0, from.passes ?? 1));
 		const w = writtenBar(bar.slots, bar.meter);
 		checkRows(own, w, from.bar);
 		const mine = replayed || !who ? null : w.notes;
@@ -664,13 +667,26 @@ function singing(
 		return (pick.notes && mine ? 1 : 0) + pick.rows.length;
 	};
 	const sing: Sing = Object.assign(singBar, { verses: versesHere });
+	/**
+	 * The rows a stop left unsung: those never reached, and those reached in
+	 * a repeat with passes enough for their verse, whose pass the stop cut off.
+	 */
+	const cutOff = (stopped: boolean): ((r: LyricsLine) => boolean) => {
+		if (!stopped) return () => false;
+		const most = new Map<LyricsLine, number>();
+		for (const [own, passes] of reached)
+			for (const r of own) most.set(r, Math.max(most.get(r) ?? 0, passes));
+		return (r) => (most.get(r) ?? Number.POSITIVE_INFINITY) >= (r.verse ?? 1);
+	};
 	/** After playing: word the silent passes, then warn of verses never sung, unless a stop left them unsung. */
 	const finish = (stopped = false) => {
 		wordSilences();
-		if (stopped) return;
-		for (const n of notes.values())
-			if (!n.sung) warn(n.line, "verse 1 is never sung: no pass of its repeat is pass 1", "lyrics");
-		const unsung = new Set(rows.all.filter((r) => r.verse !== null && !sung.has(r)));
+		if (!stopped)
+			for (const n of notes.values())
+				if (!n.sung)
+					warn(n.line, "verse 1 is never sung: no pass of its repeat is pass 1", "lyrics");
+		const cut = cutOff(stopped);
+		const unsung = new Set(rows.all.filter((r) => r.verse !== null && !sung.has(r) && !cut(r)));
 		for (const r of unsung)
 			warn(
 				r.line,

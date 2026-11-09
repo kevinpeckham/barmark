@@ -26,9 +26,16 @@ import type {
  * Where a played bar comes from, for its words (grammar 7.7): its bar
  * line, its place among that line's bars (from 0), the pass of the repeat
  * it plays in (null outside one, and in an open repeat, whose passes are
- * unknown), and the line of the replay heading it plays under, if any.
+ * unknown) and how many passes that repeat plays here, and the line of
+ * the replay heading it plays under, if any.
  */
-export type BarSource = { line: number; bar: number; pass: number | null; replay: number | null };
+export type BarSource = {
+	line: number;
+	bar: number;
+	pass: number | null;
+	passes: number | null;
+	replay: number | null;
+};
 /**
  * The words a played bar sings, given where it comes from; undefined when
  * none. `verses` says how many it would sing, with no other effect, so the
@@ -395,11 +402,16 @@ export function expand(
 	};
 	/** A part that stopped reading its lines before play stopped says so. */
 	const readAll = (next: Line | undefined) => {
-		if (next && !capped) stop(next.line, "lines");
+		// Play that ended (at Fine, after the jump) never reaches the lines past the share.
+		if (next && !capped && phase !== "done") stop(next.line, "lines");
 	};
 	let sectionName: string | null = null;
 	/** The pass of the repeat being played, and the replay heading being played, for the words (grammar 7.7). */
-	const where: Pick<BarSource, "pass" | "replay"> = { pass: null, replay: null };
+	const where: Pick<BarSource, "pass" | "passes" | "replay"> = {
+		pass: null,
+		passes: null,
+		replay: null,
+	};
 	let phase: Phase = "main";
 	const stopped = () => capped || phase === "jumped" || phase === "done";
 	const jumped = () => phase === "jumped";
@@ -533,13 +545,14 @@ export function expand(
 	};
 	/** Play `n` passes; a repeat's are numbered for the words (grammar 7.7), a plain line's are not. */
 	const passes = (n: number, counted: boolean, line: number, play: () => void) => {
-		const outer = where.pass;
+		const outer = { ...where };
+		if (counted) where.passes = n;
 		for (let i = 0; i < n && !stopped(); i++) {
 			if (++work > maxWork) return stop(line);
 			if (counted) where.pass = i + 1;
 			play();
 		}
-		where.pass = outer;
+		Object.assign(where, { pass: outer.pass, passes: outer.passes });
 	};
 
 	const playLine = ({ line: l, repeat }: Entry, out: ChartEvent[]) => {
@@ -564,7 +577,9 @@ export function expand(
 	const playEndings = (it: Extract<Item, { kind: "bracket" }>, out: ChartEvent[]) => {
 		const highest = typeof it.repeat === "number" ? it.repeat : 1;
 		const first = phase === "main" ? 1 : highest;
-		const outer = where.pass;
+		const outer = { ...where };
+		// After the jump only the last pass plays.
+		where.passes = highest - first + 1;
 		for (let pass = first; pass <= highest && !stopped(); pass++) {
 			if (++work > maxWork) return stop(it.line);
 			// The return after a jump is no new pass: it plays pass 1's words (grammar 7.7).
@@ -573,7 +588,7 @@ export function expand(
 			const ending = it.endings.find((x) => x.passes.includes(pass));
 			if (ending) playLine(ending.entry, out);
 		}
-		where.pass = outer;
+		Object.assign(where, { pass: outer.pass, passes: outer.passes });
 	};
 
 	const events: ChartEvent[] = [];
