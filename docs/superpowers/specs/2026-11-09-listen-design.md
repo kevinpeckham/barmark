@@ -1058,13 +1058,12 @@ release.
   one band. A new default is a minor that names the study.
 - **Extended harmony:** if extensions thin the harmonic histogram,
   `beatChords` could compare roots and qualities only.
-- **The pickup bound:** `PICKUP_MAX_BAR_FRACTION` 0.5 is the design's, and
+- **The pickup bound:** `PICKUP_MAX_BAR_FRACTION` 0.5 is the design's (confirmed by Kevin), and
   the study's pickup song confirms or moves it.
 - **A grammar question, Kevin's, not the study's:** should barmark read
   `CM7`, `CSus4`, `CmMaj7`, `CmM7`, `C69`, `C(7)sus4` and a Unicode minus?
-  *Recommendation:* read none in the grammar. Keep spellings unambiguous,
-  and let `db:chart-check` move stored charts once. If one form is
-  wanted, `C69` → `C6/9` is the safest.
+  **Decided by Kevin (2026-11-09): none.** Spellings stay unambiguous;
+  the app's `db:chart-check` moves stored charts once before adoption.
 
 ## 14. Kevin's answers
 
@@ -1085,7 +1084,7 @@ confirm the third:**
 - Q2: unchanged. `RecordingChart.reading` now survives
   `onUnplaced: "declared"`.
 - **Q3: yes, bounded at half a bar** (amended after the app's review;
-  Kevin to confirm). A pickup is reported only when it is at most
+  confirmed by Kevin 2026-11-09). A pickup is reported only when it is at most
   `PICKUP_MAX_BAR_FRACTION` (0.5) of a bar. A longer lead-in keeps the
   app's bar 1 with its opening silence. With `startAt` set by a person,
   the unbounded rule stands.
@@ -1112,7 +1111,7 @@ confirm the third:**
    pickup and the written bar 1 moves one bar later. The silent beats
    before the pickup leave the grid, and the other bar lines stay put.
    *Recommendation: yes.* **Decided: yes, bounded at half a bar (amended
-   after the app's review; Kevin to confirm).**
+   after the app's review; confirmed by Kevin 2026-11-09).**
 4. **Should sync write eighth-note pickups in compound meters?** Today
    `readPickup` builds whole dotted quarters, so a 1-eighth pickup in 6/8
    is ignored and a 2- or 4-eighth one comes out the wrong length. Grammar
