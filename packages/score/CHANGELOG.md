@@ -6,6 +6,10 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-11-09
+
+Requires `@barmark/musicxml` 0.7.2.
+
 ### Fixed
 
 - **A chord symbol is drawn as the chart spells it.** Verovio 6.4 appends
@@ -87,5 +91,6 @@ First release.
   needs no config; Vite 7 needs `optimizeDeps.exclude` and
   `worker.format: "es"`.
 
-[Unreleased]: https://github.com/kevinpeckham/barmark/compare/score-v0.1.0...HEAD
+[Unreleased]: https://github.com/kevinpeckham/barmark/compare/score-v0.1.1...HEAD
+[0.1.1]: https://github.com/kevinpeckham/barmark/compare/score-v0.1.0...score-v0.1.1
 [0.1.0]: https://github.com/kevinpeckham/barmark/releases/tag/score-v0.1.0

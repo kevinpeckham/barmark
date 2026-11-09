@@ -6,6 +6,8 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.7.2] - 2026-11-09
+
 ### Fixed
 
 - **A chord's degrees are not printed when its kind text already spells
@@ -576,7 +578,8 @@ and each grammar example's sounding notes and chord symbols.
 - **Errors:** a chart with errors, or with no bars, returns its
   diagnostics and no XML; characters XML can't hold are left out.
 
-[Unreleased]: https://github.com/kevinpeckham/barmark/compare/musicxml-v0.7.1...HEAD
+[Unreleased]: https://github.com/kevinpeckham/barmark/compare/musicxml-v0.7.2...HEAD
+[0.7.2]: https://github.com/kevinpeckham/barmark/compare/musicxml-v0.7.1...musicxml-v0.7.2
 [0.7.1]: https://github.com/kevinpeckham/barmark/compare/musicxml-v0.7.0...musicxml-v0.7.1
 [0.7.0]: https://github.com/kevinpeckham/barmark/compare/musicxml-v0.6.4...musicxml-v0.7.0
 [0.6.4]: https://github.com/kevinpeckham/barmark/compare/musicxml-v0.6.3...musicxml-v0.6.4
