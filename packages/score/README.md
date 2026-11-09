@@ -127,7 +127,10 @@ else console.warn(result.reason);
 
 The SVG is cleaned with an allow-list (`cleanSvg`) before it is returned;
 `scorePane` and `scoreStyles` wrap it so it follows the grid's light and
-dark palette.
+dark palette. `engraveChart` and `engraveXml` drop a chord `<degree>`
+marked `print-object="no"` before Verovio reads the MusicXML, as Verovio
+6.4 prints every degree after the chord's text (`D7sus4(7)`); `result.xml`
+is the export unchanged.
 
 ## Licence
 

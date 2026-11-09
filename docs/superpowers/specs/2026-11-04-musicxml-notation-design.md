@@ -144,6 +144,13 @@ A keyboard part has `<staves>2</staves>`, treble above and bass below.
   2026-11-04, Kevin's decision: Dorico honoured a hidden rest,
   `print-object="no"`, in some bars of Morning Song and not in others
   with identical XML; a shown rest is ordinary piano-chart engraving).
+  No slash style (amended 2026-11-08, FINDINGS "Verovio beside Dorico,
+  first run"): Verovio slashed both staves, the rest included, from
+  `<measure-style number="1">`, and carries slash style on from the part
+  before, so a keyboard's first measure turns it off after a part that
+  left it on (as does any part's that doesn't start in slashes); its slash
+  notes
+  carry slash noteheads and no stems on their own.
 - **Chord symbols** above the upper staff.
 - Each staff is its own voice in the measure (voice 1 upper, voice 5
   lower, as Dorico and MuseScore write), joined with `<backup>`.

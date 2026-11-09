@@ -208,7 +208,9 @@ plays wrong" in check.
   together itself.
 - Repeats and endings, being barlines, are written in every part. The
   score's other marks (headings, rehearsal marks, tempo, feel, jumps, a
-  repeat's words) are directions written in the top part only, so a score
+  repeat's words, and the text before the first heading, the chart's
+  description: amended 2026-11-08) are directions written in the top
+  part only, so a score
   shows them once: Dorico ignores MusicXML 4.0's `system` attribute and
   shows a direction written in every part over every staff. They still
   carry `system="only-top"` for the programs that read it. A part

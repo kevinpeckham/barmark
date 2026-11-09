@@ -22,11 +22,13 @@ import {
 	barLength,
 	beatLength,
 	beatPieces,
+	cmp,
 	type Frac,
 	frac,
 	meterValues,
 	type NoteValue,
 	noteValues,
+	pickupMeter,
 	plus,
 } from "./rhythm.js";
 import { splitStaves } from "./staves.js";
@@ -38,14 +40,19 @@ export type MeasureContext = {
 	index: number;
 	previous: Measure | null;
 	next: Measure | null;
+	/** The part opens with a pickup (`opensWithPickup`): its first measure is measure 0, implicit. */
+	pickup: boolean;
 	/** This bar's clef, and the bar before's (null for the first). */
 	clef: { now: Clef; before: Clef | null };
 	/** How far the part is written above where it sounds (a bass's octave; barmark's grammar 7.3). */
 	written: WrittenInterval;
 	/** Whether this bar shows its rhythm (`rhythmic`): its slashes stemmed, in the meter's values. */
 	rhythmic: boolean;
-	/** Whether this bar shows slashes, and the bar before it (null for the first). */
-	slashed: { now: boolean; before: boolean | null };
+	/**
+	 * Whether this bar shows slashes, and the bar before it (null for the first); `carried`:
+	 * whether the part before left slash style on, which Verovio carries into this part.
+	 */
+	slashed: { now: boolean; before: boolean | null; carried?: boolean };
 	/** Two for a keyboard: treble and bass, the slashes on the upper. */
 	staves: 1 | 2;
 	/** Each of a part's lines' events in this bar, its first line's first (barmark's grammar 7.6); absent when it writes none. */
@@ -92,23 +99,64 @@ function keyXml(m: Measure, prev: Measure | null, written: WrittenInterval): str
 	]);
 }
 
+/**
+ * Whether a part's first measure is a pickup MusicXML can say: a one-bar meter shorter
+ * than the `time:` meter (grammar 2.4), then a bar in that meter, and a length a reader
+ * counting the running meter's beat reads back as the same meter. An implicit measure has
+ * no meter of its own, so `[1/4]` in 6/8, which would read back `[2/8]`, keeps its own
+ * time signature, as does `| [2/4] G | % |`, two bars of 2/4.
+ */
+function opensWithPickup([first, second]: Measure[]): boolean {
+	if (!first?.time || second?.time) return false;
+	const length = barLength(first.meter);
+	const back = pickupMeter(length, first.time);
+	return (
+		cmp(length, barLength(first.time)) < 0 && back?.n === first.meter.n && back.d === first.meter.d
+	);
+}
+
+/** The meter a measure's time signature shows: a pickup shows the running meter. */
+const shownMeter = (m: Measure, index: number, pickup: boolean): Meter =>
+	pickup && index === 0 ? (m.time ?? m.meter) : m.meter;
+
 /** The time signature, when it is the first or a change. */
-function timeXml(m: Measure, prev: Measure | null): string {
-	if (prev && prev.meter.n === m.meter.n && prev.meter.d === m.meter.d) return "";
-	return el("time", {}, [text("beats", m.meter.n), text("beat-type", m.meter.d)]);
+function timeXml(m: Measure, ctx: MeasureContext): string {
+	const meter = shownMeter(m, ctx.index, ctx.pickup);
+	const prev = ctx.previous && shownMeter(ctx.previous, ctx.index - 1, ctx.pickup);
+	if (prev && prev.n === meter.n && prev.d === meter.d) return "";
+	return el("time", {}, [text("beats", meter.n), text("beat-type", meter.d)]);
 }
 
 const CLEF_LINE: Record<string, number> = { G: 2, F: 4, C: 3 };
 
-/** Slash style on from the first slashed measure, off for a measure of notes, and on again after. */
-function slashStyleXml({ now: on, before }: MeasureContext["slashed"], staves: 1 | 2): string {
-	if (before === null ? !on : on === before) return "";
-	return el(
+const slashStyle = (on: boolean) =>
+	el(
 		"measure-style",
-		staves === 2 ? { number: 1 } : {},
+		{},
 		el("slash", on ? { type: "start", "use-stems": "no" } : { type: "stop" }),
 	);
+
+/**
+ * Slash style on from the first slashed measure, off for a measure of notes, and on again
+ * after. A part's first measure turns it off when the part before left it on: Verovio
+ * carries slash style from one part to the next, and drew a following part's whole-bar
+ * rests as slashes. A keyboard's two staves never turn it on: its slash notes already
+ * carry slash noteheads and no stems, and Verovio slashes both staves (whole-bar rests
+ * and all) from `<measure-style number="1">`.
+ */
+function slashStyleXml(
+	{ now: on, before, carried }: MeasureContext["slashed"],
+	staves: 1 | 2,
+): string {
+	const starts = on && staves === 1;
+	if (before === null) return starts ? slashStyle(true) : carried ? slashStyle(false) : "";
+	if (staves === 2 || on === before) return "";
+	return slashStyle(on);
 }
+
+/** Whether a part leaves slash style on after its last measure, as Verovio reads it. */
+export const leavesSlashes = (slashedBars: boolean[], staves: 1 | 2) =>
+	staves === 1 && slashedBars.at(-1) === true;
 
 /** A rhythm staff's percussion clef, on one line. */
 const RHYTHM_CLEF =
@@ -138,11 +186,11 @@ function attributesXml(m: Measure, ctx: MeasureContext): string {
 	const prev = ctx.previous;
 	const slash = slashStyleXml(ctx.slashed, ctx.staves);
 	const head = prev
-		? [keyXml(m, prev, ctx.written), timeXml(m, prev), clefsXml(ctx), slash]
+		? [keyXml(m, prev, ctx.written), timeXml(m, ctx), clefsXml(ctx), slash]
 		: [
 				text("divisions", ctx.divisions),
 				keyXml(m, null, ctx.written),
-				timeXml(m, null),
+				timeXml(m, ctx),
 				clefsXml(ctx),
 				transposeXml(ctx.written),
 				slash,
@@ -393,19 +441,35 @@ function scoreStartXml(m: Measure, ctx: MeasureContext): string {
 	].join("");
 }
 
-/** Before the notes: text before the heading, the score's marks (top part only), then the part's own text lines. */
+/**
+ * Before the notes: the score's own (top part only): text before the heading, the chart's
+ * description, and its marks; then the part's own text lines. A description in every part
+ * was shown once per part.
+ */
 const startXml = (m: Measure, ctx: MeasureContext) =>
-	textXml(m.lead) + (ctx.score ? scoreStartXml(m, ctx) : "") + textXml(m.text);
+	(ctx.score ? textXml(m.lead) + scoreStartXml(m, ctx) : "") + textXml(m.text);
+
+/**
+ * How far back from the bar's end a repeat's words stand, in divisions: its last beat
+ * (in the bar's own meter), so they sit over the bar the repeat ends. Written at the
+ * bar's end, Verovio and Dorico drew them over the next bar. A whole number, as a beat
+ * of a compound meter may not be: it only places the words.
+ */
+const lastBeat = (m: Measure, divisions: number) =>
+	Math.max(1, Math.round(whole(beatLength(m.meter), divisions)));
 
 /** A repeat's words: an open one's, or a count above 2, which Dorico won't read from `times`. */
-function repeatWords(end: Marks["repeatEnd"]): string {
-	if (end === "open") return scoreDirection(text("words", "repeat as needed"));
-	return typeof end === "number" && end > 2 ? scoreDirection(text("words", `×${end}`)) : "";
+function repeatWords(m: Measure, divisions: number): string {
+	const end = m.marks.repeatEnd;
+	const words =
+		end === "open" ? "repeat as needed" : typeof end === "number" && end > 2 ? `×${end}` : "";
+	if (!words) return "";
+	return scoreDirection(text("words", words), "", -lastBeat(m, divisions));
 }
 
 /** After the notes (top part only): a repeat's words, To Coda, Fine and the jump. */
-function endXml(marks: Marks, score: boolean): string {
-	return score ? [repeatWords(marks.repeatEnd), ...marks.end.map(jumpXml)].join("") : "";
+function endXml(m: Measure, ctx: MeasureContext): string {
+	return ctx.score ? [repeatWords(m, ctx.divisions), ...m.marks.end.map(jumpXml)].join("") : "";
 }
 
 const endingXml = (marks: Marks, type: string | null | undefined) =>
@@ -436,12 +500,17 @@ function rightBarlineXml(marks: Marks): string {
 	]);
 }
 
-/** A measure's place among a part's measures: its index, and the measures either side. */
+/** A measure's place among a part's measures: its index, the measures either side, and whether the part opens with a pickup. */
 export const placeIn = (measures: Measure[], index: number) => ({
 	index,
 	previous: measures[index - 1] ?? null,
 	next: measures[index + 1] ?? null,
+	pickup: opensWithPickup(measures),
 });
+
+/** A measure's number and, for a pickup, `implicit`: MuseScore numbers its pickup 0. */
+const numbering = ({ index, pickup }: MeasureContext) =>
+	pickup ? { number: index, ...(index === 0 ? { implicit: "yes" } : {}) } : { number: index + 1 };
 
 export function measureXml(bar: MeasureEvents, ctx: MeasureContext): string {
 	const m = bar.measure;
@@ -450,7 +519,7 @@ export function measureXml(bar: MeasureEvents, ctx: MeasureContext): string {
 		: ctx.staves === 2
 			? stavesXml(bar, ctx)
 			: staffXml(bar, ctx);
-	return el("measure", { number: ctx.index + 1, text: m.shown }, [
+	return el("measure", { ...numbering(ctx), text: m.shown }, [
 		// A processing instruction: other programs ignore it, the importer reads a lyric row.
 		ctx.lyricRow ? "<?barmark lyrics?>" : "",
 		attributesXml(m, ctx),
@@ -459,7 +528,7 @@ export function measureXml(bar: MeasureEvents, ctx: MeasureContext): string {
 		bar.lift === "start" ? pedalXml("stop", ctx.staves === 2 ? 2 : null) : "",
 		body,
 		bar.lift === "end" ? pedalXml("stop", ctx.staves === 2 ? 2 : null) : "",
-		endXml(m.marks, ctx.score),
+		endXml(m, ctx),
 		textXml(m.foot),
 		rightBarlineXml(m.marks),
 	]);

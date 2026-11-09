@@ -1,5 +1,6 @@
 /** A score's marks shown once, and the review's minors on running values, endings, short values and open repeats. */
 import { describe, expect, test } from "bun:test";
+import { ownText as ownTextOf } from "../src/directions.js";
 import { all, measures, notes, xmlOf } from "./helpers.js";
 import { expected, play } from "./play.js";
 
@@ -52,6 +53,19 @@ describe("headings and rehearsal marks belong to the score", () => {
 		const xml = xmlOf(BAND.replace("Bs  | @A | {G1} | {C2} |", "Bs  | @A | Em{E1} | C{C2} |"));
 		expect(all(measures(xml, "P1").join(""), "root-step")).toEqual(["G", "C"]);
 		expect(all(measures(xml, "P2").join(""), "root-step")).toEqual(["E", "C"]);
+	});
+});
+
+describe("the description belongs to the score", () => {
+	const DESCRIBED = `A slow one, every note a quarter.\n${BAND}`;
+	test("the top part writes it, once", () => {
+		const xml = xmlOf(DESCRIBED);
+		expect(xml.match(/every note a\u00a0quarter\./g)).toHaveLength(1);
+		expect(measures(xml, "P1")[0]).toContain("every note a\u00a0quarter.");
+		expect(measures(xml, "P2")[0]).not.toContain("quarter");
+	});
+	test("a part exported alone writes it", () => {
+		expect(xmlOf(DESCRIBED, "Bs")).toContain("every note a\u00a0quarter.");
 	});
 });
 
@@ -108,8 +122,8 @@ describe("an open repeat", () => {
 	});
 });
 
-describe("a leading word A", () => {
-	/** Dorico reads a leading "a" as the article in "a tempo" and drops it. */
+describe("a lone word A", () => {
+	/** Dorico reads a lone "a" as the article in "a tempo" and drops it. */
 	const NBSP = " ";
 	test("a heading A keeps its letter: a no-break space follows it", () => {
 		const xml = xmlOf("## A\n| G | C |\n## A section\n| D |");
@@ -119,6 +133,22 @@ describe("a leading word A", () => {
 	test("so does a text line, in either case", () => {
 		const xml = xmlOf("| G | C |\n### a cappella\n");
 		expect(xml).toContain(`>a${NBSP}cappella</words>`);
+	});
+	test("so does every lone a, not only a leading one", () => {
+		// Shenandoah's "every note a quarter." read "every note  quarter." in Dorico.
+		const xml = xmlOf("every note a quarter.\n\n## Plan A\n| G | C |\n### a, then A or a\n");
+		expect(xml).toContain(`>every note a${NBSP}quarter.</words>`);
+		expect(xml).toContain(`>Plan A${NBSP}</words>`);
+		expect(xml).toContain(`>a, then A${NBSP}or a${NBSP}</words>`);
+	});
+	test("an a before a tab or a line break is held too", () => {
+		expect(ownTextOf("a\tb")).toBe("a\u00a0b");
+		expect(ownTextOf("Plan a\n")).toBe("Plan a\u00a0");
+	});
+	test("a word holding an a is written as it is", () => {
+		const xml = xmlOf("## Abba, a.k.a. B\n| G |\n### Sara and band (a)\n");
+		expect(xml).toContain(">Abba, a.k.a. B</words>");
+		expect(xml).toContain(">Sara and band (a)</words>");
 	});
 	test("other text, and barmark's own a tempo, are written as they are", () => {
 		const xml = xmlOf("tempo: 120\n## Abba\n| G |\ntempo: rit.\n| C |\ntempo: a tempo\n| D |");

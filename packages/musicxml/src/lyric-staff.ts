@@ -236,8 +236,8 @@ export function lyricScorePart(id: string): string {
 	]);
 }
 
-/** The lyric staff's `<part>`, from a parse whose lyrics have no melody to sit on. */
-export function lyricPartXml(parse: ChartParse, id: string): string {
+/** The lyric staff's `<part>`, from a parse whose lyrics have no melody to sit on; `carried`: the part before left slash style on. */
+export function lyricPartXml(parse: ChartParse, id: string, carried = false): string {
 	const bars = staffBars(parse);
 	const measures = bars.map((b) => b.measure);
 	const divisions = divisionsFor(lengthsIn(bars));
@@ -245,7 +245,7 @@ export function lyricPartXml(parse: ChartParse, id: string): string {
 		measureXml(bar, {
 			divisions,
 			...placeIn(measures, index),
-			slashed: { now: false, before: index > 0 ? false : null },
+			slashed: { now: false, before: index > 0 ? false : null, carried },
 			clef: { now: "rhythm", before: index > 0 ? "rhythm" : null },
 			rhythmic: true,
 			written: { diatonic: 0, chromatic: 0 },

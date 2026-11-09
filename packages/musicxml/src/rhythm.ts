@@ -1,5 +1,5 @@
 /** Durations as fractions of a quarter note, and how MusicXML writes them. */
-import { beatsOf, type Meter, type Slot } from "barmark";
+import { beatsOf, type Meter, parseMeter, type Slot } from "barmark";
 
 /** A positive fraction, always in lowest terms. */
 export type Frac = { n: number; d: number };
@@ -189,4 +189,20 @@ export function meterValues(start: Frac, length: Frac, meter: Meter, rest = fals
 	if (!cut) return noteValues(length);
 	const first = minus(cut, start);
 	return [...noteValues(first), ...meterValues(cut, minus(length, first), meter, rest)];
+}
+
+/** The finest unit a pickup is counted in: a 32nd. */
+const FINEST = 32;
+
+/**
+ * A pickup's meter from its length alone, as a MusicXML reader must count an implicit
+ * measure: in the running meter's beat unit (its denominator), else in halves of it and
+ * so on to 32nds; null when none counts it whole.
+ */
+export function pickupMeter(length: Frac, meter: Meter): Meter | null {
+	for (let d = meter.d; d <= FINEST; d *= 2) {
+		const n = frac(length.n * d, length.d * 4);
+		if (n.d === 1 && n.n > 0) return parseMeter(`${n.n}/${d}`);
+	}
+	return null;
 }

@@ -1,5 +1,11 @@
 /** Chord symbols as MusicXML <harmony>: a kind, plus degrees that spell the exact chord. */
-import type { ChordRecord, Interval, SimpleSlot, WrittenInterval } from "barmark";
+import {
+	type ChordRecord,
+	type Interval,
+	parseChord,
+	type SimpleSlot,
+	type WrittenInterval,
+} from "barmark";
 import { KINDS } from "./kinds.js";
 import { writtenName } from "./written.js";
 import { el, text } from "./xml.js";
@@ -81,8 +87,25 @@ function qualityText(record: ChordRecord): string {
 	return bass && rest.endsWith(`/${bass}`) ? rest.slice(0, -bass.length - 1) : rest;
 }
 
-const degreeXml = (d: Degree) =>
-	el("degree", {}, [
+const notes = (ivs: Interval[]) =>
+	ivs
+		.map((i) => `${i.alter}:${i.degree}`)
+		.sort()
+		.join(" ");
+
+/**
+ * Whether the root and kind text, read as a chord symbol, name exactly these intervals.
+ * Then every degree is already spelled by the text, and printing it again doubles it:
+ * Verovio shows the text and then each printed degree (`D7sus4(7)`, `G5(7)(no3)`).
+ */
+export function textSpells(root: string, text: string, intervals: Interval[]): boolean {
+	const r = parseChord(`${root}${text}`);
+	return r.ok && r.value.kind === "chord" && notes(r.value.intervals) === notes(intervals);
+}
+
+/** A degree, `print-object="no"` when the kind text already spells it: it still means the chord. */
+const degreeXml = (d: Degree, shown: boolean) =>
+	el("degree", shown ? {} : { "print-object": "no" }, [
 		text("degree-value", d.value),
 		text("degree-alter", d.alter),
 		text("degree-type", d.type),
@@ -92,11 +115,14 @@ const degreeXml = (d: Degree) =>
 export function harmonyXml(record: ChordRecord, by: WrittenInterval = CONCERT): string {
 	const { kind, degrees } = kindOf(record.intervals);
 	const bass = record.parts?.bass;
+	const root = record.root ?? "C";
+	const quality = qualityText(record);
+	const shown = !textSpells(root, quality, record.intervals);
 	return el("harmony", {}, [
-		pitchXml("root", record.root ?? "C", by),
-		text("kind", kind, { text: qualityText(record) }),
+		pitchXml("root", root, by),
+		text("kind", kind, { text: quality }),
 		bass ? pitchXml("bass", bass, by) : "",
-		...degrees.map(degreeXml),
+		...degrees.map((d) => degreeXml(d, shown)),
 	]);
 }
 
