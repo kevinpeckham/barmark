@@ -175,10 +175,18 @@ describe("engraveChart", () => {
 
 	test("the export stops at the length limit: a score past it is never written whole", () => {
 		const text = `## A x500\n|: "${"&".repeat(1800)}" C :| x2\n`;
-		const start = performance.now();
+		const timed = (run: () => unknown) => {
+			const start = performance.now();
+			run();
+			return performance.now() - start;
+		};
+		// The whole export writes 9 MB; the cut one stops after 100 KB.
+		const whole = timed(() => exportMusicXml(text));
+		const early = timed(() =>
+			engraveChart(vrv, text, { width: 800, maxCost: Infinity, maxXmlLength: 100_000 }),
+		);
+		expect(early).toBeLessThan(whole / 2);
 		const r = engraveChart(vrv, text, { width: 800, maxCost: Infinity, maxXmlLength: 100_000 });
-		// The whole export takes some 400 ms and writes 9 MB.
-		expect(performance.now() - start).toBeLessThan(150);
 		expect(r).toMatchObject({ ok: false, reason: "The score is too large to draw" });
 	});
 

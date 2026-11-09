@@ -36,7 +36,8 @@ export type MusicXmlOptions = {
 	/**
 	 * The longest MusicXML to write, in characters. The export stops at the
 	 * first measure past it and answers `tooLarge`, never having built more;
-	 * unset, there is no limit.
+	 * unset, there is no limit. A measure is built whole before it is counted,
+	 * so one very large measure can pass the limit by its own size.
 	 */
 	maxLength?: number;
 };
