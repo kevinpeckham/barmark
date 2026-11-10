@@ -1,6 +1,6 @@
 {
 	"name": "@barmark/engraver",
-	"version": "0.1.0",
+	"version": "0.1.1",
 	"description": "A modified, smaller build of Verovio for barmark: MusicXML to SVG in the Leipzig font, made by barmark, not by the Verovio project (Verovio 6.4.1)",
 	"type": "module",
 	"exports": {

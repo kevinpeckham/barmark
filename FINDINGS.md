@@ -413,6 +413,23 @@ showed the rule needed refining.
   sets. In `packages/listen/src/grid/beats.ts`, tested in
   `tests/beats.test.ts` ("degenerate runs never throw and abstain").
 
+### A "not inside a parenthesis" lookahead made the chord reader quadratic (2026-11-10, barmark)
+
+- **The symptom.** Writing the linear-time test for stacked spellings,
+  `D6(` followed by 20,000 run-together `add9b13` items and `)` took 1.4
+  seconds to read: ninety times the 2,000-item one, for ten times the
+  text.
+- **The cause.** The bare-`add9` rule found an `add` outside any group
+  with `/add(2|4|9|11)(?![^(]*\))/g`: at every `add` the lookahead scans
+  ahead to the next `)` to learn that it is inside one, so a long group
+  costs its length for each of its items.
+- **The fix.** One scan that matches a whole group, `\([^()]*\)`, or a
+  bare item, and keeps or takes each (`pullBare` in
+  `packages/barmark/src/chords/stacked.ts`); the bare `omit`/`no` of a
+  stacked spelling uses the same scan. A regex asking "am I inside
+  brackets?" by looking ahead is quadratic on long input; consume the
+  brackets instead (`packages/barmark/tests/chords/stacked.test.ts`).
+
 ### A download's Content-Length is not the size of what you read (2026-11-10, @barmark/score)
 
 - **The symptom.** Measuring `<barmark-score>`'s Verovio download as
@@ -976,6 +993,116 @@ and round-trip it through `format`.
   imports the bundle and runs it, so an empty bundle fails
   (`packages/listen/tests/features-entry.test.ts`). Any check of a
   bundle's content should also check that the bundle works.
+
+### jsDelivr serves the engraver's `.wasm` as `application/wasm`, brotli, CORS open, once it has the version (2026-11-10, @barmark/engraver 0.1.1)
+
+- **The symptom.** Minutes after npm accepted 0.1.1, jsDelivr served
+  `dist/verovio-module.mjs` but answered `dist/verovio-module.wasm` with
+  a 404 ("Couldn't find the requested release version 0.1.1",
+  `cache-control: public, max-age=30, s-maxage=30`). Its data API
+  (`data.jsdelivr.com/v1/packages/npm/@barmark/engraver@0.1.1`) said the
+  same. The npm tarball held the file all along. 31 seconds later the
+  `.wasm` served.
+- **The cause.** jsDelivr's view of the package's versions lags npm
+  briefly after a publish, and different files can resolve through
+  differently aged caches. Its 404 is cached for only 30 seconds, so the
+  gap closes by itself.
+- **The facts, checked.** Both files downloaded from
+  `https://cdn.jsdelivr.net/npm/@barmark/engraver@0.1.1/dist/` match
+  `packages/engraver/src/info.ts` (`openssl dgst -sha384 -binary | base64`):
+  `.mjs` 29,534 bytes, `sha384-klTppHZB…KJO`; `.wasm` 2,956,941 bytes,
+  `sha384-cBBw1xx6…pr5i`. `curl -sI -H 'Accept-Encoding: br, gzip'` on
+  the `.wasm` gives `content-type: application/wasm` (so
+  `WebAssembly.instantiateStreaming` would accept it, though score
+  fetches bytes and checks them first), `content-encoding: br` (941,454
+  bytes on the wire, 32% of the file), `access-control-allow-origin: *`,
+  `cross-origin-resource-policy: cross-origin`, `vary: Accept-Encoding`
+  and `cache-control: public, max-age=31536000, immutable`. The `.mjs` is
+  `application/javascript; charset=utf-8`, also brotli and CORS open.
+- **What to do.** After an engraver release, check jsDelivr only once
+  `npm view` shows the version, and wait for the `.wasm` with a blocking
+  check (`until curl -sfo /dev/null <url>; …`), not one request. A
+  site's switch to a new engraver version (Task 17) waits until both
+  files serve.
+- **Where.** `packages/engraver/src/info.ts` (`CDN_URL` and the digests);
+  RELEASING step 11.
+
+### The release ran `bun test` before `bun run build`, so engraver 0.1.0 never published (2026-11-10, @barmark/engraver 0.1.0)
+
+- **The symptom.** The `engraver-v0.1.0` release run (42869831886) failed
+  in `verify`, before the publish: `packages/engraver/tests/smoke.test.ts`
+  could not find `packages/engraver/dist/info.js` (`ERR_MODULE_NOT_FOUND`
+  from `scripts/smoke-engraver.mjs`). `main` had been green, and so had
+  the local release check. Tags cannot move, so 0.1.0 stays a tag and a
+  GitHub pre-release that never reached npm, and 0.1.1 is the first
+  published version.
+- **The cause.** `verify` downloads `build-engraver`'s artifact into
+  `packages/engraver/dist`. That is the `.mjs` and `.wasm` only, and
+  `dist/info.js` comes from `bun run build`, which `verify` ran after
+  `bun test`. The smoke test runs whenever the `.wasm` is present and was
+  skipped otherwise. CI's `check` job never has the dist, so the test
+  always skipped there, and nothing in CI runs `release.yml`. Every
+  release run downloads that artifact, so every package's release would
+  have failed the same way, not only the engraver's.
+- **The fix.** `verify` runs `bun run build` before `bun test`. The smoke
+  test fails with a clear message when the `.wasm` is there without
+  `dist/info.js`. A test in `packages/engraver/tests/ci.test.ts` reads
+  `release.yml` and `ci.yml` and fails any job that downloads
+  `engraver-dist` and then runs `bun test` with no `bun run build`
+  between them. It runs in `check`, the one place that sees every
+  workflow change. Copying `verify`'s steps into a CI job would test the
+  copy, not the release workflow.
+- **Where.** `.github/workflows/release.yml` (`verify`),
+  `packages/engraver/tests/smoke.test.ts`,
+  `packages/engraver/tests/ci.test.ts`.
+
+### Bun's install cooldown holds back exact pins too (2026-11-10, CI hardening)
+
+- **The symptom.** lj-website found that `minimumReleaseAge` let an exact
+  pin through, so barmark's exactly pinned devDependencies would have
+  been exempt. On the VM, Bun 1.3.14 refused `bun add --exact
+  barmark@0.22.0` (a day old) and a `package.json` edited to `"barmark":
+  "0.22.0"` then `bun install`, both with "blocked by
+  minimum-release-age". With site/'s lockfile, `bun add --exact` of any
+  package re-resolved our day-old releases and failed on all of them.
+- **The cause.** Bun's docs say so: "Exact version requests (like
+  `package@1.1.1`) still respect the age gate but bypass the stability
+  check" (docs/pm/cli/install.mdx, "Minimum release age"). The stability
+  check is the extra step that skips a burst of quick bugfix releases just
+  outside the gate; lj-website probably saw an exact pin bypass that, not
+  the age gate. A lockfile entry is not re-checked: `bun install
+  --frozen-lockfile` on an empty cache, and a plain `bun install`, both
+  installed the young versions already locked.
+- **The fix.** Seven days at the root and in `site/`, so CI's frozen
+  installs are unaffected, and `site/bunfig.toml` excludes our own eight
+  packages (`minimumReleaseAgeExcludes`), or RELEASING.md step 12's site
+  bump would fail for a week after every release. Their third-party
+  dependencies still wait: a score release that raises Verovio to a
+  version under a week old cannot reach the site until it is a week old.
+- **Where.** `bunfig.toml`, `site/bunfig.toml`.
+
+### actionlint rejects GitHub's `$/` self-repository syntax (2026-11-10, CI hardening)
+
+- **The symptom.** zizmor 1.31.1's `self-repository` audit asks for
+  `uses: $/.github/actions/engraver-build` (GitHub's syntax since
+  2026-07-30, which reads the action from the repository, not the
+  workspace). actionlint 1.7.12 fails on it: "ref is missing".
+- **The cause.** actionlint has no release since 1.7.12 (March 2026);
+  support is open as rhysd/actionlint#711.
+- **The fix.** Keep `./` with `# zizmor: ignore[self-repository]` on
+  both lines, and switch when actionlint learns the form.
+- **Where.** `.github/workflows/ci.yml` and `release.yml`, the
+  `engraver-build` steps; the `workflow-lint` job.
+
+### zizmor ignores a comment inside a `run: |` block (2026-11-10, CI hardening)
+
+- **The symptom.** `# zizmor: ignore[adhoc-packages]` at the end of the
+  `npm install` line in `confirm`'s script did not suppress the finding.
+- **The cause.** Inside a block scalar the `#` is part of the shell
+  script, not a YAML comment, and zizmor reads only YAML comments.
+- **The fix.** The comment goes after the block indicator, `run: | #
+  zizmor: ignore[...]`, which is YAML's.
+- **Where.** `.github/workflows/release.yml`, `confirm`.
 
 ### `bun run --filter '!pkg'` does not leave a package out (2026-11-10, @barmark/engraver)
 

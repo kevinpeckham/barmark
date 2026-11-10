@@ -36,7 +36,8 @@ anywhere.
   `check`, `browser`, `site`, `engraver` and `package (<node>, <package>)`
   jobs (Node 20, 22 and 24 for each package, `package (N, engraver)`
   included) must pass, and force-pushes and deletion
-  are blocked. `site-versions` is deliberately not required (step 12). Renaming a CI job or changing a matrix means updating the
+  are blocked. `site-versions` is deliberately not required (step 12), and
+  `workflow-lint` (zizmor and actionlint) is not required yet. Renaming a CI job or changing a matrix means updating the
   ruleset's required checks.
 - **Release tags** (ruleset "release tags": `v*`, `barmark-v*`,
   `render-v*`, `musicxml-v*`, `score-v*`, `sync-v*`, `midi-v*`, `listen-v*`,
@@ -229,6 +230,13 @@ runs, and `verify:package cli` fails on anything else.
     After a `barmark` bump, check `site/bun.lock` holds one barmark:
     `grep '/barmark": \["barmark@' site/bun.lock` prints nothing, or
     delete the nested entries it finds and `bun install` again (FINDINGS).
+    `site/bunfig.toml` exempts our own packages from Bun's seven-day
+    install cooldown, not their dependencies: if the release raised a
+    third-party pin (Verovio, say) to a version under a week old,
+    `bun add` refuses it until it is a week old (FINDINGS). The root
+    waits the same seven days: a Verovio bump in `packages/score` or
+    `packages/cli` (`bun add --exact verovio@X.Y.Z`) is refused until the
+    new Verovio is a week old.
 13. **Release the CLI** (after a `barmark`, `@barmark/render`,
     `@barmark/musicxml`, `@barmark/score`, `@barmark/sync` or
     `@barmark/midi` release; the CLI bundles `@barmark/sync` through

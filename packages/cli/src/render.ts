@@ -13,6 +13,7 @@ import { DEFAULT_WIDTH, MAX_WIDTH, MIN_WIDTH, scoreBody } from "./score.js";
 
 const THEMES = ["auto", "light", "dark"] as const;
 const NUMERALS = ["nashville", "roman"] as const;
+const COLUMNS = ["shared", "row"] as const;
 
 const escapeHtml = (text: string) =>
 	text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -39,6 +40,7 @@ const FLAGS = {
 	"no-bar-numbers": { type: "boolean", default: false },
 	"rehearsal-letters": { type: "boolean", default: false },
 	"no-wrap": { type: "boolean", default: false },
+	columns: { type: "string" },
 	diagnostics: { type: "boolean", default: false },
 	"font-url": { type: "string" },
 	part: { type: "string" },
@@ -48,12 +50,13 @@ const FLAGS = {
 
 type Values = ReturnType<typeof parseFlags<typeof FLAGS>>["values"];
 
-/** The grid's own flags: a score has no numerals, bar-number switch, letters, rows, problem list or Edwin. */
+/** The grid's own flags: a score has no numerals, bar-number switch, letters, rows, columns, problem list or Edwin. */
 const GRID_ONLY = [
 	"numerals",
 	"no-bar-numbers",
 	"rehearsal-letters",
 	"no-wrap",
+	"columns",
 	"diagnostics",
 	"font-url",
 ] as const;
@@ -83,7 +86,13 @@ function gridOptions(values: Values, theme: (typeof THEMES)[number], io: Io): Re
 	if (values["rehearsal-letters"]) options.rehearsalLetters = true;
 	if (values["no-wrap"]) options.wrap = false;
 	if (values.diagnostics) options.diagnostics = true;
-	return options;
+	return Object.assign(options, columnsOption(values.columns));
+}
+
+/** `--columns row` as the option; `shared`, the default, as none, so the page is the default's. */
+function columnsOption(value: string | undefined): Pick<RenderOptions, "columns"> {
+	if (value === undefined) return {};
+	return oneOf("columns", value, COLUMNS) === "row" ? { columns: "row" } : {};
 }
 
 /** --score's width, refusing the grid's own flags. */

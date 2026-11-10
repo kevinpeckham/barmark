@@ -8,8 +8,15 @@ import { MODULE_BYTES, VEROVIO_VERSION, WASM_BYTES } from "../src/info.js";
 const smoke = fileURLToPath(new URL("../../../scripts/smoke-engraver.mjs", import.meta.url));
 const moduleFile = fileURLToPath(new URL("../dist/verovio-module.mjs", import.meta.url));
 const built = existsSync(fileURLToPath(new URL("../dist/verovio-module.wasm", import.meta.url)));
+const infoFile = fileURLToPath(new URL("../dist/info.js", import.meta.url));
 
 test.skipIf(!built)("the built module instantiates in Node, matches info.js and engraves", () => {
+	// The compiled files without the TS side: never a silent skip, which is how
+	// a release ran bun test before bun run build (FINDINGS 2026-11-10).
+	if (!existsSync(infoFile))
+		throw new Error(
+			"dist/verovio-module.wasm is here but dist/info.js is not: run `bun run build` before `bun test`",
+		);
 	const run = spawnSync("node", [smoke, moduleFile]);
 	// The whole result on a failure, so its output says why.
 	expect({

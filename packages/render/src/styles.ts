@@ -74,6 +74,17 @@ const colours = (p: Palette) =>
 		.map((k) => `--bm-${k}:var(--barmark-${k},${p[k]});`)
 		.join("");
 
+/**
+ * A section's column tracks: the gutter (bar numbers, or part labels as wide
+ * as the longest), a track per cell, and the repeat count's.
+ */
+const CELLS = "repeat(var(--bm-cols),auto) auto";
+const TRACKS = {
+	numbers: `${em(GUTTER)} ${CELLS}`,
+	bare: CELLS,
+	parts: `calc(${em(GUTTER + 0.9)} + var(--bm-label-chars) * .62em) ${CELLS}`,
+};
+
 const SANS = `system-ui,-apple-system,"Segoe UI",sans-serif`;
 /** The meta line, directives, headings and diagnostics. */
 const LABEL = `var(--barmark-label-font,${SANS})`;
@@ -109,11 +120,11 @@ const css = `
 .bm-heading{display:flex;align-items:center;gap:.5em;margin:0 0 ${at(SIZES.heading, HEADING_GAP)} ${at(SIZES.heading, GUTTER)};font:600 ${em(SIZES.heading)}/1 ${LABEL};letter-spacing:.08em;text-transform:uppercase;color:var(--bm-ink)}
 .bm-rehearsal{border:.12em solid currentColor;padding:.15em .35em;border-radius:.15em;letter-spacing:0}
 .bm-times{font:italic 1.2em/1 Georgia,serif;text-transform:none;letter-spacing:0;color:var(--bm-muted)}
-.bm-grid{display:grid;grid-template-columns:${em(GUTTER)} repeat(var(--bm-cols),auto) auto;width:max-content;max-width:100%}
-.bm-chart[data-bar-numbers="off"] .bm-grid{grid-template-columns:repeat(var(--bm-cols),auto) auto}
+.bm-grid{display:grid;grid-template-columns:${TRACKS.numbers};width:max-content;max-width:100%}
+.bm-chart[data-bar-numbers="off"] .bm-grid{grid-template-columns:${TRACKS.bare}}
 .bm-chart[data-wrap="off"] .bm-grid{max-width:none}
 .bm-row,.bm-system{display:contents}
-.bm-chart[data-parts] .bm-grid{grid-template-columns:calc(${em(GUTTER + 0.9)} + var(--bm-label-chars) * .62em) repeat(var(--bm-cols),auto) auto}
+.bm-chart[data-parts] .bm-grid{grid-template-columns:${TRACKS.parts}}
 .bm-chart[data-parts] .bm-bar-number{width:auto;justify-content:flex-end;gap:.35em;padding-right:.45em}
 .bm-part-row>.bm-bar-number{border-right:.15em solid var(--bm-rule)}
 .bm-part-label{margin-right:auto}
@@ -210,6 +221,22 @@ ${FIT_STEPS.map((w) => {
 }).join("\n")}
 `;
 
+/**
+ * `columns: "row"`: each row, and each system with its parts' rows, is its
+ * own grid on the section's tracks, so its cells size to their own content.
+ * The section's grid only stacks them. Where a section wraps, a system
+ * stands aside again, as in the shared layout. Appended after the shared
+ * rules, which it leaves byte for byte as they were.
+ */
+const ROW = '.bm-chart[data-columns="row"]';
+const OWN = ":is(.bm-grid>.bm-row,.bm-system)";
+const rowCss = `
+${ROW} ${OWN}{display:grid;grid-column:1/-1;justify-self:start;grid-template-columns:${TRACKS.numbers}}
+${ROW}[data-bar-numbers="off"] ${OWN}{grid-template-columns:${TRACKS.bare}}
+${ROW}[data-parts] ${OWN}{grid-template-columns:${TRACKS.parts}}
+${FIT_STEPS.map((w) => `@container bm (max-width:${w}em){${ROW}:not([data-wrap="off"]) .bm-grid[data-fit="${w}"]>.bm-system{display:contents}}`).join("\n")}
+`;
+
 /** Collapse the readable source above: whitespace around punctuation and between rules. */
 const minify = (text: string) =>
 	text
@@ -217,4 +244,7 @@ const minify = (text: string) =>
 		.replace(/\s*([{};,>])\s*/g, "$1")
 		.replace(/:\s+/g, ":");
 
-export const stylesheet = minify(css);
+/** The rules only `columns: "row"` uses, at the stylesheet's end. */
+export const ROW_COLUMNS_CSS = minify(rowCss);
+
+export const stylesheet = minify(css) + ROW_COLUMNS_CSS;

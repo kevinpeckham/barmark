@@ -63,11 +63,22 @@ export type RenderOptions = {
 	wrap?: boolean;
 	/** Draw only the part with this label (barmark's grammar 7.4): one player's view. */
 	part?: string;
+	/**
+	 * How a section sizes its columns. `"shared"` (the default): its rows share
+	 * column tracks, so bar lines line up down the section and the widest bar
+	 * sets its column's width in every row. `"row"`: each row sizes its own
+	 * cells, so one busy bar widens only its own row; bar lines no longer line
+	 * up between rows. A system's parts still share theirs. Any other value is
+	 * `"shared"`.
+	 */
+	columns?: Columns;
 };
+
+export type Columns = "shared" | "row";
 
 type Row = Extract<BlockItem, { kind: "row" }>;
 /** `gutter`: rows keep the left column, for bar numbers or part labels. */
-type Settings = { barNumbers: boolean; gutter: boolean; numerals: Numerals | null };
+type Settings = { barNumbers: boolean; gutter: boolean; numerals: Numerals | null; rows: boolean };
 /** A system's row: the part it draws, and whether it is the system's first. */
 type PartRow = { label: string; name: string; first: boolean };
 /**
@@ -96,6 +107,7 @@ function elementAttributes(options: RenderOptions): string {
 		numeralsOf(options) ? ` numerals="${numeralsOf(options)}"` : "",
 		options.wrap === false ? ' wrap="off"' : "",
 		options.part ? ` show-part="${escapeHtml(options.part)}"` : "",
+		byRow(options) ? ' columns="row"' : "",
 	].join("");
 }
 
@@ -104,6 +116,8 @@ export const THEMES = ["auto", "light", "dark"] as const;
 /** Only a known theme reaches the markup: hosts may pass any string through. */
 const themeOf = (options: RenderOptions) => THEMES.find((t) => t === options.theme) ?? "auto";
 const numeralsOf = (options: RenderOptions) => NUMERALS.find((n) => n === options.numerals) ?? null;
+/** Whether each row sizes its own columns: only for `"row"` exactly, so anything else a host passes is shared. */
+const byRow = (options: RenderOptions) => options.columns === "row";
 
 /** What goes in the shadow root: the styles and the chart. */
 export const shadowContent = (text: string, options: RenderOptions = {}) =>
@@ -131,12 +145,17 @@ function chartHtml(text: string, options: RenderOptions): string {
 		barNumbers,
 		gutter: barNumbers || parts,
 		numerals: numeralsOf(options),
+		rows: byRow(options),
 	};
 	// Every section's left column is as wide as the longest part label, so tutti rows line up with systems.
 	const widest = Math.max(0, ...model.parts.flatMap(rowLabelsOf).map((l) => l.length));
 	const gutter = parts ? ` data-parts style="--bm-label-chars:${widest}"` : "";
-	return `<div class="bm-chart" data-theme="${themeOf(options)}"${gutter}${settings.barNumbers ? "" : ' data-bar-numbers="off"'}${options.wrap === false ? ' data-wrap="off"' : ""}>${headerHtml(model)}${model.blocks.map((b) => blockHtml(b, settings)).join("")}${copyrightHtml(model)}${options.diagnostics ? diagnosticsHtml(model) : ""}</div>`;
+	return `<div class="bm-chart" data-theme="${themeOf(options)}"${gutter}${layoutAttributes(options, settings)}>${headerHtml(model)}${model.blocks.map((b) => blockHtml(b, settings)).join("")}${copyrightHtml(model)}${options.diagnostics ? diagnosticsHtml(model) : ""}</div>`;
 }
+
+/** The chart's layout switches the stylesheet reads, each only when it is off its default. */
+const layoutAttributes = (options: RenderOptions, settings: Settings) =>
+	`${settings.barNumbers ? "" : ' data-bar-numbers="off"'}${options.wrap === false ? ' data-wrap="off"' : ""}${settings.rows ? ' data-columns="row"' : ""}`;
 
 /** Whether systems have labelled rows: several parts, or one part writing lines (barmark's grammar 7.6). */
 const labelled = (model: ChartModel) =>
@@ -227,25 +246,35 @@ function metaHtml(d: Directives, beat: TempoBeat, labelled = false): string {
 
 function blockHtml(block: SectionBlock, settings: Settings): string {
 	const label = block.heading === null ? "" : ` aria-label="${escapeHtml(block.heading)}"`;
-	return `<section class="bm-section"${label}>${headingHtml(block)}<div class="bm-grid" style="--bm-cols:${Math.max(1, block.columns)}" data-fit="${fitWidth(block)}">${block.items.map((i) => itemHtml(i, block.columns, settings)).join("")}</div></section>`;
+	return `<section class="bm-section"${label}>${headingHtml(block)}<div class="bm-grid" style="--bm-cols:${Math.max(1, block.columns)}" data-fit="${fitWidth(block, settings.rows)}">${block.items.map((i) => itemHtml(i, block.columns, settings)).join("")}</div></section>`;
 }
 
 /**
- * Roughly how many em a section needs with its columns aligned, rounded up
- * to a step the stylesheet knows; narrower than that, its rows wrap.
+ * Roughly how many em a section needs, rounded up to a step the stylesheet
+ * knows; narrower than that, its rows wrap. With shared columns that is the
+ * widest cell of each column, added up; with `rows`, the widest row.
  */
-function fitWidth(block: SectionBlock): number {
-	const widths: number[] = [];
-	const widen = (bars: number[]) => {
-		for (const [i, w] of bars.entries()) widths[i] = Math.max(widths[i] ?? 0, w);
-	};
-	for (const item of block.items) {
-		if (item.kind === "row") widen(item.cells.map(cellWidth));
-		const verses = item.kind === "row" ? [...(item.verses ?? []), ...(item.lyrics ?? [])] : [];
-		for (const v of verses) widen(v.cells.map(verseWidth));
-	}
-	const total = 5 + widths.reduce((a, b) => a + b, 0);
+function fitWidth(block: SectionBlock, rows: boolean): number {
+	const lines = block.items.map(rowWidths);
+	const sum = (widths: number[]) => widths.reduce((a, b) => a + b, 0);
+	const needed = rows ? Math.max(0, ...lines.map(sum)) : sum(widest(lines));
+	const total = 5 + needed;
 	return FIT_STEPS.find((step) => step >= total) ?? FIT_STEPS.at(-1) ?? 0;
+}
+
+/** Em per cell of a row: its bar, or the words under it when they are wider. None for anything else. */
+function rowWidths(item: BlockItem): number[] {
+	if (item.kind !== "row") return [];
+	const verses = [...(item.verses ?? []), ...(item.lyrics ?? [])];
+	return widest([item.cells.map(cellWidth), ...verses.map((v) => v.cells.map(verseWidth))]);
+}
+
+/** The widest of each column across lines of widths. */
+function widest(lines: number[][]): number[] {
+	const widths: number[] = [];
+	for (const line of lines)
+		for (const [i, w] of line.entries()) widths[i] = Math.max(widths[i] ?? 0, w);
+	return widths;
 }
 
 /** Em per bar: padding, plus each slot's text and the gap after it. */

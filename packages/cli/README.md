@@ -51,7 +51,7 @@ barmark transpose song.chart.md --to E   # or --semitones -2
 `check --format json` prints the diagnostics for other tools. `render`
 takes the renderer's options as flags: `--theme auto|light|dark`,
 `--numerals nashville|roman`, `--no-bar-numbers`, `--rehearsal-letters`,
-`--no-wrap`, `--diagnostics`, `--part <label>` to draw one part, and `--font-url <url>` to link the font
+`--no-wrap`, `--columns shared|row`, `--diagnostics`, `--part <label>` to draw one part, and `--font-url <url>` to link the font
 instead of embedding it. `barmark <command> --help` lists each command's
 flags; `barmark --version` prints the versions of the CLI, its
 libraries and Verovio.
@@ -66,8 +66,8 @@ it does the grid, `--part <label>` engraves that part alone, and
 900, a comfortable reading width: the page scales the score to fit the
 window or the paper, so the width decides how many bars go on a line,
 not how big the page is). The grid's own flags (`--numerals`,
-`--no-bar-numbers`, `--rehearsal-letters`, `--no-wrap`, `--diagnostics`,
-`--font-url`) are usage errors with `--score`, and `--width` is one
+`--no-bar-numbers`, `--rehearsal-letters`, `--no-wrap`, `--columns`,
+`--diagnostics`, `--font-url`) are usage errors with `--score`, and `--width` is one
 without it. A chart that won't engrave (one with errors, or no bars)
 writes nothing: the reason goes to stderr as `song.chart.md: Line 5:
 message`, and the exit code is 1. The score's text is set in Verovio's own

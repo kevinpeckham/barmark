@@ -2,3 +2,10 @@
 # dependencies (cd site && bun test).
 [test]
 root = "./packages"
+
+# `bun add` and `bun update` skip versions published less than seven days ago,
+# exact pins included, so a compromised release has time to be caught. An
+# install from the lockfile (CI's --frozen-lockfile, or a plain `bun install`)
+# is not re-checked (FINDINGS.md).
+[install]
+minimumReleaseAge = 604800
