@@ -364,6 +364,23 @@ showed the rule needed refining.
 
 ## Performance and robustness
 
+### A destructuring swap made the pad render eight times slower (2026-11-10, @barmark/listen render)
+
+- **The symptom.** The streamed-render equality test (40 charts, three
+  rates, four chunk sizes) took over three minutes. The whole render of
+  a 26 s chart took 490 ms at 44.1 kHz.
+- **The cause.** The app's `addPad` advances its phasor with
+  `[c, s] = [c * dc - s * ds, s * dc + c * ds]`, and the peak scan is
+  `for (const v of samples)`. Under Bun (JavaScriptCore) the swap
+  allocates an array a sample: 40 ns a tone-sample against 5 ns for two
+  plain assignments. `for...of` over a typed array was similarly slow.
+- **The fix.** `render.ts` advances the phasor with a temporary and scans
+  with an index. Each right-hand side is still computed from the old
+  values, so the arithmetic is the app's; Task 11's bit-identity check
+  (517 M samples against the app's verbatim `renderChartPads`, 0
+  differences) confirms it. The test file still takes about a minute,
+  most of it chunk size 1, where the per-chunk calls dominate.
+
 ### A best-of-three ratio of millisecond runs fails under load; alternate the runs (2026-11-10, @barmark/listen)
 
 - **The symptom.** `comb-scale.test.ts` timed three combs of a 60 s
@@ -601,6 +618,21 @@ When converting to a format that keeps written order, test the played
 order, not just the written marks.
 
 ## Design
+
+### The warping's path can skip the reference's first frame (2026-11-10, @barmark/listen dtw)
+
+- **The symptom.** The planned property "the path starts at reference
+  frame 0" failed on seeded pairs: many paths start at frame 1.
+- **The cause.** The app's `fillRow` lets a cell in row 2 take the (2,1)
+  step from row 0 (`older` is row 0 there, all zeros with subsequence and
+  0 at column 0 without), so the path's first point is frame 1 and frame
+  0 is stepped over. The app does the same: 322 of 816 warpings in Task
+  11's bit-identity check start there, on both sides alike. Without
+  subsequence the recording's first frame can be skipped the same way by
+  a (1,2) step.
+- **The fix.** None: v1 is a port. `dtw.test.ts` asserts the start is
+  frame 0 or 1 (and, without subsequence, `[0, 0]`, `[0, 1]` or
+  `[1, 0]`), and that some seeded paths do start at 1.
 
 ### An unreadable chord loses its whole bar line, not one slot (2026-11-10, @barmark/listen chartPadBars)
 
