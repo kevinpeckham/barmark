@@ -21,6 +21,9 @@ const refuse = (reason: RehashReason, message: string): RehashResult => ({
 
 const meterOf = (bar: PlayedBar) => `${bar.meter.n}/${bar.meter.d}`;
 
+/** Bars of the same length: meters compared by value (2/2 is 4/4, 6/8 is 3/4). */
+const sameLength = (a: PlayedBar, b: PlayedBar) => a.meter.n * b.meter.d === b.meter.n * a.meter.d;
+
 /** Rules 2 to 4: why the refined chart cannot take the map, or null. */
 function mismatch(map: TimingMap, built: ChartParse, refined: ChartParse): RehashResult | null {
 	const error = refined.diagnostics.find((d) => d.severity === "error");
@@ -36,7 +39,7 @@ function mismatch(map: TimingMap, built: ChartParse, refined: ChartParse): Rehas
 		);
 	const moved = refined.bars.find((bar, i) => {
 		const was = built.bars[i];
-		return was !== undefined && meterOf(bar) !== meterOf(was);
+		return was !== undefined && !sameLength(bar, was);
 	});
 	if (!moved) return null;
 	const was = built.bars[moved.index - 1] as PlayedBar;

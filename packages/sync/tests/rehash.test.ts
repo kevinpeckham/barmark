@@ -55,6 +55,14 @@ describe("rehashTiming carries the map", () => {
 		expect(r.timing.chart.hash).toBe(chartHash(refined));
 	});
 
+	test("a meter of the same length, 2/2 for 4/4, keeps the map", () => {
+		const refined = "time: 2/2, tempo: 120\n| C | G | Am | F |\n";
+		const r = rehashTiming(built, refined);
+		if (!r.ok) throw new Error(r.message);
+		expect(r.timing.bars).toEqual(built.timing?.bars ?? []);
+		expect(r.timing.chart.hash).toBe(chartHash(refined));
+	});
+
 	test("no confidence record to carry", () => {
 		const { confidence: _c, ...bare } = built;
 		const r = rehashTiming(bare, named);

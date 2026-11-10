@@ -13,7 +13,7 @@ package uses [semantic versioning](https://semver.org/).
   with the refined chart's hash, checked against it. It refuses, with a
   reason and a message, when there is no map (`no-timing`), the refined
   chart has an error (`unparsed`), it plays another number of bars
-  (`bars-differ`), or a played bar's meter changed (`meters-differ`). The
+  (`bars-differ`), or a played bar's meter changed value (`meters-differ`; 2/2 for 4/4 keeps the map). The
   confidence record is kept when every played bar resolves to as many
   slots, else dropped (`confidenceDropped: true`) with the map kept.
   Exported from `@barmark/sync` and `@barmark/sync/timing`.
