@@ -57,5 +57,8 @@
 	"scripts": {
 		"build": "rm -rf dist && tsc -p tsconfig.build.json",
 		"prepack": "bun run build"
+	},
+	"devDependencies": {
+		"@barmark/engraver": "workspace:*"
 	}
 }
