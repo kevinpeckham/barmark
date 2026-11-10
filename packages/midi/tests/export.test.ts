@@ -281,6 +281,23 @@ describe("exportMidi", () => {
 		expect(heardByBeat(bytesOf(exportMidi(text)))).toEqual(expected);
 	});
 
+	test("an ending across lines plays in the chart's order (barmark's grammar 5.1)", () => {
+		const text = "time: 1/4\n|: C | F |\n|1 G | A | B | C |\n| D :|\n|2 E |";
+		const [c, f, g, a, b, d, e] = [
+			"0 4 7",
+			"0 5 9",
+			"2 7 11",
+			"1 4 9",
+			"3 6 11",
+			"2 6 9",
+			"4 8 11",
+		];
+		const expected = [c, f, g, a, b, c, d, c, f, e];
+		expect(parseChart(text).diagnostics).toEqual([]);
+		expect(chartByBeat(parseChart(text))).toEqual(expected);
+		expect(heardByBeat(bytesOf(exportMidi(text)))).toEqual(expected);
+	});
+
 	test("the file plays the chart", () => {
 		expect(CHARTS.length).toBeGreaterThan(200);
 		for (const [name, text] of CHARTS) {

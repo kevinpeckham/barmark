@@ -2,7 +2,9 @@
  * Bars grouped into systems (the design's "Systems"): up to four bars a
  * row, a new one at every heading, repeat mark, ending, direction, `...`,
  * text line and directive, and wherever the parts' agreement changes. An
- * ending is one bar line however long (grammar 5.1), so it is never split.
+ * ending is written as one bar line however long, so it is never split
+ * (grammar 5.1 lets an ending before the last continue onto further
+ * lines; the import doesn't use that yet).
  */
 import type { BarInfo } from "./structure.js";
 

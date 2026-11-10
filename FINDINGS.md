@@ -9,6 +9,22 @@ not here.
 
 ## Testing
 
+### An indented code fence in the grammar shifts every corpus chart after it (2026-11-10, grammar)
+
+- **The symptom.** Adding an example to grammar 5.1 inside a list item,
+  its fence indented two spaces, made `sounding.test.ts` fail for a
+  grammar block that had nothing to do with endings, and regenerating
+  `sounding.json` dropped one chart and changed another.
+- **The cause.** The MusicXML corpus reads the grammar's blocks with
+  `/```[a-z]*\n([\s\S]*?)\n```/` (`packages/musicxml/tests/charts.ts`),
+  which needs a closing fence at the start of a line. An indented one
+  doesn't close, so the block ran on to the next fence and every block
+  after it paired the wrong way round.
+- **The fix.** Grammar examples stay unindented, outside lists
+  (`docs/grammar-v0.1-draft.md` 5.1). A new example is a new corpus chart:
+  `bun scripts/musicxml-sounding.ts` adds it to `sounding.json`, and the
+  diff must be additions only.
+
 ### linkedom is not a browser for custom elements (2026-11-08, @barmark/score)
 
 - **The symptom.** Writing `<barmark-score>`'s tests on linkedom, three
@@ -586,6 +602,24 @@ When converting to a format that keeps written order, test the played
 order, not just the written marks.
 
 ## Design
+
+### The MusicXML export reads repeats again from the lines (2026-11-10, @barmark/musicxml)
+
+- **The symptom.** With endings continuing onto further lines (grammar
+  5.1), barmark played `|: C |`, `|1 D |`, `| E :|`, `|2 F |`, `| G :|`,
+  `|3 A |` in the right order, but the export wrote the first `:|` as
+  `times="2"` while the second said 3.
+- **The cause.** `measures.ts` doesn't take barmark's pairing of repeats
+  and endings (`repeats.ts`, not exported); it walks `parse.lines` again,
+  with its own copy of the lines that may sit between endings, and
+  `passes` stopped at the first line that wasn't an ending, a
+  continuation line.
+- **The fix.** The parse tree marks a continuation line (`continues`), and
+  the export reads an ending's passes as `ending ?? continues`
+  (`endingOf`), in `passes`, `countLine`, `endsBracket` and the ending
+  marks (`packages/musicxml/src/measures.ts`). Any change to what a
+  repeat or ending spans must touch both walks; the parse-tree field keeps
+  them from drifting further.
 
 ### One unreadable chord dropped its whole line, so a chart played short (2026-11-10, barmark)
 

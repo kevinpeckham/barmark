@@ -566,6 +566,14 @@ function playedOn(
 	return barsOn(line, ctx).filter((b) => b.index >= first && b.index <= last);
 }
 
+/** A row's repeat marks and ending, the line it continues an ending on included (barmark's grammar 5.1). */
+function rowMarks(
+	l: BarsLine,
+): Pick<RowItem, "opens" | "closes" | "repeat" | "ending" | "continues"> {
+	const marks = { opens: l.opens, closes: l.closes, repeat: l.repeat, ending: l.ending };
+	return l.continues ? { ...marks, continues: l.continues } : marks;
+}
+
 function layoutRow(
 	l: BarsLine,
 	played: PlayedBar[],
@@ -588,10 +596,7 @@ function layoutRow(
 		line: l.line,
 		// Numbered as written, as a band counts (issue #92): repeats, endings, jumps and replays don't move it.
 		barNumber: (played[0] ?? written[0])?.written ?? null,
-		opens: l.opens,
-		closes: l.closes,
-		repeat: l.repeat,
-		ending: l.ending,
+		...rowMarks(l),
 		cells: withUnread(cells, l, ctx),
 		...singing(l, cells, played, ctx),
 	};
