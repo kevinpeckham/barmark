@@ -9,9 +9,30 @@ Releases follow the process in [RELEASING.md](RELEASING.md).
 
 ## [Unreleased]
 
-A grammar change: an unreadable slot keeps its bar (Kevin, 2026-11-10).
+Grammar changes: an unreadable slot keeps its bar, and stacked chord
+spellings read (Kevin, 2026-11-10).
 
 ### Added
+
+- **Stacked chord spellings read, with a warning** (grammar 3, A.5;
+  stem-shovel issue 16). Notation programs print alterations run together
+  ("D6 add9 omit5"): items run together in one parenthesis
+  (`D6(omit5add9)`, `D6(no5add9)`, `C7(b9#11)`) and a bare `omit`/`no`
+  trailing the chord's name, after the quality however it is spelled and
+  before any parenthesis or slash bass (`Gadd9omit3`, `Gomit5`, `Gno5`,
+  `G-7omit5`, `CΔno3`; not `Cno5maj7` or `Cno3add9`) now read as their
+  comma-separated form instead of being unreadable. The warning's
+  `suggestion` is that form (`D6(omit5,add9)`, `Gadd9(omit3)`,
+  `G(omit5)`); the printer writes the canonical form (`D6(9,no5)`), so
+  `format` fixes them. Items that are wrong on their own stay errors
+  (`C(omit5omit5)`). A chord warning's `suggestion` now reaches the
+  chart's diagnostic.
+- **An altered fifth before the parenthesis gets a suggestion**:
+  `F#b5(omit3)` is still an error (grammar 3 keeps `Ab5` the A♭ power
+  chord), now suggesting `F#(b5,omit3)`. Where the root's accidental could
+  be the fifth's, there is no suggestion, and the message says the symbol
+  is ambiguous when the fifth reading would itself read (`Gb5(omit3)`,
+  as `G(b5,omit3)`; not `Gb5(no7)`).
 
 - **`printedAsWritten(parse)`** and **`unreadSlots(line)`**: the lines the
   printer prints as written (spec §8), and a bar line's unreadable slots,
@@ -47,6 +68,12 @@ A grammar change: an unreadable slot keeps its bar (Kevin, 2026-11-10).
   an error".
 - A part's notes line (7.6) with an unreadable note set has that error
   alone, not a second one for harmony on the line.
+
+### Fixed
+
+- A chord symbol with many `add` tones in its parenthesis read in time
+  quadratic in its length (20,000 items took seconds); reading a chord
+  symbol is now linear.
 
 ## [0.22.0] - 2026-11-09
 

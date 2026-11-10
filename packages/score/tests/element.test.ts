@@ -338,6 +338,18 @@ describe("<barmark-score>", () => {
 		expect(calls).toHaveLength(1);
 	});
 
+	test("the grid follows a columns attribute", async () => {
+		const el = await make();
+		const drawn = () => parts(el).grid.querySelector(".bm-chart")?.getAttribute("data-columns");
+		expect(drawn()).toBeNull();
+		el.setAttribute("columns", "row");
+		await flush();
+		expect(drawn()).toBe("row");
+		el.setAttribute("columns", "sideways");
+		await flush();
+		expect(drawn()).toBeNull();
+	});
+
 	test("text changed while engraving shows the new score", async () => {
 		const el = await make({ view: "score" });
 		el.text = "| D |";
