@@ -855,6 +855,21 @@ and round-trip it through `format`.
 
 ## Tooling
 
+### `git archive` of a subdirectory came out empty, then not reproducible (2026-11-10, @barmark/engraver)
+
+- **The symptom.** `source.sh` packs `packages/engraver/build/` for the
+  Corresponding Source. Run as `git -C build archive HEAD:packages/engraver/build`,
+  the tarball held only its prefix directory. Fixed, two runs a few
+  seconds apart gave different digests.
+- **The cause.** Run inside a subdirectory, `git archive` limits itself
+  to that subdirectory's paths, so a tree named from the root matched
+  nothing. And an archive of a tree, unlike one of a commit, stamps every
+  entry with the current time.
+- **The fix.** Run it from `git rev-parse --show-toplevel`, and pass
+  `--mtime` with HEAD's commit time (`git log -1 --format=%cI`; the flag
+  needs git 2.41 or later). The same commit now packs to the same bytes.
+- **Where.** `packages/engraver/build/source.sh`.
+
 ### The Verovio build is reproducible across machines once paths are mapped (2026-11-10, @barmark/engraver)
 
 - **The symptom.** The spike's lighter Verovio build (variant d3) put
