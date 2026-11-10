@@ -321,7 +321,8 @@ for (const [engine, how] of [
 	test(`a gzipped load ${how} is measured against the decoded size, rising to 100%`, async ({
 		page,
 	}) => {
-		await page.goto(`/score?engine=${engine}`);
+		// The digest names the file, and so its decoded size.
+		await page.goto(`/score?engine=${engine}&integrity=good`);
 		const el = page.locator("barmark-score");
 		const seen = await watchLoading(el);
 		await switchToScore(el);
@@ -333,6 +334,18 @@ for (const [engine, how] of [
 		// Content-Length is the compressed size: no "of … MB" for it.
 		expect(measured.every((s) => !s.amount.includes("MB"))).toBe(true);
 	});
+
+test("a gzipped load with no digest shows no percentage, never one against 7.4 MB", async ({
+	page,
+}) => {
+	await page.goto("/score?engine=gzip");
+	const el = page.locator("barmark-score");
+	const seen = await watchLoading(el);
+	await switchToScore(el);
+	const log = await seen();
+	expect(log.some((s) => s.text === LOADING)).toBe(true);
+	expect(log.filter((s) => s.text === LOADING).every((s) => s.now === null)).toBe(true);
+});
 
 test("the indeterminate bar stands still with reduced motion", async ({ page }) => {
 	await page.emulateMedia({ reducedMotion: "reduce" });
