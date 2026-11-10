@@ -479,10 +479,30 @@ export function printParsed(
 /** How one non-blank physical line prints. */
 type LinePrinter = (raw: string, l: Line | undefined) => string;
 
+/** A bar line's unreadable slots (grammar 2.3): unknown harmony that keeps its text. */
+export const unreadSlots = (l: BarsLine): SimpleSlot[] =>
+	l.cells
+		.flatMap((c) =>
+			c.kind === "slots" ? c.slots.flatMap((s) => (s.kind === "group" ? s.members : [s])) : [],
+		)
+		.filter((s) => s.kind === "unknown" && s.text !== undefined);
+
+/**
+ * The lines that print as written (spec §8): every line with an error,
+ * except a bar line whose only errors are its unreadable slots, one each,
+ * which prints in canonical form with each slot's text as written.
+ */
+export function printedAsWritten(parsed: ChartParse): Set<number> {
+	const errors = new Map<number, number>();
+	for (const d of parsed.diagnostics)
+		if (d.severity === "error") errors.set(d.line, (errors.get(d.line) ?? 0) + 1);
+	for (const l of parsed.lines)
+		if (l.kind === "bars" && errors.get(l.line) === unreadSlots(l).length) errors.delete(l.line);
+	return new Set(errors.keys());
+}
+
 function linePrinter(parsed: ChartParse, edit: (l: Line) => Line): LinePrinter {
-	const errored = new Set(
-		parsed.diagnostics.filter((d) => d.severity === "error").map((d) => d.line),
-	);
+	const errored = printedAsWritten(parsed);
 	const beatsFor = beatsOfLines(parsed);
 	const systems = systemTexts(parsed, errored, beatsFor, edit);
 	return (raw, l) => {

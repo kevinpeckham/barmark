@@ -26,12 +26,12 @@ describe("printing systems (grammar 7.4, section 8)", () => {
 		);
 	});
 	test("a system with an error prints as written, unsorted", () => {
-		const text = `${TWO}Pno | G | Hx7 |\nGtr | G   | C |`;
-		expect(body(text)).toBe("Pno | G | Hx7 |\nGtr | G | C |\n");
+		const text = `${TWO}Pno | G | C_ |\nGtr | G   | C |`;
+		expect(body(text)).toBe("Pno | G | C_ |\nGtr | G | C |\n");
 	});
 	test.each([
 		["Morning Song", MORNING_SONG],
-		["an errored system", `${TWO}Pno | G | Hx7 |\nGtr | G   | C |`],
+		["an errored system", `${TWO}Pno | G | C_ |\nGtr | G   | C |`],
 		["a dropped line", `${TWO}Gtr | G | C | D |\nPno | G |`],
 	])("printing is stable: %s", (_, text) => {
 		const once = printChart(text);

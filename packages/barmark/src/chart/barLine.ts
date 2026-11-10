@@ -489,11 +489,15 @@ function rehearsalCell(
 	};
 }
 
-/** How a reader reports: `error` breaks the bar line's structure, `unread` only its slot. */
+/**
+ * How a reader reports: `error` breaks the bar line's structure, `unread`
+ * only its slot; `broken` says whether the structure has broken so far.
+ */
 type Say = {
 	error: (message: string, token: string, suggestion?: string) => null;
 	unread: (message: string, token: string, suggestion?: string) => null;
 	warn: (message: string, token: string) => void;
+	broken: () => boolean;
 };
 
 /** An unreadable slot (grammar principle 4): unknown harmony keeping what the author wrote. */
@@ -510,16 +514,11 @@ const undotted = ({ note, syllable }: Split) =>
 /**
  * The reader of one slot token: a simple slot or a `_` group of them. A
  * slot it can't read is an error and becomes unknown harmony with its
- * text (`unread`); a misplaced `%`, `...`, direction or `x N`, a bad dot or
- * an empty member is an error in the bar line's structure (`error`).
+ * text (`unread`), a misplaced or bad dot included; a misplaced `%`,
+ * `...`, direction or `x N`, or an empty member is an error in the bar
+ * line's structure (`error`).
  */
-function slotReader({ error: fail, unread, warn }: Say): (token: string) => Slot | null {
-	/** How many structural errors so far: a member that adds one is dropped, not kept as unread. */
-	let broken = 0;
-	const error = (message: string, token: string, suggestion?: string): null => {
-		broken++;
-		return fail(message, token, suggestion);
-	};
+function slotReader({ error, unread, warn, broken }: Say): (token: string) => Slot | null {
 	const report = (p: Problem): null => unread(p.problem, p.token, p.suggestion);
 	const simple = (token: string): SimpleSlot | null => {
 		if (token === "/") return { kind: "hold" };
@@ -587,11 +586,10 @@ function slotReader({ error: fail, unread, warn }: Say): (token: string) => Slot
 		const sung = sungOn(slot, syllable);
 		return "problem" in sung ? unread(sung.problem, written) : sung;
 	};
-	/** A member as read, or as written when it can't be; null only when the structure broke. */
+	/** A member as read, or as written when it can't be; null once the structure has broken. */
 	const keep = (split: Split, read: (note: string) => SimpleSlot | null, written: string) => {
-		const before = broken;
 		const slot = withSyllable(split, read);
-		if (slot || broken !== before) return slot;
+		if (slot || broken()) return slot;
 		return isDotted(split.note) ? unreadable(undotted(split), true) : unreadable(written, false);
 	};
 	const groupOf = (members: Split[], token: string): Slot => {
@@ -608,7 +606,9 @@ function slotReader({ error: fail, unread, warn }: Say): (token: string) => Slot
 	return (token: string): Slot | null => {
 		const members = groupMembers(token).map(splitSyllable);
 		const dots = members.filter((m) => isDotted(m.note)).length;
-		if (dots && (members.length !== 2 || dots > 1)) return error(DOT_PLACE, token);
+		// A dot never changes the bar count: a misplaced one is the slot's error (Kevin, 2026-11-10).
+		if (dots && (members.length !== 2 || dots > 1))
+			return unread(DOT_PLACE, token) ?? unreadable(token, false);
 		const [only] = members;
 		if (only && members.length === 1) return keep(only, (n) => markedSlot(n, false), token);
 		return groupOf(members, token);
@@ -680,7 +680,7 @@ export function parseBarLine(
 	else warn("missing trailing |", parts.at(-1)?.trim() ?? "");
 
 	const report = (p: Problem): null => error(p.problem, p.token, p.suggestion);
-	const slotOf = slotReader({ error, unread, warn });
+	const slotOf = slotReader({ error, unread, warn, broken: () => broken });
 	const readCell = (raw: string): Cell | null => {
 		const rest = raw.trim();
 		if (!rest) return error("an empty cell; use / to hold or % to repeat", "| |");

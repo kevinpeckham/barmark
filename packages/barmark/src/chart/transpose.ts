@@ -6,7 +6,7 @@ import type { ChordRecord } from "../chords/types.js";
 import { parseDirectiveLine } from "./directives.js";
 import { alterOf, conventionalKey, plain, SHARPS, spellPitch } from "./keys.js";
 import { parseChart } from "./parse.js";
-import { printParsed } from "./print.js";
+import { printedAsWritten, printParsed, unreadSlots } from "./print.js";
 import type { Cell, ChartDiagnostic, ChartParse, Key, Line, SimpleSlot, Slot } from "./types.js";
 
 /** What to transpose by: a target key (the chart needs a `key:`), or a number of semitones. */
@@ -104,11 +104,24 @@ function moveLine(l: Line, move: Move, warn: (line: number, token: string) => vo
 	return l;
 }
 
+/** A warning for an unreadable slot (grammar 2.3), which transposing leaves as written. */
+const unmoved = (line: number, slot: SimpleSlot): ChartDiagnostic => {
+	const token = slot.kind === "unknown" ? (slot.text ?? "?") : "";
+	return {
+		line,
+		severity: "warning",
+		message: `${token} can't move: it can't be read, so it stays as written`,
+		token,
+	};
+};
+
 /**
  * The chart in another key, as canonical text (spec §8). Chord roots, slash
  * basses, note sets and every `key:` line move; text never does. Spelling
  * follows the interval from the chart's first key, so every chord keeps its
- * place in the key. Lines with errors stay as written, with a warning; a
+ * place in the key. A slot that can't be read stays as written, with a
+ * warning, and its line's other chords move; a line excluded for an error
+ * stays as written, with a warning; a
  * target that isn't a key, or a target key for a chart with none, returns
  * the text unchanged with an error. Never throws.
  */
@@ -123,15 +136,17 @@ export function transposeChart(
 
 	const physical = text.replace(/^﻿/, "").split(/\r?\n/);
 	const diagnostics: ChartDiagnostic[] = [];
-	for (const line of new Set(
-		parsed.diagnostics.filter((d) => d.severity === "error").map((d) => d.line),
-	))
+	const asWritten = printedAsWritten(parsed);
+	for (const line of asWritten)
 		diagnostics.push({
 			line,
 			severity: "warning",
 			message: "not transposed: this line has an error",
 			token: physical[line - 1]?.trim() ?? "",
 		});
+	for (const l of parsed.lines)
+		if (l.kind === "bars" && !asWritten.has(l.line))
+			for (const s of unreadSlots(l)) diagnostics.push(unmoved(l.line, s));
 	const warn = (line: number, token: string) =>
 		diagnostics.push({
 			line,

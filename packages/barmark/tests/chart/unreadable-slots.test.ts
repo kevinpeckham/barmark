@@ -108,14 +108,24 @@ describe("in a group, only the unreadable member is unknown", () => {
 	});
 });
 
+describe("a misplaced or bad dot is the slot's error (Kevin, 2026-11-10)", () => {
+	for (const token of ["C.", "C._D._E", "C._D.", "{C4}.:la"])
+		test(token, () => {
+			const r = read(`| ${token} | G |`);
+			expect(r.bars?.cells).toHaveLength(2);
+			expect(firstSlot(`| ${token} | G |`)).toEqual({ kind: "unknown", text: token });
+			const e = errors(`| ${token} | G |`);
+			expect(e).toHaveLength(1);
+			expect(e[0]?.message).toContain("a dot goes on one member of a two-member group");
+		});
+});
+
 describe("broken bar structure still excludes the line", () => {
 	const broken = [
 		"| C :| D |",
 		"| C | D |: E |",
 		"| CM7 | D :| E |",
 		"| C_ |",
-		"| C._D._E |",
-		"| C. |",
 		"|1x G | D :|",
 		"| G | D | x1",
 		"| @A G |",
@@ -125,6 +135,7 @@ describe("broken bar structure still excludes the line", () => {
 		"| [4/3] G |",
 		'| "unclosed G |',
 		"| | G |",
+		"|",
 		"| G D.C. |",
 	];
 	for (const line of broken)
@@ -150,16 +161,41 @@ describe("the printer keeps the author's text", () => {
 		if (!bars) throw new Error("dropped");
 		expect(printLine(bars)).toBe("| C | CM7 G |");
 	});
-	test("format leaves a line with an unreadable slot as written", () => {
-		const chart = "time: 4/4\n|  C |   CM7  |\n|  G  |\n";
-		expect(printChart(chart)).toBe("time: 4/4\n|  C |   CM7  |\n| G |\n");
+	test("format prints a line with an unreadable slot canonically, the text verbatim", () => {
+		const chart = "time: 4/4\n|  C |   CM7  |\n|  G  / +>CSus4 / |\n";
+		expect(printChart(chart)).toBe("time: 4/4\n| C | CM7 |\n| G +>CSus4 |\n");
+	});
+	test("a line excluded for its structure still prints as written", () => {
+		const chart = "|  C :|   CM7  |\n|  G  |\n";
+		expect(printChart(chart)).toBe("|  C :|   CM7  |\n| G |\n");
+	});
+	test("a line with another error beside its unreadable slot prints as written", () => {
+		const chart = "| / CM7 |\n";
+		expect(printChart(chart)).toBe(chart);
 	});
 });
 
-describe("transpose leaves the text as written", () => {
-	test("the line with an unreadable slot stays as written, with a warning", () => {
-		const r = transposeChart("key: C\n| C | CM7 |\n| G |\n", { semitones: 2 });
-		expect(r.text).toBe("key: D\n| C | CM7 |\n| A |\n");
+describe("transpose moves the readable chords and leaves the text (Kevin, 2026-11-10)", () => {
+	test("C to D: | D | CM7 | A |, with a warning on CM7", () => {
+		const r = transposeChart("key: C\n| C | CM7 | G |\n", { to: "D" });
+		expect(r.text).toBe("key: D\n| D | CM7 | A |\n");
+		expect(r.diagnostics).toEqual([
+			{
+				line: 2,
+				severity: "warning",
+				message: "CM7 can't move: it can't be read, so it stays as written",
+				token: "CM7",
+			},
+		]);
+	});
+	test("an unreadable group member and note set stay; their neighbours move", () => {
+		const r = transposeChart("| C_CM7 {H} {E4} |\n", { semitones: 2 });
+		expect(r.text).toBe("| D_CM7 {H} {F#4} |\n");
+		expect(r.diagnostics.map((d) => d.token)).toEqual(["CM7", "{H}"]);
+	});
+	test("a line excluded for its structure stays as written", () => {
+		const r = transposeChart("key: C\n| C :| CM7 |\n| G |\n", { semitones: 2 });
+		expect(r.text).toBe("key: D\n| C :| CM7 |\n| A |\n");
 		expect(r.diagnostics.map((d) => d.message)).toEqual(["not transposed: this line has an error"]);
 	});
 });

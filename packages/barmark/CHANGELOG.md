@@ -16,18 +16,29 @@ A grammar change: an unreadable slot keeps its bar (Kevin, 2026-11-10).
 - **An unreadable slot is kept as unknown harmony with its text** (grammar
   principle 4, 2.3, 3). An unknown chord symbol (`CM7`, `CSus4`, `C69`),
   a bad note set (`{H}`), a voicing note not in its chord, a syllable on a
-  chord name, a lone `-` or a mark that can't be read (`<<<C`, `+?`) is
+  chord name, a lone `-`, a mark that can't be read (`<<<C`, `+?`) or a
+  misplaced or bad dot (`| C. |`, `C._D._E`) is
   still an error with the same message, token and suggestion, so `check`
   still fails; but the slot becomes `{ kind: "unknown", text }` and the
   line keeps its bars, so a chart plays as long as it is written. Only a
   bar line whose structure can't be read (a stray `|:` or `:|`, a bad
-  ending or `x N`, a bad `_` group, `%`, `...`, a direction or a mark
-  sharing a cell, an empty cell, an unclosed quote) is still excluded.
+  ending or `x N`, an empty group member, `%`, `...`, a direction or a
+  mark sharing a cell, an empty cell, a bad `[n/d]`, an unclosed quote)
+  is still excluded.
   Before, any error dropped the whole line.
 - **`SimpleSlot`'s `unknown` has an optional `text`** (A.7): the slot as
   written, absent for a written `?`. `printSlot` and `printLine` print it
-  as written, a dotted member's dot back in its place; a line with an
-  error still prints and transposes as written.
+  as written, a dotted member's dot back in its place.
+- **`format` prints a bar line whose only errors are unreadable slots in
+  canonical form** (spec §8), each slot's text as written. A line
+  excluded for its structure, or with any other error, still prints as
+  written.
+- **`transposeChart` moves the readable chords on a line with an
+  unreadable slot** (Kevin, 2026-11-10): `key: C`, `| C | CM7 | G |` to D
+  is `| D | CM7 | A |`, with the warning "CM7 can't move: it can't be
+  read, so it stays as written" on the slot. A line excluded for its
+  structure still stays as written, with "not transposed: this line has
+  an error".
 - A part's notes line (7.6) with an unreadable note set has that error
   alone, not a second one for harmony on the line.
 
