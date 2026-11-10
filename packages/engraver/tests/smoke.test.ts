@@ -2,7 +2,7 @@ import { expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { MODULE_BYTES, WASM_BYTES } from "../src/info.js";
+import { MODULE_BYTES, VEROVIO_VERSION, WASM_BYTES } from "../src/info.js";
 
 // Needs a compiled dist/ (`bun run compile`, or CI's engraver-dist artifact): skipped without one.
 const smoke = fileURLToPath(new URL("../../../scripts/smoke-engraver.mjs", import.meta.url));
@@ -19,7 +19,7 @@ test.skipIf(!built)("the built module instantiates in Node, matches info.js and 
 	}).toMatchObject({ status: 0 });
 	const r = JSON.parse(run.stdout.toString());
 	expect(r).toMatchObject({
-		version: expect.stringMatching(/^6\.4\.1(-|$)/),
+		version: expect.stringMatching(new RegExp(`^${VEROVIO_VERSION.replaceAll(".", "\\.")}(-|$)`)),
 		moduleBytes: MODULE_BYTES,
 		wasmBytes: WASM_BYTES,
 		digests: true,

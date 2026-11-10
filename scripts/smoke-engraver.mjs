@@ -45,6 +45,8 @@ const XML = `<?xml version="1.0" encoding="UTF-8"?>
 const sri = (bytes) => `sha384-${createHash("sha384").update(bytes).digest("base64")}`;
 
 const result = { version: "", moduleBytes: 0, wasmBytes: 0, digests: false, svg: false };
+// getVersion reads info.js's VEROVIO_VERSION, alone or followed by "-" and the commit.
+let versionOk = false;
 try {
 	const info = await import(infoUrl);
 	const moduleBytes = readFileSync(fileURLToPath(moduleUrl));
@@ -66,9 +68,14 @@ try {
 	const renderToSVG = mod.cwrap("vrvToolkit_renderToSVG", "string", ["number", "number", "number"]);
 	const vrv = make();
 	result.version = getVersion(vrv);
+	const expected = info.VEROVIO_VERSION;
+	versionOk =
+		typeof expected === "string" &&
+		expected !== "" &&
+		(result.version === expected || result.version.startsWith(`${expected}-`));
 	result.svg = Boolean(loadData(vrv, XML)) && renderToSVG(vrv, 1, 0).includes("<svg");
 } catch (error) {
 	result.error = String(error?.stack ?? error);
 }
 console.log(JSON.stringify(result));
-process.exit(result.digests && result.svg && /^6\.4\.1(-|$)/.test(result.version) ? 0 : 1);
+process.exit(result.digests && result.svg && versionOk ? 0 : 1);

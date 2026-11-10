@@ -2,6 +2,7 @@ import { expect, test } from "bun:test";
 import { existsSync, readFileSync } from "node:fs";
 import { readVersions } from "../build/facts.js";
 import pkg from "../package.json";
+import { MODULE_BYTES, WASM_BYTES } from "../src/info.js";
 
 // Committed state only: no build needed.
 const read = (path: string) => {
@@ -24,6 +25,7 @@ test("NOTICE.md names both versions, the commit, the date and this release's sou
 		`https://github.com/kevinpeckham/barmark/releases/tag/engraver-v${pkg.version}`,
 		"https://github.com/kevinpeckham/barmark/issues",
 		`verovio-${verovioVersion}-source.tar.gz`,
+		`engraver-build-${pkg.version}.tar.gz`,
 		"build/source.sh",
 		"verovio-module-hum.mjs",
 	])
@@ -61,6 +63,16 @@ test("the README's first line says what it is", () => {
 	expect(readme.split("\n")[0]).toBe(
 		`A modified build of Verovio ${verovioVersion} (LGPL-3.0-only), made by barmark, not by the Verovio project.`,
 	);
+});
+test("the README's sizes are info.ts's", () => {
+	for (const bytes of [MODULE_BYTES, WASM_BYTES])
+		expect(readme).toContain(`${bytes.toLocaleString("en-US")} bytes`);
+});
+test("Verovio's version is read from versions.env or info.ts, never written out", () => {
+	expect(buildSh).toContain("${VEROVIO_TAG#version-}");
+	for (const text of [buildSh, read("../../../scripts/smoke-engraver.mjs")])
+		expect(text).not.toContain(verovioVersion.replaceAll(".", "\\."));
+	expect(buildSh).not.toContain(verovioVersion);
 });
 test("the README names both differences from stock and links NOTICE.md and the source", () => {
 	for (const s of [

@@ -14,7 +14,7 @@ Closure; WebAssembly in a separate file; `instantiateWasm` accepted from the
 caller. No source file is changed. Only Leipzig is available; see the
 README for unsupported options. Corresponding Source:
 `verovio-6.4.1-source.tar.gz`, built by `build/source.sh` and attached,
-with `build/` as `engraver-build-X.Y.Z.tar.gz`, to each `engraver-v*`
+with `build/` as `engraver-build-0.1.0.tar.gz`, to each `engraver-v*`
 GitHub release; for this version,
 https://github.com/kevinpeckham/barmark/releases/tag/engraver-v0.1.0.
 

@@ -107,7 +107,7 @@ F="$OPT -DNDEBUG -std=c++20 -s STRICT=1 -fwasm-exceptions $MAP -resource-dir=$RE
 # 8. Banner, then the glue; the wasm unchanged.
 VERSION=$(bun -e "console.log((await Bun.file(process.argv[1]).json()).version)" "$PKG/package.json")
 {
-	echo "/*! Modified build of Verovio 6.4.1 by barmark (not the Verovio project), LGPL-3.0-only: see NOTICE.md and https://github.com/kevinpeckham/barmark/releases/tag/engraver-v$VERSION */"
+	echo "/*! Modified build of Verovio ${VEROVIO_TAG#version-} by barmark (not the Verovio project), LGPL-3.0-only: see NOTICE.md and https://github.com/kevinpeckham/barmark/releases/tag/engraver-v$VERSION */"
 	cat "$BUILD/out/verovio-module.mjs"
 } >"$OUT/verovio-module.mjs"
 cp "$BUILD/out/verovio-module.wasm" "$OUT/verovio-module.wasm"
