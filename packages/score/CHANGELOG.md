@@ -18,6 +18,9 @@ package uses [semantic versioning](https://semver.org/).
 
 ### Changed
 
+- **Requires `@barmark/render` 0.19.0** (the tempo beat, the
+  `rehearsal-letters` rule), whose minor release the `^0.18` caret would
+  not reach.
 - **The grid follows `@barmark/render`'s new `rehearsal-letters` rule**:
   no letters beside a chart's own rehearsal marks (`@A`), so the grid's
   headings no longer show two marks, matching the score, which draws only
