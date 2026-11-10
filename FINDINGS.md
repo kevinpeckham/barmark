@@ -364,6 +364,32 @@ showed the rule needed refining.
 
 ## Performance and robustness
 
+### A download's Content-Length is not the size of what you read (2026-11-10, @barmark/score)
+
+- **The symptom.** Measuring `<barmark-score>`'s Verovio download as
+  bytes read over `Content-Length` would end the bar at 367% from
+  jsDelivr (brotli, 2,014,350 bytes; 312% gzipped, 2,373,768), while
+  Verovio is 7,400,749 bytes.
+- **The cause.** With `Content-Encoding`, `Content-Length` is the
+  compressed size, but `response.body`'s reader yields decoded bytes.
+  Worse, a cross-origin response hides `Content-Encoding` unless the
+  server sends `Access-Control-Expose-Headers` (jsDelivr sends `*`; many
+  servers don't), while `Content-Length` is safelisted and always shown:
+  the response looks uncompressed. Measured through a pass-through
+  without the expose header, the bar read "30% (0.7 of 2.4 MB)" and then
+  jumped back to 32% once the body outgrew the length (the bytes read
+  over Verovio's size).
+- **The fix.** `downloadMeter` measures against `Content-Length` only
+  when the response is not encoded; otherwise against Verovio's known
+  decoded size (`VEROVIO_MODULE_BYTES`, test-checked against the
+  installed file), else not at all. Cross-origin, a length short of that
+  size is taken as compressed; a body that outgrows its length falls to
+  the next rule. Measured in Chromium: same-origin unencoded, 0 to 100%
+  with "of 7.4 MB"; jsDelivr brotli, gzip and gzip with the header
+  hidden, 0 to 100%, monotone, never "MB"
+  (`packages/score/src/download.ts`, `packages/score/tests/download.test.ts`,
+  `packages/score/browser/score.pw.ts`).
+
 ### A bundled 7 MB module is parsed at every start of a compiled binary (2026-11-08, cli)
 
 - **The symptom.** Adding `render --score` put Verovio (`verovio/wasm`, a

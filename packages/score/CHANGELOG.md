@@ -6,6 +6,41 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- **Loading progress.** While its first score waits, `<barmark-score>`
+  shows a themed status region (`role="status"`) and progress bar in
+  three phases: "Loading the score engine…" (with a percentage while the
+  download can be measured, and "X of Y MB" only when Y is the size
+  actually transferred), "Preparing…" while Verovio's WebAssembly
+  compiles and "Engraving…". Each phase is announced once; the bar
+  carries the percentage and stands still under `prefers-reduced-motion`.
+  A `verovio-url` is now downloaded by the worker with progress and
+  imported from a `blob:` URL. A compressed response is measured against
+  Verovio's decoded size (`VEROVIO_MODULE_BYTES`), never against its
+  compressed `Content-Length`, so the bar never runs past 100%. The
+  worker's new `Progress` message carries it (`LoadStatus`), and
+  `Engine.engrave` takes an `EngraveCall` with `onStatus`
+  (`EngineStatus`).
+- **`verovio-integrity`.** With an SRI digest (`sha256-`, `sha384-` or
+  `sha512-`), the worker checks the `verovio-url` copy with
+  `crypto.subtle` before importing it, and on a mismatch or any failure
+  to load it warns, naming the reason, and loads the package's own copy
+  instead, once. `VEROVIO_CDN_URL` and `VEROVIO_CDN_INTEGRITY` are
+  Verovio 6.4.1 on jsDelivr and its sha384, with `VEROVIO_VERSION` and
+  the `VerovioSource` type.
+- **`preload`.** `"intent"` starts loading Verovio on the first pointer,
+  focus or touch on the Score switch; `"idle"` once the page is idle
+  (`requestIdleCallback`, or half a second later), or on intent when the
+  reader saves data or is on 2G. `"none"`, the default, keeps today's
+  behaviour. A preload loads the engine only, shares the page's one load
+  and does nothing the second time (`Engine.preload`).
+
+### Changed
+
+- **Verovio is pinned exactly at 6.4.1** (was `^6.4.1`): the decoded size
+  and the CDN digest are those of that build.
+
 ## [0.2.0] - 2026-11-09
 
 ### Added
