@@ -4,7 +4,9 @@
  * score must never ask for more. A fake toolkit records every call.
  */
 import { expect, test } from "bun:test";
+import { readdirSync, readFileSync } from "node:fs";
 import { exportMusicXml } from "@barmark/musicxml";
+import { VerovioToolkit } from "verovio/esm";
 import { engraverCorpus } from "../../../scripts/engraver-corpus.js";
 import { engraveChart, LAYOUT } from "../src/engrave.js";
 
@@ -65,13 +67,41 @@ test("over the corpus, engraveChart calls only setOptions, loadData (MusicXML te
 });
 
 test("the corpus's MusicXML asks for no tuning and no music font", () => {
+	let exported = 0;
 	for (const [name, text] of engraverCorpus()) {
 		const r = exportMusicXml(text);
 		if (!r.ok) continue;
+		exported++;
 		expect({
 			name,
 			tuning: r.xml.includes("<staff-tuning"),
 			font: r.xml.includes("<music-font"),
 		}).toEqual({ name, tuning: false, font: false });
 	}
+	// Not vacuous: a corpus whose every export failed would check nothing.
+	expect(exported).toBeGreaterThan(0);
+});
+
+// Every toolkit method, from Verovio itself, so a method added upstream is covered too.
+const METHODS = Object.getOwnPropertyNames(VerovioToolkit.prototype).filter(
+	(m) => m !== "constructor",
+);
+const SRC = new URL("../src/", import.meta.url);
+/** Score's other sources and the CLI's score command, each with the toolkit methods it may call. */
+const OTHERS: [file: URL, allowed: string[]][] = [
+	...readdirSync(SRC)
+		.filter((f) => f.endsWith(".ts") && f !== "engrave.ts")
+		.map((f): [URL, string[]] => [new URL(f, SRC), f === "worker.ts" ? ["getVersion"] : []]),
+	[new URL("../../cli/src/score.ts", import.meta.url), []],
+];
+
+test("only engrave.ts calls Verovio's toolkit, but for the worker's getVersion", () => {
+	expect(METHODS).toContain("setOptions");
+	const found = OTHERS.flatMap(([file, allowed]) => {
+		const source = readFileSync(file, "utf8");
+		return METHODS.filter((m) => !allowed.includes(m))
+			.filter((m) => new RegExp(`\\.\\s*${m}\\s*\\(|\\[\\s*["'\`]${m}["'\`]\\s*\\]`).test(source))
+			.map((m) => `${file.pathname.split("/packages/")[1]}: ${m}`);
+	});
+	expect(found).toEqual([]);
 });
