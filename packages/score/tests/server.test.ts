@@ -50,6 +50,14 @@ describe("renderScoreHtml", () => {
 		expect(letters(plain)).toEqual(["A", "B"]);
 	});
 
+	test('the grid takes render\'s columns: "row" on the element and the grid, anything else shared', () => {
+		const row = parse(renderScoreHtml(chart, { columns: "row" }));
+		expect(row.host.getAttribute("columns")).toBe("row");
+		expect(row.inner.querySelector(".bm-chart")?.getAttribute("data-columns")).toBe("row");
+		expect(renderScoreHtml(chart, { columns: "shared" })).toBe(renderScoreHtml(chart));
+		expect(renderScoreHtml(chart, { columns: "rows" as "row" })).toBe(renderScoreHtml(chart));
+	});
+
 	test("carries chart text holding </script> intact", () => {
 		const text = `${chart}</script><b>\n</SCRIPT >\n<!-- x -->\na < b & "c"\n`;
 		const html = renderScoreHtml(text);
