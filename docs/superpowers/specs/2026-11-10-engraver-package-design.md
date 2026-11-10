@@ -245,11 +245,15 @@ what is there, with no build step: the package's `prepack` checks
 uses the same artifact.
 
 **The release workflow (design call): a separate `build-engraver` job**
-(timeout 30 min), only for `engraver-v*` tags.
+(timeout 30 min), on every tag, because `verify`'s score browser suite
+needs `dist/`.
 
-- It builds from clean with no dist cache (the emsdk cache is allowed).
-- It checks the result against `info.ts`, runs the gate and uploads
-  `dist/`.
+- On an `engraver-v*` tag it builds from clean with no dist cache (the
+  emsdk cache is allowed).
+- On any other tag it restores the dist cache, as CI does, building on a
+  miss. A release only restores caches; it never writes one.
+- Either way it checks the result against `info.ts`, runs the gate and
+  uploads `dist/`.
 - `verify` consumes that artifact, so its 20-minute limit, which already
   covers Playwright, stays as it is.
 - After `publish` and `confirm`, an `attach` job like the CLI's adds the
