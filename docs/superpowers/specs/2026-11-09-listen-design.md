@@ -974,6 +974,7 @@ differs is a porting bug, and the goldens make it a failing test.
 | The map's `recording.duration` is the recording's length | The app passes the grid's end |
 | The pipeline refuses an unplaced grid by default | §14 Q2; the app passes `onUnplaced: "declared"` |
 | The chart render streams | Bit-identical by construction; the goldens confirm it, or v1 renders whole (§10) |
+| `too-long` counts the step table's cells, `(n + 1)(m + 1)`, where the app counts `n × m`: a case within `n + m + 1` cells of `DTW_MAX_CELLS` is refused here and warped by the app (added in Task 12, after a security review) | It is what `dtwTable` allocates. The other new check, `chart-too-long` before the render when the chart's seconds exceed twice the recording's, changes no outcome: it implies more than `2m` chart frames, which no warping fits (the app's own `chart-too-long`, checked on 1,677 seeded warpings) |
 
 ## 12. Adoption and release
 

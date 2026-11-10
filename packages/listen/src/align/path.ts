@@ -67,9 +67,9 @@ const medianOr0 = (values: number[]) => (values.length > 0 ? median(values) : 0)
 const framesOf = (chroma: Float32Array, frames: number) =>
 	Array.from({ length: frames }, (_, i) => chroma.subarray(i * 12, i * 12 + 12));
 
-/** `too-long`, with the numbers behind it. */
+/** `too-long`, with the numbers behind it: the cells the step table would take, `(n + 1)(m + 1)`. */
 function tooLong(chartFrames: number, recordingFrames: number, limit: number): Refused {
-	const cells = chartFrames * recordingFrames;
+	const cells = (chartFrames + 1) * (recordingFrames + 1);
 	return refused([
 		refusal(
 			"too-long",
@@ -79,12 +79,25 @@ function tooLong(chartFrames: number, recordingFrames: number, limit: number): R
 	]);
 }
 
+/** `chart-too-long`: no warping path fits the chart into the recording. */
+function chartTooLong(chartSeconds: number, recordingSeconds: number): Refused {
+	return refused([
+		refusal(
+			"chart-too-long",
+			`The chart runs more than twice as long as the recording (${chartSeconds.toFixed(1)} s against ${recordingSeconds.toFixed(1)} s); check its tempo.`,
+			{ chartSeconds, recordingSeconds },
+		),
+	]);
+}
+
 /**
  * The chart's played bars placed in the recording by the warping alone:
  * the app's `alignChartPath`. In order: the render's chroma frames from the
  * bar seconds (`too-short` when it or the recording has none), `too-long`
- * when chart frames × recording frames exceed `DTW_MAX_CELLS`, before any
- * render or allocation; then the step table, the streamed render into its
+ * when the step table's cells, (chart frames + 1) × (recording frames + 1),
+ * exceed `DTW_MAX_CELLS`, and `chart-too-long` when the chart's seconds are
+ * more than twice the recording's, all before any render or allocation;
+ * then the step table, the streamed render into its
  * chromagram, the right chart's warping (`chart-too-long` when no path
  * fits: the chart runs more than twice the recording), the tritone control
  * on the same table, and the bar starts mapped through the path.
@@ -111,7 +124,13 @@ export function alignPath(
 				},
 			),
 		]);
-	if (n * m > s.DTW_MAX_CELLS) return tooLong(n, m, s.DTW_MAX_CELLS);
+	// The step table is (n + 1)(m + 1) bytes, and m ≥ 1 here, so n + 1 is at most half the
+	// limit: checked first, on its own, so a huge chart is refused before any product is taken.
+	if (n + 1 > s.DTW_MAX_CELLS / 2 || (n + 1) * (m + 1) > s.DTW_MAX_CELLS)
+		return tooLong(n, m, s.DTW_MAX_CELLS);
+	// The warping's steps let the chart run at most twice the recording's speed, so a chart more
+	// than twice as long has no path: refused here, before hours of it are rendered.
+	if (length / rate > 2 * features.duration) return chartTooLong(length / rate, features.duration);
 	const steps = dtwTable(n, m);
 	const stream = chromaStream(rate, length);
 	const { barStarts } = renderChartPads(bars, rate, (chunk) => stream.push(chunk));
@@ -119,14 +138,7 @@ export function alignPath(
 	const refFrames = framesOf(ref.chroma, ref.frames);
 	const rec = framesOf(features.chroma, m);
 	const right = dtwAlign(refFrames, rec, steps, true);
-	if (!Number.isFinite(right.normalizedCost))
-		return refused([
-			refusal(
-				"chart-too-long",
-				`The chart runs more than twice as long as the recording (${(length / rate).toFixed(1)} s against ${features.duration.toFixed(1)} s); check its tempo.`,
-				{ chartSeconds: length / rate, recordingSeconds: features.duration },
-			),
-		]);
+	if (!Number.isFinite(right.normalizedCost)) return chartTooLong(length / rate, features.duration);
 	const control = dtwAlign(tritone(refFrames), rec, steps, true);
 	const rawBarStarts = barStarts.map(mapSeconds(right.path, ref.hopSec));
 	const localCost = barCosts(barStarts, right.frameCost, ref.hopSec);
