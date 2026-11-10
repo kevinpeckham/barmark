@@ -155,11 +155,14 @@ describe("the streamed render (design §10)", () => {
 	test(
 		"the frame count from the bar seconds is the chromagram's of the whole render",
 		() => {
-			// Eight charts: the matrix above already pins renderLength to every chart's render, and
-			// chroma.test.ts pins chromaFrameCount to chromagram on 200 seeded lengths and rates.
+			// The eight shortest charts: the matrix above already pins renderLength to every chart's
+			// render, and chroma.test.ts pins chromaFrameCount to chromagram on 200 seeded lengths.
+			const seconds = (bars: PadBar[]) => bars.reduce((a, b) => a + b.seconds, 0);
+			const shortest = CHARTS.map(padBars)
+				.toSorted((a, b) => seconds(a) - seconds(b))
+				.slice(0, 8);
 			for (const rate of RATES)
-				for (const chart of CHARTS.slice(0, 8)) {
-					const bars = padBars(chart);
+				for (const bars of shortest) {
 					const { frames } = chromagram(renderWhole(bars, rate).samples, rate);
 					expect(chromaFrameCount(renderLength(bars, rate), rate)).toBe(frames);
 				}

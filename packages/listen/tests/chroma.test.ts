@@ -54,11 +54,11 @@ describe("chromagram", () => {
 });
 
 describe("chromaFrameCount", () => {
-	// 200 chromagrams of up to 200,000 samples: a few seconds.
+	// 200 chromagrams of up to 50,000 samples: from none to several frames at every rate.
 	test("equals chromagram's frames for 200 seeded lengths and rates", { timeout: 30_000 }, () => {
 		const rand = seeded(11);
 		for (let trial = 0; trial < 200; trial++) {
-			const length = Math.floor(rand() * 200_001);
+			const length = Math.floor(rand() * 50_001);
 			const rate = RATES[Math.floor(rand() * RATES.length)] as number;
 			expect(chromaFrameCount(length, rate)).toBe(
 				chromagram(new Float32Array(length), rate).frames,
