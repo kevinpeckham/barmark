@@ -94,7 +94,10 @@ jobs:
           path: packages/engraver/dist/verovio-module.*
           key: engraver-dist-${{ hashFiles('packages/engraver/build/**', 'packages/engraver/package.json') }}
       - run: bun run build
-      # The equivalence gate (stock Verovio against this build) goes here: the engraver plan's Task 5.
+      # The equivalence gate: stock Verovio and this build, in Node 22, must draw
+      # the corpus's SVG byte for byte. Its summary reports the timings (Q1: the
+      # slowest width-375 engraving) without gating on them.
+      - run: node --version | grep -q '^v22' && bun scripts/engraver-equivalence.ts
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: engraver-dist

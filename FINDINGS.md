@@ -2182,3 +2182,16 @@ those never reached, or reached in a repeat with passes enough for their verse (
 - **The cause.** `packages/midi/src/version.ts` holds `VERSION`, and a test
   compares it with `package.json`; step 2 named only musicxml's.
 - **The fix.** Bump it with the package version; step 2 now names both.
+
+### A 312-bar lead sheet is still one page at width 375 (2026-11-10, engraver)
+
+- **The symptom.** The equivalence gate's long chart, written to cover page
+  breaks, engraved as one page at both widths with 312 bars.
+- **The cause.** Score's `LAYOUT` asks Verovio for `pageHeight: 60000`
+  (Verovio's ceiling) with `adjustPageHeight`, so a page holds about 270
+  systems: at 375 wide and two bars a system, some 540 bars of a one-staff
+  lead sheet.
+- **The fix.** `packages/engraver/tests/fixtures/long.chart.md` has 528
+  bars (12 sections of 44), two pages at 375 and one at 1000. The cost is
+  time: it is the gate's slowest width-375 engraving, so it is the chart
+  that Q1's 500 ms rule measures.
