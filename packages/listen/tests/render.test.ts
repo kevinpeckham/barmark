@@ -91,22 +91,24 @@ function streamsWhole(c: number, chart: string, rate: number, chunks: readonly n
 	const whole = renderWhole(bars, rate);
 	expect(renderLength(bars, rate)).toBe(whole.samples.length);
 	for (const chunk of chunks) {
-		const out = new Float32Array(whole.samples.length);
 		let at = 0;
 		let tooLong = 0;
+		let differs = -1;
 		const { barStarts } = renderChartPads(
 			bars,
 			rate,
 			(part) => {
 				if (part.length > chunk) tooLong++;
-				out.set(part, at);
+				// Each chunk against the same stretch of the whole render, as it arrives.
+				const d = firstDifference(part, whole.samples.subarray(at, at + part.length));
+				if (differs < 0 && d >= 0) differs = at + d;
 				at += part.length;
 			},
 			chunk,
 		);
 		const where = `chart ${c}, chunk ${chunk}`;
 		expect([where, at, tooLong]).toEqual([where, whole.samples.length, 0]);
-		expect([where, firstDifference(out, whole.samples)]).toEqual([where, -1]);
+		expect([where, differs]).toEqual([where, -1]);
 		expect(barStarts).toEqual(whole.barStarts);
 	}
 }
