@@ -21,7 +21,12 @@
 	"files": [
 		"dist",
 		"build",
-		"CHANGELOG.md"
+		"CHANGELOG.md",
+		"COPYING",
+		"COPYING.LESSER",
+		"OFL.txt",
+		"THIRD-PARTY.md",
+		"NOTICE.md"
 	],
 	"engines": {
 		"node": ">=20"

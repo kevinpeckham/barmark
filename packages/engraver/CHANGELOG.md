@@ -15,3 +15,9 @@ package uses [semantic versioning](https://semver.org/).
   `MODULE_INTEGRITY`, `WASM_INTEGRITY`, `WASM_FILE`, `CDN_URL`). Every
   build must match its sizes and sha384 digests byte for byte:
   `bun run build` and `prepack` refuse a `dist/` that does not.
+- **Licence and notices.** `COPYING` and `COPYING.LESSER` (Verovio's
+  texts), `NOTICE.md` (what this build changes from Verovio's npm build,
+  dated), `OFL.txt` (Leipzig and Bravura) and `THIRD-PARTY.md`
+  (Emscripten and the libraries Verovio vendors) are published with the
+  package. The README states the build's limits: other fonts, footers,
+  custom tunings and the importers left out.
