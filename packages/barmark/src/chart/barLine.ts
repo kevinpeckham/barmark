@@ -23,6 +23,12 @@ type BarsLine = Extract<Line, { kind: "bars" }>;
 
 const FERMATA = new Set(["...", "…"]);
 
+/** Each simple slot of these cells, a group's members each. */
+export const simpleSlots = (cells: Cell[]): SimpleSlot[] =>
+	cells.flatMap((c) =>
+		c.kind === "slots" ? c.slots.flatMap((s) => (s.kind === "group" ? s.members : [s])) : [],
+	);
+
 /** Whether a cell is a bar: `...`, a direction and a rehearsal mark mark a place between bars. */
 export const isBar = (c: Cell) => c.kind === "slots" || c.kind === "simile";
 const QUOTES = new Set(['"', "“", "”", "„"]);

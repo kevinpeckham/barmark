@@ -220,7 +220,8 @@ How the symbols relate:
   `?`, with no second error or warning on it. Only a slot is kept this
   way: a member of a `_` group is a slot of its own, and keeps its dot.
   The printer prints the line in canonical form with the text as written
-  (8), a renderer draws it, and transposing moves the line's other chords
+  (8), a renderer draws the line as it draws any other, the slot as
+  written and marked as an error with its message, and transposing moves the line's other chords
   but leaves the text as written, with a warning on it, since what can't
   be read can't be moved. A bar line whose **structure** can't be read is
   still excluded, because its bar count is unknown: a stray or misplaced

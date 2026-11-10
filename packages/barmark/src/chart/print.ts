@@ -1,4 +1,4 @@
-import { isBar } from "./barLine.js";
+import { isBar, simpleSlots } from "./barLine.js";
 import { printDirection } from "./direction.js";
 import { beatsOf } from "./directives.js";
 import { readDocument } from "./document.js";
@@ -479,13 +479,9 @@ export function printParsed(
 /** How one non-blank physical line prints. */
 type LinePrinter = (raw: string, l: Line | undefined) => string;
 
-/** A bar line's unreadable slots (grammar 2.3): unknown harmony that keeps its text. */
-export const unreadSlots = (l: BarsLine): SimpleSlot[] =>
-	l.cells
-		.flatMap((c) =>
-			c.kind === "slots" ? c.slots.flatMap((s) => (s.kind === "group" ? s.members : [s])) : [],
-		)
-		.filter((s) => s.kind === "unknown" && s.text !== undefined);
+/** The unreadable slots of a bar line, or of any cells (grammar 2.3): unknown harmony that keeps its text. */
+export const unreadSlots = (l: { cells: Cell[] }): SimpleSlot[] =>
+	simpleSlots(l.cells).filter((s) => s.kind === "unknown" && s.text !== undefined);
 
 /**
  * The lines that print as written (spec §8): every line with an error,

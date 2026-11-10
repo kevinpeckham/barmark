@@ -11,6 +11,12 @@ Releases follow the process in [RELEASING.md](RELEASING.md).
 
 A grammar change: an unreadable slot keeps its bar (Kevin, 2026-11-10).
 
+### Added
+
+- **`printedAsWritten(parse)`** and **`unreadSlots(line)`**: the lines the
+  printer prints as written (spec §8), and a bar line's unreadable slots,
+  so a renderer draws what the printer prints.
+
 ### Changed
 
 - **An unreadable slot is kept as unknown harmony with its text** (grammar
