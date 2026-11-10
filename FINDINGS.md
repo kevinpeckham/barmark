@@ -2195,3 +2195,6 @@ those never reached, or reached in a repeat with passes enough for their verse (
   bars (12 sections of 44), two pages at 375 and one at 1000. The cost is
   time: it is the gate's slowest width-375 engraving, so it is the chart
   that Q1's 500 ms rule measures.
+- **The decision.** Kevin kept `-Oz` (2026-11-10): the 500 ms rule reads
+  real charts only, not `long.chart.md` (the gate's ⚠ line follows), as
+  written under Q1 in `docs/superpowers/specs/2026-11-10-engraver-package-design.md`.

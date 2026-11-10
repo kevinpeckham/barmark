@@ -527,6 +527,22 @@ jsDelivr, so the GPLv3 sections that LGPLv3 incorporates apply.
    Recommend `-Oz`, with a rule measured where the gate measures, in Node
    22 on CI: if the slowest width-375 engraving passes 500 ms, ship `-Os`
    as a patch (one line in `versions.env`).
+
+   **Decided by Kevin (2026-11-10): keep `-Oz` for 0.1.0.**
+   - The 500 ms rule applies to real charts only, not to the synthetic
+     `long.chart.md`, which exists only to cover page breaks.
+   - The evidence, from the gate on CI (Node 22):
+     - `long.chart.md` at 375: 463 ms stock, 644 ms lite;
+     - the slowest real chart, `peaceful-dreams.chart.md`, at 375: 113 ms
+       stock, 142 ms lite;
+     - lite over stock: 1.20 to 1.28×;
+     - instantiate: 57 ms lite against 236 ms stock;
+     - sizes: `-Oz` 1.00 MB gzip, 0.78 MB brotli, against `-Os` about
+       1.18 MB gzip (the spike's figure).
+   - How to switch: set `OPT=-Os` in `build/versions.env`, run
+     `bun run compile --update`, and put it through the gate.
+   - When to revisit: a real chart over 500 ms on CI (the gate's ⚠ line),
+     or readers' engraving time mattering more than first-load size.
 2. **Own 0.x versions, or mirror Verovio's number?** Recommend own 0.x
    (0.1.0 = 6.4.1).
 3. **Build in CI and the release workflow, never committing the binary?**

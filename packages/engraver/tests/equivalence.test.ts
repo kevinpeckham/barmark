@@ -85,9 +85,11 @@ test("the summary gives the instantiate times, the total and the slowest width-3
 	expect(s).toMatch(/slowest at 375: c1, 120 ms/);
 	expect(s).not.toContain("⚠");
 });
-test("the summary warns, without gating, over 500 ms at 375", () => {
+test("the summary warns, without gating, when a real chart passes 500 ms at 375", () => {
 	const lite = changed(run(4), 0, { ms: 501 });
-	expect(summary(run(4), lite)).toContain("⚠ over 500 ms: Q1 says ship -Os");
+	expect(summary(run(4), lite)).toContain(
+		"⚠ c0 over 500 ms at 375, a real chart: revisit -Os (Q1)",
+	);
 });
 test("the summary names the slowest real chart at 375, without the long chart, in both builds", () => {
 	const long = { name: "long.chart.md", width: 375, pages: 2, bytes: 10 } as const;
@@ -100,7 +102,8 @@ test("the summary names the slowest real chart at 375, without the long chart, i
 	expect(s).toContain(
 		"slowest real chart at 375 (without long.chart.md): c1, stock 100 ms, lite 120 ms",
 	);
-	expect(s).toContain("⚠ over 500 ms");
+	// Q1 as decided: the 500 ms rule reads real charts, not the synthetic long chart.
+	expect(s).not.toContain("⚠");
 });
 test("the summary gives lite's engrave time over stock's", () => {
 	const s = summary(run(4), run(4, { ms: 2 }));

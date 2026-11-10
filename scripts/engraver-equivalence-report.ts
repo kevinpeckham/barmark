@@ -18,7 +18,11 @@ export type Run = { version: string; instantiateMs: number; engravings: Engravin
 
 /** Fewer engravings than this is an empty pass, not a pass. */
 const MIN_ENGRAVINGS = 60;
-/** Q1: the build ships -Os instead of -Oz if its slowest width-375 engraving passes this. */
+/**
+ * Q1, as Kevin decided it (spec, Questions for Kevin): -Oz stays, and -Os is
+ * revisited if a real chart's width-375 engraving passes this. The synthetic
+ * long chart, there only for page breaks, does not count.
+ */
 const Q1_MS = 500;
 const CONTEXT = 80;
 
@@ -128,7 +132,7 @@ function realChartLine(stock: Run, lite: Run): string {
  * Each run's instantiate time, total engrave time and slowest width-375
  * engraving; lite's slowest real chart at 375 beside stock's time for it;
  * lite's total engrave time over stock's; and a warning (not a failure)
- * when the lite build's slowest passes Q1's 500 ms.
+ * when lite's slowest real chart at 375 passes Q1's 500 ms.
  */
 export function summary(stock: Run, lite: Run): string {
 	const ratio = totalMs(stock) > 0 ? (totalMs(lite) / totalMs(stock)).toFixed(2) : "n/a";
@@ -138,8 +142,10 @@ export function summary(stock: Run, lite: Run): string {
 		realChartLine(stock, lite),
 		`engrave time, lite over stock: ${ratio}× (${lite.engravings.length} engravings)`,
 	];
-	const slow = slowest375(lite);
+	const slow = slowest375(lite, (e) => e.name !== LONG);
 	if (slow && slow.ms > Q1_MS)
-		lines.push(`⚠ over ${Q1_MS} ms: Q1 says ship -Os (${slow.name}, ${ms(slow.ms)})`);
+		lines.push(
+			`⚠ ${slow.name} over ${Q1_MS} ms at 375, a real chart: revisit -Os (Q1), lite ${ms(slow.ms)}`,
+		);
 	return lines.join("\n");
 }
