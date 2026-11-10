@@ -5,6 +5,7 @@
 		"includes": [
 			"**",
 			"!packages/*/tests/fixtures",
+			"!packages/engraver/OFL.txt",
 			"!**/*.md",
 			"!.swamp.yaml",
 			"!.fallow-health-baseline.json",

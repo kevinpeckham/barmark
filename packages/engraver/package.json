@@ -1,0 +1,62 @@
+{
+	"name": "@barmark/engraver",
+	"version": "0.1.0",
+	"description": "A modified, smaller build of Verovio for barmark: MusicXML to SVG in the Leipzig font, made by barmark, not by the Verovio project (Verovio 6.4.1)",
+	"type": "module",
+	"exports": {
+		".": {
+			"types": "./dist/index.d.mts",
+			"import": "./dist/verovio-module.mjs",
+			"default": "./dist/verovio-module.mjs"
+		},
+		"./verovio-module.wasm": "./dist/verovio-module.wasm",
+		"./info": {
+			"types": "./dist/info.d.ts",
+			"import": "./dist/info.js"
+		},
+		"./package.json": "./package.json"
+	},
+	"types": "./dist/index.d.mts",
+	"sideEffects": false,
+	"files": [
+		"dist",
+		"build",
+		"CHANGELOG.md",
+		"COPYING",
+		"COPYING.LESSER",
+		"OFL.txt",
+		"THIRD-PARTY.md",
+		"NOTICE.md"
+	],
+	"engines": {
+		"node": ">=20"
+	},
+	"keywords": [
+		"barmark",
+		"verovio",
+		"music",
+		"engraving",
+		"musicxml",
+		"svg",
+		"webassembly"
+	],
+	"author": "Kevin Peckham",
+	"license": "LGPL-3.0-only",
+	"homepage": "https://github.com/kevinpeckham/barmark/tree/main/packages/engraver#readme",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/kevinpeckham/barmark.git",
+		"directory": "packages/engraver"
+	},
+	"bugs": {
+		"url": "https://github.com/kevinpeckham/barmark/issues"
+	},
+	"devDependencies": {
+		"verovio": "6.4.1"
+	},
+	"scripts": {
+		"build": "bun build/dist.ts",
+		"compile": "bun build/compile.ts",
+		"prepack": "bun build/dist.ts --require-module"
+	}
+}

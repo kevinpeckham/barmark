@@ -6,6 +6,8 @@
 		"scripts/**/*.{ts,mjs}",
 		"packages/*/tests/**/*.test.ts",
 		"packages/*/browser/*.{ts,pw.ts}",
+		// The engraver's build scripts, run by Bun from build.sh and the package scripts.
+		"packages/engraver/build/*.ts",
 		// The CLI's standalone-binary entry and its compile script, run by Bun rather than imported.
 		"packages/cli/src/binary.ts",
 		"packages/cli/scripts/*.ts"

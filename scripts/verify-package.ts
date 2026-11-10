@@ -11,67 +11,18 @@ import { mkdtempSync, readFileSync, rmSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
 import { PACKAGES, type PackageKey, packageArg, root, run } from "./lib.js";
+import { COMMON, CONTENTS } from "./package-contents.js";
 
 const json = process.argv.includes("--json");
 const noBuild = process.argv.includes("--no-build");
 const pkg = packageArg();
 const problems: string[] = [];
 
-/** What each package must publish, beyond package.json, the README, LICENSE and CHANGELOG. */
-const CONTENTS: Record<PackageKey, { required: string[]; allowed: RegExp }> = {
-	barmark: {
-		required: ["dist/index.js", "dist/index.d.ts"],
-		allowed: /^dist\/.+\.(js|d\.ts)$/,
-	},
-	render: {
-		required: [
-			"dist/index.js",
-			"dist/index.d.ts",
-			"dist/element.js",
-			"fonts/Edwin-Roman.otf",
-			"fonts/OFL.txt",
-			"fonts/README.md",
-		],
-		allowed: /^(dist\/.+\.(js|d\.ts)|fonts\/(Edwin-Roman\.otf|OFL\.txt|README\.md))$/,
-	},
-	musicxml: {
-		required: ["dist/index.js", "dist/index.d.ts"],
-		allowed: /^dist\/.+\.(js|d\.ts)$/,
-	},
-	score: {
-		required: [
-			"dist/index.js",
-			"dist/index.d.ts",
-			"dist/element.js",
-			"dist/server.js",
-			"dist/worker.js",
-		],
-		allowed: /^dist\/.+\.(js|d\.ts)$/,
-	},
-	sync: {
-		required: [
-			"dist/index.js",
-			"dist/index.d.ts",
-			"dist/timing/index.js",
-			"dist/timing/index.d.ts",
-		],
-		allowed: /^dist\/.+\.(js|d\.ts)$/,
-	},
-	midi: {
-		required: [
-			"dist/index.js",
-			"dist/index.d.ts",
-			"dist/perform/index.js",
-			"dist/perform/index.d.ts",
-		],
-		allowed: /^dist\/.+\.(js|d\.ts)$/,
-	},
-	cli: {
-		required: ["dist/cli.js", "dist/main.js"],
-		allowed: /^dist\/.+\.(js|d\.ts)$/,
-	},
+/** The entry each smoke script is given, where it is not dist/index.js (dist/cli.js for the CLI). */
+const ENTRY: Partial<Record<PackageKey, string>> = {
+	cli: "dist/cli.js",
+	engraver: "dist/verovio-module.mjs",
 };
-const COMMON = ["package.json", "README.md", "LICENSE", "CHANGELOG.md"];
 const REQUIRED = [...COMMON, ...CONTENTS[pkg.key].required];
 const allowed = (f: string) => COMMON.includes(f) || CONTENTS[pkg.key].allowed.test(f);
 
@@ -124,7 +75,7 @@ for (const dep of Object.values(PACKAGES)) {
 }
 
 // The built package, imported (or, for the CLI, run) by Node rather than Bun: what an npm user gets.
-const entry = join(pkg.dir, pkg.key === "cli" ? "dist/cli.js" : "dist/index.js");
+const entry = join(pkg.dir, ENTRY[pkg.key] ?? "dist/index.js");
 const smoke = run(["node", pkg.smoke, entry, "examples/peaceful-dreams.chart.md"], root);
 let node: Record<string, unknown> | null = null;
 try {

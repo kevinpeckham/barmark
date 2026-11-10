@@ -47,6 +47,12 @@ export const PACKAGES = {
 		tagPrefix: "cli-v",
 		smoke: "scripts/smoke-cli.mjs",
 	},
+	engraver: {
+		dir: join(root, "packages/engraver"),
+		name: "@barmark/engraver",
+		tagPrefix: "engraver-v",
+		smoke: "scripts/smoke-engraver.mjs",
+	},
 } as const;
 export type PackageKey = keyof typeof PACKAGES;
 

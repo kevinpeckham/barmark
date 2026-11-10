@@ -7,5 +7,7 @@ and keeps its own changelog:
   Harte labels (tags `barmark-vX.Y.Z`; `vX.Y.Z` before 0.2.0)
 - **[`@barmark/render`](packages/render/CHANGELOG.md)**: the bar-grid
   renderer and `<barmark-chart>` (tags `render-vX.Y.Z`)
+- **[`@barmark/engraver`](packages/engraver/CHANGELOG.md)**: a modified,
+  smaller build of Verovio for `@barmark/score` (tags `engraver-vX.Y.Z`)
 
 How a release is made: [RELEASING.md](RELEASING.md).
