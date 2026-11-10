@@ -195,6 +195,32 @@ The rules, which `checkTimingMap` enforces:
   anywhere.
 - Unknown fields are kept and ignored by v1 readers.
 
+### Carrying a map across a refinement
+
+A built chart is often refined afterwards: a section named, a chord
+respelled, shorthand changed. The map's starts still hold, but its hash no
+longer matches. `rehashTiming(built, refined, { parse? })` carries it
+across (`built` is a `BuildResult`, or any `{ chart, timing, confidence? }`;
+`parse` is `parseChart(refined)` if you have it). It never throws and never
+changes `built`. Its rules, in order:
+
+1. `built.timing` is null: `{ ok: false, reason: "no-timing" }`.
+2. `refined` has an error diagnostic: `unparsed`, naming its first error's line.
+3. It plays another number of bars than `timing.chart.bars`: `bars-differ`.
+4. A played bar's meter differs from the built chart's at the same play
+   position: `meters-differ`. Same count is not enough: a 4/4 bar turned
+   into two 2/4 bars elsewhere plays different bars, and the map's starts
+   would no longer mean what they say.
+5. Otherwise `{ ok: true, timing }`: a copy of the map with
+   `chart.hash = chartHash(refined)`, checked by `checkTimingMap` against
+   the refined chart.
+
+The confidence record keys played bars and slots, so it goes with the map
+only when every played bar resolves to as many slots (`PlayedBar.slots`,
+so `%` and a written-out hold count as the bars they play). Otherwise
+`confidence` is `null` and `confidenceDropped` is `true`, and the map is
+still kept.
+
 ### Versioning
 
 Adding an optional field keeps the version. Anything a v1 reader would
@@ -222,6 +248,11 @@ second reader (the renderer's playback cursor) uses it.
   start, at or after `map.end`, and for a time that isn't finite.
 - `secondsAtBar(map, bar, pass = 1)` is where the `pass`th playing (from 1)
   of a played bar starts, or `null`.
-- The types `TimingMap`, `TimedBar`, `TimingDiagnostic` and `Seconds`.
+- `rehashTiming(built, refined, options?)` carries a built chart's map to
+  a refinement of it (see "Carrying a map across a refinement"): `{ ok:
+  true, timing, confidence, confidenceDropped }` or `{ ok: false, reason,
+  message }`.
+- The types `TimingMap`, `TimedBar`, `TimingDiagnostic`, `Seconds`,
+  `RehashReason` and `RehashResult`.
 
 MIT licensed.

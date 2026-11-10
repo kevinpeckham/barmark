@@ -6,6 +6,18 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- `rehashTiming(built, refined, options?)` carries a built chart's timing map
+  to a refinement of it (a section named, a chord respelled): the same map
+  with the refined chart's hash, checked against it. It refuses, with a
+  reason and a message, when there is no map (`no-timing`), the refined
+  chart has an error (`unparsed`), it plays another number of bars
+  (`bars-differ`), or a played bar's meter changed (`meters-differ`). The
+  confidence record is kept when every played bar resolves to as many
+  slots, else dropped (`confidenceDropped: true`) with the map kept.
+  Exported from `@barmark/sync` and `@barmark/sync/timing`.
+
 ### Fixed
 
 - A pickup in 6/8, 9/8 or 12/8 is written in eighths (`[1/8]`, `[2/8]`, `[5/8]` …), its length rounded to whole eighths. Before, it was rounded to whole dotted quarters, so a one-eighth pickup was ignored and a two-eighth one written as `[3/8]`.
