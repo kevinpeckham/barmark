@@ -1445,6 +1445,8 @@ The release workflow logged `+ barmark@0.1.0` and its provenance, yet
 must wait and retry: the release workflow's `confirm` job polls `npm view
 barmark@<version> --prefer-online` for up to ten minutes before
 installing.
+Bun's own cache can lag too: `bun add` may still miss a version `npm view`
+already shows, and `bun add --exact --no-cache` fixes it.
 
 ### Fallow's first run: three exports nobody imported, and a baseline for the parser's complexity (2026-10-31, Fallow)
 
