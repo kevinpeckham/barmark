@@ -296,6 +296,7 @@ describe("findGrid never throws", () => {
 			[{ ...input, startAt: "1" }, undefined, [["invalid-input", "startAt"]]],
 			[{ ...input, chords: { runs: 5 } }, undefined, [["invalid-input", "chords.runs"]]],
 			[{ ...input, chords: 5 }, undefined, [["invalid-input", "chords"]]],
+			[{ ...input, chords: undefined }, undefined, [["invalid-input", "chords"]]],
 			[
 				{ ...input, chords: { runs: [], frames: 1.5 } },
 				undefined,

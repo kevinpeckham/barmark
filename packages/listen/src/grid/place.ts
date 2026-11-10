@@ -157,6 +157,7 @@ export function placeAtStart(
 		return placed(barOne, 0, lattice, duration, s, null);
 	const a = barOne - period;
 	const j = beatsInto(a, firstSound, lattice, s);
+	// `lead < period` follows from `j ≥ 1` while the slack is under 1; kept as Ruling 6 states it.
 	if (lead < period && j >= 1)
 		return placed(barOne, 0, lattice, duration, s, pickupAt(a, j, lattice));
 	const p = placed(barOne, 0, lattice, duration, s, null);

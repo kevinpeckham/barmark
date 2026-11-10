@@ -89,6 +89,16 @@ describe("placeBarOne: pickups (design §7)", () => {
 		expect(p?.warnings[0]?.detail).toEqual({ start: -0.3 });
 	});
 
+	test("a pickup whose start falls before 0:00 is clamped to it", () => {
+		// Bar 0 from a = 0.9 − 2 = −1.1; the sound at 0.05 is j = ⌊1.15 / 0.5 + 0.25⌋ = 2 beats in,
+		// so the pickup starts at max(0, −1.1 + 2 × 0.5) = 0 and lasts the other 2 beats.
+		const p = placeBarOne({ ...lattice, anchor: 0.9 }, 0, 0.05, DURATION, s);
+		expect(p?.bars[0]).toBeCloseTo(0.9, 12);
+		expect(p?.bars[1]).toBeCloseTo(2.9, 12);
+		expect(p?.pickup).toEqual({ start: 0, beats: 2 });
+		expect(codes(p)).toEqual(["pickup"]);
+	});
+
 	test("a pickup whose bar one would be at or past the end is not reported (Ruling 5)", () => {
 		const p = placeBarOne(lattice, 0, 2.55, 3, s);
 		expect(p?.bars).toEqual([1, 3]);

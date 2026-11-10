@@ -3,6 +3,8 @@ import { expect, test } from "bun:test";
 import { findGrid, type GridInput } from "../src/grid/grid.js";
 import { onDownbeats, periodOf, type Song, songFeatures } from "./helpers/songs.js";
 
+// The comb's linear cost dominates, so a quadratic in a cheap stage (beats × runs, say) could
+// hide behind it at these lengths: a ratio under six bounds the whole, not each stage.
 // The ratio is of best-of-three timings; the timeout only keeps a loaded machine from cutting a run short.
 const TIMEOUT = 60_000;
 
