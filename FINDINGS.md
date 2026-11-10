@@ -378,6 +378,24 @@ showed the rule needed refining.
   alike; best of three of each, as before. Eight full suites in a row then
   passed under the same load.
 
+### The app's beat chords sized their frames from the runs, so one bad run could throw or blank the song (2026-11-10, @barmark/listen)
+
+- **The symptom.** Porting the app's `chordminiBarChords` as `beatChords`
+  for Review Focus 3: a run whose `end` is `Infinity`, or finite but
+  huge (`1e15` s), made it ask for a frame array that long and throw a
+  `RangeError`; one whose `end` is `NaN` made the frame count `NaN`, so
+  every beat read "N.C." and the harmonic witness silently abstained on
+  a song full of chords (seen running the app's own code on each). And
+  `Math.max(0, ...runs.map(…))` spreads every run onto the stack.
+- **The cause.** The frame array is as long as the runs (or `frames`)
+  say, not as long as the beats read, and nothing checks a run is finite.
+- **The fix.** `beatChords` skips a run whose `start` or `end` is not
+  finite, keeps only the frames some beat reads (`framesRead`), and
+  folds the last end in a loop. A vote never changes: the scratchpad
+  comparison with the app's own code found 0 differences over 400 run
+  sets. In `packages/listen/src/grid/beats.ts`, tested in
+  `tests/beats.test.ts` ("degenerate runs never throw and abstain").
+
 ### A download's Content-Length is not the size of what you read (2026-11-10, @barmark/score)
 
 - **The symptom.** Measuring `<barmark-score>`'s Verovio download as
