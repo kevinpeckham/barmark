@@ -80,7 +80,11 @@ describe("layoutChart: written sections", () => {
 	test("a mid-chart directive is an item where it is written", () => {
 		const all = m.blocks.flatMap((b) => b.items);
 		expect(all.filter((i) => i.kind === "directive")).toEqual([
-			{ kind: "directive", set: { key: { tonic: "E", mode: "major" }, tempo: 120 } },
+			{
+				kind: "directive",
+				set: { key: { tonic: "E", mode: "major" }, tempo: 120 },
+				tempoBeat: { note: 4, dotted: false },
+			},
 		]);
 	});
 

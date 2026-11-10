@@ -30,7 +30,7 @@ import { fontFaceCss } from "./font.js";
 import { isTacet as isTacetCell, layoutChart } from "./model.js";
 import { barLabel, speakBar, speakVerses } from "./speech.js";
 import { FIT_STEPS, MIN_BAR, stylesheet } from "./styles.js";
-import type { BlockItem, CellModel, ChartModel, SectionBlock, Verse } from "./types.js";
+import type { BlockItem, CellModel, ChartModel, SectionBlock, TempoBeat, Verse } from "./types.js";
 import {
 	beatLinesHtml,
 	pitchHtml,
@@ -44,6 +44,11 @@ import {
 export type RenderOptions = {
 	theme?: "auto" | "light" | "dark";
 	barNumbers?: boolean;
+	/**
+	 * Boxed letters A, B, C… on each section as played. None when any bar
+	 * carries its own rehearsal mark (`@A`, barmark's grammar 2.5): the
+	 * chart's marks then stand alone, so no place is marked twice.
+	 */
 	rehearsalLetters?: boolean;
 	/** List the chart's errors and warnings below it. */
 	diagnostics?: boolean;
@@ -149,7 +154,9 @@ function headerHtml(model: ChartModel): string {
 		: "";
 	const names =
 		model.parts.length > 1 ? model.parts.map((p) => p.name).join(", ") : model.part?.name;
-	const meta = [names ? escapeHtml(names) : "", metaText(model.header)].filter(Boolean).join(" · ");
+	const meta = [names ? escapeHtml(names) : "", metaHtml(model.header, model.tempoBeat)]
+		.filter(Boolean)
+		.join(" · ");
 	const credits = creditsText(model.credits)
 		.map((c) => `<p class="bm-credits" part="credits">${escapeHtml(c)}</p>`)
 		.join("");
@@ -164,27 +171,57 @@ function copyrightHtml(model: ChartModel): string {
 	return `<footer class="bm-copyright" part="copyright">${lines.map((c) => `<p>${escapeHtml(c)}</p>`).join("")}</footer>`;
 }
 
-/** "rit. to ♩ = 90", "accel.", "a tempo". */
-function tempoChangeText(c: TempoChange): string {
-	if (c.kind === "a tempo") return c.kind;
-	return `${c.kind}.${c.to === null ? "" : ` to ♩ = ${c.to}`}`;
+/**
+ * Each beat note a tempo can count (barmark's grammar 2.1), and its name. A
+ * dotted beat adds a full stop, "♩.", as tempo marks are typed in text: the
+ * combining augmentation dot (U+1D16D) is missing from most fonts and sits
+ * apart from the note where it is drawn.
+ */
+const BEAT_NOTES: Record<TempoBeat["note"], readonly [string, string]> = {
+	2: ["\u{1D15E}", "half"],
+	4: ["♩", "quarter"],
+	8: ["♪", "eighth"],
+	16: ["\u{1D161}", "sixteenth"],
+};
+
+/** The beat note, spoken by its name: "♩." is "dotted quarter note". */
+function beatHtml(beat: TempoBeat): string {
+	const [glyph, name] = BEAT_NOTES[beat.note];
+	const dotted = beat.dotted ? "dotted " : "";
+	return `<span class="bm-beat" role="img" aria-label="${dotted}${name} note">${glyph}${beat.dotted ? "." : ""}</span>`;
 }
 
-/** "D major · 4/4 · ♩ = 145 · swing" (or "swing 58%"), escaped; labelled, "Key D major · Time 4/4 · …". */
-function metaText(d: Directives, labelled = false): string {
+const tempoHtml = (bpm: number, beat: TempoBeat) => `${beatHtml(beat)} = ${bpm}`;
+
+/** "rit. to ♩ = 90" (♩. in 6/8), "accel.", "a tempo". */
+function tempoChangeHtml(c: TempoChange, beat: TempoBeat): string {
+	if (c.kind === "a tempo") return c.kind;
+	return `${c.kind}.${c.to === null ? "" : ` to ${tempoHtml(c.to, beat)}`}`;
+}
+
+/**
+ * "D major · 4/4 · ♩ = 145 · swing" (or "swing 58%"), as markup, a tempo
+ * counting `beat`; labelled, "Key D major · Time 4/4 · …".
+ */
+function metaHtml(d: Directives, beat: TempoBeat, labelled = false): string {
 	return [
-		["Key", d.key ? `${glyphs(d.key.tonic)} ${d.key.mode}` : ""],
+		["Key", d.key ? escapeHtml(`${glyphs(d.key.tonic)} ${d.key.mode}`) : ""],
 		["Time", d.time ? `${d.time.n}/${d.time.d}` : ""],
-		["Tempo", d.tempo ? `♩ = ${d.tempo}` : ""],
+		["Tempo", d.tempo ? tempoHtml(d.tempo, beat) : ""],
 		// "a tempo" names itself; "Tempo a tempo" would stutter.
 		[
 			d.tempoChange?.kind === "a tempo" ? "" : "Tempo",
-			d.tempoChange ? tempoChangeText(d.tempoChange) : "",
+			d.tempoChange ? tempoChangeHtml(d.tempoChange, beat) : "",
 		],
-		["Feel", d.feel ? `${d.feel}${d.swingPercent === undefined ? "" : ` ${d.swingPercent}%`}` : ""],
+		[
+			"Feel",
+			d.feel
+				? escapeHtml(`${d.feel}${d.swingPercent === undefined ? "" : ` ${d.swingPercent}%`}`)
+				: "",
+		],
 	]
 		.filter(([, value]) => value)
-		.map(([label, value]) => escapeHtml(labelled && label ? `${label} ${value}` : (value ?? "")))
+		.map(([label, value]) => (labelled && label ? `${label} ${value}` : (value ?? "")))
 		.join(" · ");
 }
 
@@ -263,7 +300,7 @@ function itemHtml(item: BlockItem, columns: number, settings: Settings): string 
 			return `<p class="bm-text${item.note ? " bm-note" : ""}" part="text">${escapeHtml(item.text)}</p>`;
 		case "directive":
 			// Mid-chart, a change names itself: "→ Time 3/4", never a lone "3/4".
-			return `<p class="bm-directive" part="meta"><span class="bm-change" aria-hidden="true">→</span><span>${metaText(item.set, true)}</span></p>`;
+			return `<p class="bm-directive" part="meta"><span class="bm-change" aria-hidden="true">→</span><span>${metaHtml(item.set, item.tempoBeat, true)}</span></p>`;
 		case "error":
 			return errorHtml(item.source, item.messages);
 	}

@@ -54,7 +54,9 @@ technology the score is one image named for the chart's title, or "Score".
 
 The `text` property is the chart's text (`null` goes back to `src` or the
 script child). The element fires a `viewchange` event, with
-`detail.view`, whenever the view changes, from the switch or from script.
+`detail.view`, whenever the view changes, from the switch or from script,
+and a `scoreerror` event, with `detail.reason`, when the score can't be
+drawn (below).
 
 ```js
 const score = document.querySelector("barmark-score");
@@ -179,10 +181,27 @@ one load every element on the page uses, and asking twice does nothing.
 If Verovio fails to load, or rejects the MusicXML, or the chart will not
 export or is too large to draw (see "Engraving directly"), or Verovio
 takes over 60 seconds to load or 20 seconds to engrave, the grid stays and
-a note by the switch says "The score couldn't be drawn". The reason goes
-to the console. A score an element no longer wants (its chart or width
-changed) is dropped, and cut off after three seconds if the worker is
-already engraving it.
+a note by the switch says "The score couldn't be drawn". The same happens
+when `verovio-url` or `verovio-integrity` is refused, when the chart's
+`src` could not be loaded, or when the engraving is not clean SVG. The
+Score radio is disabled until the chart (`text`, `src` or the script
+child), `verovio-url` or `verovio-integrity` changes.
+
+The reason goes to the console as a warning, and the element fires a
+`scoreerror` event (`bubbles`, `composed`) whose `detail.reason` is the
+same string, so a page can show or log it:
+
+```js
+score.addEventListener("scoreerror", (e) => report(e.detail.reason));
+```
+
+It fires once per failure, as the note appears, after the grid is shown
+again (and after the `viewchange` back to the grid, when the score was
+being shown). Pressing the disabled Score radio fires nothing; once a
+change enables it, a score that fails again fires again. A score an
+element no longer wants (its chart or width changed) is dropped, not
+failed, and fires nothing: it is cut off after three seconds if the worker
+is already engraving it.
 
 ## On the server
 

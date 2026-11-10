@@ -6,6 +6,11 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- **`barmark render --help`** says `--rehearsal-letters` adds no letters
+  to a chart that marks its own (`@A`), as `@barmark/render` 0.19.0 does.
+
 ## [0.10.2] - 2026-11-10
 
 ### Changed

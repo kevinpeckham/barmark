@@ -891,6 +891,54 @@ and round-trip it through `format`.
 
 ## Tooling
 
+### Bun's install cooldown holds back exact pins too (2026-11-10, CI hardening)
+
+- **The symptom.** lj-website found that `minimumReleaseAge` let an exact
+  pin through, so barmark's exactly pinned devDependencies would have
+  been exempt. On the VM, Bun 1.3.14 refused `bun add --exact
+  barmark@0.22.0` (a day old) and a `package.json` edited to `"barmark":
+  "0.22.0"` then `bun install`, both with "blocked by
+  minimum-release-age". With site/'s lockfile, `bun add --exact` of any
+  package re-resolved our day-old releases and failed on all of them.
+- **The cause.** Bun's docs say so: "Exact version requests (like
+  `package@1.1.1`) still respect the age gate but bypass the stability
+  check" (docs/pm/cli/install.mdx, "Minimum release age"). The stability
+  check is the extra step that skips a burst of quick bugfix releases just
+  outside the gate; lj-website probably saw an exact pin bypass that, not
+  the age gate. A lockfile entry is not re-checked: `bun install
+  --frozen-lockfile` on an empty cache, and a plain `bun install`, both
+  installed the young versions already locked.
+- **The fix.** Seven days at the root and in `site/`, so CI's frozen
+  installs are unaffected, and `site/bunfig.toml` excludes our own eight
+  packages (`minimumReleaseAgeExcludes`), or RELEASING.md step 12's site
+  bump would fail for a week after every release. Their third-party
+  dependencies still wait: a score release that raises Verovio to a
+  version under a week old cannot reach the site until it is a week old.
+- **Where.** `bunfig.toml`, `site/bunfig.toml`.
+
+### actionlint rejects GitHub's `$/` self-repository syntax (2026-11-10, CI hardening)
+
+- **The symptom.** zizmor 1.31.1's `self-repository` audit asks for
+  `uses: $/.github/actions/engraver-build` (GitHub's syntax since
+  2026-07-30, which reads the action from the repository, not the
+  workspace). actionlint 1.7.12 fails on it: "ref is missing".
+- **The cause.** actionlint has no release since 1.7.12 (March 2026);
+  support is open as rhysd/actionlint#711.
+- **The fix.** Keep `./` with `# zizmor: ignore[self-repository]` on
+  both lines, and switch when actionlint learns the form.
+- **Where.** `.github/workflows/ci.yml` and `release.yml`, the
+  `engraver-build` steps; the `workflow-lint` job.
+
+### zizmor ignores a comment inside a `run: |` block (2026-11-10, CI hardening)
+
+- **The symptom.** `# zizmor: ignore[adhoc-packages]` at the end of the
+  `npm install` line in `confirm`'s script did not suppress the finding.
+- **The cause.** Inside a block scalar the `#` is part of the shell
+  script, not a YAML comment, and zizmor reads only YAML comments.
+- **The fix.** The comment goes after the block indicator, `run: | #
+  zizmor: ignore[...]`, which is YAML's.
+- **Where.** `.github/workflows/release.yml`, `confirm`.
+
 ### `bun run --filter '!pkg'` does not leave a package out (2026-11-10, @barmark/engraver)
 
 - **The symptom.** The root `bun run build` (`bun run --filter '*'

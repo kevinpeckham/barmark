@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fontFaceCss, renderChart } from "@barmark/render";
 import { parseHTML } from "linkedom";
+import { COMMAND_HELP } from "../src/help.js";
 import { render } from "../src/render.js";
 import { folder, PEACEFUL_DREAMS } from "./charts.js";
 
@@ -97,6 +98,14 @@ describe("barmark render", () => {
 		const io = folder({ "a.chart.md": PD, "b.chart.md": PD });
 		await expect(render(["a.chart.md", "b.chart.md"], io)).rejects.toThrow(
 			"render takes one chart",
+		);
+	});
+});
+
+describe("render help", () => {
+	test("--rehearsal-letters says it adds none to a chart that marks its own", () => {
+		expect(COMMAND_HELP.render).toMatch(
+			/--rehearsal-letters\s+Letter each section A, B, C… \(none when the chart marks its own\)/,
 		);
 	});
 });
