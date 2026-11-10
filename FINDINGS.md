@@ -1037,7 +1037,7 @@ and round-trip it through `format`.
   files; Bun 1.3.14 does not apply its `.js`-to-`.ts` rewrite to a
   subpath import.
 - **The fix.** The script installs with `bunx bun@<the app's version>`
-  when our Bun fails (`--frozen-lockfile --ignore-scripts`, in the clone
+  from the start (`--frozen-lockfile --ignore-scripts`, in the clone
   only), and a `Bun.plugin` resolves `#lib/*` into the clone's `src/lib/`,
   `.js` to `.ts` when the `.js` file is absent. The app's bare imports
   (`barmark` 0.22, `@barmark/sync` 0.3.0) resolve from the clone's own

@@ -229,7 +229,10 @@ for (const g of goldens) {
 				expect(v.timing.end).toBe(g.build.timing.end as number);
 				return;
 			}
-			expect(v.chart).toBe(g.build.chart);
+			expect(
+				v.chart,
+				"the golden's chart is barmark's printing: after a barmark printing change, regenerate the goldens (bun scripts/listen-equivalence.ts <commit>)",
+			).toBe(g.build.chart);
 			expect(v.timing).toEqual({
 				...g.build.timing,
 				recording: { duration: v.features.duration },

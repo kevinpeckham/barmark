@@ -9,9 +9,9 @@
  * `1e120b2e` (the app's compound-meter tempo fix). stem-shovel is only
  * read: read-only git commands, and a `git clone --shared --no-checkout`
  * into `~/.cache/barmark/stem-shovel-<sha8>`, checked out detached at the
- * commit, its dependencies installed there with `--frozen-lockfile` (with
- * the app's own Bun, from its `packageManager`, when this one cannot read
- * its lockfile; scripts not run). The app's modules are imported by path
+ * commit, its dependencies installed there with `--frozen-lockfile` by
+ * the app's own Bun (`bunx bun@<packageManager>`: ours cannot read its
+ * lockfile; scripts not run). The app's modules are imported by path
  * from that clone; its `#lib/*` imports are resolved by a Bun plugin.
  *
  * - **The seeded synthetic songs** (`tests/helpers/equivalence.ts`): the
@@ -117,10 +117,9 @@ function appBun(clone: string): string {
 	);
 }
 
-/** `bun install --frozen-lockfile` in the clone, with the app's own Bun when this one cannot read its lockfile. */
+/** `bun install --frozen-lockfile` in the clone with the app's own Bun (its `packageManager`), which reads its lockfile. */
 function install(clone: string) {
 	const flags = ["install", "--frozen-lockfile", "--ignore-scripts"];
-	if (run(["bun", ...flags], clone).ok) return;
 	must(run(["bunx", `bun@${appBun(clone)}`, ...flags], clone), `install failed in ${clone}:`);
 }
 

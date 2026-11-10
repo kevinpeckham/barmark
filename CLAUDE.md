@@ -178,7 +178,9 @@ Fallow, CI, Swamp), the grammar, `examples/`, the scripts and FINDINGS.md.
     `1e120b2e`): the app's own modules from a `git clone --shared` in
     `~/.cache/barmark/` beside the package; writes the synthetic goldens
     `tests/fixtures/equivalence/*.json` (`tests/equivalence.test.ts`
-    checks them) and compares the three real mixes, VM only, never in CI
+    checks them) and compares the three real mixes, VM only, never in CI;
+    the goldens' built charts are barmark's printing, so regenerate the
+    goldens after a barmark printing change
 - `packages/cli/`: `@barmark/cli`, the `barmark` command (`check`,
   `format`, `part`, `render` (`--score`: the full score, Verovio
   in-process, `src/score.ts`), `transpose`, `export`, `import`; MusicXML
