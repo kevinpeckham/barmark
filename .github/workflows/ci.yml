@@ -97,7 +97,11 @@ jobs:
       # The equivalence gate: stock Verovio and this build, in Node 22, must draw
       # the corpus's SVG byte for byte. Its summary reports the timings (Q1: the
       # slowest width-375 engraving) without gating on them.
-      - run: node --version | grep -q '^v22' && bun scripts/engraver-equivalence.ts
+      - run: |
+          if ! node --version | grep -q '^v22'; then
+            echo "::error::node 22 required (the gate's Node), not $(node --version)"; exit 1
+          fi
+          bun scripts/engraver-equivalence.ts
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: engraver-dist
