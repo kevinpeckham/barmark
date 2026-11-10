@@ -32,10 +32,6 @@ package uses [semantic versioning](https://semver.org/).
   package never asks Verovio for (fonts other than Leipzig, footers,
   tablature tunings, `.mxl`); the README says how to load it, with the
   Content-Security-Policy it needs.
-- **A Verovio from `verovio-url` must match the toolkit's version**
-  (`VEROVIO_VERSION`, 6.4.1): any other now fails to load, or, with
-  `verovio-integrity` set, falls back to the package's own copy with a
-  warning, where it was loaded anyway.
 
 - **The grid takes `columns`** (`@barmark/render`'s `columns: "shared" |
   "row"`): `<barmark-score>` observes the `columns` attribute and redraws
@@ -53,6 +49,10 @@ package uses [semantic versioning](https://semver.org/).
 
 ### Changed
 
+- **A Verovio from `verovio-url` must match the toolkit's version**
+  (`VEROVIO_VERSION`, 6.4.1): any other now fails to load, or, with
+  `verovio-integrity` set, falls back to the package's own copy with a
+  warning, where it was loaded anyway.
 - **A download's progress is measured against the file its digest
   names**: Verovio's module, or `@barmark/engraver`'s module or `.wasm`.
   A compressed `verovio-url` download with no digest, or a digest of no

@@ -9,6 +9,21 @@ not here.
 
 ## Testing
 
+### Score's browser suite was red for three tasks and nobody noticed (2026-11-10, @barmark/score)
+
+- **The symptom.** From Task 8 to Task 11 of the engraver plan, two of
+  score's Chromium tests (the gzipped loads measured to 100%) failed,
+  and nobody saw it until Task 11 ran `bun run test:browser`.
+- **The cause.** Task 8 measured a download by its declared digest, and
+  those tests declared none, so they correctly showed no percentage. Each
+  task's gate ran `bun test` only, which never runs Playwright, and the
+  branch had no PR, so CI never ran either.
+- **The fix.** The tests declare the digest, and a new one pins the
+  no-digest case (`packages/score/browser/score.pw.ts`). A task that
+  touches score's download, worker or element code runs
+  `bun run test:browser`, and a long branch opens a draft PR early so CI
+  runs on every push.
+
 ### linkedom is not a browser for custom elements (2026-11-08, @barmark/score)
 
 - **The symptom.** Writing `<barmark-score>`'s tests on linkedom, three
