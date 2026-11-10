@@ -17,14 +17,15 @@ const noBuild = process.argv.includes("--no-build");
 const pkg = packageArg();
 const problems: string[] = [];
 
-/** What each package must publish, beyond package.json, the README, LICENSE and CHANGELOG. */
+/** What each package must publish, beyond package.json, the README and CHANGELOG. */
 const CONTENTS: Record<PackageKey, { required: string[]; allowed: RegExp }> = {
 	barmark: {
-		required: ["dist/index.js", "dist/index.d.ts"],
-		allowed: /^dist\/.+\.(js|d\.ts)$/,
+		required: ["LICENSE", "dist/index.js", "dist/index.d.ts"],
+		allowed: /^(LICENSE|dist\/.+\.(js|d\.ts))$/,
 	},
 	render: {
 		required: [
+			"LICENSE",
 			"dist/index.js",
 			"dist/index.d.ts",
 			"dist/element.js",
@@ -32,46 +33,68 @@ const CONTENTS: Record<PackageKey, { required: string[]; allowed: RegExp }> = {
 			"fonts/OFL.txt",
 			"fonts/README.md",
 		],
-		allowed: /^(dist\/.+\.(js|d\.ts)|fonts\/(Edwin-Roman\.otf|OFL\.txt|README\.md))$/,
+		allowed: /^(LICENSE|dist\/.+\.(js|d\.ts)|fonts\/(Edwin-Roman\.otf|OFL\.txt|README\.md))$/,
 	},
 	musicxml: {
-		required: ["dist/index.js", "dist/index.d.ts"],
-		allowed: /^dist\/.+\.(js|d\.ts)$/,
+		required: ["LICENSE", "dist/index.js", "dist/index.d.ts"],
+		allowed: /^(LICENSE|dist\/.+\.(js|d\.ts))$/,
 	},
 	score: {
 		required: [
+			"LICENSE",
 			"dist/index.js",
 			"dist/index.d.ts",
 			"dist/element.js",
 			"dist/server.js",
 			"dist/worker.js",
 		],
-		allowed: /^dist\/.+\.(js|d\.ts)$/,
+		allowed: /^(LICENSE|dist\/.+\.(js|d\.ts))$/,
 	},
 	sync: {
 		required: [
+			"LICENSE",
 			"dist/index.js",
 			"dist/index.d.ts",
 			"dist/timing/index.js",
 			"dist/timing/index.d.ts",
 		],
-		allowed: /^dist\/.+\.(js|d\.ts)$/,
+		allowed: /^(LICENSE|dist\/.+\.(js|d\.ts))$/,
 	},
 	midi: {
 		required: [
+			"LICENSE",
 			"dist/index.js",
 			"dist/index.d.ts",
 			"dist/perform/index.js",
 			"dist/perform/index.d.ts",
 		],
-		allowed: /^dist\/.+\.(js|d\.ts)$/,
+		allowed: /^(LICENSE|dist\/.+\.(js|d\.ts))$/,
 	},
 	cli: {
-		required: ["dist/cli.js", "dist/main.js"],
-		allowed: /^dist\/.+\.(js|d\.ts)$/,
+		required: ["LICENSE", "dist/cli.js", "dist/main.js"],
+		allowed: /^(LICENSE|dist\/.+\.(js|d\.ts))$/,
+	},
+	engraver: {
+		required: [
+			"dist/verovio-module.mjs",
+			"dist/verovio-module.wasm",
+			"dist/index.d.mts",
+			"dist/info.js",
+			"dist/info.d.ts",
+			"build/versions.env",
+			"build/data.txt",
+			"build/build.sh",
+			"build/source.sh",
+		],
+		allowed: /^(dist\/(verovio-module\.(mjs|wasm)|index\.d\.mts|info\.(js|d\.ts))|build\/[^/]+)$/,
 	},
 };
-const COMMON = ["package.json", "README.md", "LICENSE", "CHANGELOG.md"];
+/** The entry each smoke script is given, where it is not dist/index.js (dist/cli.js for the CLI). */
+const ENTRY: Partial<Record<PackageKey, string>> = {
+	cli: "dist/cli.js",
+	engraver: "dist/verovio-module.mjs",
+};
+const COMMON = ["package.json", "README.md", "CHANGELOG.md"];
 const REQUIRED = [...COMMON, ...CONTENTS[pkg.key].required];
 const allowed = (f: string) => COMMON.includes(f) || CONTENTS[pkg.key].allowed.test(f);
 
@@ -124,7 +147,7 @@ for (const dep of Object.values(PACKAGES)) {
 }
 
 // The built package, imported (or, for the CLI, run) by Node rather than Bun: what an npm user gets.
-const entry = join(pkg.dir, pkg.key === "cli" ? "dist/cli.js" : "dist/index.js");
+const entry = join(pkg.dir, ENTRY[pkg.key] ?? "dist/index.js");
 const smoke = run(["node", pkg.smoke, entry, "examples/peaceful-dreams.chart.md"], root);
 let node: Record<string, unknown> | null = null;
 try {
