@@ -297,6 +297,13 @@ async function watchLoading(el: Locator): Promise<() => Promise<Seen[]>> {
 
 const LOADING = "Loading the score engine…";
 
+/** A measured download: some percentages seen, never falling, reaching 100. */
+function expectRisingTo100(nows: number[]) {
+	expect(nows.length).toBeGreaterThan(0);
+	expect(Math.max(...nows)).toBe(100);
+	expect(nows.every((n, i) => i === 0 || n >= (nows[i - 1] as number))).toBe(true);
+}
+
 test("a real load shows its measured progress, preparing, then the score", async ({ page }) => {
 	await page.goto("/score?engine=local");
 	const el = page.locator("barmark-score");
@@ -328,10 +335,7 @@ for (const [engine, how] of [
 		const seen = await watchLoading(el);
 		await switchToScore(el);
 		const measured = (await seen()).filter((s) => s.text === LOADING && s.now !== null);
-		const nows = measured.map((s) => s.now as number);
-		expect(nows.length).toBeGreaterThan(0);
-		expect(Math.max(...nows)).toBe(100);
-		expect(nows.every((n, i) => i === 0 || n >= (nows[i - 1] as number))).toBe(true);
+		expectRisingTo100(measured.map((s) => s.now as number));
 		// Content-Length is the compressed size: no "of … MB" for it.
 		expect(measured.every((s) => !s.amount.includes("MB"))).toBe(true);
 	});
@@ -440,9 +444,7 @@ test("the lite build: both digests match, it is used, its wasm measured", async 
 	const nows = (await loading())
 		.filter((s) => s.text === LOADING && s.now !== null)
 		.map((s) => s.now as number);
-	expect(nows.length).toBeGreaterThan(0);
-	expect(Math.max(...nows)).toBe(100);
-	expect(nows.every((n, i) => i === 0 || n >= (nows[i - 1] as number))).toBe(true);
+	expectRisingTo100(nows);
 });
 
 test("a wasm digest mismatch falls back to the package's own copy, with a warning", async ({
@@ -451,6 +453,7 @@ test("a wasm digest mismatch falls back to the package's own copy, with a warnin
 	const { el, warnings } = await scoreWith(page, "lite=badwasm");
 	expect(warnings).toHaveLength(1);
 	expect(warnings[0]).toContain(lite("badwasm").module);
+	expect(warnings[0]).toContain(lite("badwasm").wasm);
 	expect(warnings[0]).toContain("integrity");
 	await expect(el.locator(".bms-note")).toHaveCount(0);
 });
@@ -474,5 +477,19 @@ test("verovio-integrity without verovio-wasm-integrity falls back, saying why", 
 	const { el, warnings } = await scoreWith(page, "lite=nowasmintegrity");
 	expect(warnings).toHaveLength(1);
 	expect(warnings[0]).toContain(WASM_INTEGRITY_NEEDED);
+	await expect(el.locator(".bms-note")).toHaveCount(0);
+});
+
+test("stock Verovio with a wasm digest loads cleanly: it never asks for a .wasm", async ({
+	page,
+}) => {
+	const seen = countEngine(page);
+	const { el, warnings, local } = await scoreWith(
+		page,
+		"engine=local&integrity=good&wasmintegrity=lite",
+	);
+	expect(local).toBe(1);
+	expect(warnings).toEqual([]);
+	expect(seen.urls.some((u) => u.endsWith(".wasm"))).toBe(false);
 	await expect(el.locator(".bms-note")).toHaveCount(0);
 });

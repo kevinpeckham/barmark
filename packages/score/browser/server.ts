@@ -101,7 +101,18 @@ const LITE: Record<string, { url: string; wasmIntegrity?: string }> = {
 };
 const PRELOADS = new Set(["none", "intent", "idle"]);
 const MAX_COUNT = 4;
-const ALLOWED = new Set(["theme", "engine", "count", "chart", "integrity", "preload", "lite"]);
+/** The verovio-wasm-integrity values, by name: the lite build's, for an `engine` that never asks for a .wasm. */
+const WASM_DIGESTS: Record<string, string> = { lite: ENGRAVER_WASM_INTEGRITY };
+const ALLOWED = new Set([
+	"theme",
+	"engine",
+	"count",
+	"chart",
+	"integrity",
+	"preload",
+	"lite",
+	"wasmintegrity",
+]);
 
 const inRange = (n: number) => Number.isInteger(n) && n >= 1 && n <= MAX_COUNT;
 const named = (table: Record<string, unknown>, name: string | null) =>
@@ -117,6 +128,11 @@ const CHECKS: [(p: URLSearchParams) => boolean, (p: URLSearchParams) => string][
 	[(p) => named(CHARTS, p.get("chart")), (p) => `unknown chart: ${p.get("chart")}`],
 	[(p) => named(DIGESTS, p.get("integrity")), (p) => `unknown integrity: ${p.get("integrity")}`],
 	[(p) => named(LITE, p.get("lite")), (p) => `unknown lite: ${p.get("lite")}`],
+	[
+		(p) => named(WASM_DIGESTS, p.get("wasmintegrity")),
+		(p) => `unknown wasmintegrity: ${p.get("wasmintegrity")}`,
+	],
+	[(p) => !(p.has("lite") && p.has("wasmintegrity")), () => "lite sets its own wasm digest"],
 	[(p) => !(p.has("lite") && p.has("engine")), () => "lite and engine are both a verovio-url"],
 	[(p) => !p.has("preload") || PRELOADS.has(p.get("preload") ?? ""), () => "unknown preload"],
 	[(p) => inRange(Number(p.get("count") ?? "1")), () => `count must be 1 to ${MAX_COUNT}`],
@@ -143,12 +159,17 @@ function liteAttrs(name: string): string {
 }
 
 /** The element's attributes: `theme` and `preload` as given, the named engine's verovio-url and the named digest, or a lite copy's. */
-const attrsOf = (p: URLSearchParams) =>
-	attr("theme", p.get("theme")) +
-	attr("preload", p.get("preload")) +
-	attr("verovio-url", ENGINES[p.get("engine") ?? ""]) +
-	attr("verovio-integrity", DIGESTS[p.get("integrity") ?? ""]) +
-	liteAttrs(p.get("lite") ?? "");
+const attrsOf = (p: URLSearchParams) => {
+	const q = (key: string) => p.get(key) ?? "";
+	return (
+		attr("theme", p.get("theme")) +
+		attr("preload", p.get("preload")) +
+		attr("verovio-url", ENGINES[q("engine")]) +
+		attr("verovio-integrity", DIGESTS[q("integrity")]) +
+		attr("verovio-wasm-integrity", WASM_DIGESTS[q("wasmintegrity")]) +
+		liteAttrs(q("lite"))
+	);
+};
 
 /** The chart `chart` names, or the sixteen bars. */
 const chartOf = (p: URLSearchParams) => CHARTS[p.get("chart") ?? ""] ?? CHART;

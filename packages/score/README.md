@@ -179,9 +179,9 @@ server.
 [`@barmark/engraver`](../engraver/) is a modified, smaller build of the
 same Verovio 6.4.1, made by barmark for this package: about 3 MB where
 stock is about 7 MB, checked before each release to draw SVG byte for
-byte the same as stock over a corpus of charts. Its WebAssembly is a separate file, `verovio-module.wasm`
-beside the module, so it takes a digest of its own,
-`verovio-wasm-integrity`. On jsDelivr:
+byte the same as stock over a corpus of charts. Its WebAssembly is a
+separate file, `verovio-module.wasm` beside the module, so it takes a
+digest of its own, `verovio-wasm-integrity`. On jsDelivr:
 
 ```html
 <barmark-score
@@ -218,7 +218,11 @@ and, as for any `verovio-url` without `verovio-integrity`, there is no
 fallback, so a mismatch is a score that can't be drawn. A malformed
 `verovio-wasm-integrity` is refused like a malformed `verovio-integrity`.
 Stock Verovio, which embeds its WebAssembly, ignores
-`verovio-wasm-integrity`.
+`verovio-wasm-integrity` and loads as usual, but the progress shows less:
+the digest marks the `.wasm` as the download to measure, and stock never
+fetches one, so its module's download is shown without a percentage and
+"Preparing…" is never announced. Set `verovio-wasm-integrity` only with a
+build that loads a separate `.wasm`.
 
 A page with a Content-Security-Policy needs the CDN's origin in
 `connect-src` (the worker fetches both files), `blob:` in `script-src`
