@@ -13,7 +13,15 @@ import type {
 } from "barmark";
 
 /** `part`: draw only the part with this label (barmark's grammar 7.4), as a single-part chart. */
-export type LayoutOptions = { rehearsalLetters?: boolean; part?: string };
+export type LayoutOptions = {
+	/**
+	 * Letter each section occurrence A, B, C… in play order; none when any
+	 * bar in the chart carries its own rehearsal mark (`@A`, barmark's
+	 * grammar 2.5), which then stand alone.
+	 */
+	rehearsalLetters?: boolean;
+	part?: string;
+};
 
 /** What to draw, with every musical decision already made. */
 export type ChartModel = {
@@ -45,7 +53,7 @@ export type SectionBlock = {
 	/** `## Chorus x2` */
 	repeat: Repeat;
 	form: number | null;
-	/** "A", "B", … when rehearsal letters are on. */
+	/** "A", "B", … when rehearsal letters are on and the chart writes no rehearsal mark of its own. */
 	rehearsal: string | null;
 	/** The widest row's cell count: fermata, direction and rehearsal cells included. */
 	columns: number;

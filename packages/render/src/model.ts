@@ -120,7 +120,9 @@ export function layoutChart(text: string, options: LayoutOptions = {}): ChartMod
 		beats: tempoBeats(parse.lines),
 	};
 	const blocks = groups.map((g) => layoutGroup(g, ctx));
-	if (options.rehearsalLetters) letterBlocks(blocks);
+	// A chart that writes its own rehearsal marks keeps them alone: letters beside them would mark each place twice.
+	if (options.rehearsalLetters && !parse.bars.some((b) => b.rehearsal !== undefined))
+		letterBlocks(blocks);
 	return {
 		title: parse.title,
 		part: parse.part,

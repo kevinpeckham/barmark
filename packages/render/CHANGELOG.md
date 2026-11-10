@@ -6,6 +6,14 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- **`rehearsalLetters` adds no letters to a chart with marks of its own.**
+  When any bar carries its own rehearsal mark (`@A`, barmark's grammar
+  2.5), the option now letters nothing, where it lettered every section
+  beside the chart's marks, so headings showed twice. A chart without
+  marks is lettered as before.
+
 ### Fixed
 
 - **A tempo shows the beat it counts.** The header and mid-chart changes

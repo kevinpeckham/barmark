@@ -76,13 +76,21 @@ the element loads, with `<style data-barmark-font>` holding
 |---|---|---|---|
 | `theme` | `theme` (`theme`) | `"auto"` | `"auto"` follows the system; `"light"` or `"dark"` force one |
 | `barNumbers` | `bar-numbers="off"` (`barNumbers`) | `true` | bar numbers at the start of each row |
-| `rehearsalLetters` | `rehearsal-letters` (`rehearsalLetters`) | `false` | boxed A, B, C… on each section as played |
+| `rehearsalLetters` | `rehearsal-letters` (`rehearsalLetters`) | `false` | boxed A, B, C… on each section as played; none when the chart writes a rehearsal mark of its own (below) |
 | `numerals` | `numerals` (`numerals`) | none | `"nashville"` (6m⁷) or `"roman"` (vi⁷): each chord as its degree in its bar's key |
 | `wrap` | `wrap="off"` (`wrap`) | `true` | wrap a section's rows when it is wider than the chart's box; off, rows keep their columns and the chart overflows, for its page to scroll |
 | `part` | `show-part` (`showPart`) | none | draw only the part with this label, as one player reads it: tutti bars, its own bars, and "tacet" where it rests. The attribute isn't `part`, which HTML keeps for `::part()` styling |
 | `diagnostics` | | `false` | list the chart's errors and warnings below it |
 | `fontUrl` | | none | emit Edwin's `@font-face` rule before the chart |
 | (the `text` argument) | (`text`) | `null` | the chart to draw; wins over `src` and the script child |
+
+### Rehearsal letters
+
+`rehearsalLetters` letters each section occurrence A, B, C… in play order,
+for a chart that marks no places itself. When any bar in the chart carries
+its own rehearsal mark (`@A`, barmark's grammar 2.5), it adds no letters at
+all: the chart's marks stand alone, so no heading is marked twice, and a
+section the chart leaves unmarked stays unmarked.
 
 ### Numerals
 

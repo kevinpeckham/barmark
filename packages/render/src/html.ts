@@ -44,6 +44,11 @@ import {
 export type RenderOptions = {
 	theme?: "auto" | "light" | "dark";
 	barNumbers?: boolean;
+	/**
+	 * Boxed letters A, B, C… on each section as played. None when any bar
+	 * carries its own rehearsal mark (`@A`, barmark's grammar 2.5): the
+	 * chart's marks then stand alone, so no place is marked twice.
+	 */
 	rehearsalLetters?: boolean;
 	/** List the chart's errors and warnings below it. */
 	diagnostics?: boolean;

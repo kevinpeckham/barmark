@@ -37,6 +37,19 @@ describe("renderScoreHtml", () => {
 		expect(inner.querySelector(".bms-score")).toBeNull();
 	});
 
+	test("the grid takes render's rehearsal letters: none beside the chart's own marks", () => {
+		const own = "## Verse\n| @A | D |\n## Chorus\n| @B | G |";
+		const plain = "## Verse\n| D |\n## Chorus\n| G |";
+		const letters = (text: string) =>
+			[
+				...parse(renderScoreHtml(text, { rehearsalLetters: true })).inner.querySelectorAll(
+					".bm-heading .bm-rehearsal",
+				),
+			].map((e) => e.textContent);
+		expect(letters(own)).toEqual([]);
+		expect(letters(plain)).toEqual(["A", "B"]);
+	});
+
 	test("carries chart text holding </script> intact", () => {
 		const text = `${chart}</script><b>\n</SCRIPT >\n<!-- x -->\na < b & "c"\n`;
 		const html = renderScoreHtml(text);
