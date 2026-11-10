@@ -48,7 +48,7 @@ The element renders from its `text` property, its `src` URL, or a child
 whenever one changes; it fetches a `src` once, and renders once however
 many properties and attributes change together. A chart rendered on the
 server by `renderChart` keeps its music until it has a source of its own,
-and still follows `theme`, `bar-numbers` and `wrap`; a change to
+and still follows `theme`, `bar-numbers`, `wrap` and `columns`; a change to
 `numerals`, `rehearsal-letters` or `show-part` needs the chart's text, so
 it waits for a source.
 
@@ -79,6 +79,7 @@ the element loads, with `<style data-barmark-font>` holding
 | `rehearsalLetters` | `rehearsal-letters` (`rehearsalLetters`) | `false` | boxed A, B, C… on each section as played; none when the chart writes a rehearsal mark of its own (below) |
 | `numerals` | `numerals` (`numerals`) | none | `"nashville"` (6m⁷) or `"roman"` (vi⁷): each chord as its degree in its bar's key |
 | `wrap` | `wrap="off"` (`wrap`) | `true` | wrap a section's rows when it is wider than the chart's box; off, rows keep their columns and the chart overflows, for its page to scroll |
+| `columns` | `columns="row"` (`columns`) | `"shared"` | `"shared"`: a section's rows share column tracks, so bar lines line up down the section; `"row"`: each row sizes its own bars (below). Any other value is `"shared"` |
 | `part` | `show-part` (`showPart`) | none | draw only the part with this label, as one player reads it: tutti bars, its own bars, and "tacet" where it rests. The attribute isn't `part`, which HTML keeps for `::part()` styling |
 | `diagnostics` | | `false` | list the chart's errors and warnings below it |
 | `fontUrl` | | none | emit Edwin's `@font-face` rule before the chart |
@@ -91,6 +92,19 @@ for a chart that marks no places itself. When any bar in the chart carries
 its own rehearsal mark (`@A`, barmark's grammar 2.5), it adds no letters at
 all: the chart's marks stand alone, so no heading is marked twice, and a
 section the chart leaves unmarked stays unmarked.
+
+### Columns
+
+By default a section's rows share their columns: bar lines line up down
+the section, and the widest bar in a column sets that column's width in
+every row, so one busy bar (`| G7 | G7 C6/G Bbmaj7/F Fmaj9 |`) widens
+column two all the way down. With `columns: "row"` (`columns="row"` on the
+element) each row sizes its own bars to their content instead: the busy
+bar widens only its own row, and bar lines no longer line up between rows.
+Every row still starts at the first bar line, and a system's parts keep
+their bar lines together. Only the layout changes: the music, the markup
+inside each bar and what a screen reader hears are the same. A section
+wraps on a narrow screen as before, once its widest row no longer fits.
 
 ### Numerals
 

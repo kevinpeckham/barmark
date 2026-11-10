@@ -6,6 +6,13 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- **`barmark render --columns shared|row`**: with `row` each row of the
+  grid sizes its own bars, so a busy bar widens only its own row
+  (`@barmark/render`'s `columns`). `shared` is the default; any other
+  value is a usage error, and so is `--columns` with `--score`.
+
 ### Changed
 
 - **`barmark render --help`** says `--rehearsal-letters` adds no letters

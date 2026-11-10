@@ -46,6 +46,8 @@ describe("barmark render", () => {
 			"--rehearsal-letters",
 			"--no-wrap",
 			"--diagnostics",
+			"--columns",
+			"row",
 		]);
 		const expected = renderChart(PD, {
 			theme: "dark",
@@ -54,6 +56,7 @@ describe("barmark render", () => {
 			rehearsalLetters: true,
 			wrap: false,
 			diagnostics: true,
+			columns: "row",
 			fontUrl: DATA_URL,
 		});
 		expect(html).toContain(expected);
@@ -94,6 +97,16 @@ describe("barmark render", () => {
 			'--numerals must be nashville or roman, not "names"',
 		);
 	});
+	test("--columns shared is the default", async () => {
+		const { html } = await rendered(["pd.chart.md", "--columns", "shared"]);
+		expect(html).toContain(renderChart(PD, { fontUrl: DATA_URL }));
+	});
+	test("--columns grid is a usage error", async () => {
+		const io = folder({ "pd.chart.md": PD });
+		await expect(render(["pd.chart.md", "--columns", "grid"], io)).rejects.toThrow(
+			'--columns must be shared or row, not "grid"',
+		);
+	});
 	test("two files is a usage error", async () => {
 		const io = folder({ "a.chart.md": PD, "b.chart.md": PD });
 		await expect(render(["a.chart.md", "b.chart.md"], io)).rejects.toThrow(
@@ -107,5 +120,8 @@ describe("render help", () => {
 		expect(COMMAND_HELP.render).toMatch(
 			/--rehearsal-letters\s+Letter each section A, B, C… \(none when the chart marks its own\)/,
 		);
+	});
+	test("--columns says what row does", () => {
+		expect(COMMAND_HELP.render).toMatch(/--columns shared\|row\s+row: each row sizes its own bars/);
 	});
 });

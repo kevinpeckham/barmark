@@ -8,6 +8,12 @@ package uses [semantic versioning](https://semver.org/).
 
 ### Added
 
+- **The grid takes `columns`** (`@barmark/render`'s `columns: "shared" |
+  "row"`): `<barmark-score>` observes the `columns` attribute and redraws
+  its grid, and `renderScoreHtml` passes the option through. With
+  `columns="row"` each row of the grid sizes its own bars; the score view
+  is unchanged.
+
 - **A `scoreerror` event says why the score couldn't be drawn.** Whenever
   `<barmark-score>` shows "The score couldn't be drawn", it fires
   `scoreerror` (`bubbles`, `composed`) with `detail: { reason }`, the

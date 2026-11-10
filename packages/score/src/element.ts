@@ -109,6 +109,7 @@ function takeEarlyText(el: object): { text: string | null } | null {
 /** The grid's attributes, as `<barmark-chart>` observes them, then the score's own. */
 const OBSERVED = [
 	...["src", "theme", "bar-numbers", "rehearsal-letters", "numerals", "wrap", "show-part"],
+	"columns",
 	...["view", "verovio-url", "verovio-integrity", "preload"],
 ];
 

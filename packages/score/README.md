@@ -46,7 +46,7 @@ technology the score is one image named for the chart's title, or "Score".
 
 | Attribute (property) | |
 |---|---|
-| `src`, `theme`, `bar-numbers`, `rehearsal-letters`, `numerals`, `wrap`, `show-part` | the grid's own, as in [`@barmark/render`](../render/README.md#options-and-attributes) |
+| `src`, `theme`, `bar-numbers`, `rehearsal-letters`, `numerals`, `wrap`, `show-part`, `columns` | the grid's own, as in [`@barmark/render`](../render/README.md#options-and-attributes) |
 | `view` (`view`) | `"grid"` (default) or `"score"`; the view being shown. Set before the chart arrives, `"score"` waits for it |
 | `verovio-url` | where to load Verovio from (below) |
 | `verovio-integrity` | the SRI digest (`sha384-…`) the `verovio-url` copy must have; on a mismatch the package's own copy loads (below) |
