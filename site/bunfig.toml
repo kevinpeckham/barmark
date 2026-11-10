@@ -1,0 +1,17 @@
+# `bun add` and `bun update` skip versions published less than seven days ago,
+# exact pins included, as at the root. An install from the lockfile (CI's
+# --frozen-lockfile, or a plain `bun install`) is not re-checked (FINDINGS.md).
+[install]
+minimumReleaseAge = 604800
+# Our own packages: the site is bumped to each release on the day it ships
+# (RELEASING.md step 12). Their third-party dependencies still wait.
+minimumReleaseAgeExcludes = [
+	"barmark",
+	"@barmark/render",
+	"@barmark/musicxml",
+	"@barmark/score",
+	"@barmark/sync",
+	"@barmark/midi",
+	"@barmark/cli",
+	"@barmark/engraver",
+]
