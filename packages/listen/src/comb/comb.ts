@@ -3,9 +3,12 @@
  * (stem-bench Study 24's P2, as Study 26c uses it), arithmetic in the
  * app's order and its constants from the resolved options.
  *
- * It assumes a validated rate and a positive declared bar; the stage entry
- * points guard them, and check `flatEnvelope` first, so the comb never
- * runs on an envelope with no lattice to find.
+ * The caller's preconditions: a finite, positive declared bar and fps
+ * (and `beatsPerBar ≥ 1` wherever a beat is taken from the bar). A NaN or
+ * Infinity bar throws a TypeError here and a bar of 0 loops forever, so
+ * every stage entry refuses such inputs before it calls in, and checks
+ * `flatEnvelope` first, so the comb never runs on an envelope with no
+ * lattice to find.
  */
 import { detrend } from "../features/onset.js";
 import type { Settings } from "../options.js";

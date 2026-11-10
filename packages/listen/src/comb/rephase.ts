@@ -5,6 +5,11 @@
  * (Mop Heart, 224 bpm in 3/4: 0.42 s), and the onset lattice, not the
  * path's phase, is where the notes are, so the whole uniform line slides
  * once onto the onsets, fenced at `REPHASE_FENCE_BEATS` of a beat.
+ *
+ * The caller's preconditions: `beatsPerBar ≥ 1`, and a finite, positive
+ * period and fps. With `beatsPerBar = 0` the fence is infinite and
+ * `combSlide` loops forever, so every stage entry refuses such inputs
+ * before it calls in.
  */
 import type { Settings } from "../options.js";
 import { combSlide } from "./slide.js";

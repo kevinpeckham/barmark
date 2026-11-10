@@ -375,7 +375,7 @@ showed the rule needed refining.
   one side only.
 - **The fix.** Each run combs its envelope ten times, both lengths warm up
   first, and the three runs of each alternate, so a burst falls on both
-  alike; best of three of each, as before. Ten full suites in a row then
+  alike; best of three of each, as before. Eight full suites in a row then
   passed under the same load.
 
 ### A download's Content-Length is not the size of what you read (2026-11-10, @barmark/score)

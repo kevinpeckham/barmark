@@ -353,11 +353,9 @@ export function recordingFeatures(
  * record that throws when read (a getter, a Proxy) is `features-invalid`
  * too. On success it is the same object, not a copy.
  *
- * A record made at 22,050 Hz or more and relabelled to a 2^k multiple of
- * its rate (22,050 Hz called 44,100) passes: the onset decimation and the
- * chroma window both scale by that power of two, so its hops in seconds
- * are unchanged and it stays aligned to the recording. Catching a relabel
- * is the cache key's job, not this check's.
+ * At some rates (22,050, 44,100 and 48,000 Hz among them) a record
+ * relabelled to a power-of-two multiple keeps the same hop and passes;
+ * catching a relabel is the cache key's job.
  */
 export function readFeatures(value: unknown): Ok<Features> | Refused {
 	try {
