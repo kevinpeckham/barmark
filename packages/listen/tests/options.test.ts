@@ -182,6 +182,34 @@ describe("resolveOptions", () => {
 		}
 	});
 
+	test("prototype keys are unknown options, never thrown on or accepted", () => {
+		const cases = [
+			JSON.parse('{"__proto__":1}'),
+			{ constructor: 1 },
+			{ hasOwnProperty: 1 },
+			{ toString: 1 },
+		];
+		for (const scope of ["listen", "features", "pipeline"] as const) {
+			for (const c of cases) {
+				const r = resolveOptions(c, scope);
+				expect(r.ok).toBe(false);
+				expect(r.ok ? "" : r.refusals[0]?.reason).toBe("invalid-option");
+			}
+		}
+		for (const w of [JSON.parse('{"__proto__":1}'), { constructor: 1 }, { hasOwnProperty: 1 }]) {
+			const r = resolveOptions({ DOWNBEAT_WEIGHTS: w }, "listen");
+			expect(r.ok).toBe(false);
+			expect(option(r)).toBe("DOWNBEAT_WEIGHTS");
+		}
+	});
+
+	test("a sparse span list is refused", () => {
+		// biome-ignore lint/suspicious/noSparseArray: the hole is the point
+		expect(option(resolveOptions({ SECTION_NOVELTY_SPANS: [8, , 16] }, "listen"))).toBe(
+			"SECTION_NOVELTY_SPANS",
+		);
+	});
+
 	test("options that are not a plain object are refused with an empty option", () => {
 		for (const bad of [null, [], "x", 3, true]) {
 			const r = resolveOptions(bad, "listen");

@@ -296,7 +296,7 @@ function isPlainObject(v: unknown): v is Record<string, unknown> {
 }
 
 function checkNumber(key: string, value: unknown): Refusal | null {
-	const check = RANGES[key];
+	const check = Object.hasOwn(RANGES, key) ? RANGES[key] : undefined;
 	if (typeof value !== "number" || !Number.isFinite(value) || !check?.(value)) {
 		return bad(
 			key,
@@ -312,7 +312,7 @@ function mergeWeights(value: unknown): Readonly<DownbeatWeights> | Refusal {
 		return fail("must be an object with timeZero, harmonicRhythm and sections");
 	const merged: Record<string, number> = { ...DOWNBEAT_WEIGHTS_DEFAULT };
 	for (const [k, w] of Object.entries(value)) {
-		if (!(k in merged)) return fail(`has an unknown weight "${k}"`);
+		if (!Object.hasOwn(merged, k)) return fail(`has an unknown weight "${k}"`);
 		if (typeof w !== "number" || !Number.isFinite(w) || w < 0)
 			return fail(`needs ${k} to be a number from 0`);
 		merged[k] = w;
@@ -324,7 +324,7 @@ function checkSpans(value: unknown): readonly number[] | Refusal {
 	if (
 		!Array.isArray(value) ||
 		value.length === 0 ||
-		!value.every((s) => typeof s === "number" && whole(s))
+		!Array.from(value).every((s) => typeof s === "number" && whole(s))
 	) {
 		return bad(
 			"SECTION_NOVELTY_SPANS",
@@ -355,10 +355,10 @@ function checkCombSteps(s: Record<string, unknown>): Refusal | null {
 
 function acceptedKeys(scope: OptionScope): (key: string) => boolean {
 	const isFeature = (k: string) => FEATURE_KEYS.includes(k);
-	const isListen = (k: string) => k in DEFAULTS && !isFeature(k);
+	const isListen = (k: string) => Object.hasOwn(DEFAULTS, k) && !isFeature(k);
 	if (scope === "features") return isFeature;
 	if (scope === "listen") return isListen;
-	return (k) => k === "build" || k in DEFAULTS;
+	return (k) => k === "build" || Object.hasOwn(DEFAULTS, k);
 }
 
 /** Check one option and merge it into `merged`; a refusal when it is out of range. `build` is passed through. */
