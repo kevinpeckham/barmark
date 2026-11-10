@@ -6,6 +6,14 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.11.1] - 2026-11-10
+
+### Changed
+
+- **Uses** barmark 0.23.1: `check` suggests how to fix words on a
+  rehearsal mark's cell (`| @B | "Play 3 times" C |`); nothing else
+  changes.
+
 ## [0.11.0] - 2026-11-10
 
 ### Added
@@ -356,7 +364,8 @@ The first release of the `barmark` command. Uses `barmark` 0.8.0 and
 - **The `barmark` command:** `check`, `format`, `render` and `transpose`
   for `.chart.md` files, on npm and as standalone binaries.
 
-[Unreleased]: https://github.com/kevinpeckham/barmark/compare/cli-v0.11.0...HEAD
+[Unreleased]: https://github.com/kevinpeckham/barmark/compare/cli-v0.11.1...HEAD
+[0.11.1]: https://github.com/kevinpeckham/barmark/compare/cli-v0.11.0...cli-v0.11.1
 [0.11.0]: https://github.com/kevinpeckham/barmark/compare/cli-v0.10.2...cli-v0.11.0
 [0.10.2]: https://github.com/kevinpeckham/barmark/compare/cli-v0.10.1...cli-v0.10.2
 [0.10.1]: https://github.com/kevinpeckham/barmark/compare/cli-v0.10.0...cli-v0.10.1
