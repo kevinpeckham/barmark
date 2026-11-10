@@ -175,7 +175,7 @@ to (it does that today in `utils/alignmentReason.ts`).
 | `no-bars` | align | The chart plays no bars. |
 | `no-tempo` | align | A played bar has no tempo, and the caller gave no `tempo` to fall back on. |
 | `too-short` | align | The recording or the chart's render has no chroma frame. |
-| `too-long` | align | The DTW's cell count, chart frames × recording frames, exceeds `DTW_MAX_CELLS` (§10). It is computed from the bar seconds and checked before the chart is rendered or anything is allocated. |
+| `too-long` | align | The DTW's cell count, the step table's `(n + 1)(m + 1)` for `n` chart frames and `m` recording frames (the app counts `n × m`, §11.3), exceeds `DTW_MAX_CELLS` (§10). It is computed from the bar seconds and checked before the chart is rendered or anything is allocated. |
 | `chart-too-long` | align | The warping found no path: the chart runs more than twice as long as the recording at its declared tempo. |
 | `not-same-piece` | align | `controlCost / cost < ALIGNMENT_SAME_PIECE_RATIO` or the median local cost `> ALIGNMENT_SAME_PIECE_LOCAL_COST` (Studies 14, 16). See §14 Q1: this makes a map refusal out of a gate the app today uses only to hedge placements. |
 | `bars-off-middle` | align | The grid re-phase refused: the trusted span covers less than `REPAIR_MIN_TRUSTED_SHARE` of the bar starts (Study 26c's wrong-chart detector, kept by Study 27). |
@@ -754,7 +754,7 @@ minor (§12).
 | Section witness | beats × Σ(2L)² = beats × 1,280 for spans 8 and 16; linear | beats × 12 |
 | Harmonic witness | linear in beats + frames | frames |
 | Chart render (`renderChartPads`) | chart seconds × rate × tones | **the app: one `Float32Array` of the chart's whole length at `features.sampleRate`**, 4 bytes a sample: ≈ 200 MB for 19 minutes at 44.1 kHz. **Here: O(window)**, see below |
-| DTW | **chart frames × recording frames**, twice (the tritone control) | **one byte a cell** (the step table) + three rows |
+| DTW | **chart frames × recording frames**, twice (the tritone control) | **one byte a cell** (the step table, `(n + 1)(m + 1)` cells for `n` chart and `m` recording frames, which is what `DTW_MAX_CELLS` counts) + three rows |
 
 **The DTW is quadratic, and its ceiling is `DTW_MAX_CELLS` (150 M).** The
 chroma hop is about 0.093 s at 22,050 and 44,100 Hz (10.8 frames a second)
@@ -769,8 +769,8 @@ together, about 42 ns a cell, so the ceiling costs about 13 s in Node.
 arithmetic: with `L = ceil(Σ bar seconds × rate)` samples and the chroma
 window `win` and hop `hop` at that rate, it is `L < win ? 0 : floor((L −
 win) / hop) + 1`, exactly what `chromagram` will produce. `alignChart`
-computes it from the bar seconds, multiplies by `features.frames`, and
-refuses `too-long` (`detail: { cells, limit, chartFrames, recordingFrames
+computes it from the bar seconds, counts the step table's cells,
+`(n + 1)(features.frames + 1)` (§11.3), and refuses `too-long` (`detail: { cells, limit, chartFrames, recordingFrames
 }`) before it renders or allocates anything. The app checks only after it
 has rendered.
 
