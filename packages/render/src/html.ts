@@ -408,7 +408,7 @@ function rowClasses(row: Row, part: PartRow | undefined): string {
 	if (part) classes.push("bm-part-row");
 	if (row.sings) classes.push("bm-sings");
 	if (row.cells.some(isTacetCell)) classes.push("bm-tacet");
-	if (row.ending) classes.push("bm-ending");
+	if (row.ending || row.continues) classes.push("bm-ending");
 	return classes.join(" ");
 }
 
@@ -425,10 +425,12 @@ const leads = (part: PartRow | undefined) => !part || part.first;
 function rowHtml(row: Row, columns: number, settings: Settings, part?: PartRow): string {
 	const label = row.ending && leads(part) ? endingLabel(row.ending) : null;
 	const cells = rowCells(row, settings.numerals, label ? ` data-ending="${label.shown}"` : "");
+	const goesOn =
+		row.continues && leads(part) ? `${endingLabel(row.continues).spoken}, continued` : "";
 	const empty = `<span class="bm-empty" aria-hidden="true"></span>`.repeat(
 		Math.max(0, columns - row.cells.length),
 	);
-	const said = rowOpening(row, part, label?.spoken ?? "");
+	const said = rowOpening(row, part, label?.spoken ?? goesOn);
 	return `<div class="${rowClasses(row, part)}">${said}${gutterHtml(row, settings, part)}${cells.join("")}${empty}<span class="bm-repeat">${leads(part) ? rowRepeatHtml(row) : ""}</span></div>`;
 }
 

@@ -6,6 +6,8 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.19.0] - 2026-11-10
+
 ### Added
 
 - **`columns: "shared" | "row"`**, and the `columns` attribute and
@@ -19,6 +21,12 @@ package uses [semantic versioning](https://semver.org/).
   no longer fits, and the music, the markup inside each bar and what a
   screen reader hears don't change. Any other value is `"shared"`. The
   stylesheet gains the `"row"` rules at its end; `Columns` is exported.
+- **An ending across rows** (barmark's grammar 5.1, an ending continuing
+  onto the lines after it). A row an ending continues onto has the
+  ending's passes as the model's new optional `continues`, draws the
+  bracket's line on over its bars (class `bm-ending`) without a second
+  number, and is spoken "ending for pass 1, continued". In a system every
+  part's row does.
 
 ### Changed
 
@@ -517,7 +525,8 @@ that needs no script or as the `<barmark-chart>` web component. Requires
   zoom without sideways scrolling, the element renders and re-renders, and
   a screen reader hears "bar 9: D". Run them with `bun run test:browser`.
 
-[Unreleased]: https://github.com/kevinpeckham/barmark/compare/render-v0.18.0...HEAD
+[Unreleased]: https://github.com/kevinpeckham/barmark/compare/render-v0.19.0...HEAD
+[0.19.0]: https://github.com/kevinpeckham/barmark/compare/render-v0.18.0...render-v0.19.0
 [0.18.0]: https://github.com/kevinpeckham/barmark/compare/render-v0.17.1...render-v0.18.0
 [0.17.1]: https://github.com/kevinpeckham/barmark/compare/render-v0.17.0...render-v0.17.1
 [0.17.0]: https://github.com/kevinpeckham/barmark/compare/render-v0.16.2...render-v0.17.0

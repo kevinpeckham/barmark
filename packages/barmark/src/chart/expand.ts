@@ -209,6 +209,10 @@ function removeLastBar(events: ChartEvent[]): PlayedBar | null {
  * `written` from 1, a pickup included; `parseChart` and `extractPart`
  * renumber a pickup to 0 (grammar 2.4).
  */
+/** The lines of a repeat's ending for `pass` (grammar 5.1), or none. */
+const endingOn = (it: Extract<Item, { kind: "bracket" }>, pass: number): Entry[] =>
+	it.endings.find((x) => x.passes.includes(pass))?.entries ?? [];
+
 /**
  * `label` names the part a projected chart is (grammar 7.4), for its
  * messages; `share` is how many parts split the expansion budget.
@@ -587,8 +591,7 @@ export function expand(
 			// The return after a jump is no new pass: it plays pass 1's words (grammar 7.7).
 			where.pass = phase === "main" ? pass : 1;
 			for (const e of it.entries) playLine(e, out);
-			const ending = it.endings.find((x) => x.passes.includes(pass));
-			if (ending) playLine(ending.entry, out);
+			for (const e of endingOn(it, pass)) playLine(e, out);
 		}
 		Object.assign(where, { pass: outer.pass, passes: outer.passes });
 	};

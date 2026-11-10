@@ -8,12 +8,63 @@ package uses [semantic versioning](https://semver.org/).
 
 ### Added
 
+- **`verovio-wasm-integrity`**: the SRI digest of the `.wasm` beside a
+  `verovio-url` that loads its WebAssembly as a separate file, as
+  `@barmark/engraver` does. The worker gives Emscripten an
+  `instantiateWasm` hook that downloads the `.wasm` from beside the
+  `verovio-url` (never from the module's `blob:` URL), with progress,
+  checks its digest and only then compiles it. A missing or mismatched
+  `.wasm` fails at once, raced against Verovio's factory, rather than
+  hanging to the 60-second load deadline, and with `verovio-integrity`
+  set falls back to the package's own copy with a warning. With
+  `verovio-integrity` set, a separate `.wasm` needs this digest too
+  ("verovio-wasm-integrity is needed for a Verovio that loads a separate
+  .wasm"); a wasm digest without a module digest is supported. A
+  malformed one is refused, and changing it clears a failure. Stock
+  Verovio ignores it. Two elements share one engine: the first source
+  loaded wins, and a second element's different digests are ignored.
+- **`ENGRAVER_CDN_URL`, `ENGRAVER_CDN_INTEGRITY`,
+  `ENGRAVER_WASM_INTEGRITY`**: `@barmark/engraver` 0.1.1, the smaller
+  Verovio 6.4.1 build made by barmark, on jsDelivr, with its module's and
+  its `.wasm`'s sha384, for `verovio-url`, `verovio-integrity` and
+  `verovio-wasm-integrity`. Opt-in: they are literals, so a site that
+  never uses the build never installs it. The build leaves out what this
+  package never asks Verovio for (fonts other than Leipzig, footers,
+  tablature tunings, `.mxl`); the README says how to load it, with the
+  Content-Security-Policy it needs.
+
+### Changed
+
+- **A Verovio from `verovio-url` must match the toolkit's version**
+  (`VEROVIO_VERSION`, 6.4.1): any other now fails to load, or, with
+  `verovio-integrity` set, falls back to the package's own copy with a
+  warning, where it was loaded anyway.
+- **A download's progress is measured against the file its digest
+  names**: Verovio's module, or `@barmark/engraver`'s module or `.wasm`.
+  A compressed `verovio-url` download with no digest, or a digest of no
+  build this package knows, shows the bar without a percentage instead of
+  being measured against Verovio's 7.4 MB. With
+  `verovio-wasm-integrity`, the `.wasm` is the download measured, so the
+  bar runs to 100% once.
+
+### Technical
+
+- **The browser suite loads `@barmark/engraver`** from
+  `packages/engraver/dist` (compiled on the VM, or CI's `engraver-dist`
+  artifact): the build used with both digests and its `.wasm` measured,
+  a `.wasm` with a flipped byte, a missing `.wasm` (falling back in
+  seconds), a module digest without a wasm digest, and stock Verovio
+  with a wasm digest.
+
+## [0.4.0] - 2026-11-10
+
+### Added
+
 - **The grid takes `columns`** (`@barmark/render`'s `columns: "shared" |
   "row"`): `<barmark-score>` observes the `columns` attribute and redraws
   its grid, and `renderScoreHtml` passes the option through. With
   `columns="row"` each row of the grid sizes its own bars; the score view
   is unchanged.
-
 - **A `scoreerror` event says why the score couldn't be drawn.** Whenever
   `<barmark-score>` shows "The score couldn't be drawn", it fires
   `scoreerror` (`bubbles`, `composed`) with `detail: { reason }`, the
@@ -24,9 +75,10 @@ package uses [semantic versioning](https://semver.org/).
 
 ### Changed
 
-- **Requires `@barmark/render` 0.19.0** (the tempo beat, the
-  `rehearsal-letters` rule), whose minor release the `^0.18` caret would
-  not reach.
+- **Requires `barmark` 0.23.0, `@barmark/render` 0.19.0** (the tempo
+  beat, the `rehearsal-letters` rule) **and `@barmark/musicxml` 0.9.0**
+  (an ending across lines), whose minor releases a caret range would not
+  reach.
 - **The grid follows `@barmark/render`'s new `rehearsal-letters` rule**:
   no letters beside a chart's own rehearsal marks (`@A`), so the grid's
   headings no longer show two marks, matching the score, which draws only
@@ -224,7 +276,8 @@ First release.
   needs no config; Vite 7 needs `optimizeDeps.exclude` and
   `worker.format: "es"`.
 
-[Unreleased]: https://github.com/kevinpeckham/barmark/compare/score-v0.3.0...HEAD
+[Unreleased]: https://github.com/kevinpeckham/barmark/compare/score-v0.4.0...HEAD
+[0.4.0]: https://github.com/kevinpeckham/barmark/compare/score-v0.3.0...score-v0.4.0
 [0.3.0]: https://github.com/kevinpeckham/barmark/compare/score-v0.2.0...score-v0.3.0
 [0.2.0]: https://github.com/kevinpeckham/barmark/compare/score-v0.1.1...score-v0.2.0
 [0.1.1]: https://github.com/kevinpeckham/barmark/compare/score-v0.1.0...score-v0.1.1

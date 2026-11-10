@@ -30,6 +30,9 @@ export {
 } from "./engrave.js";
 export { cleanSvg, type ScoreTheme, scorePane, scoreStyles } from "./markup.js";
 export {
+	ENGRAVER_CDN_INTEGRITY,
+	ENGRAVER_CDN_URL,
+	ENGRAVER_WASM_INTEGRITY,
 	VEROVIO_CDN_INTEGRITY,
 	VEROVIO_CDN_URL,
 	VEROVIO_MODULE_BYTES,

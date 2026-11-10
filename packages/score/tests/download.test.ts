@@ -6,10 +6,14 @@ import {
 	checkIntegrity,
 	type Download,
 	downloadMeter,
+	fetchBytes,
 	fetchModule,
 	progressText,
 } from "../src/download.js";
 import {
+	ENGRAVER_CDN_INTEGRITY,
+	ENGRAVER_CDN_URL,
+	ENGRAVER_WASM_INTEGRITY,
 	VEROVIO_CDN_INTEGRITY,
 	VEROVIO_CDN_URL,
 	VEROVIO_MODULE_BYTES,
@@ -44,6 +48,15 @@ describe("the pinned Verovio", () => {
 			url: readme.includes(VEROVIO_CDN_URL),
 			integrity: readme.includes(VEROVIO_CDN_INTEGRITY),
 		}).toEqual({ url: true, integrity: true });
+	});
+
+	test("the README gives the lite build's URL and both digests", () => {
+		const readme = readFileSync(join(import.meta.dir, "../README.md"), "utf8");
+		expect({
+			url: readme.includes(ENGRAVER_CDN_URL),
+			integrity: readme.includes(ENGRAVER_CDN_INTEGRITY),
+			wasmIntegrity: readme.includes(ENGRAVER_WASM_INTEGRITY),
+		}).toEqual({ url: true, integrity: true, wasmIntegrity: true });
 	});
 });
 
@@ -200,6 +213,29 @@ describe("fetchModule", () => {
 				onProgress: () => {},
 			}),
 		).rejects.toThrow("integrity");
+	});
+});
+
+describe("fetchBytes", () => {
+	test("fetchBytes returns the checked bytes; fetchModule still returns a text/javascript blob", async () => {
+		const options = async () => ({
+			fetch: async () => respond(["ab", "cd"]),
+			integrity: await sri("abcd"),
+			onProgress: () => {},
+		});
+		const bytes = await fetchBytes("https://cdn.test/v.wasm", await options());
+		expect(bytes).toBeInstanceOf(Uint8Array);
+		expect(new TextDecoder().decode(bytes)).toBe("abcd");
+		await expect(
+			fetchBytes("https://cdn.test/v.wasm", {
+				fetch: async () => respond(["abce"]),
+				integrity: await sri("abcd"),
+				onProgress: () => {},
+			}),
+		).rejects.toThrow("integrity");
+		const blob = await fetchModule("https://cdn.test/v.mjs", await options());
+		expect(blob.type).toStartWith("text/javascript");
+		expect(await blob.text()).toBe("abcd");
 	});
 });
 

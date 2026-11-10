@@ -9,8 +9,12 @@ Releases follow the process in [RELEASING.md](RELEASING.md).
 
 ## [Unreleased]
 
-Grammar changes: an unreadable slot keeps its bar, and stacked chord
-spellings read (Kevin, 2026-11-10).
+## [0.23.0] - 2026-11-10
+
+Grammar changes: an unreadable slot keeps its bar, stacked chord
+spellings read, and an ending may continue onto the lines after it
+(Kevin, 2026-11-10). Implements the
+[grammar v0.1 draft](https://github.com/kevinpeckham/barmark/blob/main/docs/grammar-v0.1-draft.md).
 
 ### Added
 
@@ -33,7 +37,21 @@ spellings read (Kevin, 2026-11-10).
   be the fifth's, there is no suggestion, and the message says the symbol
   is ambiguous when the fifth reading would itself read (`Gb5(omit3)`,
   as `G(b5,omit3)`; not `Gb5(no7)`).
-
+- **An ending may continue onto the lines after it** (grammar 5.1, Kevin
+  2026-11-10, stem-shovel issue #16). An ending not closed by `:|` on its
+  own line continues through the plain `|` lines after it, up to its `:|`
+  or the next ending: `|1 G | A | B | C |` then `| D :|` is a five-bar
+  first ending, so a chart keeps four bars a row. The last ending still
+  ends at its own line. Each continuation line carries the ending's passes
+  as the new optional `continues` on its bar line in the parse tree (A.7),
+  and plays on that ending's passes only. Text, credit, lyric-row and
+  `---` lines may sit between an ending's lines; a heading, a directive
+  line, a `|:` line or a line that can't be read ends it, and a directive
+  line that stops an ending continuing is an error naming it. Only the
+  endings of a paired repeat continue. A chart that
+  read cleanly before reads the same; an ending before the last that runs
+  into the next ending with no `:|` now gives one error, "an ending before
+  the last goes back with :|", on its first line, where it gave two.
 - **`printedAsWritten(parse)`** and **`unreadSlots(line)`**: the lines the
   printer prints as written (spec §8), and a bar line's unreadable slots,
   so a renderer draws what the printer prints.
@@ -826,7 +844,8 @@ The first working release: the reference parser and printer for the
 
 - **A placeholder package that holds the `barmark` name** while the spec and parser are written.
 
-[Unreleased]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.22.0...HEAD
+[Unreleased]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.23.0...HEAD
+[0.23.0]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.22.0...barmark-v0.23.0
 [0.22.0]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.21.0...barmark-v0.22.0
 [0.21.0]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.20.0...barmark-v0.21.0
 [0.20.0]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.19.1...barmark-v0.20.0
