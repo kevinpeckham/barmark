@@ -6,6 +6,8 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-11-10
+
 ### Added
 
 - **`barmark render --columns shared|row`**: with `row` each row of the
@@ -15,6 +17,14 @@ package uses [semantic versioning](https://semver.org/).
 
 ### Changed
 
+- **Uses** barmark 0.23.0, @barmark/render 0.19.0, @barmark/musicxml
+  0.9.0, @barmark/score 0.4.0 (with Verovio 6.4.1, unchanged) and
+  @barmark/midi 0.3.2 and, through it, @barmark/sync 0.4.1: `check` and
+  `format` read stacked chord spellings with a warning (`format` writes
+  the canonical form), an unreadable slot keeps its bar (`check` still
+  fails) and `transpose` moves the readable chords beside it, an ending
+  may continue onto the lines after it in `render` and `export`, and
+  `render` shows the beat a tempo counts.
 - **`barmark render --help`** says `--rehearsal-letters` adds no letters
   to a chart that marks its own (`@A`), as `@barmark/render` 0.19.0 does.
 
@@ -344,7 +354,8 @@ The first release of the `barmark` command. Uses `barmark` 0.8.0 and
 - **The `barmark` command:** `check`, `format`, `render` and `transpose`
   for `.chart.md` files, on npm and as standalone binaries.
 
-[Unreleased]: https://github.com/kevinpeckham/barmark/compare/cli-v0.10.2...HEAD
+[Unreleased]: https://github.com/kevinpeckham/barmark/compare/cli-v0.11.0...HEAD
+[0.11.0]: https://github.com/kevinpeckham/barmark/compare/cli-v0.10.2...cli-v0.11.0
 [0.10.2]: https://github.com/kevinpeckham/barmark/compare/cli-v0.10.1...cli-v0.10.2
 [0.10.1]: https://github.com/kevinpeckham/barmark/compare/cli-v0.10.0...cli-v0.10.1
 [0.10.0]: https://github.com/kevinpeckham/barmark/compare/cli-v0.9.0...cli-v0.10.0
