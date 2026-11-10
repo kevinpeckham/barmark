@@ -162,9 +162,11 @@ function normalizeSymbol(text: string): Normal | Diagnostic {
 	if (rejected) return rejected;
 	const root = ROOT.exec(text)?.[0] ?? "";
 	let rest = text.slice(root.length);
-	for (const [pattern, replacement] of ALIASES) rest = rest.replace(pattern, replacement);
+	// Stacked spellings first: a bare omission ends the chord's name as written, not an alias.
 	const separated = separate(rest);
-	rest = logicGroups(separated.text);
+	rest = separated.text;
+	for (const [pattern, replacement] of ALIASES) rest = rest.replace(pattern, replacement);
+	rest = logicGroups(rest);
 	// `(omit3)` and `(omit 3)` are `(no3)`.
 	rest = rest.replace(/(?<=[(,]\s*)omit\s*(\d+)(?=\s*[,)])/g, "no$1");
 	// `(add9)` is `(9)`: inside a group, `add` before a tone it may add is dropped.

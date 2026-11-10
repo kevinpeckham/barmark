@@ -177,9 +177,10 @@ describe("mixed shapes", () => {
 		expect(r.warnings).toHaveLength(1);
 		expect(r.warnings[0]?.suggestion).toBe("C7(b9,#11,omit5)");
 	});
-	test("after an alias", () => {
-		expect(ok("G-7omit5").value.canonical).toBe("Gm7(no5)");
-		expect(ok("Gmin7no5").value.canonical).toBe("Gm7(no5)");
+	test("only after the quality as written, not after an alias (grammar 3)", () => {
+		expect(fails("G-7omit5").message).toContain("cannot read");
+		expect(fails("Gmin7no5").message).toContain("cannot read");
+		expect(fails("CΔno3").message).toContain("cannot read");
 	});
 	test("a warning a stacked spelling has as written stays", () => {
 		const r = ok("C7(7b9)");
@@ -259,4 +260,34 @@ describe("a long run-together parenthesis reads in linear time", () => {
 			expect(parseChord(shape(20_000))).toBeDefined();
 			expect(large / Math.max(small, 0.5)).toBeLessThan(30);
 		}, 60_000);
+});
+
+describe("review nits (PR #255)", () => {
+	test("pieces split from an item are trimmed", () => {
+		const r = ok("C7(b9 #11)");
+		expect(r.value.canonical).toBe("C7(b9,#11)");
+		expect(r.warnings[0]?.suggestion).toBe("C7(b9,#11)");
+	});
+	test("the ambiguity is said only when the fifth reading would read", () => {
+		expect(fails("Gb5(omit3)").message).toContain("ambiguous");
+		for (const symbol of ["Gb5(xyz)", "Gb5(no7)", "G#5(no7)"]) {
+			const e = fails(symbol);
+			expect(e.message).not.toContain("ambiguous");
+			expect(e.suggestion).toBeUndefined();
+		}
+	});
+	test("a bare omission is read only at the end of the chord's name, before any parenthesis or bass", () => {
+		for (const symbol of ["Cno5maj7", "Cno5m", "CΔno3", "Comit5sus4", "Cno3add9"]) {
+			expect(parseChord(symbol).ok).toBe(false);
+		}
+		expect(ok("Gm7omit5/D").value.canonical).toBe("Gm7(no5)/D");
+		expect(ok("Gadd9omit3(b13)").value.canonical).toBe("G5(9,b13)");
+		expect(ok("C7omit5(b9#11)").value.canonical).toBe("C7(b9,#11,no5)");
+		expect(ok("Csus4omit5").value.canonical).toBe("Csus4(no5)");
+		expect(ok("Cmmaj7no5").value.canonical).toBe("Cmmaj7(no5)");
+		expect(ok("C7b9no5").value.canonical).toBe("C7(b9,no5)");
+	});
+	test("a bare omission after a parenthesis is not read", () => {
+		expect(parseChord("C7(b9)no5").ok).toBe(false);
+	});
 });
