@@ -116,6 +116,54 @@ describe("words on a bar: reading", () => {
 	});
 });
 
+describe("words on a mark: the suggestion", () => {
+	/** The line with the suggestion put in place of the cell it was given for. */
+	const applied = (line: string, cell: string, suggestion: string) =>
+		line.replace(cell, suggestion.slice(2, -2));
+	const cases: [line: string, cell: string, suggestion: string][] = [
+		['| @B "Play 3 times" C |', '@B "Play 3 times" C', '| @B | "Play 3 times" C |'],
+		['| "x" @B C | D |', '"x" @B C', '| @B | "x" C |'],
+		['| @B C "fill" |', '@B C "fill"', '| @B | C "fill" |'],
+		['| @B "solo" C "rit." D | A |', '@B "solo" C "rit." D', '| @B | "solo" C "rit." D |'],
+		["| @B “half time” C |", "@B “half time” C", '| @B | "half time" C |'],
+		['|: @B "x" C :|', '@B "x" C', '| @B | "x" C |'],
+	];
+	test("words with a chord on a mark: a cell of its own, the words on the bar", () => {
+		for (const [line, , suggestion] of cases) {
+			const r = read(line);
+			expect(r.bars).toBeNull();
+			expect(r.diagnostics.map((d) => [d.message, d.suggestion])).toEqual([
+				["words go on a bar, not on a rehearsal mark", suggestion],
+			]);
+		}
+	});
+	test("the suggestion, applied, reads clean and keeps the words where they were", () => {
+		for (const [line, cell, suggestion] of cases) {
+			const fixed = applied(line, cell, suggestion);
+			expect(read(fixed).diagnostics).toEqual([]);
+			expect(play(fixed).all).toEqual([]);
+			expect(play(fixed).bars[0]?.rehearsal).toBe("B");
+		}
+		expect(applied('|: @B "x" C :|', '@B "x" C', '| @B | "x" C |')).toBe('|: @B | "x" C :|');
+	});
+	test("words and a mark with no chord: no suggestion, as the words have no bar", () => {
+		for (const line of ['| @B "x" | C |', '| "x" @B | C |']) {
+			const r = read(line);
+			expect(r.diagnostics.map((d) => [d.message, d.suggestion])).toEqual([
+				["words go on a bar, not on a rehearsal mark", undefined],
+			]);
+		}
+	});
+	test("with a one-bar meter in the cell too, no suggestion, which would lose the meter", () => {
+		expect(
+			read('| [3/4] @B "x" C | D |').diagnostics.map((d) => [d.message, d.suggestion]),
+		).toEqual([["words go on a bar, not on a rehearsal mark", undefined]]);
+	});
+	test("a mark sharing its cell with a chord and no words is suggested as before", () => {
+		expect(read("|: @A G :|").diagnostics[0]?.suggestion).toBe("| @A | G |");
+	});
+});
+
 describe("words on a bar: playing", () => {
 	test("played bars carry their words", () => {
 		const bars = play('| "solo" D | A |\n| D "rit." G |').bars;

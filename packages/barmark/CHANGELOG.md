@@ -9,6 +9,14 @@ Releases follow the process in [RELEASING.md](RELEASING.md).
 
 ## [Unreleased]
 
+### Changed
+
+- Words on a rehearsal mark's cell (`| @B "Play 3 times" C |`) are still an
+  error, now with a suggestion, as a chord on a mark has: the mark a cell of
+  its own and the words on the bar (`| @B | "Play 3 times" C |`). There is
+  none when no slot is left for the words or the cell has a one-bar meter
+  (stem-shovel issue 16, ask 7).
+
 ## [0.23.0] - 2026-11-10
 
 Grammar changes: an unreadable slot keeps its bar, stacked chord
