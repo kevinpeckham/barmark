@@ -30,7 +30,7 @@ const secondsOf = (chart: string, fallback?: number) =>
 function firstSeconds(chart: string, fallback?: number): number | null {
 	const bar = parseChart(chart).bars[0];
 	if (!bar) throw new Error("no bar");
-	return barSeconds(bar, fallback);
+	return barSeconds(bar, fallback)?.seconds ?? null;
 }
 
 /** One chord as a chart's only slot: its pad. */
@@ -54,13 +54,16 @@ describe("barSeconds: barmark's tempo rule (design §6.3)", () => {
 		expect(firstSeconds("time: 3/4, tempo: 90\n| C |")).toBe(2.0);
 		const six = parseChart("time: 4/4, tempo: 120\n| C | [6/8] C |").bars[1];
 		if (!six) throw new Error("no bar");
-		expect(barSeconds(six, undefined)).toBe(1.5);
+		expect(barSeconds(six, undefined)).toEqual({ seconds: 1.5, tempo: 120 });
 	});
 
 	test("a bar without a tempo takes the fallback, in grammar 2.1's beat, else is null", () => {
 		expect(firstSeconds("| C |", 120)).toBe(2.0);
 		expect(firstSeconds("time: 6/8\n| C |", 40)).toBe(3.0);
 		expect(firstSeconds("| C |")).toBeNull();
+		const bar = parseChart("time: 6/8\n| C |").bars[0];
+		if (!bar) throw new Error("no bar");
+		expect(barSeconds(bar, 40)).toEqual({ seconds: 3.0, tempo: 40 });
 		// The chart's own tempo wins over the fallback.
 		expect(firstSeconds("tempo: 60\n| C |", 120)).toBe(4.0);
 	});

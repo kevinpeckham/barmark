@@ -85,7 +85,7 @@ describe("the 65 Hz sine kick (design §11.2)", () => {
 		const r = gridOf(song);
 		expect(decidedOffTruth(r, song)).toBe(false);
 		// Observed: a decided grid on the truth, the comb's phase on beat 1 and every witness on class 0.
-		// Bar one reads 0.99, a frame early (it read 1.0 with the kick at gain 1).
+		// Bar one reads 0.99, one phase step early (it read 1.0 with the kick at gain 1).
 		if (!r.ok) throw new Error(r.refusals.map((p) => p.reason).join(" "));
 		expect(r.value.reading.cls).toBe(0);
 		expect(r.value.reading.decided).toBe(true);

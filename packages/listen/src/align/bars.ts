@@ -76,16 +76,19 @@ export function pitchesOf(record: ChordRecord): Pitches | null {
  * A bar's seconds, the app's `barTempo` then `chartBarSeconds` in their
  * order: `tempo:` (else `fallback`, both grammar 2.1's beat) counts the
  * beat of the `time:` meter in force, and the bar lasts its own meter's
- * numerator of its bottom note. Null when the bar has no tempo and there
- * is no fallback.
+ * numerator of its bottom note. Returns the seconds with the tempo they
+ * used; null when the bar has no tempo and there is no fallback.
  */
-export function barSeconds(bar: PlayedBar, fallback: number | undefined): number | null {
+export function barSeconds(
+	bar: PlayedBar,
+	fallback: number | undefined,
+): { seconds: number; tempo: number } | null {
 	const time = bar.time ?? bar.meter;
 	const tempo = bar.tempo ?? fallback;
 	if (tempo === undefined) return null;
 	const song = (tempo * time.n) / beatsOf(time);
 	const bpm = (song * bar.meter.d) / time.d;
-	return (bar.meter.n * 60) / bpm;
+	return { seconds: (bar.meter.n * 60) / bpm, tempo };
 }
 
 /** A slot that keeps whatever was sounding: `/`, `?`, or a group led by one. */
@@ -162,8 +165,8 @@ export function chartPadBars(parse: ChartParse, fallback: number | undefined): C
 	let carried: Carried;
 	let held: Pitches | null = null;
 	for (const bar of parse.bars) {
-		const seconds = barSeconds(bar, fallback);
-		if (seconds === null) return { ok: false, reason: "no-tempo", index: bar.index };
+		const timed = barSeconds(bar, fallback);
+		if (timed === null) return { ok: false, reason: "no-tempo", index: bar.index };
 		const reads = barReads(bar, carried);
 		if (reads.length > 0) carried = reads[reads.length - 1];
 		const pads = padsOf(reads, held);
@@ -171,8 +174,8 @@ export function chartPadBars(parse: ChartParse, fallback: number | undefined): C
 		bars.push({
 			index: bar.index,
 			pads,
-			seconds,
-			tempo: (bar.tempo ?? fallback) as number,
+			seconds: timed.seconds,
+			tempo: timed.tempo,
 			meter: { n: bar.meter.n, d: bar.meter.d },
 			key: keyText(bar.key),
 			section: sectionAt.get(bar.index) ?? (bar.rehearsal || null),
