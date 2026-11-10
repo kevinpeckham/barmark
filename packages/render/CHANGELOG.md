@@ -6,6 +6,15 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- **An ending across rows** (barmark's grammar 5.1, an ending continuing
+  onto the lines after it). A row an ending continues onto has the
+  ending's passes as the model's new optional `continues`, draws the
+  bracket's line on over its bars (class `bm-ending`) without a second
+  number, and is spoken "ending for pass 1, continued". In a system every
+  part's row does.
+
 ### Changed
 
 - **Breaking: requires `barmark` 0.23.0** (`SimpleSlot.text`: an

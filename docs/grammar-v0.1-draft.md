@@ -622,8 +622,7 @@ voltas):
 This plays `C F G C G G7`, then `C F G C G C`.
 
 - A bar line that starts with pass numbers is an **ending**: `|1`, `|2`, a
-  range `|1-3`, or a list `|1,3`. The ending is that one bar line. A long
-  ending is a long line.
+  range `|1-3`, or a list `|1,3`.
 - Endings follow the bars of a `|: … :|` repeat, one after another; only
   text, credit, lyric-row (7.7) and `---` lines may come between them. Every ending but the last closes with
   `:|`, which goes back to `|:`. The last does not: it plays and moves on.
@@ -631,13 +630,47 @@ This plays `C F G C G G7`, then `C F G C G C`.
   plays the bars from `|:` to the first ending, then that pass's ending:
   `|1-3 … :|` then `|4 …` plays four passes. Every pass from 1 to the
   highest has exactly one ending, the highest is at least 2, and its
-  ending comes last. The endings give the count, so `x N` on an ending is
-  an **error**.
+  ending comes last. The endings give the count, so `x N` on an ending, or
+  on a line it continues onto, is an **error**.
 - An ending mark anywhere but the start of a bar line is an **error**
-  (`| C |1 D |`), and so is an ending that does not follow a repeat.
-- A replay of the section plays its endings too. Machine output numbers
-  the bars of every ending as written (A.7), as a printed score does: above,
-  bars 1–4, then 5–6, then 7–8.
+  (`| C |1 D |`), and so is an ending that does not follow a repeat. An
+  ending before the last that reaches the next ending with no `:|`
+  (`|1 G |`, `| A |`, `|2 E |`) is one error, on its first line: it goes
+  back with `:|`. When no ending follows, nothing continues: `|1 G |` then
+  `| A :|` with no `|2` is the repeat with too few passes and a `:|` with
+  no `|:`, as before, and so is a `:|` after the last ending.
+- A replay of the section plays its endings too, and after a jump (5.2)
+  the repeat takes its last ending, skipping every line of the others.
+  Machine output numbers the bars of every ending as written (A.7), as a
+  printed score does: above, bars 1–4, then 5–6, then 7–8; in the chorus
+  below, bars 1–4, then 5–9, then 10. A line an ending continues
+  onto carries the ending's passes as `continues` (A.7).
+
+**An ending may continue onto the lines after it.** An ending not closed
+by `:|` on its own line continues through the plain `|` lines after it,
+up to its `:|` or the next ending:
+
+```
+## Chorus
+|: C | F | G | C |
+|1 G | A | B | C |
+| D :|
+|2 E |
+```
+
+The first ending is five bars, `G A B C D`, so a chart keeps four bars a
+row.
+
+- Only an ending that another ending follows continues. The last ending
+  has no `:|` and ends at its own line, so the lines after it play once,
+  as before.
+- A line it continues onto is a plain bar line: it opens with `|`, not
+  `|:` or another ending. Text, credit, lyric-row (7.7) and `---` lines
+  may sit between its lines, a blank line means nothing, and a rehearsal
+  mark is a cell on a continuation line like any other.
+- Any other line ends it there: a heading (which ends the section), a
+  directive line, a line opening with `|:`, or a bar line that can't be
+  read. So a time change or a repeat inside an ending is not possible.
 
 ### 5.2 Directions
 
@@ -1239,7 +1272,8 @@ A canonical printer writes:
   written
 - code-fence lines as written
 - endings as `|1`, `|1-3`, `|1,3`: passes in order, runs of three or more
-  as a range (`|1,2,3` prints as `|1-3`, `|1,2` as written)
+  as a range (`|1,2,3` prints as `|1-3`, `|1,2` as written); an ending
+  over several lines keeps its lines as written
 - directions in the spelling of 5.2's table (`d.s. al coda` prints as
   `D.S. al Coda`, `𝄋` as `Segno`)
 - omissions after the tones a chord adds (`C7(no5,b9)` prints as
@@ -1308,7 +1342,7 @@ keeps what cannot reduce:
 | error | a lone `-` in a slot (suggests `--` for silence) |
 | error | `%` or `...` sharing a cell with other slots or inside a group |
 | error | unpaired `\|:` or `:\|` |
-| error | an ending mark not at the start of a bar line, an ending that does not follow a `\|: … :\|` repeat, endings that miss or repeat a pass, a last ending that closes with `:\|` or an earlier one that does not, `x N` on an ending |
+| error | an ending mark not at the start of a bar line, an ending that does not follow a `\|: … :\|` repeat, endings that miss or repeat a pass, a last ending that closes with `:\|` or an earlier one that does not (on its own line or the lines it continues onto), `x N` on an ending or a line it continues onto |
 | error | a direction that is not alone in its cell, or a near miss of one (suggests the spelling) |
 | error | a rehearsal mark that is not alone in its cell (suggests a cell of its own), `@` without a label of letters and digits, a meter on a mark, two marks with no bar between them, a mark with no bar after it |
 | error | an unclosed quote, empty quotes, words with no bar to sit on |
@@ -1404,7 +1438,7 @@ human to say whether the band was silent, and the structure line.
 | Gradual tempo changes | Decided by Kevin (2026-11-01): `tempo:` also takes `rit.`, `accel.` (each optionally `to` a tempo) and `a tempo`. A change runs from the next bar to the next `tempo:` or the end; its shape is never written; machine output marks every bar inside one (7.2, A.7). |
 | `(addN)` in parentheses | Decided by Kevin (2026-11-02, issue #62): `(add2)`, `(add4)`, `(add9)` and `(add11)` are aliases of `(2)`, `(4)`, `(9)` and `(11)`, alone or in a list (`C(b9,add11)` = `C(b9,11)`), because chord players and DAWs spell `Am(add9)` that way. Only the four tones `addN` already takes: `add13` and `add#11` stay errors, in or out of parentheses. |
 | Custom swing ratios | Decided by Kevin (2026-11-02, issue #66): first not planned, then reopened the same day with the evidence of Stem Shovel's chart export, whose swing is a continuous amount that `swing` alone could only round to 2:1 or nothing. Decided: `swing`, `shuffle` and `swing 16` take an optional amount (`swing 58%`), where the swung note lands, from 50% to 75% inclusive (MPC style); `shuffle` takes one on the same scale; the `%` is required. The bare word is 66.7% and prints as the word, so no chart that read before changes meaning or form (7.1). |
-| Endings | Decided by Kevin (2026-11-03, issue #70): an ending is a bar line that starts with its passes (`\|1`, `\|2`, `\|1-3`, `\|1,3`), following a `\|: … :\|` repeat; the highest pass gives the count (5.1). The ending is its line, as `x N` repeats its line. Rejected: inline marks as ABC writes them (`… \|1 G :\|2 C \|`), because nothing marks where the last ending ends; and no syntax, because a score's correction editor loses the printed bars and a renderer the brackets. An ending marks a line, not a bar or a slot, so accents are no longer decided with endings. |
+| Endings | Decided by Kevin (2026-11-03, issue #70): an ending is a bar line that starts with its passes (`\|1`, `\|2`, `\|1-3`, `\|1,3`), following a `\|: … :\|` repeat; the highest pass gives the count (5.1). The ending is its line, as `x N` repeats its line (amended 2026-11-10 below: an ending before the last may continue onto further lines). Rejected: inline marks as ABC writes them (`… \|1 G :\|2 C \|`), because nothing marks where the last ending ends; and no syntax, because a score's correction editor loses the printed bars and a renderer the brackets. An ending marks a line, not a bar or a slot, so accents are no longer decided with endings. |
 | Directions | Decided by Kevin (2026-11-03, issue #70): `Segno`, `Coda`, `To Coda`, `Fine` and the jumps `D.C.`/`D.S.` (each alone or `al Fine`/`al Coda`) are cells, marks between bars that take no time (5.2). One jump per chart for now, taken once; after it every repeat plays once, `\|: :\|` taking its last ending. Rejected: direction lines (`jump: D.S. al Coda`), which cannot sit mid-line where scores put a segno; and no syntax with converters rewriting jumps as replays, which would split sections at arbitrary bars. The one exception to written order being play order. |
 | Rehearsal marks | Decided by Kevin (2026-11-03, issue #70): `@` and a label of letters and digits, alone in a cell, marks the bar after it (2.5). Rejected: `[B]`, which reads too much like the one-bar meter `[2/4]` and could be taken as a chord; `@` is distinct from both. |
 | Words on a bar | Decided by Kevin (2026-11-03, issue #70): quoted words in a cell sit before the slot they precede (2.6), with no musical meaning. Rejected: words as a cell of their own between bars, which loses the slot. |
@@ -1450,6 +1484,7 @@ human to say whether the band was silent, and the structure line.
 | A `Coda` with no bar after it | Decided by Kevin (2026-11-08): an **error** (5.2, 9); the `Coda` an `al Coda` goes on needs a bar after it: a bar written later in the chart, or a later heading that replays one (the last chorus as the coda). It gives `To Coda` nowhere to go on, and MusicXML has no measure to carry the sign. Before, it parsed, played nothing after `To Coda` and the export dropped the sign. Rejected: a warning, which would leave the jump going nowhere. |
 | Pickup | Decided by Kevin (2026-11-09): the chart's first written bar is a pickup when it is in a one-bar meter shorter, by value, than the meter in force at the next written bar, and that next bar is not itself in a one-bar meter shorter than the `time:` in force, so two short bars in a row open no pickup (2.4); it is bar 0, so bar 1 is the first full bar, as notation numbers it. Before, the pickup was bar 1 and the MusicXML export already wrote measure 0. `index`, the play position, does not change, so saved timing maps keep working. Machine output gains `pickup` on the parse (A.7). Rejected: renumbering `index` too (every saved map would answer one bar off with an unchanged hash); a literal 0 in the bar-grid gutter. |
 | An unreadable slot keeps its bar | Decided by Kevin (2026-11-10): "Barmark should not be dropping lines for a chord it can't read." Any slot that can't be read (an unknown chord symbol such as `CM7`, `CSus4`, `C69` or `C−7`, a bad note set such as `{H}`, a mark that can't be read) is still an **error**, with the same message, line, token and suggestion, so `check` still fails; but it keeps its bar as unknown harmony carrying the author's text (principle 4, 2.3, 3, A.7), which prints, renders and stays through transposition as written. Only a bar line whose structure can't be read (a stray or misplaced `\|:` or `:\|`, an unclosed or bad `_` group, a bad ending or `x N`, a rehearsal mark sharing a cell) is still excluded, because there the bar count itself is unknown. Found by porting a listening tool: a chart with `CM7` lost its whole line and played shorter than the recording. Rejected: a warning (an unreadable chord must not publish unnoticed), and keeping only unknown chord symbols (a bad note set or mark loses a line just the same). Two further rulings the same day: **transpose moves the readable chords** on a line that holds an unreadable slot (`key: C`, `\| C \| CM7 \| G \|` to D is `\| D \| CM7 \| A \|`), leaving the text as written with a warning on it, so such a line also prints in canonical form (8) and only a line excluded for its structure prints as written; and **a misplaced or bad dot** (`\| C. \|`) is the slot's error, not the structure's, since a dot never changes the bar count. |
+| An ending across lines | Decided by Kevin (2026-11-10, stem-shovel issue #16, ask 6): an ending not closed by `:\|` on its own line continues through the plain `\|` lines after it, up to its `:\|` or the next ending, so `\|1 G \| A \| B \| C \|` then `\| D :\|` is a five-bar first ending and a chart keeps four bars a row (5.1). The last ending has no `:\|` and still ends at its own line, which keeps the grammar unambiguous. Claude's rulings the same day, conservative where open: only an ending another ending follows continues, so with no ending after it nothing continues and the errors are as before (a `:\|` after the last ending stays a stray `:\|`, and the repeat still plays); text, credit, lyric-row and `---` lines may sit between an ending's lines, as between endings, and a rehearsal mark is a cell on a continuation line; a heading, a directive line, a `\|:` line or a bar line that can't be read ends the ending, so a time change or a repeat inside an ending is not possible; `x N` on a continuation line is an error, as on the ending's own line; an ending before the last that reaches the next ending with no `:\|` is one error on its first line, where before it was two. Machine output gains `continues` on a continuation line (A.7); the canonical form keeps the lines as written. A chart that read cleanly before reads the same. Rejected: continuing the last ending to the section's end, which would make every line after the endings part of them. |
 
 ## Open questions
 
@@ -1595,6 +1630,7 @@ Each slot parses to one record:
 | `rehearsal` | a cell in the parse tree that is a mark (2.5), with its `label`; on a played bar, the label of the mark just before it, or absent |
 | `words` | on a cell and a played bar: each `text` with `at`, the slot it sits before (the slot count for after the last), or absent when none |
 | `ending` | on a bar line in the parse tree: the passes an ending plays on (`[1]`, `[1, 2, 3]`), or empty |
+| `continues` | on a bar line in the parse tree that an ending continues onto (5.1): that ending's passes; absent on every other line |
 | `direction` | a cell in the parse tree that is a mark between bars (5.2): `segno`, `coda`, `to coda`, `fine`, or a `jump` with `to` (`start` for `D.C.`, `segno` for `D.S.`) and `al` (`fine`, `coda`, or empty when it plays to the end) |
 | `repeat` | on a bar line, section or repeat bracket in the parse tree: a count, or `open` for `x ...` |
 | `text` | on an `unknown` slot that can't be read (2.3): the slot as written (`CM7`, `+?`), a dotted member's dot left off; absent for a written `?` |

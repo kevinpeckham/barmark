@@ -2,6 +2,7 @@ import { parseChord } from "../chords/parse.js";
 import { misplacedRepeat, parseBarLine, readRepeat, repeatTail } from "./barLine.js";
 import { creditsOf, nearCredit, readCredit } from "./credits.js";
 import { parseDirectiveLine } from "./directives.js";
+import { continueEndings } from "./endingLines.js";
 import { checkLines } from "./lines.js";
 import { attachLyrics, readLyricRow } from "./lyricRows.js";
 import { readPart } from "./partLine.js";
@@ -371,7 +372,7 @@ export function readDocument(text: string): {
 		part: parts.length === 1 ? (parts[0] ?? null) : null,
 		parts,
 		credits: creditsOf(lines),
-		lines: lyrics.lines,
+		lines: continueEndings(lyrics.lines),
 		diagnostics,
 	};
 }

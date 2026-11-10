@@ -9,9 +9,24 @@ Releases follow the process in [RELEASING.md](RELEASING.md).
 
 ## [Unreleased]
 
-A grammar change: an unreadable slot keeps its bar (Kevin, 2026-11-10).
+Two grammar changes: an unreadable slot keeps its bar, and an ending may
+continue onto the lines after it (Kevin, 2026-11-10).
 
 ### Added
+
+- **An ending may continue onto the lines after it** (grammar 5.1, Kevin
+  2026-11-10, stem-shovel issue #16). An ending not closed by `:|` on its
+  own line continues through the plain `|` lines after it, up to its `:|`
+  or the next ending: `|1 G | A | B | C |` then `| D :|` is a five-bar
+  first ending, so a chart keeps four bars a row. The last ending still
+  ends at its own line. Each continuation line carries the ending's passes
+  as the new optional `continues` on its bar line in the parse tree (A.7),
+  and plays on that ending's passes only. Text, credit, lyric-row and
+  `---` lines may sit between an ending's lines; a heading, a directive
+  line, a `|:` line or a line that can't be read ends it. A chart that
+  read cleanly before reads the same; an ending before the last that runs
+  into the next ending with no `:|` now gives one error, "an ending before
+  the last goes back with :|", on its first line, where it gave two.
 
 - **`printedAsWritten(parse)`** and **`unreadSlots(line)`**: the lines the
   printer prints as written (spec §8), and a bar line's unreadable slots,

@@ -6,6 +6,15 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- **An ending across lines exports as one ending** (barmark's grammar
+  5.1). Its `<ending type="start">` goes on its first line's first
+  measure and its `stop` (or the last ending's `discontinue`) on its last
+  line's last measure, the backward repeat's `times` counts every ending,
+  and a repeat written out in play order (a line with `x N` inside it)
+  plays every line of each ending.
+
 ## [0.8.0] - 2026-11-09
 
 ### Added

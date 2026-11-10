@@ -154,6 +154,11 @@ export type Line =
 			repeat: Repeat;
 			/** The passes an ending plays on (grammar 5.1), in order; null for any other bar line. */
 			ending: number[] | null;
+			/**
+			 * On a plain bar line that continues an ending onto another line
+			 * (grammar 5.1): that ending's passes. Absent on every other line.
+			 */
+			continues?: number[];
 			/** The declared label of the part whose line this is (grammar 7.4); absent on a tutti line and in a single-part chart. */
 			part?: string;
 			/** The part's line this is (`RH` in `Pno.RH`, grammar 7.6), as first spelled; absent on a part's bare line. */

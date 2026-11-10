@@ -300,28 +300,40 @@ function directionCell(w: Walk, d: Direction, last: Measure | undefined): void {
 	if (d.kind === "jump" && last && last.marks.repeatEnd !== null) w.flattened = true;
 }
 
-/** Lines that may stand between a repeat's endings (barmark's `repeats.ts`). */
+/** Lines that may stand between a repeat's endings, and between an ending's lines (barmark's `endingLines.ts`). */
 const BETWEEN_ENDINGS = new Set<Line["kind"]>(["text", "credit", "lyrics", "break"]);
+
+type BarsLine = Extract<Line, { kind: "bars" }>;
+
+/** The passes of the ending a bar line starts or continues (grammar 5.1); null for any other. */
+const endingOf = (line: BarsLine) => line.ending ?? line.continues ?? null;
 
 /** The passes a repeat closed by this ending plays: the highest number of its endings. */
 function passes(lines: Line[], i: number): number {
 	let max = 0;
 	for (const l of lines.slice(i)) {
 		if (BETWEEN_ENDINGS.has(l.kind)) continue;
-		if (l.kind !== "bars" || !l.ending) break;
-		max = Math.max(max, ...l.ending);
+		const ending = l.kind === "bars" ? endingOf(l) : null;
+		if (!ending) break;
+		max = Math.max(max, ...ending);
 	}
 	return max;
 }
 
-type BarsLine = Extract<Line, { kind: "bars" }>;
+/** Whether the next bar line after `next` (past lines between endings) continues an ending. */
+function goesOn(lines: Line[], next: number): boolean {
+	const after = lines.slice(next).find((l) => !BETWEEN_ENDINGS.has(l.kind));
+	return after?.kind === "bars" && after.continues !== undefined;
+}
 
-/** An ending is its whole bar line: it starts on the first measure and stops on the last. */
-function endingMarks(line: BarsLine, first: Measure, last: Measure): void {
-	if (!line.ending) return;
-	first.marks.ending = { numbers: line.ending, start: true, stop: null };
+/** An ending starts on its first bar line's first measure and stops on its last bar line's last (grammar 5.1). */
+function endingMarks(line: BarsLine, first: Measure, last: Measure, more: boolean): void {
+	const numbers = endingOf(line);
+	if (!numbers) return;
+	if (line.ending) first.marks.ending = { numbers, start: true, stop: null };
+	if (more) return;
 	last.marks.ending = {
-		...(last.marks.ending ?? { numbers: line.ending, start: false }),
+		...(last.marks.ending ?? { numbers, start: false }),
 		stop: line.closes ? "stop" : "discontinue",
 	};
 }
@@ -330,7 +342,7 @@ function endingMarks(line: BarsLine, first: Measure, last: Measure): void {
 function barlessMarks(w: Walk, line: BarsLine): void {
 	if (line.opens) w.pending.opens = true;
 	const last = w.out.at(-1);
-	if (line.closes && last && !line.ending) last.marks.repeatEnd = line.repeat ?? 2;
+	if (line.closes && last && !endingOf(line)) last.marks.repeatEnd = line.repeat ?? 2;
 }
 
 function lineMarks(w: Walk, line: BarsLine, from: number, lines: Line[], i: number): void {
@@ -339,11 +351,10 @@ function lineMarks(w: Walk, line: BarsLine, from: number, lines: Line[], i: numb
 	if (from === w.out.length) barlessMarks(w, line);
 	if (!first || !last) return;
 	if (line.opens) first.marks.repeatStart = true;
-	endingMarks(line, first, last);
+	endingMarks(line, first, last, goesOn(lines, i));
+	const ending = endingOf(line);
 	if (line.closes)
-		last.marks.repeatEnd = line.ending
-			? Math.max(...line.ending, passes(lines, i))
-			: (line.repeat ?? 2);
+		last.marks.repeatEnd = ending ? Math.max(...ending, passes(lines, i)) : (line.repeat ?? 2);
 	else if (line.repeat !== null) {
 		first.marks.repeatStart = true;
 		last.marks.repeatEnd = line.repeat;
@@ -378,15 +389,16 @@ const closingPasses = (line: BarsLine) => (line.repeat === "open" ? 1 : (line.re
 
 /** Counts a line's bars into the bracket: a body line's as often as its own `x N` plays it, an ending's once per pass it takes. */
 function countLine(b: Bracket, line: BarsLine, bars: number): void {
-	if (line.ending) {
-		b.endings += bars * line.ending.length;
-		b.passes = Math.max(b.passes, ...line.ending);
+	const ending = endingOf(line);
+	if (ending) {
+		b.endings += bars * ending.length;
+		b.passes = Math.max(b.passes, ...ending);
 	} else b.body += bars * (line.closes || typeof line.repeat !== "number" ? 1 : line.repeat);
 }
 
 /** The `|: … :|`'s last line: its last ending, or its `:|` with no endings after it. */
 const endsBracket = (line: BarsLine, lines: Line[], next: number) =>
-	line.ending ? !line.closes : line.closes && passes(lines, next) === 0;
+	endingOf(line) ? !line.closes && !goesOn(lines, next) : line.closes && passes(lines, next) === 0;
 
 /**
  * A `|: … :|` holding a bar line's `x N`, written out in play order once
@@ -401,7 +413,7 @@ function bracketLine(w: Walk, line: BarsLine, from: number, lines: Line[], next:
 	countLine(b, line, w.out.length - from);
 	if (!endsBracket(line, lines, next)) return;
 	w.bracket = null;
-	const passes = line.ending ? b.passes : closingPasses(line);
+	const passes = endingOf(line) ? b.passes : closingPasses(line);
 	const bars = b.nested ? bracketPlays(w, b.from, passes * b.body + b.endings) : [];
 	if (bars.length) rewrite(w, b.from, bars);
 }
