@@ -14,10 +14,13 @@ if [ $# -ne 1 ]; then
 fi
 HERE=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 PKG=$(dirname "$HERE")
+# build/ as committed: refuse uncommitted changes before writing anything.
+if [ -n "$(git -C "$HERE" status --porcelain -- .)" ]; then
+	echo "source.sh: $HERE has uncommitted changes" >&2
+	exit 1
+fi
 # shellcheck source=versions.env
 source "$HERE/versions.env"
-mkdir -p "$1"
-OUT=$(realpath "$1")
 CACHE=${BARMARK_ENGRAVER_CACHE:-$HOME/.cache/barmark-engraver}
 REPO="$CACHE/src/verovio"
 VERSION=$(bun -e "console.log((await Bun.file(process.argv[1]).json()).version)" "$PKG/package.json")
@@ -33,14 +36,13 @@ if [ "$COMMIT" != "$VEROVIO_COMMIT" ]; then
 	echo "source.sh: $VEROVIO_TAG is $COMMIT, not $VEROVIO_COMMIT" >&2
 	exit 1
 fi
+# Every check has passed: only now is <outdir> written.
+mkdir -p "$1"
+OUT=$(realpath "$1")
 git -C "$REPO" archive --format=tar.gz --prefix="verovio-$VEROVIO/" \
 	-o "$OUT/verovio-$VEROVIO-source.tar.gz" "$VEROVIO_COMMIT"
 
-# 2. build/ as committed.
-if [ -n "$(git -C "$HERE" status --porcelain -- .)" ]; then
-	echo "source.sh: $HERE has uncommitted changes" >&2
-	exit 1
-fi
+# 2. build/ as committed (checked first, above).
 # From the top level: git archive run in a subdirectory archives only its paths.
 # A tree, unlike a commit, is stamped with the current time; use HEAD's instead.
 TOP=$(git -C "$HERE" rev-parse --show-toplevel)
