@@ -29,6 +29,7 @@ JOBS=${BARMARK_ENGRAVER_JOBS:-$(nproc)}
 if [ ! -d "$CACHE/emsdk" ]; then
 	git clone https://github.com/emscripten-core/emsdk "$CACHE/emsdk"
 fi
+git -C "$CACHE/emsdk" fetch --quiet
 git -C "$CACHE/emsdk" checkout --quiet "$EMSDK_COMMIT"
 (cd "$CACHE/emsdk" && ./emsdk install "$EMSDK_VERSION" && ./emsdk activate "$EMSDK_VERSION")
 set +u
