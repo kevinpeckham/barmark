@@ -6,6 +6,14 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.10.1] - 2026-11-10
+
+### Changed
+
+- **Uses** @barmark/score 0.3.0 (with Verovio 6.4.1, unchanged).
+  `render --score` engraves as before: the release adds only the
+  element's loading progress, `verovio-integrity` and `preload`.
+
 ## [0.10.0] - 2026-11-09
 
 ### Changed
@@ -316,7 +324,8 @@ The first release of the `barmark` command. Uses `barmark` 0.8.0 and
 - **The `barmark` command:** `check`, `format`, `render` and `transpose`
   for `.chart.md` files, on npm and as standalone binaries.
 
-[Unreleased]: https://github.com/kevinpeckham/barmark/compare/cli-v0.10.0...HEAD
+[Unreleased]: https://github.com/kevinpeckham/barmark/compare/cli-v0.10.1...HEAD
+[0.10.1]: https://github.com/kevinpeckham/barmark/compare/cli-v0.10.0...cli-v0.10.1
 [0.10.0]: https://github.com/kevinpeckham/barmark/compare/cli-v0.9.0...cli-v0.10.0
 [0.9.0]: https://github.com/kevinpeckham/barmark/compare/cli-v0.8.0...cli-v0.9.0
 [0.8.0]: https://github.com/kevinpeckham/barmark/compare/cli-v0.7.0...cli-v0.8.0
