@@ -84,15 +84,34 @@ export async function checkIntegrity(bytes: BufferSource, integrity: string): Pr
 /** How often an unmeasurable download reports: every this many bytes. */
 const UNKNOWN_STEP = 512 * 1024;
 
-/** Reports a download only when its whole percentage moves, or (unmeasured) every UNKNOWN_STEP bytes. */
+/** A download's measure, but unmeasured from the first time it would go down (the body outgrew its length). */
+function rising() {
+	let high = -1;
+	let lost = false;
+	return (d: Download): Download => {
+		const percent = d.fraction === null ? -1 : Math.floor(d.fraction * 100);
+		lost ||= percent >= 0 && percent < high;
+		high = Math.max(high, percent);
+		return lost ? { ...d, fraction: null, bytes: null } : d;
+	};
+}
+
+/**
+ * Reports a download only when its whole percentage rises (it never goes
+ * down: see `rising`), or, unmeasured, every UNKNOWN_STEP bytes.
+ */
 function throttled(report: (d: Download) => void) {
+	const monotone = rising();
 	let last: number | null = null;
 	return (d: Download, done: number) => {
+		const shown = monotone(d);
 		const mark =
-			d.fraction === null ? -1 - Math.floor(done / UNKNOWN_STEP) : Math.floor(d.fraction * 100);
+			shown.fraction === null
+				? -1 - Math.floor(done / UNKNOWN_STEP)
+				: Math.floor(shown.fraction * 100);
 		if (mark === last) return;
 		last = mark;
-		report(d);
+		report(shown);
 	};
 }
 
@@ -120,10 +139,15 @@ export async function fetchModule(url: string, options: FetchModuleOptions): Pro
 		done += r.value.byteLength;
 		report(meter(done), done);
 	}
-	const blob = new Blob(chunks as BlobPart[], { type: "text/javascript" });
-	if (options.integrity !== undefined) {
-		if (!(await checkIntegrity(await blob.arrayBuffer(), options.integrity)))
-			throw new Error(`${url} does not match its integrity digest`);
+	// One copy of the module: the chunks are joined and dropped before it is digested and wrapped.
+	const bytes = new Uint8Array(done);
+	let at = 0;
+	for (const chunk of chunks.splice(0)) {
+		bytes.set(chunk, at);
+		at += chunk.byteLength;
 	}
+	if (options.integrity !== undefined && !(await checkIntegrity(bytes, options.integrity)))
+		throw new Error(`${url} does not match its integrity digest`);
+	const blob = new Blob([bytes], { type: "text/javascript" });
 	return blob;
 }

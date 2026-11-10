@@ -610,7 +610,7 @@ describe("<barmark-score preload>", () => {
 	type Idle = (cb: () => void) => number;
 	const g = globalThis as unknown as {
 		requestIdleCallback?: Idle | undefined;
-		cancelIdleCallback?: (id: number) => void;
+		cancelIdleCallback?: ((id: number) => void) | undefined;
 		navigator: { connection?: unknown };
 	};
 	let idle: (() => void)[] = [];
@@ -647,6 +647,22 @@ describe("<barmark-score preload>", () => {
 		await flush();
 		expect(preloads).toEqual([["https://example.test/v.mjs", digest]]);
 		expect(calls).toHaveLength(0);
+	});
+
+	test("changing preload away from idle cancels the armed idle load", async () => {
+		const cancelled: number[] = [];
+		const cancel = g.cancelIdleCallback;
+		g.cancelIdleCallback = (id) => cancelled.push(id);
+		try {
+			const el = await make({ preload: "idle" });
+			expect(idle).toHaveLength(1);
+			el.setAttribute("preload", "none");
+			expect(cancelled).toEqual([1]);
+			el.setAttribute("preload", "idle");
+			expect(idle).toHaveLength(2);
+		} finally {
+			g.cancelIdleCallback = cancel;
+		}
 	});
 
 	test("idle falls back to setTimeout without requestIdleCallback", async () => {

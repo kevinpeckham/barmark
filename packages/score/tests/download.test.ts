@@ -166,6 +166,17 @@ describe("fetchModule", () => {
 		expect(seen.length).toBe(101);
 	});
 
+	test("never reports a lower percentage: a measure that falls back goes indeterminate", async () => {
+		// A same-origin proxy that strips Content-Encoding: the length is the compressed size.
+		const seen: (number | null)[] = [];
+		await fetchModule("https://cdn.test/v.mjs", {
+			fetch: async () => respond(["aa", "aa", "aaaa"], { "content-length": "4" }),
+			expected: 10,
+			onProgress: (p) => seen.push(p.fraction),
+		});
+		expect(seen).toEqual([0, 0.5, 1, null]);
+	});
+
 	test("an HTTP error rejects with its status", async () => {
 		await expect(
 			fetchModule("https://cdn.test/v.mjs", {

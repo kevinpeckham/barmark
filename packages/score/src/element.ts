@@ -215,7 +215,7 @@ function defineElement(): void {
 			if (!this.isConnected || old === value) return;
 			// A new URL may be the fix: the Score radio works again, as after a new chart.
 			if (name === "verovio-url" || name === "verovio-integrity") this.#clearFailure();
-			else if (name === "preload") this.#armIdle();
+			else if (name === "preload") this.#preloadChanged();
 			else if (name === "view") this.#applyView();
 			else if (name === "src") this.#chartChanged();
 			else this.#schedule();
@@ -347,6 +347,15 @@ function defineElement(): void {
 		/** A reader reaching for Score: any preload but "none" starts now. */
 		#intent() {
 			if (this.#preloadMode() !== "none") this.#preload();
+		}
+
+		/** A new `preload`: an idle load armed for "idle" is cancelled unless it is still "idle". */
+		#preloadChanged() {
+			if (this.#preloadMode() !== "idle") {
+				this.#idle?.();
+				this.#idle = null;
+			}
+			this.#armIdle();
 		}
 
 		/** `preload="idle"`: start the load when the page is idle (or shortly, without requestIdleCallback). */

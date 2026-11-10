@@ -40,6 +40,10 @@ package uses [semantic versioning](https://semver.org/).
 
 - **Verovio is pinned exactly at 6.4.1** (was `^6.4.1`): the decoded size
   and the CDN digest are those of that build.
+- **A `verovio-url` is fetched, then imported from a `blob:` URL**, with
+  or without `verovio-integrity`, where the worker used to `import()` it
+  directly. A worker served with its own Content-Security-Policy needs
+  the module's origin in `connect-src` and `blob:` in `script-src`.
 
 ## [0.2.0] - 2026-11-09
 

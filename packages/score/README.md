@@ -91,9 +91,11 @@ bundling the 7 MB inside the worker; it only changes where that module
 comes from. The URL is resolved against the page and must be http(s);
 anything else is refused and the score is not drawn. The first
 `verovio-url` that loads wins for the whole page: every element shares one
-worker, so a later or different URL is not loaded. The worker downloads
-the module and imports it from a `blob:` URL; a worker served with its own
-Content-Security-Policy needs `blob:` in `script-src`.
+worker, so a later or different URL is not loaded. The worker downloads a
+`verovio-url` with `fetch` (with or without `verovio-integrity`) and
+imports it from a `blob:` URL, so a worker served with its own
+Content-Security-Policy needs the module's origin (a CDN's, say) in
+`connect-src` and `blob:` in `script-src`.
 
 ### While the score loads
 

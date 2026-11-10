@@ -49,13 +49,19 @@ function luminanceRange(page: Page, png: Buffer): Promise<{ min: number; max: nu
 	);
 }
 
-test("no engine request until the first switch", async ({ page }) => {
+/** Opens `url` and waits for the network to settle, having asked for no engine. */
+async function openQuiet(page: Page, url: string) {
 	const seen = countEngine(page);
-	await page.goto("/score");
+	await page.goto(url);
 	const el = page.locator("barmark-score");
 	await expect(el.locator(".bms-grid .bm-chart")).toBeVisible();
 	await page.waitForLoadState("networkidle");
 	expect(seen.engine).toBe(0);
+	return { seen, el };
+}
+
+test("no engine request until the first switch", async ({ page }) => {
+	const { seen, el } = await openQuiet(page, "/score");
 	await switchToScore(el);
 	expect(seen.worker).toBe(1);
 	// engine.js, then the worker (Verovio is bundled into it).
@@ -343,28 +349,32 @@ test("the indeterminate bar stands still with reduced motion", async ({ page }) 
 	expect(animation).toBe("none");
 });
 
-test("verovio-integrity: a matching copy is used", async ({ page }) => {
+const LOCAL = "/verovio/verovio-module.mjs";
+
+/** Opens `/score?query`, presses Score and waits for it: the console's warnings and the engine's requests. */
+async function scoreWith(page: Page, query: string) {
 	const warnings: string[] = [];
 	page.on("console", (m) => m.type() === "warning" && warnings.push(m.text()));
 	const seen = countEngine(page);
-	await page.goto("/score?engine=local&integrity=good");
-	await switchToScore(page.locator("barmark-score"));
-	expect(seen.urls.filter((u) => u === "/verovio/verovio-module.mjs")).toHaveLength(1);
+	await page.goto(`/score?${query}`);
+	const el = page.locator("barmark-score");
+	await switchToScore(el);
+	return { el, warnings, local: seen.urls.filter((u) => u === LOCAL).length };
+}
+
+test("verovio-integrity: a matching copy is used", async ({ page }) => {
+	const { warnings, local } = await scoreWith(page, "engine=local&integrity=good");
+	expect(local).toBe(1);
 	expect(warnings).toEqual([]);
 });
 
 test("verovio-integrity: a mismatch falls back to the package's own copy, with a warning", async ({
 	page,
 }) => {
-	const warnings: string[] = [];
-	page.on("console", (m) => m.type() === "warning" && warnings.push(m.text()));
-	const seen = countEngine(page);
-	await page.goto("/score?engine=local&integrity=bad");
-	const el = page.locator("barmark-score");
-	await switchToScore(el);
-	expect(seen.urls.filter((u) => u === "/verovio/verovio-module.mjs")).toHaveLength(1);
+	const { el, warnings, local } = await scoreWith(page, "engine=local&integrity=bad");
+	expect(local).toBe(1);
 	expect(warnings).toHaveLength(1);
-	expect(warnings[0]).toContain("/verovio/verovio-module.mjs");
+	expect(warnings[0]).toContain(LOCAL);
 	expect(warnings[0]).toContain("integrity");
 	await expect(el.locator(".bms-note")).toHaveCount(0);
 });
@@ -373,7 +383,7 @@ test('preload="idle" loads the engine before a press, once', async ({ page }) =>
 	const seen = countEngine(page);
 	await page.goto("/score?engine=local&preload=idle");
 	await expect
-		.poll(() => seen.urls.filter((u) => u === "/verovio/verovio-module.mjs").length, {
+		.poll(() => seen.urls.filter((u) => u === LOCAL).length, {
 			timeout: 10_000,
 		})
 		.toBe(1);
@@ -384,17 +394,12 @@ test('preload="idle" loads the engine before a press, once', async ({ page }) =>
 	const watched = await watchLoading(el);
 	await switchToScore(el);
 	expect((await watched()).some((s) => s.text === LOADING)).toBe(false);
-	expect(seen.urls.filter((u) => u === "/verovio/verovio-module.mjs")).toHaveLength(1);
+	expect(seen.urls.filter((u) => u === LOCAL)).toHaveLength(1);
 	expect(seen.worker).toBe(1);
 });
 
 test('preload="intent" loads the engine on hovering Score, not before', async ({ page }) => {
-	const seen = countEngine(page);
-	await page.goto("/score?engine=local&preload=intent");
-	const el = page.locator("barmark-score");
-	await expect(el.locator(".bms-grid .bm-chart")).toBeVisible();
-	await page.waitForLoadState("networkidle");
-	expect(seen.engine).toBe(0);
+	const { seen, el } = await openQuiet(page, "/score?engine=local&preload=intent");
 	await el.getByRole("radio", { name: "Score" }).hover();
 	await expect.poll(() => seen.worker, { timeout: 10_000 }).toBe(1);
 	expect(await el.getAttribute("view")).toBeNull();

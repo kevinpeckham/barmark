@@ -205,11 +205,12 @@ export function createEngine(makeWorker: () => WorkerLike, options: EngineOption
 	const onReady = (job: Running, ready: Ready) => {
 		loaded ??= ready.loaded;
 		warm = true;
-		tell(ENGRAVING);
+		// A preload's Ready engraves nothing: the job behind it hears "engrave" at its own Ready.
 		if (preloads.has(job.id)) {
 			finish(job);
 			return next();
 		}
+		tell(ENGRAVING);
 		clear(job);
 		job.timers = [
 			setTimeout(overdue(job.id, "engraving"), deadline),

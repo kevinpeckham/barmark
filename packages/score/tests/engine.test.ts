@@ -457,6 +457,9 @@ describe("createEngine: loading", () => {
 		w.send({ id: w.current, status: download(0.5) });
 		w.ready();
 		expect(w.posted.at(-1)).toMatchObject({ text: "a" });
+		// Engraving starts at the job's own Ready, not the preload's.
+		expect(seen).toEqual([download(null), download(0.5)]);
+		w.ready();
 		expect(seen).toEqual([download(null), download(0.5), { phase: "engrave" }]);
 	});
 
