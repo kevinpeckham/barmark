@@ -18,13 +18,15 @@ package uses [semantic versioning](https://semver.org/).
 ### Changed
 
 - **Uses** barmark 0.23.0, @barmark/render 0.19.0, @barmark/musicxml
-  0.9.0, @barmark/score 0.4.0 (with Verovio 6.4.1, unchanged) and
-  @barmark/midi 0.3.2 and, through it, @barmark/sync 0.4.1: `check` and
-  `format` read stacked chord spellings with a warning (`format` writes
-  the canonical form), an unreadable slot keeps its bar (`check` still
-  fails) and `transpose` moves the readable chords beside it, an ending
-  may continue onto the lines after it in `render` and `export`, and
-  `render` shows the beat a tempo counts.
+  0.9.0 and @barmark/midi 0.3.2 and, through it, @barmark/sync 0.4.1:
+  `check` and `format` read stacked chord spellings with a warning
+  (`format` writes the canonical form), an unreadable slot keeps its bar
+  (`check` still fails) and `transpose` moves the readable chords beside
+  it, an ending may continue onto the lines after it in `render` and
+  `export`, and `render` shows the beat a tempo counts.
+- **Uses @barmark/score 0.5.0 (still stock Verovio in-process).**
+  `render --score` engraves with Verovio 6.4.1, unchanged; score's
+  `@barmark/engraver` opt-in is for pages, not the CLI.
 - **`barmark render --help`** says `--rehearsal-letters` adds no letters
   to a chart that marks its own (`@A`), as `@barmark/render` 0.19.0 does.
 
