@@ -142,6 +142,8 @@ describe("alignChart on a song rendered from its own chart", () => {
 		const chords = [...PROGRESSION, ...PROGRESSION];
 		chords[5] = "CM7"; // unreadable: a ? that holds the bar before's chord
 		const r2 = alignChart({ chart: chartOf(chords), features });
+		expect(reasons(r2)).toEqual([]);
+		expect(r2.ok).toBe(true);
 		const warning = r2.warnings.find((w) => w.code === "chart-diagnostics");
 		expect(warning?.detail).toEqual({ count: 1 });
 	});
@@ -208,6 +210,12 @@ describe("alignChart never throws: each bad input is its named refusal", () => {
 				reason: "invalid-input",
 				detail: { field: "tempo" },
 			});
+		// The positive case: a fallback of 120 is read, so neither the tempo nor the bars refuse.
+		const read = reasons(alignChart({ chart: untimed, features, tempo: 120 }));
+		expect(read).not.toContain("invalid-input");
+		expect(read).not.toContain("no-tempo");
+		// Two bars against 48 s: the fit refuses it, past the input and the bars.
+		expect(read).toContain("bar-length-off");
 	});
 
 	test("declared, startAt and recording are checked", () => {
