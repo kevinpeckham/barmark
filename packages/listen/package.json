@@ -1,7 +1,7 @@
 {
 	"name": "@barmark/listen",
 	"version": "0.1.0",
-	"description": "Listen to a recording and sync a barmark chord chart with it: audio features, a bar grid, a chart and a timing map, each stage refusing in plain words.",
+	"description": "Find the bars in a recording and line a barmark chord chart up with them.",
 	"type": "module",
 	"sideEffects": false,
 	"exports": {

@@ -1,7 +1,7 @@
 # @barmark/listen
 
-Listen to a recording and sync a [barmark](https://barmark.dev) chord
-chart with it. It reads a recording's audio features, finds its bar grid
+Find the bars in a recording and line a [barmark](https://barmark.dev)
+chord chart up with them. It reads a recording's audio features, finds its bar grid
 and where bar one is, builds a chart and its timing map from a chord
 model's runs, and aligns an existing chart to the recording.
 
