@@ -311,7 +311,8 @@ const endingOf = (line: BarsLine) => line.ending ?? line.continues ?? null;
 /** The passes a repeat closed by this ending plays: the highest number of its endings. */
 function passes(lines: Line[], i: number): number {
 	let max = 0;
-	for (const l of lines.slice(i)) {
+	for (let k = i; k < lines.length; k++) {
+		const l = lines[k] as Line;
 		if (BETWEEN_ENDINGS.has(l.kind)) continue;
 		const ending = l.kind === "bars" ? endingOf(l) : null;
 		if (!ending) break;
@@ -320,9 +321,11 @@ function passes(lines: Line[], i: number): number {
 	return max;
 }
 
-/** Whether the next bar line after `next` (past lines between endings) continues an ending. */
+/** Whether the next bar line from `next` (past lines between endings) continues an ending; reads only up to it. */
 function goesOn(lines: Line[], next: number): boolean {
-	const after = lines.slice(next).find((l) => !BETWEEN_ENDINGS.has(l.kind));
+	let k = next;
+	while (k < lines.length && BETWEEN_ENDINGS.has((lines[k] as Line).kind)) k++;
+	const after = lines[k];
 	return after?.kind === "bars" && after.continues !== undefined;
 }
 

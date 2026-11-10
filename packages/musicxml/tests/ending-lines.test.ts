@@ -1,5 +1,7 @@
 /** Barmark's grammar 5.1 (2026-11-10): an ending may continue onto the plain bar lines after it. */
 import { describe, expect, test } from "bun:test";
+import { parseChart } from "barmark";
+import { writtenMeasures } from "../src/measures.js";
 import { measures, xmlOf } from "./helpers.js";
 import { expected, play } from "./play.js";
 
@@ -81,4 +83,24 @@ describe("an ending across lines", () => {
 				["2:start", "2:discontinue"],
 			]);
 	});
+});
+
+describe("many bar lines", () => {
+	/** The best of three walks of `n` lines of `line`, after one to warm up. */
+	const walk = (n: number, line = "| C |") => {
+		const parse = parseChart(Array.from({ length: n }, () => line).join("\n"));
+		let ms = Number.POSITIVE_INFINITY;
+		for (let run = 0; run <= 3; run++) {
+			const start = performance.now();
+			writtenMeasures(parse);
+			if (run > 0) ms = Math.min(ms, performance.now() - start);
+		}
+		return ms;
+	};
+	test("eight times as many lines are walked in linear time", () => {
+		// About eight now; 42 when each line copied the lines after it to look for an ending's next line.
+		expect(walk(16000) / walk(2000)).toBeLessThan(16);
+		// Each `:|` looks ahead for endings too.
+		expect(walk(16000, "|: C :|") / walk(2000, "|: C :|")).toBeLessThan(16);
+	}, 60_000);
 });
