@@ -25,6 +25,29 @@ package uses [semantic versioning](https://semver.org/).
   cell gains `unread`, the messages in order. A `%` copy of the bar draws
   the text without the error. A line with any other error still draws as
   the error box.
+- **`rehearsalLetters` adds no letters to a chart with marks of its own.**
+  When any bar carries its own rehearsal mark (`@A`, barmark's grammar
+  2.5), the option now letters nothing, where it lettered every section
+  beside the chart's marks, so headings showed twice. A chart without
+  marks is lettered as before.
+- **The model gains `tempoBeat`** (`{ note, dotted }`, `note` 2, 4, 8 or
+  16) on `ChartModel`, for the header, and on each directive item: the
+  beat a tempo there counts (see Fixed). A directive item built by hand
+  needs it.
+
+### Fixed
+
+- **A tempo shows the beat it counts.** The header and mid-chart changes
+  always drew `♩ =`, so 6/8 with `tempo: 40` showed "♩ = 40" though
+  barmark (grammar 2.1) and the MIDI and MusicXML exports count 40 dotted
+  quarters. A tempo, and a `rit.` or `accel.` `to` one, now shows the beat
+  of the `time:` in force at the bar it applies to, as the parser, MIDI and
+  MusicXML count it: "♩. = 40" in 6/8, 9/8 and 12/8, 𝅗𝅥 in 2/2, ♪ in 3/8,
+  ♩ in 4/4 as before. A `time:` change mid-chart moves it, even one
+  written on the line after the `tempo:`; a one-bar meter does not
+  (grammar 2.4). The note's `.bm-beat` span tries Apple Symbols, Segoe UI
+  Symbol, Noto Music and Symbola first, which hold 𝅗𝅥 and 𝅘𝅥𝅯. Screen
+  readers hear the note's name ("dotted quarter note").
 
 ## [0.18.0] - 2026-11-09
 

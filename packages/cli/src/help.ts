@@ -69,7 +69,7 @@ The grid only:
   --numerals nashville|roman
                            Show chords as degrees of the key
   --no-bar-numbers         Hide bar numbers
-  --rehearsal-letters      Letter each section A, B, C…
+  --rehearsal-letters      Letter each section A, B, C… (none when the chart marks its own)
   --no-wrap                Keep each row on one line
   --diagnostics            List the chart's problems below it
   --font-url <url>         Link the font instead of embedding it

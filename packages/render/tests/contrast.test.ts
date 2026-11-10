@@ -27,6 +27,11 @@ describe("palettes meet WCAG AA", () => {
 });
 
 describe("the stylesheet", () => {
+	test("a beat note names the symbol fonts that hold 𝅗𝅥 and 𝅘𝅥𝅯 before the label's", () => {
+		expect(stylesheet).toMatch(
+			/\.bm-beat\{font-family:"Apple Symbols","Segoe UI Symbol","Noto Music",Symbola,var\(--barmark-label-font,/,
+		);
+	});
 	test("stops inherited styles at the shadow boundary", () => {
 		expect(stylesheet).toContain(":host{all:initial;display:block}");
 	});

@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import { layoutChart } from "../src/index.js";
+import { parseHTML } from "linkedom";
+import { layoutChart, renderChartUnwrapped } from "../src/index.js";
 import type { BlockItem, ChartModel, SectionBlock } from "../src/types.js";
 import { EXAMPLE } from "./fixtures.js";
 
@@ -130,6 +131,36 @@ describe("rehearsal letters", () => {
 
 	test("off by default", () => {
 		expect(layoutChart(EXAMPLE).blocks.every((b) => b.rehearsal === null)).toBe(true);
+	});
+
+	test("none beside the chart's own marks: a chart writing any @ mark keeps its own", () => {
+		const own = "## Verse\n| @A | D | G |\n## Chorus\n| @B | A | D |";
+		expect(layoutChart(own, { rehearsalLetters: true }).blocks.map((b) => b.rehearsal)).toEqual([
+			null,
+			null,
+		]);
+		// One mark is enough: a section without its own is not lettered either.
+		const one = "## Verse\n| D | G |\n## Chorus\n| @B | A | D |\n## Verse";
+		expect(layoutChart(one, { rehearsalLetters: true }).blocks.map((b) => b.rehearsal)).toEqual([
+			null,
+			null,
+			null,
+		]);
+		const html = renderChartUnwrapped(own, { rehearsalLetters: true });
+		const d = parseHTML(`<!doctype html><body>${html}`).document;
+		expect(d.querySelectorAll(".bm-heading .bm-rehearsal")).toHaveLength(0);
+		expect([...d.querySelectorAll(".bm-mark .bm-box")].map((e) => e.textContent)).toEqual([
+			"A",
+			"B",
+		]);
+	});
+
+	test("a chart without marks of its own is lettered as before", () => {
+		const plain = "## Verse\n| D | G |\n## Chorus\n| A | D |";
+		expect(layoutChart(plain, { rehearsalLetters: true }).blocks.map((b) => b.rehearsal)).toEqual([
+			"A",
+			"B",
+		]);
 	});
 
 	test("past Z the letters double: AA, AB", () => {
