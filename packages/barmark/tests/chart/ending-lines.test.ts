@@ -233,3 +233,31 @@ describe("printing and transposing", () => {
 		expect(out).toBe("key: D\n|: D | G |\n|1 A | B | C# | D |\n| E :|\n|2 F# |\n");
 	});
 });
+
+describe("a real chart: Caught You Thinking's chorus (stem-shovel issue #16)", () => {
+	const SOLO = "key: Eb\n## Solo\n| @C | Abmaj7 | / | Gm11 | / | Gm7/F Cm7/G | Eb6/G | Bb7/Ab |";
+	const chorus = (ending: string) =>
+		`## Chorus\n|: @B | Fmaj9 | Bbmaj7 | C7 |\n${ending}\n|4 / |\n${SOLO}`;
+	/** As the score read wrote it: a one-bar ending for passes 1 to 3. */
+	const READ = chorus("|1-3 C6/G Bbmaj7/F Fmaj9 :|");
+	test("reads cleanly and plays four passes, the fourth holding into the solo", () => {
+		expect(errors(READ)).toEqual([]);
+		const pass = ["Fmaj9", "Bbmaj7", "C7"];
+		const ending = "C6/G Bbmaj7/F Fmaj9";
+		expect(play(READ).texts.slice(0, 17)).toEqual([
+			...[1, 2, 3].flatMap(() => [...pass, ending]),
+			...pass,
+			"/",
+			"Abmaj7",
+		]);
+	});
+	test("with a two-bar ending, on one line or continued onto two, the play order is the same", () => {
+		const oneLine = chorus("|1-3 C6/G Bbmaj7/F Fmaj9 | C7 :|");
+		const twoLines = chorus("|1-3 C6/G Bbmaj7/F Fmaj9 |\n| C7 :|");
+		expect(errors(twoLines)).toEqual([]);
+		expect(marks(twoLines)).toEqual(["|", "|1,2,3", "+1,2,3", "|4", "|"]);
+		expect(play(twoLines).texts).toEqual(play(oneLine).texts);
+		expect(meaning(parseChart(twoLines)).bars).toEqual(meaning(parseChart(oneLine)).bars);
+		expect(printChart(`${twoLines}\n`)).toBe(printChart(printChart(`${twoLines}\n`)));
+	});
+});
