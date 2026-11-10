@@ -855,6 +855,38 @@ and round-trip it through `format`.
 
 ## Tooling
 
+### The Verovio build is reproducible across machines once paths are mapped (2026-11-10, @barmark/engraver)
+
+- **The symptom.** The spike's lighter Verovio build (variant d3) put
+  absolute paths of the machine that built it into the `.wasm`:
+  `__FILE__` strings from `jsonxx.cc` and clang's resource directory. With
+  those mapped, `build.sh`'s first two VM builds (two cache roots) still
+  differed by about 70 bytes of `.wasm`, and the path scan named the leak:
+  `<emsdk>/upstream/emscripten/cache/sysroot/share/verovio`.
+- **The cause.** `__FILE__` and the resource directory hold the paths of the
+  source, emsdk and the build tree. The last leak is Verovio's CMake:
+  `add_compile_definitions(RESOURCE_DIR="${CMAKE_INSTALL_PREFIX}/share/verovio")`
+  becomes the `resourcePath` option's default, and emcmake sets the install
+  prefix to emsdk's absolute sysroot. Stock npm Verovio 6.4.1 holds its
+  builder's path there (`/Users/laurent/tools/emsdk/…/sysroot/share/verovio`).
+  A prefix map does not touch it: it is a string literal, not a file name.
+- **The fix.** `build.sh` maps the source, emsdk and build roots
+  (`-ffile-prefix-map=…=verovio|emsdk|build`, on compile and link), passes
+  clang's `-resource-dir` explicitly and sets `-DCMAKE_INSTALL_PREFIX=/usr/local`,
+  so the default is Verovio's own fallback, `/usr/local/share/verovio` (the
+  JS constructor sets `/data` before every toolkit, so nothing reads it).
+  `paths.ts` fails the build on any home, temp, opt, macOS or runner path, or
+  on the source, emsdk, build or working directory anywhere in either file;
+  it allows `/home/web_user`, which is Emscripten's virtual filesystem.
+- **The result.** Two VM builds from different cache roots (one with a
+  copied emsdk, one downloaded fresh) and a GitHub `ubuntu-latest` runner
+  build agree byte for byte: `verovio-module.mjs` 29,534 bytes, sha256
+  `a3021db201e9a2392b5159086d55eb765d06274d4d9d82d162cfb426cf929bd3`;
+  `verovio-module.wasm` 2,956,941 bytes, sha256
+  `74273b7167510dc2f0bf83c3cd37658e07dedc4261ed99ffcfebc1e02ade0a6c`, on
+  both machines.
+- **Where.** `packages/engraver/build/build.sh`, `packages/engraver/build/paths.ts`.
+
 ### A batch of releases lost one: a newer waiting run cancels the older (2026-11-09, render, musicxml and sync releases)
 
 - **The symptom.** Three GitHub releases created back to back
