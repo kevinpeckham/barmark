@@ -17,7 +17,8 @@ import {
 	USE_SCORE_ELEMENT,
 	USE_SCORE_SERVER,
 	USE_SYNC,
-	VITE7_CONFIG,
+	VITE_CONFIG,
+	VITE_SETTINGS,
 } from "../src/lib/start.ts";
 import { build, page, site } from "./built.ts";
 
@@ -67,12 +68,15 @@ describe("the score code Get Started shows", () => {
 		expect(USE_SCORE_ELEMENT).toContain('import "@barmark/score/element";');
 		expect(USE_SCORE_ELEMENT).toContain('<barmark-score view="score"');
 	});
-	test("the Vite 7 settings are the score README's", () => {
+	test("the Vite settings are the score README's", () => {
 		const readme = readFileSync(
 			join(dirname(Bun.resolveSync("@barmark/score/package.json", site)), "README.md"),
 			"utf8",
 		);
-		expect(readme).toContain(VITE7_CONFIG);
+		for (const setting of VITE_SETTINGS) {
+			expect(readme).toContain(setting);
+			expect(VITE_CONFIG).toContain(setting);
+		}
 	});
 });
 

@@ -6,6 +6,12 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Technical
+
+- **The README says when Vite needs `worker: { format: "es" }`**: on Vite 8
+  too, with `verovio-url`, or the worker inlines Verovio's fallback copy
+  and a reader downloads Verovio twice.
+
 ## [0.3.0] - 2026-11-10
 
 ### Added

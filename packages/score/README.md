@@ -69,16 +69,21 @@ The engine runs in a module Worker, created as
 That is the pattern Vite and webpack follow, so a bundler finds the worker
 and Verovio for you.
 
-Vite 8 (and Vite+) needs no config, in `vite dev` or a build. Vite 7 needs
-two lines: its dev pre-bundler moves the element away from the worker and
-the font it finds by URL, and it builds workers as `iife`, which cannot
-load Verovio on demand.
+Vite 8 (and Vite+) draws a score with no config, in `vite dev` or a
+build. But Vite builds workers as `iife` by default, which cannot split, so
+the worker's fallback copy of Verovio is inlined into it: with
+`verovio-url`, a reader then downloads Verovio twice, inside the worker and
+from your URL. Set `worker: { format: "es" }` and Verovio becomes a chunk
+of its own, fetched only if your URL fails. Vite 7 needs that line in any
+case (an `iife` worker cannot load Verovio on demand) and one more: its dev
+pre-bundler moves the element away from the worker and the font it finds
+by URL.
 
 ```js
-// vite.config.js, for Vite 7 (harmless on Vite 8)
+// vite.config.js
 export default {
-	optimizeDeps: { exclude: ["@barmark/score"] },
-	worker: { format: "es" },
+	worker: { format: "es" }, // Vite 8 with verovio-url; Vite 7 always
+	optimizeDeps: { exclude: ["@barmark/score"] }, // Vite 7 only (harmless on Vite 8)
 };
 ```
 
@@ -236,7 +241,8 @@ stays MIT. Verovio © Laurent Pugin and others; its licence text is
 A site that bundles the worker ships Verovio inside its bundle. Keeping
 Verovio a separate file (through `verovio-url`, or the bundler's own
 chunk) and keeping its notice is the easy way to meet the LGPL. If it is
-bundled into one file with the worker instead (Vite 8 does this), credit it
-with its copyright and licence, host or link the LGPL and GPL texts, and
-link your site's source so a visitor can rebuild it with another Verovio;
-barmark.dev does all three in its footer. This is not legal advice.
+bundled into one file with the worker instead (Vite's default `iife`
+worker format does this), credit it with its copyright and licence, host
+or link the LGPL and GPL texts, and link your site's source so a visitor
+can rebuild it with another Verovio; barmark.dev does all three in its
+footer. This is not legal advice.
