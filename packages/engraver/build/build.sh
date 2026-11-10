@@ -43,8 +43,9 @@ if [ ! -d "$CACHE/venv" ]; then
 	"$CACHE/venv/bin/pip" install "cmake==$CMAKE_VERSION"
 fi
 export PATH="$CACHE/venv/bin:$PATH"
-if ! cmake --version | head -n 1 | grep -qx "cmake version $CMAKE_VERSION"; then
-	echo "build.sh: cmake is not $CMAKE_VERSION: $(cmake --version | head -n 1)" >&2
+CMAKE_LINE=$(cmake --version | sed -n 1p)
+if [ "$CMAKE_LINE" != "cmake version $CMAKE_VERSION" ]; then
+	echo "build.sh: cmake is not $CMAKE_VERSION: $CMAKE_LINE" >&2
 	exit 1
 fi
 
