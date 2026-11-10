@@ -28,6 +28,8 @@ const CHARTS: Record<string, string> = {
 		"# Piano\npart: Pno = Piano\npart: Bs = Bass\n## A\nPno.RH | +G{B3 D4 G4} / C._D / | *C{C4 E4 G4} |\nPno.LH | {G2} / / / | {C3} |\nBs | {G1} | {C2} |\n| G | C |",
 	pianoAlone:
 		"# Piano Alone\npart: Pno = Piano\nPno.RH | +G{B3 D4 G4} / C._D / | *C |\nPno.LH | {G2} / / / | {C3} |",
+	columns:
+		"# Columns\n## A\n| G7 | G7 C6/G Bbmaj7/F Fmaj9 | C | F |\n| C | F | G | C |\n## B\n|: C | D |\n|1 E | F :|\n|2 G | % |\n| C | CM7 |\n| E :| F |\n| A | B | C | D | E | F | G | A |\n",
 	long: "# Long\n## A\n| A | B | C | D | E | F | G | A | B | C | D | E |\n| A / B / | C / D / | E / F / | G / A / | B / C / | D / E / |",
 };
 const HOSTILE = `*{margin:2em!important;padding:0!important;font-family:"Comic Sans MS",cursive!important;line-height:3!important}
@@ -68,6 +70,8 @@ function chartPage(url: URL, hostile: boolean): Response {
 		diagnostics: p.has("diagnostics"),
 		barNumbers: p.get("numbers") !== "off",
 		wrap: p.get("wrap") !== "off",
+		// Passed through as given, so a page can check that an unknown value falls back to shared.
+		columns: p.get("columns") as NonNullable<RenderOptions["columns"]>,
 	};
 	const chart = CHARTS[param(p, "chart", "example")] ?? "";
 	const charts = renderChart(chart, options).repeat(Number(param(p, "count", "1")));
@@ -89,6 +93,7 @@ function elementPage(): Response {
 		<barmark-chart id="missing" src="/nope.chart.md"></barmark-chart>
 		${renderChart("## Verse\n| D | A |").replace("<barmark-chart", '<barmark-chart id="server"')}
 		${renderChart("## Verse\n| D | A |", { theme: "dark", rehearsalLetters: true }).replace("<barmark-chart", '<barmark-chart id="styled"')}
+		${renderChart("## A\n| G7 C6/G Bbmaj7/F Fmaj9 | C |\n| C | F |").replace("<barmark-chart", '<barmark-chart id="columns"')}
 		<barmark-chart id="early"></barmark-chart>
 		<script>document.querySelector("#early").text = "## Early\\n| E |";</script>
 		<textarea id="editor"></textarea>

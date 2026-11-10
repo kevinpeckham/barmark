@@ -6,6 +6,20 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- **`columns: "shared" | "row"`**, and the `columns` attribute and
+  property on `<barmark-chart>` (stem-shovel#16, ask 5). `"shared"`, the
+  default, draws every chart byte for byte as before (a snapshot over
+  `examples/` and every chart fixture in the repository holds it to
+  that). With `"row"` each row, and each system of parts, sizes its own
+  bars to their content, so one busy bar no longer widens its column in
+  every row of the section; bar lines no longer line up between rows. The
+  chart takes `data-columns="row"`, a section wraps once its widest row
+  no longer fits, and the music, the markup inside each bar and what a
+  screen reader hears don't change. Any other value is `"shared"`. The
+  stylesheet gains the `"row"` rules at its end; `Columns` is exported.
+
 ### Changed
 
 - **Breaking: requires `barmark` 0.23.0** (`SimpleSlot.text`: an
