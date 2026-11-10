@@ -1,6 +1,6 @@
 ---
 name: release
-description: Cut a release of barmark, @barmark/render, @barmark/musicxml, @barmark/sync, @barmark/midi or @barmark/cli - gates via Swamp, bump version, CHANGELOG, commit, tag, push, GitHub release (which publishes to npm)
+description: Cut a release of barmark, @barmark/render, @barmark/musicxml, @barmark/score, @barmark/sync, @barmark/midi, @barmark/cli or @barmark/engraver - gates via Swamp, bump version, CHANGELOG, commit, tag, push, GitHub release (which publishes to npm)
 argument-hint: [package version, e.g. barmark 0.2.0 or render 0.1.0]
 ---
 
@@ -9,10 +9,12 @@ argument-hint: [package version, e.g. barmark 0.2.0 or render 0.1.0]
 Follow `RELEASING.md` step by step; it is the source of truth. The
 package is `barmark` (`packages/barmark`), `render`
 (`packages/render`, published as `@barmark/render`), `musicxml`
-(`packages/musicxml`, published as `@barmark/musicxml`), `sync`
+(`packages/musicxml`, published as `@barmark/musicxml`), `score`
+(`packages/score`, published as `@barmark/score`), `sync`
 (`packages/sync`, published as `@barmark/sync`), `midi`
-(`packages/midi`, published as `@barmark/midi`) or `cli`
-(`packages/cli`, published as `@barmark/cli`); its tag is
+(`packages/midi`, published as `@barmark/midi`), `cli`
+(`packages/cli`, published as `@barmark/cli`) or `engraver`
+(`packages/engraver`, published as `@barmark/engraver`); its tag is
 `<pkg>-vX.Y.Z`. If the package or version is missing, read the package's
 `package.json` and ask (0.x: a minor for grammar or API changes, a patch
 for fixes).
@@ -30,6 +32,17 @@ Points that are easy to miss:
 - When `@barmark/render` needs unreleased `barmark` changes, release
   `barmark` first: the render release check fails until the `barmark`
   version it depends on is on npm.
+- `engraver`: after the bump, `cd packages/engraver && bun run compile
+  --update` (the banner names the version, so `src/info.ts` changes) and
+  commit `info.ts`; the release check with `pkg=engraver` runs the
+  equivalence gate. The release notes begin "A modified build of Verovio
+  X.Y.Z (LGPL-3.0-only), made by barmark, not by the Verovio project;
+  Corresponding Source attached." Afterwards check the release lists
+  `verovio-X.Y.Z-source.tar.gz`, `engraver-build-X.Y.Z.tar.gz` and the
+  five licence files. Then a `score` patch (new `ENGRAVER_*` literals) and
+  a site bump. Each release run now takes 5–10 minutes longer (it builds
+  the engraver): start the next only when the previous has left the
+  release queue.
 - Bump the version in `bun.lock` too (the package's workspace entry):
   Bun leaves it stale, and `bun pm pack` reads it.
 - Run `bunx varlock run -- swamp workflow run release-check --input

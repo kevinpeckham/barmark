@@ -1,6 +1,6 @@
 # Releasing
 
-This repository publishes seven npm packages from one Bun workspace, each
+This repository publishes eight npm packages from one Bun workspace, each
 versioned and released on its own:
 
 | Package | Directory | Release tag |
@@ -12,6 +12,7 @@ versioned and released on its own:
 | `@barmark/sync` | `packages/sync` | `sync-vX.Y.Z` |
 | `@barmark/midi` | `packages/midi` | `midi-vX.Y.Z` |
 | `@barmark/cli` | `packages/cli` | `cli-vX.Y.Z` |
+| `@barmark/engraver` | `packages/engraver` | `engraver-vX.Y.Z` |
 
 (`barmark` 0.0.x and 0.1.0 were tagged `vX.Y.Z`, before the workspace.)
 
@@ -23,18 +24,22 @@ publishes it through npm trusted publishing with provenance, then installs
 it back from npm and reads a real chart with it. For `@barmark/cli` it
 then compiles the standalone binaries in a read-only job, runs the
 Linux one, and a separate job with no checkout or install attaches all
-five to the GitHub release with Edwin's licence. No npm token exists
+five to the GitHub release with Edwin's licence. For `@barmark/engraver`
+its `build-engraver` job compiles Verovio from clean and bundles the
+Corresponding Source, which the release then carries. No npm token exists
 anywhere.
 
 ## Repository rules
 
 - **`main`** (ruleset "main"): changes arrive by pull request, CI's
-  `check`, `browser`, `site` and `package (<node>, <package>)` jobs (Node
-  20, 22 and 24 for each package) must pass, and force-pushes and deletion
+  `check`, `browser`, `site`, `engraver` and `package (<node>, <package>)`
+  jobs (Node 20, 22 and 24 for each package, `package (N, engraver)`
+  included) must pass, and force-pushes and deletion
   are blocked. `site-versions` is deliberately not required (step 12). Renaming a CI job or changing a matrix means updating the
   ruleset's required checks.
-- **Release tags** (ruleset "release tags", `v*`, `barmark-v*` and
-  `render-v*`): a tag can be created but never moved or deleted, so a
+- **Release tags** (ruleset "release tags", `v*`, `barmark-v*`,
+  `render-v*` and the other packages' patterns, `engraver-v*` among
+  them): a tag can be created but never moved or deleted, so a
   version always names the code that was released.
 - **The `npm` environment** holds the publish job: it needs Kevin's
   approval and runs only for release tags. Each package's npm trusted
@@ -97,9 +102,28 @@ size, a patch included, is a `@barmark/score` release that also updates
 sha384) and the digest in the score README; `tests/download.test.ts`
 fails until all three match the installed file.
 
+**`@barmark/engraver`** has its own 0.x line, with Verovio's version as
+data (0.1.0 is Verovio 6.4.1). A Verovio upgrade, or a change to its
+exports or build flags, is a **minor**; a build change that alters the
+bytes but not the SVG (emsdk, flags that keep the output, `data/`) is a
+**patch**. The glue's banner names the engraver release, so any version
+bump changes the module's bytes: an engraver release pull request runs
+`cd packages/engraver && bun run compile --update`, which rebuilds and
+re-anchors `src/info.ts`, commits `info.ts`, and then passes the
+equivalence gate (`bun scripts/engraver-equivalence.ts`, stock and the
+build byte-identical). **A Verovio upgrade is one joint pull request:**
+`packages/engraver/build/versions.env` and `info.ts`, score's exact
+`verovio` pin, score's stock constants and its `ENGRAVER_*` literals, so
+`main` never holds the two half-moved. Then release `@barmark/engraver`,
+then `@barmark/score`, then the CLI, then the site. Stock may lead, with
+score's `ENGRAVER_LAGGING = true`, while the build catches up; phase 2
+(the build as score's default) never ships while it lags. **An engraver
+patch** changes only digests: it needs a `@barmark/score` patch (new
+literal values) and a site bump, and the CLI only if score's code changed.
+
 ## Checks
 
-The same scripts run in three places; `<pkg>` is `barmark`, `render`, `musicxml`, `score`, `sync`, `midi` or `cli`:
+The same scripts run in three places; `<pkg>` is `barmark`, `render`, `musicxml`, `score`, `sync`, `midi`, `cli` or `engraver`:
 
 | Check | Command | Local (Swamp) | CI (every push and PR) | Release workflow |
 |---|---|---|---|---|
@@ -109,6 +133,7 @@ The same scripts run in three places; `<pkg>` is `barmark`, `render`, `musicxml`
 | The renderer in Chromium | `bun run test:browser` | | ✓ | ✓ |
 | Package contents, Node import | `bun run verify:package <pkg>` | ✓ | ✓ (Node 20, 22, 24) | ✓ |
 | Version, CHANGELOG, tag, dependencies on npm, clean `main` | `bun run verify:release <pkg>` | ✓ | | ✓ (tag = version) |
+| Engraver build and equivalence | `cd packages/engraver && bun run compile`; `bun scripts/engraver-equivalence.ts` | ✓ (`pkg=engraver`) | ✓ (`engraver`; weekly clean rebuild) | ✓ (`build-engraver`) |
 
 Locally, `bunx varlock run -- swamp workflow run release-check --input
 pkg=<pkg>` runs all but the browser tests through the `barmark` Swamp
@@ -126,7 +151,7 @@ runs, and `verify:package cli` fails on anything else.
 
 ## Steps
 
-`<pkg>` is the package's key (`barmark`, `render`, `musicxml`, `score`, `sync`, `midi` or `cli`) and the tag is
+`<pkg>` is the package's key (`barmark`, `render`, `musicxml`, `score`, `sync`, `midi`, `cli` or `engraver`) and the tag is
 `<pkg>-vX.Y.Z`.
 
 1. **Start a release branch** from an up-to-date `main` with CI green:
@@ -138,7 +163,12 @@ runs, and `verify:package cli` fails on anything else.
    range; `verify:package` fails if the two disagree. For
    `@barmark/musicxml` and `@barmark/midi`, also `packages/<pkg>/src/version.ts`:
    the export names it in each file (musicxml in its `<encoding>`), and a
-   test checks it.
+   test checks it. For `@barmark/engraver`, run `cd packages/engraver &&
+   bun run compile --update` after the bump: the banner names the version,
+   so this rebuilds and re-anchors `src/info.ts`, which the bump commits.
+   Then run the equivalence gate (`bun run build && bun
+   scripts/engraver-equivalence.ts`; the release-check workflow runs it for
+   `pkg=engraver`).
 3. **The package's CHANGELOG.md:** move the `[Unreleased]` entries into a
    new `## [x.y.z] - YYYY-MM-DD` section, leave `[Unreleased]` empty, and
    update the compare links at the bottom. Use `### Added`, `### Changed`,
@@ -166,12 +196,21 @@ runs, and `verify:package cli` fails on anything else.
    create one release at a time: release runs share a concurrency group
    that keeps one running and one pending, and a newer pending run
    cancels the older one, so start the next only when the previous run
-   is running or done (FINDINGS 2026-11-09).
+   is running or done (FINDINGS 2026-11-09). Every release run now builds
+   the engraver first (`build-engraver`), which adds 5–10 minutes, so wait
+   until the previous run has left the release queue before starting the
+   next; this matters for the engraver → score → CLI sequence.
+   **An engraver release's notes begin with** "A modified build of
+   Verovio X.Y.Z (LGPL-3.0-only), made by barmark, not by the Verovio
+   project; Corresponding Source attached."
 10. **Approve** the publish when GitHub asks (the run's "Review
     deployments" button, or `gh run view`), after the verify job passes.
 11. **Confirm:** the workflow's `confirm` job installs the new version
     from npm and reads Peaceful Dreams with it; when it passes, check the
-    package's provenance on npmjs.com.
+    package's provenance on npmjs.com. For `@barmark/engraver`, check the
+    release page lists `verovio-X.Y.Z-source.tar.gz`,
+    `engraver-build-X.Y.Z.tar.gz` and the five licence files (`COPYING`,
+    `COPYING.LESSER`, `OFL.txt`, `NOTICE.md`, `THIRD-PARTY.md`).
 12. **Bump barmark.dev:** on a new branch, `cd site && bun add --exact
     <npm name>@X.Y.Z`, run `bun run check && bun test`, and open a pull
     request `chore(site): use <npm name> X.Y.Z` (`site/package.json` and
@@ -240,13 +279,14 @@ manual step before its first release (the same for `@barmark/cli`):
    environment `npm`. Then set publishing access to require two-factor
    authentication and disallow tokens.
 3. **Rulesets** (repository settings → Rules): add the new tag pattern
-   (`cli-v*` for the CLI, `musicxml-v*` for `@barmark/musicxml`, `score-v*` for `@barmark/score`) to
+   (`cli-v*` for the CLI, `musicxml-v*` for `@barmark/musicxml`, `score-v*` for `@barmark/score`, `engraver-v*` for `@barmark/engraver`) to
    "release tags", and the new package job's checks (`package (20, cli)`,
    `package (22, cli)`, `package (24, cli)`; likewise `package (N,
-   musicxml)`) to the "main" ruleset's required checks.
+   musicxml)`; for the engraver, `engraver` and `package (N, engraver)`)
+   to the "main" ruleset's required checks.
 4. **The `npm` environment** (repository settings → Environments →
    npm → Deployment branches and tags): add a tag rule for the same
-   pattern (`cli-v*`, `musicxml-v*`, `score-v*`). Without it the publish job is rejected at once,
+   pattern (`cli-v*`, `musicxml-v*`, `score-v*`, `engraver-v*`). Without it the publish job is rejected at once,
    before any approval is asked for ("Tag … is not allowed to deploy to
    npm due to environment protection rules"), and nothing reaches npm;
    after adding it, rerun the failed jobs (`gh run rerun <id> --failed`).

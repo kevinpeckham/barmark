@@ -3,19 +3,21 @@ name: release-check
 description: >-
   barmark's release gate: lint, typecheck and tests, Fallow (dead code,
   duplication, complexity beyond the baseline), the npm package (contents
-  and a Node import), and release readiness (version, CHANGELOG, tag and npm
+  and a Node import), for engraver the equivalence gate (stock Verovio and
+  the build draw the same SVG), and release readiness (version, CHANGELOG, tag and npm
   free, clean main), each run by the barmark behavior and kept as data, then
   asserted clean. Run `bunx varlock run -- swamp workflow run release-check`
   after the version-bump commit (RELEASING.md); pass `--input allowDirty=true`
   while preparing on a branch, and `--input pkg=render` or `pkg=cli` to
-  check @barmark/render or @barmark/cli instead of barmark.
+  check @barmark/render or @barmark/cli instead of barmark; `pkg=engraver`
+  needs a compiled packages/engraver/dist and the root `bun run build`.
 tags:
   area: release
 inputs:
   properties:
     pkg:
       type: string
-      enum: [barmark, render, musicxml, score, sync, midi, cli]
+      enum: [barmark, render, musicxml, score, sync, midi, cli, engraver]
       default: barmark
       description: The workspace package whose package and release checks run
     allowDirty:
@@ -54,6 +56,18 @@ jobs:
           - step: health
             condition:
               type: succeeded
+      - name: equivalence
+        description: For engraver, stock Verovio and the build draw the same SVG; skipped otherwise
+        task:
+          type: behavior
+          behavior: barmark
+          methodName: equivalence
+          inputs:
+            pkg: ${{ inputs.pkg }}
+        dependsOn:
+          - step: package
+            condition:
+              type: succeeded
       - name: release
         description: Version, CHANGELOG section, tag and npm version free, clean main
         task:
@@ -64,7 +78,7 @@ jobs:
             pkg: ${{ inputs.pkg }}
             allowDirty: ${{ inputs.allowDirty }}
         dependsOn:
-          - step: package
+          - step: equivalence
             condition:
               type: succeeded
   - name: verify
@@ -94,6 +108,13 @@ jobs:
           type: assert
           expr: data.latest("barmark", "package").attributes.ok
           message: '${{ "Package: " + data.latest("barmark", "package").attributes.summary }}'
+          severity: high
+      - name: equivalence-clean
+        description: For engraver, stock and build engrave every chart byte-identically
+        task:
+          type: assert
+          expr: data.latest("barmark", "equivalence").attributes.ok
+          message: '${{ "Equivalence: " + data.latest("barmark", "equivalence").attributes.summary }}'
           severity: high
       - name: release-ready
         description: The version is ready to tag and publish

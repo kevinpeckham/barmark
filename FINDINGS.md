@@ -855,6 +855,95 @@ and round-trip it through `format`.
 
 ## Tooling
 
+### `bun run --filter '!pkg'` does not leave a package out (2026-11-10, @barmark/engraver)
+
+- **The symptom.** The root `bun run build` (`bun run --filter '*'
+  build`) runs in every CI `package` row and before `test:browser`. Giving
+  the engraver a `build` that runs emcc would have compiled Verovio there,
+  and `--filter '*' --filter '!@barmark/engraver'` still ran it.
+- **The cause.** In Bun 1.3.14 a negated filter does not exclude a
+  workspace package from `bun run --filter` (checked on the VM).
+- **The fix.** Two scripts: the engraver's `build` never runs emcc (it
+  emits `dist/info.js`, the types, and checks a compiled `dist/` against
+  `info.ts` when one is there), and the emcc build is `bun run compile`
+  (`--update` rewrites `info.ts`).
+- **Where.** `packages/engraver/package.json`, `packages/engraver/build/dist.ts`,
+  `packages/engraver/build/compile.ts`.
+
+### Emscripten's glue holds `/home/web_user` and `/tmp` (2026-11-10, @barmark/engraver)
+
+- **The symptom.** The first leaked-path scan of the build, a plain search
+  for `/home/` and `/tmp/` in both files, failed on a build that leaked
+  nothing.
+- **The cause.** The glue carries Emscripten's virtual filesystem: the
+  user's home `/home/web_user` and the `/tmp` and `/home` directories it
+  creates at start. They are paths inside the module, not the builder's.
+- **The fix.** The scan matches a home, temp, opt, macOS or runner path
+  only with a name after the directory (`/tmp/x`, not `/tmp`), allows
+  `/home/web_user`, and also looks for the source, emsdk, build and
+  working directories as literals, so a real leak is still caught.
+- **Where.** `packages/engraver/build/paths.ts` (tested in
+  `packages/engraver/tests/paths.test.ts`).
+
+### The glue ignores `instantiateWasm` unless it is linked to accept it (2026-11-10, @barmark/engraver)
+
+- **The symptom.** The spike's worker passed the factory an
+  `instantiateWasm` hook to download and check the `.wasm` itself; the
+  build never called it and fetched the `.wasm` on its own.
+- **The cause.** With `-s STRICT=1`, the glue reads only the incoming
+  `Module` properties `INCOMING_MODULE_JS_API` names, and the default list
+  in strict mode leaves `instantiateWasm` out. Once it is named, a second
+  trap: a hook that returns `{}` and never calls `receive` (its download
+  failed) leaves the factory's promise unsettled for ever.
+- **The fix.** The link names it:
+  `INCOMING_MODULE_JS_API=onRuntimeInitialized,instantiateWasm`, the one
+  flag that makes the build behave differently from stock. `@barmark/score`
+  (0.4.0) races the factory against a promise the hook rejects on failure,
+  so a failed download fails the load instead of hanging it.
+- **Where.** `packages/engraver/build/build.sh`; the spec's Loading section
+  (`docs/superpowers/specs/2026-11-10-engraver-package-design.md`).
+
+### Trimming Verovio's `data/` breaks more than the font left out (2026-11-10, @barmark/engraver)
+
+- **The symptom.** The spike's build kept only `Bravura.xml`,
+  `Leipzig.xml`, `Leipzig/`, `Leipzig.css` and `text/`. Other music fonts
+  failed, as expected (Bravura drew no glyphs; Leland and Gootville drew
+  Leipzig), but so did `fontTextLiberation` (no Liberation embedded),
+  `footer: "always"` (no footer) and a custom tuning (`tuningFile`: missing
+  `tuning-glyphnames.json`), all but the last with nothing logged.
+- **The cause.** Those options read files from the `data/` tree that was
+  left out; the embedded filesystem holds only what `--embed-file`
+  packed, and Verovio falls back quietly when a file is missing.
+- **The fix.** None needed for barmark: `@barmark/score` sets no `font*`
+  key, no tuning and `footer: "none"` (`packages/score/src/engrave.ts`),
+  and the equivalence gate covers what it asks. The engraver README's
+  Limits section states what the build does for anyone calling it with
+  other options.
+- **Where.** `packages/engraver/build/data.txt`, `packages/engraver/README.md`.
+
+### `NO_EDIT_SUPPORT` does not compile at Verovio 6.4.1 (2026-11-10, @barmark/engraver)
+
+- **The symptom.** Building Verovio 6.4.1 with `-DNO_EDIT_SUPPORT=ON`, to
+  leave out the editor toolkit barmark never calls, fails to compile.
+- **The cause.** Upstream does not keep the option building at this
+  version; we did not dig further, since the editor is small beside what
+  the importers and `data/` cost.
+- **The fix.** The build does not use it; the editor stays in, and the
+  size is won elsewhere (importers and `data/` left out, `-Oz`).
+- **Where.** `packages/engraver/build/build.sh`, the plan's Global
+  Constraints.
+
+### Verovio's CMake builds Release, so `-Oz` in `CMAKE_CXX_FLAGS` alone is overridden (2026-11-10, @barmark/engraver)
+
+- **The symptom.** In the spike, `-Oz` passed only in `CMAKE_CXX_FLAGS`
+  did not make the library smaller.
+- **The cause.** Verovio's CMake defaults `CMAKE_BUILD_TYPE` to Release,
+  and CMake appends `CMAKE_CXX_FLAGS_RELEASE` (`-O3 -DNDEBUG`) after
+  `CMAKE_CXX_FLAGS`, so the last `-O` wins.
+- **The fix.** The same flags go in both `CMAKE_CXX_FLAGS` and
+  `CMAKE_CXX_FLAGS_RELEASE`, and `-Oz` on the link too.
+- **Where.** `packages/engraver/build/build.sh`.
+
 ### `git archive` of a subdirectory came out empty, then not reproducible (2026-11-10, @barmark/engraver)
 
 - **The symptom.** `source.sh` packs `packages/engraver/build/` for the
