@@ -94,25 +94,47 @@ export function gateProblems(
 
 const ms = (n: number) => `${Math.round(n)} ms`;
 
-/** The slowest engraving at width 375, or none. */
-const slowest375 = (run: Run): Engraving | undefined =>
+/** The synthetic stress chart, left out of the "real chart" line. */
+const LONG = "long.chart.md";
+
+/** The slowest engraving at width 375 among those `keep` accepts, or none. */
+const slowest375 = (
+	run: Run,
+	keep: (e: Engraving) => boolean = () => true,
+): Engraving | undefined =>
 	run.engravings
-		.filter((e) => e.width === 375)
+		.filter((e) => e.width === 375 && keep(e))
 		.reduce<Engraving | undefined>((a, e) => (a && a.ms >= e.ms ? a : e), undefined);
 
+const totalMs = (run: Run) => run.engravings.reduce((t, e) => t + e.ms, 0);
+
 function line(which: string, run: Run): string {
-	const total = run.engravings.reduce((t, e) => t + e.ms, 0);
 	const slow = slowest375(run);
-	return `${which}: ${run.version}, instantiate ${ms(run.instantiateMs)}, engrave ${ms(total)} in total over ${run.engravings.length}, slowest at 375: ${slow ? `${slow.name}, ${ms(slow.ms)}` : "none"}`;
+	return `${which}: ${run.version}, instantiate ${ms(run.instantiateMs)}, engrave ${ms(totalMs(run))} in total over ${run.engravings.length}, slowest at 375: ${slow ? `${slow.name}, ${ms(slow.ms)}` : "none"}`;
+}
+
+/** Lite's slowest real chart at 375 (the long chart left out), with stock's time for the same engraving. */
+function realChartLine(stock: Run, lite: Run): string {
+	const slow = slowest375(lite, (e) => e.name !== LONG);
+	if (!slow) return `slowest real chart at 375 (without ${LONG}): none`;
+	const same = stock.engravings.find((e) => e.name === slow.name && e.width === 375);
+	return `slowest real chart at 375 (without ${LONG}): ${slow.name}, stock ${same ? ms(same.ms) : "none"}, lite ${ms(slow.ms)}`;
 }
 
 /**
  * Each run's instantiate time, total engrave time and slowest width-375
- * engraving, with a warning (not a failure) when the lite build's slowest
- * passes Q1's 500 ms.
+ * engraving; lite's slowest real chart at 375 beside stock's time for it;
+ * lite's total engrave time over stock's; and a warning (not a failure)
+ * when the lite build's slowest passes Q1's 500 ms.
  */
 export function summary(stock: Run, lite: Run): string {
-	const lines = [line("stock", stock), line("lite ", lite)];
+	const ratio = totalMs(stock) > 0 ? (totalMs(lite) / totalMs(stock)).toFixed(2) : "n/a";
+	const lines = [
+		line("stock", stock),
+		line("lite ", lite),
+		realChartLine(stock, lite),
+		`engrave time, lite over stock: ${ratio}× (${lite.engravings.length} engravings)`,
+	];
 	const slow = slowest375(lite);
 	if (slow && slow.ms > Q1_MS)
 		lines.push(`⚠ over ${Q1_MS} ms: Q1 says ship -Os (${slow.name}, ${ms(slow.ms)})`);
