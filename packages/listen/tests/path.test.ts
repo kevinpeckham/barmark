@@ -137,6 +137,20 @@ describe("alignPath and rephaseAlignment: the app's alignChart", () => {
 	});
 });
 
+describe("alignPath on bars it cannot measure", () => {
+	test("a bar of non-finite seconds is invalid-input on bars, never a NaN length past the checks", () => {
+		const good = barsAt(120);
+		for (const seconds of [Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY]) {
+			const bars = good.map((b, i) => (i === 3 ? { ...b, seconds } : b));
+			const r = alignPath(bars, features, DEFAULTS);
+			expect(r.ok).toBe(false);
+			if (r.ok) continue;
+			expect(r.refusals.map((x) => x.reason)).toEqual(["invalid-input"]);
+			expect(r.refusals[0]?.detail?.field).toBe("bars");
+		}
+	});
+});
+
 describe("rephaseAlignment on a silent envelope", () => {
 	test("an all-zero onset is flat: no re-phase, the path's starts kept", () => {
 		const silent = { ...features, onset: new Float32Array(features.onset.length) };

@@ -92,8 +92,9 @@ function chartTooLong(chartSeconds: number, recordingSeconds: number): Refused {
 
 /**
  * The chart's played bars placed in the recording by the warping alone:
- * the app's `alignChartPath`. In order: the render's chroma frames from the
- * bar seconds (`too-short` when it or the recording has none), `too-long`
+ * the app's `alignChartPath`. In order: `invalid-input` (`field: "bars"`)
+ * when the bar seconds do not sum to a finite length, the render's chroma
+ * frames from the bar seconds (`too-short` when it or the recording has none), `too-long`
  * when the step table's cells, (chart frames + 1) × (recording frames + 1),
  * exceed `DTW_MAX_CELLS`, and `chart-too-long` when the chart's seconds are
  * more than twice the recording's, all before any render or allocation;
@@ -111,6 +112,13 @@ export function alignPath(
 ): Ok<PathResult> | Refused {
 	const rate = features.sampleRate;
 	const length = renderLength(bars, rate);
+	// A bar of non-finite seconds makes the length NaN or ∞, which every comparison below lets by.
+	if (!Number.isFinite(length))
+		return refused([
+			refusal("invalid-input", "A bar of the chart has no finite length in seconds.", {
+				field: "bars",
+			}),
+		]);
 	const n = chromaFrameCount(length, rate);
 	const m = features.frames;
 	if (n === 0 || m === 0)
