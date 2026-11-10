@@ -10,7 +10,14 @@ const moduleFile = fileURLToPath(new URL("../dist/verovio-module.mjs", import.me
 const built = existsSync(fileURLToPath(new URL("../dist/verovio-module.wasm", import.meta.url)));
 
 test.skipIf(!built)("the built module instantiates in Node, matches info.js and engraves", () => {
-	const r = JSON.parse(spawnSync("node", [smoke, moduleFile]).stdout.toString());
+	const run = spawnSync("node", [smoke, moduleFile]);
+	// The whole result on a failure, so its output says why.
+	expect({
+		status: run.status,
+		stderr: run.stderr.toString(),
+		stdout: run.stdout.toString(),
+	}).toMatchObject({ status: 0 });
+	const r = JSON.parse(run.stdout.toString());
 	expect(r).toMatchObject({
 		version: expect.stringMatching(/^6\.4\.1(-|$)/),
 		moduleBytes: MODULE_BYTES,
