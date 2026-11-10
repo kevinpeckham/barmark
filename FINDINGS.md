@@ -861,7 +861,8 @@ and round-trip it through `format`.
   absolute paths of the machine that built it into the `.wasm`:
   `__FILE__` strings from `jsonxx.cc` and clang's resource directory. With
   those mapped, `build.sh`'s first two VM builds (two cache roots) still
-  differed by about 70 bytes of `.wasm`, and the path scan named the leak:
+  differed (`.wasm` 2,957,006 and 2,957,082 bytes, and the glue), and the
+  path scan named the leak:
   `<emsdk>/upstream/emscripten/cache/sysroot/share/verovio`.
 - **The cause.** `__FILE__` and the resource directory hold the paths of the
   source, emsdk and the build tree. The last leak is Verovio's CMake:
