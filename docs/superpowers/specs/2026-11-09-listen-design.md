@@ -189,7 +189,6 @@ to (it does that today in `utils/alignmentReason.ts`).
 | Code | When |
 | --- | --- |
 | `pickup` | The grid reports a pickup. `detail.start` and `detail.beats` are included. |
-| `pickup-dropped` | A compound-meter pickup that sync would write at the wrong length (§7). The grid keeps the first bar as the app places it. |
 | `bar-one-clamped` | Bar one fell before 0:00 (by less than 0.75 beat, §7) and starts at 0:00. |
 | `sound-before-start` | With `startAt` set, sound begins a bar or more before it. Those bars are outside the grid and their chords are dropped (sync's `outside-bars`). |
 | `grid-truncated` | The grid reached `MAX_GRID_BARS` before the recording's end. The app truncated silently. Here it warns (design call). |
@@ -650,15 +649,12 @@ barmark numbers that bar 0 (`written`). Its `index` is 1, so the timing
 map's first entry is `{ bar: 1, start: pickup.start }`. The confidence
 record and `chartHash` are unchanged by the numbering.
 
-**Compound meters: a guard until sync writes eighths.** The lattice counts
-numerator beats (eighths in 6/8). `readPickup` builds the pickup in barmark
-beats (dotted quarters) and rounds to whole ones. So a 1-eighth pickup
-rounds to nothing, and a 2- or 4-eighth one is written at the wrong length
-(3 or 6 eighths). Until sync writes `[k/8]` pickups (§14 Q4), listen
-reports a compound-meter pickup only when `beatsPerBar − j` is a multiple
-of the meter's grouping (3). Otherwise it adds `pickup-dropped` and places
-bar one at `a`, clamped as the app does (design call). Once sync writes
-`[k/8]`, a listen patch lifts the guard.
+**Compound meters: no guard (plan Ruling 1).** The lattice counts
+numerator beats (eighths in 6/8). sync 0.3.1 writes a compound-meter
+pickup in eighths (`[1/8]`, `[2/8]` …, §14 Q4), and listen requires a sync
+that includes it, so listen reports compound-meter pickups as it reports
+simple ones. The guard this section once described (a `pickup-dropped`
+warning until sync wrote eighths) was never built.
 
 ## 8. The refinement contract in `@barmark/sync`
 
@@ -961,7 +957,6 @@ differs is a porting bug, and the goldens make it a failing test.
 | --- | --- |
 | Pickups (§7): with `j ≥ 1`, the app's bar 1 becomes the pickup, starting at the first sound's beat; the written bar 1 moves one bar later | Kevin's pickup decision |
 | Pickups longer than `PICKUP_MAX_BAR_FRACTION` of a bar keep the app's bar 1 (no difference); only shorter ones move | §7's bound |
-| `pickup-dropped` in compound meters, where the grid stays as the app's | sync writes whole dotted-quarter pickups only |
 | Compound-meter bar seconds from a chart's own `tempo:` (6/8 at 40 = 3.0 s, 12/8 at 60 = 4.0 s, `[6/8]` in 4/4 at 120 = 1.5 s), asserted on the package's values | The app was wrong before `1e120b2e`; goldens come from that commit or later, so they agree, and the cases are also asserted on their own |
 | `startsOnBarLine: false` | New input; the app's default (true) is unchanged |
 | `RecordingChart.reading` with `onUnplaced: "declared"` | New field |
@@ -976,6 +971,12 @@ differs is a porting bug, and the goldens make it a failing test.
 | With `onUnplaced: "declared"`, the declared grid is `barStartsFrom` (the placed grid's rule): a bar line exactly at the recording's end closes the last bar, and the grid holds up to `MAX_GRID_BARS` (2,000) bars. The app's fallback, `barStartsOf` (`state/songChordDraft.svelte.ts`), keeps a zero-length last bar when a bar line lands exactly on the duration and caps at 1,999 bars | One rule for both grids. Edge-only, and on the fallback path only: a bar line exactly at the end, or a grid of 2,000 bars or more |
 | The chart render streams | Bit-identical by construction; the goldens confirm it, or v1 renders whole (§10) |
 | A bar line with an unreadable chord (`CM7`, `C(7)sus4`, `riff` …) keeps its bars here, the slot held as `?` (§6.3); the app's adapter loses the whole line, so its chart plays shorter | barmark keeps an unreadable slot as unknown harmony `{ kind: "unknown", text }` since PR #250 (grammar principle 4); the app parses with barmark 0.22, which drops the line. Task 16 names these charts; the seeded generators write no unreadable chord |
+| A chart without `time:` is 4/4, as barmark reads it; the app's adapter substitutes the song's meter there (`meterRules`). `declared` sets only the fit's bar | Plan Ruling 3. The equivalence charts all carry `time:` |
+| A bar's section is its heading, else its rehearsal mark; the app's third source, words that name a section (`chartSectionName`), stays in the app | Plan Ruling 4: a score-read heuristic |
+| The fallback tempo (`AlignInput.tempo`) is in grammar 2.1's beat; the app's adapter's default tempo is in the song's bottom-note unit. They agree where the beat is the bottom note; a chart whose `time:` changes before its first `tempo:` cannot be matched by converting | One unit for every tempo the package reads (§12.3) |
+| A `symbol` run reads as barmark's canonical spelling when `parseChord` reads it, so `A-` and `Am` count as one chord, not a change; the app compares the symbols as written | §11.1. Symbol runs with non-canonical spellings only; no ChordMini (Harte) label is affected |
+| A run whose `start` or `end` is not finite is skipped, and only the frames some beat reads are kept; the app sized its frames from the runs, so such a run threw or voted every beat "N.C." | Review Focus 3; never-throws (FINDINGS.md). A vote never changes on finite runs |
+| Refusals are names: the app's grid reasons map as §12.8 says, and the fit's sentences (`alignmentFit`'s `reasons`) are the refusal reasons `bar-one-far`, `bar-length-off`, `weak-fit`, `bars-off-middle` and `no-bars` | §4: refusals are values with reasons, not sentences |
 | `too-long` counts the step table's cells, `(n + 1)(m + 1)`, where the app counts `n × m`: a case within `n + m + 1` cells of `DTW_MAX_CELLS` is refused here and warped by the app (added in Task 12, after a security review) | It is what `dtwTable` allocates. The other new check, `chart-too-long` before the render when the chart's seconds exceed twice the recording's, changes no outcome: it implies more than `2m` chart frames, which no warping fits (the app's own `chart-too-long`, checked on 1,677 seeded warpings) |
 
 ## 12. Adoption and release
@@ -1121,7 +1122,8 @@ confirm the third:**
    2.4 already allows `[1/8]` before 6/8. *Recommendation:* a sync patch
    that writes `[k/8]` for any whole number of eighths. It lands before
    listen reports compound-meter pickups. Until then the §7 guard stands,
-   and listen drops those pickups with `pickup-dropped`.
+   and listen drops those pickups with `pickup-dropped`. **Done: sync
+   0.3.1 writes `[k/8]`, so no guard was built (plan Ruling 1).**
 5. **How strict should `rehashTiming` be?** It refuses when a played bar's
    meter changes, not only the count. *Recommendation: yes.* The map's
    starts mean nothing on a bar of another length, and a refinement that
