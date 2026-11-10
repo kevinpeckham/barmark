@@ -609,6 +609,25 @@ describe("withReady", () => {
 		]);
 	});
 
+	test("the request's source reaches the loader whole, both digests and all, and Ready says so", async () => {
+		const posted: unknown[] = [];
+		const seen: VerovioSource[] = [];
+		// A fake that reports where it loaded from exactly as it was asked.
+		const loader = toolkitLoader(async (source) => {
+			seen.push(source);
+			return { toolkit: "toolkit", from: source };
+		});
+		const source = {
+			verovioUrl: "https://cdn.test/verovio-module.mjs",
+			verovioIntegrity: "sha384-x",
+			verovioWasmIntegrity: "sha384-w",
+		};
+		const request = { id: 6, text: "x", width: 800, ...source };
+		await withReady(loader, request, (m) => posted.push(m))();
+		expect(seen).toEqual([source]);
+		expect(posted).toEqual([{ id: 6, loaded: source }]);
+	});
+
 	test("a load that fails says nothing", async () => {
 		const posted: unknown[] = [];
 		const loader = toolkitLoader(async () => {
