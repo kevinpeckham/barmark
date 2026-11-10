@@ -99,9 +99,9 @@ describe("layoutChart: written sections", () => {
 
 describe("layoutChart: lines with errors", () => {
 	test("a line with an error is shown as written, with its messages", () => {
-		const m = layoutChart("## A\n| D | Q7x |\n| G |");
+		const m = layoutChart("## A\n| D :| Q7x |\n| G |");
 		const items = block(m, 0).items;
-		expect(items[0]).toMatchObject({ kind: "error", line: 2, source: "| D | Q7x |" });
+		expect(items[0]).toMatchObject({ kind: "error", line: 2, source: "| D :| Q7x |" });
 		expect((items[0] as { messages: string[] }).messages.length).toBeGreaterThan(0);
 		expect(items[1]).toMatchObject({ kind: "row", line: 3 });
 	});

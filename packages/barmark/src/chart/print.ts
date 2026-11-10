@@ -1,9 +1,10 @@
-import { isBar } from "./barLine.js";
+import { isBar, simpleSlots } from "./barLine.js";
 import { printDirection } from "./direction.js";
 import { beatsOf } from "./directives.js";
 import { readDocument } from "./document.js";
 import { printKey } from "./keys.js";
 import { extractPart, parseChart } from "./parse.js";
+import { splitSyllable } from "./syllable.js";
 import type {
 	Cell,
 	ChartParse,
@@ -78,7 +79,15 @@ const printLyricSlot = (s: LyricSlot): string => {
 	return s.kind === "hold" ? "/" : "--";
 };
 
+/** An unreadable slot as written: a dotted member's dot goes back before its syllable. */
+function printUnread(text: string, dotted: boolean): string {
+	if (!dotted) return text;
+	const { note, syllable } = splitSyllable(text);
+	return `${note}.${syllable === null ? "" : `:${syllable}`}`;
+}
+
 function printSimple(s: SimpleSlot): string {
+	if (s.kind === "unknown" && s.text !== undefined) return printUnread(s.text, Boolean(s.dotted));
 	const body =
 		s.kind === "chord" ? s.chord.canonical + (s.voicing?.canonical ?? "") : SYMBOLS[s.kind];
 	const sung = s.kind === "chord" && s.syllable ? `:${printSyllable(s.syllable)}` : "";
@@ -470,10 +479,26 @@ export function printParsed(
 /** How one non-blank physical line prints. */
 type LinePrinter = (raw: string, l: Line | undefined) => string;
 
+/** The unreadable slots of a bar line, or of any cells (grammar 2.3): unknown harmony that keeps its text. */
+export const unreadSlots = (l: { cells: Cell[] }): SimpleSlot[] =>
+	simpleSlots(l.cells).filter((s) => s.kind === "unknown" && s.text !== undefined);
+
+/**
+ * The lines that print as written (spec §8): every line with an error,
+ * except a bar line whose only errors are its unreadable slots, one each,
+ * which prints in canonical form with each slot's text as written.
+ */
+export function printedAsWritten(parsed: ChartParse): Set<number> {
+	const errors = new Map<number, number>();
+	for (const d of parsed.diagnostics)
+		if (d.severity === "error") errors.set(d.line, (errors.get(d.line) ?? 0) + 1);
+	for (const l of parsed.lines)
+		if (l.kind === "bars" && errors.get(l.line) === unreadSlots(l).length) errors.delete(l.line);
+	return new Set(errors.keys());
+}
+
 function linePrinter(parsed: ChartParse, edit: (l: Line) => Line): LinePrinter {
-	const errored = new Set(
-		parsed.diagnostics.filter((d) => d.severity === "error").map((d) => d.line),
-	);
+	const errored = printedAsWritten(parsed);
 	const beatsFor = beatsOfLines(parsed);
 	const systems = systemTexts(parsed, errored, beatsFor, edit);
 	return (raw, l) => {

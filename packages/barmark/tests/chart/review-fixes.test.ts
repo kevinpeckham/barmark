@@ -42,19 +42,19 @@ describe("long whitespace runs parse in linear time", () => {
 describe("a section whose bar lines all fail stays a definition", () => {
 	test("it plays nothing rather than replaying an earlier section", () => {
 		const r = parseChart(
-			"## Verse\n| D | A |\n## Chorus\n| G |\n## Verse\n| E | Hm |\n## Outro\n| C |",
+			"## Verse\n| D | A |\n## Chorus\n| G |\n## Verse\n| E :| A |\n## Outro\n| C |",
 		);
 		expect(r.bars.map(barText)).toEqual(["D", "A", "G", "C"]);
 		expect(r.sections.map((s) => s.replayOf)).toEqual([null, null, null, null]);
 		expect(r.diagnostics.map((d) => d.line)).toEqual([6]);
 	});
 	test("no spurious replay error", () => {
-		const r = parseChart("## Verse\n| D | Hm |\n## Chorus\n| G |");
+		const r = parseChart("## Verse\n| D :| A |\n## Chorus\n| G |");
 		expect(r.diagnostics.map((d) => d.line)).toEqual([2]);
 	});
 	test("the dropped line is kept as written", () => {
-		expect(parseChart("| D | Hm |").lines).toEqual([
-			{ kind: "invalid", line: 1, text: "| D | Hm |", written: 2 },
+		expect(parseChart("| D :| A |").lines).toEqual([
+			{ kind: "invalid", line: 1, text: "| D :| A |", written: 2 },
 		]);
 	});
 });

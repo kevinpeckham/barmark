@@ -59,7 +59,7 @@ describe("systems (grammar 7.4)", () => {
 		expect(e.map((x) => x.message).join()).toContain("the same repeat marks");
 	});
 	test("a line with an error is in its system but not checked", () => {
-		const text = `${TWO}Gtr | G | C |\nPno | G | Hx7 |`;
+		const text = `${TWO}Gtr | G | C |\nPno | G | C_ |`;
 		const ls = labelled(text);
 		expect(ls.map((l) => [l.kind, l.system])).toEqual([
 			["bars", 0],

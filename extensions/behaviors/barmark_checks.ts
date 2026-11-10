@@ -2,7 +2,7 @@
  * Swamp behavior type for barmark's release checks: each method runs one of
  * the repo's own scripts (the same ones CI runs) and records what it found
  * as typed, versioned data. One definition, `barmark`, lives under models/;
- * the release-check workflow calls all four and asserts they are clean.
+ * the release-check workflow calls them all and asserts they are clean.
  * Pure scripts: no network beyond git and npm lookups, so no vault.
  */
 import { z } from "npm:zod@4";
@@ -23,9 +23,9 @@ const GatesSchema = z.object({
 });
 
 const PkgArg = z
-	.enum(["barmark", "render", "musicxml", "score", "sync", "midi", "cli"])
+	.enum(["barmark", "render", "musicxml", "score", "sync", "midi", "cli", "engraver"])
 	.default("barmark")
-	.describe("The workspace package to check: barmark, render (@barmark/render), musicxml (@barmark/musicxml), score (@barmark/score), sync (@barmark/sync), midi (@barmark/midi) or cli (@barmark/cli)");
+	.describe("The workspace package to check: barmark, render (@barmark/render), musicxml (@barmark/musicxml), score (@barmark/score), sync (@barmark/sync), midi (@barmark/midi), cli (@barmark/cli) or engraver (@barmark/engraver)");
 
 const PackageSchema = z.object({
 	label: z.string(),
@@ -41,6 +41,16 @@ const PackageSchema = z.object({
 	ok: z.boolean(),
 	summary: z.string(),
 	problems: z.array(z.string()),
+});
+
+const EquivalenceSchema = z.object({
+	label: z.string(),
+	pkg: z.string(),
+	checkedAt: z.string(),
+	engravings: z.number().int().describe("Engravings compared, stock against the build; 0 when skipped"),
+	ok: z.boolean(),
+	summary: z.string(),
+	output: z.string().describe("The gate's problems when it fails"),
 });
 
 const ReleaseSchema = z.object({
@@ -113,8 +123,8 @@ async function verify(context: Context, script: string, extra: string[] = []) {
 
 export const behavior = {
 	type: "@kevin/barmark-checks",
-	version: "2026.10.31.3",
-	description: "barmark's release checks (lint, tests, Fallow, package, release readiness) run on the checkout and kept as data",
+	version: "2026.11.10.1",
+	description: "barmark's release checks (lint, tests, Fallow, package, engraver equivalence, release readiness) run on the checkout and kept as data",
 	globalArguments: GlobalArgsSchema,
 	resources: {
 		gates: {
@@ -132,6 +142,12 @@ export const behavior = {
 		health: {
 			description: "Fallow: dead code, duplication and complexity beyond the baseline",
 			schema: HealthSchema,
+			lifetime: "infinite",
+			garbageCollection: 30,
+		},
+		equivalence: {
+			description: "@barmark/engraver's build against stock Verovio: the same SVG, byte for byte",
+			schema: EquivalenceSchema,
 			lifetime: "infinite",
 			garbageCollection: 30,
 		},
@@ -217,6 +233,38 @@ export const behavior = {
 				};
 				if (!ok) context.logger.warning("Fallow failed: {summary}", data);
 				return { dataHandles: [await context.writeResource("health", "health", data)] };
+			},
+		},
+		equivalence: {
+			description: "Run scripts/engraver-equivalence.ts for engraver (stock and build draw the same SVG); skipped for any other package",
+			arguments: z.object({ pkg: PkgArg }),
+			execute: async (args: { pkg: string }, context: Context) => {
+				const base = {
+					label: context.globalArgs.label,
+					pkg: args.pkg,
+					checkedAt: new Date().toISOString(),
+				};
+				if (args.pkg !== "engraver") {
+					const data = { ...base, engravings: 0, ok: true, summary: "skipped: not engraver", output: "" };
+					return { dataHandles: [await context.writeResource("equivalence", "equivalence", data)] };
+				}
+				const r = (await verify(context, "scripts/engraver-equivalence.ts")) as unknown as {
+					ok: boolean;
+					engravings: number;
+					problems: string[];
+					summary: string;
+				};
+				const data = EquivalenceSchema.parse({
+					...base,
+					engravings: r.engravings,
+					ok: r.ok,
+					summary: r.ok
+						? `${r.engravings} engravings, stock and build byte-identical`
+						: r.problems.slice(0, 3).join("; "),
+					output: r.ok ? tail(r.summary) : r.problems.join("\n"),
+				});
+				if (!data.ok) context.logger.warning("Engraver equivalence failed: {summary}", data);
+				return { dataHandles: [await context.writeResource("equivalence", "equivalence", data)] };
 			},
 		},
 		release: {

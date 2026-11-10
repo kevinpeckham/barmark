@@ -134,7 +134,7 @@ Set these custom properties on the element or anything above it:
 | `--barmark-paper` | the background |
 | `--barmark-muted` | holds, bar numbers, braces, meta lines |
 | `--barmark-rule` | bar lines |
-| `--barmark-accent` | errors |
+| `--barmark-accent` | errors, and slots that can't be read |
 | `--barmark-directive` | mid-chart changes (default the muted colour) |
 | `--barmark-note` | `###` note lines (default the ink colour) |
 | `--barmark-lyrics` | syllables under a voice line and in lyric rows (default the ink colour) |
@@ -152,7 +152,7 @@ barmark-chart::part(heading) {
 
 `::part()` names: `title`, `meta`, `heading`, `bar`, `chord`, `text`,
 `bar-number`, `rehearsal`, `lyrics` (each verse's line of words, inside
-its `bar`). These, the custom properties and the
+its `bar`), `unread` (a slot that can't be read, drawn as written). These, the custom properties and the
 attributes are the public surface: changing them is a breaking change.
 
 ## Light, dark and print
@@ -205,7 +205,9 @@ repeat, an ending, a jump or a replay doesn't move them, so a replayed
 section shows the numbers it was written with. A pickup is bar 0: its
 row shows no number in the gutter (`barNumber` is `0` in the model) and
 is spoken as "pickup", and the bars after it are 1, 2, and so on. A line with an error shows as written, underlined,
-with its message. `layoutChart(text)` returns all of this as data, if
+with its message, unless its only errors are slots that can't be read
+(`CM7`): that line draws as usual, each such slot as written in the
+error colour with its message as a tooltip and in the bar's spoken name. `layoutChart(text)` returns all of this as data, if
 you want to draw it yourself, and `typesetChord(parts)` with `glyphs`
 gives a chord's pieces as the page sets them (root and quality, the
 raised extension, the bass after a slash, ♯ and ♭), and

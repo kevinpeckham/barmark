@@ -1,4 +1,4 @@
-import { isBar } from "./barLine.js";
+import { isBar, simpleSlots as slotsIn } from "./barLine.js";
 import type { BarSource, Sing } from "./expand.js";
 import { perWritten, slotTimes } from "./shares.js";
 import type {
@@ -27,10 +27,7 @@ type LyricsLine = Extract<Line, { kind: "lyrics" }>;
 export type Singer = { part: DeclaredPart | null; label?: string; sings?: string };
 
 /** Each simple slot of a bar line's cells. */
-const simpleSlots = (l: BarsLine): SimpleSlot[] =>
-	l.cells.flatMap((c) =>
-		c.kind === "slots" ? c.slots.flatMap((s) => (s.kind === "group" ? s.members : [s])) : [],
-	);
+const simpleSlots = (l: BarsLine): SimpleSlot[] => slotsIn(l.cells);
 const isNote = (s: SimpleSlot) => s.kind === "chord" && s.chord.kind === "notes";
 const hasSyllables = (l: BarsLine) => simpleSlots(l).some((s) => s.kind === "chord" && s.syllable);
 const hasNotes = (l: BarsLine) => simpleSlots(l).some(isNote);

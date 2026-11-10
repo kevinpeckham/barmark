@@ -115,9 +115,9 @@ describe("errors drop the line", () => {
 		expect(e[0]?.line).toBe(7);
 	});
 	test("a chord suggestion is kept", () => expect(errors("| CM7 |")[0]?.suggestion).toBe("Cmaj7"));
-	test("a markdown table names its first non-chord", () => {
+	test("a markdown table names its first non-chord, and keeps its cells as unread slots", () => {
 		const r = read("| Name | Part |");
-		expect(r.bars).toBeNull();
+		expect(r.bars?.cells.map(kinds)).toEqual([["unknown"], ["unknown"]]);
 		expect(r.diagnostics[0]?.token).toBe("Name");
 	});
 	test("an empty group member", () => expect(errors("| D_ |")).toHaveLength(1));

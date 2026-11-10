@@ -19,7 +19,8 @@ function notesOnlyProblem(l: BarsLine): string | null {
 	const harmony = slots.some(
 		(s) =>
 			s.kind === "nc" ||
-			s.kind === "unknown" ||
+			// An unreadable slot is already an error of its own, not harmony written here.
+			(s.kind === "unknown" && s.text === undefined) ||
 			(s.kind === "chord" && (s.chord.kind !== "notes" || s.voicing !== undefined)),
 	);
 	if (harmony)

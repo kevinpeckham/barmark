@@ -570,6 +570,25 @@ order, not just the written marks.
 
 ## Design
 
+### One unreadable chord dropped its whole line, so a chart played short (2026-11-10, barmark)
+
+- **The symptom.** Porting the listening tool, a chart with one `CM7`
+  played shorter than its recording: every bar on that line was gone, so
+  everything after it was early.
+- **The cause.** `parseBarLine` treated every error alike: any error, a
+  chord symbol it couldn't read included, made `bars` null, and the line
+  was excluded. The error was reported, but play order, timing and every
+  export silently lost the line's bars.
+- **The fix.** Kevin's decision: an unreadable slot (chord symbol, note
+  set, voicing, syllable or mark) is still an error but becomes unknown
+  harmony with the author's `text`, `{ kind: "unknown", text: "CM7" }`;
+  only an error in the bar line's structure, where the bar count itself is
+  unknown, drops it. The slot reader is its own function, `slotReader`,
+  with two ways to report: `error` breaks the line, `unread` keeps the
+  slot (`packages/barmark/src/chart/barLine.ts`; grammar principle 4,
+  2.3; `packages/barmark/tests/chart/unreadable-slots.test.ts`). Tests
+  that used `Hm` to make a line fail now use a structural error.
+
 ### A passing tone at exactly a quarter of the chord named a 9th (2026-11-08, @barmark/midi import)
 
 - **The symptom.** A fill of eighths D5 E5 F5 E5 D5 from beat 2 over a
@@ -854,6 +873,143 @@ when two rules each define "first", test a chart that tells them apart,
 and round-trip it through `format`.
 
 ## Tooling
+
+### `bun run --filter '!pkg'` does not leave a package out (2026-11-10, @barmark/engraver)
+
+- **The symptom.** The root `bun run build` (`bun run --filter '*'
+  build`) runs in every CI `package` row and before `test:browser`. Giving
+  the engraver a `build` that runs emcc would have compiled Verovio there,
+  and `--filter '*' --filter '!@barmark/engraver'` still ran it.
+- **The cause.** In Bun 1.3.14 a negated filter does not exclude a
+  workspace package from `bun run --filter` (checked on the VM).
+- **The fix.** Two scripts: the engraver's `build` never runs emcc (it
+  emits `dist/info.js`, the types, and checks a compiled `dist/` against
+  `info.ts` when one is there), and the emcc build is `bun run compile`
+  (`--update` rewrites `info.ts`).
+- **Where.** `packages/engraver/package.json`, `packages/engraver/build/dist.ts`,
+  `packages/engraver/build/compile.ts`.
+
+### Emscripten's glue holds `/home/web_user` and `/tmp` (2026-11-10, @barmark/engraver)
+
+- **The symptom.** The first leaked-path scan of the build, a plain search
+  for `/home/` and `/tmp/` in both files, failed on a build that leaked
+  nothing.
+- **The cause.** The glue carries Emscripten's virtual filesystem: the
+  user's home `/home/web_user` and the `/tmp` and `/home` directories it
+  creates at start. They are paths inside the module, not the builder's.
+- **The fix.** The scan matches a home, temp, opt, macOS or runner path
+  only with a name after the directory (`/tmp/x`, not `/tmp`), allows
+  `/home/web_user`, and also looks for the source, emsdk, build and
+  working directories as literals, so a real leak is still caught.
+- **Where.** `packages/engraver/build/paths.ts` (tested in
+  `packages/engraver/tests/paths.test.ts`).
+
+### The glue ignores `instantiateWasm` unless it is linked to accept it (2026-11-10, @barmark/engraver)
+
+- **The symptom.** The spike's worker passed the factory an
+  `instantiateWasm` hook to download and check the `.wasm` itself; the
+  build never called it and fetched the `.wasm` on its own.
+- **The cause.** With `-s STRICT=1`, the glue reads only the incoming
+  `Module` properties `INCOMING_MODULE_JS_API` names, and the default list
+  in strict mode leaves `instantiateWasm` out. Once it is named, a second
+  trap: a hook that returns `{}` and never calls `receive` (its download
+  failed) leaves the factory's promise unsettled for ever.
+- **The fix.** The link names it:
+  `INCOMING_MODULE_JS_API=onRuntimeInitialized,instantiateWasm`, the one
+  flag that makes the build behave differently from stock. `@barmark/score`
+  (0.4.0) races the factory against a promise the hook rejects on failure,
+  so a failed download fails the load instead of hanging it.
+- **Where.** `packages/engraver/build/build.sh`; the spec's Loading section
+  (`docs/superpowers/specs/2026-11-10-engraver-package-design.md`).
+
+### Trimming Verovio's `data/` breaks more than the font left out (2026-11-10, @barmark/engraver)
+
+- **The symptom.** The spike's build kept only `Bravura.xml`,
+  `Leipzig.xml`, `Leipzig/`, `Leipzig.css` and `text/`. Other music fonts
+  failed, as expected (Bravura drew no glyphs; Leland and Gootville drew
+  Leipzig), but so did `fontTextLiberation` (no Liberation embedded),
+  `footer: "always"` (no footer) and a custom tuning (`tuningFile`: missing
+  `tuning-glyphnames.json`), all but the last with nothing logged.
+- **The cause.** Those options read files from the `data/` tree that was
+  left out; the embedded filesystem holds only what `--embed-file`
+  packed, and Verovio falls back quietly when a file is missing.
+- **The fix.** None needed for barmark: `@barmark/score` sets no `font*`
+  key, no tuning and `footer: "none"` (`packages/score/src/engrave.ts`),
+  and the equivalence gate covers what it asks. The engraver README's
+  Limits section states what the build does for anyone calling it with
+  other options.
+- **Where.** `packages/engraver/build/data.txt`, `packages/engraver/README.md`.
+
+### `NO_EDIT_SUPPORT` does not compile at Verovio 6.4.1 (2026-11-10, @barmark/engraver)
+
+- **The symptom.** Building Verovio 6.4.1 with `-DNO_EDIT_SUPPORT=ON`, to
+  leave out the editor toolkit barmark never calls, fails to compile.
+- **The cause.** Upstream does not keep the option building at this
+  version; we did not dig further, since the editor is small beside what
+  the importers and `data/` cost.
+- **The fix.** The build does not use it; the editor stays in, and the
+  size is won elsewhere (importers and `data/` left out, `-Oz`).
+- **Where.** `packages/engraver/build/build.sh`, the plan's Global
+  Constraints.
+
+### Verovio's CMake builds Release, so `-Oz` in `CMAKE_CXX_FLAGS` alone is overridden (2026-11-10, @barmark/engraver)
+
+- **The symptom.** In the spike, `-Oz` passed only in `CMAKE_CXX_FLAGS`
+  did not make the library smaller.
+- **The cause.** Verovio's CMake defaults `CMAKE_BUILD_TYPE` to Release,
+  and CMake appends `CMAKE_CXX_FLAGS_RELEASE` (`-O3 -DNDEBUG`) after
+  `CMAKE_CXX_FLAGS`, so the last `-O` wins.
+- **The fix.** The same flags go in both `CMAKE_CXX_FLAGS` and
+  `CMAKE_CXX_FLAGS_RELEASE`, and `-Oz` on the link too.
+- **Where.** `packages/engraver/build/build.sh`.
+
+### `git archive` of a subdirectory came out empty, then not reproducible (2026-11-10, @barmark/engraver)
+
+- **The symptom.** `source.sh` packs `packages/engraver/build/` for the
+  Corresponding Source. Run as `git -C build archive HEAD:packages/engraver/build`,
+  the tarball held only its prefix directory. Fixed, two runs a few
+  seconds apart gave different digests.
+- **The cause.** Run inside a subdirectory, `git archive` limits itself
+  to that subdirectory's paths, so a tree named from the root matched
+  nothing. And an archive of a tree, unlike one of a commit, stamps every
+  entry with the current time.
+- **The fix.** Run it from `git rev-parse --show-toplevel`, and pass
+  `--mtime` with HEAD's commit time (`git log -1 --format=%cI`; the flag
+  needs git 2.41 or later). The same commit now packs to the same bytes.
+- **Where.** `packages/engraver/build/source.sh`.
+
+### The Verovio build is reproducible across machines once paths are mapped (2026-11-10, @barmark/engraver)
+
+- **The symptom.** The spike's lighter Verovio build (variant d3) put
+  absolute paths of the machine that built it into the `.wasm`:
+  `__FILE__` strings from `jsonxx.cc` and clang's resource directory. With
+  those mapped, `build.sh`'s first two VM builds (two cache roots) still
+  differed (`.wasm` 2,957,006 and 2,957,082 bytes, and the glue), and the
+  path scan named the leak:
+  `<emsdk>/upstream/emscripten/cache/sysroot/share/verovio`.
+- **The cause.** `__FILE__` and the resource directory hold the paths of the
+  source, emsdk and the build tree. The last leak is Verovio's CMake:
+  `add_compile_definitions(RESOURCE_DIR="${CMAKE_INSTALL_PREFIX}/share/verovio")`
+  becomes the `resourcePath` option's default, and emcmake sets the install
+  prefix to emsdk's absolute sysroot. Stock npm Verovio 6.4.1 holds its
+  builder's path there (`/Users/laurent/tools/emsdk/…/sysroot/share/verovio`).
+  A prefix map does not touch it: it is a string literal, not a file name.
+- **The fix.** `build.sh` maps the source, emsdk and build roots
+  (`-ffile-prefix-map=…=verovio|emsdk|build`, on compile and link), passes
+  clang's `-resource-dir` explicitly and sets `-DCMAKE_INSTALL_PREFIX=/usr/local`,
+  so the default is Verovio's own fallback, `/usr/local/share/verovio` (the
+  JS constructor sets `/data` before every toolkit, so nothing reads it).
+  `paths.ts` fails the build on any home, temp, opt, macOS or runner path, or
+  on the source, emsdk, build or working directory anywhere in either file;
+  it allows `/home/web_user`, which is Emscripten's virtual filesystem.
+- **The result.** Two VM builds from different cache roots (one with a
+  copied emsdk, one downloaded fresh) and a GitHub `ubuntu-latest` runner
+  build agree byte for byte: `verovio-module.mjs` 29,534 bytes, sha256
+  `a3021db201e9a2392b5159086d55eb765d06274d4d9d82d162cfb426cf929bd3`;
+  `verovio-module.wasm` 2,956,941 bytes, sha256
+  `74273b7167510dc2f0bf83c3cd37658e07dedc4261ed99ffcfebc1e02ade0a6c`, on
+  both machines.
+- **Where.** `packages/engraver/build/build.sh`, `packages/engraver/build/paths.ts`.
 
 ### A batch of releases lost one: a newer waiting run cancels the older (2026-11-09, render, musicxml and sync releases)
 
@@ -2134,3 +2290,19 @@ those never reached, or reached in a repeat with passes enough for their verse (
 - **The cause.** `packages/midi/src/version.ts` holds `VERSION`, and a test
   compares it with `package.json`; step 2 named only musicxml's.
 - **The fix.** Bump it with the package version; step 2 now names both.
+
+### A 312-bar lead sheet is still one page at width 375 (2026-11-10, engraver)
+
+- **The symptom.** The equivalence gate's long chart, written to cover page
+  breaks, engraved as one page at both widths with 312 bars.
+- **The cause.** Score's `LAYOUT` asks Verovio for `pageHeight: 60000`
+  (Verovio's ceiling) with `adjustPageHeight`, so a page holds about 270
+  systems: at 375 wide and two bars a system, some 540 bars of a one-staff
+  lead sheet.
+- **The fix.** `packages/engraver/tests/fixtures/long.chart.md` has 528
+  bars (12 sections of 44), two pages at 375 and one at 1000. The cost is
+  time: it is the gate's slowest width-375 engraving, so it is the chart
+  that Q1's 500 ms rule measures.
+- **The decision.** Kevin kept `-Oz` (2026-11-10): the 500 ms rule reads
+  real charts only, not `long.chart.md` (the gate's ⚠ line follows), as
+  written under Q1 in `docs/superpowers/specs/2026-11-10-engraver-package-design.md`.

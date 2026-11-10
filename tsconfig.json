@@ -22,8 +22,15 @@
 			"@barmark/sync": ["./packages/sync/src/index.ts"],
 			"@barmark/sync/timing": ["./packages/sync/src/timing/index.ts"],
 			"@barmark/midi": ["./packages/midi/src/index.ts"],
-			"@barmark/midi/perform": ["./packages/midi/src/perform/index.ts"]
+			"@barmark/midi/perform": ["./packages/midi/src/perform/index.ts"],
+			"@barmark/engraver/info": ["./packages/engraver/src/info.ts"]
 		}
 	},
-	"include": ["packages/*/src", "packages/*/tests", "packages/*/browser", "scripts"]
+	"include": [
+		"packages/*/src",
+		"packages/*/tests",
+		"packages/*/browser",
+		"packages/engraver/build",
+		"scripts"
+	]
 }
