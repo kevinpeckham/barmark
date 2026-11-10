@@ -891,6 +891,39 @@ and round-trip it through `format`.
 
 ## Tooling
 
+### jsDelivr serves the engraver's `.wasm` as `application/wasm`, brotli, CORS open, once it has the version (2026-11-10, @barmark/engraver 0.1.1)
+
+- **The symptom.** Minutes after npm accepted 0.1.1, jsDelivr served
+  `dist/verovio-module.mjs` but answered `dist/verovio-module.wasm` with
+  a 404 ("Couldn't find the requested release version 0.1.1",
+  `cache-control: public, max-age=30, s-maxage=30`). Its data API
+  (`data.jsdelivr.com/v1/packages/npm/@barmark/engraver@0.1.1`) said the
+  same. The npm tarball held the file all along. 31 seconds later the
+  `.wasm` served.
+- **The cause.** jsDelivr's view of the package's versions lags npm
+  briefly after a publish, and different files can resolve through
+  differently aged caches. Its 404 is cached for only 30 seconds, so the
+  gap closes by itself.
+- **The facts, checked.** Both files downloaded from
+  `https://cdn.jsdelivr.net/npm/@barmark/engraver@0.1.1/dist/` match
+  `packages/engraver/src/info.ts` (`openssl dgst -sha384 -binary | base64`):
+  `.mjs` 29,534 bytes, `sha384-klTppHZB…KJO`; `.wasm` 2,956,941 bytes,
+  `sha384-cBBw1xx6…pr5i`. `curl -sI -H 'Accept-Encoding: br, gzip'` on
+  the `.wasm` gives `content-type: application/wasm` (so
+  `WebAssembly.instantiateStreaming` would accept it, though score
+  fetches bytes and checks them first), `content-encoding: br` (941,454
+  bytes on the wire, 32% of the file), `access-control-allow-origin: *`,
+  `cross-origin-resource-policy: cross-origin`, `vary: Accept-Encoding`
+  and `cache-control: public, max-age=31536000, immutable`. The `.mjs` is
+  `application/javascript; charset=utf-8`, also brotli and CORS open.
+- **What to do.** After an engraver release, check jsDelivr only once
+  `npm view` shows the version, and wait for the `.wasm` with a blocking
+  check (`until curl -sfo /dev/null <url>; …`), not one request. A
+  site's switch to a new engraver version (Task 17) waits until both
+  files serve.
+- **Where.** `packages/engraver/src/info.ts` (`CDN_URL` and the digests);
+  RELEASING step 11.
+
 ### The release ran `bun test` before `bun run build`, so engraver 0.1.0 never published (2026-11-10, @barmark/engraver 0.1.0)
 
 - **The symptom.** The `engraver-v0.1.0` release run (42869831886) failed
