@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
+import { COMMON, CONTENTS } from "../../../scripts/package-contents.js";
 import pkg from "../package.json";
 
 // versions.env, read as build.sh sources it: KEY=value, one per line.
@@ -34,4 +35,13 @@ test("the build never compiles: compile is separate", () => {
 		compile: "bun build/compile.ts",
 		prepack: "bun build/dist.ts --require-module",
 	});
+});
+test("verify-package requires and allows every top-level file the package publishes", () => {
+	const { required, allowed } = CONTENTS.engraver;
+	const files = pkg.files.filter((f) => !["dist", "build"].includes(f) && !COMMON.includes(f));
+	expect(files.length).toBeGreaterThan(0);
+	for (const f of files) {
+		expect(required).toContain(f);
+		expect(allowed.test(f)).toBe(true);
+	}
 });
