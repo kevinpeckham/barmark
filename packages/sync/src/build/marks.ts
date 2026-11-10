@@ -369,22 +369,27 @@ export function checkTempos(
 
 /**
  * The pickup bar for `pickup.start`, or null with `pickup-ignored` when it is
- * not a time before bar 1 or its length is not one to (beats - 1) beats.
+ * not a time before bar 1 or its length is not one to (units - 1) units. The
+ * unit is the beat in a simple meter and the eighth in a compound one, where
+ * the pickup is written `[k/8]`.
  */
 export function readPickup(raw: unknown, bars: BarSpan[], report: Report): BarSpan | null {
 	if (raw === undefined || raw === null) return null;
 	const bar = bars[0] as BarSpan;
 	const start = isRecord(raw) ? raw.start : undefined;
-	const k = isTime(start)
-		? Math.round((bar.start - start) / ((bar.end - bar.start) / bar.beats))
-		: 0;
-	if (!isTime(start) || start >= bar.start || k < 1 || k >= bar.beats) {
-		report.info("pickup-ignored", "The pickup is not one to a few beats before bar 1; ignored", {
-			path: "pickup",
-		});
+	const compound = beatsOf(bar.meter) !== bar.meter.n;
+	const units = compound ? bar.meter.n : bar.beats;
+	const k = isTime(start) ? Math.round((bar.start - start) / ((bar.end - bar.start) / units)) : 0;
+	if (!isTime(start) || start >= bar.start || k < 1 || k >= units) {
+		report.info(
+			"pickup-ignored",
+			"The pickup is not one to a few beats (eighths in a compound meter) before bar 1; ignored",
+			{
+				path: "pickup",
+			},
+		);
 		return null;
 	}
-	const compound = beatsOf(bar.meter) !== bar.meter.n;
-	const meter = compound ? { n: 3 * k, d: 8 } : { n: k, d: bar.meter.d };
-	return { start, end: bar.start, meter, beats: k, pickup: true };
+	const beats = compound && k % 3 === 0 ? k / 3 : k;
+	return { start, end: bar.start, meter: { n: k, d: bar.meter.d }, beats, pickup: true };
 }
