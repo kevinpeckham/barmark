@@ -54,19 +54,43 @@ function continuation(units: Unit[], at: number): number[] {
 }
 
 /**
+ * Where a section's repeats stand, as `pairRepeats` pairs them: a `|:`
+ * waiting for its `:|`, or a repeat's endings being collected.
+ */
+type Pairing = { open: boolean; endings: boolean };
+
+/** Whether `l` is an ending of a paired repeat, moving the pairing past it. */
+function paired(p: Pairing, l: Line): boolean {
+	if (l.kind === "bars" && l.ending) {
+		p.endings = p.open || p.endings;
+		p.open = false;
+		return p.endings;
+	}
+	if (p.endings && BETWEEN_ENDINGS.has(l.kind)) return false;
+	p.endings = false;
+	if (l.kind === "section") p.open = false;
+	if (l.kind === "bars") p.open = l.closes ? false : p.open || l.opens;
+	return false;
+}
+
+/**
  * Mark the plain bar lines that continue an ending onto further lines
  * (grammar 5.1, Kevin's decision 2026-11-10): each gets the ending's
- * passes as `continues`. Never throws.
+ * passes as `continues`. Only an ending of a paired repeat continues, so
+ * an ending with no `|:` before it leaves a stray `:|` stray. Never throws.
  */
 export function continueEndings(lines: Line[]): Line[] {
 	const units = unitsOf(lines);
 	const marked = new Map<Line, number[]>();
-	units.forEach((u, i) => {
-		const ref = bars(u.ref);
-		if (!ref?.ending || ref.closes) return;
-		for (const k of continuation(units, i))
-			for (const l of (units[k] as Unit).lines) marked.set(l, ref.ending);
-	});
+	const pairing: Pairing = { open: false, endings: false };
+	for (let i = 0; i < units.length; i++) {
+		const ref = (units[i] as Unit).ref;
+		if (!paired(pairing, ref) || ref.kind !== "bars" || !ref.ending || ref.closes) continue;
+		const run = continuation(units, i);
+		for (const k of run) for (const l of (units[k] as Unit).lines) marked.set(l, ref.ending);
+		// The lines it continues onto belong to the ending: the pairing goes on after them.
+		i = run.at(-1) ?? i;
+	}
 	if (!marked.size) return lines;
 	return lines.map((l) => {
 		const passes = marked.get(l);

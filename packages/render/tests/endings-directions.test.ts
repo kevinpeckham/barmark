@@ -108,6 +108,14 @@ describe("an ending across rows (barmark's grammar 5.1)", () => {
 			"ending for pass 2",
 		]);
 	});
+	test("a stray :| after endings with no repeat continues no bracket", () => {
+		const text = "| C |\n|1 D |\n| E :|\n|2 F |";
+		const items = layoutChart(text).blocks.flatMap((b) => b.items);
+		expect(items.some((i) => i.kind === "row" && i.continues)).toBe(false);
+		expect(texts(renderChartUnwrapped(text), ".bm-sr").some((t) => t.includes("continued"))).toBe(
+			false,
+		);
+	});
 	test("in a system, every part's row continues the ending", () => {
 		const text = [
 			"part: Gtr = Guitar",

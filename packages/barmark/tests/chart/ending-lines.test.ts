@@ -151,12 +151,30 @@ describe("an ending that never meets its :|", () => {
 	});
 	test("endings with no repeat before them keep today's errors", () => {
 		const text = "| C |\n|1 D |\n| E :|\n|2 F |";
+		expect(marks(text)).toEqual(["|", "|1", "|", "|2"]);
 		expect(errors(text)).toEqual([
 			[2, "an ending follows the bars of a |: … :| repeat"],
 			[3, ":| has no |: before it in this section"],
 			[4, "an ending follows the bars of a |: … :| repeat"],
 		]);
 		expect(play(text).texts).toEqual(["C", "D", "E", "F"]);
+	});
+});
+
+describe("only an ending of a paired repeat continues", () => {
+	test("a repeat closed before the endings pairs none of them", () => {
+		const text = "|: C :|\n|1 D |\n| E :|\n|2 F |";
+		expect(marks(text)).toEqual(["|", "|1", "|", "|2"]);
+		expect(errors(text).map(([l]) => l)).toEqual([2, 3, 4]);
+	});
+	test("a repeat in another section pairs none of them", () => {
+		const text = "## A\n|: C |\n## B\n|1 D |\n| E :|\n|2 F |";
+		expect(marks(text)).toEqual(["|", "|1", "|", "|2"]);
+	});
+	test("a later ending of a paired set continues", () => {
+		const text = "|: C |\n|1 D :|\n|2 E |\n| F :|\n|3 G |";
+		expect(marks(text)).toEqual(["|", "|1", "|2", "+2", "|3"]);
+		expect(errors(text)).toEqual([]);
 	});
 });
 
