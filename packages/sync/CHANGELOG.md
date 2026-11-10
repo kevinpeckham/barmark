@@ -6,6 +6,8 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-11-10
+
 ### Added
 
 - `rehashTiming(built, refined, options?)` carries a built chart's timing map
@@ -85,7 +87,8 @@ exports: `keyFromText`, `conventionalKey`, `printKey`, `spellPitch`).
   times the runs' own confidence; `?` is 0), and the confidences the input
   gave for `key`, `meter`, `tempo` and `sections`. The shape may change.
 
-[Unreleased]: https://github.com/kevinpeckham/barmark/compare/sync-v0.3.0...HEAD
+[Unreleased]: https://github.com/kevinpeckham/barmark/compare/sync-v0.4.0...HEAD
+[0.4.0]: https://github.com/kevinpeckham/barmark/compare/sync-v0.3.0...sync-v0.4.0
 [0.3.0]: https://github.com/kevinpeckham/barmark/compare/sync-v0.2.1...sync-v0.3.0
 [0.2.1]: https://github.com/kevinpeckham/barmark/compare/sync-v0.2.0...sync-v0.2.1
 [0.2.0]: https://github.com/kevinpeckham/barmark/compare/sync-v0.1.0...sync-v0.2.0
