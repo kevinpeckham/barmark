@@ -3,12 +3,19 @@
  * built packages through an import map, and a server-drawn score.
  *
  *   bun packages/score/browser/server.ts   (PORT, default 5261)
+ *
+ * It needs @barmark/engraver's compiled module in packages/engraver/dist
+ * (`bun run compile` there, or CI's engraver-dist artifact).
  */
 import { join } from "node:path";
 import { fontFaceCss } from "@barmark/render";
 import { renderScoreHtml } from "../src/server.js";
 import { viewOf } from "../src/switch.js";
-import { VEROVIO_CDN_INTEGRITY } from "../src/verovio.js";
+import {
+	ENGRAVER_CDN_INTEGRITY,
+	ENGRAVER_WASM_INTEGRITY,
+	VEROVIO_CDN_INTEGRITY,
+} from "../src/verovio.js";
 
 const root = join(import.meta.dir, "../../..");
 
@@ -81,12 +88,23 @@ const DIGESTS: Record<string, string> = {
 	good: VEROVIO_CDN_INTEGRITY,
 	bad: "sha384-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
 };
+/*
+ * The lite build (@barmark/engraver), by name: its verovio-url, with both
+ * digests, except `nowasmintegrity`, which sets only the module's. `badwasm`
+ * serves a .wasm with its last byte flipped; `nowasm` serves none.
+ */
+const LITE: Record<string, { url: string; wasmIntegrity?: string }> = {
+	ok: { url: "/engraver/ok/verovio-module.mjs", wasmIntegrity: ENGRAVER_WASM_INTEGRITY },
+	badwasm: { url: "/engraver/badwasm/verovio-module.mjs", wasmIntegrity: ENGRAVER_WASM_INTEGRITY },
+	nowasm: { url: "/engraver/nowasm/verovio-module.mjs", wasmIntegrity: ENGRAVER_WASM_INTEGRITY },
+	nowasmintegrity: { url: "/engraver/ok/verovio-module.mjs" },
+};
 const PRELOADS = new Set(["none", "intent", "idle"]);
 const MAX_COUNT = 4;
-const ALLOWED = new Set(["theme", "engine", "count", "chart", "integrity", "preload"]);
+const ALLOWED = new Set(["theme", "engine", "count", "chart", "integrity", "preload", "lite"]);
 
 const inRange = (n: number) => Number.isInteger(n) && n >= 1 && n <= MAX_COUNT;
-const named = (table: Record<string, string>, name: string | null) =>
+const named = (table: Record<string, unknown>, name: string | null) =>
 	name === null || Object.hasOwn(table, name);
 
 /** Each check on the query, with what it says when the query fails it. */
@@ -98,6 +116,8 @@ const CHECKS: [(p: URLSearchParams) => boolean, (p: URLSearchParams) => string][
 	[(p) => named(ENGINES, p.get("engine")), (p) => `unknown engine: ${p.get("engine")}`],
 	[(p) => named(CHARTS, p.get("chart")), (p) => `unknown chart: ${p.get("chart")}`],
 	[(p) => named(DIGESTS, p.get("integrity")), (p) => `unknown integrity: ${p.get("integrity")}`],
+	[(p) => named(LITE, p.get("lite")), (p) => `unknown lite: ${p.get("lite")}`],
+	[(p) => !(p.has("lite") && p.has("engine")), () => "lite and engine are both a verovio-url"],
 	[(p) => !p.has("preload") || PRELOADS.has(p.get("preload") ?? ""), () => "unknown preload"],
 	[(p) => inRange(Number(p.get("count") ?? "1")), () => `count must be 1 to ${MAX_COUNT}`],
 ];
@@ -111,12 +131,24 @@ function refusal(p: URLSearchParams): string | null {
 const attr = (name: string, value: string | null | undefined) =>
 	value == null ? "" : ` ${name}="${escapeAttr(value)}"`;
 
-/** The element's attributes: `theme` and `preload` as given, the named engine's verovio-url and the named digest. */
+/** The named lite copy's three attributes: its URL, its module digest and, if it has one, its wasm digest. */
+function liteAttrs(name: string): string {
+	const copy = LITE[name];
+	if (!copy) return "";
+	return (
+		attr("verovio-url", copy.url) +
+		attr("verovio-integrity", ENGRAVER_CDN_INTEGRITY) +
+		attr("verovio-wasm-integrity", copy.wasmIntegrity)
+	);
+}
+
+/** The element's attributes: `theme` and `preload` as given, the named engine's verovio-url and the named digest, or a lite copy's. */
 const attrsOf = (p: URLSearchParams) =>
 	attr("theme", p.get("theme")) +
 	attr("preload", p.get("preload")) +
 	attr("verovio-url", ENGINES[p.get("engine") ?? ""]) +
-	attr("verovio-integrity", DIGESTS[p.get("integrity") ?? ""]);
+	attr("verovio-integrity", DIGESTS[p.get("integrity") ?? ""]) +
+	liteAttrs(p.get("lite") ?? "");
 
 /** The chart `chart` names, or the sixteen bars. */
 const chartOf = (p: URLSearchParams) => CHARTS[p.get("chart") ?? ""] ?? CHART;
@@ -165,6 +197,32 @@ const verovio = join(root, "packages/score/node_modules/verovio/dist/verovio-mod
 const gzipped = Bun.gzipSync(await Bun.file(verovio).bytes());
 const JS = "text/javascript; charset=utf-8";
 
+/** @barmark/engraver's compiled module and .wasm, or an exit saying how to get them. */
+async function engraverDist(): Promise<{
+	module: Uint8Array<ArrayBuffer>;
+	wasm: Uint8Array<ArrayBuffer>;
+}> {
+	const dist = join(root, "packages/engraver/dist");
+	const [module, wasm] = [
+		Bun.file(join(dist, "verovio-module.mjs")),
+		Bun.file(join(dist, "verovio-module.wasm")),
+	];
+	if (!((await module.exists()) && (await wasm.exists()))) {
+		console.error(
+			"packages/engraver/dist has no compiled module: run `cd packages/engraver && bun run compile`, or download CI's engraver-dist artifact",
+		);
+		process.exit(1);
+	}
+	return { module: await module.bytes(), wasm: await wasm.bytes() };
+}
+
+const engraver = await engraverDist();
+/** The .wasm with its last byte flipped: the same size, another digest. */
+const badWasm = engraver.wasm.slice();
+badWasm[badWasm.length - 1] = (badWasm.at(-1) ?? 0) ^ 0xff;
+const WASM = "application/wasm";
+const engraverModule = () => new Response(engraver.module, { headers: { "content-type": JS } });
+
 const server = Bun.serve({
 	// Loopback only: nothing off this machine needs the suite's pages.
 	hostname: "127.0.0.1",
@@ -177,6 +235,14 @@ const server = Bun.serve({
 			new Response(Bun.file(verovio), { headers: { "content-type": JS } }),
 		"/verovio-gz/verovio-module.mjs": () =>
 			new Response(gzipped, { headers: { "content-type": JS, "content-encoding": "gzip" } }),
+		"/engraver/ok/verovio-module.mjs": engraverModule,
+		"/engraver/ok/verovio-module.wasm": () =>
+			new Response(engraver.wasm, { headers: { "content-type": WASM } }),
+		"/engraver/badwasm/verovio-module.mjs": engraverModule,
+		"/engraver/badwasm/verovio-module.wasm": () =>
+			new Response(badWasm, { headers: { "content-type": WASM } }),
+		// No .wasm beside it: the request falls through to a 404.
+		"/engraver/nowasm/verovio-module.mjs": engraverModule,
 		"/verovio-gz-cors/verovio-module.mjs": () =>
 			new Response(gzipped, {
 				headers: {

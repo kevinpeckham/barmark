@@ -11,6 +11,9 @@ import {
 	progressText,
 } from "../src/download.js";
 import {
+	ENGRAVER_CDN_INTEGRITY,
+	ENGRAVER_CDN_URL,
+	ENGRAVER_WASM_INTEGRITY,
 	VEROVIO_CDN_INTEGRITY,
 	VEROVIO_CDN_URL,
 	VEROVIO_MODULE_BYTES,
@@ -45,6 +48,15 @@ describe("the pinned Verovio", () => {
 			url: readme.includes(VEROVIO_CDN_URL),
 			integrity: readme.includes(VEROVIO_CDN_INTEGRITY),
 		}).toEqual({ url: true, integrity: true });
+	});
+
+	test("the README gives the lite build's URL and both digests", () => {
+		const readme = readFileSync(join(import.meta.dir, "../README.md"), "utf8");
+		expect({
+			url: readme.includes(ENGRAVER_CDN_URL),
+			integrity: readme.includes(ENGRAVER_CDN_INTEGRITY),
+			wasmIntegrity: readme.includes(ENGRAVER_WASM_INTEGRITY),
+		}).toEqual({ url: true, integrity: true, wasmIntegrity: true });
 	});
 });
 

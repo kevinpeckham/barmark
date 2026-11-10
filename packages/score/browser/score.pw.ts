@@ -1,4 +1,5 @@
 import { expect, type Locator, type Page, test } from "@playwright/test";
+import { WASM_INTEGRITY_NEEDED } from "../src/wasm.js";
 
 /** Counts, from now on, the page's requests for the score engine: engine.js, the worker or a Verovio module. */
 function countEngine(page: Page): { worker: number; engine: number; urls: string[] } {
@@ -416,4 +417,62 @@ test('preload="intent" loads the engine on hovering Score, not before', async ({
 	await el.getByRole("radio", { name: "Score" }).hover();
 	await expect.poll(() => seen.worker, { timeout: 10_000 }).toBe(1);
 	expect(await el.getAttribute("view")).toBeNull();
+});
+
+/** Where the lite build's requests go, for each of the server's copies of it. */
+const lite = (copy: string) => ({
+	module: `/engraver/${copy}/verovio-module.mjs`,
+	wasm: `/engraver/${copy}/verovio-module.wasm`,
+});
+
+test("the lite build: both digests match, it is used, its wasm measured", async ({ page }) => {
+	const warnings: string[] = [];
+	page.on("console", (m) => m.type() === "warning" && warnings.push(m.text()));
+	const seen = countEngine(page);
+	await page.goto("/score?lite=ok");
+	const el = page.locator("barmark-score");
+	const loading = await watchLoading(el);
+	await switchToScore(el);
+	expect(warnings).toEqual([]);
+	expect(seen.urls.filter((u) => u === lite("ok").module)).toHaveLength(1);
+	expect(seen.urls.filter((u) => u === lite("ok").wasm)).toHaveLength(1);
+	// The glue is unmeasured; the .wasm is measured, rising to 100% once.
+	const nows = (await loading())
+		.filter((s) => s.text === LOADING && s.now !== null)
+		.map((s) => s.now as number);
+	expect(nows.length).toBeGreaterThan(0);
+	expect(Math.max(...nows)).toBe(100);
+	expect(nows.every((n, i) => i === 0 || n >= (nows[i - 1] as number))).toBe(true);
+});
+
+test("a wasm digest mismatch falls back to the package's own copy, with a warning", async ({
+	page,
+}) => {
+	const { el, warnings } = await scoreWith(page, "lite=badwasm");
+	expect(warnings).toHaveLength(1);
+	expect(warnings[0]).toContain(lite("badwasm").module);
+	expect(warnings[0]).toContain("integrity");
+	await expect(el.locator(".bms-note")).toHaveCount(0);
+});
+
+test("a missing .wasm falls back in seconds, not at the load deadline", async ({ page }) => {
+	const warnings: string[] = [];
+	page.on("console", (m) => m.type() === "warning" && warnings.push(m.text()));
+	await page.goto("/score?lite=nowasm");
+	const el = page.locator("barmark-score");
+	await expect(el.locator(".bms-grid .bm-chart")).toBeVisible();
+	await el.getByRole("radio", { name: "Score" }).click();
+	// The hung factory is raced: well inside the engine's 60-second deadline.
+	await expect(scoreSvg(el)).toBeVisible({ timeout: 15_000 });
+	expect(warnings).toHaveLength(1);
+	expect(warnings[0]).toContain(lite("nowasm").module);
+});
+
+test("verovio-integrity without verovio-wasm-integrity falls back, saying why", async ({
+	page,
+}) => {
+	const { el, warnings } = await scoreWith(page, "lite=nowasmintegrity");
+	expect(warnings).toHaveLength(1);
+	expect(warnings[0]).toContain(WASM_INTEGRITY_NEEDED);
+	await expect(el.locator(".bms-note")).toHaveCount(0);
 });
