@@ -1,6 +1,15 @@
 import { toHarte } from "./harte.js";
 import { noteSemitone, transpose } from "./intervals.js";
 import { canonicalParts, printChord } from "./print.js";
+import {
+	alteredFifth,
+	bareScan,
+	intoGroup,
+	pullBare,
+	type Separated,
+	separate,
+	stackedWarning,
+} from "./stacked.js";
 import type { ChordRecord, Diagnostic, Interval, ParseResult } from "./types.js";
 import {
 	ALIASES,
@@ -87,6 +96,14 @@ function toneProblem(tone: string, before: string[]): string | null {
 	return TONES.includes(tone) ? null : `"${tone}" is not a tone a parenthesis can add`;
 }
 
+/** The parts a normalized symbol is spelled from, valid together, or why not. */
+function readParts(text: string, symbol: string): ChordParts | Diagnostic {
+	const read = tokenize(text);
+	if (typeof read === "string") return { message: `${symbol}: ${read}`, token: symbol };
+	const parts = powerChord(read);
+	return validateParts(parts, symbol) ?? parts;
+}
+
 const ORDINAL: Record<number, string> = { 3: "3rd", 5: "5th" };
 
 /**
@@ -132,45 +149,66 @@ function logicGroups(rest: string): string {
 	return `5${others.length ? `(${others.join(",")})` : ""}${joined.slice(group[0].length)}`;
 }
 
-/** Appendix A.5 and A.6: Unicode, rejections, then aliases into canonical vocabulary. */
-function normalizeSymbol(symbol: string): { text: string } | Diagnostic {
-	const text = symbol.replace(/♯/g, "#").replace(/♭/g, "b");
+const BARE_ADD = bareScan("add(?:2|4|9|11)");
+
+/** The text a symbol is read from: ♯ and ♭ as # and b (Appendix A.5). */
+const ascii = (symbol: string) => symbol.replace(/♯/g, "#").replace(/♭/g, "b");
+
+type Normal = { text: string; separated: Separated };
+
+/** Appendix A.5 and A.6: rejections, then aliases into canonical vocabulary. */
+function normalizeSymbol(text: string): Normal | Diagnostic {
 	const rejected = rejection(text, noteSemitone);
 	if (rejected) return rejected;
 	const root = ROOT.exec(text)?.[0] ?? "";
 	let rest = text.slice(root.length);
 	for (const [pattern, replacement] of ALIASES) rest = rest.replace(pattern, replacement);
-	rest = logicGroups(rest);
+	const separated = separate(rest);
+	rest = logicGroups(separated.text);
 	// `(omit3)` and `(omit 3)` are `(no3)`.
 	rest = rest.replace(/(?<=[(,]\s*)omit\s*(\d+)(?=\s*[,)])/g, "no$1");
 	// `(add9)` is `(9)`: inside a group, `add` before a tone it may add is dropped.
 	rest = rest.replace(/(?<=[(,]\s*)add(2|4|9|11)(?=\s*[,)])/g, "$1");
 	// A bare `add9` outside any group; what is left inside one is the tokenizer's to name.
-	const bare = /add(2|4|9|11)(?![^(]*\))/g;
-	const added = [...rest.matchAll(bare)].map((m) => m[1] ?? "");
-	if (added.length) {
-		rest = rest.replace(bare, "");
-		const close = rest.indexOf(")");
-		if (close >= 0) rest = `${rest.slice(0, close)},${added.join(",")}${rest.slice(close)}`;
-		else {
-			const slash = /\/[A-G][#b]?$/.exec(rest);
-			const at = slash ? slash.index : rest.length;
-			rest = `${rest.slice(0, at)}(${added.join(",")})${rest.slice(at)}`;
-		}
-	}
-	return { text: root + rest };
+	const bare = pullBare(rest, BARE_ADD);
+	rest = intoGroup(
+		bare.text,
+		bare.taken.map((a) => a.slice(3)),
+	);
+	return { text: root + rest, separated };
+}
+
+/**
+ * The warning a stacked spelling reads with (grammar 3): its suggestion is
+ * the symbol with its items separated, or the canonical spelling when that
+ * would not read as the same chord.
+ */
+function stacked(symbol: string, text: string, normal: Normal, canonical: string) {
+	const { runTogether, bareOmission } = normal.separated;
+	if (!runTogether && !bareOmission) return null;
+	const root = ROOT.exec(text)?.[0] ?? "";
+	const written = root + separate(text.slice(root.length)).text;
+	const check = parseChord(written);
+	const same = check.ok && check.value.canonical === canonical;
+	return stackedWarning(symbol, normal.separated, same ? written : canonical);
 }
 
 export function parseChord(symbol: string): ParseResult {
-	const normal = normalizeSymbol(symbol);
+	const text = ascii(symbol);
+	const normal = normalizeSymbol(text);
 	if (!("text" in normal)) return { ok: false, error: normal };
-	const read = tokenize(normal.text);
-	if (typeof read === "string") {
-		return { ok: false, error: { message: `${symbol}: ${read}`, token: symbol } };
+	const r = readChord(symbol, normal.text);
+	if (!r.ok) {
+		return { ok: false, error: alteredFifth(symbol, text, r.error, (s) => parseChord(s).ok) };
 	}
-	const parts = powerChord(read);
-	const invalid = validateParts(parts, symbol);
-	if (invalid) return { ok: false, error: invalid };
+	const warning = stacked(symbol, text, normal, r.value.canonical);
+	return warning ? { ...r, warnings: [warning, ...r.warnings] } : r;
+}
+
+/** The chord a normalized symbol names. */
+function readChord(symbol: string, text: string): ParseResult {
+	const parts = readParts(text, symbol);
+	if ("message" in parts) return { ok: false, error: parts };
 	const added = chordIntervals(
 		{ ...parts, tones: parts.tones.filter((t) => !isOmission(t)) },
 		symbol,

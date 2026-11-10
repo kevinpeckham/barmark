@@ -364,6 +364,23 @@ showed the rule needed refining.
 
 ## Performance and robustness
 
+### A "not inside a parenthesis" lookahead made the chord reader quadratic (2026-11-10, barmark)
+
+- **The symptom.** Writing the linear-time test for stacked spellings,
+  `D6(` followed by 20,000 run-together `add9b13` items and `)` took 1.4
+  seconds to read: ninety times the 2,000-item one, for ten times the
+  text.
+- **The cause.** The bare-`add9` rule found an `add` outside any group
+  with `/add(2|4|9|11)(?![^(]*\))/g`: at every `add` the lookahead scans
+  ahead to the next `)` to learn that it is inside one, so a long group
+  costs its length for each of its items.
+- **The fix.** One scan that matches a whole group, `\([^()]*\)`, or a
+  bare item, and keeps or takes each (`pullBare` in
+  `packages/barmark/src/chords/stacked.ts`); the bare `omit`/`no` of a
+  stacked spelling uses the same scan. A regex asking "am I inside
+  brackets?" by looking ahead is quadratic on long input; consume the
+  brackets instead (`packages/barmark/tests/chords/stacked.test.ts`).
+
 ### A download's Content-Length is not the size of what you read (2026-11-10, @barmark/score)
 
 - **The symptom.** Measuring `<barmark-score>`'s Verovio download as
