@@ -535,10 +535,10 @@ jsDelivr, so the GPLv3 sections that LGPLv3 incorporates apply.
    **Decided by Kevin (2026-11-10): keep `-Oz` for 0.1.0.**
    - The 500 ms rule applies to real charts only, not to the synthetic
      `long.chart.md`, which exists only to cover page breaks.
-   - The evidence, from the gate on CI (Node 22):
+   - The evidence, from one CI run of the gate (Node 22); which real
+     chart is slowest varies between runs:
      - `long.chart.md` at 375: 463 ms stock, 644 ms lite;
-     - the slowest real chart, `peaceful-dreams.chart.md`, at 375: 113 ms
-       stock, 142 ms lite;
+     - that run's slowest real chart at 375: 113 ms stock, 142 ms lite;
      - lite over stock: 1.20 to 1.28×;
      - instantiate: 57 ms lite against 236 ms stock;
      - sizes: `-Oz` 1.00 MB gzip, 0.78 MB brotli, against `-Os` about
