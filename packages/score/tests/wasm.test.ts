@@ -38,6 +38,12 @@ function deps(fail?: string, body = new Uint8Array([0, 97, 115, 109])) {
 }
 const depsFailing = (reason: string) => deps(reason);
 
+/** The SRI digest (sha384) of `text`. */
+const sri = async (text: string) => {
+	const hash = await crypto.subtle.digest("SHA-384", new TextEncoder().encode(text));
+	return `sha384-${Buffer.from(hash).toString("base64")}`;
+};
+
 const src: WasmSource = {
 	moduleUrl: "https://cdn.example/v/verovio-module.mjs",
 	integrity: "sha384-A",
@@ -70,7 +76,7 @@ describe("wasmHook", () => {
 		expect(WASM_FILE).toBe("verovio-module.wasm");
 	});
 
-	test("checks the digest, instantiates with Emscripten's imports, receives, and returns {}", async () => {
+	test("passes the digest on, instantiates with Emscripten's imports, receives, and returns {}", async () => {
 		const d = deps();
 		const imports = { env: { memory: 1 } } as unknown as WebAssembly.Imports;
 		const received: unknown[][] = [];
@@ -125,6 +131,20 @@ describe("wasmHook", () => {
 			received = true;
 		});
 		await expect(hook.failed).rejects.toThrow("404");
+		expect(received).toBe(false);
+	});
+
+	test("a wasm that does not match its digest rejects `failed` and is never instantiated", async () => {
+		const d = deps();
+		// The real fetchBytes, so the digest is checked as the worker checks it.
+		d.fetchBytes = (url, o) => fetchBytes(url, { ...o, fetch: async () => new Response("abcd") });
+		const hook = wasmHook({ ...src, integrity: await sri("abce") }, d);
+		let received = false;
+		hook.instantiateWasm({}, () => {
+			received = true;
+		});
+		await expect(hook.failed).rejects.toThrow("integrity");
+		expect(d.instantiated).toEqual([]);
 		expect(received).toBe(false);
 	});
 });
