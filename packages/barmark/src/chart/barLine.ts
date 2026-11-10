@@ -502,7 +502,7 @@ function rehearsalCell(
 type Say = {
 	error: (message: string, token: string, suggestion?: string) => null;
 	unread: (message: string, token: string, suggestion?: string) => null;
-	warn: (message: string, token: string) => void;
+	warn: (message: string, token: string, suggestion?: string) => void;
 	broken: () => boolean;
 };
 
@@ -547,12 +547,13 @@ function slotReader({ error, unread, warn, broken }: Say): (token: string) => Sl
 		if (brace > 0) {
 			const v = parseVoiced(token, brace);
 			if ("problem" in v) return report(v);
-			for (const r of v.warnings) for (const w of r.ok ? r.warnings : []) warn(w.message, w.token);
+			for (const r of v.warnings)
+				for (const w of r.ok ? r.warnings : []) warn(w.message, w.token, w.suggestion);
 			return { kind: "chord", chord: v.chord, voicing: v.voicing };
 		}
 		const r = brace === 0 ? parseNoteSet(token) : parseChord(token);
 		if (!r.ok) return unread(r.error.message, token, r.error.suggestion);
-		for (const w of r.warnings) warn(w.message, w.token);
+		for (const w of r.warnings) warn(w.message, w.token, w.suggestion);
 		return { kind: "chord", chord: r.value };
 	};
 	/** A slot with its push and articulation, if written. */
@@ -654,8 +655,8 @@ export function parseBarLine(
 		broken = true;
 		return unread(message, token, suggestion);
 	};
-	const warn = (message: string, token: string) =>
-		add({ line, severity: "warning", message, token });
+	const warn = (message: string, token: string, suggestion?: string) =>
+		add({ line, severity: "warning", message, token, ...(suggestion ? { suggestion } : {}) });
 
 	let body = text.trim();
 	let repeat: Repeat = null;

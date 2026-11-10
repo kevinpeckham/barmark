@@ -461,10 +461,44 @@ and `Cm(no3)` print as `C5`. Leaving out a tone the chord doesn't have
 (`C7(b5,no5)`), any other tone (`C7(no7)`) or the same one twice is an
 **error**.
 
+**Stacked spellings.** Notation programs print a chord's alterations one
+after another with no separator ("D6 add9 omit5"), so charts arrive with
+them run together. Two such shapes are accepted, each read as its
+comma-separated form with a **warning** whose suggestion is that form:
+
+- items run together inside one parenthesis, each item a valid one on its
+  own and each after the first starting with `add`, `omit`, `no`, `b` or
+  `#`: `D6(omit5add9)` is `D6(omit5,add9)`, `D6(no5add9)` is
+  `D6(no5,add9)`, `C7(b9#11)` is `C7(b9,#11)`. Digits run together are not
+  split: `C(911)` stays an error.
+- a bare `omit` or `no` trailing the chord's name: after the whole
+  quality, however it is spelled (`Gm7omit5`, `G-7omit5`, `Gmin7no5`,
+  `CΔno3`), and before any parenthesis or slash bass. It joins the
+  chord's last parenthesis, or a new one before any slash bass. Anywhere
+  else it stays an error (`Cno5maj7`, `Cno3add9`, `C7(b9)no5`).
+  `Gadd9omit3` is `Gadd9(omit3)`, `Gadd9omit3(b13)` is `Gadd9(b13,omit3)`,
+  `Gomit5` is `G(omit5)` and `Gno5` is `G(no5)`.
+
+The suggestion is the symbol as written with its items separated (or the
+canonical form, if that would not read as the same chord); the canonical
+printer writes the canonical form, as for any alias: `D6(omit5add9)`
+prints as `D6(9,no5)`. Items that are wrong on their own stay errors once
+separated: `C(omit5omit5)` leaves out the 5th twice.
+
 **Alterations without parentheses** (`C7b9`, `Am7b5`) are accepted, but
 only directly after an extension. That keeps the root's accidental
 unambiguous: `Ab5` is always the A♭ power chord, never A(♭5), and `Cb9` is
 C♭9. The canonical form puts alterations in parentheses.
+
+So an altered fifth written before the parenthesis on a chord with no
+extension, `F#b5(omit3)`, is an **error** (not a stacked spelling: `Gb5(omit3)`
+would be ambiguous). Where the root's own accidental can't be read with
+the fifth, the error suggests the fifth in the parentheses:
+`F#(b5,omit3)`. Where it can, the error gives no suggestion, and its
+message says the symbol is ambiguous only when the fifth reading would
+itself read: `Gb5(omit3)` could be `G(b5,omit3)`, so it is said to be
+ambiguous; `Gb5(no7)` could not be `G(b5,no7)` either, so it keeps its
+plain error.
 
 Appendix A is the full vocabulary: the interval of every building block,
 which combinations are valid, every accepted alias, and the machine output.
@@ -1372,6 +1406,7 @@ keeps what cannot reduce:
 | warning | `x N` with N > 8 |
 | warning | note set with octaves out of ascending order; repeated note without octaves |
 | warning | a natural tone in parentheses that the chord already has (`C7(7)`) |
+| warning | a stacked spelling: items run together in a parenthesis (`D6(omit5add9)`) or a bare `omit`/`no` (`Gadd9omit3`), suggesting the comma-separated form (3) |
 | warning | a text line that looks like an old-style label (`Chorus:`, `[Chorus]`), an old bare chord line, a bar line written with escaped pipes (`D \\| A \\|`), a misnamed directive (`meter:`, `bpm:`), `title:` (suggesting the `#` title) or a misnamed credit (`author:`, `words:`), with a suggested fix |
 | warning | a credit with a directive after its value on the line (`composer: A, key: G`) |
 | warning | a bar line after a word that is not a declared part label (`Bass \| E \|`), or after a chord, its leading `\|` left off (`G \| C \|`, suggesting `\| G \| C \|`) |
@@ -1484,6 +1519,7 @@ human to say whether the band was silent, and the structure line.
 | A `Coda` with no bar after it | Decided by Kevin (2026-11-08): an **error** (5.2, 9); the `Coda` an `al Coda` goes on needs a bar after it: a bar written later in the chart, or a later heading that replays one (the last chorus as the coda). It gives `To Coda` nowhere to go on, and MusicXML has no measure to carry the sign. Before, it parsed, played nothing after `To Coda` and the export dropped the sign. Rejected: a warning, which would leave the jump going nowhere. |
 | Pickup | Decided by Kevin (2026-11-09): the chart's first written bar is a pickup when it is in a one-bar meter shorter, by value, than the meter in force at the next written bar, and that next bar is not itself in a one-bar meter shorter than the `time:` in force, so two short bars in a row open no pickup (2.4); it is bar 0, so bar 1 is the first full bar, as notation numbers it. Before, the pickup was bar 1 and the MusicXML export already wrote measure 0. `index`, the play position, does not change, so saved timing maps keep working. Machine output gains `pickup` on the parse (A.7). Rejected: renumbering `index` too (every saved map would answer one bar off with an unchanged hash); a literal 0 in the bar-grid gutter. |
 | An unreadable slot keeps its bar | Decided by Kevin (2026-11-10): "Barmark should not be dropping lines for a chord it can't read." Any slot that can't be read (an unknown chord symbol such as `CM7`, `CSus4`, `C69` or `C−7`, a bad note set such as `{H}`, a mark that can't be read) is still an **error**, with the same message, line, token and suggestion, so `check` still fails; but it keeps its bar as unknown harmony carrying the author's text (principle 4, 2.3, 3, A.7), which prints, renders and stays through transposition as written. Only a bar line whose structure can't be read (a stray or misplaced `\|:` or `:\|`, an unclosed or bad `_` group, a bad ending or `x N`, a rehearsal mark sharing a cell) is still excluded, because there the bar count itself is unknown. Found by porting a listening tool: a chart with `CM7` lost its whole line and played shorter than the recording. Rejected: a warning (an unreadable chord must not publish unnoticed), and keeping only unknown chord symbols (a bad note set or mark loses a line just the same). Two further rulings the same day: **transpose moves the readable chords** on a line that holds an unreadable slot (`key: C`, `\| C \| CM7 \| G \|` to D is `\| D \| CM7 \| A \|`), leaving the text as written with a warning on it, so such a line also prints in canonical form (8) and only a line excluded for its structure prints as written; and **a misplaced or bad dot** (`\| C. \|`) is the slot's error, not the structure's, since a dot never changes the bar count. |
+| Stacked spellings | Decided by Kevin (2026-11-10, stem-shovel issue 16): notation programs print alterations run together ("D6 add9 omit5"), so charts arrive as `D6(omit5add9)`, `Gadd9omit3` and `F#b5(omit3)`. **Accepted, with a warning** whose suggestion is the comma-separated spelling: items run together inside one parenthesis (`D6(omit5add9)` is `D6(omit5,add9)`, and `D6(no5add9)` likewise; generally two or more valid items with no separator, each after the first starting with `add`, `omit`, `no`, `b` or `#`), and a bare `omit`/`no` trailing the chord's name, after the whole quality however it is spelled and before any parenthesis or slash bass (`Gadd9omit3` is `Gadd9(omit3)`, `Gomit5` is `G(omit5)`, `Gno5` is `G(no5)`, `CΔno3` is `CΔ(no3)`; `Cno5maj7` and `Cno3add9` stay errors) (3, A.5). The canonical printer writes the canonical form as for any alias (`D6(9,no5)`). **Not accepted:** an altered fifth before the parenthesis on a chord with no extension (`F#b5(omit3)`), since 3 keeps `Ab5` always the A♭ power chord and `Gb5(omit3)` would be ambiguous; it stays an error, now suggesting `F#(b5,omit3)` where the root carries no accidental that could be the fifth's, and, where it does, giving no suggestion and saying it is ambiguous only when the fifth reading would itself read (`Gb5(omit3)` as `G(b5,omit3)`; not `Gb5(no7)`) (A.6). Before, all three shapes were errors, and since the same day's ruling each kept its bar as unknown harmony. Rejected: splitting digits run together (`C(911)`), which reads no notation program's output and would guess. |
 | An ending across lines | Decided by Kevin (2026-11-10, stem-shovel issue #16, ask 6): an ending not closed by `:\|` on its own line continues through the plain `\|` lines after it, up to its `:\|` or the next ending, so `\|1 G \| A \| B \| C \|` then `\| D :\|` is a five-bar first ending and a chart keeps four bars a row (5.1). The last ending has no `:\|` and still ends at its own line, which keeps the grammar unambiguous. Claude's rulings the same day, conservative where open: only an ending another ending follows continues, so with no ending after it nothing continues and the errors are as before (a `:\|` after the last ending stays a stray `:\|`, and the repeat still plays); text, credit, lyric-row and `---` lines may sit between an ending's lines, as between endings, and a rehearsal mark is a cell on a continuation line; a heading, a directive line, a `\|:` line or a bar line that can't be read ends the ending, so a time change or a repeat inside an ending is not possible; `x N` on a continuation line is an error, as on the ending's own line; an ending before the last that reaches the next ending with no `:\|` is one error on its first line, where before it was two. Machine output gains `continues` on a continuation line (A.7); the canonical form keeps the lines as written. A chart that read cleanly before reads the same. Rejected: continuing the last ending to the section's end, which would make every line after the endings part of them. |
 
 ## Open questions
@@ -1593,6 +1629,8 @@ Accepted on input, printed canonically:
 | groups in a row (`(b9)(#11)`, Logic Pro) | one group (`(b9,#11)`) |
 | `(5)` on a bare root (`F#(5)`, `F#(5,7)`) | `5` (`F#5`, `F#5(7)`) |
 | `(omit3)`, `(omit 3)`, `(omit5)`, `(omit 5)` | `(no3)`, `(no5)` |
+| items run together in a parenthesis (`D6(omit5add9)`, `C7(b9#11)`; Dorico and other notation programs), with a warning suggesting `D6(omit5,add9)` | one list (`D6(9,no5)`, `C7(b9,#11)`) |
+| a bare `omit`/`no` after the quality (`Gadd9omit3`, `Gomit5`, `Gno5`), with a warning suggesting `Gadd9(omit3)`, `G(omit5)`, `G(no5)` | in the parentheses (`G5(9)`, `G(no5)`) |
 | `(no3)` on a triad (`C(no3)`, `Cm(no3)`) | `5` (`C5`) |
 | `♯`, `♭` | `#`, `b` |
 
@@ -1605,6 +1643,7 @@ Accepted on input, printed canonically:
 | lowercase root (`d`) | ambiguous with prose | `D` |
 | double accidentals (`Cbb`) | never needed for a root | the enharmonic root |
 | German `H` | ambiguous with B | `B` |
+| an altered fifth before the parenthesis on a chord with no extension (`F#b5(omit3)`) | an alteration without parentheses goes only after an extension (3) | `F#(b5,omit3)`; none where the root's accidental could be the fifth's, said to be ambiguous only when the fifth reading would itself read (`Gb5(omit3)`, as `G(b5,omit3)`; `Gb5(no7)` keeps its plain error) |
 
 ### A.7 Machine output
 

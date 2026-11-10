@@ -7,7 +7,13 @@
 
 import { NUMERALS } from "./chord.js";
 import { FONT_FAMILY, fontFaceCss } from "./font.js";
-import { loadErrorContent, type RenderOptions, shadowContent, THEMES } from "./html.js";
+import {
+	type Columns,
+	loadErrorContent,
+	type RenderOptions,
+	shadowContent,
+	THEMES,
+} from "./html.js";
 
 type Attributes = {
 	getAttribute(name: string): string | null;
@@ -26,6 +32,8 @@ export function optionsFromAttributes(el: Attributes): RenderOptions {
 		wrap: el.getAttribute("wrap") !== "off",
 		...(numerals ? { numerals } : {}),
 		...(part ? { part } : {}),
+		// Only "row" changes the layout; anything else, or none, keeps the shared columns.
+		...(el.getAttribute("columns") === "row" ? { columns: "row" as const } : {}),
 	};
 }
 
@@ -74,6 +82,7 @@ function defineElement(): void {
 			"numerals",
 			"wrap",
 			"show-part",
+			"columns",
 		];
 		#observer = new MutationObserver(() => this.#schedule());
 		#renders = 0;
@@ -149,6 +158,15 @@ function defineElement(): void {
 			else this.setAttribute("numerals", v);
 		}
 
+		/** "row" when each row sizes its own columns; "shared", the default, otherwise. */
+		get columns(): Columns {
+			return optionsFromAttributes(this).columns ?? "shared";
+		}
+		set columns(v: string) {
+			if (v === "row") this.setAttribute("columns", "row");
+			else this.removeAttribute("columns");
+		}
+
 		/** The label of the part to draw on its own, or null for the whole chart. */
 		get showPart() {
 			return this.getAttribute("show-part");
@@ -208,6 +226,9 @@ function defineElement(): void {
 			else chart?.removeAttribute("data-bar-numbers");
 			if (options.wrap === false) chart?.setAttribute("data-wrap", "off");
 			else chart?.removeAttribute("data-wrap");
+			// data-fit keeps the estimate the chart was drawn with: a shared one wraps a "row" section a little early.
+			if (options.columns === "row") chart?.setAttribute("data-columns", "row");
+			else chart?.removeAttribute("data-columns");
 		}
 	}
 	customElements.define("barmark-chart", BarmarkChart);

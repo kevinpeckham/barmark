@@ -801,3 +801,184 @@ test.describe("show-part", () => {
 		await expect(systems).toHaveCount(1);
 	});
 });
+
+/** Each drawn row's bars (bar-number gutter excluded): left, right and top, in px. */
+type Bar = { left: number; right: number; top: number };
+const barsOf = (page: Page, selector = "barmark-chart") =>
+	inChart(
+		page,
+		(root) =>
+			[...root.querySelectorAll(".bm-row")].map((row) =>
+				[...row.querySelectorAll(":scope>.bm-bar")].map((bar) => {
+					const r = bar.getBoundingClientRect();
+					return { left: r.left, right: r.right, top: r.top };
+				}),
+			),
+		selector,
+	) as Promise<Bar[][]>;
+/** Row r's bar i (from the end when negative), which the test expects to be there. */
+function barAt(rows: Bar[][], r: number, i: number): Bar {
+	const bar = rows[r]?.at(i);
+	if (!bar) throw new Error(`no bar ${i} in row ${r}`);
+	return bar;
+}
+const width = (bar: Bar) => bar.right - bar.left;
+/** The chart at `path`, its font loaded, as rows of bars. */
+async function drawnBars(page: Page, path: string): Promise<Bar[][]> {
+	await page.goto(path);
+	await page.evaluate(() => document.fonts.ready);
+	return barsOf(page);
+}
+
+test.describe("columns", () => {
+	test.beforeEach(async ({ page }) => {
+		await page.setViewportSize({ width: 1600, height: 900 });
+	});
+
+	test("shared: a busy bar widens its column in every row of the section, as before", async ({
+		page,
+	}) => {
+		const rows = await drawnBars(page, "/chart?chart=columns");
+		expect(width(barAt(rows, 0, 1))).toBeGreaterThan(2 * width(barAt(rows, 0, 0)));
+		for (const i of [0, 1, 2, 3])
+			expect(Math.abs(barAt(rows, 1, i).right - barAt(rows, 0, i).right)).toBeLessThan(1);
+	});
+
+	for (const odd of ["bogus", "ROW", ""])
+		test(`an unknown value ("${odd}") lays out as shared`, async ({ page }) => {
+			const shared = await drawnBars(page, "/chart?chart=columns");
+			expect(await drawnBars(page, `/chart?chart=columns&columns=${odd}`)).toEqual(shared);
+		});
+
+	test("row: a busy bar widens only its own row", async ({ page }) => {
+		const rows = await drawnBars(page, "/chart?chart=columns&columns=row");
+		const [busy, plain] = [barAt(rows, 0, 1), barAt(rows, 1, 1)];
+		expect(width(busy)).toBeGreaterThan(2 * width(barAt(rows, 0, 0)));
+		// The plain row's second bar is as narrow as its first, far narrower than the busy one.
+		expect(Math.abs(width(plain) - width(barAt(rows, 1, 0)))).toBeLessThan(1);
+		expect(width(plain)).toBeLessThan(width(busy) / 2);
+		// Its bar lines no longer line up with the busy row's, but both start at the first barline.
+		expect(Math.abs(barAt(rows, 1, 0).left - barAt(rows, 0, 0).left)).toBeLessThan(1);
+		expect(barAt(rows, 1, -1).right).toBeLessThan(barAt(rows, 0, -1).right - 50);
+	});
+
+	test("row: every row stays one line of bars, touching end to end", async ({ page }) => {
+		const rows = await drawnBars(page, "/chart?chart=columns&columns=row");
+		expect(rows.map((r) => r.length)).toEqual([4, 4, 2, 2, 2, 2, 8]);
+		for (const row of rows)
+			for (const [i, bar] of row.entries()) {
+				expect(Math.abs(bar.top - (row[0]?.top ?? 0))).toBeLessThan(1);
+				if (i > 0) expect(Math.abs(bar.left - (row[i - 1]?.right ?? 0))).toBeLessThan(1);
+			}
+	});
+
+	test("row: endings, %, an unreadable slot and an error box still draw", async ({ page }) => {
+		await page.goto("/chart?chart=columns&columns=row");
+		await page.evaluate(() => document.fonts.ready);
+		const drawn = await inChart(page, (root) => {
+			const box = (s: string) => (root.querySelector(s) as Element).getBoundingClientRect();
+			const style = (s: string) => getComputedStyle(root.querySelector(s) as Element);
+			const ending = root.querySelector(".bm-ending>.bm-bar") as Element;
+			const error = box(".bm-error");
+			const rows = [...root.querySelectorAll(".bm-section:nth-of-type(2) .bm-row")];
+			return {
+				endingTop: getComputedStyle(ending).borderTopStyle,
+				endingLabel: getComputedStyle(ending, "::after").content,
+				repeatStart: style(".bm-row>div.bm-bar[data-repeat-start]").borderLeftStyle,
+				simile: box(".bm-ending .bm-hold, .bm-ending .bm-chord").width > 0,
+				unread: style(".bm-unread").textDecorationStyle,
+				error: { width: error.width, height: error.height, top: error.top },
+				rowAbove: (rows[3] as Element).getBoundingClientRect().bottom,
+				rowBelow: (rows[4] as Element).querySelector(".bm-bar")?.getBoundingClientRect().top,
+			};
+		});
+		expect(drawn.endingTop).toBe("solid");
+		expect(drawn.endingLabel).toBe('"1."');
+		expect(drawn.repeatStart).toBe("double");
+		expect(drawn.simile).toBe(true);
+		expect(drawn.unread).toBe("wavy");
+		expect(drawn.error.width).toBeGreaterThan(50);
+		expect(drawn.error.height).toBeGreaterThan(5);
+		expect(drawn.error.top).toBeGreaterThanOrEqual(drawn.rowAbove - 1);
+		expect(drawn.rowBelow ?? 0).toBeGreaterThanOrEqual(drawn.error.top + drawn.error.height - 1);
+	});
+
+	test("row: a system's parts keep their bar lines together", async ({ page }) => {
+		for (const path of ["/chart?chart=piano&columns=row", "/chart?chart=parts&columns=row"]) {
+			await page.goto(path);
+			await page.evaluate(() => document.fonts.ready);
+			const systems = await inChart(page, (root) =>
+				[...root.querySelectorAll(".bm-system")].map((system) =>
+					[...system.querySelectorAll(":scope>.bm-row")].map((row) =>
+						[...row.querySelectorAll(":scope>.bm-bar")].map(
+							(bar) => bar.getBoundingClientRect().right,
+						),
+					),
+				),
+			);
+			expect(systems.length).toBeGreaterThan(0);
+			for (const rows of systems)
+				for (const row of rows)
+					for (const [i, right] of row.entries())
+						expect(Math.abs(right - (rows[0]?.[i] ?? 0))).toBeLessThan(1);
+		}
+	});
+
+	const phone = async (page: Page, query: string) => {
+		await page.setViewportSize({ width: 360, height: 800 });
+		await page.goto(
+			`/chart?${query}&css=${encodeURIComponent("body{margin:0}barmark-chart{margin:0}")}`,
+		);
+		await page.evaluate(() => document.fonts.ready);
+		return page.evaluate(() => ({
+			scroll: document.documentElement.scrollWidth,
+			client: document.documentElement.clientWidth,
+		}));
+	};
+	for (const chart of ["columns", "long", "busy"])
+		test(`row: ${chart} wraps on a phone without scrolling sideways`, async ({ page }) => {
+			const { scroll, client } = await phone(page, `chart=${chart}&columns=row`);
+			expect(scroll).toBeLessThanOrEqual(client);
+		});
+	// Morning Song's widest system is wider than a phone in either layout (its bars don't wrap inside a system).
+	test("row: systems on a phone are no wider than shared", async ({ page }) => {
+		const shared = await phone(page, "chart=parts");
+		const row = await phone(page, "chart=parts&columns=row");
+		expect(row.scroll).toBeLessThanOrEqual(shared.scroll);
+	});
+
+	test("row: a screen reader hears the same chart", async ({ page }) => {
+		const heard = () =>
+			page
+				.locator("barmark-chart")
+				.first()
+				.evaluate((el) =>
+					[...(el.shadowRoot?.querySelectorAll(".bm-sr, [aria-label], [role]") ?? [])].map(
+						(e) => `${e.getAttribute("role")}|${e.getAttribute("aria-label")}|${e.textContent}`,
+					),
+				);
+		for (const chart of ["columns", "parts", "lead"]) {
+			await page.goto(`/chart?chart=${chart}`);
+			const shared = await heard();
+			await page.goto(`/chart?chart=${chart}&columns=row`);
+			expect(await heard()).toEqual(shared);
+		}
+	});
+
+	test("the element takes columns as an attribute, server-rendered or not", async ({ page }) => {
+		await page.goto("/element");
+		await expect(page.locator("#inline .bm-heading")).toHaveText("Verse");
+		await page.evaluate(() => {
+			(document.querySelector("#inline") as HTMLElement & { columns: string }).columns = "row";
+			document.querySelector("#columns")?.setAttribute("columns", "row");
+		});
+		await expect(page.locator("#inline .bm-chart")).toHaveAttribute("data-columns", "row");
+		await expect(page.locator("#columns .bm-chart")).toHaveAttribute("data-columns", "row");
+		const rowed = await barsOf(page, "#columns");
+		expect(width(barAt(rowed, 1, 0))).toBeLessThan(width(barAt(rowed, 0, 0)) / 2);
+		await page.evaluate(() => document.querySelector("#columns")?.setAttribute("columns", "x"));
+		await expect(page.locator("#columns .bm-chart")).not.toHaveAttribute("data-columns", /.*/);
+		const shared = await barsOf(page, "#columns");
+		expect(Math.abs(width(barAt(shared, 1, 0)) - width(barAt(shared, 0, 0)))).toBeLessThan(1);
+	});
+});

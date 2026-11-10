@@ -118,6 +118,7 @@ describe("barmark render --score", () => {
 		["--rehearsal-letters"],
 		["--no-wrap"],
 		["--diagnostics"],
+		["--columns", "row"],
 		["--font-url", "/fonts/Edwin-Roman.otf"],
 	])
 		test(`${flag[0]} with --score is a usage error`, async () => {

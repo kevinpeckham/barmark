@@ -71,6 +71,9 @@ The grid only:
   --no-bar-numbers         Hide bar numbers
   --rehearsal-letters      Letter each section A, B, C… (none when the chart marks its own)
   --no-wrap                Keep each row on one line
+  --columns shared|row     row: each row sizes its own bars, so a busy bar widens
+                           only its own row (default shared: bar lines line up
+                           down each section)
   --diagnostics            List the chart's problems below it
   --font-url <url>         Link the font instead of embedding it
 `,
