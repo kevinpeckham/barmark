@@ -6,6 +6,14 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.10.2] - 2026-11-10
+
+### Changed
+
+- **Uses** @barmark/sync 0.4.0 and @barmark/midi 0.3.1. The sync release
+  writes a pickup in 6/8, 9/8 or 12/8 in eighths (`[k/8]`) and adds
+  `rehashTiming`; nothing else changes.
+
 ## [0.10.1] - 2026-11-10
 
 ### Changed
@@ -324,7 +332,8 @@ The first release of the `barmark` command. Uses `barmark` 0.8.0 and
 - **The `barmark` command:** `check`, `format`, `render` and `transpose`
   for `.chart.md` files, on npm and as standalone binaries.
 
-[Unreleased]: https://github.com/kevinpeckham/barmark/compare/cli-v0.10.1...HEAD
+[Unreleased]: https://github.com/kevinpeckham/barmark/compare/cli-v0.10.2...HEAD
+[0.10.2]: https://github.com/kevinpeckham/barmark/compare/cli-v0.10.1...cli-v0.10.2
 [0.10.1]: https://github.com/kevinpeckham/barmark/compare/cli-v0.10.0...cli-v0.10.1
 [0.10.0]: https://github.com/kevinpeckham/barmark/compare/cli-v0.9.0...cli-v0.10.0
 [0.9.0]: https://github.com/kevinpeckham/barmark/compare/cli-v0.8.0...cli-v0.9.0
