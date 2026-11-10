@@ -294,6 +294,28 @@ describe("ported from the app's server/chartBuild.test.ts", () => {
 		expect(r.reading).toBeNull();
 		expect(r.features).toBe(silent);
 	});
+
+	test("a start past the end is nothing-fits once: the declared grid fits nothing either, and the refusal is the grid's own", () => {
+		const v = okValue(fromSamples);
+		const startAt = v.features.duration + 10;
+		const grid = chartFromRecording({
+			features: v.features,
+			chords: song.chords,
+			declared: DECLARED,
+			startAt,
+		});
+		const r = chartFromRecording({
+			features: v.features,
+			chords: song.chords,
+			declared: DECLARED,
+			startAt,
+			onUnplaced: "declared",
+		});
+		expect(reasons(r)).toEqual(["nothing-fits"]);
+		expect(r).toEqual(grid);
+		if (r.ok) return;
+		expect(r.reading).toMatchObject({ byStart: true });
+	});
 });
 
 afterAll(() => {
@@ -306,6 +328,13 @@ describe("declaredGrid", () => {
 		expect(declaredGrid(0, 2, 7, 2000)).toEqual({ bars: [0, 2, 4, 6, 7], truncated: false });
 		expect(declaredGrid(1, 2, 20, 3)).toEqual({ bars: [1, 3, 5, 7], truncated: true });
 		expect(declaredGrid(25, 2, 20, 2000)).toBeNull();
+	});
+
+	test("§11.3: no zero-length bar on a bar line at the end, and max bars, where the app's barStartsOf keeps one and caps at 1,999", () => {
+		expect(declaredGrid(0, 2, 8, 2000)).toEqual({ bars: [0, 2, 4, 6, 8], truncated: false });
+		const long = declaredGrid(0, 1, 3000, 2000);
+		expect(long?.bars).toHaveLength(2001);
+		expect(long?.truncated).toBe(true);
 	});
 });
 

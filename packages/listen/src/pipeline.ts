@@ -215,6 +215,7 @@ function onDeclared(
 	const start = c.startAt ?? 0;
 	const from = declaredGrid(start, (beatsOf(c.meter) * 60) / c.tempo, f.duration, s.MAX_GRID_BARS);
 	if (!from) {
+		if (r.refusals[0]?.reason === "nothing-fits") return r;
 		const message = `The declared grid's bar one, at ${start.toFixed(2)} s, is at or after the recording's end.`;
 		return refused([...r.refusals, refusal("nothing-fits", message)], r.warnings);
 	}
@@ -337,7 +338,7 @@ function run(
  * on the declared bar to the recording's end (`declaredGrid`), with
  * `bar-one-unplaced` naming the refusal it replaced and the reading kept;
  * a declared grid that fits nothing is the original refusal plus
- * `nothing-fits`. Input and option refusals are never replaced.
+ * `nothing-fits`, or the original alone when it is already `nothing-fits`. Input and option refusals are never replaced.
  *
  * Then `chartFromDetections` with the grid, the pickup's start when there
  * is one, the chords, the declared meter, the title, key, sections and
