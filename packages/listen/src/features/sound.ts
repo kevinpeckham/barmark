@@ -5,6 +5,9 @@
  * feature options, `ALIGNMENT_SOUND_FLOOR` and `ALIGNMENT_SOUND_WINDOW_SEC`,
  * which the features record. A change to what this computes bumps
  * `FEATURES_VERSION`.
+ *
+ * It assumes a finite, validated rate and length; the stage entry points
+ * guard them and refuse instead.
  */
 
 /** The RMS of each `size`-sample window, the last one short. */

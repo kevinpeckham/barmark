@@ -6,6 +6,10 @@
  * `Math.hypot`, then the norm), so its frames are the app's bit for bit.
  * The window, the hop and the 55 to 2,200 Hz band are fixed, not options
  * (design 5.3): a change to what this computes bumps `FEATURES_VERSION`.
+ *
+ * Like every kernel here, it assumes a finite, validated rate and length
+ * (`new Float32Array` throws a RangeError on a rate of 0 or Infinity, or an
+ * infinite length); the stage entry points guard them and refuse instead.
  */
 import { fft } from "./fft.js";
 
@@ -84,7 +88,10 @@ function chromaFrame(k: Kernel, samples: Float32Array): Float32Array {
 export type ChromaStream = {
 	/** The next samples, in order. Samples past the stream's declared length are ignored. */
 	push(chunk: Float32Array): void;
-	/** The chromagram of every sample pushed. */
+	/**
+	 * The chromagram of every sample pushed. A stream that ends early, short
+	 * of its declared length, is trimmed to the frames its samples filled.
+	 */
 	finish(): Chromagram;
 };
 

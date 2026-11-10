@@ -3,6 +3,9 @@
  * in the app's order so its results are the app's bit for bit. Fixed, not
  * an option (design 5.3): a change to what this computes bumps
  * `FEATURES_VERSION`.
+ *
+ * It assumes a validated length, a power of two its callers fix; the stage
+ * entry points guard what reaches it and refuse instead.
  */
 
 /** Reorders `re` and `im` in place into bit-reversed index order. */

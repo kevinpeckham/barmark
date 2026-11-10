@@ -97,7 +97,11 @@ describe("chromaStream", () => {
 			const streamed = stream.finish();
 			expect(streamed.frames).toBe(whole.frames);
 			expect(streamed.hopSec).toBe(whole.hopSec);
-			expect(streamed.chroma).toEqual(whole.chroma);
+			expect(streamed.chroma.length).toBe(whole.chroma.length);
+			for (let i = 0; i < whole.chroma.length; i++) {
+				if (!Object.is(streamed.chroma[i], whole.chroma[i]))
+					throw new Error(`chroma[${i}] differs at ${rate} Hz`);
+			}
 		}
 	});
 

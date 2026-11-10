@@ -5,6 +5,9 @@
  * results are the app's bit for bit. The window, the hop, the decimation
  * and the half-second detrend are fixed, not options (design 5.3): a
  * change to what this computes bumps `FEATURES_VERSION`.
+ *
+ * It assumes a finite, validated rate and length; the stage entry points
+ * guard them and refuse instead.
  */
 import { fft } from "./fft.js";
 
