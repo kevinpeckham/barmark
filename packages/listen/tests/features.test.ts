@@ -166,6 +166,54 @@ describe("readFeatures", () => {
 		expect(join(real, trimmed)).toEqual(["features-invalid"]);
 	});
 
+	test("a record that throws when read is refused, never thrown", () => {
+		const real = value(recordingFeatures(song(RATE), RATE));
+		const getter = { ...real };
+		Object.defineProperty(getter, "onset", {
+			enumerable: true,
+			get() {
+				throw new Error("boom");
+			},
+		});
+		const trap = () => {
+			throw new Error("boom");
+		};
+		const cases: [string, unknown][] = [
+			["a throwing getter", getter],
+			["a Proxy whose get throws", new Proxy({ ...real }, { get: trap })],
+			["a Proxy whose getPrototypeOf throws", new Proxy({ ...real }, { getPrototypeOf: trap })],
+			["a Proxy whose has throws", new Proxy({ ...real }, { getOwnPropertyDescriptor: trap })],
+		];
+		for (const [name, input] of cases) {
+			let r: ReturnType<typeof readFeatures> | undefined;
+			expect(() => {
+				r = readFeatures(input);
+			}, name).not.toThrow();
+			expect([name, r ? reasons(r) : "threw"]).toEqual([name, ["features-invalid"]]);
+			expect([name, r && !r.ok ? r.refusals[0]?.message : ""]).toEqual([
+				name,
+				"The record could not be read.",
+			]);
+		}
+	});
+
+	test("a polluted Object.prototype cannot stand in for a missing own key", () => {
+		const real = value(recordingFeatures(song(RATE), RATE));
+		const proto = Object.prototype as Record<string, unknown>;
+		const { sound, ...soundless } = real;
+		const floorless = { ...real, sound: { windowSec: sound.windowSec } };
+		try {
+			proto.sound = sound;
+			proto.floor = sound.floor;
+			expect(reasons(readFeatures(soundless))).toEqual(["features-invalid"]);
+			expect(reasons(readFeatures(floorless))).toEqual(["features-invalid"]);
+		} finally {
+			delete proto.sound;
+			delete proto.floor;
+		}
+		expect(readFeatures(real).ok).toBe(true);
+	});
+
 	test("returns the same record, no copy", () => {
 		const f = featuresOf({ duration: 2 });
 		expect(value(readFeatures(f))).toBe(f);

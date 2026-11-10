@@ -14,6 +14,7 @@ package uses [semantic versioning](https://semver.org/).
   (`FEATURES_VERSION` 1), and `readFeatures` checks one read back from a
   cache, refusing another version (`features-version`) or a record whose
   hop or frame rate does not follow from its sample rate, whose arrays
-  are not `Float32Array`s or whose values are not finite
-  (`features-invalid`). The entry imports nothing from `barmark` or
+  are not `Float32Array`s, whose arrays are not the length its duration
+  gives at its rate, whose values are not finite, which lacks a key of
+  its own, or which throws when read (`features-invalid`). The entry imports nothing from `barmark` or
   `@barmark/sync`.

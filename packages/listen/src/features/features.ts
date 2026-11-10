@@ -125,6 +125,28 @@ function onsetPart(samples: Float32Array, sampleRate: number): OnsetPart {
 const invalid = (field: string, message: string): Refusal =>
 	refusal("features-invalid", message, { field });
 
+/** Every key a record holds, each of which must be its own, not inherited. */
+const KEYS = [
+	"format",
+	"version",
+	"sampleRate",
+	"duration",
+	"chroma",
+	"frames",
+	"hopSec",
+	"onset",
+	"fps",
+	"firstSound",
+	"lastSound",
+	"sound",
+] as const;
+
+/** Each required key the record's own, so a polluted `Object.prototype` cannot stand in for one. */
+function checkKeys(v: Record<string, unknown>): Refusal | null {
+	const missing = KEYS.find((key) => !Object.hasOwn(v, key));
+	return missing === undefined ? null : invalid(missing, `The features record has no ${missing}.`);
+}
+
 /** The format, the version, the rate and the duration. */
 function checkHead(v: Record<string, unknown>): Refusal | null {
 	if (v.format !== FORMAT) return invalid("format", `This is not a ${FORMAT} record.`);
@@ -203,16 +225,23 @@ function checkLengths(v: Record<string, unknown>): Refusal | null {
 	return null;
 }
 
-/** The audible span inside the recording, and the two sound options in their ranges. */
-function checkSound(v: Record<string, unknown>): Refusal | null {
+/** The audible span inside the recording. */
+function checkSpan(v: Record<string, unknown>): Refusal | null {
 	const duration = v.duration as number;
-	const { firstSound: first, lastSound: last, sound } = v;
+	const { firstSound: first, lastSound: last } = v;
 	if (!isTime(first) || first > duration)
 		return invalid("firstSound", "The first sound is not inside the recording.");
 	if (!isTime(last) || last > duration || last < first)
 		return invalid("lastSound", "The last sound is not inside the recording, after the first.");
-	if (!isPlainObject(sound))
-		return invalid("sound", "The features do not record their sound options.");
+	return null;
+}
+
+/** The two sound options, each the record's own, in their ranges. */
+function checkSound(v: Record<string, unknown>): Refusal | null {
+	const { sound } = v;
+	const own =
+		isPlainObject(sound) && Object.hasOwn(sound, "floor") && Object.hasOwn(sound, "windowSec");
+	if (!own) return invalid("sound", "The features do not record their sound options.");
 	const options = resolveOptions(
 		{ ALIGNMENT_SOUND_FLOOR: sound.floor, ALIGNMENT_SOUND_WINDOW_SEC: sound.windowSec },
 		"features",
@@ -223,7 +252,15 @@ function checkSound(v: Record<string, unknown>): Refusal | null {
 
 /** The first thing wrong with a record, or null when it is a valid `Features`. */
 function checkRecord(v: Record<string, unknown>): Refusal | null {
-	for (const check of [checkHead, checkArrays, checkTiming, checkLengths, checkSound]) {
+	for (const check of [
+		checkKeys,
+		checkHead,
+		checkArrays,
+		checkTiming,
+		checkLengths,
+		checkSpan,
+		checkSound,
+	]) {
 		const problem = check(v);
 		if (problem) return problem;
 	}
@@ -312,11 +349,23 @@ export function recordingFeatures(
  * duration, two `Float32Array`s, frame count, hop, frame rate, audible span
  * and sound options are each what a record made at its rate holds, every
  * value finite. A record that does not match what it claims is a cache
- * miss. On success it is the same object, not a copy.
+ * miss. Every key is read as the record's own, never inherited, and a
+ * record that throws when read (a getter, a Proxy) is `features-invalid`
+ * too. On success it is the same object, not a copy.
+ *
+ * A record made at 22,050 Hz or more and relabelled to a 2^k multiple of
+ * its rate (22,050 Hz called 44,100) passes: the onset decimation and the
+ * chroma window both scale by that power of two, so its hops in seconds
+ * are unchanged and it stays aligned to the recording. Catching a relabel
+ * is the cache key's job, not this check's.
  */
 export function readFeatures(value: unknown): Ok<Features> | Refused {
-	if (!isPlainObject(value))
-		return refused([invalid("record", "The features record is not a plain object.")]);
-	const problem = checkRecord(value);
-	return problem ? refused([problem]) : ok(value as Features);
+	try {
+		if (!isPlainObject(value))
+			return refused([invalid("record", "The features record is not a plain object.")]);
+		const problem = checkRecord(value);
+		return problem ? refused([problem]) : ok(value as Features);
+	} catch {
+		return refused([invalid("record", "The record could not be read.")]);
+	}
 }
