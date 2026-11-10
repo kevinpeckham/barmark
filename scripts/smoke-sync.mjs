@@ -76,7 +76,7 @@ const result = {
 	mainHasThem: names.every((n) => n in main),
 	built: builtGood,
 };
-const wanted = ["barAt", "chartHash", "checkTimingMap", "secondsAtBar"];
+const wanted = ["barAt", "chartHash", "checkTimingMap", "rehashTiming", "secondsAtBar"];
 const good =
 	/^[0-9a-f]{16}$/.test(hash) &&
 	diagnostics.length === 0 &&
