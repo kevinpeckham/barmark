@@ -76,13 +76,21 @@ the element loads, with `<style data-barmark-font>` holding
 |---|---|---|---|
 | `theme` | `theme` (`theme`) | `"auto"` | `"auto"` follows the system; `"light"` or `"dark"` force one |
 | `barNumbers` | `bar-numbers="off"` (`barNumbers`) | `true` | bar numbers at the start of each row |
-| `rehearsalLetters` | `rehearsal-letters` (`rehearsalLetters`) | `false` | boxed A, B, C… on each section as played |
+| `rehearsalLetters` | `rehearsal-letters` (`rehearsalLetters`) | `false` | boxed A, B, C… on each section as played; none when the chart writes a rehearsal mark of its own (below) |
 | `numerals` | `numerals` (`numerals`) | none | `"nashville"` (6m⁷) or `"roman"` (vi⁷): each chord as its degree in its bar's key |
 | `wrap` | `wrap="off"` (`wrap`) | `true` | wrap a section's rows when it is wider than the chart's box; off, rows keep their columns and the chart overflows, for its page to scroll |
 | `part` | `show-part` (`showPart`) | none | draw only the part with this label, as one player reads it: tutti bars, its own bars, and "tacet" where it rests. The attribute isn't `part`, which HTML keeps for `::part()` styling |
 | `diagnostics` | | `false` | list the chart's errors and warnings below it |
 | `fontUrl` | | none | emit Edwin's `@font-face` rule before the chart |
 | (the `text` argument) | (`text`) | `null` | the chart to draw; wins over `src` and the script child |
+
+### Rehearsal letters
+
+`rehearsalLetters` letters each section occurrence A, B, C… in play order,
+for a chart that marks no places itself. When any bar in the chart carries
+its own rehearsal mark (`@A`, barmark's grammar 2.5), it adds no letters at
+all: the chart's marks stand alone, so no heading is marked twice, and a
+section the chart leaves unmarked stays unmarked.
 
 ### Numerals
 
@@ -126,7 +134,7 @@ Set these custom properties on the element or anything above it:
 | `--barmark-paper` | the background |
 | `--barmark-muted` | holds, bar numbers, braces, meta lines |
 | `--barmark-rule` | bar lines |
-| `--barmark-accent` | errors |
+| `--barmark-accent` | errors, and slots that can't be read |
 | `--barmark-directive` | mid-chart changes (default the muted colour) |
 | `--barmark-note` | `###` note lines (default the ink colour) |
 | `--barmark-lyrics` | syllables under a voice line and in lyric rows (default the ink colour) |
@@ -144,7 +152,7 @@ barmark-chart::part(heading) {
 
 `::part()` names: `title`, `meta`, `heading`, `bar`, `chord`, `text`,
 `bar-number`, `rehearsal`, `lyrics` (each verse's line of words, inside
-its `bar`). These, the custom properties and the
+its `bar`), `unread` (a slot that can't be read, drawn as written). These, the custom properties and the
 attributes are the public surface: changing them is a breaking change.
 
 ## Light, dark and print
@@ -179,6 +187,14 @@ Bar numbers sit in a gutter at the left edge; section headings, lyrics,
 note lines and mid-chart changes start at the first bar line. Chords start
 at the left of their share of the bar. A change written mid-chart names
 itself: `time: 3/4, tempo: 120` draws as "→ Time 3/4 · Tempo ♩ = 120".
+A tempo shows the beat `tempo:` counts (barmark's grammar 2.1), from the
+`time:` in force at the bar it applies to (a `time:` on the next line
+counts): the bottom number in a simple meter
+(♩ in 4/4, 𝅗𝅥 in 2/2, ♪ in 3/8) and the dotted quarter in 6/8, 9/8 and
+12/8, so 6/8 with `tempo: 40` shows "♩. = 40" and a `rit. to 90` there
+"rit. to ♩. = 90". A one-bar meter never changes it (grammar 2.4). The
+note is spoken by name ("dotted quarter note"), and the model gives it as
+`tempoBeat` on the chart (for the header) and on each directive item.
 At the default size chords are 16px and no label is under 12px.
 
 Chords appear in their canonical form whatever the author typed (`Cø`
@@ -189,7 +205,9 @@ repeat, an ending, a jump or a replay doesn't move them, so a replayed
 section shows the numbers it was written with. A pickup is bar 0: its
 row shows no number in the gutter (`barNumber` is `0` in the model) and
 is spoken as "pickup", and the bars after it are 1, 2, and so on. A line with an error shows as written, underlined,
-with its message. `layoutChart(text)` returns all of this as data, if
+with its message, unless its only errors are slots that can't be read
+(`CM7`): that line draws as usual, each such slot as written in the
+error colour with its message as a tooltip and in the bar's spoken name. `layoutChart(text)` returns all of this as data, if
 you want to draw it yourself, and `typesetChord(parts)` with `glyphs`
 gives a chord's pieces as the page sets them (root and quality, the
 raised extension, the bass after a slash, ♯ and ♭), and

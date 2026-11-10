@@ -25,8 +25,15 @@
 			"@barmark/midi/perform": ["./packages/midi/src/perform/index.ts"],
 			"@barmark/listen": ["./packages/listen/src/index.ts"],
 			"@barmark/listen/features": ["./packages/listen/src/features/index.ts"],
-			"@barmark/listen/stages": ["./packages/listen/src/stages.ts"]
+			"@barmark/listen/stages": ["./packages/listen/src/stages.ts"],
+			"@barmark/engraver/info": ["./packages/engraver/src/info.ts"]
 		}
 	},
-	"include": ["packages/*/src", "packages/*/tests", "packages/*/browser", "scripts"]
+	"include": [
+		"packages/*/src",
+		"packages/*/tests",
+		"packages/*/browser",
+		"packages/engraver/build",
+		"scripts"
+	]
 }

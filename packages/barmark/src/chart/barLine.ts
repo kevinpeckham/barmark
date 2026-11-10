@@ -23,6 +23,12 @@ type BarsLine = Extract<Line, { kind: "bars" }>;
 
 const FERMATA = new Set(["...", "…"]);
 
+/** Each simple slot of these cells, a group's members each. */
+export const simpleSlots = (cells: Cell[]): SimpleSlot[] =>
+	cells.flatMap((c) =>
+		c.kind === "slots" ? c.slots.flatMap((s) => (s.kind === "group" ? s.members : [s])) : [],
+	);
+
 /** Whether a cell is a bar: `...`, a direction and a rehearsal mark mark a place between bars. */
 export const isBar = (c: Cell) => c.kind === "slots" || c.kind === "simile";
 const QUOTES = new Set(['"', "“", "”", "„"]);
@@ -490,67 +496,40 @@ function rehearsalCell(
 }
 
 /**
- * One bar line: cells between pipes, each cell's slots, the `|:` and `:|`
- * marks and an `x N` tail. Any error drops the whole line (`bars` is null);
- * `written` still says how many bars it writes.
+ * How a reader reports: `error` breaks the bar line's structure, `unread`
+ * only its slot; `broken` says whether the structure has broken so far.
  */
-export function parseBarLine(
-	text: string,
-	line: number,
-): { bars: BarsLine | null; written: number; diagnostics: ChartDiagnostic[] } {
-	const diagnostics: ChartDiagnostic[] = [];
-	let listed = 0;
-	const add = (d: ChartDiagnostic) => {
-		listed++;
-		if (listed <= MAX_LINE_DIAGNOSTICS) diagnostics.push(d);
-		else if (listed === MAX_LINE_DIAGNOSTICS + 1)
-			diagnostics.push({
-				line,
-				severity: "error",
-				message: "further problems on this line are not listed",
-				token: "",
-			});
-	};
-	const error = (message: string, token: string, suggestion?: string): null => {
-		add({ line, severity: "error", message, token, ...(suggestion ? { suggestion } : {}) });
-		return null;
-	};
-	const warn = (message: string, token: string) =>
-		add({ line, severity: "warning", message, token });
+type Say = {
+	error: (message: string, token: string, suggestion?: string) => null;
+	unread: (message: string, token: string, suggestion?: string) => null;
+	warn: (message: string, token: string) => void;
+	broken: () => boolean;
+};
 
-	let body = text.trim();
-	let repeat: Repeat = null;
-	const lastPipe = body.lastIndexOf("|");
-	const tail = repeatTail(body.slice(lastPipe + 1), true);
-	if (tail) {
-		body = body.slice(0, lastPipe + 1) + tail.rest;
-		repeat = readRepeat(tail.count, line, diagnostics);
-	}
-	const leading = readEnding(body);
-	body = leading.body;
-	const ending = leading.ending;
-	if (leading.bad) error(ENDING_FORM, leading.bad);
-	const opens = body.startsWith("|:");
-	if (opens) body = `|${body.slice(2)}`;
-	const closes = body.endsWith(":|");
-	if (closes) body = `${body.slice(0, -2)}|`;
-	const written = barsWritten(body);
-	const stray = strayEnding(body);
-	if (stray) error(...stray);
-	if (body.includes(":|") || body.includes("|:"))
-		error("|: must open a bar line and :| must close one", body.includes(":|") ? ":|" : "|:");
-	// A misplaced mark makes the cells unreadable: report it once, not again as chords.
-	if (diagnostics.some((d) => d.severity === "error")) return { bars: null, written, diagnostics };
+/** An unreadable slot (grammar principle 4): unknown harmony keeping what the author wrote. */
+const unreadable = (text: string, dotted: boolean): SimpleSlot => ({
+	kind: "unknown",
+	text,
+	...(dotted ? { dotted: true as const } : {}),
+});
 
-	const parts = body.split("|").slice(1);
-	if (parts.at(-1)?.trim() === "") parts.pop();
-	else warn("missing trailing |", parts.at(-1)?.trim() ?? "");
+/** A sung member's text without its rhythm's dot: `{H}.:la` is `{H}:la`. */
+const undotted = ({ note, syllable }: Split) =>
+	`${note.slice(0, -1)}${syllable === null ? "" : `:${syllable}`}`;
 
-	const report = (p: Problem): null => error(p.problem, p.token, p.suggestion);
+/**
+ * The reader of one slot token: a simple slot or a `_` group of them. A
+ * slot it can't read is an error and becomes unknown harmony with its
+ * text (`unread`), a misplaced or bad dot included; a misplaced `%`,
+ * `...`, direction or `x N`, or an empty member is an error in the bar
+ * line's structure (`error`).
+ */
+function slotReader({ error, unread, warn, broken }: Say): (token: string) => Slot | null {
+	const report = (p: Problem): null => unread(p.problem, p.token, p.suggestion);
 	const simple = (token: string): SimpleSlot | null => {
 		if (token === "/") return { kind: "hold" };
 		if (SILENCE.has(token)) return { kind: "silence" };
-		if (token === "-") return error("a lone - is not a slot; silence is --", token, "--");
+		if (token === "-") return unread("a lone - is not a slot; silence is --", token, "--");
 		if (token === "?") {
 			warn("unknown harmony", token);
 			return { kind: "unknown" };
@@ -572,7 +551,7 @@ export function parseBarLine(
 			return { kind: "chord", chord: v.chord, voicing: v.voicing };
 		}
 		const r = brace === 0 ? parseNoteSet(token) : parseChord(token);
-		if (!r.ok) return error(r.error.message, token, r.error.suggestion);
+		if (!r.ok) return unread(r.error.message, token, r.error.suggestion);
 		for (const w of r.warnings) warn(w.message, w.token);
 		return { kind: "chord", chord: r.value };
 	};
@@ -607,32 +586,107 @@ export function parseBarLine(
 		read: (note: string) => SimpleSlot | null,
 	): SimpleSlot | null => {
 		const written = `${note}:${syllable}`;
-		if (syllable !== null && !note) return error(NOT_A_NOTE_SET, written);
+		if (syllable !== null && !note) return unread(NOT_A_NOTE_SET, written);
 		const slot = read(note);
 		if (syllable === null || !slot) return slot;
 		const sung = sungOn(slot, syllable);
-		return "problem" in sung ? error(sung.problem, written) : sung;
+		return "problem" in sung ? unread(sung.problem, written) : sung;
 	};
-	/** One slot token: a simple slot, or a `_` group of them. */
-	const slotOf = (token: string): Slot | null => {
-		const members = groupMembers(token).map(splitSyllable);
-		const dots = members.filter((m) => isDotted(m.note)).length;
-		if (dots && (members.length !== 2 || dots > 1)) return error(DOT_PLACE, token);
-		const [only] = members;
-		if (only && members.length === 1) return withSyllable(only, (n) => markedSlot(n, false));
-		return groupOf(members, token);
+	/** A member as read, or as written when it can't be; null once the structure has broken. */
+	const keep = (split: Split, read: (note: string) => SimpleSlot | null, written: string) => {
+		const slot = withSyllable(split, read);
+		if (slot || broken()) return slot;
+		return isDotted(split.note) ? unreadable(undotted(split), true) : unreadable(written, false);
 	};
 	const groupOf = (members: Split[], token: string): Slot => {
 		const out: SimpleSlot[] = [];
 		for (const m of members) {
 			const s =
 				m.note || m.syllable !== null
-					? withSyllable(m, memberOf)
+					? keep(m, memberOf, m.syllable === null ? m.note : `${m.note}:${m.syllable}`)
 					: error("an empty member in a group", token);
 			if (s) out.push(s);
 		}
 		return { kind: "group", members: out };
 	};
+	return (token: string): Slot | null => {
+		const members = groupMembers(token).map(splitSyllable);
+		const dots = members.filter((m) => isDotted(m.note)).length;
+		// A dot never changes the bar count: a misplaced one is the slot's error (Kevin, 2026-11-10).
+		if (dots && (members.length !== 2 || dots > 1))
+			return unread(DOT_PLACE, token) ?? unreadable(token, false);
+		const [only] = members;
+		if (only && members.length === 1) return keep(only, (n) => markedSlot(n, false), token);
+		return groupOf(members, token);
+	};
+}
+
+/**
+ * One bar line: cells between pipes, each cell's slots, the `|:` and `:|`
+ * marks and an `x N` tail. An error in its structure drops the whole line
+ * (`bars` is null); `written` still says how many bars it writes. A slot
+ * that can't be read is an error too, but keeps its place as unknown
+ * harmony with its text (grammar principle 4).
+ */
+export function parseBarLine(
+	text: string,
+	line: number,
+): { bars: BarsLine | null; written: number; diagnostics: ChartDiagnostic[] } {
+	const diagnostics: ChartDiagnostic[] = [];
+	let listed = 0;
+	let broken = false;
+	const add = (d: ChartDiagnostic) => {
+		listed++;
+		if (listed <= MAX_LINE_DIAGNOSTICS) diagnostics.push(d);
+		else if (listed === MAX_LINE_DIAGNOSTICS + 1)
+			diagnostics.push({
+				line,
+				severity: "error",
+				message: "further problems on this line are not listed",
+				token: "",
+			});
+	};
+	const unread = (message: string, token: string, suggestion?: string): null => {
+		add({ line, severity: "error", message, token, ...(suggestion ? { suggestion } : {}) });
+		return null;
+	};
+	const error = (message: string, token: string, suggestion?: string): null => {
+		broken = true;
+		return unread(message, token, suggestion);
+	};
+	const warn = (message: string, token: string) =>
+		add({ line, severity: "warning", message, token });
+
+	let body = text.trim();
+	let repeat: Repeat = null;
+	const lastPipe = body.lastIndexOf("|");
+	const tail = repeatTail(body.slice(lastPipe + 1), true);
+	if (tail) {
+		body = body.slice(0, lastPipe + 1) + tail.rest;
+		repeat = readRepeat(tail.count, line, diagnostics);
+	}
+	const leading = readEnding(body);
+	body = leading.body;
+	const ending = leading.ending;
+	if (leading.bad) error(ENDING_FORM, leading.bad);
+	const opens = body.startsWith("|:");
+	if (opens) body = `|${body.slice(2)}`;
+	const closes = body.endsWith(":|");
+	if (closes) body = `${body.slice(0, -2)}|`;
+	const written = barsWritten(body);
+	const stray = strayEnding(body);
+	if (stray) error(...stray);
+	if (body.includes(":|") || body.includes("|:"))
+		error("|: must open a bar line and :| must close one", body.includes(":|") ? ":|" : "|:");
+	// A misplaced mark makes the cells unreadable: report it once, not again as chords.
+	if (diagnostics.some((d) => d.severity === "error")) return { bars: null, written, diagnostics };
+
+	const parts = body.split("|").slice(1);
+	if (parts.at(-1)?.trim() === "") parts.pop();
+	else warn("missing trailing |", parts.at(-1)?.trim() ?? "");
+
+	const report = (p: Problem): null => error(p.problem, p.token, p.suggestion);
+	const slotOf = slotReader({ error, unread, warn, broken: () => broken });
 	const readCell = (raw: string): Cell | null => {
 		const rest = raw.trim();
 		if (!rest) return error("an empty cell; use / to hold or % to repeat", "| |");
@@ -662,9 +716,8 @@ export function parseBarLine(
 	if (parts.length === 0) error("a bar line needs at least one cell", text.trim());
 	const cells = parts.map(readCell).filter((c): c is Cell => c !== null);
 
-	const failed = diagnostics.some((d) => d.severity === "error");
 	return {
-		bars: failed ? null : { kind: "bars", line, opens, closes, cells, repeat, ending },
+		bars: broken ? null : { kind: "bars", line, opens, closes, cells, repeat, ending },
 		written,
 		diagnostics,
 	};

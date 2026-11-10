@@ -13,7 +13,15 @@ import type {
 } from "barmark";
 
 /** `part`: draw only the part with this label (barmark's grammar 7.4), as a single-part chart. */
-export type LayoutOptions = { rehearsalLetters?: boolean; part?: string };
+export type LayoutOptions = {
+	/**
+	 * Letter each section occurrence A, B, C… in play order; none when any
+	 * bar in the chart carries its own rehearsal mark (`@A`, barmark's
+	 * grammar 2.5), which then stand alone.
+	 */
+	rehearsalLetters?: boolean;
+	part?: string;
+};
 
 /** What to draw, with every musical decision already made. */
 export type ChartModel = {
@@ -26,9 +34,18 @@ export type ChartModel = {
 	credits: Credits;
 	/** Directives before the first heading, bar line or text line. */
 	header: Directives;
+	/** The beat the header's tempo counts. */
+	tempoBeat: TempoBeat;
 	blocks: SectionBlock[];
 	diagnostics: ChartDiagnostic[];
 };
+
+/**
+ * The note a `tempo:` counts (barmark's grammar 2.1), from the `time:` in
+ * force, never a one-bar meter's (2.4): the bottom number in a simple meter
+ * (`note: 4` is a quarter), a dotted quarter in 6/8, 9/8 and 12/8.
+ */
+export type TempoBeat = { note: 2 | 4 | 8 | 16; dotted: boolean };
 
 export type SectionBlock = {
 	/** The heading as written; null for content before the first heading. */
@@ -36,7 +53,7 @@ export type SectionBlock = {
 	/** `## Chorus x2` */
 	repeat: Repeat;
 	form: number | null;
-	/** "A", "B", … when rehearsal letters are on. */
+	/** "A", "B", … when rehearsal letters are on and the chart writes no rehearsal mark of its own. */
 	rehearsal: string | null;
 	/** The widest row's cell count: fermata, direction and rehearsal cells included. */
 	columns: number;
@@ -83,7 +100,8 @@ export type BlockItem =
 	  }
 	/** `note` marks a `###` line, whose text is given without the marks. */
 	| { kind: "text"; text: string; note: boolean }
-	| { kind: "directive"; set: Directives }
+	/** A change written mid-chart; `tempoBeat` is the beat a tempo there counts. */
+	| { kind: "directive"; set: Directives; tempoBeat: TempoBeat }
 	| ErrorItem;
 
 /**
@@ -113,6 +131,8 @@ export type CellModel =
 			tacet?: true;
 			/** `%` on a tutti line whose parts each copy a different bar: drawn as `%`, its slots empty (barmark's grammar 7.4). */
 			simile?: true;
+			/** The error message of each slot written here that can't be read, in order (barmark's grammar 2.3); absent when none. */
+			unread?: string[];
 	  }
 	| { kind: "fermata" }
 	/** A segno, coda or jump between bars (barmark's grammar 5.2). */

@@ -229,16 +229,16 @@ describe("pitchesOf: the app's chordPitchClasses cases barmark reads", () => {
 		expect(pitchesOf(record("{C E G}"))).toBeNull();
 	});
 
-	test("the seven spellings barmark does not read: the line plays no bar, the parse has an error", () => {
-		// The spec (§6.3) expected a `?` slot that holds. barmark reads a bar
-		// line with an unreadable chord as no bars at all, as the app's
-		// adapter does too (it parses with barmark before its SPELLINGS run),
-		// so the bar is lost, not held: F then G, two bars.
+	test("the seven spellings barmark does not read: a ? slot that holds, the parse has an error", () => {
+		// barmark keeps the bar (PR #250): the slot reads as unknown harmony,
+		// `{ kind: "unknown", text }`, which holds, as §6.3 says. The app's
+		// adapter still loses the line (§11.3).
 		for (const spelling of ["CM7", "CSus4", "CmMaj7", "CmM7", "C69", "C(7)sus4", "C−7"]) {
 			const chart = `| F |\n| ${spelling} |\n| G |`;
 			const parse = parseChart(chart);
 			expect(parse.diagnostics.some((d) => d.severity === "error" && d.line === 2)).toBe(true);
-			expect(padsOf(chart)).toEqual([[F], [G]]);
+			expect(parse.bars[1]?.slots[0]).toMatchObject({ kind: "unknown", text: spelling });
+			expect(padsOf(chart)).toEqual([[F], [F], [G]]);
 		}
 	});
 });

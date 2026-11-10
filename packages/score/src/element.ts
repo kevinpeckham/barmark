@@ -537,7 +537,10 @@ function defineElement(): void {
 			grid?.toggleAttribute("hidden", true);
 		}
 
-		/** The score could not be drawn: the grid again, a note by the switch, Score disabled. */
+		/**
+		 * The score could not be drawn: the grid again, a note by the switch, Score
+		 * disabled, and a `scoreerror` event saying why, once per failure.
+		 */
 		#fail(reason: string) {
 			console.warn(`<barmark-score>: the score couldn't be drawn: ${reason}`);
 			this.#failed = true;
@@ -560,6 +563,9 @@ function defineElement(): void {
 			pane?.removeAttribute("aria-busy");
 			this.#showGrid();
 			if (this.view === "score") this.view = "grid";
+			this.dispatchEvent(
+				new CustomEvent("scoreerror", { detail: { reason }, bubbles: true, composed: true }),
+			);
 		}
 
 		#clearFailure() {

@@ -130,14 +130,14 @@ describe("transposeChart: the rest of the chart", () => {
 		);
 	});
 	test("a line with an error is left as written, with a warning", () => {
-		const r = transposeChart("key: D\n| D | Hm |\n| A |\n", { to: "E" });
-		expect(r.text).toBe("key: E\n| D | Hm |\n| B |\n");
+		const r = transposeChart("key: D\n| D :| A |\n| A |\n", { to: "E" });
+		expect(r.text).toBe("key: E\n| D :| A |\n| B |\n");
 		expect(r.diagnostics).toEqual([
 			{
 				line: 2,
 				severity: "warning",
 				message: "not transposed: this line has an error",
-				token: "| D | Hm |",
+				token: "| D :| A |",
 			},
 		]);
 	});

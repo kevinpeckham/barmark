@@ -25,7 +25,7 @@
     },
     "packages/cli": {
       "name": "@barmark/cli",
-      "version": "0.10.1",
+      "version": "0.10.2",
       "bin": {
         "barmark": "./dist/cli.js",
       },
@@ -35,6 +35,13 @@
         "@barmark/render": "workspace:*",
         "@barmark/score": "workspace:*",
         "barmark": "workspace:*",
+        "verovio": "6.4.1",
+      },
+    },
+    "packages/engraver": {
+      "name": "@barmark/engraver",
+      "version": "0.1.0",
+      "devDependencies": {
         "verovio": "6.4.1",
       },
     },
@@ -48,7 +55,7 @@
     },
     "packages/midi": {
       "name": "@barmark/midi",
-      "version": "0.3.0",
+      "version": "0.3.1",
       "dependencies": {
         "@barmark/sync": "workspace:^",
         "barmark": "workspace:^",
@@ -84,7 +91,7 @@
     },
     "packages/sync": {
       "name": "@barmark/sync",
-      "version": "0.3.0",
+      "version": "0.4.0",
       "dependencies": {
         "barmark": "workspace:^",
       },
@@ -92,6 +99,8 @@
   },
   "packages": {
     "@barmark/cli": ["@barmark/cli@workspace:packages/cli"],
+
+    "@barmark/engraver": ["@barmark/engraver@workspace:packages/engraver"],
 
     "@barmark/listen": ["@barmark/listen@workspace:packages/listen"],
 

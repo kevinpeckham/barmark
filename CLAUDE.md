@@ -161,6 +161,26 @@ Fallow, CI, Swamp), the grammar, `examples/`, the scripts and FINDINGS.md.
     versions embedded)
   - `tests/`: commands in-process, plus the built bin under Node and a
     compiled binary
+- `packages/engraver/`: `@barmark/engraver`, a modified, smaller build of
+  Verovio 6.4.1 for `@barmark/score` (LGPL-3.0-only; `NOTICE.md`,
+  `THIRD-PARTY.md`, `COPYING*`, `OFL.txt`). **Never commit `dist/`**: the
+  `.mjs` and `.wasm` are compiled by emsdk on the VM, in CI and in the
+  release workflow, and must match `src/info.ts` byte for byte
+  - `build/`: `build.sh` (clone at the pin, emsdk, compile, link, banner,
+    path scan), `versions.env` (the pins), `data.txt` (the `data/` kept),
+    `compile.ts` (`bun run compile [--update]`), `dist.ts` (`bun run
+    build`: the TS side, and a stale-dist check), `facts.ts` (sizes,
+    digests, `info.ts`), `paths.ts` (the leaked-path scan), `source.sh`
+    (the Corresponding Source for a release)
+  - `src/info.ts`: the anchor, the build's sizes and digests, written by
+    `compile --update`; `src/index.d.mts`: the module's types
+  - `tests/`: committed-state tests (no compiled build needed), the
+    licence files pinned, and `fixtures/long.chart.md`
+- `scripts/engraver-equivalence.ts [--lite <dir>] [--json]`: the engraver
+  equivalence gate, stock `verovio/wasm` against the build over
+  `scripts/engraver-corpus.ts`, byte-identical SVG; it runs
+  `scripts/engraver-engrave.mjs` (Node 22, score's built `engraveXml`) once
+  per engraver. Needs the root `bun run build` and a compiled dist
 - `scripts/score-dorico.ts [outdir]`: `@barmark/score`'s Verovio engraving
   of the examples and the lead sheet beside the PDF Dorico engraves of the
   same exported MusicXML (mac-bench `dorico`, beside this repo), as one
@@ -176,7 +196,7 @@ Fallow, CI, Swamp), the grammar, `examples/`, the scripts and FINDINGS.md.
   `bun test` skips it (`bunfig.toml`), Fallow ignores it
 - `docs/superpowers/`: designs (`specs/`) and implementation plans (`plans/`)
 - `scripts/verify-package.ts`, `scripts/verify-release.ts`: release checks
-  shared by CI and Swamp; both take the package (`barmark`, `render`, `musicxml`, `score`, `sync`, `midi` or `cli`)
+  shared by CI and Swamp; both take the package (`barmark`, `render`, `musicxml`, `score`, `sync`, `midi`, `cli` or `engraver`)
 
 ## Commands
 
@@ -188,6 +208,8 @@ bun run test:browser             # the renderer in Chromium (builds first)
 bun run verify:package <pkg>     # build, npm pack contents, Node import
 bun run verify:release <pkg>     # version, CHANGELOG, tag, clean main
 bunx varlock run -- swamp workflow run release-check [--input pkg=render]
+cd packages/engraver && bun run compile [--update]   # emsdk build of Verovio; --update re-anchors info.ts
+bun scripts/engraver-equivalence.ts   # stock vs the build, byte-identical SVG
 cd site && bun run dev|build|check|test|test:browser   # barmark.dev
 ```
 
@@ -210,7 +232,7 @@ cd site && bun run dev|build|check|test|test:browser   # barmark.dev
   or other AI attribution trailer.
 - Releases follow `RELEASING.md` (the `/release` skill walks it). Each
   package is tagged on its own: `barmark-vX.Y.Z`, `render-vX.Y.Z`,
-  `musicxml-vX.Y.Z`, `score-vX.Y.Z`, `sync-vX.Y.Z`, `midi-vX.Y.Z`, `cli-vX.Y.Z`. A library release is followed by a CLI release and a
+  `musicxml-vX.Y.Z`, `score-vX.Y.Z`, `sync-vX.Y.Z`, `midi-vX.Y.Z`, `cli-vX.Y.Z`, `engraver-vX.Y.Z`. A library release is followed by a CLI release and a
   bump in `kevinpeckham/songs` (RELEASING.md steps 13–14), a `sync`,
   `midi` or `score` release included (the CLI bundles `sync` through
   `midi`, and `score` with Verovio). After
@@ -219,5 +241,9 @@ cd site && bun run dev|build|check|test|test:browser   # barmark.dev
   `score` depends on `barmark`, `@barmark/render` and `@barmark/musicxml`
   with carets, so a release of any of them may need a `score` patch
   raising that dependency, as `midi` follows `sync`, and then the CLI.
+  An engraver version bump runs `bun run compile --update` and commits
+  `info.ts`. A Verovio upgrade is one joint PR (`versions.env`, `info.ts`,
+  score's `verovio` pin, stock constants and `ENGRAVER_*` literals), then
+  releases engraver, score, the CLI and the site in that order.
 - `@barmark/render` never changes the music: anything musical (what `%`
   copies, bar numbers, what a replay plays) comes from the parser.

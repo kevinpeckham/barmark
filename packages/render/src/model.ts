@@ -15,8 +15,11 @@ import {
 	type PartBar,
 	type PlayedBar,
 	parseChart,
+	printedAsWritten,
 	type SectionOccurrence,
+	unreadSlots,
 } from "barmark";
+import { tempoBeatOf, tempoBeats } from "./tempo.js";
 import type {
 	BlockItem,
 	CellModel,
@@ -25,6 +28,7 @@ import type {
 	LayoutOptions,
 	RowItem,
 	SectionBlock,
+	TempoBeat,
 	Verse,
 } from "./types.js";
 import { type Landing, landings, rowVerses, singerOf, sungVerses } from "./verses.js";
@@ -38,12 +42,16 @@ type Group = { heading: SectionLine | null; lines: Line[] };
 type Context = {
 	parse: ChartParse;
 	source: string[];
-	/** Error messages by line number. */
+	/** Error messages by line number, for the lines drawn as written. */
 	errors: Map<number, string[]>;
+	/** The messages of a bar line whose only errors are its unreadable slots, one each, in order (barmark's grammar 2.3, 8). */
+	unread: Map<number, string[]>;
 	/** Each section's lines, by its heading's line number. */
 	written: Map<number, Group>;
 	/** The played bars of each line, by the line they are written on: in a chart of several parts, each part's own. */
 	bars: Map<number, DrawnBar[]>;
+	/** The beat a tempo counts at each directive line, by its line number. */
+	beats: Map<number, TempoBeat>;
 };
 
 /** A played bar as drawn: `perPart` marks a tutti bar its parts play differently. */
@@ -110,21 +118,31 @@ export function layoutChart(text: string, options: LayoutOptions = {}): ChartMod
 	const ctx: Context = {
 		parse,
 		source: text.split(/\r?\n/),
-		errors: errorsByLine(parse),
+		...errorsByLine(parse),
 		written: new Map(groups.flatMap((g) => (g.heading ? [[g.heading.line, g] as const] : []))),
 		bars: indexByLine(barsByLine(parse)),
+		beats: tempoBeats(parse.lines),
 	};
 	const blocks = groups.map((g) => layoutGroup(g, ctx));
-	if (options.rehearsalLetters) letterBlocks(blocks);
+	// A chart that writes its own rehearsal marks keeps them alone: letters beside them would mark each place twice.
+	if (options.rehearsalLetters && !parse.bars.some((b) => b.rehearsal !== undefined))
+		letterBlocks(blocks);
 	return {
 		title: parse.title,
 		part: parse.part,
 		parts: parse.parts,
 		credits: parse.credits,
 		header,
+		tempoBeat: headerBeat(parse.lines, ctx.beats),
 		blocks,
 		diagnostics: parse.diagnostics,
 	};
+}
+
+/** The beat the header's tempo counts: its directives' (they share the next bar line), or the default. */
+function headerBeat(lines: Line[], beats: Map<number, TempoBeat>): TempoBeat {
+	const first = lines.find((l) => l.kind === "directive");
+	return (first && beats.get(first.line)) ?? tempoBeatOf(undefined);
 }
 
 /** Rehearsal letters mark position: every section occurrence, and leading bars, in play order. */
@@ -142,13 +160,32 @@ function letters(n: number): string {
 	return head + String.fromCharCode(65 + (n % 26));
 }
 
-function errorsByLine(parse: ChartParse): Map<number, string[]> {
+/**
+ * Error messages by line: a line the printer prints as written is drawn as
+ * written; a bar line whose only errors are its unreadable slots is drawn,
+ * each slot with its message (barmark's grammar 2.3, 8).
+ */
+function errorsByLine(parse: ChartParse): Pick<Context, "errors" | "unread"> {
+	const asWritten = printedAsWritten(parse);
 	const errors = new Map<number, string[]>();
+	const unread = new Map<number, string[]>();
 	for (const d of parse.diagnostics) {
 		if (d.severity !== "error") continue;
-		errors.set(d.line, [...(errors.get(d.line) ?? []), d.message]);
+		const into = asWritten.has(d.line) ? errors : unread;
+		into.set(d.line, [...(into.get(d.line) ?? []), d.message]);
 	}
-	return errors;
+	return { errors, unread };
+}
+
+/** Each written bar with its unreadable slots' messages, in order (barmark's grammar 2.3). */
+function withUnread(cells: CellModel[], l: BarsLine, ctx: Context): CellModel[] {
+	const messages = [...(ctx.unread.get(l.line) ?? [])];
+	if (!messages.length) return cells;
+	return cells.map((c, i) => {
+		const own = l.cells[i];
+		const unread = own ? messages.splice(0, unreadSlots({ cells: [own] }).length) : [];
+		return c.kind === "slots" && unread.length ? { ...c, unread } : c;
+	});
 }
 
 /** Lines that name the chart rather than play it: never part of the body. */
@@ -484,7 +521,11 @@ function layoutLine(
 		case "text":
 			return textItem(l.text);
 		case "directive":
-			return { kind: "directive", set: l.set };
+			return {
+				kind: "directive",
+				set: l.set,
+				tempoBeat: ctx.beats.get(l.line) ?? tempoBeatOf(undefined),
+			};
 		case "invalid":
 			return errorItem(l.line, ctx);
 		default:
@@ -551,7 +592,7 @@ function layoutRow(
 		closes: l.closes,
 		repeat: l.repeat,
 		ending: l.ending,
-		cells,
+		cells: withUnread(cells, l, ctx),
 		...singing(l, cells, played, ctx),
 	};
 }

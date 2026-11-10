@@ -77,6 +77,8 @@ const colours = (p: Palette) =>
 const SANS = `system-ui,-apple-system,"Segoe UI",sans-serif`;
 /** The meta line, directives, headings and diagnostics. */
 const LABEL = `var(--barmark-label-font,${SANS})`;
+/** Fonts holding the beat notes outside the Basic Multilingual Plane (𝅗𝅥 U+1D15E, 𝅘𝅥𝅯 U+1D161), tried before the label's. */
+const SYMBOLS = `"Apple Symbols","Segoe UI Symbol","Noto Music",Symbola`;
 /** Lyrics and note lines: a serif every system has, with a true italic (Edwin has none). */
 const TEXT = "var(--barmark-text-font,Georgia,serif)";
 const CHART_FONT = `var(--barmark-font,"${FONT_FAMILY}","Edwin",Georgia,serif)`;
@@ -99,6 +101,7 @@ const css = `
 .bm-credits{font-family:${LABEL};font-size:${em(SIZES.meta)};margin:0 0 .15em}
 .bm-copyright{font-family:${LABEL};font-size:${em(SIZES.meta)};color:var(--bm-muted);margin-top:1.5em}
 .bm-copyright p{margin:0}
+.bm-beat{font-family:${SYMBOLS},${LABEL}}
 .bm-meta{font-family:${LABEL};font-size:${em(SIZES.meta)};color:var(--bm-muted);margin:0}
 .bm-directive{grid-column:1/-1;display:flex;align-items:baseline;gap:.4em;margin:.9em 0 .3em ${at(SIZES.directive, GUTTER)};font-family:${LABEL};font-size:${em(SIZES.directive)};color:var(--barmark-directive,var(--bm-muted))}
 .bm-directive::after{content:"";flex:1;align-self:center;margin-left:.4em;border-top:.06em solid var(--bm-rule);opacity:.6}
@@ -134,6 +137,7 @@ const css = `
 .bm-chord sup{font-size:${em(SIZES.superscript)};vertical-align:.55em;line-height:0}
 .bm-chord sub{font-size:${em(SIZES.octave)};line-height:0}
 .bm-hold,.bm-unknown,.bm-brace,.bm-simile{color:var(--bm-muted)}
+.bm-unread{color:var(--bm-accent);text-decoration:underline wavy var(--bm-accent);text-decoration-thickness:.08em;text-underline-offset:.25em}
 .bm-nc{font-size:${em(SIZES.noChord)};letter-spacing:.06em}
 .bm-silence{display:inline-block;width:.9em;height:.32em;background:var(--bm-ink);vertical-align:.25em}
 .bm-ring,.bm-notes{font-size:${em(SIZES.noteNames)}}

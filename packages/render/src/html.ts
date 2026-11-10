@@ -30,7 +30,7 @@ import { fontFaceCss } from "./font.js";
 import { isTacet as isTacetCell, layoutChart } from "./model.js";
 import { barLabel, speakBar, speakVerses } from "./speech.js";
 import { FIT_STEPS, MIN_BAR, stylesheet } from "./styles.js";
-import type { BlockItem, CellModel, ChartModel, SectionBlock, Verse } from "./types.js";
+import type { BlockItem, CellModel, ChartModel, SectionBlock, TempoBeat, Verse } from "./types.js";
 import {
 	beatLinesHtml,
 	pitchHtml,
@@ -44,6 +44,11 @@ import {
 export type RenderOptions = {
 	theme?: "auto" | "light" | "dark";
 	barNumbers?: boolean;
+	/**
+	 * Boxed letters A, B, C… on each section as played. None when any bar
+	 * carries its own rehearsal mark (`@A`, barmark's grammar 2.5): the
+	 * chart's marks then stand alone, so no place is marked twice.
+	 */
 	rehearsalLetters?: boolean;
 	/** List the chart's errors and warnings below it. */
 	diagnostics?: boolean;
@@ -73,6 +78,8 @@ type View = {
 	numeral: { style: Numerals; key: Key } | null;
 	pitches: boolean;
 	sung: SungBar | null;
+	/** The bar's unreadable slots' messages still to draw, taken in order (barmark's grammar 2.3). */
+	unread?: string[];
 };
 
 export function renderChart(text: string, options: RenderOptions = {}): string {
@@ -147,7 +154,9 @@ function headerHtml(model: ChartModel): string {
 		: "";
 	const names =
 		model.parts.length > 1 ? model.parts.map((p) => p.name).join(", ") : model.part?.name;
-	const meta = [names ? escapeHtml(names) : "", metaText(model.header)].filter(Boolean).join(" · ");
+	const meta = [names ? escapeHtml(names) : "", metaHtml(model.header, model.tempoBeat)]
+		.filter(Boolean)
+		.join(" · ");
 	const credits = creditsText(model.credits)
 		.map((c) => `<p class="bm-credits" part="credits">${escapeHtml(c)}</p>`)
 		.join("");
@@ -162,27 +171,57 @@ function copyrightHtml(model: ChartModel): string {
 	return `<footer class="bm-copyright" part="copyright">${lines.map((c) => `<p>${escapeHtml(c)}</p>`).join("")}</footer>`;
 }
 
-/** "rit. to ♩ = 90", "accel.", "a tempo". */
-function tempoChangeText(c: TempoChange): string {
-	if (c.kind === "a tempo") return c.kind;
-	return `${c.kind}.${c.to === null ? "" : ` to ♩ = ${c.to}`}`;
+/**
+ * Each beat note a tempo can count (barmark's grammar 2.1), and its name. A
+ * dotted beat adds a full stop, "♩.", as tempo marks are typed in text: the
+ * combining augmentation dot (U+1D16D) is missing from most fonts and sits
+ * apart from the note where it is drawn.
+ */
+const BEAT_NOTES: Record<TempoBeat["note"], readonly [string, string]> = {
+	2: ["\u{1D15E}", "half"],
+	4: ["♩", "quarter"],
+	8: ["♪", "eighth"],
+	16: ["\u{1D161}", "sixteenth"],
+};
+
+/** The beat note, spoken by its name: "♩." is "dotted quarter note". */
+function beatHtml(beat: TempoBeat): string {
+	const [glyph, name] = BEAT_NOTES[beat.note];
+	const dotted = beat.dotted ? "dotted " : "";
+	return `<span class="bm-beat" role="img" aria-label="${dotted}${name} note">${glyph}${beat.dotted ? "." : ""}</span>`;
 }
 
-/** "D major · 4/4 · ♩ = 145 · swing" (or "swing 58%"), escaped; labelled, "Key D major · Time 4/4 · …". */
-function metaText(d: Directives, labelled = false): string {
+const tempoHtml = (bpm: number, beat: TempoBeat) => `${beatHtml(beat)} = ${bpm}`;
+
+/** "rit. to ♩ = 90" (♩. in 6/8), "accel.", "a tempo". */
+function tempoChangeHtml(c: TempoChange, beat: TempoBeat): string {
+	if (c.kind === "a tempo") return c.kind;
+	return `${c.kind}.${c.to === null ? "" : ` to ${tempoHtml(c.to, beat)}`}`;
+}
+
+/**
+ * "D major · 4/4 · ♩ = 145 · swing" (or "swing 58%"), as markup, a tempo
+ * counting `beat`; labelled, "Key D major · Time 4/4 · …".
+ */
+function metaHtml(d: Directives, beat: TempoBeat, labelled = false): string {
 	return [
-		["Key", d.key ? `${glyphs(d.key.tonic)} ${d.key.mode}` : ""],
+		["Key", d.key ? escapeHtml(`${glyphs(d.key.tonic)} ${d.key.mode}`) : ""],
 		["Time", d.time ? `${d.time.n}/${d.time.d}` : ""],
-		["Tempo", d.tempo ? `♩ = ${d.tempo}` : ""],
+		["Tempo", d.tempo ? tempoHtml(d.tempo, beat) : ""],
 		// "a tempo" names itself; "Tempo a tempo" would stutter.
 		[
 			d.tempoChange?.kind === "a tempo" ? "" : "Tempo",
-			d.tempoChange ? tempoChangeText(d.tempoChange) : "",
+			d.tempoChange ? tempoChangeHtml(d.tempoChange, beat) : "",
 		],
-		["Feel", d.feel ? `${d.feel}${d.swingPercent === undefined ? "" : ` ${d.swingPercent}%`}` : ""],
+		[
+			"Feel",
+			d.feel
+				? escapeHtml(`${d.feel}${d.swingPercent === undefined ? "" : ` ${d.swingPercent}%`}`)
+				: "",
+		],
 	]
 		.filter(([, value]) => value)
-		.map(([label, value]) => escapeHtml(labelled && label ? `${label} ${value}` : (value ?? "")))
+		.map(([label, value]) => (labelled && label ? `${label} ${value}` : (value ?? "")))
 		.join(" · ");
 }
 
@@ -261,7 +300,7 @@ function itemHtml(item: BlockItem, columns: number, settings: Settings): string 
 			return `<p class="bm-text${item.note ? " bm-note" : ""}" part="text">${escapeHtml(item.text)}</p>`;
 		case "directive":
 			// Mid-chart, a change names itself: "→ Time 3/4", never a lone "3/4".
-			return `<p class="bm-directive" part="meta"><span class="bm-change" aria-hidden="true">→</span><span>${metaText(item.set, true)}</span></p>`;
+			return `<p class="bm-directive" part="meta"><span class="bm-change" aria-hidden="true">→</span><span>${metaHtml(item.set, item.tempoBeat, true)}</span></p>`;
 		case "error":
 			return errorHtml(item.source, item.messages);
 	}
@@ -403,6 +442,10 @@ type Sung = {
 	beats: string;
 };
 
+/** A bar's unreadable slots' errors, spoken after the bar (barmark's grammar 2.3). */
+const spokenErrors = (cell: CellModel) =>
+	cell.kind === "slots" ? (cell.unread ?? []).map((m) => `error: ${m}`) : [];
+
 function cellHtml(
 	cell: CellModel,
 	barNumber: number | null,
@@ -412,8 +455,8 @@ function cellHtml(
 ): string {
 	const numeral =
 		numerals && cell.kind === "slots" && cell.key ? { style: numerals, key: cell.key } : null;
-	const said = [speakBar(barNumber, cell, numeral !== null), sung.words].filter(Boolean);
-	const spoken = `<span class="bm-sr">${escapeHtml(said.join(", "))}</span>`;
+	const said = [speakBar(barNumber, cell, numeral !== null), ...spokenErrors(cell), sung.words];
+	const spoken = `<span class="bm-sr">${escapeHtml(said.filter(Boolean).join(", "))}</span>`;
 	if (cell.kind !== "slots") return betweenBarsHtml(cell, spoken, marks);
 	const change = cell.tempoChange ? ` data-tempo-change="${cell.tempoChange}"` : "";
 	const [body, end] = barBody(cell, { numeral, pitches: sung.pitches, sung: sung.bar });
@@ -425,7 +468,9 @@ function cellHtml(
 }
 
 /** What a bar shows: its meter, its slots (or `%`), and "cut"; then the words after its last slot. */
-function barBody(cell: Extract<CellModel, { kind: "slots" }>, view: View): [string, string] {
+function barBody(cell: Extract<CellModel, { kind: "slots" }>, given: View): [string, string] {
+	// Each unreadable slot takes its message in turn (barmark's grammar 2.3).
+	const view = { ...given, unread: [...(cell.unread ?? [])] };
 	const meter = cell.meter
 		? `<span class="bm-meter"><span>${cell.meter.n}</span><span>${cell.meter.d}</span></span>`
 		: "";
@@ -559,10 +604,21 @@ function unmarkedSlotHtml(slot: Slot, view: View): string {
 		case "silence":
 			return `<span class="bm-silence"></span>`;
 		case "unknown":
-			return `<span class="bm-unknown">?</span>`;
+			return unknownHtml(slot.text, view);
 		case "group":
 			return groupHtml(slot.members, view);
 	}
+}
+
+/**
+ * `?`, or an unreadable slot as its author wrote it (barmark's grammar
+ * 2.3); one written on its own line carries its error, a `%` copy doesn't.
+ */
+function unknownHtml(text: string | undefined, view: View): string {
+	if (text === undefined) return `<span class="bm-unknown">?</span>`;
+	const message = view.unread?.shift();
+	if (message === undefined) return `<span class="bm-unknown">${escapeHtml(text)}</span>`;
+	return `<span class="bm-unknown bm-unread" part="unread" title="${escapeHtml(message)}">${escapeHtml(text)}</span>`;
 }
 
 function chordHtml(record: ChordRecord, view: View): string {

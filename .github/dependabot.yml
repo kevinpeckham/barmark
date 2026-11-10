@@ -4,8 +4,10 @@
 # release has time to be caught before it is proposed here.
 version: 2
 updates:
+  # The workflows (scanned from /) and the local composite actions, which
+  # pin actions of their own.
   - package-ecosystem: github-actions
-    directory: /
+    directories: ["/", "/.github/actions/*"]
     schedule:
       interval: monthly
     cooldown:
