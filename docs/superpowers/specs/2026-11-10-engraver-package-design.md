@@ -1,8 +1,8 @@
-# `@barmark/verovio`: design
+# `@barmark/engraver`: design
 
 Status: revised after review (2026-11-10), for Kevin. **Kevin** decided
 that the lighter Verovio becomes its own npm package in the barmark
-family, named `@barmark/verovio`. Everything else is a **design call**
+family, and named it `@barmark/engraver` (see Name). Everything else is a **design call**
 (Claude's, with a reason), open to correction. The questions only Kevin
 can answer are at the end. No grammar change.
 
@@ -12,12 +12,34 @@ can answer are at the end. No grammar change.
 appears. The stock npm module is 7,400,749 bytes (2.36 MB gzip) and takes
 about 180 to 240 ms to instantiate. A Verovio 6.4.1 built only for what
 barmark uses is about 2.99 MB (1.00 MB gzip, 0.78 MB brotli) and
-instantiates in about 60 to 80 ms. `@barmark/verovio` publishes that
+instantiates in about 60 to 80 ms. `@barmark/engraver` publishes that
 build so a site can load it, first by choosing to (`verovio-url`) and
 later by default.
 
 Its promise is narrow and checked: **for what `@barmark/score` asks of
 it, it draws exactly what stock Verovio of the same version draws.**
+
+## Name
+
+Decided by Kevin (2026-11-10): **`@barmark/engraver`**. The name leaves
+out "verovio" on purpose:
+
+- **Audit heuristics.** Supply-chain scanners such as Socket and Snyk flag
+  a package that carries another project's name and ships that project's
+  binary, modified, from a different publisher. That pattern looks like
+  squatting or impersonation.
+- **Honesty.** A modified build should not look like the Verovio
+  project's own package. What it is gets said plainly in its README
+  instead.
+
+Alternatives considered:
+
+- `@barmark/score-engine`: too easily confused with `@barmark/score`.
+- `@barmark/verovio-lite`: the same audit risk as `@barmark/verovio`.
+
+The stock npm package `verovio`, Verovio the project and its licence keep
+their names everywhere below. The Corresponding Source asset keeps the
+name `verovio-6.4.1-source`, because it is Verovio's source.
 
 ## Starting point (the spike; details in FINDINGS)
 
@@ -46,14 +68,14 @@ PR 1 records these surprises in FINDINGS.md, and also these two:
 
 ## Package shape
 
-**(design call) A workspace package, `packages/verovio`, holding no
+**(design call) A workspace package, `packages/engraver`, holding no
 compiled files in git.** The `.wasm` and `.mjs` are built in CI, by the
 release workflow, and on the VM. Reason: committing 3 MB of binary per
 Verovio upgrade would bloat history for good, and a committed digest
 pins every build exactly anyway.
 
 ```
-packages/verovio/
+packages/engraver/
   build/versions.env  VEROVIO_TAG, VEROVIO_COMMIT, EMSDK_VERSION, EMSDK_COMMIT,
                       CMAKE_VERSION, OPT (-Oz), MODIFIED (date)
   build/data.txt      the data/ entries kept
@@ -137,7 +159,7 @@ Reason: mirroring 6.4.1 leaves a build-only fix nowhere to go,
 prereleases (`6.4.1-barmark.1`) are skipped by carets, and npm drops build
 metadata.
 
-The tag is `verovio-vX.Y.Z` and the package key is `verovio`. It is added
+The tag is `engraver-vX.Y.Z` and the package key is `engraver`. It is added
 to `verify-package`, `verify-release`, the CI `package` matrix,
 `release.yml` and Swamp's release-check input.
 
@@ -147,17 +169,17 @@ the module. **(design call) The two move together in one PR:**
 
 - `versions.env` and `info.ts`
 - score's exact `verovio` pin
-- score's stock constants and its `VEROVIO_LITE_*` literals
+- score's stock constants and its `ENGRAVER_*` literals
 
 Score's test that the two `VEROVIO_VERSION`s agree therefore never sees
-`main` half-done. Then release `@barmark/verovio`, then score, then the
+`main` half-done. Then release `@barmark/engraver`, then score, then the
 CLI (its exact `verovio` pin, as now), then the site. Reason: a
 version-check that only `verify:release score` runs would let `main`
 carry a mismatch unnoticed until release day.
 
 Q9 asks whether stock may lead when the lite build lags.
 
-A `@barmark/verovio` **patch** changes only digests. It needs a score
+A `@barmark/engraver` **patch** changes only digests. It needs a score
 patch (new literal values) and a site bump. The CLI is unaffected unless
 score's code changed.
 
@@ -202,10 +224,10 @@ precisely).** npm provenance attests only that the tarball came from
 - a byte-identical match with the committed `info.ts`, which anyone can
   repeat with `build/`
 
-**The CI job `verovio`** always runs and is a required check:
+**The CI job `engraver`** always runs and is a required check:
 
 1. Restore the emsdk cache (key: the emsdk pins).
-2. Restore the dist cache (key: a hash of `packages/verovio/build/**`).
+2. Restore the dist cache (key: a hash of `packages/engraver/build/**`).
    Only a clean build that matched `info.ts` writes this cache.
 3. On a miss, build from clean and check against `info.ts`. On a hit,
    check the cached files against `info.ts`.
@@ -216,14 +238,14 @@ A weekly scheduled run ignores the dist cache. **(design call)** Reason:
 an ordinary PR then pays a cache restore, not a 6 to 8 minute build on 4
 vCPU, and the check is not weakened.
 
-**The `package (N, verovio)` rows** run after `verovio` and download its
-artifact into `packages/verovio/dist`. `verify:package verovio` then packs
+**The `package (N, engraver)` rows** run after `engraver` and download its
+artifact into `packages/engraver/dist`. `verify:package engraver` then packs
 what is there, with no build step: the package's `prepack` checks
 `dist/` against `info.ts` and never compiles. The score `browser` job
 uses the same artifact.
 
-**The release workflow (design call): a separate `build-verovio` job**
-(timeout 30 min), only for `verovio-v*` tags.
+**The release workflow (design call): a separate `build-engraver` job**
+(timeout 30 min), only for `engraver-v*` tags.
 
 - It builds from clean with no dist cache (the emsdk cache is allowed).
 - It checks the result against `info.ts`, runs the gate and uploads
@@ -234,9 +256,9 @@ uses the same artifact.
   Corresponding Source bundle and the licence files to the GitHub
   release.
 
-**On the VM:** `cd packages/verovio && bun run build` (cache in
-`~/.cache/barmark-verovio/`). Root `bun test` needs no build:
-`packages/verovio/tests` checks only what is committed. Those tests check
+**On the VM:** `cd packages/engraver && bun run build` (cache in
+`~/.cache/barmark-engraver/`). Root `bun test` needs no build:
+`packages/engraver/tests` checks only what is committed. Those tests check
 that:
 
 - `info.ts` and `versions.env` agree
@@ -245,10 +267,10 @@ that:
 
 ### The equivalence gate
 
-**(design call) A root script, `scripts/verovio-equivalence.ts`.** It
+**(design call) A root script, `scripts/engraver-equivalence.ts`.** It
 needs score's real `engraveXml` and both modules, so putting it in either
-package would make a dependency cycle. It runs in the `verovio` job, in
-`build-verovio`, and in Swamp's release-check for `pkg=verovio`, in Node
+package would make a dependency cycle. It runs in the `engraver` job, in
+`build-engraver`, and in Swamp's release-check for `pkg=engraver`, in Node
 22.
 
 - **Corpus:**
@@ -282,7 +304,7 @@ separately fetched `.wasm`. **(design call) A new attribute,
 `verovio-wasm-integrity`, and the worker fetches the `.wasm` itself:**
 
 - The worker calls `m.default({ instantiateWasm })`. Stock ignores the
-  hook; `@barmark/verovio` calls it with `(imports, receive)`.
+  hook; `@barmark/engraver` calls it with `(imports, receive)`.
 - **A missing `verovio-wasm-integrity` while `verovio-integrity` is set
   is a synchronous throw from the hook:** "verovio-wasm-integrity is
   needed for a Verovio that loads a separate .wasm".
@@ -344,10 +366,10 @@ verified path does not depend on either.
 
 - `verovio-wasm-integrity`, the hook with its race, and the digest-keyed
   `expected`.
-- New exports `VEROVIO_LITE_CDN_URL`, `VEROVIO_LITE_CDN_INTEGRITY` and
-  `VEROVIO_LITE_WASM_INTEGRITY`. **(design call)** They are literals:
-  `@barmark/verovio` is an exact devDependency, and a test holds the
-  literals equal to `packages/verovio/src/info.ts`. Reason: a site that
+- New exports `ENGRAVER_CDN_URL`, `ENGRAVER_CDN_INTEGRITY` and
+  `ENGRAVER_WASM_INTEGRITY`. **(design call)** They are literals:
+  `@barmark/engraver` is an exact devDependency, and a test holds the
+  literals equal to `packages/engraver/src/info.ts`. Reason: a site that
   doesn't opt in shouldn't install 3 MB.
 - **(design call) The option-limits test** (`tests/verovio-options.test.ts`):
   - `LAYOUT`'s keys plus `scale` and `pageWidth` are within an
@@ -361,7 +383,7 @@ verified path does not depend on either.
 
   `header: "auto"` is allowed: titles use `text/`, and the gate covers
   titled charts.
-- The `@barmark/verovio` README states the limits for anyone calling
+- The `@barmark/engraver` README states the limits for anyone calling
   `engraveXml` with their own MusicXML. Implementation characterises what
   the build does when asked for Bravura, a footer or tablature, and
   writes it down there.
@@ -369,8 +391,8 @@ verified path does not depend on either.
 **Phase 2, the default (a later score minor), only when all of these
 hold:**
 
-1. The `verovio` job and the gate have been required checks through at
-   least one `@barmark/verovio` release, and the weekly clean rebuild is
+1. The `engraver` job and the gate have been required checks through at
+   least one `@barmark/engraver` release, and the weekly clean rebuild is
    green.
 2. **Score's browser job** loads the lite build both ways, including the
    fail-closed, hang and mismatch cases, in Chromium, Firefox and WebKit.
@@ -381,7 +403,7 @@ hold:**
    emit and find the `.wasm`.
 5. Kevin agrees.
 
-Then `own()` imports `@barmark/verovio`, which becomes an exact
+Then `own()` imports `@barmark/engraver`, which becomes an exact
 dependency. `verovio` stays a dependency for `verovio/esm`.
 
 **(design call) The CLI keeps stock Verovio.** Reasons:
@@ -420,11 +442,13 @@ jsDelivr, so the GPLv3 sections that LGPLv3 incorporates apply.
 
    A test holds NOTICE.md to `versions.env`.
 
-   **(design call)** The README's first line says plainly that this is a
-   modified build, not the Verovio project's. Reason: the name could be
-   read as an official port, and reports belong here.
+   **(design call)** The README's first line says plainly: "A modified
+   build of Verovio 6.4.1 (LGPL-3.0-only), made by barmark, not by the
+   Verovio project". It links the Corresponding Source and the build steps
+   (`build/`, `bun run build`). Reason: the package's name does not say
+   Verovio (see Name), so the first line must, and reports belong here.
 3. **Corresponding Source (§6), (design call) mirrored:** each
-   `verovio-vX.Y.Z` release carries `verovio-6.4.1-source.tar.gz` (a
+   `engraver-vX.Y.Z` release carries `verovio-6.4.1-source.tar.gz` (a
    `git archive` of the commit), `build/` and the licence files. Reason:
    §6(d) requires us to keep it available for as long as we offer the
    object code, and upstream's repository isn't ours. Emscripten is named
@@ -445,7 +469,7 @@ jsDelivr, so the GPLv3 sections that LGPLv3 incorporates apply.
 **Wording to update** (in the PRs below):
 
 - **Score README "Licence":** keep "loaded unchanged" for stock, and add
-  "or, if you choose it, the modified build `@barmark/verovio`
+  "or, if you choose it, the modified build `@barmark/engraver`
   (LGPL-3.0-only, its source published with each release)".
 - **Score's `package.json` description:** changes only in phase 2.
 - **barmark.dev:**
@@ -459,34 +483,34 @@ jsDelivr, so the GPLv3 sections that LGPLv3 incorporates apply.
 
 ## Release order
 
-1. **PR 1, `packages/verovio`.**
+1. **PR 1, `packages/engraver`.**
    - It starts with the cross-machine reproducibility check.
    - It contains `build/`, `info.ts`, the licence files and NOTICE; the
-     `verovio` CI job; the gate script and the long-chart fixture;
+     `engraver` CI job; the gate script and the long-chart fixture;
      `verify-package` and `verify-release` entries; `release.yml`
-     (`build-verovio`, the tag case, `attach`); Swamp `pkg=verovio`;
+     (`build-engraver`, the tag case, `attach`); Swamp `pkg=engraver`;
      RELEASING.md; FINDINGS.
 2. **Kevin's one-time steps** (below), once the cross-machine result is in
    (Q10).
-3. **Release `verovio-v0.1.0`.**
+3. **Release `engraver-v0.1.0`.**
 4. **PR 2, score 0.4.0** (phase 1, with Chromium browser tests and the
    README), then release it.
 5. **CLI patch** ("Uses @barmark/score 0.4.0"; still stock Verovio), then
    the `kevinpeckham/songs` bump.
 6. **Site:** score 0.4.0 and the CLI; `site/src/lib/chart.ts` on the
-   three `VEROVIO_LITE_*` constants; the footer, FAQ and Get Started text.
+   three `ENGRAVER_*` constants; the footer, FAQ and Get Started text.
 7. **Later:** phase 2, by its criteria.
 
 ## Kevin's one-time steps (listed, not done)
 
-1. `npm whoami`, then publish a placeholder `@barmark/verovio@0.0.0` with
+1. `npm whoami`, then publish a placeholder `@barmark/engraver@0.0.0` with
    `npm publish --access public` (`@barmark` org).
 2. npmjs.com → Trusted Publisher: GitHub Actions, `kevinpeckham/barmark`,
    `release.yml`, environment `npm`. Then require 2FA and disallow tokens.
-3. Rulesets: add `verovio-v*` to "release tags". Add `verovio` and
-   `package (20|22|24, verovio)` to "main"'s required checks, after PR 1
+3. Rulesets: add `engraver-v*` to "release tags". Add `engraver` and
+   `package (20|22|24, engraver)` to "main"'s required checks, after PR 1
    has run them.
-4. `npm` environment: a tag rule for `verovio-v*`.
+4. `npm` environment: a tag rule for `engraver-v*`.
 5. Phase 2's go-ahead.
 
 ## Questions for Kevin (with recommendations)
@@ -504,7 +528,7 @@ jsDelivr, so the GPLv3 sections that LGPLv3 incorporates apply.
 2. **Own 0.x versions, or mirror Verovio's number?** Recommend own 0.x
    (0.1.0 = 6.4.1).
 3. **Build in CI and the release workflow, never committing the binary?**
-   It costs a 30-minute-limit `build-verovio` job per release. Recommend
+   It costs a 30-minute-limit `build-engraver` job per release. Recommend
    yes.
 4. **Corresponding Source as GitHub release assets, not in the npm
    tarball?** Recommend yes.
