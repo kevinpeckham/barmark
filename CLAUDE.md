@@ -174,6 +174,11 @@ Fallow, CI, Swamp), the grammar, `examples/`, the scripts and FINDINGS.md.
   - `tests/`: `bun test`, synthetic songs rendered in the tests
     (`tests/helpers/`), no audio checked in; the scale tests time
     relatively, as `@barmark/midi`'s do
+  - `bun scripts/listen-equivalence.ts <stem-shovel commit>` (at or after
+    `1e120b2e`): the app's own modules from a `git clone --shared` in
+    `~/.cache/barmark/` beside the package; writes the synthetic goldens
+    `tests/fixtures/equivalence/*.json` (`tests/equivalence.test.ts`
+    checks them) and compares the three real mixes, VM only, never in CI
 - `packages/cli/`: `@barmark/cli`, the `barmark` command (`check`,
   `format`, `part`, `render` (`--score`: the full score, Verovio
   in-process, `src/score.ts`), `transpose`, `export`, `import`; MusicXML

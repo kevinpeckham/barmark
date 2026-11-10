@@ -974,6 +974,28 @@ and round-trip it through `format`.
 
 ## Tooling
 
+### Our Bun cannot install or resolve Stem Shovel's checkout (2026-11-10, @barmark/listen equivalence)
+
+- **The symptom.** In the equivalence script's clone of stem-shovel,
+  `bun install --frozen-lockfile` failed with `UnknownLockfileVersion`
+  ("lockfile had changes, but lockfile is frozen"). Once installed, the
+  first import of `audio/chartlessGrid.ts` failed: "Cannot find module
+  '#lib/constants/chartAlignment.js'".
+- **The cause.** The app pins Bun 1.4.2 (`packageManager`), whose
+  `bun.lock` is lockfile version 2; this repo's Bun 1.3.14 cannot read it.
+  And the app imports its own modules as `#lib/*` (package.json
+  `imports`, mapped to `./src/lib/*`) with `.js` specifiers for `.ts`
+  files; Bun 1.3.14 does not apply its `.js`-to-`.ts` rewrite to a
+  subpath import.
+- **The fix.** The script installs with `bunx bun@<the app's version>`
+  when our Bun fails (`--frozen-lockfile --ignore-scripts`, in the clone
+  only), and a `Bun.plugin` resolves `#lib/*` into the clone's `src/lib/`,
+  `.js` to `.ts` when the `.js` file is absent. The app's bare imports
+  (`barmark` 0.22, `@barmark/sync` 0.3.0) resolve from the clone's own
+  `node_modules`, which the unreadable-chord check confirms (barmark 0.22
+  drops the line). In `scripts/listen-equivalence.ts` (`install`, the
+  plugin).
+
 ### Bun.build empties an entry in a `"sideEffects": false` package (2026-11-10, @barmark/listen)
 
 - **The symptom.** Task 5's check that `@barmark/listen/features`

@@ -51,8 +51,8 @@ export type SynthSong = {
 	samples: Float32Array;
 	sampleRate: 22050;
 	chords: ListenChordRuns;
-	/** The bar starts (bar one first, no end) and where the pickup starts (null: none). */
-	truth: { bars: number[]; pickup: number | null };
+	/** The bar starts (bar one first, no end), where the pickup starts (null: none) and each bar's Harte label. */
+	truth: { bars: number[]; pickup: number | null; labels: string[] };
 };
 
 const hz = (midi: number) => 440 * 2 ** ((midi - 69) / 12);
@@ -131,6 +131,6 @@ export function synthSong(spec: SynthSpec): SynthSong {
 		samples,
 		sampleRate: RATE,
 		chords: { frameSec: FRAME_SEC, frames, runs },
-		truth: { bars, pickup },
+		truth: { bars, pickup, labels: chords.map((c) => c.label) },
 	};
 }

@@ -1,0 +1,484 @@
+{
+	"app": {
+		"commit": "59da195257866a033208d09174375dab1ea202b8",
+		"date": "2026-11-10T11:52:27+00:00"
+	},
+	"case": {
+		"name": "flat-harmony",
+		"spec": {
+			"downbeat": 0.25,
+			"harmony": "flat",
+			"meter": "4/4",
+			"tempo": 120,
+			"bars": 16,
+			"seed": 1614
+		},
+		"appTempo": 120,
+		"chart": "time: 4/4, tempo: 120\n| C | C | C | C |\n| C | C | C | C |\n| C | C | C | C |\n| C | C | C | C |\n"
+	},
+	"features": {
+		"chromaHash": "16f5da4cd4079685",
+		"onsetHash": "f32a4906c82d6b2d",
+		"frames": 344,
+		"hopSec": 0.09287981859410431,
+		"fps": 86.1328125,
+		"firstSound": 0.2000907029478458,
+		"lastSound": 32.04997732426304
+	},
+	"grid": {
+		"ok": false,
+		"reason": "undecided",
+		"cls": 2,
+		"decided": false,
+		"witnesses": [
+			{
+				"name": "timeZero",
+				"cls": null,
+				"weight": 2,
+				"detail": {
+					"distanceBeats": 0.47990401919616094
+				}
+			},
+			{
+				"name": "harmonicRhythm",
+				"cls": null,
+				"weight": 2,
+				"detail": {
+					"histogram": [
+						0,
+						0,
+						0,
+						0
+					],
+					"margin": 0,
+					"ratio": {
+						"$number": "Infinity"
+					}
+				}
+			},
+			{
+				"name": "sections",
+				"cls": 2,
+				"weight": 1,
+				"detail": {
+					"histogram": [
+						1,
+						1,
+						3,
+						0
+					],
+					"margin": 2,
+					"ratio": 3,
+					"peaks": 5
+				}
+			}
+		]
+	},
+	"alignment": {
+		"barStarts": [
+			0.5572789115646258,
+			1.7430385487528344,
+			2.882358276643991,
+			3.882358276643991,
+			5.021678004535147,
+			6.1609977324263046,
+			7.207437641723356,
+			8.207437641723356,
+			9.207437641723356,
+			10.207437641723356,
+			11.207437641723356,
+			12.207437641723356,
+			13.207437641723356,
+			14.207437641723356,
+			15.207437641723356,
+			16.207437641723356,
+			17.32498866213152
+		],
+		"rawBarStarts": [
+			0.5572789115646258,
+			1.7430385487528344,
+			2.882358276643991,
+			3.882358276643991,
+			5.021678004535147,
+			6.1609977324263046,
+			7.207437641723356,
+			8.207437641723356,
+			9.207437641723356,
+			10.207437641723356,
+			11.207437641723356,
+			12.207437641723356,
+			13.207437641723356,
+			14.207437641723356,
+			15.207437641723356,
+			16.207437641723356,
+			17.32498866213152
+		],
+		"repair": null,
+		"cost": 0.03420354130906302,
+		"controlCost": 0.8285107880228817,
+		"localCost": [
+			0.030546407807957043,
+			0.03419603559781204,
+			0.036369625656377705,
+			0.034998377446423874,
+			0.0343436673283577,
+			0.033875556154684586,
+			0.034438585596425195,
+			0.033354082737456665,
+			0.0383796924281688,
+			0.03296115909787742,
+			0.034207814949608985,
+			0.03176410479301756,
+			0.03657778556503001,
+			0.03525784035975283,
+			0.032316574383349644,
+			0.03240415249019861
+		],
+		"firstSound": 0.2000907029478458,
+		"lastSound": 32.04997732426304
+	},
+	"fit": {
+		"bar1": 0.5572789115646258,
+		"medianBar": 1,
+		"declaredBar": 2,
+		"ratio": 24.222953422760014,
+		"reasons": [
+			"bars 1.0 s where the tempo says 2.00 s",
+			"the chart's bars do not line up with the recording through its middle; is this the right chart?"
+		]
+	},
+	"placements": {
+		"sections": [],
+		"keyChanges": [],
+		"tempoChanges": [],
+		"ratio": 24.222953422760014,
+		"samePiece": true
+	},
+	"timing": {
+		"format": "barmark-timing",
+		"version": 1,
+		"chart": {
+			"bars": 16,
+			"hash": "bd8096244e58f01f"
+		},
+		"recording": {
+			"duration": 32.04997732426304
+		},
+		"source": "aligned",
+		"bars": [
+			{
+				"bar": 1,
+				"start": 0.5572789115646258
+			},
+			{
+				"bar": 2,
+				"start": 1.7430385487528344
+			},
+			{
+				"bar": 3,
+				"start": 2.882358276643991
+			},
+			{
+				"bar": 4,
+				"start": 3.882358276643991
+			},
+			{
+				"bar": 5,
+				"start": 5.021678004535147
+			},
+			{
+				"bar": 6,
+				"start": 6.1609977324263046
+			},
+			{
+				"bar": 7,
+				"start": 7.207437641723356
+			},
+			{
+				"bar": 8,
+				"start": 8.207437641723356
+			},
+			{
+				"bar": 9,
+				"start": 9.207437641723356
+			},
+			{
+				"bar": 10,
+				"start": 10.207437641723356
+			},
+			{
+				"bar": 11,
+				"start": 11.207437641723356
+			},
+			{
+				"bar": 12,
+				"start": 12.207437641723356
+			},
+			{
+				"bar": 13,
+				"start": 13.207437641723356
+			},
+			{
+				"bar": 14,
+				"start": 14.207437641723356
+			},
+			{
+				"bar": 15,
+				"start": 15.207437641723356
+			},
+			{
+				"bar": 16,
+				"start": 16.207437641723356
+			}
+		],
+		"end": 17.32498866213152
+	},
+	"build": {
+		"on": "declared",
+		"grid": [
+			0,
+			2,
+			4,
+			6,
+			8,
+			10,
+			12,
+			14,
+			16,
+			18,
+			20,
+			22,
+			24,
+			26,
+			28,
+			30,
+			32,
+			32.04997732426304
+		],
+		"chart": "# Equivalence flat-harmony\ntime: 4/4, tempo: 120\n| ? C / / | / | / | / |\n| / | / | / | / |\n| / | / | / | / |\n| / | / | / | / |\n| / / / ? |\n",
+		"timing": {
+			"format": "barmark-timing",
+			"version": 1,
+			"chart": {
+				"bars": 17,
+				"hash": "3367859a46adf383"
+			},
+			"source": "detected",
+			"bars": [
+				{
+					"bar": 1,
+					"start": 0
+				},
+				{
+					"bar": 2,
+					"start": 2
+				},
+				{
+					"bar": 3,
+					"start": 4
+				},
+				{
+					"bar": 4,
+					"start": 6
+				},
+				{
+					"bar": 5,
+					"start": 8
+				},
+				{
+					"bar": 6,
+					"start": 10
+				},
+				{
+					"bar": 7,
+					"start": 12
+				},
+				{
+					"bar": 8,
+					"start": 14
+				},
+				{
+					"bar": 9,
+					"start": 16
+				},
+				{
+					"bar": 10,
+					"start": 18
+				},
+				{
+					"bar": 11,
+					"start": 20
+				},
+				{
+					"bar": 12,
+					"start": 22
+				},
+				{
+					"bar": 13,
+					"start": 24
+				},
+				{
+					"bar": 14,
+					"start": 26
+				},
+				{
+					"bar": 15,
+					"start": 28
+				},
+				{
+					"bar": 16,
+					"start": 30
+				},
+				{
+					"bar": 17,
+					"start": 32
+				}
+			],
+			"end": 32.04997732426304,
+			"recording": {
+				"duration": 32.04997732426304
+			}
+		},
+		"confidence": {
+			"format": "barmark-confidence",
+			"version": 1,
+			"bars": [
+				{
+					"bar": 1,
+					"confidence": 0.75,
+					"slots": [
+						0,
+						1,
+						1,
+						1
+					]
+				},
+				{
+					"bar": 2,
+					"confidence": 1,
+					"slots": [
+						1
+					]
+				},
+				{
+					"bar": 3,
+					"confidence": 1,
+					"slots": [
+						1
+					]
+				},
+				{
+					"bar": 4,
+					"confidence": 1,
+					"slots": [
+						1
+					]
+				},
+				{
+					"bar": 5,
+					"confidence": 1,
+					"slots": [
+						1
+					]
+				},
+				{
+					"bar": 6,
+					"confidence": 1,
+					"slots": [
+						1
+					]
+				},
+				{
+					"bar": 7,
+					"confidence": 1,
+					"slots": [
+						1
+					]
+				},
+				{
+					"bar": 8,
+					"confidence": 1,
+					"slots": [
+						1
+					]
+				},
+				{
+					"bar": 9,
+					"confidence": 1,
+					"slots": [
+						1
+					]
+				},
+				{
+					"bar": 10,
+					"confidence": 1,
+					"slots": [
+						1
+					]
+				},
+				{
+					"bar": 11,
+					"confidence": 1,
+					"slots": [
+						1
+					]
+				},
+				{
+					"bar": 12,
+					"confidence": 1,
+					"slots": [
+						1
+					]
+				},
+				{
+					"bar": 13,
+					"confidence": 1,
+					"slots": [
+						1
+					]
+				},
+				{
+					"bar": 14,
+					"confidence": 1,
+					"slots": [
+						1
+					]
+				},
+				{
+					"bar": 15,
+					"confidence": 1,
+					"slots": [
+						1
+					]
+				},
+				{
+					"bar": 16,
+					"confidence": 1,
+					"slots": [
+						1
+					]
+				},
+				{
+					"bar": 17,
+					"confidence": 0.75,
+					"slots": [
+						1,
+						1,
+						1,
+						0
+					]
+				}
+			]
+		},
+		"diagnostics": [
+			{
+				"level": "warning",
+				"message": "No chord was detected here; written as ?"
+			},
+			{
+				"level": "warning",
+				"message": "No chord was detected here; written as ?"
+			}
+		]
+	}
+}
