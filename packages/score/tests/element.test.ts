@@ -10,11 +10,19 @@ const window = parseHTML(
 	'<!doctype html><html><head><base href="https://example.test/page/"></head><body></body></html>',
 );
 const { document } = window;
+/** linkedom's CustomEvent, keeping `composed`, which it drops. */
+const LinkedomCustomEvent = window.CustomEvent as unknown as typeof CustomEvent;
+class ComposedCustomEvent extends LinkedomCustomEvent<unknown> {
+	constructor(type: string, init?: CustomEventInit) {
+		super(type, init);
+		Object.defineProperty(this, "composed", { value: init?.composed ?? false });
+	}
+}
 Object.assign(globalThis, {
 	HTMLElement: window.HTMLElement,
 	customElements: window.customElements,
 	MutationObserver: window.MutationObserver,
-	CustomEvent: window.CustomEvent,
+	CustomEvent: ComposedCustomEvent,
 	Event: window.Event,
 });
 
@@ -563,6 +571,138 @@ describe("<barmark-score> loading", () => {
 		const styles = parts(served.host as HTMLElement).root.querySelector("style")?.textContent ?? "";
 		expect(styles).toContain("prefers-reduced-motion");
 	});
+});
+
+/** Every `scoreerror` reaching the document, while `catching` runs, with a console.warn silenced. */
+async function scoreErrors(catching: (seen: ScoreError[]) => Promise<void>) {
+	const seen: ScoreError[] = [];
+	const listen = (e: Event) => {
+		const { detail, bubbles, composed, target } = e as CustomEvent<{ reason: string }>;
+		seen.push({ reason: detail.reason, bubbles, composed, target });
+	};
+	const warn = spyOn(console, "warn").mockImplementation(() => {});
+	document.addEventListener("scoreerror", listen);
+	try {
+		await catching(seen);
+		// The reason is the one the warning gives.
+		for (const [i, e] of seen.entries())
+			expect(String(warn.mock.calls[i]?.[0])).toBe(
+				`<barmark-score>: the score couldn't be drawn: ${e.reason}`,
+			);
+		expect(warn.mock.calls).toHaveLength(seen.length);
+	} finally {
+		document.removeEventListener("scoreerror", listen);
+		warn.mockRestore();
+	}
+}
+type ScoreError = {
+	reason: string;
+	bubbles: boolean;
+	composed: boolean;
+	target: EventTarget | null;
+};
+
+describe("<barmark-score> scoreerror", () => {
+	test("a chart the engine refuses: bubbling, composed, from the element, with the reason", () =>
+		scoreErrors(async (seen) => {
+			const el = await make({ view: "score" });
+			calls[0]?.resolve({ id: 1, ok: false, reason: "line 3: Xq9 is not a chord" });
+			await flush();
+			expect(parts(el).note?.textContent).toBe("The score couldn't be drawn");
+			expect(seen).toEqual([
+				{ reason: "line 3: Xq9 is not a chord", bubbles: true, composed: true, target: el },
+			]);
+		}));
+
+	test("an engine that fails to load", () =>
+		scoreErrors(async (seen) => {
+			setEngineForTests(() => {
+				throw new Error("no worker here");
+			});
+			try {
+				await make({ view: "score" });
+			} finally {
+				setEngineForTests(fakeEngine);
+			}
+			expect(seen.map((e) => e.reason)).toEqual(["no worker here"]);
+		}));
+
+	test("an engine that fails while engraving", () =>
+		scoreErrors(async (seen) => {
+			await make({ view: "score" });
+			calls[0]?.reject(new Error("The score engine failed"));
+			await flush();
+			expect(seen.map((e) => e.reason)).toEqual(["The score engine failed"]);
+		}));
+
+	test("a refused verovio-url, and a refused verovio-integrity", () =>
+		scoreErrors(async (seen) => {
+			await make({ view: "score", "verovio-url": "data:text/javascript,1" });
+			await make({
+				view: "score",
+				"verovio-url": "https://cdn.test/verovio.mjs",
+				"verovio-integrity": "md5-x",
+			});
+			expect(seen.map((e) => e.reason)).toEqual([
+				"verovio-url must be an http(s) URL",
+				"verovio-integrity must be one sha256-, sha384- or sha512- digest",
+			]);
+		}));
+
+	test("a src that could not be loaded leaves no chart to engrave", () =>
+		scoreErrors(async (seen) => {
+			const offline = () => Promise.reject(new Error("offline"));
+			const fetching = spyOn(globalThis, "fetch").mockImplementation(
+				Object.assign(offline, { preconnect: () => {} }),
+			);
+			try {
+				const el = await make({ src: "https://example.test/song.chart" }, null);
+				el.view = "score";
+				await flush();
+				expect(parts(el).note?.textContent).toBe("The score couldn't be drawn");
+			} finally {
+				fetching.mockRestore();
+			}
+			expect(seen.map((e) => e.reason)).toEqual(["there is no chart to engrave"]);
+		}));
+
+	test("an engraving that is not clean SVG", () =>
+		scoreErrors(async (seen) => {
+			const el = await make({ view: "score" });
+			calls[0]?.resolve({ id: 1, ok: true, svg: "<svg viewBox=0></svg>", pages: 1 });
+			await flush();
+			expect(parts(el).note?.textContent).toBe("The score couldn't be drawn");
+			expect(seen.map((e) => e.reason)).toEqual([
+				"The score markup is not clean SVG: an unquoted attribute value",
+			]);
+		}));
+
+	test("once per failure: the disabled Score radio fires none; a retry that fails fires again", () =>
+		scoreErrors(async (seen) => {
+			const el = await make({ view: "score" });
+			calls[0]?.resolve({ id: 1, ok: false, reason: "first" });
+			await flush();
+			click(parts(el).radios[1] as HTMLElement);
+			el.view = "score";
+			await flush();
+			expect(seen.map((e) => e.reason)).toEqual(["first"]);
+
+			el.text = "| D |";
+			await flush();
+			click(parts(el).radios[1] as HTMLElement);
+			await flush();
+			calls[1]?.resolve({ id: 2, ok: false, reason: "second" });
+			await flush();
+			expect(seen.map((e) => e.reason)).toEqual(["first", "second"]);
+		}));
+
+	test("a score drawn fires none", () =>
+		scoreErrors(async (seen) => {
+			await make({ view: "score" });
+			calls[0]?.resolve({ id: 1, ok: true, svg: svg("first"), pages: 1 });
+			await flush();
+			expect(seen).toEqual([]);
+		}));
 });
 
 describe("<barmark-score verovio-integrity>", () => {

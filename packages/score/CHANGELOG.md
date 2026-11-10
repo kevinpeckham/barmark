@@ -6,6 +6,28 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- **A `scoreerror` event says why the score couldn't be drawn.** Whenever
+  `<barmark-score>` shows "The score couldn't be drawn", it fires
+  `scoreerror` (`bubbles`, `composed`) with `detail: { reason }`, the
+  reason its console warning gives: Verovio failing to load or engrave, a
+  refused `verovio-url` or `verovio-integrity`, a `src` that could not be
+  loaded, or an engraving that is not clean SVG. Once per failure; a
+  retry the chart or a new URL enables fires again if it fails.
+
+### Changed
+
+- **The grid follows `@barmark/render`'s new `rehearsal-letters` rule**:
+  no letters beside a chart's own rehearsal marks (`@A`), so the grid's
+  headings no longer show two marks, matching the score, which draws only
+  the chart's own.
+
+### Fixed
+
+- **The grid's tempo shows the beat it counts**, from `@barmark/render`:
+  "♩. = 40" in 6/8, 9/8 and 12/8, where it showed "♩ = 40".
+
 ### Technical
 
 - **The README says when Vite needs `worker: { format: "es" }`**: on Vite 8
