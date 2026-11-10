@@ -41,7 +41,7 @@ jobs:
       - run: bun run fallow --format github-annotations
   # @barmark/engraver: Verovio compiled by emsdk, which must match
   # packages/engraver/src/info.ts byte for byte. A restored dist is checked
-  # against info.ts; a miss compiles from clean (6 to 8 minutes), and only
+  # against info.ts; a miss compiles from clean (about 4.5 minutes), and only
   # that clean build, once it has matched info.ts, writes the dist cache.
   # The weekly and hand-dispatched runs skip the dist cache and always
   # compile. Later jobs take the files from the engraver-dist artifact.
