@@ -1,6 +1,6 @@
 # `@barmark/engraver`: design
 
-Status: revised after review (2026-11-10), for Kevin. **Kevin** decided
+Status: approved by Kevin (2026-11-10), with his answers to the ten questions at the end. **Kevin** decided
 that the lighter Verovio becomes its own npm package in the barmark
 family, and named it `@barmark/engraver` (see Name). Everything else is a **design call**
 (Claude's, with a reason), open to correction. The questions only Kevin
@@ -514,6 +514,8 @@ jsDelivr, so the GPLv3 sections that LGPLv3 incorporates apply.
 5. Phase 2's go-ahead.
 
 ## Questions for Kevin (with recommendations)
+
+**Decided by Kevin (2026-11-10): yes to all ten recommendations below.** Each "Recommend" now reads as the decision.
 
 1. **`-Oz` or `-Os`?**
    - The size gap is 0.18 MB gzip (about 0.15 s at 10 Mbit/s), paid once
