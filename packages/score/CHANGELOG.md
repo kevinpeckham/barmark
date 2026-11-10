@@ -6,6 +6,8 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-11-10
+
 ### Added
 
 - **The grid takes `columns`** (`@barmark/render`'s `columns: "shared" |
@@ -13,7 +15,6 @@ package uses [semantic versioning](https://semver.org/).
   its grid, and `renderScoreHtml` passes the option through. With
   `columns="row"` each row of the grid sizes its own bars; the score view
   is unchanged.
-
 - **A `scoreerror` event says why the score couldn't be drawn.** Whenever
   `<barmark-score>` shows "The score couldn't be drawn", it fires
   `scoreerror` (`bubbles`, `composed`) with `detail: { reason }`, the
@@ -24,9 +25,10 @@ package uses [semantic versioning](https://semver.org/).
 
 ### Changed
 
-- **Requires `@barmark/render` 0.19.0** (the tempo beat, the
-  `rehearsal-letters` rule), whose minor release the `^0.18` caret would
-  not reach.
+- **Requires `barmark` 0.23.0, `@barmark/render` 0.19.0** (the tempo
+  beat, the `rehearsal-letters` rule) **and `@barmark/musicxml` 0.9.0**
+  (an ending across lines), whose minor releases a caret range would not
+  reach.
 - **The grid follows `@barmark/render`'s new `rehearsal-letters` rule**:
   no letters beside a chart's own rehearsal marks (`@A`), so the grid's
   headings no longer show two marks, matching the score, which draws only
@@ -224,7 +226,8 @@ First release.
   needs no config; Vite 7 needs `optimizeDeps.exclude` and
   `worker.format: "es"`.
 
-[Unreleased]: https://github.com/kevinpeckham/barmark/compare/score-v0.3.0...HEAD
+[Unreleased]: https://github.com/kevinpeckham/barmark/compare/score-v0.4.0...HEAD
+[0.4.0]: https://github.com/kevinpeckham/barmark/compare/score-v0.3.0...score-v0.4.0
 [0.3.0]: https://github.com/kevinpeckham/barmark/compare/score-v0.2.0...score-v0.3.0
 [0.2.0]: https://github.com/kevinpeckham/barmark/compare/score-v0.1.1...score-v0.2.0
 [0.1.1]: https://github.com/kevinpeckham/barmark/compare/score-v0.1.0...score-v0.1.1
