@@ -38,6 +38,10 @@
         "verovio": "6.4.1",
       },
     },
+    "packages/engraver": {
+      "name": "@barmark/engraver",
+      "version": "0.1.0",
+    },
     "packages/midi": {
       "name": "@barmark/midi",
       "version": "0.3.0",
@@ -84,6 +88,8 @@
   },
   "packages": {
     "@barmark/cli": ["@barmark/cli@workspace:packages/cli"],
+
+    "@barmark/engraver": ["@barmark/engraver@workspace:packages/engraver"],
 
     "@barmark/midi": ["@barmark/midi@workspace:packages/midi"],
 

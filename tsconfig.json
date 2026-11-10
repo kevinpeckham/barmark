@@ -25,5 +25,11 @@
 			"@barmark/midi/perform": ["./packages/midi/src/perform/index.ts"]
 		}
 	},
-	"include": ["packages/*/src", "packages/*/tests", "packages/*/browser", "scripts"]
+	"include": [
+		"packages/*/src",
+		"packages/*/tests",
+		"packages/*/browser",
+		"packages/engraver/build",
+		"scripts"
+	]
 }
