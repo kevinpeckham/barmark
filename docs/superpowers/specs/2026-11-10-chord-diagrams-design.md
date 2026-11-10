@@ -150,7 +150,7 @@ shape only 28% of the time, so a hand-written table is needed for the
 chords people play most. (c) keeps every package MIT and still gets
 ChordPro's judgement, as a report for a person, never as shipped data.
 Our table is written from the instrument and checked by machine (section
-7); it is never copied from ChordPro's files.
+8); it is never copied from ChordPro's files.
 
 **The table (design call).** One TypeScript module in the new package,
 written by hand:
