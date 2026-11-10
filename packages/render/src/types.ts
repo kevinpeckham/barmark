@@ -45,7 +45,7 @@ export type ChartModel = {
  * force, never a one-bar meter's (2.4): the bottom number in a simple meter
  * (`note: 4` is a quarter), a dotted quarter in 6/8, 9/8 and 12/8.
  */
-export type TempoBeat = { note: number; dotted: boolean };
+export type TempoBeat = { note: 2 | 4 | 8 | 16; dotted: boolean };
 
 export type SectionBlock = {
 	/** The heading as written; null for content before the first heading. */

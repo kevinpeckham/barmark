@@ -15,21 +15,33 @@ const COMMON_TIME: Meter = { n: 4, d: 4 };
  */
 export function tempoBeatOf(meter: Meter | undefined): TempoBeat {
 	const m = meter ?? COMMON_TIME;
-	return beatsOf(m) === m.n ? { note: m.d, dotted: false } : { note: m.d / 2, dotted: true };
+	// barmark admits a bottom number of 2, 4, 8 or 16 only (grammar, `time:`), and only 8 is compound.
+	const note = (beatsOf(m) === m.n ? m.d : m.d / 2) as TempoBeat["note"];
+	return { note, dotted: beatsOf(m) !== m.n };
 }
 
 /**
  * The beat a tempo counts at each directive line, by line number: that of
- * the `time:` in force there, its own included (grammar 2.1). One-bar
- * meters set no `time:`, so they never change it (grammar 2.4).
+ * the `time:` in force at the next bar line, as the parser, MIDI and
+ * MusicXML count the bar's meter (grammar 2.1), so a `time:` written on a
+ * later line before that bar counts too. Directives after the last bar line
+ * take the `time:` in force at the chart's end. One-bar meters set no
+ * `time:`, so they never change it (grammar 2.4).
  */
 export function tempoBeats(lines: Line[]): Map<number, TempoBeat> {
 	const beats = new Map<number, TempoBeat>();
 	let time = COMMON_TIME;
+	let waiting: number[] = [];
+	const settle = () => {
+		for (const line of waiting) beats.set(line, tempoBeatOf(time));
+		waiting = [];
+	};
 	for (const l of lines) {
+		if (l.kind === "bars") settle();
 		if (l.kind !== "directive") continue;
 		time = l.set.time ?? time;
-		beats.set(l.line, tempoBeatOf(time));
+		waiting.push(l.line);
 	}
+	settle();
 	return beats;
 }

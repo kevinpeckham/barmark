@@ -129,10 +129,16 @@ export function layoutChart(text: string, options: LayoutOptions = {}): ChartMod
 		parts: parse.parts,
 		credits: parse.credits,
 		header,
-		tempoBeat: tempoBeatOf(header.time),
+		tempoBeat: headerBeat(parse.lines, ctx.beats),
 		blocks,
 		diagnostics: parse.diagnostics,
 	};
+}
+
+/** The beat the header's tempo counts: its directives' (they share the next bar line), or the default. */
+function headerBeat(lines: Line[], beats: Map<number, TempoBeat>): TempoBeat {
+	const first = lines.find((l) => l.kind === "directive");
+	return (first && beats.get(first.line)) ?? tempoBeatOf(undefined);
 }
 
 /** Rehearsal letters mark position: every section occurrence, and leading bars, in play order. */

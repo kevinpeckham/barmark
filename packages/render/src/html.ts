@@ -175,7 +175,7 @@ function copyrightHtml(model: ChartModel): string {
  * combining augmentation dot (U+1D16D) is missing from most fonts and sits
  * apart from the note where it is drawn.
  */
-const BEAT_NOTES: Record<number, readonly [string, string]> = {
+const BEAT_NOTES: Record<TempoBeat["note"], readonly [string, string]> = {
 	2: ["\u{1D15E}", "half"],
 	4: ["♩", "quarter"],
 	8: ["♪", "eighth"],
@@ -184,7 +184,7 @@ const BEAT_NOTES: Record<number, readonly [string, string]> = {
 
 /** The beat note, spoken by its name: "♩." is "dotted quarter note". */
 function beatHtml(beat: TempoBeat): string {
-	const [glyph, name] = BEAT_NOTES[beat.note] ?? ["♩", "quarter"];
+	const [glyph, name] = BEAT_NOTES[beat.note];
 	const dotted = beat.dotted ? "dotted " : "";
 	return `<span class="bm-beat" role="img" aria-label="${dotted}${name} note">${glyph}${beat.dotted ? "." : ""}</span>`;
 }

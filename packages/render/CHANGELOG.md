@@ -20,11 +20,15 @@ package uses [semantic versioning](https://semver.org/).
   always drew `♩ =`, so 6/8 with `tempo: 40` showed "♩ = 40" though
   barmark (grammar 2.1) and the MIDI and MusicXML exports count 40 dotted
   quarters. A tempo, and a `rit.` or `accel.` `to` one, now shows the beat
-  of the `time:` in force where it is written: "♩. = 40" in 6/8, 9/8 and
-  12/8, 𝅗𝅥 in 2/2, ♪ in 3/8, ♩ in 4/4 as before. A `time:` change mid-chart
-  moves it; a one-bar meter does not (grammar 2.4). Screen readers hear
-  the note's name ("dotted quarter note"). The model gains `tempoBeat`
-  (`{ note, dotted }`) on `ChartModel` and on each directive item.
+  of the `time:` in force at the bar it applies to, as the parser, MIDI and
+  MusicXML count it: "♩. = 40" in 6/8, 9/8 and 12/8, 𝅗𝅥 in 2/2, ♪ in 3/8,
+  ♩ in 4/4 as before. A `time:` change mid-chart moves it, even one
+  written on the line after the `tempo:`; a one-bar meter does not
+  (grammar 2.4). The note's `.bm-beat` span tries Apple Symbols, Segoe UI
+  Symbol, Noto Music and Symbola first, which hold 𝅗𝅥 and 𝅘𝅥𝅯. Screen
+  readers hear the note's name ("dotted quarter note"). The model gains
+  `tempoBeat` (`{ note, dotted }`) on `ChartModel` and on each directive
+  item.
 
 ## [0.18.0] - 2026-11-09
 

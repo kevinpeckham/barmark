@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { parseHTML } from "linkedom";
 import { layoutChart, renderChartUnwrapped } from "../src/index.js";
+import type { TempoBeat } from "../src/types.js";
 
 const doc = (html: string) =>
 	parseHTML(`<!doctype html><html><body>${html}</body></html>`).document;
@@ -19,8 +20,8 @@ const directiveBeats = (text: string) =>
 		.blocks.flatMap((b) => b.items)
 		.flatMap((i) => (i.kind === "directive" ? [i.tempoBeat] : []));
 
-const QUARTER = { note: 4, dotted: false };
-const DOTTED_QUARTER = { note: 4, dotted: true };
+const QUARTER: TempoBeat = { note: 4, dotted: false };
+const DOTTED_QUARTER: TempoBeat = { note: 4, dotted: true };
 
 describe("the beat a tempo counts (barmark's grammar 2.1)", () => {
 	test("4/4, and a chart with no time:, count quarters", () => {
@@ -93,6 +94,31 @@ describe("the beat a tempo counts (barmark's grammar 2.1)", () => {
 		const four = "tempo: 100\n## A\n| [6/8] G | C |\ntempo: 90\n| [6/8] D | G |";
 		expect(directives(four)[0]?.textContent).toContain("Tempo ♩ = 90");
 		expect(directiveBeats(four)).toEqual([QUARTER]);
+	});
+
+	test("a time: on a later line, before the next bar, sets the beat a tempo counts", () => {
+		// The bar plays 60 dotted quarters: the parser, MIDI and MusicXML count the bar's meter.
+		const mid = "## A\n| G |\ntempo: 60\ntime: 6/8\n| C |";
+		expect(directives(mid).map((d) => d.textContent?.replace("→", ""))).toEqual([
+			"Tempo ♩. = 60",
+			"Time 6/8",
+		]);
+		expect(directiveBeats(mid)).toEqual([DOTTED_QUARTER, DOTTED_QUARTER]);
+		// A header split by a heading still counts the meter of its first bar.
+		expect(header("tempo: 60\n## A\ntime: 6/8\n| G |")?.textContent).toBe("♩. = 60");
+		expect(layoutChart("tempo: 60\n## A\ntime: 6/8\n| G |").tempoBeat).toEqual(DOTTED_QUARTER);
+		// A time: after the bar does not reach back.
+		const after = "## A\n| G |\ntempo: 60\n| C |\ntime: 6/8\n| D |";
+		expect(directiveBeats(after)).toEqual([QUARTER, DOTTED_QUARTER]);
+	});
+
+	test("a tempo with no bars after it counts the time: in force at the chart's end", () => {
+		expect(directiveBeats("time: 6/8\n## A\n| G |\ntempo: 60")).toEqual([DOTTED_QUARTER]);
+		expect(directiveBeats("## A\n| G |\ntempo: 60\ntime: 6/8")).toEqual([
+			DOTTED_QUARTER,
+			DOTTED_QUARTER,
+		]);
+		expect(directiveBeats("## A\n| G |\ntempo: 60")).toEqual([QUARTER]);
 	});
 
 	test("a replayed section's directives keep their beat", () => {
