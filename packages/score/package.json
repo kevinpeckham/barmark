@@ -52,7 +52,7 @@
 		"@barmark/musicxml": "workspace:^",
 		"@barmark/render": "workspace:^",
 		"barmark": "workspace:^",
-		"verovio": "^6.4.1"
+		"verovio": "6.4.1"
 	},
 	"scripts": {
 		"build": "rm -rf dist && tsc -p tsconfig.build.json",

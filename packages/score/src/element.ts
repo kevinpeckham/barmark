@@ -3,7 +3,8 @@
  * Grid / Score switch. Its chart comes from the `text` property, a `src` URL or
  * a child `<script type="text/barmark">`, as `<barmark-chart>`'s does. A shadow
  * root drawn by `renderScoreHtml` is reused. The score engine (Verovio, in a
- * worker) loads on the first switch to the score, never before. Importing
+ * worker) loads on the first switch to the score, or earlier as `preload`
+ * asks, showing its progress while it loads. Importing
  * this module registers the element (once) and the font (once per document).
  */
 
@@ -20,7 +21,9 @@ import {
 	optionsFromAttributes,
 } from "@barmark/render/element";
 import { parseChart } from "barmark";
-import type { Engine, EngraveReply } from "./engine.js";
+import { isIntegrity } from "./download.js";
+import type { Engine, EngineStatus, EngraveReply } from "./engine.js";
+import { showStatus, UNMEASURED } from "./loading.js";
 import { isLeipzigFace, scorePane } from "./markup.js";
 import { decodeCarried, gridError, scoreShell } from "./shell.js";
 import { type ScoreView, viewOf } from "./switch.js";
@@ -35,13 +38,18 @@ export function setEngineForTests(factory: EngineFactory | null): void {
 }
 
 let loading: Promise<Engine> | null = null;
+/** The page's engine once imported. */
+let loaded: Engine | null = null;
 
 /** The page's engine, imported on first use; a failed import is tried again next time. */
 function loadEngine(): Promise<Engine> {
 	const factory = testEngine;
 	if (factory) return Promise.resolve().then(factory);
 	loading ??= import("./engine.js").then(
-		(m) => m.engine(),
+		(m) => {
+			loaded = m.engine();
+			return loaded;
+		},
 		(e: unknown) => {
 			loading = null;
 			throw e;
@@ -50,7 +58,6 @@ function loadEngine(): Promise<Engine> {
 	return loading;
 }
 
-const LOADING = "Loading score…";
 /** The score's accessible name when the chart has no title. */
 const UNTITLED = "Score";
 const NOTE = "The score couldn't be drawn";
@@ -102,8 +109,24 @@ function takeEarlyText(el: object): { text: string | null } | null {
 /** The grid's attributes, as `<barmark-chart>` observes them, then the score's own. */
 const OBSERVED = [
 	...["src", "theme", "bar-numbers", "rehearsal-letters", "numerals", "wrap", "show-part"],
-	...["view", "verovio-url"],
+	...["view", "verovio-url", "verovio-integrity", "preload"],
 ];
+
+/** With no `requestIdleCallback`, how long after connecting `preload="idle"` starts the load. */
+const IDLE_FALLBACK_MS = 500;
+
+/** Whether the reader asked to save data, or is on a 2G line: `preload="idle"` waits for intent there. */
+function sparing(): boolean {
+	const c = (
+		globalThis.navigator as { connection?: { saveData?: boolean; effectiveType?: string } }
+	)?.connection;
+	return c?.saveData === true || c?.effectiveType === "2g" || c?.effectiveType === "slow-2g";
+}
+
+/** The pointer, focus or touch on the Score radio that says a reader may want the score. */
+const INTENT = ["pointerenter", "focus", "touchstart"];
+
+type Preload = "none" | "intent" | "idle";
 
 const messageOf = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
@@ -123,6 +146,7 @@ const same = (a: Engraving | null, b: Engraving) =>
 type Grid = { text: string | null | undefined; html: string | null };
 
 const URL_REASON = "verovio-url must be an http(s) URL";
+const INTEGRITY_REASON = "verovio-integrity must be one sha256-, sha384- or sha512- digest";
 
 /** `verovio-url` resolved against the page: undefined when absent, null unless http(s). */
 function verovioHref(value: string | null, base: string | undefined): string | null | undefined {
@@ -160,6 +184,12 @@ function defineElement(): void {
 		/** The engraving and theme the pane holds, so an unchanged one is not written again. */
 		#revealed: { svg: string; theme: string } | null = null;
 		#asked: Engraving | null = null;
+		/** What the engine last said about the request being waited on. */
+		#status: EngineStatus = UNMEASURED;
+		/** Whether this element has asked the engine to preload. */
+		#preloaded = false;
+		/** The pending idle preload's cancel, if one is armed. */
+		#idle: (() => void) | null = null;
 
 		connectedCallback() {
 			const early = takeEarlyText(this);
@@ -171,8 +201,11 @@ function defineElement(): void {
 				this.#resize.observe(this);
 			}
 			this.#schedule();
+			this.#armIdle();
 		}
 		disconnectedCallback() {
+			this.#idle?.();
+			this.#idle = null;
 			this.#observer.disconnect();
 			this.#resize?.disconnect();
 			this.#resize = null;
@@ -181,7 +214,8 @@ function defineElement(): void {
 		attributeChangedCallback(name: string, old: string | null, value: string | null) {
 			if (!this.isConnected || old === value) return;
 			// A new URL may be the fix: the Score radio works again, as after a new chart.
-			if (name === "verovio-url") this.#clearFailure();
+			if (name === "verovio-url" || name === "verovio-integrity") this.#clearFailure();
+			else if (name === "preload") this.#armIdle();
 			else if (name === "view") this.#applyView();
 			else if (name === "src") this.#chartChanged();
 			else this.#schedule();
@@ -298,6 +332,69 @@ function defineElement(): void {
 			this.#wired = switcher;
 			switcher.addEventListener("click", (e) => this.#pick(radioOf(e.target)));
 			switcher.addEventListener("keydown", (e) => this.#key(e as KeyboardEvent));
+			const score = switcher.querySelector('[data-view="score"]');
+			for (const type of INTENT)
+				score?.addEventListener(type, () => this.#intent(), { passive: true });
+		}
+
+		/** `preload`: "none" unless "intent" or "idle"; "idle" is "intent" on a sparing connection. */
+		#preloadMode(): Preload {
+			const v = this.getAttribute("preload");
+			if (v === "idle") return sparing() ? "intent" : "idle";
+			return v === "intent" ? "intent" : "none";
+		}
+
+		/** A reader reaching for Score: any preload but "none" starts now. */
+		#intent() {
+			if (this.#preloadMode() !== "none") this.#preload();
+		}
+
+		/** `preload="idle"`: start the load when the page is idle (or shortly, without requestIdleCallback). */
+		#armIdle() {
+			if (this.#idle || this.#preloaded || this.#preloadMode() !== "idle") return;
+			const run = () => {
+				this.#idle = null;
+				this.#preload();
+			};
+			const g = globalThis as {
+				requestIdleCallback?: (cb: () => void) => number;
+				cancelIdleCallback?: (id: number) => void;
+			};
+			if (g.requestIdleCallback) {
+				const id = g.requestIdleCallback(run);
+				this.#idle = () => g.cancelIdleCallback?.(id);
+			} else {
+				const t = setTimeout(run, IDLE_FALLBACK_MS);
+				this.#idle = () => clearTimeout(t);
+			}
+		}
+
+		/** Loads the engine with no job, once per element; the engine shares the one load. */
+		#preload() {
+			if (this.#preloaded) return;
+			const source = this.#source();
+			if (source === null) return;
+			this.#preloaded = true;
+			loadEngine().then(
+				(e) => e.preload(source.url, source.integrity),
+				() => {},
+			);
+		}
+
+		/** Where Verovio comes from, or null (and why) when `verovio-url` or `verovio-integrity` is refused. */
+		#verovio(): { url: string | undefined; integrity: string | undefined } | { refused: string } {
+			const url = verovioHref(this.getAttribute("verovio-url"), this.ownerDocument.baseURI);
+			if (url === null) return { refused: URL_REASON };
+			const integrity = url === undefined ? null : this.getAttribute("verovio-integrity");
+			if (integrity === null) return { url, integrity: undefined };
+			return isIntegrity(integrity)
+				? { url, integrity: integrity.trim() }
+				: { refused: INTEGRITY_REASON };
+		}
+
+		#source() {
+			const v = this.#verovio();
+			return "refused" in v ? null : v;
 		}
 
 		#pick(radio: Element | null) {
@@ -364,19 +461,34 @@ function defineElement(): void {
 			const want = { text: this.#chart, width: this.clientWidth || 0 };
 			if (this.#engraved && same(this.#engraved, want)) return this.#reveal(this.#engraved);
 			if (same(this.#asked, want)) return this.#busy();
-			const url = verovioHref(this.getAttribute("verovio-url"), this.ownerDocument.baseURI);
-			if (url === null) return this.#fail(URL_REASON);
-			void this.#engrave(want, url);
+			const verovio = this.#verovio();
+			if ("refused" in verovio) return this.#fail(verovio.refused);
+			void this.#engrave(want, verovio);
 		}
 
-		/** Engraves `want`; only the newest request this element made is shown. */
-		async #engrave(want: Engraving, url: string | undefined) {
-			this.#busy();
+		/** Engraves `want`; only the newest request this element made is shown, with its status while it waits. */
+		async #engrave(
+			want: Engraving,
+			verovio: { url: string | undefined; integrity: string | undefined },
+		) {
 			this.#asked = want;
 			const ask = ++this.#engraves;
+			this.#status = UNMEASURED;
+			const onStatus = (s: EngineStatus) => {
+				if (ask !== this.#engraves) return;
+				this.#status = s;
+				const { pane } = this.#parts();
+				if (pane && this.#revealed === null) showStatus(pane, s);
+			};
+			const call =
+				verovio.integrity === undefined ? { onStatus } : { onStatus, integrity: verovio.integrity };
+			const run = (e: Engine) => e.engrave(this, want.text, want.width, verovio.url, call);
+			// A loaded engine is asked at once, so its status (not a provisional one) is the first drawn.
+			const request = loaded ? run(loaded) : loadEngine().then(run);
+			this.#busy();
 			let reply: EngraveReply | null;
 			try {
-				reply = await (await loadEngine()).engrave(this, want.text, want.width, url);
+				reply = await request;
 			} catch (e) {
 				reply = { id: 0, ok: false, reason: messageOf(e) };
 			}
@@ -388,11 +500,11 @@ function defineElement(): void {
 			if (this.view === "score") this.#reveal(this.#engraved);
 		}
 
-		/** A score on its way: a shown one stays (busy) until the new one lands, else "Loading score…". */
+		/** A score on its way: a shown one stays (busy) until the new one lands, else its loading status. */
 		#busy() {
 			const { grid, pane } = this.#parts();
 			if (!pane) return;
-			if (this.#revealed === null) pane.textContent = LOADING;
+			if (this.#revealed === null) showStatus(pane, this.#status);
 			pane.setAttribute("aria-busy", "true");
 			pane.toggleAttribute("hidden", false);
 			grid?.toggleAttribute("hidden", true);

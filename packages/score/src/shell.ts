@@ -1,6 +1,7 @@
 // What the server and the element both write inside `<barmark-score>`'s shadow root,
 // so client-drawn and server-drawn markup are the same. Verovio-free, like ./server.js.
 import { stylesheet } from "@barmark/render";
+import { loadingStyles } from "./loading.js";
 import { escapeHtml, scoreStyles } from "./markup.js";
 import { type ScoreView, switchHtml, switchStyles } from "./switch.js";
 
@@ -14,7 +15,7 @@ export const decodeCarried = (text: string) =>
 
 /** The shadow root's content around a drawn grid: styles, the switch, the grid, the (empty) score pane. */
 export const scoreShell = (grid: string, view: ScoreView) =>
-	`<style>${stylesheet}${switchStyles}${scoreStyles}</style>${switchHtml(view)}<div class="bms-grid">${grid}</div><div class="bms-pane" hidden></div>`;
+	`<style>${stylesheet}${switchStyles}${scoreStyles}${loadingStyles}</style>${switchHtml(view)}<div class="bms-grid">${grid}</div><div class="bms-pane" hidden></div>`;
 
 /** A chart that could not be loaded, drawn where the grid would be, as `<barmark-chart>` draws it. */
 export function gridError(message: string, theme: string): string {
