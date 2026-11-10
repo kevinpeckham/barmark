@@ -180,8 +180,8 @@ function pass(
  * chunks to find the peak, pass 2 renders again and hands each chunk,
  * peak-normalized, to `sink`, in order. The chunk is reused: a sink that
  * keeps samples copies them. `chunk` (a whole number ≥ 1, default 65,536)
- * bounds every chunk's length. The samples are `renderWhole`'s bit for
- * bit; `barStarts` is its too.
+ * bounds every chunk's length; any other value takes the default. The
+ * samples are `renderWhole`'s bit for bit; `barStarts` is its too.
  */
 export function renderChartPads(
 	bars: PadBar[],
@@ -189,11 +189,12 @@ export function renderChartPads(
 	sink: (chunk: Float32Array) => void,
 	chunk = CHUNK,
 ): { barStarts: number[] } {
+	const size = Number.isInteger(chunk) && chunk >= 1 ? chunk : CHUNK;
 	let peak = 0;
-	pass(bars, sampleRate, chunk, (out) => {
+	pass(bars, sampleRate, size, (out) => {
 		for (let i = 0; i < out.length; i++) peak = Math.max(peak, Math.abs(out[i] as number));
 	});
-	pass(bars, sampleRate, chunk, (out) => {
+	pass(bars, sampleRate, size, (out) => {
 		if (peak > 0) for (let i = 0; i < out.length; i++) out[i] = (out[i] as number) / peak;
 		sink(out);
 	});

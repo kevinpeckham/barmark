@@ -124,6 +124,16 @@ describe("the streamed render (design §10)", () => {
 		expect(sizes).toEqual([...Array(10).fill(65536), 44100 * 16 - 10 * 65536]);
 	});
 
+	test("a chunk that is not a whole number of at least 1 takes the default", () => {
+		const bars = padBars("time: 4/4, tempo: 60\n| C | G | Am | F |");
+		// NaN first: unguarded, NaN streamed nothing, and 0 or less never finished.
+		for (const chunk of [Number.NaN, 2.5, Number.POSITIVE_INFINITY, 0, -5]) {
+			const sizes: number[] = [];
+			renderChartPads(bars, 44100, (part) => sizes.push(part.length), chunk);
+			expect([chunk, sizes]).toEqual([chunk, [...Array(10).fill(65536), 44100 * 16 - 10 * 65536]]);
+		}
+	});
+
 	test(
 		"the frame count from the bar seconds is the chromagram's of the whole render",
 		() => {
