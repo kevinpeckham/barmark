@@ -181,7 +181,7 @@ test("resizing reflows the score", async ({ page }) => {
 		const seen = { blank: false, busy: false };
 		Object.assign(window, { reflow: seen });
 		new MutationObserver(() => {
-			if (!pane.querySelector(".bms-score svg") || pane.textContent?.includes("Loading score"))
+			if (!pane.querySelector(".bms-score svg") || pane.querySelector(".bms-loading"))
 				seen.blank = true;
 			if (pane.getAttribute("aria-busy") === "true") seen.busy = true;
 		}).observe(pane, { childList: true, subtree: true, attributes: true, characterData: true });
@@ -261,4 +261,141 @@ test("chord accidentals and the tempo's note draw in Leipzig, registered with th
 	await switchToScore(page.locator("#s0"));
 	await switchToScore(page.locator("#s1"));
 	expect(await page.locator("head style[data-barmark-score-font]").count()).toBe(1);
+});
+
+/** What the loading region showed, each time it changed: its live text, the bar's value and the amount. */
+type Seen = { text: string; now: number | null; amount: string };
+
+/** Starts recording the loading region of `el` as it changes. */
+async function watchLoading(el: Locator): Promise<() => Promise<Seen[]>> {
+	await expect(el.locator(".bms-grid .bm-chart")).toBeVisible();
+	await el.evaluate((host) => {
+		const pane = host.shadowRoot?.querySelector(".bms-pane");
+		if (!pane) throw new Error("no pane");
+		const seen: Seen[] = [];
+		Object.assign(window, { loading: seen });
+		new MutationObserver(() => {
+			const box = pane.querySelector(".bms-loading");
+			if (!box) return;
+			const now = box.querySelector('[role="progressbar"]')?.getAttribute("aria-valuenow");
+			seen.push({
+				text: box.querySelector('[role="status"]')?.textContent ?? "",
+				now: now == null ? null : Number(now),
+				amount: box.querySelector(".bms-amount")?.textContent ?? "",
+			});
+		}).observe(pane, { childList: true, subtree: true, attributes: true, characterData: true });
+	});
+	return () => el.page().evaluate(() => (window as unknown as { loading: Seen[] }).loading);
+}
+
+const LOADING = "Loading the score engine…";
+
+test("a real load shows its measured progress, preparing, then the score", async ({ page }) => {
+	await page.goto("/score?engine=local");
+	const el = page.locator("barmark-score");
+	const seen = await watchLoading(el);
+	await switchToScore(el);
+	const log = await seen();
+	const measured = log.filter((s) => s.text === LOADING && s.now !== null);
+	expect(measured.length).toBeGreaterThan(0);
+	// Not encoded: measured against Content-Length, with the real transfer size shown.
+	expect(Math.max(...measured.map((s) => s.now as number))).toBe(100);
+	const nows = measured.map((s) => s.now as number);
+	expect(nows.every((n, i) => i === 0 || n >= (nows[i - 1] as number))).toBe(true);
+	expect(measured.at(-1)?.amount).toBe("100% (7.4 of 7.4 MB)");
+	const phases = [...new Set(log.map((s) => s.text))];
+	expect(phases.slice(0, 2)).toEqual([LOADING, "Preparing…"]);
+	expect(log.filter((s) => s.text !== LOADING).every((s) => s.now === null)).toBe(true);
+});
+
+for (const [engine, how] of [
+	["gzip", "same-origin"],
+	["gzip-cross", "cross-origin, its Content-Encoding hidden,"],
+])
+	test(`a gzipped load ${how} is measured against the decoded size, rising to 100%`, async ({
+		page,
+	}) => {
+		await page.goto(`/score?engine=${engine}`);
+		const el = page.locator("barmark-score");
+		const seen = await watchLoading(el);
+		await switchToScore(el);
+		const measured = (await seen()).filter((s) => s.text === LOADING && s.now !== null);
+		const nows = measured.map((s) => s.now as number);
+		expect(nows.length).toBeGreaterThan(0);
+		expect(Math.max(...nows)).toBe(100);
+		expect(nows.every((n, i) => i === 0 || n >= (nows[i - 1] as number))).toBe(true);
+		// Content-Length is the compressed size: no "of … MB" for it.
+		expect(measured.every((s) => !s.amount.includes("MB"))).toBe(true);
+	});
+
+test("the indeterminate bar stands still with reduced motion", async ({ page }) => {
+	await page.emulateMedia({ reducedMotion: "reduce" });
+	await page.goto("/score");
+	const el = page.locator("barmark-score");
+	await expect(el.locator(".bms-grid .bm-chart")).toBeVisible();
+	const animation = await el.evaluate((host) => {
+		const pane = host.shadowRoot?.querySelector(".bms-pane") as HTMLElement;
+		pane.hidden = false;
+		pane.innerHTML =
+			'<div class="bms-loading"><p class="bms-status"></p><div class="bms-bar" role="progressbar"><span></span></div></div>';
+		return getComputedStyle(pane.querySelector(".bms-bar > span") as Element).animationName;
+	});
+	expect(animation).toBe("none");
+});
+
+test("verovio-integrity: a matching copy is used", async ({ page }) => {
+	const warnings: string[] = [];
+	page.on("console", (m) => m.type() === "warning" && warnings.push(m.text()));
+	const seen = countEngine(page);
+	await page.goto("/score?engine=local&integrity=good");
+	await switchToScore(page.locator("barmark-score"));
+	expect(seen.urls.filter((u) => u === "/verovio/verovio-module.mjs")).toHaveLength(1);
+	expect(warnings).toEqual([]);
+});
+
+test("verovio-integrity: a mismatch falls back to the package's own copy, with a warning", async ({
+	page,
+}) => {
+	const warnings: string[] = [];
+	page.on("console", (m) => m.type() === "warning" && warnings.push(m.text()));
+	const seen = countEngine(page);
+	await page.goto("/score?engine=local&integrity=bad");
+	const el = page.locator("barmark-score");
+	await switchToScore(el);
+	expect(seen.urls.filter((u) => u === "/verovio/verovio-module.mjs")).toHaveLength(1);
+	expect(warnings).toHaveLength(1);
+	expect(warnings[0]).toContain("/verovio/verovio-module.mjs");
+	expect(warnings[0]).toContain("integrity");
+	await expect(el.locator(".bms-note")).toHaveCount(0);
+});
+
+test('preload="idle" loads the engine before a press, once', async ({ page }) => {
+	const seen = countEngine(page);
+	await page.goto("/score?engine=local&preload=idle");
+	await expect
+		.poll(() => seen.urls.filter((u) => u === "/verovio/verovio-module.mjs").length, {
+			timeout: 10_000,
+		})
+		.toBe(1);
+	expect(seen.worker).toBe(1);
+	const el = page.locator("barmark-score");
+	// The load is underway or done: the press finds the engine past downloading.
+	await page.waitForLoadState("networkidle");
+	const watched = await watchLoading(el);
+	await switchToScore(el);
+	expect((await watched()).some((s) => s.text === LOADING)).toBe(false);
+	expect(seen.urls.filter((u) => u === "/verovio/verovio-module.mjs")).toHaveLength(1);
+	expect(seen.worker).toBe(1);
+});
+
+test('preload="intent" loads the engine on hovering Score, not before', async ({ page }) => {
+	const seen = countEngine(page);
+	await page.goto("/score?engine=local&preload=intent");
+	const el = page.locator("barmark-score");
+	await expect(el.locator(".bms-grid .bm-chart")).toBeVisible();
+	await page.waitForLoadState("networkidle");
+	expect(seen.engine).toBe(0);
+	await el.getByRole("radio", { name: "Score" }).hover();
+	await expect.poll(() => seen.worker, { timeout: 10_000 }).toBe(1);
+	expect(await el.getAttribute("view")).toBeNull();
 });
