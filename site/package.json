@@ -24,7 +24,7 @@
 		"barmark": "0.22.0"
 	},
 	"devDependencies": {
-		"@barmark/cli": "0.10.1",
+		"@barmark/cli": "0.10.2",
 		"@barmark/musicxml": "0.8.0",
 		"@barmark/sync": "0.3.0",
 		"@fontsource/noto-mono": "5.3.0",

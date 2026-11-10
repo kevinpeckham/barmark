@@ -6,9 +6,26 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-11-10
+
+### Added
+
+- `rehashTiming(built, refined, options?)` carries a built chart's timing map
+  to a refinement of it (a section named, a chord respelled): the same map
+  with the refined chart's hash, checked against it. It refuses, with a
+  reason and a message, when there is no map (`no-timing`), the refined
+  chart has an error (`unparsed`), it plays another number of bars
+  (`bars-differ`), or a played bar's meter changed value (`meters-differ`; 2/2 for 4/4 keeps the map). The
+  confidence record is kept when every played bar resolves to as many
+  slots, else dropped (`confidenceDropped: true`) with the map kept.
+  Exported from `@barmark/sync` and `@barmark/sync/timing`.
+
 ### Fixed
 
-- A pickup in 6/8, 9/8 or 12/8 is written in eighths (`[1/8]`, `[2/8]`, `[5/8]` …), its length rounded to whole eighths. Before, it was rounded to whole dotted quarters, so a one-eighth pickup was ignored and a two-eighth one written as `[3/8]`.
+- A pickup in 6/8, 9/8 or 12/8 is written in eighths (`[1/8]`, `[2/8]`,
+  `[5/8]` …), its length rounded to whole eighths. Before, it was rounded
+  to whole dotted quarters, so a one-eighth pickup was ignored and a
+  two-eighth one written as `[3/8]`.
 
 ## [0.3.0] - 2026-11-09
 
@@ -70,7 +87,8 @@ exports: `keyFromText`, `conventionalKey`, `printKey`, `spellPitch`).
   times the runs' own confidence; `?` is 0), and the confidences the input
   gave for `key`, `meter`, `tempo` and `sections`. The shape may change.
 
-[Unreleased]: https://github.com/kevinpeckham/barmark/compare/sync-v0.3.0...HEAD
+[Unreleased]: https://github.com/kevinpeckham/barmark/compare/sync-v0.4.0...HEAD
+[0.4.0]: https://github.com/kevinpeckham/barmark/compare/sync-v0.3.0...sync-v0.4.0
 [0.3.0]: https://github.com/kevinpeckham/barmark/compare/sync-v0.2.1...sync-v0.3.0
 [0.2.1]: https://github.com/kevinpeckham/barmark/compare/sync-v0.2.0...sync-v0.2.1
 [0.2.0]: https://github.com/kevinpeckham/barmark/compare/sync-v0.1.0...sync-v0.2.0

@@ -25,7 +25,7 @@
     },
     "packages/cli": {
       "name": "@barmark/cli",
-      "version": "0.10.1",
+      "version": "0.10.2",
       "bin": {
         "barmark": "./dist/cli.js",
       },
@@ -47,7 +47,7 @@
     },
     "packages/midi": {
       "name": "@barmark/midi",
-      "version": "0.3.0",
+      "version": "0.3.1",
       "dependencies": {
         "@barmark/sync": "workspace:^",
         "barmark": "workspace:^",
@@ -83,7 +83,7 @@
     },
     "packages/sync": {
       "name": "@barmark/sync",
-      "version": "0.3.0",
+      "version": "0.4.0",
       "dependencies": {
         "barmark": "workspace:^",
       },
