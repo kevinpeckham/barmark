@@ -24,7 +24,8 @@ const run = (n: number, over: Partial<Engraving> = {}): Run => ({
 	engravings: Array.from({ length: n }, (_, i) => ({
 		name: `c${i >> 1}`,
 		width: i % 2 ? 1000 : 375,
-		pages: 1,
+		// The first chart breaks a page at 375, as the long chart does.
+		pages: i === 0 ? 2 : 1,
 		bytes: 10,
 		ms: 1,
 		...over,
@@ -59,6 +60,10 @@ test("a page-count difference is named", () => {
 		expect.stringMatching(/c2 at 375: 1 pages in stock, 2 in lite/),
 	]);
 });
+test("no engraving over one page fails: page breaks are uncovered", () =>
+	expect(gateProblems(run(60, { pages: 1 }), run(60, { pages: 1 }), () => "<svg/>")).toEqual([
+		expect.stringContaining("no engraving has more than one page"),
+	]));
 test("a chart one run lacks is named", () => {
 	const lite = run(62);
 	expect(gateProblems(run(60), lite, () => "<svg/>")).toEqual([

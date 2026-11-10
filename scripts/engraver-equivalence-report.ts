@@ -63,7 +63,8 @@ function pairProblems(
 
 /**
  * Everything that fails the gate: a different getVersion(), fewer than 60
- * engravings, a chart one run lacks, an empty engraving, or a page count or
+ * engravings, no engraving of more than one page (so page breaks go
+ * untested), a chart one run lacks, an empty engraving, or a page count or
  * SVG that differs by a byte. Timings never fail it.
  */
 export function gateProblems(
@@ -77,6 +78,10 @@ export function gateProblems(
 	const count = Math.min(stock.engravings.length, lite.engravings.length);
 	if (count < MIN_ENGRAVINGS)
 		problems.push(`only ${count} engravings, under ${MIN_ENGRAVINGS}: an empty pass is not a pass`);
+	if (!stock.engravings.some((e) => e.pages > 1))
+		problems.push(
+			"no engraving has more than one page: the long chart no longer covers page breaks",
+		);
 	const lites = new Map(lite.engravings.map((e) => [keyOf(e), e]));
 	for (const s of stock.engravings) {
 		const l = lites.get(keyOf(s));
