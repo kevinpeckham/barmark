@@ -30,8 +30,9 @@ spellings read (Kevin, 2026-11-10).
 - **An altered fifth before the parenthesis gets a suggestion**:
   `F#b5(omit3)` is still an error (grammar 3 keeps `Ab5` the A♭ power
   chord), now suggesting `F#(b5,omit3)`. Where the root's accidental could
-  be the fifth's (`Gb5(omit3)`), the message says it is ambiguous and
-  gives no suggestion.
+  be the fifth's, there is no suggestion, and the message says the symbol
+  is ambiguous when the fifth reading would itself read (`Gb5(omit3)`,
+  as `G(b5,omit3)`; not `Gb5(no7)`).
 
 - **`printedAsWritten(parse)`** and **`unreadSlots(line)`**: the lines the
   printer prints as written (spec §8), and a bar line's unreadable slots,

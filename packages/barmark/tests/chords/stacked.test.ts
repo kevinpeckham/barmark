@@ -300,3 +300,17 @@ describe("review nits (PR #255)", () => {
 		expect(parseChord("C7(b9)no5").ok).toBe(false);
 	});
 });
+
+describe("an omission after the slash bass (PR #255 re-review)", () => {
+	test("is an error, as before stacked spellings", () => {
+		for (const symbol of ["C/Eno5", "Cmaj7/Gno3", "C/Eomit5", "C7/Bbno5"]) {
+			expect(parseChord(symbol).ok).toBe(false);
+		}
+	});
+	test("6/9 is an extension, not a bass: C6/9no5 trails the name and reads", () => {
+		const r = ok("C6/9no5");
+		expect(r.value.canonical).toBe("C6/9(no5)");
+		expect(r.warnings[0]?.suggestion).toBe("C6/9(no5)");
+		expect(ok("C6/9no5/E").value.canonical).toBe("C6/9(no5)/E");
+	});
+});

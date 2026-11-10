@@ -13,6 +13,8 @@ const ITEM = /^(?:add\d+|(?:omit\s*|no)\d+|[b#]?\d+)$/;
 const ITEM_START = /(?=add|omit|no|[b#])/;
 /** A slash bass at the end of the text after the root. */
 const BASS = /\/[A-G][#b]?$/;
+/** Where the chord's name ends: its first parenthesis or slash bass. */
+const NAME_END = /\(|\/[A-G]/;
 
 /** The items run together in one parenthesis item, or the item alone when it isn't a run of valid items. */
 function splitItem(item: string): string[] {
@@ -75,9 +77,9 @@ export function separate(rest: string): Separated {
 		return out.join(",");
 	};
 	const text = rest.replace(GROUP, (_, inner: string) => `(${split(inner)})`);
-	// The chord's name: what comes before any parenthesis or slash bass.
-	const paren = text.indexOf("(");
-	const end = paren >= 0 ? paren : (BASS.exec(text)?.index ?? text.length);
+	// The chord's name: what comes before the first parenthesis or slash bass
+	// (a slash before a letter; `6/9` is an extension), whatever follows it.
+	const end = NAME_END.exec(text)?.index ?? text.length;
 	const name = text.slice(0, end);
 	const bare = TRAILING_OMISSION.exec(name);
 	if (!bare) return { text, runTogether, bareOmission: false };
