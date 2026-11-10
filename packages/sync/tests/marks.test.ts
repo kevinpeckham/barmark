@@ -589,6 +589,57 @@ describe("pickup", () => {
 		expect(errors(r.chart)).toEqual([]);
 	});
 
+	describe("in a compound meter the pickup is counted in eighths", () => {
+		const cases: [string, string, number[], number, number, string?][] = [
+			["1 eighth in 6/8", "6/8", [3, 6, 9], 2.5, 1, "| [1/8] G"],
+			["2 eighths in 6/8", "6/8", [3, 6, 9], 2, 2, "| [2/8] G"],
+			["5 eighths in 12/8", "12/8", [6, 12, 18], 3.5, 5],
+			["6 eighths in 9/8", "9/8", [4.5, 9, 13.5], 1.5, 6],
+		];
+		for (const [name, meter, bars, start, n, line] of cases) {
+			test(name, () => {
+				const r = chartFromDetections({
+					grid: { bars },
+					meter,
+					pickup: { start },
+					chords: {
+						runs: [G(start, bars[0] as number), run(bars[0] as number, bars[2] as number)],
+					},
+				});
+				const parse = parseChart(r.chart);
+				expect(parse.pickup).toBe(true);
+				expect(parse.bars[0]?.meter).toEqual({ n, d: 8 });
+				if (line) expect(lineOf(r.chart, "|")).toContain(line);
+				expect(r.timing?.bars[0]).toMatchObject({ bar: 1, start });
+				expect(errors(r.chart)).toEqual([]);
+			});
+		}
+
+		test("6 eighths in 9/8 is two slots", () => {
+			const r = chartFromDetections({
+				grid: { bars: [4.5, 9, 13.5] },
+				meter: "9/8",
+				pickup: { start: 1.5 },
+				chords: { runs: [G(1.5, 3), run(3, 4.5, "D:maj"), run(4.5, 13.5)] },
+			});
+			expect(lineOf(r.chart, "|")).toContain("| [6/8] G D |");
+			expect(errors(r.chart)).toEqual([]);
+		});
+
+		test("a whole bar or a fraction of an eighth is ignored", () => {
+			for (const start of [0, 2.9]) {
+				const r = chartFromDetections({
+					grid: { bars: [3, 6, 9] },
+					meter: "6/8",
+					pickup: { start },
+					chords: { runs: [run(start, 9)] },
+				});
+				expect(r.diagnostics.find((d) => d.code === "pickup-ignored")?.severity).toBe("info");
+				expect(parseChart(r.chart).bars).toHaveLength(2);
+			}
+		});
+	});
+
 	test("a pickup too short or too long is ignored", () => {
 		for (const start of [0.9, -1, Number.NaN]) {
 			const r = chartFromDetections({
