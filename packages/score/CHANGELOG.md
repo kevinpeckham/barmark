@@ -6,6 +6,8 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-11-10
+
 ### Added
 
 - **`verovio-wasm-integrity`**: the SRI digest of the `.wasm` beside a
@@ -276,7 +278,8 @@ First release.
   needs no config; Vite 7 needs `optimizeDeps.exclude` and
   `worker.format: "es"`.
 
-[Unreleased]: https://github.com/kevinpeckham/barmark/compare/score-v0.4.0...HEAD
+[Unreleased]: https://github.com/kevinpeckham/barmark/compare/score-v0.5.0...HEAD
+[0.5.0]: https://github.com/kevinpeckham/barmark/compare/score-v0.4.0...score-v0.5.0
 [0.4.0]: https://github.com/kevinpeckham/barmark/compare/score-v0.3.0...score-v0.4.0
 [0.3.0]: https://github.com/kevinpeckham/barmark/compare/score-v0.2.0...score-v0.3.0
 [0.2.0]: https://github.com/kevinpeckham/barmark/compare/score-v0.1.1...score-v0.2.0
