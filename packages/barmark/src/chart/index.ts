@@ -23,12 +23,14 @@ export { opensWithPickup } from "./pickup.js";
 export {
 	printCell,
 	printChart,
+	printedAsWritten,
 	printLine,
 	printParsed,
 	printPart,
 	printPasses,
 	printSlot,
 	reduceSlots,
+	unreadSlots,
 } from "./print.js";
 export { memberShares } from "./shares.js";
 export { streamKey } from "./systems.js";

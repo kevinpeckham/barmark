@@ -160,7 +160,7 @@ function speakUnpushed(slot: Slot, key?: Key): string {
 		case "silence":
 			return "stop";
 		case "unknown":
-			return "unknown chord";
+			return slot.text === undefined ? "unknown chord" : `unreadable: ${slot.text}`;
 		case "group":
 			return speakGroup(slot.members, key);
 	}

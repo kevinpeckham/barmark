@@ -570,6 +570,25 @@ order, not just the written marks.
 
 ## Design
 
+### One unreadable chord dropped its whole line, so a chart played short (2026-11-10, barmark)
+
+- **The symptom.** Porting the listening tool, a chart with one `CM7`
+  played shorter than its recording: every bar on that line was gone, so
+  everything after it was early.
+- **The cause.** `parseBarLine` treated every error alike: any error, a
+  chord symbol it couldn't read included, made `bars` null, and the line
+  was excluded. The error was reported, but play order, timing and every
+  export silently lost the line's bars.
+- **The fix.** Kevin's decision: an unreadable slot (chord symbol, note
+  set, voicing, syllable or mark) is still an error but becomes unknown
+  harmony with the author's `text`, `{ kind: "unknown", text: "CM7" }`;
+  only an error in the bar line's structure, where the bar count itself is
+  unknown, drops it. The slot reader is its own function, `slotReader`,
+  with two ways to report: `error` breaks the line, `unread` keeps the
+  slot (`packages/barmark/src/chart/barLine.ts`; grammar principle 4,
+  2.3; `packages/barmark/tests/chart/unreadable-slots.test.ts`). Tests
+  that used `Hm` to make a line fail now use a structural error.
+
 ### A passing tone at exactly a quarter of the chord named a 9th (2026-11-08, @barmark/midi import)
 
 - **The symptom.** A fill of eighths D5 E5 F5 E5 D5 from beat 2 over a

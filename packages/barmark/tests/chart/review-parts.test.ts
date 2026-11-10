@@ -6,8 +6,8 @@ const TWO = "part: Gtr = Guitar\npart: Pno = Piano\n";
 
 describe("stage A review fixes", () => {
 	test("a part's own errored line prints as written, with its error", () => {
-		const t = `${TWO}Gtr | G | C |\nPno | Em | Xq7z |\n`;
-		expect(printPart(t, "Pno")).toBe("part: Pno = Piano\nPno | Em | Xq7z |\n");
+		const t = `${TWO}Gtr | G | C |\nPno | Em | C_ |\n`;
+		expect(printPart(t, "Pno")).toBe("part: Pno = Piano\nPno | Em | C_ |\n");
 		expect(extractPart(t, "Pno")?.diagnostics.filter((d) => d.severity === "error")).toHaveLength(
 			1,
 		);

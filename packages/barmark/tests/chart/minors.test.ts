@@ -46,7 +46,10 @@ describe("final-review minors", () => {
 	});
 	test("Ax2 with no trailing pipe is not A twice", () => {
 		const r = parseChart("| D | Ax2");
-		expect(r.bars).toHaveLength(0);
+		expect(r.bars.map((b) => b.slots)).toEqual([
+			[expect.objectContaining({ kind: "chord" })],
+			[{ kind: "unknown", text: "Ax2" }],
+		]);
 		expect(r.diagnostics.some((d) => d.severity === "error" && d.token === "Ax2")).toBe(true);
 	});
 	test("a trailing comma on a directive line is harmless", () => {

@@ -113,6 +113,8 @@ export type CellModel =
 			tacet?: true;
 			/** `%` on a tutti line whose parts each copy a different bar: drawn as `%`, its slots empty (barmark's grammar 7.4). */
 			simile?: true;
+			/** The error message of each slot written here that can't be read, in order (barmark's grammar 2.3); absent when none. */
+			unread?: string[];
 	  }
 	| { kind: "fermata" }
 	/** A segno, coda or jump between bars (barmark's grammar 5.2). */

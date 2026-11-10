@@ -88,7 +88,11 @@ export type SimpleSlot = (
 	| { kind: "hold" }
 	| { kind: "nc"; push?: Push }
 	| { kind: "silence"; push?: Push }
-	| { kind: "unknown" }
+	/**
+	 * Unknown harmony: a written `?`, or a slot that can't be read (an error,
+	 * grammar principle 4), which keeps the author's `text` as written.
+	 */
+	| { kind: "unknown"; text?: string }
 ) & {
 	/** A dotted member of a two-member group (grammar 2.2): three quarters of its slot. */
 	dotted?: true;
