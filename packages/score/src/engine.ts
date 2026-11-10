@@ -5,7 +5,12 @@ import type { Download } from "./download.js";
  * with `verovioIntegrity`, a copy that must have that digest (or the
  * package's own is loaded in its place).
  */
-export type VerovioSource = { verovioUrl?: string; verovioIntegrity?: string };
+export type VerovioSource = {
+	verovioUrl?: string;
+	verovioIntegrity?: string;
+	/** The `.wasm`'s digest, for a Verovio that loads a separate one (`@barmark/engraver`). */
+	verovioWasmIntegrity?: string;
+};
 
 /**
  * What a page asks the worker for: one chart, laid out for a width; or,

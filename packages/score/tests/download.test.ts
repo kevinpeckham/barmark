@@ -6,6 +6,7 @@ import {
 	checkIntegrity,
 	type Download,
 	downloadMeter,
+	fetchBytes,
 	fetchModule,
 	progressText,
 } from "../src/download.js";
@@ -200,6 +201,29 @@ describe("fetchModule", () => {
 				onProgress: () => {},
 			}),
 		).rejects.toThrow("integrity");
+	});
+});
+
+describe("fetchBytes", () => {
+	test("fetchBytes returns the checked bytes; fetchModule still returns a text/javascript blob", async () => {
+		const options = async () => ({
+			fetch: async () => respond(["ab", "cd"]),
+			integrity: await sri("abcd"),
+			onProgress: () => {},
+		});
+		const bytes = await fetchBytes("https://cdn.test/v.wasm", await options());
+		expect(bytes).toBeInstanceOf(Uint8Array);
+		expect(new TextDecoder().decode(bytes)).toBe("abcd");
+		await expect(
+			fetchBytes("https://cdn.test/v.wasm", {
+				fetch: async () => respond(["abce"]),
+				integrity: await sri("abcd"),
+				onProgress: () => {},
+			}),
+		).rejects.toThrow("integrity");
+		const blob = await fetchModule("https://cdn.test/v.mjs", await options());
+		expect(blob.type).toStartWith("text/javascript");
+		expect(await blob.text()).toBe("abcd");
 	});
 });
 

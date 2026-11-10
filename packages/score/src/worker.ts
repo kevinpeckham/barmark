@@ -1,6 +1,6 @@
 import * as esm from "verovio/esm";
 import { VerovioToolkit } from "verovio/esm";
-import { type Download, fetchModule } from "./download.js";
+import { type Download, fetchBytes, fetchModule } from "./download.js";
 import type {
 	LoadStatus,
 	Progress,
@@ -11,7 +11,8 @@ import type {
 	WorkerMessage,
 } from "./engine.js";
 import { engraveChart } from "./engrave.js";
-import { VEROVIO_MODULE_BYTES } from "./verovio.js";
+import { knownSize, VEROVIO_VERSION } from "./verovio.js";
+import { createWith, sameVerovio, type WasmSource, wasmHook } from "./wasm.js";
 
 type Toolkit = VerovioToolkit;
 
@@ -64,49 +65,86 @@ export type LoaderDeps<M, T> = {
 	/** Downloads `url` with progress, checked against `integrity` when given (download.ts). */
 	fetchModule(
 		url: string,
-		options: { integrity?: string; onProgress: (d: Download) => void },
+		options: {
+			integrity?: string;
+			expected?: number | undefined;
+			onProgress: (d: Download) => void;
+		},
 	): Promise<Blob>;
 	/** Imports a downloaded module. */
 	importBlob(blob: Blob): Promise<M>;
 	/** The package's own Verovio, as the bundler placed it. */
 	own(): Promise<M>;
-	/** Instantiates the module's WebAssembly: the toolkit. */
-	instantiate(m: M): Promise<T>;
+	/**
+	 * Instantiates the module's WebAssembly, reporting `prepare`: the
+	 * toolkit. `wasm`, for a module from a URL, says where a separate
+	 * `.wasm` comes from, should the module load one.
+	 */
+	instantiate(m: M, wasm: WasmSource | undefined, report: Report): Promise<T>;
+	/** The Verovio version a toolkit reports. */
+	versionOf(t: T): string;
+	/** The version of the Verovio this package's toolkit is written for. */
+	toolkitVersion: string;
 	warn(message: string): void;
 };
 
 const UNMEASURED: Download = { phase: "download", fraction: null, bytes: null };
 
+/** The `.wasm` source for a module from `verovioUrl`: its digest is required when the module's is given. */
+const wasmSource = ({ verovioUrl, verovioIntegrity, verovioWasmIntegrity }: VerovioSource) => ({
+	moduleUrl: verovioUrl as string,
+	...(verovioWasmIntegrity === undefined ? {} : { integrity: verovioWasmIntegrity }),
+	required: verovioIntegrity !== undefined,
+});
+
+/**
+ * How a module's own download reports: measured, or, when a separate
+ * `.wasm` will be measured, once as unmeasured, so the bar never runs to
+ * 100% twice.
+ */
+const glueProgress = (source: VerovioSource, report: Report) => {
+	if (source.verovioWasmIntegrity === undefined) return report;
+	report(UNMEASURED);
+	return () => {};
+};
+
 /**
  * Loads Verovio from `source`. The package's own copy comes through the
  * bundler, its download unmeasured. A `verovioUrl` is downloaded here,
  * with progress, and imported from a blob; with `verovioIntegrity` its
- * digest is checked first, and a mismatch or any failure falls back to
- * the package's own copy, once, with a warning. Without one, a failure is
- * the failure.
+ * digest is checked first, and a mismatch, a Verovio other than the
+ * toolkit's, or any failure falls back to the package's own copy, once,
+ * with a warning. Without one, a failure is the failure.
  */
 export function verovioLoader<M, T>(deps: LoaderDeps<M, T>) {
-	const prepared = async (m: M, report: Report) => {
-		report({ phase: "prepare" });
-		return deps.instantiate(m);
-	};
 	const own = async (report: Report): Promise<Loaded<T>> => {
 		report(UNMEASURED);
-		return { toolkit: await prepared(await deps.own(), report), from: {} };
+		return { toolkit: await deps.instantiate(await deps.own(), undefined, report), from: {} };
 	};
-	const fromUrl = async (verovioUrl: string, integrity: string | undefined, report: Report) => {
-		const options =
-			integrity === undefined ? { onProgress: report } : { integrity, onProgress: report };
-		const blob = await deps.fetchModule(verovioUrl, options);
-		return prepared(await deps.importBlob(blob), report);
+	const checked = (t: T) => {
+		const got = deps.versionOf(t);
+		if (!sameVerovio(got, deps.toolkitVersion))
+			throw new Error(
+				`Verovio ${got} does not match this package's toolkit (${deps.toolkitVersion})`,
+			);
+		return t;
+	};
+	const fromUrl = async (source: VerovioSource, report: Report) => {
+		const { verovioUrl, verovioIntegrity } = source;
+		const blob = await deps.fetchModule(verovioUrl as string, {
+			...(verovioIntegrity === undefined ? {} : { integrity: verovioIntegrity }),
+			expected: knownSize(verovioIntegrity),
+			onProgress: glueProgress(source, report),
+		});
+		return checked(await deps.instantiate(await deps.importBlob(blob), wasmSource(source), report));
 	};
 	return async (source: VerovioSource, report: Report): Promise<Loaded<T>> => {
 		const { verovioUrl, verovioIntegrity } = source;
 		if (verovioUrl === undefined) return own(report);
 		if (verovioIntegrity === undefined)
-			return { toolkit: await fromUrl(verovioUrl, undefined, report), from: { verovioUrl } };
+			return { toolkit: await fromUrl(source, report), from: { verovioUrl } };
 		try {
-			return { toolkit: await fromUrl(verovioUrl, verovioIntegrity, report), from: source };
+			return { toolkit: await fromUrl(source, report), from: source };
 		} catch (err) {
 			deps.warn(
 				`<barmark-score>: Verovio from ${verovioUrl} was not used (${String(err)}); loading the package's own copy instead`,
@@ -126,27 +164,56 @@ async function importBlob(blob: Blob): Promise<VerovioModule> {
 	}
 }
 
-type VerovioModule = { default: () => Promise<unknown> };
+// A method taking any object, so Verovio's own factory (its options typed without the hook) fits.
+type VerovioModule = { default(arg?: object): Promise<unknown> };
+
+/**
+ * Runs the module's factory, reporting `prepare`: for a module from a URL,
+ * with a hook for its `.wasm`. With the `.wasm`'s digest given, its
+ * download is the measured one, so `prepare` waits for it to arrive;
+ * otherwise (the package's own copy, or a module that ignores the hook)
+ * Verovio is preparing from the start.
+ */
+function createModule(m: VerovioModule, wasm: WasmSource | undefined, report: Report) {
+	const prepare = () => report({ phase: "prepare" });
+	if (wasm?.integrity === undefined) prepare();
+	if (wasm === undefined) return m.default();
+	const hook = wasmHook(wasm, {
+		fetchBytes: (u, o) => fetchBytes(u, { ...o, fetch: (x) => fetch(x) }),
+		instantiate: (bytes, imports) => {
+			if (wasm.integrity !== undefined) prepare();
+			return WebAssembly.instantiate(bytes, imports);
+		},
+		onProgress: report,
+	});
+	return createWith(m.default, hook);
+}
 
 const toolkit = toolkitLoader(
 	verovioLoader<VerovioModule, Toolkit>({
-		fetchModule: (url, options) =>
-			fetchModule(url, { ...options, fetch: (u) => fetch(u), expected: VEROVIO_MODULE_BYTES }),
+		fetchModule: (url, options) => fetchModule(url, { ...options, fetch: (u) => fetch(u) }),
 		importBlob,
 		own: () => import("verovio/wasm"),
-		instantiate: async (m) => {
-			const module = await m.default();
+		instantiate: async (m, wasm, report) => {
+			const module = await createModule(m, wasm, report);
 			enableLog(LOG_OFF, module);
 			return new VerovioToolkit(module as ConstructorParameters<typeof VerovioToolkit>[0]);
 		},
+		versionOf: (t) => t.getVersion(),
+		toolkitVersion: VEROVIO_VERSION,
 		warn: (message) => console.warn(message),
 	}),
 );
 
 /** `request`'s Verovio source, without its absent fields. */
-const sourceOf = ({ verovioUrl, verovioIntegrity }: Request): VerovioSource => ({
+const sourceOf = ({
+	verovioUrl,
+	verovioIntegrity,
+	verovioWasmIntegrity,
+}: Request): VerovioSource => ({
 	...(verovioUrl === undefined ? {} : { verovioUrl }),
 	...(verovioIntegrity === undefined ? {} : { verovioIntegrity }),
+	...(verovioWasmIntegrity === undefined ? {} : { verovioWasmIntegrity }),
 });
 
 /**

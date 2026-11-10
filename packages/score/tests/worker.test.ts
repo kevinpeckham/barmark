@@ -1,13 +1,25 @@
 import { describe, expect, test } from "bun:test";
+import { VerovioToolkit } from "verovio/esm";
+import createModule from "verovio/wasm";
 import type { LoadStatus, Ready, Reply, WorkerMessage } from "../src/engine.js";
+import { VEROVIO_VERSION } from "../src/verovio.js";
+import { sameVerovio, type WasmSource } from "../src/wasm.js";
 import { answer, type LoaderDeps, toolkitLoader, verovioLoader } from "../src/worker.js";
 
 type Module = { from: string };
 
-/** A loader over fakes: `bodies` are what each URL serves, `own` is the package's Verovio. */
-function fakes(bodies: Record<string, string | Error>, own: Error | null = null) {
+/**
+ * A loader over fakes: `bodies` are what each URL serves, `own` is the
+ * package's Verovio, `version` what a downloaded module's toolkit reports.
+ */
+function fakes(
+	bodies: Record<string, string | Error>,
+	own: Error | null = null,
+	version = "6.4.1",
+) {
 	const log: string[] = [];
 	const warnings: string[] = [];
+	const wasms: (WasmSource | undefined)[] = [];
 	const deps: LoaderDeps<Module, string> = {
 		fetchModule: async (url, { integrity, onProgress }) => {
 			log.push(`fetch ${url}${integrity ? ` ${integrity}` : ""}`);
@@ -28,13 +40,17 @@ function fakes(bodies: Record<string, string | Error>, own: Error | null = null)
 			if (own) throw own;
 			return { from: "own" };
 		},
-		instantiate: async (m) => {
+		instantiate: async (m, wasm, report) => {
 			log.push("instantiate");
+			wasms.push(wasm);
+			report({ phase: "prepare" });
 			return `toolkit ${m.from}`;
 		},
+		versionOf: (t) => (t === "toolkit own" ? "6.4.1" : version),
+		toolkitVersion: "6.4.1",
 		warn: (m) => warnings.push(m),
 	};
-	return { load: verovioLoader(deps), log, warnings };
+	return { load: verovioLoader(deps), log, warnings, wasms };
 }
 
 const phases = (seen: LoadStatus[]) =>
@@ -111,6 +127,71 @@ describe("verovioLoader", () => {
 		const { load, log } = fakes({});
 		expect((await load({ verovioIntegrity: "ok-x" }, () => {})).from).toEqual({});
 		expect(log[0]).toBe("import own");
+	});
+});
+
+describe("the separate .wasm and the version check", () => {
+	const url = "https://cdn.test/v/verovio-module.mjs";
+
+	test("a module whose Verovio is not the toolkit's falls back with integrity, with a warning", async () => {
+		const { load, warnings } = fakes({ [url]: "cdn" }, null, "6.3.0");
+		const r = await load({ verovioUrl: url, verovioIntegrity: "ok-cdn" }, () => {});
+		expect(r).toEqual({ toolkit: "toolkit own", from: {} });
+		expect(warnings.length).toBe(1);
+		expect(warnings[0]).toContain(url);
+		expect(warnings[0]).toContain("6.3.0");
+		expect(warnings[0]).toContain("6.4.1");
+	});
+
+	test("without verovio-integrity, a version mismatch is the failure", async () => {
+		const { load } = fakes({ [url]: "cdn" }, null, "6.3.0");
+		await expect(load({ verovioUrl: url }, () => {})).rejects.toThrow(
+			"Verovio 6.3.0 does not match this package's toolkit (6.4.1)",
+		);
+	});
+
+	test("a version with the toolkit's version then a dash is the same Verovio", async () => {
+		const { load } = fakes({ [url]: "cdn" }, null, "6.4.1-fbe8f46");
+		expect((await load({ verovioUrl: url }, () => {})).toolkit).toBe("toolkit cdn");
+	});
+
+	test("verovio-url with a wasm digest passes the wasm source to instantiate", async () => {
+		const { load, wasms } = fakes({ [url]: "cdn" });
+		const source = {
+			verovioUrl: url,
+			verovioIntegrity: "ok-cdn",
+			verovioWasmIntegrity: "sha384-W",
+		};
+		expect(await load(source, () => {})).toEqual({ toolkit: "toolkit cdn", from: source });
+		expect(wasms).toEqual([{ moduleUrl: url, integrity: "sha384-W", required: true }]);
+	});
+
+	test("without verovio-integrity, the wasm digest is not required", async () => {
+		const { load, wasms } = fakes({ [url]: "cdn" });
+		await load({ verovioUrl: url }, () => {});
+		expect(wasms).toEqual([{ moduleUrl: url, required: false }]);
+	});
+
+	test("with a wasm digest, the glue's download is reported unmeasured", async () => {
+		const { load } = fakes({ [url]: "cdn" });
+		const seen: LoadStatus[] = [];
+		await load(
+			{ verovioUrl: url, verovioIntegrity: "ok-cdn", verovioWasmIntegrity: "sha384-W" },
+			(s) => seen.push(s),
+		);
+		expect(phases(seen)).toEqual(["download null", "prepare"]);
+	});
+
+	test("the package's own copy gets no wasm source", async () => {
+		const { load, wasms } = fakes({});
+		await load({}, () => {});
+		expect(wasms).toEqual([undefined]);
+	});
+
+	test("sameVerovio accepts the stock module's own getVersion()", async () => {
+		expect(
+			sameVerovio(new VerovioToolkit(await createModule()).getVersion(), VEROVIO_VERSION),
+		).toBe(true);
 	});
 });
 
