@@ -6,6 +6,10 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+
+- A pickup in 6/8, 9/8 or 12/8 is written in eighths (`[1/8]`, `[2/8]`, `[5/8]` …), its length rounded to whole eighths. Before, it was rounded to whole dotted quarters, so a one-eighth pickup was ignored and a two-eighth one written as `[3/8]`.
+
 ## [0.3.0] - 2026-11-09
 
 ### Changed
