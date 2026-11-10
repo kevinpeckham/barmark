@@ -364,6 +364,20 @@ showed the rule needed refining.
 
 ## Performance and robustness
 
+### A best-of-three ratio of millisecond runs fails under load; alternate the runs (2026-11-10, @barmark/listen)
+
+- **The symptom.** `comb-scale.test.ts` timed three combs of a 60 s
+  envelope, then three of a 240 s one, and failed one full-suite run in
+  three on the VM (load average 13 to 16) with ratios of 6.2 and 12.7,
+  where the comb measures 3.5 to 4.1 alone.
+- **The cause.** A comb of 60 s takes about 2 ms, shorter than a burst of
+  load, and timing all of one length before the other lets a burst land on
+  one side only.
+- **The fix.** Each run combs its envelope ten times, both lengths warm up
+  first, and the three runs of each alternate, so a burst falls on both
+  alike; best of three of each, as before. Ten full suites in a row then
+  passed under the same load.
+
 ### A download's Content-Length is not the size of what you read (2026-11-10, @barmark/score)
 
 - **The symptom.** Measuring `<barmark-score>`'s Verovio download as
