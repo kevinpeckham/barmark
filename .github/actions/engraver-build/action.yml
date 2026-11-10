@@ -2,8 +2,9 @@
 # release.yml's `build-engraver` job, so the two build it the same way.
 # Verovio compiled by emsdk must match packages/engraver/src/info.ts byte for
 # byte. A restored dist is checked against info.ts; a miss compiles from
-# clean (about 4.5 minutes). Then the equivalence gate, in Node 22, and the
-# engraver-dist artifact, which later jobs download into
+# clean (about 4.5 minutes). Then the equivalence gate, in Node 22; after a
+# compile, build/source.sh's Corresponding Source, checked and not uploaded;
+# and the engraver-dist artifact, which later jobs download into
 # packages/engraver/dist.
 #
 # The job runs checkout, setup-bun, setup-node 22 and `bun install` first.
@@ -68,6 +69,26 @@ runs:
           echo "::error::node 22 required (the gate's Node), not $(node --version)"; exit 1
         fi
         bun scripts/engraver-equivalence.ts
+    # The Corresponding Source (build/source.sh), whenever this action
+    # compiled and so has the Verovio clone: the weekly clean run and every
+    # dist-cache miss exercise what an engraver tag runs, before a tag is
+    # made. Checked here, uploaded only by release.yml on an engraver tag.
+    - if: steps.dist.outputs.cache-hit != 'true'
+      shell: bash
+      run: |
+        bash packages/engraver/build/source.sh "$RUNNER_TEMP/source"
+        out="$RUNNER_TEMP/source"
+        source packages/engraver/build/versions.env
+        verovio="verovio-${VEROVIO_TAG#version-}"
+        build=$(tar -tzf "$out"/engraver-build-*.tar.gz)
+        for f in build.sh versions.env source.sh; do
+          grep -qx "engraver-build-[^/]*/$f" <<<"$build" || { echo "::error::engraver-build lacks $f"; exit 1; }
+        done
+        src=$(tar -tzf "$out/$verovio-source.tar.gz")
+        for f in cmake/CMakeLists.txt emscripten/exports.txt src/toolkit.cpp include/vrv/toolkit.h COPYING.LESSER; do
+          grep -qx "$verovio/$f" <<<"$src" || { echo "::error::$verovio-source lacks $f"; exit 1; }
+        done
+        ls -l "$out"
     - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
       with:
         name: engraver-dist
