@@ -75,6 +75,8 @@ export type BlockItem =
 			repeat: Repeat;
 			/** The passes an ending plays on; null for any other row. */
 			ending: number[] | null;
+			/** On a row an ending continues onto (barmark's grammar 5.1): that ending's passes. Absent on any other row. */
+			continues?: number[];
 			cells: CellModel[];
 			/** Set on a line that sings words (barmark's grammar 7.7): its note sets draw as pitch names over them. */
 			sings?: true;

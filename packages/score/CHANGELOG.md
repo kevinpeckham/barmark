@@ -33,20 +33,6 @@ package uses [semantic versioning](https://semver.org/).
   tablature tunings, `.mxl`); the README says how to load it, with the
   Content-Security-Policy it needs.
 
-- **The grid takes `columns`** (`@barmark/render`'s `columns: "shared" |
-  "row"`): `<barmark-score>` observes the `columns` attribute and redraws
-  its grid, and `renderScoreHtml` passes the option through. With
-  `columns="row"` each row of the grid sizes its own bars; the score view
-  is unchanged.
-
-- **A `scoreerror` event says why the score couldn't be drawn.** Whenever
-  `<barmark-score>` shows "The score couldn't be drawn", it fires
-  `scoreerror` (`bubbles`, `composed`) with `detail: { reason }`, the
-  reason its console warning gives: Verovio failing to load or engrave, a
-  refused `verovio-url` or `verovio-integrity`, a `src` that could not be
-  loaded, or an engraving that is not clean SVG. Once per failure; a
-  retry the chart or a new URL enables fires again if it fails.
-
 ### Changed
 
 - **A Verovio from `verovio-url` must match the toolkit's version**
@@ -60,9 +46,39 @@ package uses [semantic versioning](https://semver.org/).
   being measured against Verovio's 7.4 MB. With
   `verovio-wasm-integrity`, the `.wasm` is the download measured, so the
   bar runs to 100% once.
-- **Requires `@barmark/render` 0.19.0** (the tempo beat, the
-  `rehearsal-letters` rule), whose minor release the `^0.18` caret would
-  not reach.
+
+### Technical
+
+- **The browser suite loads `@barmark/engraver`** from
+  `packages/engraver/dist` (compiled on the VM, or CI's `engraver-dist`
+  artifact): the build used with both digests and its `.wasm` measured,
+  a `.wasm` with a flipped byte, a missing `.wasm` (falling back in
+  seconds), a module digest without a wasm digest, and stock Verovio
+  with a wasm digest.
+
+## [0.4.0] - 2026-11-10
+
+### Added
+
+- **The grid takes `columns`** (`@barmark/render`'s `columns: "shared" |
+  "row"`): `<barmark-score>` observes the `columns` attribute and redraws
+  its grid, and `renderScoreHtml` passes the option through. With
+  `columns="row"` each row of the grid sizes its own bars; the score view
+  is unchanged.
+- **A `scoreerror` event says why the score couldn't be drawn.** Whenever
+  `<barmark-score>` shows "The score couldn't be drawn", it fires
+  `scoreerror` (`bubbles`, `composed`) with `detail: { reason }`, the
+  reason its console warning gives: Verovio failing to load or engrave, a
+  refused `verovio-url` or `verovio-integrity`, a `src` that could not be
+  loaded, or an engraving that is not clean SVG. Once per failure; a
+  retry the chart or a new URL enables fires again if it fails.
+
+### Changed
+
+- **Requires `barmark` 0.23.0, `@barmark/render` 0.19.0** (the tempo
+  beat, the `rehearsal-letters` rule) **and `@barmark/musicxml` 0.9.0**
+  (an ending across lines), whose minor releases a caret range would not
+  reach.
 - **The grid follows `@barmark/render`'s new `rehearsal-letters` rule**:
   no letters beside a chart's own rehearsal marks (`@A`), so the grid's
   headings no longer show two marks, matching the score, which draws only
@@ -75,11 +91,6 @@ package uses [semantic versioning](https://semver.org/).
 
 ### Technical
 
-- **The browser suite loads `@barmark/engraver`** from
-  `packages/engraver/dist` (compiled on the VM, or CI's `engraver-dist`
-  artifact): the build used with both digests and its `.wasm` measured,
-  a `.wasm` with a flipped byte, a missing `.wasm` (falling back in
-  seconds) and a module digest without a wasm digest.
 - **The README says when Vite needs `worker: { format: "es" }`**: on Vite 8
   too, with `verovio-url`, or the worker inlines Verovio's fallback copy
   and a reader downloads Verovio twice.
@@ -265,7 +276,8 @@ First release.
   needs no config; Vite 7 needs `optimizeDeps.exclude` and
   `worker.format: "es"`.
 
-[Unreleased]: https://github.com/kevinpeckham/barmark/compare/score-v0.3.0...HEAD
+[Unreleased]: https://github.com/kevinpeckham/barmark/compare/score-v0.4.0...HEAD
+[0.4.0]: https://github.com/kevinpeckham/barmark/compare/score-v0.3.0...score-v0.4.0
 [0.3.0]: https://github.com/kevinpeckham/barmark/compare/score-v0.2.0...score-v0.3.0
 [0.2.0]: https://github.com/kevinpeckham/barmark/compare/score-v0.1.1...score-v0.2.0
 [0.1.1]: https://github.com/kevinpeckham/barmark/compare/score-v0.1.0...score-v0.1.1

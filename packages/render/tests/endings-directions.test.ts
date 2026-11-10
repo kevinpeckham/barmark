@@ -86,3 +86,55 @@ describe("the HTML", () => {
 		expect(spoken).toEqual(["segno", "bar 1: C", "bar 2: D", "dal segno"]);
 	});
 });
+
+describe("an ending across rows (barmark's grammar 5.1)", () => {
+	const FIVE = "|: C | F |\n|1 G | A | B | C |\n| D :|\n|2 E |";
+	test("a row the ending continues onto carries its passes as `continues`", () => {
+		const rows = rowsOf(FIVE);
+		expect(rows.map((r) => r.ending)).toEqual([null, [1], null, [2]]);
+		expect(rows.map((r) => r.continues ?? null)).toEqual([null, null, [1], null]);
+		expect(rows.map((r) => r.barNumber)).toEqual([1, 3, 7, 8]);
+	});
+	test("the bracket runs on over the next row, labelled once, and is said to continue", () => {
+		const html = renderChartUnwrapped(FIVE);
+		const rows = [...doc(html).querySelectorAll(".bm-row")];
+		expect(rows.map((r) => r.classList.contains("bm-ending"))).toEqual([false, true, true, true]);
+		expect(
+			rows.map((r) => r.querySelector("[data-ending]")?.getAttribute("data-ending") ?? null),
+		).toEqual([null, "1.", null, "2."]);
+		expect(texts(html, ".bm-sr").filter((t) => t.startsWith("ending"))).toEqual([
+			"ending for pass 1",
+			"ending for pass 1, continued",
+			"ending for pass 2",
+		]);
+	});
+	test("a stray :| after endings with no repeat continues no bracket", () => {
+		const text = "| C |\n|1 D |\n| E :|\n|2 F |";
+		const items = layoutChart(text).blocks.flatMap((b) => b.items);
+		expect(items.some((i) => i.kind === "row" && i.continues)).toBe(false);
+		expect(texts(renderChartUnwrapped(text), ".bm-sr").some((t) => t.includes("continued"))).toBe(
+			false,
+		);
+	});
+	test("in a system, every part's row continues the ending", () => {
+		const text = [
+			"part: Gtr = Guitar",
+			"part: Bass = Bass",
+			"Gtr |: C |",
+			"Bass |: C |",
+			"Gtr |1 G |",
+			"Bass |1 G |",
+			"Gtr | A :|",
+			"Bass | A :|",
+			"Gtr |2 E |",
+			"Bass |2 E |",
+		].join("\n");
+		const html = renderChartUnwrapped(text);
+		const systems = [...doc(html).querySelectorAll(".bm-system")];
+		expect(
+			systems.map((s) =>
+				[...s.querySelectorAll(".bm-row")].every((r) => r.classList.contains("bm-ending")),
+			),
+		).toEqual([false, true, true, true]);
+	});
+});

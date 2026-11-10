@@ -218,3 +218,25 @@ describe("secondsAtBar", () => {
 		expect(secondsAtBar(m, 2, 1.5)).toBeNull();
 	});
 });
+
+describe("an ending across lines (barmark's grammar 5.1)", () => {
+	const text = "|: C | F |\n|1 G | A | B | C |\n| D :|\n|2 E |";
+	/** A map of `n` played bars, two seconds each, made for `text`. */
+	const mapOf = (n: number) => ({
+		format: "barmark-timing",
+		version: 1,
+		chart: { bars: n, hash: chartHash(text) },
+		bars: Array.from({ length: n }, (_, i) => ({ bar: i + 1, start: i * 2 })),
+		end: n * 2,
+	});
+	test("a map times every bar the ending plays, its second line's included", () => {
+		expect(parseChart(text).bars.map((b) => b.written)).toEqual([1, 2, 3, 4, 5, 6, 7, 1, 2, 8]);
+		expect(checkTimingMap(mapOf(10), { text }).diagnostics).toEqual([]);
+		expect(errorPaths(mapOf(8), { text })).toContain("chart.bars");
+	});
+	test("the second pass's first bar is played bar 8", () => {
+		const map = mapOf(10) as unknown as TimingMap;
+		expect(barAt(map, 14.5)).toEqual({ entry: 7, bar: 8, fraction: 0.25 });
+		expect(secondsAtBar(map, 10)).toBe(18);
+	});
+});

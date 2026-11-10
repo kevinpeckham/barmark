@@ -24,6 +24,22 @@ not here.
   `bun run test:browser`, and a long branch opens a draft PR early so CI
   runs on every push.
 
+### An indented code fence in the grammar shifts every corpus chart after it (2026-11-10, grammar)
+
+- **The symptom.** Adding an example to grammar 5.1 inside a list item,
+  its fence indented two spaces, made `sounding.test.ts` fail for a
+  grammar block that had nothing to do with endings, and regenerating
+  `sounding.json` dropped one chart and changed another.
+- **The cause.** The MusicXML corpus reads the grammar's blocks with
+  `/```[a-z]*\n([\s\S]*?)\n```/` (`packages/musicxml/tests/charts.ts`),
+  which needs a closing fence at the start of a line. An indented one
+  doesn't close, so the block ran on to the next fence and every block
+  after it paired the wrong way round.
+- **The fix.** Grammar examples stay unindented, outside lists
+  (`docs/grammar-v0.1-draft.md` 5.1). A new example is a new corpus chart:
+  `bun scripts/musicxml-sounding.ts` adds it to `sounding.json`, and the
+  diff must be additions only.
+
 ### linkedom is not a browser for custom elements (2026-11-08, @barmark/score)
 
 - **The symptom.** Writing `<barmark-score>`'s tests on linkedom, three
@@ -602,6 +618,24 @@ order, not just the written marks.
 
 ## Design
 
+### The MusicXML export reads repeats again from the lines (2026-11-10, @barmark/musicxml)
+
+- **The symptom.** With endings continuing onto further lines (grammar
+  5.1), barmark played `|: C |`, `|1 D |`, `| E :|`, `|2 F |`, `| G :|`,
+  `|3 A |` in the right order, but the export wrote the first `:|` as
+  `times="2"` while the second said 3.
+- **The cause.** `measures.ts` doesn't take barmark's pairing of repeats
+  and endings (`repeats.ts`, not exported); it walks `parse.lines` again,
+  with its own copy of the lines that may sit between endings, and
+  `passes` stopped at the first line that wasn't an ending, a
+  continuation line.
+- **The fix.** The parse tree marks a continuation line (`continues`), and
+  the export reads an ending's passes as `ending ?? continues`
+  (`endingOf`), in `passes`, `countLine`, `endsBracket` and the ending
+  marks (`packages/musicxml/src/measures.ts`). Any change to what a
+  repeat or ending spans must touch both walks; the parse-tree field keeps
+  them from drifting further.
+
 ### One unreadable chord dropped its whole line, so a chart played short (2026-11-10, barmark)
 
 - **The symptom.** Porting the listening tool, a chart with one `CM7`
@@ -905,6 +939,39 @@ when two rules each define "first", test a chart that tells them apart,
 and round-trip it through `format`.
 
 ## Tooling
+
+### jsDelivr serves the engraver's `.wasm` as `application/wasm`, brotli, CORS open, once it has the version (2026-11-10, @barmark/engraver 0.1.1)
+
+- **The symptom.** Minutes after npm accepted 0.1.1, jsDelivr served
+  `dist/verovio-module.mjs` but answered `dist/verovio-module.wasm` with
+  a 404 ("Couldn't find the requested release version 0.1.1",
+  `cache-control: public, max-age=30, s-maxage=30`). Its data API
+  (`data.jsdelivr.com/v1/packages/npm/@barmark/engraver@0.1.1`) said the
+  same. The npm tarball held the file all along. 31 seconds later the
+  `.wasm` served.
+- **The cause.** jsDelivr's view of the package's versions lags npm
+  briefly after a publish, and different files can resolve through
+  differently aged caches. Its 404 is cached for only 30 seconds, so the
+  gap closes by itself.
+- **The facts, checked.** Both files downloaded from
+  `https://cdn.jsdelivr.net/npm/@barmark/engraver@0.1.1/dist/` match
+  `packages/engraver/src/info.ts` (`openssl dgst -sha384 -binary | base64`):
+  `.mjs` 29,534 bytes, `sha384-klTppHZB…KJO`; `.wasm` 2,956,941 bytes,
+  `sha384-cBBw1xx6…pr5i`. `curl -sI -H 'Accept-Encoding: br, gzip'` on
+  the `.wasm` gives `content-type: application/wasm` (so
+  `WebAssembly.instantiateStreaming` would accept it, though score
+  fetches bytes and checks them first), `content-encoding: br` (941,454
+  bytes on the wire, 32% of the file), `access-control-allow-origin: *`,
+  `cross-origin-resource-policy: cross-origin`, `vary: Accept-Encoding`
+  and `cache-control: public, max-age=31536000, immutable`. The `.mjs` is
+  `application/javascript; charset=utf-8`, also brotli and CORS open.
+- **What to do.** After an engraver release, check jsDelivr only once
+  `npm view` shows the version, and wait for the `.wasm` with a blocking
+  check (`until curl -sfo /dev/null <url>; …`), not one request. A
+  site's switch to a new engraver version (Task 17) waits until both
+  files serve.
+- **Where.** `packages/engraver/src/info.ts` (`CDN_URL` and the digests);
+  RELEASING step 11.
 
 ### The release ran `bun test` before `bun run build`, so engraver 0.1.0 never published (2026-11-10, @barmark/engraver 0.1.0)
 

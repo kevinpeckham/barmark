@@ -1,18 +1,21 @@
+import { BETWEEN_ENDINGS } from "./endingLines.js";
 import type { Line, Repeat } from "./types.js";
 
 type BarsLine = Extract<Line, { kind: "bars" }>;
 type Report = (line: number, message: string, token: string) => void;
 
 export type Entry = { line: Line; repeat: Repeat };
-/** One ending: the passes it plays on and its bar line. */
-export type Ending = { passes: number[]; entry: Entry };
+/** One ending: the passes it plays on and its bar lines (grammar 5.1). */
+export type Ending = { passes: number[]; entries: Entry[] };
 /** A line, or a `|: … :|` repeat; one with endings plays `repeat` passes, each taking its ending. */
 export type Item =
 	| ({ kind: "line" } & Entry)
 	| { kind: "bracket"; line: number; entries: Entry[]; repeat: Repeat; endings: Ending[] };
 
+/** An ending as written: the bar line that starts it, then the lines it continues onto. */
+type Written = { head: BarsLine; lines: BarsLine[] };
 /** A repeat whose endings have begun, with the text lines met among them. */
-type Endings = { line: number; entries: Entry[]; endings: BarsLine[]; between: Entry[] };
+type Endings = { line: number; entries: Entry[]; endings: Written[]; between: Entry[] };
 /** Pairing so far: the items made, a `|:` waiting for its `:|`, and endings being collected. */
 type State = {
 	items: Item[];
@@ -38,29 +41,32 @@ function passProblems(endings: BarsLine[], last: BarsLine): [BarsLine, string][]
 	return problems;
 }
 
-/** Every ending but the last goes back with `:|`; the last plays on. */
-function closeProblems(endings: BarsLine[], last: BarsLine): [BarsLine, string][] {
-	return endings.flatMap((b): [BarsLine, string][] => {
+/** Every ending but the last goes back with `:|` on its last line; the last plays on. */
+function closeProblems(endings: Written[], last: BarsLine): [BarsLine, string][] {
+	return endings.flatMap(({ head: b, lines }): [BarsLine, string][] => {
+		const closes = lines.at(-1)?.closes ?? false;
 		if (b === last)
-			return b.closes ? [[b, "the last ending plays on, so it doesn't close with :|"]] : [];
-		return b.closes ? [] : [[b, "an ending before the last goes back with :|"]];
+			return closes ? [[b, "the last ending plays on, so it doesn't close with :|"]] : [];
+		return closes ? [] : [[b, "an ending before the last goes back with :|"]];
 	});
 }
 
 /** A repeat with its endings, or, if they have problems, each line played once. */
 function closeEndings(e: Endings, error: Report): Item[] {
-	const last = e.endings.at(-1);
+	const heads = e.endings.map((x) => x.head);
+	const last = heads.at(-1);
 	if (!last) return [];
-	const problems = [...passProblems(e.endings, last), ...closeProblems(e.endings, last)];
+	const problems = [...passProblems(heads, last), ...closeProblems(e.endings, last)];
 	for (const [b, message] of problems) error(b.line, message, passesToken(b));
 	const between = e.between.map((x) => asLine(x.line));
+	const written = e.endings.flatMap((x) => x.lines);
 	if (problems.length)
-		return [...e.entries.map((x) => asLine(x.line)), ...e.endings.map(asLine), ...between];
-	const endings = e.endings.map((b) => ({
-		passes: b.ending ?? [],
-		entry: { line: b, repeat: null },
+		return [...e.entries.map((x) => asLine(x.line)), ...written.map(asLine), ...between];
+	const endings = e.endings.map((x) => ({
+		passes: x.head.ending ?? [],
+		entries: x.lines.map((line) => ({ line, repeat: null })),
 	}));
-	const repeat = highestPass(e.endings);
+	const repeat = highestPass(heads);
 	return [{ kind: "bracket", line: e.line, entries: e.entries, repeat, endings }, ...between];
 }
 
@@ -68,8 +74,9 @@ function closeEndings(e: Endings, error: Report): Item[] {
 function takeEnding(st: State, bars: BarsLine, error: Report): void {
 	if (bars.repeat !== null)
 		error(bars.line, "x N on an ending: the endings give the count", passesToken(bars));
-	if (st.open) st.endings = { ...st.open, endings: [bars], between: [] };
-	else if (st.endings) st.endings.endings.push(bars);
+	const ending = { head: bars, lines: [bars] };
+	if (st.open) st.endings = { ...st.open, endings: [ending], between: [] };
+	else if (st.endings) st.endings.endings.push(ending);
 	else {
 		error(bars.line, "an ending follows the bars of a |: … :| repeat", passesToken(bars));
 		st.items.push(asLine(bars));
@@ -109,8 +116,14 @@ function addEntry(st: State, entry: Entry): void {
 	else st.items.push({ kind: "line", ...entry });
 }
 
-/** Lines that may sit between endings (grammar 5.1): they mean nothing to the timeline. */
-const BETWEEN_ENDINGS = new Set<Line["kind"]>(["text", "credit", "lyrics", "break"]);
+const repeatToken = (r: Repeat) => (r === "open" ? "x ..." : `x${r}`);
+
+/** A line an ending continues onto (grammar 5.1) joins it; its own `x N` is an error, as on the ending's first line. */
+function continueEnding(e: Endings, bars: BarsLine, error: Report): void {
+	if (bars.repeat !== null)
+		error(bars.line, "x N on an ending: the endings give the count", repeatToken(bars.repeat));
+	e.endings.at(-1)?.lines.push(bars);
+}
 
 /**
  * Pair `|:` and `:|` within one section's lines, with the endings that
@@ -125,6 +138,7 @@ export function pairRepeats(lines: Line[], error: Report): Item[] {
 	};
 	for (const l of lines) {
 		if (l.kind === "bars" && l.ending) takeEnding(st, l, error);
+		else if (l.kind === "bars" && l.continues && st.endings) continueEnding(st.endings, l, error);
 		else if (st.endings && BETWEEN_ENDINGS.has(l.kind))
 			st.endings.between.push({ line: l, repeat: null });
 		else {
