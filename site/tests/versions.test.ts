@@ -32,3 +32,11 @@ describe("the CLI", () => {
 		]);
 	});
 });
+
+describe("the score", () => {
+	test("its tags are score-v, so the site's pin is checked too", () => {
+		expect(behind({ "@barmark/score": "0.1.0" }, ["score-v0.1.1", "score-v0.1.0"])).toEqual([
+			"@barmark/score 0.1.0 < 0.1.1",
+		]);
+	});
+});

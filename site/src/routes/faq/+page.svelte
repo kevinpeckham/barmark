@@ -3,7 +3,7 @@ import { onMount } from "svelte";
 import { LINKS } from "#lib/site.js";
 
 const description =
-	"What Barmark is, who makes it, how it compares with other chord notations, what it suits, and how it is licensed.";
+	"What Barmark is, who makes it, how it compares with other chord notations, what it suits, how it shows a chart as a score, and how it is licensed.";
 const link = "underline decoration-accent/60 underline-offset-3 hover-text-accent";
 const code = "font-mono text-accent";
 const question = "font-serif text-xl text-ink scroll-mt-6";
@@ -22,6 +22,10 @@ const QUESTIONS = [
 	["cli", "Can I check my charts without writing code?"],
 	["numerals", "Can I write Nashville numbers or Roman numerals?"],
 	["lyrics", "Can a chart hold lyrics?"],
+	["score", "Can Barmark show a chart as sheet music?"],
+	["score-package", "Why is the score view a separate package?"],
+	["verovio", "What engraves the score?"],
+	["score-dorico", "Does the score match Dorico or MuseScore?"],
 	["tested", "How do you know it reads charts correctly?"],
 	["help", "How do I report a problem or suggest a change?"],
 ] as const;
@@ -67,9 +71,10 @@ onMount(() => {
 <main class="home-page-x-padding py-10 flex flex-col gap-6 min-w-0">
 	<h1 class="marketing-headline text-ink">Frequently asked questions</h1>
 
-	<!-- Wide: the questions in a column that stays in view beside the answers. Narrow: above them. -->
+	<!-- Wide: the questions in a column that stays in view beside the answers (short enough to stay put
+		 beside the last answer, scrolling inside itself if it must). Narrow: above them. -->
 	<div class="grid grid-cols-1 lg:grid-cols-[17rem_minmax(0,1fr)] gap-10 lg:gap-14 items-start">
-		<aside class="lg:(sticky top-6 max-h-[calc(100vh-3rem)] overflow-y-auto)">
+		<aside class="lg:(sticky top-6 max-h-[calc(100vh-8rem)] overflow-y-auto)">
 			<nav aria-label="Questions">
 				<h2 class="window-label mb-3">Questions</h2>
 				<ul class="flex flex-col text-sm">
@@ -78,7 +83,7 @@ onMount(() => {
 							<a
 								href="#{id}"
 								aria-current={current === id ? "true" : undefined}
-								class="block border-l-2 border-line pl-3 py-1.5 opacity-75 hover-(opacity-100 text-accent) aria-[current=true]:(border-accent text-accent opacity-100) focus-visible-(outline-2 outline-accent)"
+								class="block border-l-2 border-line pl-3 py-1 opacity-75 hover-(opacity-100 text-accent) aria-[current=true]:(border-accent text-accent opacity-100) focus-visible-(outline-2 outline-accent)"
 								>{text}</a
 							>
 						</li>
@@ -97,8 +102,9 @@ onMount(() => {
 					which bars, in which sections, in what key, meter and tempo, and in what order the song plays.
 				</p>
 				<p>
-					It is also five npm packages: <code class={code}>barmark</code> reads and writes charts,
+					It is also six npm packages: <code class={code}>barmark</code> reads and writes charts,
 					<code class={code}>@barmark/render</code> draws them as a clean bar grid on any web page,
+					<code class={code}>@barmark/score</code> shows the same chart as a full score beside the grid,
 					<code class={code}>@barmark/musicxml</code> converts them to and from MusicXML,
 					<code class={code}>@barmark/sync</code> builds a chart from a recording's detected chords and
 					says when each bar plays, and <code class={code}>@barmark/cli</code> does the rest from the
@@ -200,6 +206,10 @@ onMount(() => {
 						Roman numerals.
 					</li>
 					<li>
+						Readers who read staff notation more easily than a chord grid:
+						<code class={code}>&lt;barmark-score&gt;</code> switches the same chart to a score.
+					</li>
+					<li>
 						Music research and audio tools that align chords with recordings, where every bar has to be
 						accounted for: <code class={code}>@barmark/sync</code> writes the chart and the bar times.
 					</li>
@@ -209,9 +219,11 @@ onMount(() => {
 			<section>
 				{@render heading("not-fit")}
 				<p>
-					Barmark describes harmony in time, not who plays what. It doesn't write melodies, rhythms note
-					by note or individual parts; that is the job of standard notation and formats such as
-					MusicXML. For lyrics with chords above the words, ChordPro is the better fit.
+					Barmark is a chord chart first: it says which chords sound in which bars. A chart can also carry
+					a singer's melody, its lyrics and several parts, and the score view draws them, but it is not a
+					format for engraving an arrangement note for note with every marking; that is the job of
+					standard notation programs and formats such as MusicXML. For lyrics with chords above the words,
+					ChordPro is the better fit.
 				</p>
 			</section>
 
@@ -263,8 +275,63 @@ onMount(() => {
 				{@render heading("lyrics")}
 				<p>
 					Yes. Any line that isn't bars, a heading or a directive is text, so lyrics, cues and notes go on
-					lines of their own between the rows of bars, and the renderer shows them there. Barmark doesn't
-					align chords to syllables.
+					lines of their own between the rows of bars, and the renderer shows them there. To put words on
+					the beats, a <code class={code}>lyrics:</code> row under a bar line places each syllable in its
+					bar, and a melody line can carry a syllable on each note. The
+					<a href="/syntax" class={link}>Syntax Guide</a> shows both, and the score view draws them under
+					the staff.
+				</p>
+			</section>
+
+			<section>
+				{@render heading("score")}
+				<p>
+					Yes. <a href="/get-started#score" class={link}><code class={code}>@barmark/score</code></a>
+					draws a chart as a full score: chord symbols over rhythm slashes, a singer's melody and its
+					lyrics as notes, each part on a staff of its own (a piano on two), with the chart's sections,
+					repeats, endings, key, meter and tempo. Its <code class={code}>&lt;barmark-score&gt;</code> element
+					shows the bar grid with a Grid / Score switch above it; the home page's chart and
+					<a href="/try" class={link}>Try It</a> have one. From the terminal,
+					<code class={code}>npx @barmark/cli render --score song.chart.md --out song.html</code> writes the
+					score as a page to open in a browser and print to PDF.
+				</p>
+				<p>
+					The score adds no music of its own. A chart of chord names stays chord names over slashes: no
+					voicing is guessed, because on a page a guessed voicing would read as the arrangement.
+				</p>
+			</section>
+
+			<section>
+				{@render heading("score-package")}
+				<p>
+					Size. The engraver behind the score is several megabytes (about 2.5 MB compressed, as this site
+					serves it), and most pages that show a chart need only the grid. So
+					<code class={code}>&lt;barmark-chart&gt;</code> stays as light as it was, with no score code, and
+					<code class={code}>&lt;barmark-score&gt;</code> loads the engraver only the first time a reader
+					presses Score, in a background worker so the page doesn't freeze. A reader who stays on the grid
+					never downloads it, and one copy serves every score on a page.
+				</p>
+			</section>
+
+			<section>
+				{@render heading("verovio")}
+				<p>
+					<a href={LINKS.verovio} class={link}>Verovio</a>, an open-source music engraver, licensed under
+					the <a href={LINKS.verovioLicense} class={link}>LGPL-3.0</a>.
+					<code class={code}>@barmark/score</code> uses it as an ordinary npm dependency, loaded unchanged
+					when a score is drawn. None of its code is copied into Barmark's packages, which stay MIT. The
+					CLI's standalone binaries carry Verovio unmodified, with its licence in the release.
+				</p>
+			</section>
+
+			<section>
+				{@render heading("score-dorico")}
+				<p>
+					It is drawn from the same file they open. The score is engraved from the MusicXML that
+					<a href={LINKS.musicxmlReadme} class={link}><code class={code}>@barmark/musicxml</code></a>
+					exports, the file <code class={code}>barmark export --musicxml</code> writes, so Dorico, MuseScore
+					or Sibelius read the same notes, chords, parts and structure. How the page is laid out, its line
+					breaks, spacing and fonts, is each program's own.
 				</p>
 			</section>
 

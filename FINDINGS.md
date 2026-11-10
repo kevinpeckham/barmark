@@ -1445,6 +1445,8 @@ The release workflow logged `+ barmark@0.1.0` and its provenance, yet
 must wait and retry: the release workflow's `confirm` job polls `npm view
 barmark@<version> --prefer-online` for up to ten minutes before
 installing.
+Bun's own cache can lag too: `bun add` may still miss a version `npm view`
+already shows, and `bun add --exact --no-cache` fixes it.
 
 ### Fallow's first run: three exports nobody imported, and a baseline for the parser's complexity (2026-10-31, Fallow)
 
@@ -2107,3 +2109,20 @@ two reviews of one class, stop fixing instances: list the nested loops and their
 every one that multiplies two inputs. Suppressing what a stop explains must be just as exact: dropping
 every "never sung" after a stop hid a real one (verse 3 under `x2`); the rows a stop cut off are
 those never reached, or reached in a repeat with passes enough for their verse (`BarSource.passes`).
+
+### Vite 8 bundled Verovio into the score's worker, so a CDN copy was a second download (2026-11-10, site)
+
+- **The symptom.** With `verovio-url` and `verovio-integrity` pointing at
+  jsDelivr, barmark.dev's built worker was still 8.5 MB: a reader pressing
+  Score fetched the worker, with Verovio inside it, and then Verovio again
+  from the CDN.
+- **The cause.** Vite builds workers as `iife` by default, which cannot
+  split, so the worker's fallback `import("verovio/wasm")` was inlined.
+  The score README says Vite 8 needs no config, which is true for drawing a
+  score, not for keeping Verovio out of the worker.
+- **The fix.** `worker: { format: "es" }` in `site/vite.config.ts`: the
+  worker is about 200 KB and Verovio a chunk of its own, fetched only when
+  the CDN copy fails. `site/tests/build.test.ts` checks the sizes, and the
+  browser suite checks the score loads from jsDelivr with no fallback
+  warning. A site using `verovio-url` on Vite 8 needs the same setting;
+  the score README should say so.

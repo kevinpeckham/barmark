@@ -57,6 +57,38 @@ editor.addEventListener("input", () => {
 	chart.text = editor.value;
 });`;
 
+export const INSTALL_SCORE = "npm install @barmark/score";
+
+export const USE_SCORE_ELEMENT = `<script type="module">
+	import "@barmark/score/element"; // registers <barmark-chart> too
+</script>
+
+<!-- The grid, with a Grid / Score switch above it -->
+<barmark-score src="/charts/example-song.chart.md"></barmark-score>
+
+<!-- Or open on the score -->
+<barmark-score view="score" theme="dark">
+	<script type="text/barmark">
+		key: D
+		| D | A | Bm | G |
+	</script>
+</barmark-score>`;
+
+export const USE_SCORE_SERVER = `import { renderScoreHtml } from "@barmark/score/server";
+
+// The grid and the switch, drawn with no script; Verovio is never loaded here.
+const html = renderScoreHtml(text, {
+	theme: "auto",
+	fontUrl: "/fonts/Edwin-Roman.otf", // as for renderChart
+});`;
+
+/** Vite 7 only; Vite 8 needs nothing (the score package's README). */
+export const VITE7_CONFIG = `// vite.config.js, for Vite 7 (harmless on Vite 8)
+export default {
+	optimizeDeps: { exclude: ["@barmark/score"] },
+	worker: { format: "es" },
+};`;
+
 export const INSTALL_MUSICXML = "npm install @barmark/musicxml";
 
 export const USE_MUSICXML = `import { exportMusicXml, importMusicXml } from "@barmark/musicxml";
@@ -116,6 +148,7 @@ export const USE_CLI = `npx @barmark/cli check songs          # every .chart.md 
 npx @barmark/cli format --write songs # rewrite them in standard form
 npx @barmark/cli transpose example-song.chart.md --to E
 npx @barmark/cli render example-song.chart.md --out example-song.html
+npx @barmark/cli render --score example-song.chart.md --out example-song-score.html  # the full score
 npx @barmark/cli export --musicxml example-song.chart.md --out example-song.musicxml
 npx @barmark/cli import example-song.musicxml --out imported.chart.md  # a MusicXML score as a chart`;
 

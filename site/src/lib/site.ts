@@ -11,12 +11,25 @@ export const LINKS = {
 	renderReadme: "https://github.com/kevinpeckham/barmark/tree/main/packages/render#readme",
 	cliReadme: "https://github.com/kevinpeckham/barmark/tree/main/packages/cli#readme",
 	musicxmlReadme: "https://github.com/kevinpeckham/barmark/tree/main/packages/musicxml#readme",
+	scoreReadme: "https://github.com/kevinpeckham/barmark/tree/main/packages/score#readme",
+	verovio: "https://github.com/rism-digital/verovio",
+	verovioLicense: "https://github.com/rism-digital/verovio/blob/develop/COPYING.LESSER",
+	/** Verovio's source at the version the score bundles (the site's verovio pin). */
+	verovioBundled: "https://github.com/rism-digital/verovio/tree/version-6.4.1",
+	/** This site's source, so it can be rebuilt with another Verovio. */
+	siteSource: "https://github.com/kevinpeckham/barmark/tree/main/site",
 	syncReadme: "https://github.com/kevinpeckham/barmark/tree/main/packages/sync#readme",
 	cliReleases: "https://github.com/kevinpeckham/barmark/releases?q=cli-v",
 	songs: "https://github.com/kevinpeckham/songs",
 	parserReadme: "https://github.com/kevinpeckham/barmark/tree/main/packages/barmark#readme",
 	lightningJar: "https://www.lightningjar.com",
 	origin: "https://www.barmark.dev",
+} as const;
+
+/** Files the site serves itself, linked by path. */
+export const FILES = {
+	/** Verovio's licence, from static/licenses (the CLI's release attaches the same texts). */
+	verovioLgpl: "/licenses/Verovio-LGPL-3.0.txt",
 } as const;
 
 export const HEADLINE =
