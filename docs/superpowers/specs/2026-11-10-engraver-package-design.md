@@ -461,8 +461,11 @@ jsDelivr, so the GPLv3 sections that LGPLv3 incorporates apply.
    - Emscripten's MIT and UIUC notices (its glue, musl, libc++ and
      compiler-rt are in the output)
    - the libraries Verovio vendors
-   - `data/text/` (Times metrics) named as **Verovio-derived data under
-     Verovio's licence**, not as OFL
+   - `data/text/` (Times metrics, `font-family="Times"`): Verovio's data,
+     embedded unchanged. Its source font is unrecorded upstream
+     (`fonts/generate_text_font.sh` takes it as an argument); Verovio's
+     `fonts/README.md` names Liberation and says all its fonts are OFL.
+     THIRD-PARTY states only that and points to `OFL.txt`.
 5. **OFL:** `Leipzig/`, `Leipzig.xml`, `Leipzig.css` and `Bravura.xml`
    derive from Leipzig and Bravura (SIL OFL 1.1). `OFL.txt` and NOTICE.md
    credit them. No Reserved Font Name is used in our package's name.

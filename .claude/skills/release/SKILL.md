@@ -40,9 +40,11 @@ Points that are easy to miss:
   Corresponding Source attached." Afterwards check the release lists
   `verovio-X.Y.Z-source.tar.gz`, `engraver-build-X.Y.Z.tar.gz` and the
   five licence files. Then a `score` patch (new `ENGRAVER_*` literals) and
-  a site bump. Each release run now takes 5–10 minutes longer (it builds
-  the engraver): start the next only when the previous has left the
-  release queue.
+  a site bump. Every release run builds the engraver first
+  (`build-engraver`): about 5 minutes on an `engraver-v*` tag or a
+  dist-cache miss, which compile from clean; otherwise a cache restore and
+  the gate. Start the next release only when the previous has left the
+  queue.
 - Bump the version in `bun.lock` too (the package's workspace entry):
   Bun leaves it stale, and `bun pm pack` reads it.
 - Run `bunx varlock run -- swamp workflow run release-check --input

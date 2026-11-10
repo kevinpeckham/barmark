@@ -37,9 +37,9 @@ anywhere.
   included) must pass, and force-pushes and deletion
   are blocked. `site-versions` is deliberately not required (step 12). Renaming a CI job or changing a matrix means updating the
   ruleset's required checks.
-- **Release tags** (ruleset "release tags", `v*`, `barmark-v*`,
-  `render-v*` and the other packages' patterns, `engraver-v*` among
-  them): a tag can be created but never moved or deleted, so a
+- **Release tags** (ruleset "release tags": `v*`, `barmark-v*`,
+  `render-v*`, `musicxml-v*`, `score-v*`, `sync-v*`, `midi-v*`, `cli-v*`
+  and `engraver-v*`): a tag can be created but never moved or deleted, so a
   version always names the code that was released.
 - **The `npm` environment** holds the publish job: it needs Kevin's
   approval and runs only for release tags. Each package's npm trusted
@@ -133,7 +133,7 @@ The same scripts run in three places; `<pkg>` is `barmark`, `render`, `musicxml`
 | The renderer in Chromium | `bun run test:browser` | | ✓ | ✓ |
 | Package contents, Node import | `bun run verify:package <pkg>` | ✓ | ✓ (Node 20, 22, 24) | ✓ |
 | Version, CHANGELOG, tag, dependencies on npm, clean `main` | `bun run verify:release <pkg>` | ✓ | | ✓ (tag = version) |
-| Engraver build and equivalence | `cd packages/engraver && bun run compile`; `bun scripts/engraver-equivalence.ts` | ✓ (`pkg=engraver`) | ✓ (`engraver`; weekly clean rebuild) | ✓ (`build-engraver`) |
+| Engraver build and equivalence | `cd packages/engraver && bun run compile`; `bun scripts/engraver-equivalence.ts` | ✓ (`pkg=engraver`) | ✓ (`engraver`; weekly clean rebuild, with `build/source.sh`: a red Monday `ci` run on main is drift in the engraver build: investigate before the next engraver release) | ✓ (`build-engraver`) |
 
 Locally, `bunx varlock run -- swamp workflow run release-check --input
 pkg=<pkg>` runs all but the browser tests through the `barmark` Swamp
@@ -196,10 +196,11 @@ runs, and `verify:package cli` fails on anything else.
    create one release at a time: release runs share a concurrency group
    that keeps one running and one pending, and a newer pending run
    cancels the older one, so start the next only when the previous run
-   is running or done (FINDINGS 2026-11-09). Every release run now builds
-   the engraver first (`build-engraver`), which adds 5–10 minutes, so wait
-   until the previous run has left the release queue before starting the
-   next; this matters for the engraver → score → CLI sequence.
+   is running or done (FINDINGS 2026-11-09). Every release run builds the
+   engraver first (`build-engraver`): about 5 minutes on an `engraver-v*`
+   tag or a dist-cache miss, which compile from clean; otherwise a cache
+   restore and the gate. Start the next release only when the previous
+   has left the queue.
    **An engraver release's notes begin with** "A modified build of
    Verovio X.Y.Z (LGPL-3.0-only), made by barmark, not by the Verovio
    project; Corresponding Source attached."
@@ -210,7 +211,9 @@ runs, and `verify:package cli` fails on anything else.
     package's provenance on npmjs.com. For `@barmark/engraver`, check the
     release page lists `verovio-X.Y.Z-source.tar.gz`,
     `engraver-build-X.Y.Z.tar.gz` and the five licence files (`COPYING`,
-    `COPYING.LESSER`, `OFL.txt`, `NOTICE.md`, `THIRD-PARTY.md`).
+    `COPYING.LESSER`, `OFL.txt`, `NOTICE.md`, `THIRD-PARTY.md`). If
+   `confirm` times out, `gh run rerun <id> --failed` reruns it and then
+   `attach-source` (artifacts live 7 days).
 12. **Bump barmark.dev:** on a new branch, `cd site && bun add --exact
     <npm name>@X.Y.Z`, run `bun run check && bun test`, and open a pull
     request `chore(site): use <npm name> X.Y.Z` (`site/package.json` and
