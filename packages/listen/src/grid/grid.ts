@@ -5,9 +5,10 @@
  * three witnesses' vote, then bar one placed (design §6.2 and §7).
  */
 import type { BarGrid, ChordRun } from "@barmark/sync";
-import { beatsOf, type Meter, parseMeter } from "barmark";
+import { beatsOf, type Meter } from "barmark";
 import type { CombFit } from "../comb/comb.js";
 import { type Features, readFeatures } from "../features/features.js";
+import { invalid, isNumber, isRefusal, readDeclared, readStart } from "../input.js";
 import { type ListenOptions, resolveOptions, type Settings } from "../options.js";
 import { type Ok, ok, type Refusal, type Refused, refusal, refused } from "../result.js";
 import type { ListenChordRuns } from "./beats.js";
@@ -69,38 +70,12 @@ type Checked = {
 	startsOnBarLine: boolean;
 };
 
-const invalid = (field: string, message: string): Refusal =>
-	refusal("invalid-input", message, { field });
-
-const isNumber = (v: unknown): v is number => typeof v === "number" && Number.isFinite(v);
-
-/** The declared meter and tempo, or why they cannot be read. */
-function readDeclared(declared: unknown): { meter: Meter; tempo: number } | Refusal {
-	if (typeof declared !== "object" || declared === null)
-		return invalid("declared", "The declared meter and tempo must be an object.");
-	const { meter: text, tempo } = declared as Record<string, unknown>;
-	const meter = typeof text === "string" ? parseMeter(text) : null;
-	if (!meter) return invalid("declared.meter", "The declared meter must read as a meter, as 4/4.");
-	if (!(isNumber(tempo) && tempo >= 1 && tempo <= 999))
-		return invalid("declared.tempo", "The declared tempo must be a number from 1 to 999.");
-	return { meter, tempo };
-}
-
-/** `startAt` (null when not given), or why it cannot be read. */
-function readStart(startAt: unknown): { startAt: number | null } | Refusal {
-	if (startAt === undefined || startAt === null) return { startAt: null };
-	if (isNumber(startAt) && startAt >= 0) return { startAt };
-	return invalid("startAt", "The start of bar one must be a time in seconds from 0.");
-}
-
 /** `startsOnBarLine` (true when not given), or why it cannot be read. */
 function readBarLine(given: unknown): { startsOnBarLine: boolean } | Refusal {
 	if (given === undefined) return { startsOnBarLine: true };
 	if (typeof given === "boolean") return { startsOnBarLine: given };
 	return invalid("startsOnBarLine", "startsOnBarLine must be true or false.");
 }
-
-const isRefusal = (v: object): v is Refusal => "reason" in v;
 
 /** A run's own fields, copied; null when it is not an object or its label or symbol is not a string. */
 function readRun(run: unknown): ChordRun | null {
