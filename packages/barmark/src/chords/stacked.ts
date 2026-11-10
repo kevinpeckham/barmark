@@ -54,21 +54,16 @@ export function intoGroup(rest: string, items: string[]): string {
 
 /** A parenthesis and its items. */
 const GROUP = /\((?<inner>[^()]*)\)/g;
-/**
- * A bare `omit`/`no` at the end of the chord's name as written (grammar 3):
- * after the quality, extension, alterations, sus and bare adds, before any
- * parenthesis or slash bass. Aliases are not a name as written: `CΔno3`
- * stays an error.
- */
-const BARE_OMISSION =
-	/^((?:m(?!aj)|dim|aug|5)?(?:7alt|maj13|maj9|maj7|6\/9|13|11|9|7|6)?(?:b5|#5|b9|#9|#11|b13)*(?:sus[24])?(?:add(?:2|4|9|11))*)((?:omit\s*|no)\d+)(?=[(/]|$)/;
+/** A bare `omit`/`no` ending the chord's name. */
+const TRAILING_OMISSION = /(?:omit\s*|no)\d+$/;
 
 export type Separated = { text: string; runTogether: boolean; bareOmission: boolean };
 
 /**
  * The text after a root with items run together in a parenthesis separated
- * by commas, and a bare `omit`/`no` ending the chord's name moved into the
- * last group (or a new one): `6(omit5add9)` is `6(omit5,add9)`, `add9omit3` is
+ * by commas, and a bare `omit`/`no` ending the chord's name (after the
+ * quality however it is spelled, before any parenthesis or slash bass)
+ * moved into the last group (or a new one): `6(omit5add9)` is `6(omit5,add9)`, `add9omit3` is
  * `add9(omit3)`.
  */
 export function separate(rest: string): Separated {
@@ -80,10 +75,13 @@ export function separate(rest: string): Separated {
 		return out.join(",");
 	};
 	const text = rest.replace(GROUP, (_, inner: string) => `(${split(inner)})`);
-	const bare = BARE_OMISSION.exec(text);
+	// The chord's name: what comes before any parenthesis or slash bass.
+	const paren = text.indexOf("(");
+	const end = paren >= 0 ? paren : (BASS.exec(text)?.index ?? text.length);
+	const name = text.slice(0, end);
+	const bare = TRAILING_OMISSION.exec(name);
 	if (!bare) return { text, runTogether, bareOmission: false };
-	const [whole, head = "", omission = ""] = bare;
-	const moved = intoGroup(head + text.slice(whole.length), [omission]);
+	const moved = intoGroup(name.slice(0, bare.index) + text.slice(end), [bare[0]]);
 	return { text: moved, runTogether, bareOmission: true };
 }
 

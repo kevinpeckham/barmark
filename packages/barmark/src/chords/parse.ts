@@ -162,7 +162,7 @@ function normalizeSymbol(text: string): Normal | Diagnostic {
 	if (rejected) return rejected;
 	const root = ROOT.exec(text)?.[0] ?? "";
 	let rest = text.slice(root.length);
-	// Stacked spellings first: a bare omission ends the chord's name as written, not an alias.
+	// Stacked spellings first, on the name as written; the aliases then read what is left.
 	const separated = separate(rest);
 	rest = separated.text;
 	for (const [pattern, replacement] of ALIASES) rest = rest.replace(pattern, replacement);

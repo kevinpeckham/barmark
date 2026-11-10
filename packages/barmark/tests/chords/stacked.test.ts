@@ -177,10 +177,19 @@ describe("mixed shapes", () => {
 		expect(r.warnings).toHaveLength(1);
 		expect(r.warnings[0]?.suggestion).toBe("C7(b9,#11,omit5)");
 	});
-	test("only after the quality as written, not after an alias (grammar 3)", () => {
-		expect(fails("G-7omit5").message).toContain("cannot read");
-		expect(fails("Gmin7no5").message).toContain("cannot read");
-		expect(fails("CΔno3").message).toContain("cannot read");
+	test("after the quality however it is spelled (grammar 3)", () => {
+		const read: [string, string, string][] = [
+			["G-7omit5", "Gm7(no5)", "G-7(omit5)"],
+			["Gmin7no5", "Gm7(no5)", "Gmin7(no5)"],
+			["CΔno3", "Cmaj7(no3)", "CΔ(no3)"],
+			["CΔ7no5", "Cmaj7(no5)", "CΔ7(no5)"],
+			["Gm7omit5", "Gm7(no5)", "Gm7(omit5)"],
+		];
+		for (const [symbol, canonical, suggestion] of read) {
+			const r = ok(symbol);
+			expect(r.value.canonical).toBe(canonical);
+			expect(r.warnings[0]?.suggestion).toBe(suggestion);
+		}
 	});
 	test("a warning a stacked spelling has as written stays", () => {
 		const r = ok("C7(7b9)");
@@ -277,7 +286,7 @@ describe("review nits (PR #255)", () => {
 		}
 	});
 	test("a bare omission is read only at the end of the chord's name, before any parenthesis or bass", () => {
-		for (const symbol of ["Cno5maj7", "Cno5m", "CΔno3", "Comit5sus4", "Cno3add9"]) {
+		for (const symbol of ["Cno5maj7", "Cno5m", "Comit5sus4", "Cno3add9", "C-no5m7", "Cno5/E7"]) {
 			expect(parseChord(symbol).ok).toBe(false);
 		}
 		expect(ok("Gm7omit5/D").value.canonical).toBe("Gm7(no5)/D");
