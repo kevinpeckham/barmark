@@ -8,24 +8,24 @@ They are Verovio's own data, unchanged, at version-6.4.1
 (commit fbe8f4695ab0a123cb096e0cf92354b44f7a2fb8). No Reserved Font Name is
 used in this package's name.
 
-Leipzig, https://github.com/rism-digital/leipzig
-(copyright line from LICENSE.txt at commit
-08d99233037c6f73a27920c56ce39966290eedb1):
-
-Copyright (c) 2014, Etienne Darbellay, Jean-Francois Martiand Laurent Pugin (info@rism.digital),
-with Reserved Font Name "Leipzig".
-
 Bravura, https://github.com/steinbergmedia/bravura
-(copyright line from LICENSE.txt at commit
-354f353b96cdd1eef6d450ea3e4eb0dfc50a92c4; Verovio's metadata names Bravura
-1.392):
+(copyright line from LICENSE.txt at tag bravura-1.392, the version
+Verovio's metadata names):
 
 Copyright © 2019, Steinberg Media Technologies GmbH (http://www.steinberg.net/),
 with Reserved Font Name "Bravura".
 
+Leipzig, https://github.com/rism-digital/leipzig
+(LICENSE.txt at commit 08d99233037c6f73a27920c56ce39966290eedb1, byte for
+byte, from its copyright line to the end of this file):
+
+Copyright (c) 2014, Etienne Darbellay, Jean-Francois Martiand Laurent Pugin (info@rism.digital), 
+with Reserved Font Name "Leipzig".
+
 This Font Software is licensed under the SIL Open Font License, Version 1.1.
 This license is copied below, and is also available with a FAQ at:
 https://openfontlicense.org
+
 
 -----------------------------------------------------------
 SIL OPEN FONT LICENSE Version 1.1 - 26 February 2007

@@ -91,7 +91,23 @@ test("OFL.txt names both fonts, their sources and what derives from them", () =>
 	])
 		expect(ofl).toContain(s);
 });
-test("THIRD-PARTY.md names Emscripten, the vendored libraries and data/text as Verovio's", () => {
+// Leipzig's LICENSE.txt at rism-digital/leipzig 08d99233037c6f73a27920c56ce39966290eedb1,
+// 4,437 bytes: OFL.txt carries it verbatim, from its copyright line to the end.
+const LEIPZIG_LICENSE_SHA256 = "77b3d0cfb6fa5f4784d64b9ddabffc1f8c9544b0389c4a13088e7b94defe1763";
+test("OFL.txt ends with Leipzig's upstream LICENSE.txt, byte for byte", () => {
+	const bytes = readFileSync(new URL("../OFL.txt", import.meta.url));
+	const start = bytes.indexOf("Copyright (c) 2014, Etienne Darbellay");
+	expect(start).toBeGreaterThan(0);
+	const tail = bytes.subarray(start);
+	expect(tail.length).toBe(4437);
+	expect(new Bun.CryptoHasher("sha256").update(tail).digest("hex")).toBe(LEIPZIG_LICENSE_SHA256);
+});
+test("OFL.txt cites Bravura by its release tag", () => {
+	const ofl = read("../OFL.txt");
+	expect(ofl).toContain("bravura-1.392");
+	expect(ofl).not.toContain("354f353");
+});
+test("THIRD-PARTY.md names Emscripten, the vendored libraries and what Verovio records of data/text", () => {
 	const third = read("../THIRD-PARTY.md");
 	for (const s of [
 		"Emscripten",
