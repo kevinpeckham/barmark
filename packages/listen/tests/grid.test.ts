@@ -246,13 +246,14 @@ describe("grid-truncated", () => {
 		expect(r.value.grid.bars).toHaveLength(6);
 		const period = r.value.reading.lattice.period;
 		expect(r.value.grid.bars.at(-1)).toBeCloseTo((r.value.grid.bars[0] as number) + 5 * period, 9);
-		expect(r.warnings).toEqual([
+		// tempo-drift (the comb's bar against the declared one) is tested in tempo-drift.test.ts.
+		expect(r.warnings.filter((w) => w.code !== "tempo-drift")).toEqual([
 			expect.objectContaining({ code: "grid-truncated", detail: { bars: 5 } }),
 		]);
 	});
 
 	test("no warning when the grid reaches the end", () => {
-		expect(placedWarnings(inputOf(FROM_ZERO))).toEqual([]);
+		expect(placedWarnings(inputOf(FROM_ZERO)).filter((c) => c !== "tempo-drift")).toEqual([]);
 	});
 });
 

@@ -193,6 +193,7 @@ to (it does that today in `utils/alignmentReason.ts`).
 | `sound-before-start` | With `startAt` set, sound begins a bar or more before it. Those bars are outside the grid and their chords are dropped (sync's `outside-bars`). |
 | `grid-truncated` | The grid reached `MAX_GRID_BARS` before the recording's end. The app truncated silently. Here it warns (design call). |
 | `bar-one-unplaced` | The pipeline built on the declared grid because the grid could not be placed and the caller asked for that (§6.4). `detail.reason` names the refusal it replaced. |
+| `tempo-drift` | The grid's lattice settled on a bar other than the declared one: `detail.ratio` is `period / declaredBar − 1` (signed), with `detail.period` and `detail.declaredBar`. On a placed grid and on `downbeat-undecided` or `nothing-fits` alike; never a refusal and no threshold (the host decides; Stem Shovel holds a draft above 4 %, Study 34b, issue #17). Not emitted when the ratio is zero within floating-point error (8 ulps of 1); the comb's 0.02 % scan step means a recording at its declared tempo usually shows a drift of that size. |
 | `chart-diagnostics` | The aligned chart has parse warnings or errors. The alignment still runs, as the app's adapter does. `detail.count` is included. |
 
 ## 5. Options: the constants
@@ -977,6 +978,7 @@ differs is a porting bug, and the goldens make it a failing test.
 | A `symbol` run reads as barmark's canonical spelling when `parseChord` reads it, so `A-` and `Am` count as one chord, not a change; the app compares the symbols as written | §11.1. Symbol runs with non-canonical spellings only; no ChordMini (Harte) label is affected |
 | A run whose `start` or `end` is not finite is skipped, and only the frames some beat reads are kept; the app sized its frames from the runs, so such a run threw or voted every beat "N.C." | Review Focus 3; never-throws (FINDINGS.md). A vote never changes on finite runs |
 | Refusals are names: the app's grid reasons map as §12.8 says, and the fit's sentences (`alignmentFit`'s `reasons`) are the refusal reasons `bar-one-far`, `bar-length-off`, `weak-fit`, `bars-off-middle` and `no-bars` | §4: refusals are values with reasons, not sentences |
+| listen adds `tempo-drift`; the app computes the same ratio itself | Stem Shovel issue #17 (Study 34b): the grid holds both numbers. A warning only, so no value changes and the goldens stand |
 | `too-long` counts the step table's cells, `(n + 1)(m + 1)`, where the app counts `n × m`: a case within `n + m + 1` cells of `DTW_MAX_CELLS` is refused here and warped by the app (added in Task 12, after a security review) | It is what `dtwTable` allocates. The other new check, `chart-too-long` before the render when the chart's seconds exceed twice the recording's, changes no outcome: it implies more than `2m` chart frames, which no warping fits (the app's own `chart-too-long`, checked on 1,677 seeded warpings) |
 
 ## 12. Adoption and release

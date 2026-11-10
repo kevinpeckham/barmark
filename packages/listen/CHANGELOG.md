@@ -60,6 +60,17 @@ package uses [semantic versioning](https://semver.org/).
     app counts `n × m`, and is checked before the render.
   - The chart's render streams in windows, bit for bit the same as a
     whole render, as the app renders.
+  - `tempo-drift`: `findGrid` and `chartFromRecording` warn how far the
+    comb's settled bar is from the declared one (`detail.ratio`,
+    `period / declaredBar − 1`, signed, with `detail.period` and
+    `detail.declaredBar`), on a placed grid and on an undecided or
+    nothing-fits refusal alike. A warning with no threshold: the host
+    decides (Stem Shovel holds a draft above 4 %, Study 34b). The app
+    computes the same ratio itself; no number changes.
+- **The README says why `declared` is required**: detecting tempo and
+  meter is where this pipeline fails on real recordings (Study 34), so a
+  host that detects what it passes as `declared` should treat the result
+  as unreviewed.
 - `@barmark/listen/features`: `recordingFeatures`, `chromaFeatures`,
   `onsetFeatures` and `joinFeatures` make a recording's features record
   (`FEATURES_VERSION` 1), and `readFeatures` checks one read back from a

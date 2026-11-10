@@ -26,7 +26,8 @@ export type WarningCode =
 	| "sound-before-start"
 	| "grid-truncated"
 	| "bar-one-unplaced"
-	| "chart-diagnostics";
+	| "chart-diagnostics"
+	| "tempo-drift";
 
 /** One reason a call refused. */
 export type Refusal = {

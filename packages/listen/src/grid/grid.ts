@@ -10,8 +10,17 @@ import type { CombFit } from "../comb/comb.js";
 import { type Features, readFeatures } from "../features/features.js";
 import { invalid, isNumber, isRefusal, readDeclared, readStart } from "../input.js";
 import { type ListenOptions, resolveOptions, type Settings } from "../options.js";
-import { type Ok, ok, type Refusal, type Refused, refusal, refused } from "../result.js";
+import {
+	type ListenWarning,
+	type Ok,
+	ok,
+	type Refusal,
+	type Refused,
+	refusal,
+	refused,
+} from "../result.js";
 import type { ListenChordRuns } from "./beats.js";
+import { tempoDrift } from "./drift.js";
 import { gridLattice, type Lattice, mod } from "./lattice.js";
 import { type Placement, placeAtStart, placeBarOne } from "./place.js";
 import { sectionWitness } from "./sections.js";
@@ -159,16 +168,20 @@ function readInput(input: unknown): Ok<Checked> | Refused {
 	return ok({ features: features.value, ...declared, ...start, ...chords, ...barLine });
 }
 
-/** The placement as the grid's answer, `nothing-fits` when there is none. */
-function answer(placement: Placement | null, reading: GridReading): GridResult {
+/** The placement as the grid's answer, `nothing-fits` when there is none; `drift` the lattice's warnings first. */
+function answer(
+	placement: Placement | null,
+	reading: GridReading,
+	drift: ListenWarning[],
+): GridResult {
 	if (!placement)
 		return refused(
 			[refusal("nothing-fits", "Bar one lands at or after the recording's end.")],
-			[],
+			drift,
 			{ reading },
 		);
 	const value = { grid: { bars: placement.bars }, pickup: placement.pickup, reading };
-	return ok(value, placement.warnings);
+	return ok(value, [...drift, ...placement.warnings]);
 }
 
 /** The reading's comb and lattice, copied. */
@@ -195,15 +208,18 @@ function witnessesOf(c: Checked, lattice: Lattice, s: Settings): Witness[] {
 function gridOf(c: Checked, s: Settings): GridResult {
 	const { features: f } = c;
 	const beatsPerBar = c.meter.n;
-	const read = gridLattice(f.onset, f.fps, (beatsOf(c.meter) * 60) / c.tempo, beatsPerBar, s);
+	const declaredBar = (beatsOf(c.meter) * 60) / c.tempo;
+	const read = gridLattice(f.onset, f.fps, declaredBar, beatsPerBar, s);
 	if (!read.ok) return { ...read, reading: null };
 	const { lattice, comb } = read.value;
+	const warning = tempoDrift(lattice.period, declaredBar);
+	const drift = warning ? [warning] : [];
 	const base = readingOf(comb, lattice);
 	if (c.startAt !== null) {
 		const k = Math.round((c.startAt - lattice.anchor) / lattice.beat);
 		const cls = mod(k, beatsPerBar);
 		const reading = { ...base, witnesses: [], scores: [], cls, decided: true, byStart: true };
-		return answer(placeAtStart(lattice, c.startAt, f.firstSound, f.duration, s), reading);
+		return answer(placeAtStart(lattice, c.startAt, f.firstSound, f.duration, s), reading, drift);
 	}
 	const witnesses = witnessesOf(c, lattice, s);
 	const { cls, decided, scores } = downbeatVote(witnesses, beatsPerBar, s);
@@ -211,9 +227,9 @@ function gridOf(c: Checked, s: Settings): GridResult {
 	if (!decided) {
 		const detail = Object.fromEntries(scores.map((v, k) => [`class${k}`, v]));
 		const message = "The witnesses did not agree on which beat is bar one.";
-		return refused([refusal("downbeat-undecided", message, detail)], [], { reading });
+		return refused([refusal("downbeat-undecided", message, detail)], drift, { reading });
 	}
-	return answer(placeBarOne(lattice, cls, f.firstSound, f.duration, s), reading);
+	return answer(placeBarOne(lattice, cls, f.firstSound, f.duration, s), reading, drift);
 }
 
 /**
@@ -232,8 +248,11 @@ function gridOf(c: Checked, s: Settings): GridResult {
  * past the end (`nothing-fits`). The last two carry the reading beside
  * the refusal; the others `reading: null`. New, not the app's:
  * `no-period` (the app voted on noise), the pickup, `startsOnBarLine`,
- * and `grid-truncated` when `MAX_GRID_BARS` cut the grid (the app cut
- * silently).
+ * `grid-truncated` when `MAX_GRID_BARS` cut the grid (the app cut
+ * silently), and `tempo-drift` once the lattice is read (on a placed grid,
+ * `downbeat-undecided` and `nothing-fits` alike): the comb's bar against
+ * the declared one, `period / declaredBar − 1`, a warning with no
+ * threshold (the app computes the same ratio itself).
  */
 export function findGrid(input: GridInput, options?: ListenOptions): GridResult {
 	const resolved = resolveOptions(options, "listen");

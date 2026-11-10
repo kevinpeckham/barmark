@@ -92,6 +92,6 @@ describe("the 65 Hz sine kick (design §11.2)", () => {
 		expect(r.value.reading.scores).toEqual([3, 0, 2, 0]);
 		expect(r.value.grid.bars[0]).toBeCloseTo(0.99, 9);
 		expect(r.value.pickup).toBeNull();
-		expect(r.warnings).toEqual([]);
+		expect(r.warnings.map((w) => w.code)).toEqual(["tempo-drift"]);
 	});
 });

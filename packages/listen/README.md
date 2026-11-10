@@ -58,6 +58,22 @@ witnesses (time zero, harmonic rhythm, section boundaries) vote on which
 beat is the downbeat. `startAt` (the song's own start of bar one, set by
 a person) skips the vote.
 
+`declared` is required, and the package does not detect tempo or meter.
+Detecting them is where this pipeline fails on real recordings: in Stem
+Shovel's Study 34, every confidently wrong draft was wrong before the grid
+ran (a blues at half tempo, a waltz read as 4/4), and the steps after it
+wrote a faithful chart on the wrong bars. A host that detects what it
+passes as `declared` should treat the result as unreviewed: hold it for a
+person to check rather than save it as the song's chart.
+
+`tempo-drift` warns how far the comb's settled bar is from the declared
+one: `detail.ratio` is `period / declaredBar − 1`, signed (negative when
+the recording runs faster), with `detail.period` and
+`detail.declaredBar`. It is a warning with no threshold here; the host
+decides what is too far (Stem Shovel holds a draft above 4 %). The comb
+scans its period in steps of 0.02 %, so a recording at its declared
+tempo usually shows a drift of about that size.
+
 If the recording may not start on a bar line (a phone capture, a clip), pass `startsOnBarLine: false`.
 
 ### A chart and a recording
@@ -149,6 +165,7 @@ seconds and bar numbers; `detail` has the numbers behind it.
 | `grid-truncated` | The grid reached `MAX_GRID_BARS` before the recording's end. |
 | `bar-one-unplaced` | The pipeline built on the declared grid (`onUnplaced: "declared"`); `detail.reason` names the refusal it replaced. |
 | `chart-diagnostics` | The aligned chart has parse warnings or errors (a `?` among them); the alignment still runs. |
+| `tempo-drift` | grid and pipeline: the comb's bar differs from the declared one (`detail.ratio`, `period / declaredBar − 1`, signed; `detail.period`, `detail.declaredBar`). No threshold: the host decides. Not emitted when the ratio is zero within floating-point error. |
 
 ## Options
 
