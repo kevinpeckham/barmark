@@ -41,3 +41,33 @@ test("Dependabot updates the actions the local composite actions pin", () => {
 			true,
 		);
 });
+
+// A job that downloads the engraver's dist has the .mjs and .wasm but not the
+// TS side (dist/info.js), which only `bun run build` writes; `bun test` then
+// runs the smoke test against a half-built dist. CI's `check` job never has
+// the dist, so only reading the workflows catches the order (FINDINGS
+// 2026-11-10).
+test("every job with the engraver's dist builds it before bun test", () => {
+	type Job = { steps?: Step[] };
+	const checked: string[] = [];
+	for (const file of ["release.yml", "ci.yml"]) {
+		const workflow = Bun.YAML.parse(read(`../../../.github/workflows/${file}`)) as {
+			jobs: Record<string, Job>;
+		};
+		for (const [name, job] of Object.entries(workflow.jobs)) {
+			const steps = job.steps ?? [];
+			const download = steps.findIndex(
+				(s) => s.uses?.startsWith("actions/download-artifact") && s.with?.name === "engraver-dist",
+			);
+			if (download < 0) continue;
+			steps.forEach((s, i) => {
+				if (i < download || !/^bun test\b/.test(s.run?.trim() ?? "")) return;
+				const built = steps.slice(download, i).some((b) => b.run?.trim() === "bun run build");
+				checked.push(`${file} ${name}`);
+				expect(built ? "" : `${file} ${name}: bun test before bun run build`).toBe("");
+			});
+		}
+	}
+	// release.yml's verify runs bun test with the dist: the rule has something to check.
+	expect(checked).toContain("release.yml verify");
+});
