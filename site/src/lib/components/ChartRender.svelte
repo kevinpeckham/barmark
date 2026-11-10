@@ -1,20 +1,35 @@
 <script lang="ts">
 import { onMount, untrack } from "svelte";
-import { chartHtml } from "#lib/chart.js";
+import { chartHtml, type Preload, scoreHtml } from "#lib/chart.js";
+import { transposed } from "#lib/key.js";
 
 type Numerals = "nashville" | "roman";
+type View = "grid" | "score";
+type ChartElement = HTMLElement & { text: string | null; numerals?: Numerals | null };
 
 let {
 	text,
 	label,
 	barNumbers = true,
 	numerals = null,
+	score = false,
+	preload = "none",
+	semitones = 0,
+	onviewchange,
 }: {
 	text: string;
 	label?: string;
 	barNumbers?: boolean;
 	/** Each chord as its degree in its bar's key; null: chord names. */
 	numerals?: Numerals | null;
+	/** A <barmark-score>, with its Grid / Score switch, rather than a <barmark-chart>. Read once. */
+	score?: boolean;
+	/** A score's: when it starts loading Verovio, ahead of the reader's first press. Read once. */
+	preload?: Preload;
+	/** Draw the chart this many semitones from its own key; the text itself never changes. */
+	semitones?: number;
+	/** The reader switched a score between Grid and Score. */
+	onviewchange?: (view: View) => void;
 } = $props();
 
 /** Charts longer than this re-render once typing pauses, not on every key. */
@@ -24,26 +39,35 @@ const PAUSE_MS = 250;
 const MAX = 50_000;
 const tooLong = $derived(text.length > MAX);
 
+// The element, chosen once: Verovio stays behind <barmark-score>'s Score switch,
+// so importing its element here loads only the grid and the switch.
+const asScore = untrack(() => score);
+const tag = asScore ? "barmark-score" : "barmark-chart";
+const load = () => (asScore ? import("@barmark/score/element") : import("@barmark/render/element"));
+
 // The prerendered chart: computed once, so Svelte never rewrites it. From
-// then on the <barmark-chart> element draws, from its text property.
+// then on the element draws, from its text property.
 let rendered = untrack(() => text);
-const initial = chartHtml(
-	rendered,
-	untrack(() => ({ barNumbers })),
+let moved = untrack(() => semitones);
+const initial = (asScore ? scoreHtml : chartHtml)(
+	transposed(rendered, moved),
+	untrack(() => ({ barNumbers, preload })),
 );
 let host: HTMLDivElement;
 
-const chart = () =>
-	host.querySelector("barmark-chart") as HTMLElement & {
-		text: string | null;
-		numerals: Numerals | null;
-	};
+const chart = () => host.querySelector(tag) as ChartElement;
+const draw = () => {
+	chart().text = transposed(rendered, moved);
+};
 
 onMount(() => {
-	void import("@barmark/render/element");
+	void load();
 	// After navigating inside the site, Svelte inserts {@html} without the
 	// parser, so the declarative shadow root never attached: give the element its text.
-	if (!chart().shadowRoot) chart().text = rendered;
+	if (!chart().shadowRoot) draw();
+	const changed = (e: Event) => onviewchange?.((e as CustomEvent<{ view: View }>).detail.view);
+	host.addEventListener("viewchange", changed);
+	return () => host.removeEventListener("viewchange", changed);
 });
 
 let spelled = untrack(() => numerals);
@@ -51,21 +75,28 @@ $effect(() => {
 	const next = numerals;
 	if (next === spelled) return;
 	spelled = next;
-	void import("@barmark/render/element").then(() => {
-		chart().numerals = next;
+	void load().then(() => {
+		const el = chart();
+		// <barmark-score> reads the grid's options from its attributes only.
+		if (!asScore) el.numerals = next;
+		else if (next) el.setAttribute("numerals", next);
+		else el.removeAttribute("numerals");
 		// The prerendered chart has no text of its own, and the attribute alone only restyles it.
-		chart().text = rendered;
+		draw();
 	});
 });
 
 $effect(() => {
-	if (tooLong || text === rendered) return;
 	const next = text;
+	const n = semitones;
+	if (tooLong || (next === rendered && n === moved)) return;
 	const render = () => {
 		rendered = next;
-		chart().text = next;
+		moved = n;
+		draw();
 	};
-	if (next.length < LONG) return render();
+	// A new key is a click, not typing: it draws at once.
+	if (next.length < LONG || next === rendered) return render();
 	const timer = setTimeout(render, PAUSE_MS);
 	return () => clearTimeout(timer);
 });

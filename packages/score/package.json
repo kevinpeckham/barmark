@@ -1,6 +1,6 @@
 {
 	"name": "@barmark/score",
-	"version": "0.1.1",
+	"version": "0.3.0",
 	"description": "Show a barmark chord chart as a full engraved score: MusicXML from @barmark/musicxml, engraved by Verovio (LGPL-3.0, a dependency loaded unchanged).",
 	"type": "module",
 	"exports": {
@@ -52,7 +52,7 @@
 		"@barmark/musicxml": "workspace:^",
 		"@barmark/render": "workspace:^",
 		"barmark": "workspace:^",
-		"verovio": "^6.4.1"
+		"verovio": "6.4.1"
 	},
 	"scripts": {
 		"build": "rm -rf dist && tsc -p tsconfig.build.json",

@@ -63,7 +63,8 @@ beat: the bottom number in simple meters, the dotted quarter in compound
 ones, so 6/8 at 120 eighths a minute is `tempo: 40`; a tempo `change` counts
 the same beat; omitted, it is taken from the grid, and `null` writes none; one far from
 the grid's warns with `tempo-grid-disagree`) and a `pickup: { start }`
-for the bar before bar 1. The timing map counts a pickup as bar 1.
+for the bar before bar 1. The chart writes the pickup as bar 0 (and the
+builder's diagnostics say so), but the timing map counts it as map bar 1.
 
 A few things the builder settles for you:
 
@@ -186,7 +187,7 @@ The rules, which `checkTimingMap` enforces:
   times in a recording, so its passes map back to the same indices), and
   bars may be missing (a recording that cuts a section). A map made from
   a chart alone runs 1 to N.
-- With a pickup, the pickup is played bar 1, so grid bar k is map bar k+1.
+- Map bar k is the chart's played bar k (`PlayedBar.index`, the play position). With a pickup, written bar k is map bar k+1 (the pickup, written 0, is map bar 1), so grid bar k is map bar k+1. Maps made before the pickup was numbered 0 stay valid.
 - `beats`, when present, are the onsets after `start`: they increase, are
   after `start` and before the entry ends, and, checked against a chart,
   number `beatsOf` the bar's meter minus one (a 4/4 bar has three; a 6/8

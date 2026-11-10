@@ -27,8 +27,35 @@ export type Sung = {
 };
 
 /** Within a rounding error: onsets are sums of fractions of a bar. */
-export const sungAt = (sung: Sung[], at: Frac) =>
-	sung.filter((s) => Math.abs(s.at - at.n / at.d) < 1e-9);
+const near = (s: Sung, at: number) => Math.abs(s.at - at) < 1e-9;
+
+/**
+ * The syllables sung at an onset, in the order given, looked up by a
+ * binary search over them sorted once: a bar may hold thousands, and
+ * each onset scanning all of them made a crowded bar quadratic.
+ */
+export function sungAtOf(sung: Sung[]): (at: Frac) => Sung[] {
+	const order = sung.map((_, i) => i).sort((a, b) => (sung[a] as Sung).at - (sung[b] as Sung).at);
+	return (f) => {
+		const at = f.n / f.d;
+		// The first syllable not well below the onset: a wider margin than `near`'s, which then decides.
+		let lo = 0;
+		let hi = order.length;
+		while (lo < hi) {
+			const mid = (lo + hi) >> 1;
+			if ((sung[order[mid] as number] as Sung).at < at - 1e-6) lo = mid + 1;
+			else hi = mid;
+		}
+		const found: number[] = [];
+		for (let i = lo; i < order.length; i++) {
+			const index = order[i] as number;
+			const s = sung[index] as Sung;
+			if (s.at > at + 1e-6) break;
+			if (near(s, at)) found.push(index);
+		}
+		return found.sort((a, b) => a - b).map((i) => sung[i] as Sung);
+	};
+}
 
 /**
  * Each measure's played bars: its own, and the passes no measure of their
@@ -41,7 +68,11 @@ function barsOf(parse: ChartParse, measures: Measure[]): PlayedBar[][] {
 	for (const b of parse.bars) {
 		const at = first.get(b.written) ?? b.index;
 		first.set(b.written, at);
-		if (!claimed.has(b.index)) passes.set(at, [...(passes.get(at) ?? []), b]);
+		if (claimed.has(b.index)) continue;
+		// Pushed, not copied: a bar line played thousands of times made copying quadratic.
+		const sharing = passes.get(at);
+		if (sharing) sharing.push(b);
+		else passes.set(at, [b]);
 	}
 	const byIndex = new Map(parse.bars.map((b) => [b.index, b]));
 	return measures.map((m) => {

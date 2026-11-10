@@ -114,7 +114,9 @@ pitch, the first note-off ends both, as in any sequencer.
 
 ### Losses
 
-Each loss is reported once, at the first bar it happened in:
+Each loss is reported once, at the first bar it happened in, as `bar` (the
+play position, repeated bars counted) and `written` (that bar's written
+number, 0 for a pickup):
 
 | Code | When |
 |---|---|
@@ -257,8 +259,9 @@ is an error, and otherwise parses with no errors.
 ### Diagnostics
 
 Each diagnostic has a `code`, a `severity`, a `message`, and where it
-can, a `track` (1-based, in file order) and the played `bar` (a pickup
-is bar 1). A problem that repeats
+can, a `track` (1-based, in file order) and the `bar` of the chart written, as
+the chart numbers it (a pickup is bar 0, the first full bar 1; with no
+pickup the first bar is 1). A problem that repeats
 is reported once, with a count and its first bars.
 
 | Code | Severity | When |

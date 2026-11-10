@@ -8,6 +8,7 @@ import { join } from "node:path";
 import { fontFaceCss } from "@barmark/render";
 import { renderScoreHtml } from "../src/server.js";
 import { viewOf } from "../src/switch.js";
+import { VEROVIO_CDN_INTEGRITY } from "../src/verovio.js";
 
 const root = join(import.meta.dir, "../../..");
 
@@ -68,9 +69,21 @@ const escapeAttr = (s: string) => s.replaceAll("&", "&amp;").replaceAll('"', "&q
 const ENGINES: Record<string, string> = {
 	missing: "/nope/verovio.mjs",
 	data: "data:text/javascript,export default async () => ({})",
+	// The installed Verovio module, as served (Content-Length, no encoding) and gzipped.
+	local: "/verovio/verovio-module.mjs",
+	gzip: "/verovio-gz/verovio-module.mjs",
+	// Gzipped from another origin (localhost, not 127.0.0.1), with CORS but Content-Encoding not exposed.
+	"gzip-cross": `http://localhost:${process.env.PORT ?? 5261}/verovio-gz-cors/verovio-module.mjs`,
 };
+
+/** The verovio-integrity values, by name: the module's own digest, and another. */
+const DIGESTS: Record<string, string> = {
+	good: VEROVIO_CDN_INTEGRITY,
+	bad: "sha384-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+};
+const PRELOADS = new Set(["none", "intent", "idle"]);
 const MAX_COUNT = 4;
-const ALLOWED = new Set(["theme", "engine", "count", "chart"]);
+const ALLOWED = new Set(["theme", "engine", "count", "chart", "integrity", "preload"]);
 
 const inRange = (n: number) => Number.isInteger(n) && n >= 1 && n <= MAX_COUNT;
 const named = (table: Record<string, string>, name: string | null) =>
@@ -84,6 +97,8 @@ const CHECKS: [(p: URLSearchParams) => boolean, (p: URLSearchParams) => string][
 	})(),
 	[(p) => named(ENGINES, p.get("engine")), (p) => `unknown engine: ${p.get("engine")}`],
 	[(p) => named(CHARTS, p.get("chart")), (p) => `unknown chart: ${p.get("chart")}`],
+	[(p) => named(DIGESTS, p.get("integrity")), (p) => `unknown integrity: ${p.get("integrity")}`],
+	[(p) => !p.has("preload") || PRELOADS.has(p.get("preload") ?? ""), () => "unknown preload"],
 	[(p) => inRange(Number(p.get("count") ?? "1")), () => `count must be 1 to ${MAX_COUNT}`],
 ];
 
@@ -96,9 +111,12 @@ function refusal(p: URLSearchParams): string | null {
 const attr = (name: string, value: string | null | undefined) =>
 	value == null ? "" : ` ${name}="${escapeAttr(value)}"`;
 
-/** The element's attributes: `theme` as given, and the named engine's verovio-url. */
+/** The element's attributes: `theme` and `preload` as given, the named engine's verovio-url and the named digest. */
 const attrsOf = (p: URLSearchParams) =>
-	attr("theme", p.get("theme")) + attr("verovio-url", ENGINES[p.get("engine") ?? ""]);
+	attr("theme", p.get("theme")) +
+	attr("preload", p.get("preload")) +
+	attr("verovio-url", ENGINES[p.get("engine") ?? ""]) +
+	attr("verovio-integrity", DIGESTS[p.get("integrity") ?? ""]);
 
 /** The chart `chart` names, or the sixteen bars. */
 const chartOf = (p: URLSearchParams) => CHARTS[p.get("chart") ?? ""] ?? CHART;
@@ -143,6 +161,10 @@ async function staticFile(req: Request): Promise<Response> {
 	return new Response("not found", { status: 404 });
 }
 
+const verovio = join(root, "packages/score/node_modules/verovio/dist/verovio-module.mjs");
+const gzipped = Bun.gzipSync(await Bun.file(verovio).bytes());
+const JS = "text/javascript; charset=utf-8";
+
 const server = Bun.serve({
 	// Loopback only: nothing off this machine needs the suite's pages.
 	hostname: "127.0.0.1",
@@ -150,9 +172,19 @@ const server = Bun.serve({
 	routes: {
 		"/score": (req) => scorePage(new URL(req.url)),
 		"/server": (req) => serverPage(new URL(req.url)),
-		"/score/worker.js": new Response(worker, {
-			headers: { "content-type": "text/javascript; charset=utf-8" },
-		}),
+		"/score/worker.js": new Response(worker, { headers: { "content-type": JS } }),
+		"/verovio/verovio-module.mjs": () =>
+			new Response(Bun.file(verovio), { headers: { "content-type": JS } }),
+		"/verovio-gz/verovio-module.mjs": () =>
+			new Response(gzipped, { headers: { "content-type": JS, "content-encoding": "gzip" } }),
+		"/verovio-gz-cors/verovio-module.mjs": () =>
+			new Response(gzipped, {
+				headers: {
+					"content-type": JS,
+					"content-encoding": "gzip",
+					"access-control-allow-origin": "*",
+				},
+			}),
 	},
 	fetch: staticFile,
 });

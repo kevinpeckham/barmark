@@ -80,7 +80,7 @@ export type BuildDiagnostic = {
 	/** Where in the input: "chords.runs[12]", "changes[3]", "grid.bars". */
 	path?: string;
 	at?: Seconds;
-	/** The played bar it concerns, in the chart written. */
+	/** The bar's written number in the chart built (a pickup is 0, the next bar 1). */
 	bar?: number;
 };
 
@@ -91,10 +91,12 @@ export type BuildDiagnostic = {
 export type ConfidenceRecord = {
 	format: "barmark-confidence";
 	version: 1;
+	/** `bar` is the play position (`PlayedBar.index`), as in the timing map; not the written number. */
 	bars: { bar: number; confidence: number; slots: number[] }[];
 	key?: number;
 	meter?: number;
 	tempo?: number;
+	/** `bar` is the play position (`PlayedBar.index`) the section starts at. */
 	sections?: { bar: number; confidence: number }[];
 };
 

@@ -364,6 +364,32 @@ showed the rule needed refining.
 
 ## Performance and robustness
 
+### A download's Content-Length is not the size of what you read (2026-11-10, @barmark/score)
+
+- **The symptom.** Measuring `<barmark-score>`'s Verovio download as
+  bytes read over `Content-Length` would end the bar at 367% from
+  jsDelivr (brotli, 2,014,350 bytes; 312% gzipped, 2,373,768), while
+  Verovio is 7,400,749 bytes.
+- **The cause.** With `Content-Encoding`, `Content-Length` is the
+  compressed size, but `response.body`'s reader yields decoded bytes.
+  Worse, a cross-origin response hides `Content-Encoding` unless the
+  server sends `Access-Control-Expose-Headers` (jsDelivr sends `*`; many
+  servers don't), while `Content-Length` is safelisted and always shown:
+  the response looks uncompressed. Measured through a pass-through
+  without the expose header, the bar read "30% (0.7 of 2.4 MB)" and then
+  jumped back to 32% once the body outgrew the length (the bytes read
+  over Verovio's size).
+- **The fix.** `downloadMeter` measures against `Content-Length` only
+  when the response is not encoded; otherwise against Verovio's known
+  decoded size (`VEROVIO_MODULE_BYTES`, test-checked against the
+  installed file), else not at all. Cross-origin, a length short of that
+  size is taken as compressed; a body that outgrows its length falls to
+  the next rule. Measured in Chromium: same-origin unencoded, 0 to 100%
+  with "of 7.4 MB"; jsDelivr brotli, gzip and gzip with the header
+  hidden, 0 to 100%, monotone, never "MB"
+  (`packages/score/src/download.ts`, `packages/score/tests/download.test.ts`,
+  `packages/score/browser/score.pw.ts`).
+
 ### A bundled 7 MB module is parsed at every start of a compiled binary (2026-11-08, cli)
 
 - **The symptom.** Adding `render --score` put Verovio (`verovio/wasm`, a
@@ -829,6 +855,23 @@ and round-trip it through `format`.
 
 ## Tooling
 
+### A batch of releases lost one: a newer waiting run cancels the older (2026-11-09, render, musicxml and sync releases)
+
+- **The symptom.** Three GitHub releases created back to back
+  (`render-v0.18.0`, `musicxml-v0.8.0`, `sync-v0.3.0`) started three
+  release runs; musicxml's ended `cancelled` without running a job, while
+  render's waited for approval and sync's sat pending.
+- **The cause.** `release.yml` has `concurrency: { group: release,
+  cancel-in-progress: false }`. GitHub keeps one run in progress and one
+  pending per group; a newer pending run cancels the older pending one.
+  A run waiting for the `npm` approval is still in progress, so the
+  queue stays full until it is approved.
+- **The fix.** `gh run rerun <id>` on the cancelled run once the run ahead
+  of it has started, so it isn't cancelled again. Create one release at a
+  time, the next only when the previous run is running or done, not
+  while one is pending.
+- **Where.** RELEASING.md step 9; `.github/workflows/release.yml`.
+
 ### Verovio's npm package carries no licence text (2026-11-08, cli)
 
 **Symptom:** bundling Verovio into the CLI's binaries for `render
@@ -909,7 +952,7 @@ slashes. Verovio now draws the rests (`engrave.test.ts`). Dorico used the piano'
 regions"; the "(4)" and "(8)" counts); the piano's slashes are now plain stemless
 slash-notehead notes there, which may show as notes, not a region. (4) The pickup is measure 0,
 `implicit="yes"`, under the running `<time>`, numbering from 1 after it, as MuseScore writes
-one (`opensWithPickup` in `measure-xml.ts`); a first bar whose length would read back as
+one (`opensWithPickup` in `measure-xml.ts`, since 2026-11-09 `sayablePickup`); a first bar whose length would read back as
 another meter in the running beat (`[1/4]` in 6/8) or that a one-bar meter follows keeps its own
 `<time>`. Verovio draws one 4/4 and a measure 0 (`metcon="false"`). (5) `ownText` holds every
 whitespace-delimited "a"/"A" to the next word. (6) `×N` (and "repeat as needed") carries an
@@ -1402,6 +1445,8 @@ The release workflow logged `+ barmark@0.1.0` and its provenance, yet
 must wait and retry: the release workflow's `confirm` job polls `npm view
 barmark@<version> --prefer-online` for up to ten minutes before
 installing.
+Bun's own cache can lag too: `bun add` may still miss a version `npm view`
+already shows, and `bun add --exact --no-cache` fixes it.
 
 ### Fallow's first run: three exports nobody imported, and a baseline for the parser's complexity (2026-10-31, Fallow)
 
@@ -1707,7 +1752,7 @@ barmark's export writes a `[1/4]` pickup as a short first measure in a
 `time: 1/4` then `time: 3/4`, so Amazing Grace never came back as
 written. The import now reads both shapes as a pickup
 (`settleFirstPickup` in `import/read.ts`). Since 2026-11-08 the export writes
-MuseScore's shape (`opensWithPickup` in `measure-xml.ts`), except for a
+MuseScore's shape (`opensWithPickup` in `measure-xml.ts`, since 2026-11-09 `sayablePickup`), except for a
 first bar the implicit shape would read back as another meter.
 
 ### A lyric row ends its system (grammar 7.7), and examples feed several tests (2026-11-06, examples)
@@ -1969,3 +2014,115 @@ input once each (200,000 openers ran past 120 s). Now one `indexOf` pass (`forVe
 `packages/score/tests/for-verovio.test.ts`, 200,000 openers in milliseconds). **Rule:** a lazy
 `[\s\S]*?` between two markers on caller-supplied text is quadratic when the closer can be
 missing; scan with `indexOf`.
+
+**Again on the site PR (2026-11-09):** a Low DoS finding: Try It's Score takes a chart from a
+shared link, and a 3 KB chart (a thousand-syllable lyric row inside nested repeats played a
+thousand times) stayed under the site's size and bar guards but made the MusicXML export scan
+the bar's whole row once per onset (`lyric-staff.ts`, `lyrics.ts`'s `sungAt`); the same shape
+hid in words per slot, beam groups per value and a bare line's marks per event, and a bar line
+played thousands of times copied its list of passes each time. And the score worker kept
+computing requests whose element had moved on, with no deadline, so one slow job blocked every
+later score on the page. **Fix:** each lookup indexed once per bar (`sungAtOf`, maps by onset
+and slot, binary search), tested by `packages/musicxml/tests/export-scale.test.ts` (eight times
+one crowded bar of 2,000 and of 16,000 items, at most sixteen times the time; about seven now,
+22 to 44 on the old code); the finding's chart went from about 40 s to 21 s, the rest being the
+370 MB of MusicXML it really writes. So `engraveChart` now refuses, before exporting, a score
+whose `scoreCost` (an estimate of the MusicXML's bytes, never under it: measures of every
+declared part, tacet too, slots, pitches, syllables and the escaped length of every text, times
+its plays) is over 50,000,000, and MusicXML over 50,000,000 characters after. A note count
+alone was not enough (a second review): long escaped words on few notes, or many tacet parts,
+cost as much, and a third review found more the estimate missed (a part's silent lines, text
+lines). A size estimate chases the writer; bound the writer itself: `exportMusicXml` takes
+`maxLength` and stops at the first measure past it (`tooLarge`), which `engraveChart` sets to
+50,000,000, keeping `scoreCost` only as a cheap early refusal. The engine gives the worker one job at a time, drops superseded requests still
+waiting, and cuts off (terminate, fresh worker loading the Verovio the first one did) a job
+whose Verovio load runs past `LOAD_DEADLINE_MS` (60 s), or whose engraving, timed from the
+worker's `Ready`, runs past `JOB_DEADLINE_MS` (20 s) or past `SUPERSEDED_GRACE_MS` (3 s) once
+superseded; a crash fails only its own job. Tested with a fake worker and fake timers in
+`packages/score/tests/engine.test.ts`. Timing a job from `postMessage` would have counted a
+slow 7 MB download against it (a second review again). **Rule:** any code a shared link reaches is
+attack surface: a per-item `find`/`filter` over a bar, row or play order is quadratic in what
+an author can write, so index it once; output a short input can multiply (repeats) is
+bounded where it is made, by a budget the writer charges as it writes; an estimate made beforehand
+is only an early refusal;
+and work for a page in a worker is cancellable and bounded, since `postMessage` can't take a
+job back, with a download's budget kept apart from the work's.
+
+**Again (2026-11-09, barmark): source × plays.** Two Low findings on barmark.dev's Try It, which
+parses a shared `?q=` link on load. Its guards (50,000 characters, 10,000 played bars) bound each
+factor, not their product. (1) Lyrics: `verses.ts` built fresh `{ at, syllable, note }` objects on
+every play, so one chord under 3,000 syllables `x10000` made 30 million objects from 6 KB (7 s,
+1.7 GB). (2) Pedal: `pedalWarnings`, run on every parse, walked every slot of every played bar
+through `pedalStates`' matrix; one bar of 12,000 slots `x10000` took 36 s. The audit found the
+same shape in `checkPushes` (`slotTimes` on every play), the notes' syllables and onsets, and in
+`@barmark/render` (`singsOnNotes` read every syllable of every played bar). **Fix:** `perWritten`
+(`shares.ts`) remembers what a written bar's slots give in a meter; `singing` reads each row's
+cell once per what it holds as it begins, and a pass touches only the verses it sings;
+`pedalWarnings` streams, each written bar's effect walked once from up and once from down;
+render's lookup is a `WeakMap` on the shared syllables. Now 54 ms (lyrics) and 0.6 s (pedal),
+heap flat. `packages/barmark/tests/chart/play-scale.test.ts` checks the sharing by identity and
+the time ratio (ten times the written and the plays, under thirty times as long);
+`render/tests/scale.test.ts` the layout. **Rule:** a played bar shares its written bar's data;
+per-play cost is O(1) beyond what differs by pass. Look for the class: anything in the expansion
+that maps over a bar's slots or syllables runs once per play.
+
+**Then, the review of the fix (2026-11-09):** three more products reachable from `?q=`. (1) Verse
+rows × plain replays: outside a repeat a bar sings every verse, so 1,560 rows under a section
+replayed 5,000 times made 7.8 million verse references (1.3 s, 61 MB); the verses a written bar
+sings when it plays again now count toward `expand`'s `work` budget (its first play's are bounded
+by the source), so it stops with the existing error (0.1 s, 2 MB; real charts use at most 153 of
+100,000). (2) Parts were cubic: each stream scanned its system for its own line at every line it
+projected (`ownLine`), and the systems, the reference line's vote, the declared labels and the
+singers' lines were each rebuilt or rescanned per part. 600 one-bar parts (19 KB) took 9 s; now
+0.1 s, and 1,500 parts 0.9 s (`parts-scale.test.ts`). That figure was one bar per part only: a
+second review found the same class one layer on. Lyric rows were gathered by copying their list
+per row (1,383 parts under 1,383 verses, 18 s), and every part read every line although it may
+play only its share of the 10,000 bars (3,227 parts resting through 2,000 systems, 19 s; 2,113
+parts under 6,339 tutti lines, 27 s). Now each part reads at most its share of the work in lines,
+and its projection stops building there (all three about 1 s at 50 KB). The same review found that a budget's
+message and side effects must follow the output: the verse stop named bars a `->` had cut, and the
+bar it stopped had already been checked and sung. A budget is checked before the work it guards,
+with a question that has no effect (`Sing.verses`), and its message counts what is output. (3) Diagnostics: each silent pass of a
+2,500-verse bar played 10,000 times warned separately, naming every verse: 7,500 warnings, 105
+million characters, all rendered by the site. Now one warning per line with its passes as ranges
+and long lists cut short. Also: a ratio test's small side must take milliseconds (the lyric
+row's took 0.7 ms, so one pause could fail it), and checking the old code fails it must finish
+(60,000 syllables × 6,000 plays ran past five minutes; 6,000 × 100 against ten times both fails
+at 96×). **Rule:** the output is attack surface too: a diagnostic repeated per play, or one that
+lists everything, multiplies like the data does.
+
+**And a third review (2026-11-09):** the same class, one layer on again. Every part singing
+(`a |{C4}:la|`, one line each) found each stream's voices by asking every voice for its stream,
+which scanned the streams: streams × voices × streams, 59 s at 50 KB. A part's own line was looked
+up again at every line of its system; each part walked every line of the chart (only its own and
+the shared ones can play in it); the score order rebuilt every system's by-part map once per
+part; a row under a replay heading was copied onto every line of the replayed system, rows × parts.
+Fixing the three named shapes one at a time would have left the rest, so this round listed every
+loop in `packages/barmark/src` that nests over parts, voices, lines, systems, rows or played bars,
+with its bound at 50 KB and 10,000 bars, and gave each one past O(source + played bars) an index
+built once (a `Map` by label, a `WeakMap` by array identity, a list shared per unit, a lookup
+memoized as played). The audit found eight more, among them printing (a 10,000-bar line counted
+its bars again per bar, 2.2 s) and the lyric rows' `covers` (one copy per row). One test,
+`many parts times anything` in `parts-scale.test.ts`, builds each worst shape at 200 and 1,600
+parts and fails past 20× (linear measures up to 9×; the old code 38× to 441×). **Rule:** after
+two reviews of one class, stop fixing instances: list the nested loops and their bounds, then index
+every one that multiplies two inputs. Suppressing what a stop explains must be just as exact: dropping
+every "never sung" after a stop hid a real one (verse 3 under `x2`); the rows a stop cut off are
+those never reached, or reached in a repeat with passes enough for their verse (`BarSource.passes`).
+
+### Vite 8 bundled Verovio into the score's worker, so a CDN copy was a second download (2026-11-10, site)
+
+- **The symptom.** With `verovio-url` and `verovio-integrity` pointing at
+  jsDelivr, barmark.dev's built worker was still 8.5 MB: a reader pressing
+  Score fetched the worker, with Verovio inside it, and then Verovio again
+  from the CDN.
+- **The cause.** Vite builds workers as `iife` by default, which cannot
+  split, so the worker's fallback `import("verovio/wasm")` was inlined.
+  The score README says Vite 8 needs no config, which is true for drawing a
+  score, not for keeping Verovio out of the worker.
+- **The fix.** `worker: { format: "es" }` in `site/vite.config.ts`: the
+  worker is about 200 KB and Verovio a chunk of its own, fetched only when
+  the CDN copy fails. `site/tests/build.test.ts` checks the sizes, and the
+  browser suite checks the score loads from jsDelivr with no fallback
+  warning. A site using `verovio-url` on Vite 8 needs the same setting;
+  the score README should say so.

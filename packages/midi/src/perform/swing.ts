@@ -47,6 +47,7 @@ export function swingMap(
 					code: "swing-compound",
 					message: `swing in ${unswung.bar.meter.n}/${unswung.bar.meter.d} is not applied: its beats already divide in three`,
 					bar: unswung.bar.index,
+					written: unswung.bar.written,
 				},
 			]
 		: [];

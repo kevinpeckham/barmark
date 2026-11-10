@@ -5,15 +5,16 @@
     "": {
       "name": "barmark-site",
       "dependencies": {
-        "@barmark/render": "0.17.1",
+        "@barmark/render": "0.18.0",
+        "@barmark/score": "0.3.0",
         "@vercel/analytics": "2.0.1",
         "@vercel/speed-insights": "2.0.0",
-        "barmark": "0.21.0",
+        "barmark": "0.22.0",
       },
       "devDependencies": {
-        "@barmark/cli": "0.8.0",
-        "@barmark/musicxml": "0.7.1",
-        "@barmark/sync": "0.2.1",
+        "@barmark/cli": "0.10.1",
+        "@barmark/musicxml": "0.8.0",
+        "@barmark/sync": "0.3.0",
         "@fontsource/noto-mono": "5.3.0",
         "@fontsource/noto-sans": "5.3.0",
         "@fontsource/noto-serif": "5.3.0",
@@ -31,6 +32,7 @@
         "svelte-check": "4.7.7",
         "typescript": "6.0.3",
         "unocss": "66.12.0",
+        "verovio": "6.4.1",
         "vite": "8.3.5",
       },
     },
@@ -40,15 +42,17 @@
 
     "@antfu/install-pkg": ["@antfu/install-pkg@2.1.0", "", { "dependencies": { "package-manager-detector": "^1.8.0", "tinyexec": "^1.3.1" } }, "sha512-sdg9NxU3zR4Mnawfbc/x6GB5Wf17WYud5qOuEuxXjaKpYpMkISSJEjItGebXJ2bQ4DIcly4NYH23mtkGJjvKUw=="],
 
-    "@barmark/cli": ["@barmark/cli@0.8.0", "", { "dependencies": { "@barmark/midi": "0.2.0", "@barmark/musicxml": "0.7.1", "@barmark/render": "0.17.1", "barmark": "0.21.0" }, "bin": { "barmark": "dist/cli.js" } }, "sha512-UhYEzMKxgnZY/u22jsHvpeV0LqVdGSPLILOj6lHu7vEAF2f0bXrq8nDuF9S6SMmdfh4bwLxzuQQdeHL1ubcwHQ=="],
+    "@barmark/cli": ["@barmark/cli@0.10.1", "", { "dependencies": { "@barmark/midi": "0.3.0", "@barmark/musicxml": "0.8.0", "@barmark/render": "0.18.0", "@barmark/score": "0.3.0", "barmark": "0.22.0", "verovio": "6.4.1" }, "bin": { "barmark": "dist/cli.js" } }, "sha512-HTVc+1j+Le9x6W3pQ/OFwVnL1yyhbnyrNH0vaTMXjJTcy65zXOMhuKUjYBjFCybKYrZiI/dn4O63w1KdA1TbBg=="],
 
-    "@barmark/midi": ["@barmark/midi@0.2.0", "", { "dependencies": { "@barmark/sync": "^0.2.1", "barmark": "^0.21.0" } }, "sha512-1ct1+zqwpIouKkqlmqMrf5YHrwwex7E5xF7YsoM2SiQ6hUCeEflfRUdhmL2Xe2DJcjwgF8fE995lLobtJMY3OA=="],
+    "@barmark/midi": ["@barmark/midi@0.3.0", "", { "dependencies": { "@barmark/sync": "^0.3.0", "barmark": "^0.22.0" } }, "sha512-wcPF0fvmJOE9lVwDiIQjy1i3/qdLcPN5n5g2lwrsXwX0uCwxuTj3toP82D5qDAddoezF0DVWtZDUzMn7XFmiXQ=="],
 
-    "@barmark/musicxml": ["@barmark/musicxml@0.7.1", "", { "dependencies": { "barmark": "^0.21.0", "fast-xml-parser": "5.12.0" } }, "sha512-3bB7Uv2NnbPVWz6ew8l0Jh+Rjh2MSlSuKyP6Fng3eHEqEukRGydAQO/N5CDV9AFVaS2P2zmLhoZYNs2P7ifKoA=="],
+    "@barmark/musicxml": ["@barmark/musicxml@0.8.0", "", { "dependencies": { "barmark": "^0.22.0", "fast-xml-parser": "5.12.0" } }, "sha512-7MHKU2ZnDPLZ6+Xhix96XrT5rU7WEBd+Nei9g4fzLKaPvuN4Vfk9R8PMIuOAX7SSnQoCmqan+LtN+CBMrXJpYA=="],
 
-    "@barmark/render": ["@barmark/render@0.17.1", "", { "dependencies": { "barmark": "^0.21.0" } }, "sha512-GGWQDaV4UE64LkGNbQS9qooCuGywarpGHnDlpvPHUERu1jnBck70ideWP5IXczGecy+Jb34xgEANIChHg3cYdA=="],
+    "@barmark/render": ["@barmark/render@0.18.0", "", { "dependencies": { "barmark": "^0.22.0" } }, "sha512-0ntv4/0Iutw4DsxqrZ81bK5kERaVJmPWmxU8KlrPHuHA44Ya/p0YDYoL386Xrp//lWw6EY/w/NEGVlFyh5riDA=="],
 
-    "@barmark/sync": ["@barmark/sync@0.2.1", "", { "dependencies": { "barmark": "^0.21.0" } }, "sha512-gUdagmS0NLM43qPxnkPcPzanh8/YTsgEyN094/+R9Z5EYp37s8gFz7xNHAv7W6oIoI0BADX/jR/HwZ+ArHrcLg=="],
+    "@barmark/score": ["@barmark/score@0.3.0", "", { "dependencies": { "@barmark/musicxml": "^0.8.0", "@barmark/render": "^0.18.0", "barmark": "^0.22.0", "verovio": "6.4.1" } }, "sha512-SDJNgDf0R0eyS80ww6HLxhHRAfY1dfNwZPGR5XLBTMUVBRLM3NS/QZhdIptoXr70AaGQYV8UW9ku5E18O3GVHg=="],
+
+    "@barmark/sync": ["@barmark/sync@0.3.0", "", { "dependencies": { "barmark": "^0.22.0" } }, "sha512-C67jRtiZZLMDlmFy23ImxkKsNeefintbe1qB/j2ev265qeI0E+KsUIhXaVjpfXsxNR7g8Dnm44u12v6ZyW+56A=="],
 
     "@fontsource/noto-mono": ["@fontsource/noto-mono@5.3.0", "", {}, "sha512-QZieY3OyKEImCXg3HRiF6p6/H0GXX94uEb53ayLyQgCTB20LdkvsyJIgigo6lAGmVw3WEs40DdG5KTqpxfwgGg=="],
 
@@ -248,7 +252,7 @@
 
     "balanced-match": ["balanced-match@4.0.4", "", {}, "sha512-BLrgEcRTwX2o6gGxGOCNyMvGSp35YofuYzw9h1IMTRmKqttAZZVU67bdb9Pr2vUHA8+j3i2tJfjO6C6+4myGTA=="],
 
-    "barmark": ["barmark@0.21.0", "", {}, "sha512-YzxrlwvWJVQJOo7BBOUP3QRNXp6tyYN83um8QkqH4aM7sZau31ITrydqKf0WqxPt7bPDdCFNHi324qrH6nvHoQ=="],
+    "barmark": ["barmark@0.22.0", "", {}, "sha512-1gk/aAUHbkr5tYO3SdPj+HG8EossusYxOyqQLdZWhIOde2m8xdiU+X3r36FRHOJdyoPM3oOcgxdLSqUpm23rkA=="],
 
     "bindings": ["bindings@1.5.0", "", { "dependencies": { "file-uri-to-path": "1.0.0" } }, "sha512-p2q/t/mhvuOj/UeLlV6566GD/guowlr0hHxClI0W9m7MWYkL1F0hLo+0Aexs9HSPCtR1SXQ0TD3MMKrXZajbiQ=="],
 
@@ -481,6 +485,8 @@
     "unocss": ["unocss@66.12.0", "", { "dependencies": { "@unocss/cli": "66.12.0", "@unocss/core": "66.12.0", "@unocss/preset-attributify": "66.12.0", "@unocss/preset-icons": "66.12.0", "@unocss/preset-mini": "66.12.0", "@unocss/preset-tagify": "66.12.0", "@unocss/preset-typography": "66.12.0", "@unocss/preset-uno": "66.12.0", "@unocss/preset-web-fonts": "66.12.0", "@unocss/preset-wind": "66.12.0", "@unocss/preset-wind3": "66.12.0", "@unocss/preset-wind4": "66.12.0", "@unocss/rollup": "66.12.0", "@unocss/transformer-attributify-jsx": "66.12.0", "@unocss/transformer-compile-class": "66.12.0", "@unocss/transformer-directives": "66.12.0", "@unocss/transformer-variant-group": "66.12.0", "@unocss/vite": "66.12.0" }, "peerDependencies": { "@unocss/astro": "66.12.0", "@unocss/postcss": "66.12.0", "@unocss/webpack": "66.12.0" }, "optionalPeers": ["@unocss/astro", "@unocss/postcss", "@unocss/webpack"] }, "sha512-BfdiiXQKc8mg6JPqVdttVNL4gbQZy5jD8MFtl5Q4QAmPMjLHy6Ybhc9nWSvwBCo4PjMxgXonX/97wF8tmJQ1Mw=="],
 
     "unplugin-utils": ["unplugin-utils@0.3.2", "", { "dependencies": { "pathe": "^2.0.3", "picomatch": "^4.0.4" } }, "sha512-xVToRh2CTmLk2HnEG7ac4rl1MJTT3RFkpS8B++/SnB0kXvuaavD+n3m/vrzyWQOdJNSZQACnbz01pnppbwV5BA=="],
+
+    "verovio": ["verovio@6.4.1", "", {}, "sha512-+5exuA63AC0FHFo0L/4BlcF6EpEOWIp81pwz/afMupxss/tsrdVLxX8Pqh9QFzUOXcB4mP9Box4xc+hrkKN+LA=="],
 
     "vite": ["vite@8.3.5", "", { "dependencies": { "lightningcss": "^1.33.0", "picomatch": "^4.0.7", "postcss": "^8.5.30", "rolldown": "~1.2.14", "tinyglobby": "^0.2.17" }, "optionalDependencies": { "fsevents": "~2.3.3" }, "peerDependencies": { "@types/node": "^20.19.0 || >=22.12.0", "@vitejs/devtools": "^0.7.1 || ^0.8.0", "esbuild": "^0.27.0 || ^0.28.0", "jiti": ">=1.21.0", "less": "^4.0.0", "sass": "^1.70.0", "sass-embedded": "^1.70.0", "stylus": ">=0.54.8", "sugarss": "^5.0.0", "terser": "^5.16.0", "tsx": "^4.8.1", "yaml": "^2.4.2" }, "optionalPeers": ["@types/node", "@vitejs/devtools", "esbuild", "jiti", "less", "sass", "sass-embedded", "stylus", "sugarss", "terser", "tsx", "yaml"], "bin": { "vite": "bin/vite.js" } }, "sha512-z1YpjieJ9g0ebTmQpLBv/oq9E3F9EIlOe+7LahW8SrE3LTiG3udBRUXQOlYXP9b+IC2q2phHeVxj9xGlw34OEQ=="],
 

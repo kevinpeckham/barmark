@@ -1551,6 +1551,44 @@
 			]
 		}
 	},
+	"grammar block 1e3fde79": {
+		"P1": {
+			"notes": [],
+			"harmonies": [
+				{
+					"text": "G",
+					"at": "0/1"
+				},
+				{
+					"text": "C",
+					"at": "1/1"
+				},
+				{
+					"text": "D",
+					"at": "5/1"
+				}
+			]
+		}
+	},
+	"grammar block a1fb540e": {
+		"P1": {
+			"notes": [],
+			"harmonies": [
+				{
+					"text": "D",
+					"at": "0/1"
+				},
+				{
+					"text": "G",
+					"at": "1/1"
+				},
+				{
+					"text": "C",
+					"at": "4/1"
+				}
+			]
+		}
+	},
 	"grammar block 0db1e303": {
 		"P1": {
 			"notes": [],

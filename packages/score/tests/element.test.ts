@@ -2,7 +2,7 @@ import { afterEach, beforeAll, describe, expect, spyOn, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { parseHTML } from "linkedom";
-import type { Engine, EngraveReply } from "../src/engine.js";
+import type { Engine, EngineStatus, EngraveReply } from "../src/engine.js";
 import { renderScoreHtml } from "../src/server.js";
 
 // linkedom stands in for the browser: its window's classes become the globals the element uses.
@@ -36,19 +36,29 @@ type Call = {
 	text: string;
 	width: number;
 	verovioUrl: string | undefined;
+	integrity: string | undefined;
+	status: (s: EngineStatus) => void;
 	resolve: (reply: EngraveReply | null) => void;
 	reject: (error: Error) => void;
 };
 
 let calls: Call[] = [];
+let preloads: [string | undefined, string | undefined][] = [];
 /** Elements a test put in the page, removed after it. */
 const mounted: Element[] = [];
 let made = 0;
 const fakeEngine = (): Engine => {
 	made++;
 	return {
-		engrave: (_key, text, width, verovioUrl) =>
-			new Promise((resolve, reject) => calls.push({ text, width, verovioUrl, resolve, reject })),
+		engrave: (_key, text, width, verovioUrl, call = {}) =>
+			new Promise((resolve, reject) => {
+				const status = (s: EngineStatus) => call.onStatus?.(s);
+				status({ phase: "download", fraction: null, bytes: null });
+				calls.push({ text, width, verovioUrl, integrity: call.integrity, status, resolve, reject });
+			}),
+		preload: (verovioUrl, integrity) => {
+			preloads.push([verovioUrl, integrity]);
+		},
 	};
 };
 
@@ -86,6 +96,7 @@ beforeAll(async () => {
 
 afterEach(() => {
 	calls = [];
+	preloads = [];
 	made = 0;
 	for (const el of mounted.splice(0)) el.remove();
 });
@@ -118,6 +129,19 @@ const parts = (el: HTMLElement) => {
 	};
 };
 
+/** The loading status the pane shows: its live text, the bar's value, the amount beside it; null when none. */
+const status = (el: HTMLElement) => {
+	const box = parts(el).pane.querySelector(".bms-loading");
+	if (!box) return null;
+	const bar = box.querySelector('[role="progressbar"]');
+	const now = bar?.getAttribute("aria-valuenow");
+	return {
+		text: box.querySelector('[role="status"]')?.textContent,
+		now: now == null ? null : Number(now),
+		amount: box.querySelector(".bms-amount")?.textContent,
+	};
+};
+
 const checked = (el: HTMLElement) =>
 	parts(el).radios.map((r) => r.getAttribute("aria-checked") === "true");
 
@@ -147,7 +171,7 @@ describe("<barmark-score>", () => {
 		expect(calls.map((c) => [c.text, c.width, c.verovioUrl])).toEqual([
 			[chart, 0, "https://example.test/vrv/verovio.mjs"],
 		]);
-		expect(pane.textContent).toBe("Loading score…");
+		expect(status(el)).toEqual({ text: "Loading the score engine…", now: null, amount: "" });
 		expect(pane.getAttribute("aria-busy")).toBe("true");
 
 		calls[0]?.resolve({ id: 1, ok: true, svg: svg("first"), pages: 1 });
@@ -263,7 +287,7 @@ describe("<barmark-score>", () => {
 		await flush();
 		const { pane, grid: gridPane } = parts(el);
 		expect(calls).toHaveLength(1);
-		expect(pane.textContent).toBe("Loading score…");
+		expect(status(el)?.text).toBe("Loading the score engine…");
 		expect(pane.getAttribute("aria-busy")).toBe("true");
 		expect(pane.hasAttribute("hidden")).toBe(false);
 		expect(gridPane.hasAttribute("hidden")).toBe(true);
@@ -368,7 +392,7 @@ describe("<barmark-score>", () => {
 		for (const fire of resizers) fire();
 		await flush(40);
 		expect(calls.map((c) => c.width)).toEqual([400, 600]);
-		expect(pane.textContent).not.toContain("Loading score");
+		expect(status(el)).toBeNull();
 		expect(pane.querySelector("g.first")).not.toBeNull();
 		expect(pane.getAttribute("aria-busy")).toBe("true");
 		expect(pane.hasAttribute("hidden")).toBe(false);
@@ -459,6 +483,235 @@ describe("<barmark-score>", () => {
 		press(score, " ");
 		await flush();
 		expect(el.view).toBe("score");
+	});
+});
+
+describe("<barmark-score> loading", () => {
+	test("the phases: downloading with progress, preparing, engraving, then the score", async () => {
+		const el = await make({ view: "score" });
+		const call = calls[0] as Call;
+		const box = parts(el).pane.querySelector(".bms-loading");
+		const live = box?.querySelector('[role="status"]');
+		const bar = box?.querySelector('[role="progressbar"]');
+		expect(bar?.getAttribute("aria-label")).toBe("Loading the score engine");
+
+		call.status({ phase: "download", fraction: 0.426, bytes: null });
+		expect(status(el)).toEqual({ text: "Loading the score engine…", now: 42, amount: "42%" });
+		expect(bar?.getAttribute("aria-valuetext")).toBe("42%");
+		call.status({
+			phase: "download",
+			fraction: 0.5,
+			bytes: { done: 3_700_000, total: 7_400_749 },
+		});
+		expect(status(el)).toEqual({
+			text: "Loading the score engine…",
+			now: 50,
+			amount: "50% (3.7 of 7.4 MB)",
+		});
+		// The same region is updated in place: a screen reader hears the phase once, not each percent.
+		expect(parts(el).pane.querySelector('[role="status"]')).toBe(live as Element);
+
+		call.status({ phase: "prepare" });
+		expect(status(el)).toEqual({ text: "Preparing…", now: null, amount: "" });
+		expect(bar?.getAttribute("aria-label")).toBe("Preparing");
+		call.status({ phase: "engrave" });
+		expect(status(el)).toEqual({ text: "Engraving…", now: null, amount: "" });
+
+		call.resolve({ id: 1, ok: true, svg: svg("first"), pages: 1 });
+		await flush();
+		expect(status(el)).toBeNull();
+		expect(parts(el).pane.querySelector("g.first")).not.toBeNull();
+	});
+
+	test("progress while the grid is shown leaves the grid shown", async () => {
+		const el = await make({ view: "score" });
+		el.view = "grid";
+		await flush();
+		calls[0]?.status({ phase: "download", fraction: 0.3, bytes: null });
+		const { grid, pane } = parts(el);
+		expect(grid.hasAttribute("hidden")).toBe(false);
+		expect(pane.hasAttribute("hidden")).toBe(true);
+		el.view = "score";
+		await flush();
+		expect(status(el)?.now).toBe(30);
+	});
+
+	test("a status for a superseded request is not shown", async () => {
+		const el = await make({ view: "score" });
+		const first = calls[0] as Call;
+		el.text = "# Other\n\n| D |\n";
+		await flush();
+		first.status({ phase: "prepare" });
+		expect(status(el)?.text).toBe("Loading the score engine…");
+	});
+
+	test("a failure after progress shows the note, no status", async () => {
+		const warn = spyOn(console, "warn").mockImplementation(() => {});
+		try {
+			const el = await make({ view: "score" });
+			calls[0]?.status({ phase: "download", fraction: 0.9, bytes: null });
+			calls[0]?.reject(new Error("The score engine failed"));
+			await flush();
+			expect(status(el)).toBeNull();
+			expect(parts(el).note?.textContent).toBe("The score couldn't be drawn");
+		} finally {
+			warn.mockRestore();
+		}
+	});
+
+	test("the bar honours reduced motion", () => {
+		const styles = parts(served.host as HTMLElement).root.querySelector("style")?.textContent ?? "";
+		expect(styles).toContain("prefers-reduced-motion");
+	});
+});
+
+describe("<barmark-score verovio-integrity>", () => {
+	const url = "https://cdn.test/verovio.mjs";
+	const digest = "sha384-iGNyhtxpKLNw90cjbI9ES538TJtbNZjLxsFVUuI8PwE2TTNQ+i2j9CjQnRMhZXHk";
+
+	test("travels with verovio-url to the engine", async () => {
+		await make({ view: "score", "verovio-url": url, "verovio-integrity": digest });
+		expect(calls.map((c) => [c.verovioUrl, c.integrity])).toEqual([[url, digest]]);
+	});
+
+	test("without verovio-url it is unused", async () => {
+		await make({ view: "score", "verovio-integrity": digest });
+		expect(calls.map((c) => [c.verovioUrl, c.integrity])).toEqual([[undefined, undefined]]);
+	});
+
+	test("a malformed digest is refused and the score is not drawn", async () => {
+		const warn = spyOn(console, "warn").mockImplementation(() => {});
+		try {
+			const el = await make({ view: "score", "verovio-url": url, "verovio-integrity": "md5-x" });
+			expect(calls).toHaveLength(0);
+			expect(el.view).toBe("grid");
+			expect(String(warn.mock.calls[0]?.[0])).toContain("verovio-integrity");
+		} finally {
+			warn.mockRestore();
+		}
+	});
+
+	test("a new digest clears the failure", async () => {
+		const warn = spyOn(console, "warn").mockImplementation(() => {});
+		try {
+			const el = await make({ "verovio-url": url, "verovio-integrity": "md5-x" });
+			el.view = "score";
+			await flush();
+			expect(parts(el).note).not.toBeNull();
+			el.setAttribute("verovio-integrity", digest);
+			expect(parts(el).note).toBeNull();
+		} finally {
+			warn.mockRestore();
+		}
+	});
+});
+
+describe("<barmark-score preload>", () => {
+	type Idle = (cb: () => void) => number;
+	const g = globalThis as unknown as {
+		requestIdleCallback?: Idle | undefined;
+		cancelIdleCallback?: ((id: number) => void) | undefined;
+		navigator: { connection?: unknown };
+	};
+	let idle: (() => void)[] = [];
+	const connection = (value: unknown) =>
+		Object.defineProperty(g.navigator, "connection", { value, configurable: true });
+
+	beforeAll(() => {
+		g.requestIdleCallback = (cb) => idle.push(cb);
+		g.cancelIdleCallback = () => {};
+	});
+	afterEach(() => {
+		idle = [];
+		connection(undefined);
+	});
+
+	const scoreRadio = (el: HTMLElement) => parts(el).radios[1] as HTMLElement;
+	const fire = (target: Element, type: string) => target.dispatchEvent(new window.Event(type));
+
+	test("none (the default) loads nothing before a press", async () => {
+		const el = await make({ "verovio-url": "/v.mjs" });
+		fire(scoreRadio(el), "pointerenter");
+		for (const cb of idle) cb();
+		await flush();
+		expect(made).toBe(0);
+		expect(preloads).toEqual([]);
+	});
+
+	test("idle starts the load when the page is idle, with the element's url and digest", async () => {
+		const digest = "sha384-iGNyhtxpKLNw90cjbI9ES538TJtbNZjLxsFVUuI8PwE2TTNQ+i2j9CjQnRMhZXHk";
+		await make({ preload: "idle", "verovio-url": "/v.mjs", "verovio-integrity": digest });
+		expect(preloads).toEqual([]);
+		expect(idle).toHaveLength(1);
+		for (const cb of idle) cb();
+		await flush();
+		expect(preloads).toEqual([["https://example.test/v.mjs", digest]]);
+		expect(calls).toHaveLength(0);
+	});
+
+	test("changing preload away from idle cancels the armed idle load", async () => {
+		const cancelled: number[] = [];
+		const cancel = g.cancelIdleCallback;
+		g.cancelIdleCallback = (id) => cancelled.push(id);
+		try {
+			const el = await make({ preload: "idle" });
+			expect(idle).toHaveLength(1);
+			el.setAttribute("preload", "none");
+			expect(cancelled).toEqual([1]);
+			el.setAttribute("preload", "idle");
+			expect(idle).toHaveLength(2);
+		} finally {
+			g.cancelIdleCallback = cancel;
+		}
+	});
+
+	test("idle falls back to setTimeout without requestIdleCallback", async () => {
+		const ric = g.requestIdleCallback;
+		g.requestIdleCallback = undefined;
+		try {
+			await make({ preload: "idle" });
+			expect(preloads).toEqual([]);
+			await flush(120);
+			expect(preloads).toEqual([[undefined, undefined]]);
+		} finally {
+			g.requestIdleCallback = ric;
+		}
+	});
+
+	for (const [name, value] of [
+		["Save-Data", { saveData: true, effectiveType: "4g" }],
+		["a 2g line", { saveData: false, effectiveType: "2g" }],
+		["a slow-2g line", { effectiveType: "slow-2g" }],
+	] as const)
+		test(`idle on ${name} waits for intent instead`, async () => {
+			connection(value);
+			const el = await make({ preload: "idle" });
+			expect(idle).toHaveLength(0);
+			await flush(5);
+			expect(preloads).toEqual([]);
+			fire(scoreRadio(el), "pointerenter");
+			await flush();
+			expect(preloads).toHaveLength(1);
+		});
+
+	for (const type of ["pointerenter", "focus", "touchstart"])
+		test(`intent starts the load on ${type} on the Score switch, once`, async () => {
+			const el = await make({ preload: "intent" });
+			expect(idle).toHaveLength(0);
+			fire(parts(el).radios[0] as HTMLElement, type);
+			await flush();
+			expect(preloads).toEqual([]);
+			fire(scoreRadio(el), type);
+			fire(scoreRadio(el), type);
+			await flush();
+			expect(preloads).toEqual([[undefined, undefined]]);
+		});
+
+	test("a refused verovio-url preloads nothing", async () => {
+		const el = await make({ preload: "intent", "verovio-url": "javascript:1" });
+		fire(scoreRadio(el), "pointerenter");
+		await flush();
+		expect(preloads).toEqual([]);
 	});
 });
 

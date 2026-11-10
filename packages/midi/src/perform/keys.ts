@@ -51,6 +51,7 @@ export function keysOf(bars: BarAt[]): { keys: Performance["keys"]; losses: Midi
 					code: "mode",
 					message: `${lost.bar.key.tonic} ${lost.bar.key.mode} is written as its parent major's signature: MIDI's key signature knows only major and minor`,
 					bar: lost.bar.index,
+					written: lost.bar.written,
 				},
 			]
 		: [];

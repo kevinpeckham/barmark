@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, test } from "bun:test";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { LINKS } from "../src/lib/site.ts";
+import { FILES, LINKS } from "../src/lib/site.ts";
 import { build, out, page, site } from "./built.ts";
 
 beforeAll(build, 120_000);
@@ -13,8 +13,9 @@ describe("the site builds", () => {
 	test("the packages come from npm at exact versions", () => {
 		const pkg = JSON.parse(readFileSync(join(site, "package.json"), "utf8"));
 		expect(pkg.dependencies).toEqual({
-			barmark: "0.21.0",
-			"@barmark/render": "0.17.1",
+			barmark: "0.22.0",
+			"@barmark/render": "0.18.0",
+			"@barmark/score": "0.3.0",
 			"@vercel/analytics": "2.0.1",
 			"@vercel/speed-insights": "2.0.0",
 		});
@@ -52,6 +53,37 @@ describe("the site builds", () => {
 			"SIL OPEN FONT LICENSE",
 		);
 	});
+	test("Verovio's licences ship with the site, as the CLI's release carries them", () => {
+		for (const [name, heading] of [
+			["Verovio-LGPL-3.0.txt", "GNU LESSER GENERAL PUBLIC LICENSE"],
+			["Verovio-GPL-3.0.txt", "GNU GENERAL PUBLIC LICENSE"],
+		] as const) {
+			const served = readFileSync(join(out, "licenses", name), "utf8");
+			expect(served.trimStart()).toStartWith(heading);
+			expect(served).toBe(readFileSync(join(site, "../packages/cli/licenses", name), "utf8"));
+		}
+	});
+	test("every page's footer credits Verovio, and each of its links on the site resolves", () => {
+		for (const path of ["index.html", "syntax.html", "try.html", "get-started.html", "faq.html"]) {
+			const footer = page(path).querySelector("footer");
+			const hrefs = [...(footer?.querySelectorAll("a") ?? [])].map(
+				(a) => a.getAttribute("href") ?? "",
+			);
+			expect(hrefs).toContain(LINKS.verovioBundled);
+			expect(hrefs).toContain(FILES.verovioLgpl);
+			expect(hrefs).toContain(LINKS.siteSource);
+			expect(footer?.textContent?.replace(/\s+/g, " ")).toContain(
+				"Verovio © Laurent Pugin and others, LGPL-3.0",
+			);
+			// The version linked is the version the score package bundles.
+			const verovio = JSON.parse(
+				readFileSync(join(site, "node_modules/verovio/package.json"), "utf8"),
+			).version;
+			expect(LINKS.verovioBundled).toEndWith(`/tree/version-${verovio}`);
+			for (const href of hrefs.filter((h) => h.startsWith("/")))
+				expect([href, existsSync(join(out, href))]).toEqual([href, true]);
+		}
+	});
 	test("Edwin and its licence ship with the site", () => {
 		expect(existsSync(join(out, "fonts/Edwin-Roman.otf"))).toBe(true);
 		expect(existsSync(join(out, "fonts/OFL.txt"))).toBe(true);
@@ -83,6 +115,17 @@ describe("the site builds", () => {
 			),
 		);
 		expect(users).toEqual([]);
+	});
+	test("the score's worker leaves Verovio in a chunk of its own, fetched only if jsDelivr's copy fails", () => {
+		const workers = join(out, "_app/immutable/workers");
+		const files = readdirSync(workers).filter((f) => f.endsWith(".js"));
+		expect(files).toHaveLength(1);
+		// Verovio's module is about 8 MB; the worker without it is a few hundred KB.
+		expect(readFileSync(join(workers, files[0] ?? "")).length).toBeLessThan(1_000_000);
+		const chunks = readdirSync(join(workers, "chunks")).map(
+			(f) => readFileSync(join(workers, "chunks", f)).length,
+		);
+		expect(Math.max(...chunks)).toBeGreaterThan(5_000_000);
 	});
 	test("the OG image is a 1200×630 PNG", () => {
 		const png = readFileSync(join(out, "og.png"));

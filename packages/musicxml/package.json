@@ -1,6 +1,6 @@
 {
 	"name": "@barmark/musicxml",
-	"version": "0.7.2",
+	"version": "0.8.0",
 	"description": "Convert between barmark chord charts and MusicXML 4.0: export charts with several parts, and import MusicXML or .mxl scores, for MuseScore, Dorico, Sibelius and Finale.",
 	"type": "module",
 	"exports": {

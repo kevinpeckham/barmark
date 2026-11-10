@@ -186,7 +186,9 @@ shows as Cm⁷(♭5)). `%` is drawn as the bar it copies; a replayed section
 is drawn in full, and its own lyrics replace the written section's. Bar
 numbers count the bars as written, each once, as a band counts them: a
 repeat, an ending, a jump or a replay doesn't move them, so a replayed
-section shows the numbers it was written with. A line with an error shows as written, underlined,
+section shows the numbers it was written with. A pickup is bar 0: its
+row shows no number in the gutter (`barNumber` is `0` in the model) and
+is spoken as "pickup", and the bars after it are 1, 2, and so on. A line with an error shows as written, underlined,
 with its message. `layoutChart(text)` returns all of this as data, if
 you want to draw it yourself, and `typesetChord(parts)` with `glyphs`
 gives a chord's pieces as the page sets them (root and quality, the

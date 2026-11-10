@@ -1,5 +1,5 @@
 /** A chart's play order as timed notes, in exact quarters (spec 4). */
-import type { ChartEvent, ChartParse, SimpleSlot } from "barmark";
+import type { ChartEvent, ChartParse, PlayedBar, SimpleSlot } from "barmark";
 import { applyPushes } from "./figures.js";
 import { keysOf } from "./keys.js";
 import { lineNotes, type TimedSlot } from "./line.js";
@@ -13,10 +13,10 @@ import { type Stream, streamBar, type TrackPlan, tracksOf } from "./tracks.js";
 import type { MidiLoss, Performance, PerformedTrack, Quarters } from "./types.js";
 
 /** The play order from the events: bars at their onsets, each marked when a fermata follows it, an open repeat's events once. */
-function timeline(events: ChartEvent[]): { bars: TimedBar[]; open: number | null } {
+function timeline(events: ChartEvent[]): { bars: TimedBar[]; open: PlayedBar | null } {
 	const bars: TimedBar[] = [];
 	let at = ZERO;
-	let open: number | null = null;
+	let open: PlayedBar | null = null;
 	const walk = (list: ChartEvent[]) => {
 		for (const e of list) {
 			if (e.kind === "bar") {
@@ -28,7 +28,7 @@ function timeline(events: ChartEvent[]): { bars: TimedBar[]; open: number | null
 			} else {
 				const first = bars.length;
 				walk(e.events);
-				open ??= bars[first]?.bar.index ?? null;
+				open ??= bars[first]?.bar ?? null;
 			}
 		}
 	};
@@ -36,10 +36,11 @@ function timeline(events: ChartEvent[]): { bars: TimedBar[]; open: number | null
 	return { bars, open };
 }
 
-const openLoss = (bar: number): MidiLoss => ({
+const openLoss = (bar: PlayedBar): MidiLoss => ({
 	code: "open-repeat",
 	message: "an open repeat (x ...) plays once: MIDI can't repeat as needed",
-	bar,
+	bar: bar.index,
+	written: bar.written,
 });
 
 /** A rest's stand-in: where a line rests or its part is tacet, an N.C. fills the bar, as the parse writes a tacet bar. */
@@ -148,6 +149,7 @@ export function perform(parse: ChartParse, options: { tempo?: number } = {}): Pe
 	const { bars: timed, open } = timeline(parse.events);
 	const bars: Performance["bars"] = timed.map(({ bar, at }) => ({
 		index: bar.index,
+		written: bar.written,
 		at,
 		meter: bar.meter,
 	}));

@@ -8,10 +8,14 @@
  * `where`. A message raised once per track or once per import may name
  * tracks (a list of them is capped). The reader (`smf/read.ts`) reports
  * through it too.
+ *
+ * Bars are given as the grid numbers them (1 for its first bar); once the
+ * grid is known to open with a pickup, `writtenBars` makes them the chart's
+ * (the pickup is bar 0, the first full bar 1), those raised so far too.
  */
 import type { MidiImportCode, MidiImportDiagnostic } from "./types.js";
 
-/** Where a diagnostic points: a 1-based track chunk, a played bar of the chart. */
+/** Where a diagnostic points: a 1-based track chunk, the chart's bar: a grid number until `writtenBars` runs, then its written number. */
 export type Where = { track?: number | undefined; bar?: number | undefined };
 
 export type Report = {
@@ -21,6 +25,8 @@ export type Report = {
 		message: string,
 		where?: Where,
 	): void;
+	/** From now on, and for those raised so far, bars count from the chart's pickup as bar 0. */
+	writtenBars(): void;
 	/** The diagnostics, in the order first raised. */
 	readonly list: MidiImportDiagnostic[];
 };
@@ -61,8 +67,18 @@ function addBar(e: Entry, bar: number | undefined) {
 export function createReport(): Report {
 	const list: MidiImportDiagnostic[] = [];
 	const entries = new Map<string, Entry>();
+	let shift = 0;
 	return {
 		list,
+		writtenBars() {
+			if (shift > 0) return;
+			shift = 1;
+			for (const e of entries.values()) {
+				e.bars = e.bars.map((b) => b - 1);
+				if (e.d.bar !== undefined) e.d.bar -= 1;
+				e.d.message = messageOf(e);
+			}
+		},
 		add(code, severity, message, { track, bar } = {}) {
 			const key = `${code} ${track ?? ""} ${message}`;
 			let e = entries.get(key);
@@ -74,7 +90,7 @@ export function createReport(): Report {
 				list.push(d);
 			}
 			e.count++;
-			addBar(e, bar);
+			addBar(e, bar === undefined ? bar : bar - shift);
 			e.d.message = messageOf(e);
 		},
 	};

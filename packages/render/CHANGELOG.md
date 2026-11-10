@@ -6,6 +6,27 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.18.0] - 2026-11-09
+
+### Changed
+
+- **Requires `barmark` 0.22.0** (a pickup is bar 0, `ChartParse.pickup`),
+  whose minor release a caret range would not reach.
+- **A pickup is bar 0** (barmark's grammar 2.4). The gutter draws no
+  number on a row that starts with the pickup, and the screen-reader
+  text says "pickup" where it said "bar 1"; the bars after it are
+  numbered from 1. `RowModel.barNumber` is `0` on such a row. Charts
+  without a pickup render exactly as before.
+
+### Fixed
+
+- **A bar played many times, or one with many notes and syllables, lays
+  out in linear time.** Deciding whether a chart with no parts sings read
+  every syllable of every played bar (now once per written bar, with a
+  `barmark` whose plays share their syllables), and placing a singing
+  bar's syllables under its slots scanned every slot for each syllable
+  (now a binary search).
+
 ## [0.17.1] - 2026-11-08
 
 ### Changed
@@ -439,7 +460,8 @@ that needs no script or as the `<barmark-chart>` web component. Requires
   zoom without sideways scrolling, the element renders and re-renders, and
   a screen reader hears "bar 9: D". Run them with `bun run test:browser`.
 
-[Unreleased]: https://github.com/kevinpeckham/barmark/compare/render-v0.17.1...HEAD
+[Unreleased]: https://github.com/kevinpeckham/barmark/compare/render-v0.18.0...HEAD
+[0.18.0]: https://github.com/kevinpeckham/barmark/compare/render-v0.17.1...render-v0.18.0
 [0.17.1]: https://github.com/kevinpeckham/barmark/compare/render-v0.17.0...render-v0.17.1
 [0.17.0]: https://github.com/kevinpeckham/barmark/compare/render-v0.16.2...render-v0.17.0
 [0.16.2]: https://github.com/kevinpeckham/barmark/compare/render-v0.16.1...render-v0.16.2

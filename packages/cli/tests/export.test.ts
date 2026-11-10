@@ -124,6 +124,20 @@ describe("barmark export --midi", () => {
 		);
 		expect(written(io, "o.mid")).toEqual(bytes(chart, { title: "o" }));
 	});
+	test("a loss in the first full bar after a pickup is bar 1", async () => {
+		const chart = "tempo: 100\n| [1/4] G |\n| C | x ...\n";
+		const io = folder({ "o.chart.md": chart });
+		expect(await exportCommand(["--midi", "o.chart.md", "--out", "o.mid"], io)).toBe(0);
+		expect(io.err()).toBe(
+			"o.chart.md: bar 1: warning: an open repeat (x ...) plays once: MIDI can't repeat as needed\n",
+		);
+	});
+	test("a loss prints its written number, not its play position", () => {
+		const loss = { code: "channels-shared" as const, message: "shared" };
+		expect(lossLine("f.chart.md", { ...loss, bar: 3, written: 1 })).toBe(
+			"f.chart.md: bar 1: warning: shared",
+		);
+	});
 	test("a loss is a line: file: bar N: warning: message; with no bar, without one", () => {
 		const loss = { code: "channels-shared" as const, message: "shared" };
 		expect(lossLine("f.chart.md", { ...loss, bar: 3 })).toBe("f.chart.md: bar 3: warning: shared");

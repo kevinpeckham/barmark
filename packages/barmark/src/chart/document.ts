@@ -26,6 +26,8 @@ function checkParts(lines: Line[], diagnostics: ChartDiagnostic[]): Part[] {
 	if (declared.length < 2) return declared.map(partOf);
 	const seen = new Map<string, string>();
 	const parts: Part[] = [];
+	// Where each declaration is, found once: finding it again for every bad one costs the lines times the bad ones.
+	let at: Map<Line, number> | undefined;
 	for (const l of declared) {
 		const problem = partProblem(l, seen);
 		if (!problem) {
@@ -34,7 +36,9 @@ function checkParts(lines: Line[], diagnostics: ChartDiagnostic[]): Part[] {
 		}
 		const text = l.label ? `part: ${l.label} = ${l.name}` : `part: ${l.name}`;
 		diagnostics.push({ line: l.line, severity: "error", token: text, ...problem });
-		lines[lines.indexOf(l)] = { kind: "text", line: l.line, text };
+		at ??= new Map(lines.map((m, i) => [m, i]));
+		const i = at.get(l);
+		if (i !== undefined) lines[i] = { kind: "text", line: l.line, text };
 	}
 	return parts;
 }
@@ -100,9 +104,8 @@ function readHeading(text: string, line: number, diagnostics: ChartDiagnostic[])
 }
 
 /** A declared label written before a bar line, exactly, or a part's label, a dot and a line's name (grammar 7.6). */
-function findLabel(word: string, declared: Part[]): Owner | null {
-	const match = (w: string) =>
-		declared.find((p) => p.label?.toLowerCase() === w.toLowerCase())?.label;
+function findLabel(word: string, declared: Map<string, string>): Owner | null {
+	const match = (w: string) => declared.get(w.toLowerCase());
 	const exact = match(word);
 	if (exact) return { part: exact };
 	const dot = word.lastIndexOf(".");
@@ -251,6 +254,9 @@ export function readDocument(text: string): {
 	const lines: Line[] = [];
 	const diagnostics: ChartDiagnostic[] = [];
 	let title: string | null = null;
+	/** The parts declared so far, by lowercased label (the first of a label), and whether a bar line has been read. */
+	const labels = new Map<string, string>();
+	let barred = false;
 	/** The line kept as text, with why it isn't what it looks like. */
 	const asText = (
 		t: string,
@@ -269,8 +275,10 @@ export function readDocument(text: string): {
 	/** A `part:` line names the chart once, before its first bar (grammar 7.3). */
 	const partLine = (read: Part | string, t: string, line: number): Line => {
 		if (typeof read === "string") return asText(t, line, "error", read);
-		if (lines.some((l) => l.kind === "bars" || l.kind === "invalid"))
+		if (barred)
 			return asText(t, line, "error", "part: names the whole chart; put it before the first bar");
+		const label = read.label?.toLowerCase();
+		if (label !== undefined && !labels.has(label)) labels.set(label, read.label ?? "");
 		return { kind: "part", line, ...read };
 	};
 	const otherLine = (t: string, line: number): Line => {
@@ -292,8 +300,6 @@ export function readDocument(text: string): {
 		diagnostics.push(...r.diagnostics);
 		return r.bars ?? { kind: "invalid", line, text: t, written: r.written };
 	};
-	const declaredParts = () =>
-		lines.filter((l): l is Extract<Line, { kind: "part" }> => l.kind === "part");
 	/** A labelled line that can't be read: no space before its pipe, or a bad line name. */
 	const badLabel = (t: string, line: number, word: string, rest: string, owner: Owner): Line => {
 		const space = t.length > word.length + rest.length;
@@ -309,7 +315,7 @@ export function readDocument(text: string): {
 	/** A declared part's bar line, or one of its lines (`Pno.RH`, grammar 7.6). */
 	const labelledLine = (t: string, line: number): Line | null => {
 		const split = splitLabel(t);
-		const owner = split && findLabel(split.word, declaredParts());
+		const owner = split && findLabel(split.word, labels);
 		if (!split || !owner) return null;
 		const { word, space, rest } = split;
 		if (!space || !LINE_NAME.test(owner.lineName ?? "X"))
@@ -348,7 +354,10 @@ export function readDocument(text: string): {
 		.split(/\r?\n/)
 		.forEach((raw, i) => {
 			const t = raw.trim();
-			if (t && !t.startsWith("```")) lines.push(classify(t, i + 1));
+			if (!t || t.startsWith("```")) return;
+			const l = classify(t, i + 1);
+			if (l.kind === "bars" || l.kind === "invalid") barred = true;
+			lines.push(l);
 		});
 	const empty = noBarLines(lines);
 	if (empty) diagnostics.push(empty);

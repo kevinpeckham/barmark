@@ -43,20 +43,34 @@ function offsetXml(xml: string, by: number): string {
 
 /**
  * The marks written before each of a line's events: those that fall within
- * it, each offset from its start. The last event takes any left over.
+ * it, each offset from its start. The last event takes any left over. Each
+ * mark finds its event by a binary search: a bar may hold thousands.
  */
 export function marksBefore(
 	starts: Frac[],
 	marks: Marked[],
 	toDivisions: (f: Frac) => number,
 ): string[] {
-	return starts.map((start, i) => {
-		const end = starts[i + 1];
-		return marks
-			.filter((m) => cmp(m.at, start) >= 0 && (!end || cmp(m.at, end) < 0))
-			.map((m) => offsetXml(m.xml, toDivisions(minus(m.at, start))))
-			.join("");
-	});
+	const within: Marked[][] = starts.map(() => []);
+	for (const m of marks) {
+		const i = startOf(starts, m.at);
+		if (i >= 0) within[i]?.push(m);
+	}
+	return starts.map((start, i) =>
+		(within[i] ?? []).map((m) => offsetXml(m.xml, toDivisions(minus(m.at, start)))).join(""),
+	);
+}
+
+/** The last of the (ascending) starts at or before `at`, by a binary search; -1 if none is. */
+function startOf(starts: Frac[], at: Frac): number {
+	let lo = 0;
+	let hi = starts.length;
+	while (lo < hi) {
+		const mid = (lo + hi) >> 1;
+		if (cmp(starts[mid] as Frac, at) <= 0) lo = mid + 1;
+		else hi = mid;
+	}
+	return lo - 1;
 }
 
 /** Marks written before a whole-bar rest: each offset from the bar's start. */
