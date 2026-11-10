@@ -1,11 +1,12 @@
 # Guitar chord diagrams: design
 
-Status: draft for Kevin (2026-11-10). Asked for by Kevin on 2026-11-10:
+Status: approved by Kevin (2026-11-10). Asked for by Kevin on 2026-11-10:
 the renderer should have an option that shows chord diagrams for guitar,
 and the planned ChordPro export (`@barmark/lyricsheet`, branch
 `docs/chord-lyric-interchange`) should be able to use the same shapes.
-Calls marked **(design call)** are Claude's, each with its reason, and
-open to correction; section 10 lists the questions only Kevin can answer.
+Calls marked **Decided by Kevin (2026-11-10)** are his; section 10
+lists them. Calls marked **(design call)** are Claude's, each with its
+reason, and open to correction.
 
 No grammar change. A diagram is a view, like numerals: it never changes
 the music, the bar numbers or the chart's text (render's rule:
@@ -107,7 +108,7 @@ string, strings ascending, interior mutes allowed:
 gzipped (barmark included). ChordPro's 667 own shapes in a compact
 encoding are 2.9 KB gzipped (4.9 KB with the aliases).
 
-## 3. Where shapes come from (design call: option c)
+## 3. Where shapes come from (Decided by Kevin (2026-11-10): option c)
 
 | | (a) ChordPro's tables | (b) our table + finder | (c) our table + finder, ChordPro as a VM-only check |
 |---|---|---|---|
@@ -140,10 +141,11 @@ Team; licence text © The Perl Foundation) is under the Artistic License
 Shipping (a) means: the table file under the Artistic 2.0 beside MIT code,
 ChordPro's notices in each package and the CLI's release assets (as
 Verovio's LGPL is today), a document of our changes, and a source
-pointer in every bundle. Whether that suits barmark is Kevin's call
-(question 1); this is not legal advice.
+pointer in every bundle. This is not legal advice.
 
-**Recommendation: (c).** Reason: the finder is needed for a quarter of
+**Decided by Kevin (2026-11-10): (c),** our own table plus the finder,
+under MIT; ChordPro's tables are only a VM-only check and are never
+shipped. Reason: the finder is needed for a quarter of
 our vocabulary whatever we choose; ChordPro's table has errors that a
 mechanical check catches anyway; and the finder alone picks the familiar
 shape only 28% of the time, so a hand-written table is needed for the
@@ -202,7 +204,8 @@ with an error is skipped (its chords are unknown).
 
 ## 5. What the reader sees
 
-**5.1 A strip, at the top (design call).** The diagrams sit in one
+**5.1 A strip, at the top (Decided by Kevin (2026-11-10): top only for
+now).** The diagrams sit in one
 wrapping row after the header and before the first section. Reasons:
 
 - Diagrams over the grid were weighed and rejected for now: a diagram is
@@ -211,7 +214,7 @@ wrapping row after the header and before the first section. Reasons:
   would go.
 - At the top, a reader learns the shapes before playing, and on a screen
   the bottom of a long chart is out of view. Printed songbooks do both;
-  a `bottom` value can come later.
+  bottom placement is deferred.
 
 **5.2 Order and duplicates (design call).** First appearance in written
 order, through the chart's events (replays and `%` add nothing new); one
@@ -266,15 +269,16 @@ nothing more. A PDF drawer outside the browser gets the shapes as data
 
 ## 6. Options and API
 
-**6.1 A new package, `@barmark/fretboard` (design call).** Reasons:
+**6.1 A new package, `@barmark/fretboard` (Decided by Kevin
+(2026-11-10)).** Reasons:
 
 - `@barmark/lyricsheet` needs the shapes and must not depend on render;
   render needs them and must not grow by a table it doesn't use.
 - The name is free on npm. The unscoped `fretboard` is an unrelated
   0.0.1 from 2022; the word also names scale-on-the-neck viewers, but the
   package's scope (tunings, shapes, later ukulele and maybe tab) is the
-  fretboard. `@barmark/frets` and `@barmark/fingerings` are free too
-  (question 2).
+  fretboard. (`@barmark/frets` and `@barmark/fingerings` were free
+  too.)
 - Dependencies: `barmark` with a caret, as `@barmark/musicxml` has.
 
 ```ts
@@ -296,22 +300,24 @@ diagramHand: "left" })`, attributes `chord-diagrams="guitar"` and
 pieces, shape or reason, speech), so other drawers get the same data.
 `"ukulele"` and `"mandolin"` are later values of the same option.
 
-**Render's weight (design call): a regular dependency with a budget.**
+**Render's weight (Decided by Kevin (2026-11-10)): a static import with
+a +5 KB budget enforced by a test.**
 Render imports `@barmark/fretboard` statically. The finder (1.4 KB
 gzipped in the spike), a table of about 250 rows (about 2 KB) and the
 SVG drawer (about 1 KB) add roughly 4.5 KB gzipped to the element's
 43 KB, about 10%. A size test fails the build above +5 KB. Reason: the
 attribute then works everywhere (score's grid, the CLI, barmark.dev)
-with no registration step. If Kevin wants zero cost for charts without
-diagrams, the alternative is injecting the instrument
-(`chordDiagrams: guitar` imported from `@barmark/fretboard`, and a
-side-effect import that registers it for the element); question 2.
+with no registration step. The alternative weighed and not taken:
+injecting the instrument (`chordDiagrams: guitar` imported from
+`@barmark/fretboard`, plus a side-effect import that registers it for
+the element), so charts without diagrams pay nothing.
 
-**6.3 Tuning and capo: later (design call).** First release: standard
-tuning only. Reason: a capo changes what the strip's names mean (concert
-pitch, as charts are written, or the shape's name, as guitarists
-think), which is Kevin's question 5, and the grammar ruled the capo a
-note line, not syntax. Alternate tunings need only a `Tuning` value and
+**6.3 Tuning and capo: deferred (Decided by Kevin (2026-11-10)).** First
+release: standard tuning only. A capo changes what the strip's names
+mean (concert pitch, as charts are written, or the shape's name, as
+guitarists think); when it comes, the strip shows shape names with the
+concert name beside them. The grammar ruled the capo a note line, not
+syntax. Alternate tunings need only a `Tuning` value and
 the finder; the table is standard tuning, so other tunings would be
 finder-only until they get tables.
 
@@ -349,11 +355,11 @@ ChordPro's built-in, or that ChordPro doesn't know. Under each option:
 - **(c)** The same as (b) at run time. Minimal defines would need a
   list of the names where our shape equals ChordPro's, generated by the
   VM check and committed: data derived from ChordPro's table, even if
-  only names (question 3).
+  only names.
 
-**So it constrains the choice a little, and the design doesn't take
-minimal defines in the first release (design call): with diagrams on,
-the export defines every chord it writes.** Reasons: the output then
+**So it constrains the choice a little. Decided by Kevin (2026-11-10):
+with diagrams on, the export writes `{define}` for every chord it
+writes.** Reasons: the output then
 shows the strip's exact shapes in any ChordPro reader, whatever its
 version or the reader's own instrument config; ChordPro's built-in table
 changes between releases, so "differs from built-in" is a moving target;
@@ -415,10 +421,16 @@ All in `bun test` unless marked VM.
 - `@barmark/lyricsheet`: defines with `diagrams`, in its first release
   if the timing fits, else its next minor.
 
-**Later.** Ukulele and mandolin (tunings plus their own tables), capo,
-alternate tunings, finger numbers, a `bottom` position, diagrams over the
-grid, choosing among `shapesFor` alternatives (by an option, not syntax),
+**Later.** Ukulele and mandolin (tunings plus their own tables), finger
+numbers, diagrams over the grid, choosing among `shapesFor` alternatives (by an option, not syntax),
 MusicXML `<frame>` in the export, `{define}` import.
+
+**Deferred by Kevin's decisions (2026-11-10).**
+
+- Capo, and its naming: shape names with the concert name beside them,
+  when it comes.
+- Tuning: standard tuning only until then.
+- Bottom placement of the strip.
 
 **Risks.**
 
@@ -438,28 +450,19 @@ MusicXML `<frame>` in the export, `{define}` import.
   ChordPro's included; ours are written from the instrument and checked
   by machine, and the comparison script never copies its data.
 
-## 10. Questions for Kevin
+## 10. Decisions
 
-1. **Where shapes come from, and the licence.** (a) ship ChordPro's
-   tables under the Artistic 2.0, with its notices, a record of our
-   changes and source pointers in bundles; or (c) write our own table
-   and use ChordPro's only in a VM-only comparison. Recommended: (c),
-   for the reasons in section 3.
-2. **Package and weight.** A new `@barmark/fretboard` (or
-   `@barmark/frets`), which render imports statically for about 4.5 KB
-   gzipped under a +5 KB budget; or injection, so charts without
-   diagrams pay nothing but the element needs a registration import.
-   Recommended: `@barmark/fretboard`, static, with the budget.
-3. **ChordPro defines.** Define every chord when diagrams are on, or
-   only those that differ from ChordPro's built-in, which needs a
-   committed list derived from ChordPro's table. Recommended: define
-   every chord.
-4. **Strip position.** Top only in the first release, or a
-   `top`/`bottom` choice now. Recommended: top only.
-5. **Capo.** When it comes, do the strip's names stay concert pitch (as
-   the chart is written) with the shapes moved, or show the shape names a
-   capoed guitarist thinks in? Recommended: defer the capo; when it
-   comes, show shape names with the concert name beside them.
-6. **No syntax for choosing a shape.** Authors who want a particular
-   fingering write a voicing with octaves, which already picks the
-   notes. Recommended: no grammar change; revisit if players ask.
+Decided by Kevin (2026-11-10), each as recommended:
+
+1. **Where shapes come from: option (c).** Our own table plus the
+   finder, under MIT. ChordPro's tables are only a VM-only check and are
+   never shipped (section 3).
+2. **Package and weight: `@barmark/fretboard`,** imported statically by
+   render, with the +5 KB budget enforced by a test (section 6).
+3. **ChordPro defines:** with diagrams on, the export writes `{define}`
+   for every chord (section 7).
+4. **Strip position:** the top only, for now (section 5.1).
+5. **Capo:** deferred; when it comes, shape names with the concert name
+   beside them (section 6.3).
+6. **No syntax for picking a shape.** Authors who want a particular
+   fingering write a voicing with octaves.
