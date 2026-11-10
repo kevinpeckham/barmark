@@ -1,8 +1,12 @@
-# Lyric sheets (ChordPro import and export): design
+# Lyric sheets (ChordPro export): design
 
 Status: draft for Kevin (2026-11-10). Asked for by Kevin on 2026-11-10.
-Calls marked **(design call)** are Claude's, each with its reason, and
-open to correction; section 8 lists the questions only Kevin can answer.
+Kevin decided on 2026-11-10 that **phase 1 (0.1.0) is export only**;
+import is phase 2, deferred, and is sketched in section 8 as notes, not
+commitments. Calls marked **(design call)** are Claude's, each with its
+reason, and open to correction; section 9 lists Kevin's remaining
+questions.
+
 No grammar change: Kevin ruled on 2026-11-01 that ChordPro inline chords
 are not planned as barmark syntax (grammar, "Open questions"), because
 barmark places chords in bars, not over words. This package converts; it
@@ -13,44 +17,32 @@ never adds syntax.
 ChordPro is the plain-text format most songbook apps, worship tools and
 guitar sites read and write: lyrics with chords in brackets before the
 syllable they fall on (`[G]Down by the [C]river`), and directives in
-braces (`{title: …}`, `{start_of_chorus}`). A barmark user wants to:
-
-- **give** a chart to someone whose app reads ChordPro (export), and
-- **start** a chart from a ChordPro file they already have (import),
-  knowing what the import guessed, because ChordPro has no bars.
+braces (`{title: …}`, `{start_of_chorus}`). A barmark user wants to
+**give** a chart to someone whose app reads ChordPro, knowing exactly
+what the export could not carry.
 
 ## 2. The name
+
+**Decided by Kevin (2026-11-10): `@barmark/lyricsheet`, with the CLI flag
+`barmark export --lyricsheet`.**
 
 Kevin's rule: no "chordpro" in the package name, its exports or the
 CLI's flags, so we never look like squatters on the ChordPro project's
 name or get confused with its packages. (We did the same for Verovio:
 our trimmed Verovio build is `@barmark/engraver`, not `@barmark/verovio`;
 its placeholder is on npm and the package is in review, PR #245.) The
-README and docs may say plainly that the package reads and writes
-ChordPro.
+README and docs may say plainly that the package writes ChordPro.
 
-Checked on npm on 2026-11-10 (`npm view`; weekly downloads from the npm
-API):
+The names considered, checked on npm on 2026-11-10:
 
-| Name | Scoped name free? | Unscoped neighbour | Verdict |
-|---|---|---|---|
-| **`@barmark/lyricsheet`** | free | `lyricsheet`: free; `lyric-sheet`: free | **Recommended.** No ChordPro library or rival format uses the word. "Lyric sheet" describes what most exports are: words with chords on them. The downside is small: the term can mean words alone, and a chart with no lyrics exports as a ChordPro grid. |
-| `@barmark/songsheet` | free | `songsheet` 7.8.0, about 30 downloads a week: a parser for its *own* plain-text "Songsheet Format" (chords above lyrics) | The most natural word, but it is another chord-over-lyrics format's name, which is exactly the confusion we are avoiding. |
-| `@barmark/chordsheet` | free | `chordsheetjs` 18.0.0, about 5,600 downloads a week: ChordSheetJS, the best-known JavaScript **ChordPro** library; also `chordsheet` (markdown with chords, about 2 a week) | Accurate, but `@barmark/chordsheet` reads like barmark's ChordSheetJS. That is the worst clash of the three. |
+| Name | Unscoped neighbour | Why |
+|---|---|---|
+| **`@barmark/lyricsheet`** (chosen) | none (`lyricsheet` and `lyric-sheet` are free) | No ChordPro library or rival format uses the word. |
+| `@barmark/songsheet` | `songsheet`, a parser for its own "Songsheet Format" (about 30 downloads a week) | It is another chord-over-lyrics format's name. |
+| `@barmark/chordsheet` | `chordsheetjs`, ChordSheetJS, the best-known JavaScript ChordPro library (about 5,600 a week) | It reads like barmark's ChordSheetJS. |
 
-The fallback if Kevin wants none of these is `@barmark/chordlyrics`, which
-is free both scoped and unscoped.
-
-**CLI (design call).** The CLI names a format with a boolean flag of its
-own (`barmark export --musicxml`, `--midi`), not with `--to <format>`.
-`--to lyricsheet` would work, but it would be the only format chosen
-that way, so the flag is **`barmark export --lyricsheet`**. Import
-already picks the reader from the file's extension (`.mid` and `.midi`,
-`.mxl`, otherwise MusicXML). Reading `.cho`, `.crd`, `.chopro`, `.chord`,
-`.pro` and `.chordpro` (the extensions chordpro.org lists, plus
-`.chordpro`) as ChordPro is acceptable: an extension is the format's own
-fact, not a name we claim. **`barmark import --lyricsheet <file>`**
-forces the format for any other extension, such as `.txt`.
+The CLI names a format with a boolean flag of its own (`--musicxml`,
+`--midi`), not with `--to <format>`, so the flag is `--lyricsheet`.
 
 ## 3. Package shape
 
@@ -58,7 +50,7 @@ forces the format for any other extension, such as `.txt`.
 packages/lyricsheet/            @barmark/lyricsheet
   package.json                  deps: barmark (workspace:^) only
   README.md  CHANGELOG.md
-  src/index.ts                  exportLyricsheet, importLyricsheet, decodeLyricsheetBytes, VERSION, types
+  src/index.ts                  exportLyricsheet, VERSION, types
   src/version.ts
   src/export/                   one module per stage
     index.ts                    parse, choose the part, plan, write; never throws
@@ -68,45 +60,24 @@ packages/lyricsheet/            @barmark/lyricsheet
     spell.ts                    barmark chord → the spelling ChordPro readers know
     meta.ts                     title, credits, key/time/tempo, text lines
     losses.ts                   grouped losses, as @barmark/musicxml's Losses
-  src/import/
-    index.ts                    run the stages; never throws (catch → "importer bug")
-    text.ts                     bytes/BOM/CRLF, lines with numbers, #-comments
-    directives.ts               {name: value}, short forms, label="", selectors
-    songs.ts                    {new_song} splitting
-    sections.ts                 environments → sections, {chorus} recall, replays
-    lines.ts                    a lyric line → bars and a lyric row
-    grid.ts                     a grid line → bar line, endings, x N
-    chords.ts                   chord names → barmark slots; unreadable → ?
-    meta.ts                     metadata → title, credits, directives, text
-    write.ts                    assemble, printChart, re-parse self-check
-  tests/                        bun test; fixtures/ *.cho with expected *.chart.md
+  tests/                        bun test; fixtures/ *.chart.md with golden *.cho
 ```
 
 - **Dependencies (design call): `barmark` alone, with a caret
-  (`workspace:^`), as `@barmark/musicxml` has.** ChordPro is line-based
-  text, and a hand-written reader is small. A parser dependency would
-  bring in a second chord grammar that disagrees with Appendix A.
-- **API (design call)**, shaped like the two existing converters:
+  (`workspace:^`), as `@barmark/musicxml` has.** Writing ChordPro needs
+  nothing more.
+- **API (design call)**, shaped like the MIDI export:
   - `exportLyricsheet(chart, { part?, title? })` returns
     `{ ok: true; text; diagnostics: ChartDiagnostic[]; losses: LyricsheetLoss[] }`,
     or `{ ok: false; diagnostics }` when the chart has errors.
   - A `LyricsheetLoss` is `{ code; message; bar?; written? }`, as
-    `MidiLoss` is, and losses are grouped per code.
-  - `importLyricsheet(text, { instrument?, song? })` returns
-    `{ text; diagnostics: LyricsheetImportDiagnostic[] }`.
-  - A `LyricsheetImportDiagnostic` is
-    `{ severity: "error" | "warning"; message; line?; token? }`, where
-    `line` is the ChordPro source line.
-  - `decodeLyricsheetBytes(bytes)` mirrors `decodeXmlBytes`.
+    `MidiLoss` is, grouped per code.
   - No export, type or option says "chordpro".
-- **CLI.**
-  - `export.ts` gains `--lyricsheet`, which writes to stdout or `--out`
-    and takes `--part`. Losses print as MIDI's do
-    (`file: bar N: warning: …`).
-  - `import.ts` gains the extensions above and `--lyricsheet`.
-    Diagnostics print as `file:line: severity: message`.
-  - `@barmark/cli` pins the new package exactly, and its binaries bundle
-    it.
+- **CLI.** `export.ts` gains `--lyricsheet`, which writes to stdout or
+  `--out` and takes `--part`. Losses print as MIDI's do
+  (`file: bar N: warning: …`). `barmark import` is unchanged in phase 1.
+  `@barmark/cli` pins the new package exactly, and its binaries bundle
+  it.
 - **Repository work in the building PR:**
   - `tsconfig.json` paths;
   - the CI `package (N, lyricsheet)` matrix entries;
@@ -115,10 +86,9 @@ packages/lyricsheet/            @barmark/lyricsheet
   - RELEASING.md's tables and step 13;
   - CLAUDE.md's layout;
   - the `/release` skill's package list and the Swamp `pkg` input.
-- **barmark.dev: deferred.** Later, the site could get a Get Started line
+- **barmark.dev: deferred.** Later, a Get Started line
   (`barmark export --lyricsheet`) and perhaps a "Copy as ChordPro"
-  button. The site installs from npm, so either change follows the first
-  release.
+  button, after the first release, since the site installs from npm.
 
 **Kevin's one-time npm steps** (RELEASING.md "A new package's first
 release"; listed here, not done):
@@ -198,7 +168,7 @@ lyric lines and in a grid. The cells of a grid bar are its beats.
 | repeated name (`G G`) | `[G]` again | `/` (ChordPro: play here) | — |
 | `%` | the copied chords | `%` | — |
 | `N.C.` | `[*N.C.]` (an annotation, printed as text) | `N.C.` cell | — |
-| `--` | `[*Stop]` | a `Stop` cell (the reference check, 6, confirms readers print `N.C.`, `Stop` and `?` cells as text) | the stop is text |
+| `--` | `[*Stop]` | a `Stop` cell | the stop is text |
 | `?` | `[*?]` | `?` | — |
 | note set `{E}` | `[*E]`, `[*C E F# B]`: the notes as text | the same | not a chord to readers; octaves, `!` |
 | voicing `Cmaj7{…}` | `[Cmaj7]` | `Cmaj7` | the voicing |
@@ -211,7 +181,8 @@ lyric lines and in a grid. The cells of a grid bar are its beats.
 Each "Lost" is reported once per code, naming the bars. Reason: an
 annotation (`[*…]`) is printed as text and never transposed or given a
 diagram, so a reader never mistakes `N.C.`, a stop or a note for a
-chord.
+chord. The reference check (5.3) confirms readers print the `N.C.`,
+`Stop` and `?` grid cells as text.
 
 **4.4 Several parts (design call).**
 
@@ -279,282 +250,199 @@ another barmark **alias**:
 | `(9)` | `add9` |
 | `mmaj7` | `m(maj7)` |
 
-Use ASCII `#` and `b` only. A test checks that every exported spelling
-parses back in barmark to the same chord. A symbol with no ChordPro form
-(`7(b9,#11)`, `(no3)`) is written canonically, and the reference
-implementation's check (7.3) lists which ones it cannot read. Reason:
-what is read must be the chord we meant, both in a ChordPro reader and
-back in barmark.
+Use ASCII `#` and `b` only. A symbol with no ChordPro form (`7(b9,#11)`,
+`(no3)`) is written canonically. Reason: what is read must be the chord
+we meant, both in a ChordPro reader and back in barmark. Section 5 says
+how both are checked.
 
-## 5. Import: ChordPro → barmark
+## 5. Proving the export right
 
-**5.1 Bars (design call): (a) and (b), with (c)'s honesty. Grids are
-read exactly; lyric lines get inferred bars, one per chord, with a
-warning.**
+Phase 1 has no reader of our own, so a round trip back to barmark is
+not available. Three checks stand in for it, each catching what the
+others can't.
 
-- A `{start_of_grid}` gives bars, cells and repeats exactly:
-  - `.` becomes `/`, `/` repeats the chord, and `C~G` becomes `C_G`;
-  - `%` stays `%`, and `%%` is written out as its two bars;
-  - `|:`, `:|` and `:|:` become repeats. A volta `|2` starts an ending
-    bar line, so a grid line is split there;
-  - right-margin `x3` becomes `x3`; other margin text becomes a text
-    line.
-- A lyric line becomes one bar line with **one bar per chord**, in
-  order. The file holds nothing else to go on.
-  - Each section with inferred bars warns once: "bars inferred, one per
-    chord change: check bar lengths", naming the source lines.
-  - Words before a line's first chord get a leading bar: `/`, holding
-    the chord before. At the song's start, where `/` would have nothing
-    to hold, it is `N.C.`.
-- Rejected:
-  - Refusing lyric lines without a grid ((a) alone). Almost no ChordPro
-    file has grids, so the import would refuse nearly every file.
-  - A `?` meter ((b)'s alternative). barmark has no unknown meter, and
-    adding one would be a grammar change.
-  - Bars entirely of `?`. That would discard the chords the file does
-    give.
+**5.1 Golden files (in CI).** Each fixture chart has a hand-checked
+expected `.cho` beside it, and the export must match it byte for byte.
 
-The chart is a draft that parses. The warning says exactly what was
-guessed.
+- Catches: any change in output; that is, regressions.
+- Misses: a mistake in the golden file itself. It is only as right as
+  the person who checked it, so each golden file is reviewed once
+  against sections 4.1–4.7 when it is added.
 
-**5.2 Lyrics and inline chords (design call).**
+**5.2 An independent reader in CI: ChordSheetJS.** `chordsheetjs`,
+pinned exactly as a test-only devDependency, as `@barmark/midi` reads
+its files back with `midi-file`. It parses every golden file. The test
+then compares its result with a **played yardstick** computed from the
+chart alone, through `parseChart`, with no importer:
 
-- **One row per line.** Each lyric line that has words gets a `lyrics:`
-  row under its bar line.
-- **A bar's words.** Bar *i*'s cell holds the words sung from chord *i*
-  up to chord *i+1*:
-  - one word is one syllable;
-  - several words are one slot divided with `_` (`Down_by_the`).
-    Durations are unknown, and a `_` group never triggers the
-    uneven-slot warning that a slot count of 3 in 4/4 would;
-  - a word split by a chord (`riv[C]er`) gives `riv-` (the word
-    continues), then `er`.
-- **A chord with no words.** Its cell is `/`, holding the last word, as
-  a trailing chord is usually read. Before anything has been sung in the
-  verse, the cell is `--`.
-- **Characters a syllable can't hold.** Straight quotes become curly
-  quotes. `{` `}` `_` `|` become `(` `)` `‿` `¦`. One warning is given.
-- **Chord-only lines** get no row.
-- **Lyrics-only lines** (no chords) become text lines. When their
-  environment has the name of an earlier one, its heading is a replay
-  (grammar 6: "a section holding only lyrics … replays the changes").
+- per section occurrence, in played order, its name and the sequence of
+  chords and sung words. A word is the syllables of `PlayedBar.lyrics`
+  joined; a chord is the canonical name of each attack;
+- each chord name ChordSheetJS parses must denote the same chord as
+  barmark's: both parse it, and barmark's `parseChord` reads the
+  exported spelling back to the same chord (intervals and bass);
+- title, credits, key, time and tempo, from its metadata.
 
-Reason: this is the most the file says. Barmark's own export joins
-syllables into words, and the words come back intact.
+What it catches: malformed directives, unbalanced environments, chords
+attached to the wrong word, words lost or reordered, spellings another
+reader misreads. Its limits: it is one implementation, more lenient than
+the reference, and it is licensed GPL-2.0-only (question 1).
 
-**5.3 Environments and `{chorus}` (design call).**
+**5.3 The reference implementation (VM only, never in CI).** The Perl
+`chordpro` from CPAN (`App::Music::ChordPro`), installed in `~/.local`
+with `cpanm`; it is not on the VM yet. `bun scripts/lyricsheet-reference.ts`
+runs it over every golden file and fails on any warning it prints, such
+as an unknown chord or directive. It keeps its text output for a person
+to compare, like the MuseScore and Dorico checks. A spike confirms the
+exact flags.
 
-- **Section names.** `sov`, `soc`, `sob` and custom `start_of_xxx` each
-  become a `## ` heading with the label, else Verse, Chorus, Bridge, or
-  Xxx. Both `{sov: Verse 1}` and `label="Verse 1"` are read.
-- **Grids** are sections too, named by their label.
-- **Lines outside any environment** belong to the unnamed section, or to
-  the section before.
-- **Replays.** A section whose chords and line shapes match an earlier
-  section of the same name is written as a replay, with its words as
-  `lyrics:` rows. This is the MusicXML import's rule (its call 4).
-- **`{chorus}`** becomes `## <the recalled chorus's name>`, a replay. A
-  label (`{chorus: Final}`) becomes a text line under it.
-- **`{chorus}` with no chorus before it** becomes a text line and a
-  warning.
+- Catches: whatever the format's own implementation won't accept, which
+  includes our chord spellings (4.7) and the grid's annotation cells.
+- Misses: regressions between runs, since nothing runs it in CI.
 
-Reason: barmark's replay is exactly ChordPro's recall, by name and
-looking backward.
+**Also, in `bun test`:**
 
-**5.4 Chord names (Kevin's ruling, 2026-11-10).** Each bracketed name is
-read with `parseChord`:
-
-- **Readable names.** Aliases are canonicalised, so `Am7b5` prints as
-  `Am7(b5)`.
-- **Unreadable names.** A name barmark cannot read keeps its bar as
-  unknown harmony with its text: `"H7" ?`. It also stays an **error**
-  diagnostic with the line and token, and carries barmark's suggestion
-  where there is one: `CM7` suggests `Cmaj7` or `C`, and `H` suggests
-  `B`.
-  - The importer never applies a suggestion itself (design call). `C2`
-    and `CM` are rejected because they are ambiguous, and guessing would
-    change the chord.
-  - Nashville and Roman-numeral names are unreadable in 0.1.0.
-- **Special cases (design call).**
-  - A lowercase root alone (`[d]`), which ChordPro reads as a note,
-    becomes the note set `{D}`.
-  - `[N.C.]`, `[NC]` and `[*N.C.]` become `N.C.`.
-  - `[*Stop]` becomes `--`, and `[*?]` becomes `?`.
-  - `[*@B]` becomes the rehearsal mark `@B`.
-  - Any other `[*text]` becomes words on the bar, `"text"`.
-- **The CLI with an import error (design call).** The chart is still
-  written, so the person can fix it, but the exit status is 1. This
-  differs from MusicXML import, whose errors all mean nothing was
-  imported.
-
-**5.5 Everything else (design call).**
-
-| ChordPro | barmark | Diagnostic |
-|---|---|---|
-| `{title}`/`{t}`, `{meta: title …}` | `# Title` (the first; later ones are text) | — |
-| `{subtitle}`, `{artist}`, `{album}`, `{year}`, `{duration}`, `{tag}`, other `{meta}` | a text line, as `Artist: …` (barmark has no subtitle; Kevin, 2026-11-07) | — |
-| `{composer}`, `{lyricist}`, `{copyright}`, `{meta: arranger …}` | credit lines | — |
-| `{key}`, `{time}`, `{tempo}`, again mid-song | `key:`, `time:`, `tempo:` at that point; an unreadable value is a text line | warning |
-| `{tempo}` in 6/8, 9/8 or 12/8 | written as is; barmark counts dotted quarters, and ChordPro doesn't say | warning |
-| `{capo: N}` | Kevin's question 3; recommended: chords and key transposed up N semitones to sounding pitch (`transposeChart`), plus a text line `Capo N` | warning |
-| `{transpose: N}` | applied to the chords after it, as ChordPro means | — |
-| `{comment}`, `{c}`, `{ci}`, `{cb}`, `{highlight}` | a text line; one matching a feel or `rit.` the export wrote becomes that directive | — |
-| `# comment` lines | dropped: ChordPro ignores them | — |
-| `{define}`, `{chord}` | dropped: fingerings are not harmony | one warning |
-| `{start_of_tab}`, `{start_of_abc}`, `{start_of_ly}`, `{start_of_textblock}` | text lines, each with a leading `\`, so a tab line starting with `\|` stays text | one warning per block |
-| `{start_of_svg}` | dropped | warning |
-| fonts, sizes, colours, `{new_page}`, `{columns}`, `{image}`, `x_` directives | ignored: layout, not music | — |
-| `{new_song}` | only song 1 is imported, or `options.song`; the warning counts the songs | warning |
-| a selector, `{key-guitar: …}`, `{start_of_verse-piano}` | applied when it matches `options.instrument`; a `!` inverts the match. With no instrument given, only `!`-selected directives apply | one warning listing the selectors skipped |
-| unknown directive | a text line | warning |
-
-**Unicode, BOM and line endings (design call).**
-
-- A UTF-8 BOM is stripped.
-- CRLF and CR become LF before lines are numbered.
-- Text is NFC-normalised.
-- `decodeLyricsheetBytes` reads UTF-8. Bytes that are not valid UTF-8
-  are decoded as Windows-1252 with one warning, because older `.cho`
-  files are often Latin-1.
-- Control characters become U+FFFD, as the CLI already shows them.
-- `♯` and `♭` in chord names are accepted, as barmark accepts them.
-
-**Never throws.** Every stage reports into one diagnostics list. The
-whole run is wrapped, as `importMusicXml` is, so a bug becomes an
-"importer bug" error, not an exception. The result is always printed
-with `printChart` and re-parsed. A parse error in our own output is
-reported as an importer bug at the source line it came from.
-
-## 6. Round trips
-
-The `meaning` yardstick (`packages/barmark/tests/chart/fixtures.ts`)
-compares title, part, sections, events, and per played bar the meter,
-key, tempo, feel, section, slot timeline, mark and words. It does not
-compare lyrics. The package adds a `sung` yardstick: per played bar and
-verse, the syllables' text in order (from `PlayedBar.lyrics`), joined
-into words.
-
-| Direction | Promise | Not promised |
-|---|---|---|
-| barmark → ChordPro → barmark, chart without lyrics (all grids) | `meaning` holds except where a "Lost" row of 4.3 applies; the yardstick test skips charts with those features, as the MusicXML round trip skips rhythm figures | pushes, marks, note sets, voicings, modes, parts beyond one |
-| barmark → ChordPro → barmark, chart with lyrics | the same chords in the same order and the same `sung` words per section occurrence, in played order | bar lengths and slot positions; repeats come back unfolded |
-| ChordPro → barmark → ChordPro | **idempotent after one pass:** `export(import(x))` is equal to `export(import(export(import(x))))`, byte for byte; and against `x` itself, the same chords (canonically spelled) before the same words, and the same environments, labels and metadata | `#` comments, `{define}`, layout directives, selectors not applied, word spacing |
-| barmark → ChordPro → barmark → ChordPro | the two ChordPro texts are identical | — |
+- every chord spelling in Appendix A's tables, exported and read back
+  with `parseChord`, is the same chord;
+- the export never throws on the barmark corpus, and a chart with errors
+  gives `ok: false`;
+- a 1,000-bar chart exports in linear time, as `export-scale.test.ts`
+  does in `@barmark/midi`; FINDINGS records two quadratic surprises.
 
 **Fixtures (design call): we write them all.** No song text is copied,
 copyrighted or not.
 
-- **Examples.** The examples are Kevin's or traditional: Peaceful Dreams
-  (grid-only), Morning Song (parts) and Shenandoah (a pickup and two
-  verses). The grammar's "At a glance" is also used.
-- **Hand-written ChordPro files** in `tests/fixtures/`, each with its
-  expected `.chart.md`. Their lyrics are nonsense or ours. They cover:
-  - every directive and abbreviation in 5.5;
-  - a grid with voltas and `%%`;
-  - `{chorus}` with and without a label, and with no chorus;
-  - selectors;
-  - `{new_song}`;
-  - a capo and a transpose;
-  - CRLF with a BOM, and a Windows-1252 file;
-  - unreadable chords (`H7`, `CM7`, `C2`, `IV`);
-  - tab and abc blocks.
-- **A scale test.** A 1,000-line file imports in linear time, as
-  `export-scale.test.ts` does. FINDINGS records two quadratic surprises.
+- **Examples.** These are Kevin's or traditional: Peaceful Dreams
+  (grid-only), Morning Song (parts), Shenandoah (a pickup and two
+  verses), and the grammar's "At a glance".
+- **Hand-written charts** cover:
+  - each row of 4.3;
+  - repeats with verses on passes, endings, a D.S. and `->`;
+  - a replayed chorus with the same words, and one with new words;
+  - `x ...`;
+  - stacked verses;
+  - key, time and tempo changes;
+  - a church mode;
+  - several parts.
 
-**A reference implementation (design call): two checks, neither shipped
-nor run on users' files.**
+  Their lyrics are nonsense or ours.
 
-- **In CI: an independent parser,** as `@barmark/midi` reads its files
-  back with `midi-file`. ChordSheetJS (`chordsheetjs`, pinned exactly as
-  a devDependency) parses every exported fixture, and the test compares
-  its chord and lyric pairs with ours. Note: it is GPL-2.0-only. A
-  devDependency used only in tests is never distributed, but Kevin
-  decides (question 7).
-- **On the VM only, never in CI:** the reference Perl `chordpro` from
-  CPAN (`App::Music::ChordPro`). It is not installed yet; `cpanm`
-  installs it in `~/.local`.
-  - `bun scripts/lyricsheet-reference.ts` runs it over every export and
-    fails on any warning it prints (unknown chords, malformed
-    directives).
-  - It keeps its text and ChordPro backends' output for a person to
-    compare, like the MuseScore and Dorico checks.
-  - A spike confirms the exact backend flags.
+## 6. Scope
 
-## 7. Scope
+**Phase 1, 0.1.0:**
 
-**0.1.0:**
-
-- Export: everything in section 4.
-- Import: everything in section 5, with options `instrument` and `song`.
-- The CLI flags.
-- README sections "Exporting" and "Importing", each with its losses
-  table.
+- Section 4 in full.
+- `barmark export --lyricsheet`.
+- The checks of section 5.
+- A README with an "Exporting" section and its losses table.
+- Then a CLI minor, the songs bump and the site's Get Started line, per
+  RELEASING.md.
 
 **Later:**
 
-- **Exact round trips** through `x_barmark` hint directives, which other
-  readers ignore by ChordPro's rule. This would be like the MusicXML
-  export's `<?barmark root?>`. See question 5.
-- **Reading more than one song.** `--song N` is in 0.1.0; a whole
-  songbook as several charts is later.
-- **Nashville and Roman names, resolved against `{key}`,** if Kevin wants
-  numerals as input, which is not planned as syntax.
-- **A German `H` option.**
-- **`{define}` to voicings.**
-- **abc blocks through a real converter.**
-- **Export options:** a capo (shapes, plus `{capo}`) and grid-only
+- Phase 2, import (section 8).
+- Export options: a capo (chord shapes plus `{capo}`), and grid-only
   output.
-- **The barmark.dev option.**
-- **Plain "chords over words" text** (two-line, not ChordPro), which is
-  a different reader.
+- The barmark.dev option.
 
 **Risks:**
 
-1. **Inferred bars are often wrong** where a bar holds two chords. This
-   is mitigated by the warning per section, and grids are exact.
-2. **ChordPro dialects** (SongSelect, Ultimate Guitar exports,
-   OnSong extensions) put non-standard text in brackets. Unreadable
-   chords are errors with the text kept, so nothing is lost, but some
-   files will import with many errors.
-3. **Readers differ** in what chord spellings they accept. 4.7 and the
-   reference check reduce this; they don't remove it.
-4. **The GPL test oracle** (question 7).
-5. **Name collisions.** `lyricsheet` has none today. Kevin's placeholder
-   publish reserves it.
-6. **Complexity.** `plan.ts` and `sections.ts` will want to grow, so
-   Fallow's thresholds shape them, one module per stage.
+1. **Readers differ** in what chord spellings and grid cells they
+   accept. 4.7 and the checks of 5.2 and 5.3 reduce this; they don't
+   remove it.
+2. **The GPL test oracle** (question 1).
+3. **Golden files are trusted once checked**, so they need that first
+   review.
+4. **Complexity.** `plan.ts` will want to grow, so Fallow's thresholds
+   shape it.
 
-## 8. Questions for Kevin
+## 7. Phase 2 boundary
 
-1. **The name.** Recommended: `@barmark/lyricsheet` and
-   `export --lyricsheet`. The alternatives are `@barmark/songsheet`
-   (clashes with the unscoped `songsheet` format) and
-   `@barmark/chordsheet` (reads as barmark's ChordSheetJS, a ChordPro
-   library), with `@barmark/chordlyrics` as a fallback. All are free on
-   npm today.
-2. **Import by extension**, with `--lyricsheet` to force the format.
-   Recommended: yes, including `.pro`, which other tools use too; the
-   flag covers anything ambiguous.
-3. **Capo on import.** Recommended: transpose to sounding pitch, because
-   charts are always concert pitch (7.3), and keep a `Capo N` text line.
-   The alternative keeps the chord shapes and makes the chart wrong by N
-   semitones.
-4. **Bars for lyric lines.** Recommended: one bar per chord, with a
-   warning per section. The alternatives are refusing lyric lines
-   outside grids, or proposing an unknown meter (a grammar change, which
-   I don't recommend).
-5. **Exact round trips** through hidden `x_barmark` directives (slot
-   shapes per line). Recommended: not in 0.1.0. Ship the honest lossy
-   export first, then decide whether invisible hints in someone's
-   songbook file are welcome.
-6. **Exit status of an import with unreadable chords.** Recommended:
-   write the chart and exit 1, so CI notices and a person can still fix
-   the draft.
-7. **ChordSheetJS (GPL-2.0-only) as a test-only devDependency.**
-   Recommended: yes. It is never bundled or published, and it is the
-   only independent ChordPro parser that can run in CI. If not, only the
-   VM Perl check runs.
-8. **Release order.** Recommended: export and import together as 0.1.0,
-   then the CLI minor, then songs, then the site line. The alternative is
-   export first, since it is the simpler direction and ships about a
-   week sooner.
+Nothing in phase 1 depends on import, and nothing in it should make
+import harder:
+
+- The losses and the yardstick are computed from barmark's own parse.
+- The output carries no hidden hints (question 2).
+
+## 8. Phase 2: import (deferred, sketch)
+
+These are notes from the first draft, kept for when import is
+scheduled. They are not commitments; each needs Kevin's decisions again.
+
+- **Bars.** ChordPro has no bars or durations. A grid section gives bars
+  exactly:
+  - `.` reads as a hold, grid `/` as a repeated chord, and `C~G` as
+    `C_G`;
+  - `%%` is written out as its two bars;
+  - voltas start ending lines.
+
+  For lyric lines the options were:
+  - (a) require a grid or bar marks the author adds;
+  - (b) one bar per chord change, with a warning per section;
+  - (c) a draft full of `?`.
+
+  (b) looked best: (a) refuses almost every real file; a `?` meter would
+  be a grammar change; and (c) throws away the chords the file gives.
+  Words before a line's first chord would need a leading `/` bar, or
+  `N.C.` at the start.
+- **Lyrics.** Each line becomes a `lyrics:` row:
+  - a bar's words in one `_`-divided slot (no uneven-slot warning);
+  - a word split by a chord continues with `-`;
+  - a chord with no words gets `/`, or `--` before anything is sung;
+  - characters a syllable can't hold (`"` `{` `}` `_` `|`) are replaced,
+    with a warning.
+
+  Lines with words but no chords become text lines, under a replay
+  heading when the section's name matches an earlier one (grammar 6).
+- **Environments.** `sov`, `soc`, `sob` and custom `start_of_xxx` become
+  `##` headings named by their labels. `{chorus}` is a replay of the
+  chorus before it, its label a text line. With no chorus before it, it
+  becomes text with a warning. Identical repeated sections become
+  replays, as in the MusicXML import's call 4.
+- **Chord names.** Kevin ruled on 2026-11-10 that an unreadable chord
+  keeps its bar as unknown harmony with its text (`"H7" ?`) and stays an
+  error.
+  - Suggestions such as `CM7` → `Cmaj7` are reported, never applied.
+  - `[d]` is a note, `{D}`.
+  - `[*N.C.]`, `[*Stop]`, `[*?]` and `[*@B]` read back as what this
+    export writes.
+  - Nashville and Roman-numeral names stay unreadable unless numerals
+    become input.
+- **Everything else.**
+  - Metadata becomes `#`, credits, directives or text lines.
+  - `{transpose}` is applied to the chords after it.
+  - A capo: sounding pitch plus a `Capo N` text line looked right,
+    since charts are concert pitch (7.3).
+  - Dropped: `{define}`, `#` comments and layout directives.
+  - Tab, abc and ly blocks are kept as `\` text lines.
+  - `{new_song}`: song 1 only.
+  - Selectors apply against an `instrument` option.
+- **Encoding.** Strip the BOM; turn CRLF and CR into LF; NFC; read
+  bytes that aren't UTF-8 as Windows-1252 with a warning.
+- **Behaviour.**
+  - It never throws; every problem is a diagnostic with a source line.
+  - The CLI reads `.cho`, `.crd`, `.chopro`, `.chord`, `.pro` and
+    `.chordpro` by extension, with a flag to force the format.
+- **Round trips** then become possible: ChordPro → barmark → ChordPro
+  idempotent after one pass, and the `meaning` yardstick for grid-only
+  charts.
+
+## 9. Questions for Kevin
+
+1. **ChordSheetJS, which is GPL-2.0-only, as a test-only
+   devDependency.** Recommended: yes. It is never bundled or published,
+   and it is the only independent ChordPro reader that can run in CI.
+   Without it, CI has golden files alone, and the reference check runs
+   only on the VM.
+2. **Hidden `x_barmark` hint directives** in the export, which ChordPro
+   readers ignore by rule, carrying each line's slot shapes so a future
+   import could round-trip exactly. Recommended: not in phase 1. Ship
+   the plain export, and decide with phase 2 whether invisible hints in
+   someone's songbook file are welcome.
+3. **Installing the Perl reference on the VM** (`cpanm
+   App::Music::ChordPro` into `~/.local`). Recommended: yes, as
+   MuseScore was installed for the MusicXML checks.
+4. **Stacked verses** on bars that play once (4.5). Recommended: write
+   one pass per verse, with a loss. The alternative is to write verse 1
+   with chords and the others as `{comment}` text, which is shorter but
+   leaves their words without chords.
