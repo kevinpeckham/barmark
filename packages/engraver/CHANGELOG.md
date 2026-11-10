@@ -6,6 +6,8 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-11-10
+
 ### Added
 
 - **First release.** Verovio 6.4.1, built for what `@barmark/score` asks
@@ -21,3 +23,6 @@ package uses [semantic versioning](https://semver.org/).
   (Emscripten and the libraries Verovio vendors) are published with the
   package. The README states the build's limits: other fonts, footers,
   custom tunings and the importers left out.
+
+[Unreleased]: https://github.com/kevinpeckham/barmark/compare/engraver-v0.1.0...HEAD
+[0.1.0]: https://github.com/kevinpeckham/barmark/releases/tag/engraver-v0.1.0
