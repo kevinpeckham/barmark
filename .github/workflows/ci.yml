@@ -40,11 +40,12 @@ jobs:
       # findings show as annotations on the pull request.
       - run: bun run fallow --format github-annotations
   # @barmark/engraver: Verovio compiled by emsdk, which must match
-  # packages/engraver/src/info.ts byte for byte. A restored dist is checked
-  # against info.ts; a miss compiles from clean (about 4.5 minutes), and only
-  # that clean build, once it has matched info.ts, writes the dist cache.
-  # The weekly and hand-dispatched runs skip the dist cache and always
-  # compile. Later jobs take the files from the engraver-dist artifact.
+  # packages/engraver/src/info.ts byte for byte (.github/actions/engraver-build).
+  # A restored dist is checked against info.ts; a miss compiles from clean
+  # (about 4.5 minutes), and only that clean build, once it has matched
+  # info.ts, writes the dist cache. The weekly and hand-dispatched runs skip
+  # the dist cache and always compile. Later jobs take the files from the
+  # engraver-dist artifact.
   engraver:
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -57,59 +58,12 @@ jobs:
         with:
           node-version: 22
       - run: bun install --frozen-lockfile
-      - id: dist
-        if: github.event_name != 'schedule' && github.event_name != 'workflow_dispatch'
-        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      # The build, its caches, the gate and the engraver-dist artifact, shared
+      # with release.yml's build-engraver job.
+      - uses: ./.github/actions/engraver-build
         with:
-          path: packages/engraver/dist/verovio-module.*
-          key: engraver-dist-${{ hashFiles('packages/engraver/build/**', 'packages/engraver/package.json') }}
-      # The pinned emsdk and CMake (build.sh's cache, 540 MB), keyed on their pins: only a compile needs them.
-      - id: tools
-        if: steps.dist.outputs.cache-hit != 'true'
-        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: |
-            ~/.cache/barmark-engraver/emsdk
-            ~/.cache/barmark-engraver/venv
-          key: engraver-tools-${{ hashFiles('packages/engraver/build/versions.env') }}
-      # A miss: build from clean, then check against info.ts (compile fails on any difference).
-      - if: steps.dist.outputs.cache-hit != 'true'
-        working-directory: packages/engraver
-        run: bun run compile
-      # A hit: check the restored files against info.ts, refusing a dist without them.
-      - if: steps.dist.outputs.cache-hit == 'true'
-        working-directory: packages/engraver
-        run: bun run build --require-module
-      - if: steps.tools.outputs.cache-hit != 'true' && steps.dist.outputs.cache-hit != 'true'
-        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: |
-            ~/.cache/barmark-engraver/emsdk
-            ~/.cache/barmark-engraver/venv
-          key: engraver-tools-${{ hashFiles('packages/engraver/build/versions.env') }}
-      # Only a clean build that matched info.ts gets here without a hit.
-      - if: steps.dist.outputs.cache-hit != 'true'
-        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: packages/engraver/dist/verovio-module.*
-          key: engraver-dist-${{ hashFiles('packages/engraver/build/**', 'packages/engraver/package.json') }}
-      - run: bun run build
-      # The equivalence gate: stock Verovio and this build, in Node 22, must draw
-      # the corpus's SVG byte for byte. Its summary reports the timings (Q1: the
-      # slowest width-375 engraving) without gating on them.
-      - run: |
-          if ! node --version | grep -q '^v22'; then
-            echo "::error::node 22 required (the gate's Node), not $(node --version)"; exit 1
-          fi
-          bun scripts/engraver-equivalence.ts
-      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: engraver-dist
-          path: |
-            packages/engraver/dist/verovio-module.mjs
-            packages/engraver/dist/verovio-module.wasm
-          if-no-files-found: error
-          retention-days: 7
+          clean: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' }}
+          save-cache: true
   # The renderer in a real browser: isolation from hostile page CSS, themes,
   # reflow on narrow screens and at 400% zoom, the web component, and what a
   # screen reader hears.
