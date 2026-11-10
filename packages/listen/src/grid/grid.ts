@@ -238,6 +238,11 @@ function gridOf(c: Checked, s: Settings): GridResult {
 export function findGrid(input: GridInput, options?: ListenOptions): GridResult {
 	const resolved = resolveOptions(options, "listen");
 	if (!resolved.ok) return { ...resolved, reading: null };
+	return gridWith(input, resolved.value.settings);
+}
+
+/** `findGrid` on options already resolved (the pipeline's): the input checked, then the grid. */
+export function gridWith(input: unknown, s: Settings): GridResult {
 	let checked: Ok<Checked> | Refused;
 	try {
 		checked = readInput(input);
@@ -245,5 +250,5 @@ export function findGrid(input: GridInput, options?: ListenOptions): GridResult 
 		checked = refused([invalid("input", "The grid's input could not be read.")]);
 	}
 	if (!checked.ok) return { ...checked, reading: null };
-	return gridOf(checked.value, resolved.value.settings);
+	return gridOf(checked.value, s);
 }

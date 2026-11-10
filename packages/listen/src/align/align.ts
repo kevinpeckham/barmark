@@ -9,7 +9,7 @@ import type { TimingMap } from "@barmark/sync";
 import { beatsOf, type ChartParse, type Meter, parseChart } from "barmark";
 import { type Features, readFeatures } from "../features/features.js";
 import type { Declared } from "../grid/grid.js";
-import { invalid, isRefusal, isTempo, readDeclared, readStart } from "../input.js";
+import { invalid, isRefusal, isTempo, readDeclared, readRecording, readStart } from "../input.js";
 import { type ListenOptions, resolveOptions, type Settings } from "../options.js";
 import { type ListenWarning, type Ok, ok, type Refused, refusal, refused } from "../result.js";
 import { chartPadBars, type PadBar } from "./bars.js";
@@ -72,16 +72,6 @@ function readTempo(tempo: unknown) {
 	if (tempo === undefined) return { tempo: undefined };
 	if (isTempo(tempo)) return { tempo };
 	return invalid("tempo", "The fallback tempo must be a number from 1 to 999.");
-}
-
-/** `recording.id` (absent: none), or why it cannot be read. */
-function readRecording(recording: unknown) {
-	if (recording === undefined) return { id: undefined };
-	if (typeof recording !== "object" || recording === null)
-		return invalid("recording", "The recording must be an object with an optional id.");
-	const { id } = recording as Record<string, unknown>;
-	if (id === undefined || typeof id === "string") return { id };
-	return invalid("recording.id", "The recording's id must be a string.");
 }
 
 /** What the alignment is measured by, after the chart and the features: the first problem refused. */

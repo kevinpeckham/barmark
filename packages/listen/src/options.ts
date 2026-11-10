@@ -362,9 +362,12 @@ function acceptedKeys(scope: OptionScope): (key: string) => boolean {
 	return (k) => k === "build" || Object.hasOwn(DEFAULTS, k);
 }
 
-/** Check one option and merge it into `merged`; a refusal when it is out of range. `build` is passed through. */
+/** Check one option and merge it into `merged`; a refusal when it is out of range. `build` must be an object and is passed through. */
 function mergeOption(merged: Record<string, unknown>, key: string, value: unknown): Refusal | null {
-	if (key === "build") return null;
+	if (key === "build")
+		return isPlainObject(value)
+			? null
+			: bad("build", "Option build must be an object of the builder's options.");
 	if (key === "DOWNBEAT_WEIGHTS" || key === "SECTION_NOVELTY_SPANS") {
 		const r = key === "DOWNBEAT_WEIGHTS" ? mergeWeights(value) : checkSpans(value);
 		if ("reason" in r) return r;
@@ -379,7 +382,7 @@ function mergeOption(merged: Record<string, unknown>, key: string, value: unknow
 /**
  * Merge `options` over `DEFAULTS` for a scope, refusing an unknown key, a key
  * the scope does not take and a value outside its range. Never throws.
- * `build` (pipeline scope only) is passed through for sync to validate.
+ * `build` (pipeline scope only) must be an object, passed through for sync to read.
  */
 export function resolveOptions(
 	options: unknown,

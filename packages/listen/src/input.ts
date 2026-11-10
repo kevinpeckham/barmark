@@ -35,3 +35,13 @@ export function readStart(startAt: unknown): { startAt: number | null } | Refusa
 	if (isNumber(startAt) && startAt >= 0) return { startAt };
 	return invalid("startAt", "The start of bar one must be a time in seconds from 0.");
 }
+
+/** `recording.id` (absent: none), or why it cannot be read. */
+export function readRecording(recording: unknown) {
+	if (recording === undefined) return { id: undefined };
+	if (typeof recording !== "object" || recording === null)
+		return invalid("recording", "The recording must be an object with an optional id.");
+	const { id } = recording as Record<string, unknown>;
+	if (id === undefined || typeof id === "string") return { id };
+	return invalid("recording.id", "The recording's id must be a string.");
+}
