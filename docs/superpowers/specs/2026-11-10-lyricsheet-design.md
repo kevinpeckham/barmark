@@ -24,8 +24,8 @@ braces (`{title: …}`, `{start_of_chorus}`). A barmark user wants to:
 Kevin's rule: no "chordpro" in the package name, its exports or the
 CLI's flags, so we never look like squatters on the ChordPro project's
 name or get confused with its packages. (We did the same for Verovio:
-the engraving package is `@barmark/score`, not `@barmark/verovio`; the
-brief called it `@barmark/engraver`, but no package has that name.) The
+our trimmed Verovio build is `@barmark/engraver`, not `@barmark/verovio`;
+its placeholder is on npm and the package is in review, PR #245.) The
 README and docs may say plainly that the package reads and writes
 ChordPro.
 
