@@ -205,13 +205,16 @@ across (`built` is a `BuildResult`, or any `{ chart, timing, confidence? }`;
 changes `built`. Its rules, in order:
 
 1. `built.timing` is null: `{ ok: false, reason: "no-timing" }`.
+   A map or confidence record that is not well formed (`checkTimingMap`
+   finds an error in the map alone), or a built chart that plays another
+   number of bars than the map has, is refused with `bars-differ`.
 2. `refined` has an error diagnostic: `unparsed`, naming its first error's line.
 3. It plays another number of bars than `timing.chart.bars`: `bars-differ`.
 4. A played bar's meter differs from the built chart's at the same play
    position: `meters-differ`. Meters are compared by value, so 2/2 for
-   4/4 or 3/4 for 6/8 keeps the map: the bars last as long. Same count is not enough: a 4/4 bar turned
-   into two 2/4 bars elsewhere plays different bars, and the map's starts
-   would no longer mean what they say.
+   4/4 or 3/4 for 6/8 keeps the map: the bars last as long. Same count is
+   not enough: a 4/4 bar turned into two 2/4 bars elsewhere plays
+   different bars, and the map's starts would no longer mean what they say.
 5. Otherwise `{ ok: true, timing }`: a copy of the map with
    `chart.hash = chartHash(refined)`, checked by `checkTimingMap` against
    the refined chart.

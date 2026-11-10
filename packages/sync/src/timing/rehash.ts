@@ -24,8 +24,8 @@ const meterOf = (bar: PlayedBar) => `${bar.meter.n}/${bar.meter.d}`;
 /** Bars of the same length: meters compared by value (2/2 is 4/4, 6/8 is 3/4). */
 const sameLength = (a: PlayedBar, b: PlayedBar) => a.meter.n * b.meter.d === b.meter.n * a.meter.d;
 
-/** Rules 2 to 4: why the refined chart cannot take the map, or null. */
-function mismatch(map: TimingMap, built: ChartParse, refined: ChartParse): RehashResult | null {
+/** Rules 2 and 3: why the refined chart cannot take the map, or null. */
+function unplayable(map: TimingMap, refined: ChartParse): RehashResult | null {
 	const error = refined.diagnostics.find((d) => d.severity === "error");
 	if (error)
 		return refuse(
@@ -37,16 +37,48 @@ function mismatch(map: TimingMap, built: ChartParse, refined: ChartParse): Rehas
 			"bars-differ",
 			`The refined chart plays ${refined.bars.length} bars where the map has ${map.chart.bars}; ${DROPPED}`,
 		);
-	const moved = refined.bars.find((bar, i) => {
+	return null;
+}
+
+/** Rule 4: the first played bar whose meter changed value, or null. */
+function remetered(built: ChartParse, refined: ChartParse): RehashResult | null {
+	for (const [i, bar] of refined.bars.entries()) {
 		const was = built.bars[i];
-		return was !== undefined && !sameLength(bar, was);
-	});
-	if (!moved) return null;
-	const was = built.bars[moved.index - 1] as PlayedBar;
-	return refuse(
-		"meters-differ",
-		`The refined chart's bar ${moved.index} (in play order) is in ${meterOf(moved)} where the map's chart has ${meterOf(was)}; ${DROPPED}`,
-	);
+		if (was && !sameLength(bar, was))
+			return refuse(
+				"meters-differ",
+				`The refined chart's bar ${bar.index} (in play order) is in ${meterOf(bar)} where the map's chart has ${meterOf(was)}; ${DROPPED}`,
+			);
+	}
+	return null;
+}
+
+type Obj = Record<string, unknown>;
+const isObj = (v: unknown): v is Obj => typeof v === "object" && v !== null && !Array.isArray(v);
+
+/** True when a record can be copied: its bars, and sections if any, are lists of objects. */
+const recordShaped = (r: ConfidenceRecord) =>
+	Array.isArray(r.bars) &&
+	r.bars.every((b: unknown) => isObj(b) && Array.isArray(b.slots)) &&
+	(r.sections === undefined ||
+		(Array.isArray(r.sections) && r.sections.every((x: unknown) => isObj(x))));
+
+/** Why `built` cannot be carried as given (a malformed map or record, a short chart), or null. */
+function unusable(
+	map: TimingMap,
+	record: ConfidenceRecord | null,
+	was: ChartParse,
+): RehashResult | null {
+	const shape = checkTimingMap(map).diagnostics.find((d) => d.severity === "error");
+	if (shape) return refuse("bars-differ", `${shape.message}; ${DROPPED}`);
+	if (record !== null && !(isObj(record) && recordShaped(record)))
+		return refuse("bars-differ", `The confidence record has no list of bars; ${DROPPED}`);
+	if (was.bars.length !== map.chart.bars)
+		return refuse(
+			"bars-differ",
+			`The built chart plays ${was.bars.length} bars where the map has ${map.chart.bars}; ${DROPPED}`,
+		);
+	return null;
 }
 
 /** A copy of `map` with `hash` (by hand: the build has no `structuredClone` type). */
@@ -82,16 +114,17 @@ export function rehashTiming(
 	options?: { parse?: ChartParse },
 ): RehashResult {
 	if (!built.timing) return refuse("no-timing", "The built chart has no timing map to carry.");
-	const parse = options?.parse ?? parseChart(refined);
+	const record = built.confidence ?? null;
 	const was = parseChart(built.chart);
-	const refused = mismatch(built.timing, was, parse);
+	const parse = options?.parse ?? parseChart(refined);
+	const refused =
+		unusable(built.timing, record, was) ?? unplayable(built.timing, parse) ?? remetered(was, parse);
 	if (refused) return refused;
 	const timing = withHash(built.timing, chartHash(refined, parse));
 	const failed = checkTimingMap(timing, { text: refined, parse }).diagnostics.find(
 		(d) => d.severity === "error",
 	);
 	if (failed) return refuse("bars-differ", `${failed.message}; ${DROPPED}`);
-	const record = built.confidence ?? null;
 	const keep = record !== null && sameSlots(was, parse);
 	return {
 		ok: true,

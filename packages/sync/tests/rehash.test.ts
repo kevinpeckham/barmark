@@ -119,4 +119,46 @@ describe("rehashTiming refuses", () => {
 				"The refined chart's bar 3 (in play order) is in 2/4 where the map's chart has 4/4; the timing map was dropped.",
 		});
 	});
+
+	test("a map with no bars is refused, not thrown on", () => {
+		const { bars: _b, ...noBars } = built.timing as NonNullable<typeof built.timing>;
+		const malformed = { ...built, timing: noBars as unknown as typeof built.timing };
+		expect(rehashTiming(malformed, named)).toEqual({
+			ok: false,
+			reason: "bars-differ",
+			message: "bars must be a list; the timing map was dropped.",
+		});
+	});
+
+	test("a map with no chart field is refused, not thrown on", () => {
+		const { chart: _c, ...noChart } = built.timing as NonNullable<typeof built.timing>;
+		const r = rehashTiming({ ...built, timing: noChart as unknown as typeof built.timing }, named);
+		expect(r).toEqual({
+			ok: false,
+			reason: "bars-differ",
+			message: "chart must be an object; the timing map was dropped.",
+		});
+	});
+
+	test("a confidence record with no bars is refused, not thrown on", () => {
+		const { bars: _b, ...noBars } = built.confidence as NonNullable<typeof built.confidence>;
+		const r = rehashTiming(
+			{ ...built, confidence: noBars as unknown as typeof built.confidence },
+			named,
+		);
+		expect(r).toEqual({
+			ok: false,
+			reason: "bars-differ",
+			message: "The confidence record has no list of bars; the timing map was dropped.",
+		});
+	});
+
+	test("bars-differ: the built chart plays fewer bars than its map", () => {
+		const short = { ...built, chart: `${HEAD}| C | G | Am |\n` };
+		expect(rehashTiming(short, named)).toEqual({
+			ok: false,
+			reason: "bars-differ",
+			message: "The built chart plays 3 bars where the map has 4; the timing map was dropped.",
+		});
+	});
 });
