@@ -172,6 +172,13 @@ describe("the separate .wasm and the version check", () => {
 		expect(wasms).toEqual([{ moduleUrl: url, required: false }]);
 	});
 
+	test("a wasm digest without verovio-integrity is reported with the url, so a replacement checks it too", async () => {
+		const { load, wasms } = fakes({ [url]: "cdn" });
+		const source = { verovioUrl: url, verovioWasmIntegrity: "sha384-W" };
+		expect(await load(source, () => {})).toEqual({ toolkit: "toolkit cdn", from: source });
+		expect(wasms).toEqual([{ moduleUrl: url, integrity: "sha384-W", required: false }]);
+	});
+
 	test("with a wasm digest, the glue's download is reported unmeasured", async () => {
 		const { load } = fakes({ [url]: "cdn" });
 		const seen: LoadStatus[] = [];

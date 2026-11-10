@@ -91,8 +91,11 @@ export type LoaderDeps<M, T> = {
 const UNMEASURED: Download = { phase: "download", fraction: null, bytes: null };
 
 /** The `.wasm` source for a module from `verovioUrl`: its digest is required when the module's is given. */
-const wasmSource = ({ verovioUrl, verovioIntegrity, verovioWasmIntegrity }: VerovioSource) => ({
-	moduleUrl: verovioUrl as string,
+const wasmSource = (
+	verovioUrl: string,
+	{ verovioIntegrity, verovioWasmIntegrity }: VerovioSource,
+): WasmSource => ({
+	moduleUrl: verovioUrl,
 	...(verovioWasmIntegrity === undefined ? {} : { integrity: verovioWasmIntegrity }),
 	required: verovioIntegrity !== undefined,
 });
@@ -129,22 +132,29 @@ export function verovioLoader<M, T>(deps: LoaderDeps<M, T>) {
 			);
 		return t;
 	};
-	const fromUrl = async (source: VerovioSource, report: Report) => {
-		const { verovioUrl, verovioIntegrity } = source;
-		const blob = await deps.fetchModule(verovioUrl as string, {
+	const fromUrl = async (verovioUrl: string, source: VerovioSource, report: Report) => {
+		const { verovioIntegrity } = source;
+		const blob = await deps.fetchModule(verovioUrl, {
 			...(verovioIntegrity === undefined ? {} : { integrity: verovioIntegrity }),
 			expected: knownSize(verovioIntegrity),
 			onProgress: glueProgress(source, report),
 		});
-		return checked(await deps.instantiate(await deps.importBlob(blob), wasmSource(source), report));
+		const m = await deps.importBlob(blob);
+		return checked(await deps.instantiate(m, wasmSource(verovioUrl, source), report));
 	};
 	return async (source: VerovioSource, report: Report): Promise<Loaded<T>> => {
-		const { verovioUrl, verovioIntegrity } = source;
+		const { verovioUrl, verovioIntegrity, verovioWasmIntegrity } = source;
 		if (verovioUrl === undefined) return own(report);
-		if (verovioIntegrity === undefined)
-			return { toolkit: await fromUrl(source, report), from: { verovioUrl } };
+		// Without a module digest, no fallback; the wasm digest is kept so a replacement worker checks it too.
+		if (verovioIntegrity === undefined) {
+			const from = {
+				verovioUrl,
+				...(verovioWasmIntegrity === undefined ? {} : { verovioWasmIntegrity }),
+			};
+			return { toolkit: await fromUrl(verovioUrl, source, report), from };
+		}
 		try {
-			return { toolkit: await fromUrl(source, report), from: source };
+			return { toolkit: await fromUrl(verovioUrl, source, report), from: source };
 		} catch (err) {
 			deps.warn(
 				`<barmark-score>: Verovio from ${verovioUrl} was not used (${String(err)}); loading the package's own copy instead`,
