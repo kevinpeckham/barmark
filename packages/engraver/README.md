@@ -38,8 +38,8 @@ with a digest for each file:
 ```html
 <barmark-score
 	src="/charts/peaceful-dreams.chart.md"
-	verovio-url="https://cdn.jsdelivr.net/npm/@barmark/engraver@0.1.0/dist/verovio-module.mjs"
-	verovio-integrity="sha384-UW1YAjZf3McdHfVDtlJ4+Xo4jOMXuoaifQ2pim3xyOI35r4IoZMiq0PISPvc3ylA"
+	verovio-url="https://cdn.jsdelivr.net/npm/@barmark/engraver@0.1.1/dist/verovio-module.mjs"
+	verovio-integrity="sha384-klTppHZB0IPzdIOfSXNr8CbdhJU+1yp5eltjmgp8W3E8uhht5dlRy1mwrBSnmKJO"
 	verovio-wasm-integrity="sha384-cBBw1xx6xHEb/I7QDrSFDgImfzzvZVvwru055NG6QbY1zHI/FFLQHjlKdtH7pr5i"
 ></barmark-score>
 ```
@@ -152,4 +152,4 @@ libraries' notices are in [THIRD-PARTY.md](THIRD-PARTY.md).
 
 The Corresponding Source, Verovio's source at the pinned commit with
 `build/` and the licence files, is attached to each release:
-https://github.com/kevinpeckham/barmark/releases/tag/engraver-v0.1.0.
+https://github.com/kevinpeckham/barmark/releases/tag/engraver-v0.1.1.
