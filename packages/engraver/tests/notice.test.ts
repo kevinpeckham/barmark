@@ -129,13 +129,20 @@ test("THIRD-PARTY.md names Emscripten, the vendored libraries and what Verovio r
 		"data/text/",
 	])
 		expect(third).toContain(s);
-	// One bullet, read as prose: data/text/ is Verovio's, under Verovio's licence, not OFL.
+	// One bullet, read as prose: data/text/'s origin is unrecorded upstream, and it asserts no
+	// licence the tree doesn't state; it quotes what Verovio's fonts/README.md says.
 	const text = third
 		.replace(/\s+/g, " ")
 		.split(" - ")
 		.find((b) => b.startsWith("`data/text/`"));
-	expect(text).toContain("Verovio-derived data under Verovio's licence");
-	expect(text).toContain("not under the OFL");
+	expect(text).toContain("does not record which font");
+	expect(text).toContain("fonts/generate_text_font.sh");
+	expect(text).toContain(
+		"All fonts included in Verovio are licensed under the SIL Open Font License",
+	);
+	expect(text).toContain("OFL.txt");
+	expect(text).not.toContain("Verovio's licence");
+	expect(text).not.toContain("not under the OFL");
 });
 test("the package publishes the licence files", () => {
 	for (const f of ["COPYING", "COPYING.LESSER", "OFL.txt", "THIRD-PARTY.md", "NOTICE.md"])

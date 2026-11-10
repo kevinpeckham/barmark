@@ -681,10 +681,17 @@ Verovio's source and is distributed here under Verovio's licence.
 
 ## Data
 
-- `data/text/` (the Times metrics Verovio lays text out with:
+- `data/text/` (the text metrics Verovio lays text out with:
   `Times.xml`, `Times-bold.xml`, `Times-italic.xml`,
-  `Times-bold-italic.xml`) is **Verovio-derived data under Verovio's
-  licence** (LGPL-3.0-only), not a font and not under the OFL.
+  `Times-bold-italic.xml`) is Verovio's data, embedded unchanged: glyph
+  bounding boxes, not a font. Verovio's tree does not record which font
+  file they were extracted from: `fonts/generate_text_font.sh` extracts
+  them from a font named on its command line, and the files say only
+  `font-family="Times"` and `units-per-em="2048"`. Verovio's
+  `fonts/README.md` names Liberation as its text font and says "All fonts
+  included in Verovio are licensed under the SIL Open Font License"; that
+  licence is in `OFL.txt`, which this package ships. Nothing in Verovio's
+  tree states a licence for these files beyond that.
 - `Leipzig/`, `Leipzig.xml`, `Leipzig.css` and `Bravura.xml` derive from
   the Leipzig and Bravura fonts, under the SIL Open Font License 1.1: see
   `OFL.txt`.
