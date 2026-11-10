@@ -8,6 +8,9 @@ package uses [semantic versioning](https://semver.org/).
 
 ### Changed
 
+- **Breaking: requires `barmark` 0.23.0** (`SimpleSlot.text`: an
+  unreadable slot keeps its bar as unknown harmony with its text), whose
+  minor release a caret range would not reach.
 - **An unreadable slot is drawn as written** (barmark's grammar 2.3): where
   a slot is unknown harmony with the author's text, such as a `%` copying
   a bar with `CM7`, the bar draws `CM7` (escaped) where it would draw
