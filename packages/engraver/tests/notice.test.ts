@@ -23,6 +23,9 @@ test("NOTICE.md names both versions, the commit, the date and this release's sou
 		`Modified ${versions.MODIFIED}`,
 		`https://github.com/kevinpeckham/barmark/releases/tag/engraver-v${pkg.version}`,
 		"https://github.com/kevinpeckham/barmark/issues",
+		`verovio-${verovioVersion}-source.tar.gz`,
+		"build/source.sh",
+		"verovio-module-hum.mjs",
 	])
 		expect(notice).toContain(s);
 });

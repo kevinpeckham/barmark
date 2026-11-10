@@ -13,6 +13,9 @@ compiled and linked with `-Oz` and build paths mapped; glue minified with
 Closure; WebAssembly in a separate file; `instantiateWasm` accepted from the
 caller. No source file is changed. Only Leipzig is available; see the
 README for unsupported options. Corresponding Source:
+`verovio-6.4.1-source.tar.gz`, built by `build/source.sh` and attached,
+with `build/` as `engraver-build-X.Y.Z.tar.gz`, to each `engraver-v*`
+GitHub release; for this version,
 https://github.com/kevinpeckham/barmark/releases/tag/engraver-v0.1.0.
 
 ## What differs from stock, in full
@@ -31,8 +34,10 @@ https://github.com/kevinpeckham/barmark/releases/tag/engraver-v0.1.0.
   sets the resource path to `/data` before any toolkit is made.
 - **Importers disabled** with `-DNO_HUMDRUM_SUPPORT=ON`,
   `-DNO_PAE_SUPPORT=ON`, `-DNO_ABC_SUPPORT=ON`, `-DNO_GABC_SUPPORT=ON`,
-  `-DNO_DARMS_SUPPORT=ON` and `-DNO_MXL_SUPPORT=ON`. Stock's npm module
-  already leaves out Humdrum and DARMS. The MusicXML (uncompressed) and MEI
+  `-DNO_DARMS_SUPPORT=ON` and `-DNO_MXL_SUPPORT=ON`. Stock's
+  `verovio/wasm` module already leaves out Humdrum and DARMS; the npm
+  package also ships `verovio-module-hum.mjs` (`verovio/wasm-hum`), a
+  build with Humdrum. The MusicXML (uncompressed) and MEI
   readers are not disabled.
 - **Bundled data:** only `Bravura.xml`, `Leipzig.xml`, `Leipzig`,
   `Leipzig.css` and `text` of Verovio's `data/` are embedded (the list is
@@ -61,5 +66,5 @@ is used in this package's name.
 
 `COPYING` and `COPYING.LESSER` are Verovio's licence texts, verbatim from
 `version-6.4.1`. `THIRD-PARTY.md` holds the notices of Emscripten and of the
-libraries Verovio vendors that are compiled into this build, and names
-`data/text/` as Verovio's own data.
+libraries Verovio vendors that are compiled into this build, and says
+what Verovio's tree records about `data/text/`.

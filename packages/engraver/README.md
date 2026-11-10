@@ -106,7 +106,8 @@ input, this is what it does (measured 2026-11-10 in Node 22 against stock
   supported in this build.` for ABC, Plaine & Easie and GABC.
   `loadZipDataBuffer` and `loadZipDataBase64` (compressed MusicXML, `.mxl`)
   return `false` and log `MXL import is not supported in this build.`
-  Humdrum and DARMS are not read, as in stock's npm module.
+  Humdrum and DARMS are not read, as in stock's `verovio/wasm` (npm's
+  `verovio/wasm-hum`, `verovio-module-hum.mjs`, reads Humdrum).
 
 ## How it is built
 
