@@ -9,9 +9,12 @@ Releases follow the process in [RELEASING.md](RELEASING.md).
 
 ## [Unreleased]
 
+## [0.23.0] - 2026-11-10
+
 Grammar changes: an unreadable slot keeps its bar, stacked chord
 spellings read, and an ending may continue onto the lines after it
-(Kevin, 2026-11-10).
+(Kevin, 2026-11-10). Implements the
+[grammar v0.1 draft](https://github.com/kevinpeckham/barmark/blob/main/docs/grammar-v0.1-draft.md).
 
 ### Added
 
@@ -49,7 +52,6 @@ spellings read, and an ending may continue onto the lines after it
   read cleanly before reads the same; an ending before the last that runs
   into the next ending with no `:|` now gives one error, "an ending before
   the last goes back with :|", on its first line, where it gave two.
-
 - **`printedAsWritten(parse)`** and **`unreadSlots(line)`**: the lines the
   printer prints as written (spec §8), and a bar line's unreadable slots,
   so a renderer draws what the printer prints.
@@ -842,7 +844,8 @@ The first working release: the reference parser and printer for the
 
 - **A placeholder package that holds the `barmark` name** while the spec and parser are written.
 
-[Unreleased]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.22.0...HEAD
+[Unreleased]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.23.0...HEAD
+[0.23.0]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.22.0...barmark-v0.23.0
 [0.22.0]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.21.0...barmark-v0.22.0
 [0.21.0]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.20.0...barmark-v0.21.0
 [0.20.0]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.19.1...barmark-v0.20.0
