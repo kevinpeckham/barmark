@@ -4,6 +4,7 @@ import { beatsOf } from "./directives.js";
 import { readDocument } from "./document.js";
 import { printKey } from "./keys.js";
 import { extractPart, parseChart } from "./parse.js";
+import { splitSyllable } from "./syllable.js";
 import type {
 	Cell,
 	ChartParse,
@@ -78,7 +79,15 @@ const printLyricSlot = (s: LyricSlot): string => {
 	return s.kind === "hold" ? "/" : "--";
 };
 
+/** An unreadable slot as written: a dotted member's dot goes back before its syllable. */
+function printUnread(text: string, dotted: boolean): string {
+	if (!dotted) return text;
+	const { note, syllable } = splitSyllable(text);
+	return `${note}.${syllable === null ? "" : `:${syllable}`}`;
+}
+
 function printSimple(s: SimpleSlot): string {
+	if (s.kind === "unknown" && s.text !== undefined) return printUnread(s.text, Boolean(s.dotted));
 	const body =
 		s.kind === "chord" ? s.chord.canonical + (s.voicing?.canonical ?? "") : SYMBOLS[s.kind];
 	const sung = s.kind === "chord" && s.syllable ? `:${printSyllable(s.syllable)}` : "";

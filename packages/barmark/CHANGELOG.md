@@ -9,6 +9,28 @@ Releases follow the process in [RELEASING.md](RELEASING.md).
 
 ## [Unreleased]
 
+A grammar change: an unreadable slot keeps its bar (Kevin, 2026-11-10).
+
+### Changed
+
+- **An unreadable slot is kept as unknown harmony with its text** (grammar
+  principle 4, 2.3, 3). An unknown chord symbol (`CM7`, `CSus4`, `C69`),
+  a bad note set (`{H}`), a voicing note not in its chord, a syllable on a
+  chord name, a lone `-` or a mark that can't be read (`<<<C`, `+?`) is
+  still an error with the same message, token and suggestion, so `check`
+  still fails; but the slot becomes `{ kind: "unknown", text }` and the
+  line keeps its bars, so a chart plays as long as it is written. Only a
+  bar line whose structure can't be read (a stray `|:` or `:|`, a bad
+  ending or `x N`, a bad `_` group, `%`, `...`, a direction or a mark
+  sharing a cell, an empty cell, an unclosed quote) is still excluded.
+  Before, any error dropped the whole line.
+- **`SimpleSlot`'s `unknown` has an optional `text`** (A.7): the slot as
+  written, absent for a written `?`. `printSlot` and `printLine` print it
+  as written, a dotted member's dot back in its place; a line with an
+  error still prints and transposes as written.
+- A part's notes line (7.6) with an unreadable note set has that error
+  alone, not a second one for harmony on the line.
+
 ## [0.22.0] - 2026-11-09
 
 A grammar change: a chart's pickup is bar 0 (2.4), which now defines a

@@ -20,8 +20,10 @@ note.
    canonical printer writes exactly one spelling.
 3. **Fix traps in the notation, don't just document them.** If a reasonable
    musician would misread a construct, change the construct.
-4. **Never fail silently.** Anything a parser cannot read is an *error*
-   (line excluded, line number given). Anything readable but likely
+4. **Never fail silently.** Anything a parser cannot read is an *error*,
+   with its line number. A slot that can't be read keeps its place as
+   unknown harmony (`?`, 2.3) with the author's text; a bar line whose
+   structure can't be read is excluded. Anything readable but likely
    unintended is a *warning*.
 5. **Write it the way musicians already write it on paper.** Simile `%`,
    beat slashes `/`, repeat barlines `|: :|`, `x2`, `N.C.`.
@@ -180,7 +182,7 @@ equally**. Triplets are three-member groups.
 | `/` | **hold**: whatever was sounding continues (a chord, a note set, no-chord or silence) | any slot |
 | `N.C.` | **no harmony**: chord instruments stop, though drums, a riff or a voice may continue | any slot |
 | `--` | **silence**: the whole band stops | any slot |
-| `?` | **unknown harmony**: there is a chord here, not yet written down (always a warning) | any slot |
+| `?` | **unknown harmony**: there is a chord here, not yet written down (always a warning); also what a slot that can't be read becomes (an error) | any slot |
 | `%` | **simile**: repeat the previous bar's contents exactly | alone in a cell |
 | `...` | **unmeasured hold**: whatever was sounding continues for an unmeasured span (fermata, ring-out, grand pause). It is not counted as a bar. | alone in a cell |
 
@@ -206,6 +208,23 @@ How the symbols relate:
   through many notes.
 - `?` is valid so charts can be drafted with gaps, and it always warns so
   no gap gets published unnoticed.
+- **A slot that can't be read is an error, and keeps its bar.** An unknown
+  chord symbol (`CM7`, `CSus4`), a bad note set (`{H}`), a voicing note not
+  in its chord, a syllable on a chord name, a lone `-` or a mark that
+  can't be read (`<<<C`, `+?`) is reported with its line, token and any
+  suggestion, and its whole slot (marks and syllable included) becomes
+  unknown harmony that keeps the author's text, so the bar, the line and
+  the chart's length stay as written: it plays, counts and converts as
+  `?`, with no second error or warning on it. Only a slot is kept this
+  way: a member of a `_` group is a slot of its own, and keeps its dot.
+  The printer writes the text back as written, a renderer draws it, and
+  transposing leaves it as written, since what can't be read can't be
+  moved. A bar line whose **structure** can't be read is still excluded,
+  because its bar count is unknown: a stray or misplaced `|:` or `:|`, a
+  bad ending or `x N`, a `%`, `...`, direction, `x N` or rehearsal mark
+  sharing a cell, an empty cell or group member, a misplaced dot or `[n/d]`,
+  or an unclosed quote. It still counts its bars for the bar numbers
+  after it.
 - A hit lasts its whole slot; for a shorter hit use a smaller slot (`G_--`).
 - `N.C.` is the canonical spelling; `NC`, `n.c.` and `N.C` are accepted.
 - Renderers draw `...` as a fermata.
@@ -444,8 +463,8 @@ C♭9. The canonical form puts alterations in parentheses.
 
 Appendix A is the full vocabulary: the interval of every building block,
 which combinations are valid, every accepted alias, and the machine output.
-An unknown chord symbol is an **error**, and the whole bar line is
-excluded.
+An unknown chord symbol is an **error**, and its slot is kept as unknown
+harmony with the symbol as written (2.3), so its bar still plays.
 
 ## 4. Note sets
 
@@ -961,8 +980,10 @@ the piano is **tacet**: it isn't written, so it rests.
   the piano Em repeats each). After a bar where the part was tacet, both
   are **errors**. A push borrows from the part's slot before it, in play
   order, tacet or not.
-- **A labelled line with an error** stays in its system, with its own
-  error only; its part is tacet there.
+- **A labelled line excluded for an error** (its structure can't be read,
+  2.3) stays in its system, with its own error only; its part is tacet
+  there. A line with an unreadable slot is not excluded: it plays, the
+  slot as unknown harmony.
 - **One part at a time.** A part extracted from the chart is an ordinary
   single-part chart: the tutti bars, its own bars, and each tacet stretch
   as bars of `N.C.` (not `--`: the rest of the band still plays), each
@@ -1054,7 +1075,8 @@ Bs     | {G1}        | {C2}        | {D2}           | {G1}        |
   hold **notes only**: note sets, `/`, `--`, `%`, words, accents, hits and
   pushes. A chord symbol, a voicing, `N.C.` or `?` on another line is an
   **error** suggesting a note set, or a voicing on the first line; so is a
-  pedal mark (2.9), which belongs to the part.
+  pedal mark (2.9), which belongs to the part. A slot there that can't be
+  read has its own error (2.3), not this one.
 - **Each line its own.** `/` holds what that line played and `%` copies
   that line's bar before, in written order (2.3). After a system where
   the line wasn't written, both are errors.
@@ -1313,7 +1335,11 @@ keeps what cannot reduce:
 | warning | a lyric row's syllable where the singing line starts no note; a `:/` with no syllable sung before it in play order; a numbered verse no pass sings; a repeat's pass that sings nothing where other passes sing (7.7) |
 | warning | a chart with text but no bar line at all (reported once, at the first text line), so a chart in another format never reads as empty |
 
-Every message gives the line number and quotes the offending token.
+Every message gives the line number and quotes the offending token. An
+error on a slot (an unknown or rejected chord symbol, a bad note set,
+voicing or syllable, a lone `-`, a mark that can't be read) keeps the slot
+as unknown harmony with its text (2.3); any other error on a bar line
+excludes the line.
 
 ## 10. Migrating from stem-shovel charts
 
@@ -1413,6 +1439,7 @@ human to say whether the band was silent, and the structure line.
 | Tempo in a one-bar meter | Decided by Kevin (2026-11-08): a one-bar meter keeps the tempo unit of the `time:` in force; `tempo:` counts the beat of the running meter `time:` set, so a short or odd bar never changes speed (2.4). In `time: 6/8, tempo: 60` a `[2/8]` pickup plays at 60 dotted quarters a minute, and a `[3/4]` bar lasts two of them. After a `time:` line the tempo counts the new meter's beat, as before (2.1). Rejected: the bracketed meter's own beat, which changes speed at a pickup. Machine output gains `time` on a played bar in a one-bar meter (A.7), and an extracted part's tacet stand-in for a `%` takes the meter of the bar it copies (7.4). |
 | A `Coda` with no bar after it | Decided by Kevin (2026-11-08): an **error** (5.2, 9); the `Coda` an `al Coda` goes on needs a bar after it: a bar written later in the chart, or a later heading that replays one (the last chorus as the coda). It gives `To Coda` nowhere to go on, and MusicXML has no measure to carry the sign. Before, it parsed, played nothing after `To Coda` and the export dropped the sign. Rejected: a warning, which would leave the jump going nowhere. |
 | Pickup | Decided by Kevin (2026-11-09): the chart's first written bar is a pickup when it is in a one-bar meter shorter, by value, than the meter in force at the next written bar, and that next bar is not itself in a one-bar meter shorter than the `time:` in force, so two short bars in a row open no pickup (2.4); it is bar 0, so bar 1 is the first full bar, as notation numbers it. Before, the pickup was bar 1 and the MusicXML export already wrote measure 0. `index`, the play position, does not change, so saved timing maps keep working. Machine output gains `pickup` on the parse (A.7). Rejected: renumbering `index` too (every saved map would answer one bar off with an unchanged hash); a literal 0 in the bar-grid gutter. |
+| An unreadable slot keeps its bar | Decided by Kevin (2026-11-10): "Barmark should not be dropping lines for a chord it can't read." Any slot that can't be read (an unknown chord symbol such as `CM7`, `CSus4`, `C69` or `C−7`, a bad note set such as `{H}`, a mark that can't be read) is still an **error**, with the same message, line, token and suggestion, so `check` still fails; but it keeps its bar as unknown harmony carrying the author's text (principle 4, 2.3, 3, A.7), which prints, renders and stays through transposition as written. Only a bar line whose structure can't be read (a stray or misplaced `\|:` or `:\|`, an unclosed or bad `_` group, a bad ending or `x N`, a rehearsal mark sharing a cell) is still excluded, because there the bar count itself is unknown. Found by porting a listening tool: a chart with `CM7` lost its whole line and played shorter than the recording. Rejected: a warning (an unreadable chord must not publish unnoticed), and keeping only unknown chord symbols (a bad note set or mark loses a line just the same). |
 
 ## Open questions
 
@@ -1553,13 +1580,14 @@ Each slot parses to one record:
 | `time` | on a played bar in a one-bar meter (2.4): the meter of the `time:` in force, whose beat `tempo` counts; absent on any other bar |
 | `tempoChange` | on a played bar inside a rit. or accel.: its `kind` (`rit` or `accel`), `from` (the steady tempo) and `to` (the target, or empty when open); empty outside one |
 | `swingPercent` | on a played bar and a directive: the swing amount in force (50 to 75), or empty for the bare word (66.7) and for `straight` |
-| `written` | on a played bar: its number as written, 0 for a pickup (2.4), else counting each written bar once in written order from 1 (`%` included, `...` not). A repeat or replay plays its bars under the numbers they were written with, and a bar line dropped for an error still counts its bars, so the numbers after it hold |
+| `written` | on a played bar: its number as written, 0 for a pickup (2.4), else counting each written bar once in written order from 1 (`%` included, `...` not). A repeat or replay plays its bars under the numbers they were written with, and a bar line excluded for an error in its structure (2.3) still counts its bars, so the numbers after it hold |
 | `pickup` | on the parse: true when the chart's first written bar is a pickup (2.4), written bar 0; `opensWithPickup` gives the same from the played bars |
 | `rehearsal` | a cell in the parse tree that is a mark (2.5), with its `label`; on a played bar, the label of the mark just before it, or absent |
 | `words` | on a cell and a played bar: each `text` with `at`, the slot it sits before (the slot count for after the last), or absent when none |
 | `ending` | on a bar line in the parse tree: the passes an ending plays on (`[1]`, `[1, 2, 3]`), or empty |
 | `direction` | a cell in the parse tree that is a mark between bars (5.2): `segno`, `coda`, `to coda`, `fine`, or a `jump` with `to` (`start` for `D.C.`, `segno` for `D.S.`) and `al` (`fine`, `coda`, or empty when it plays to the end) |
 | `repeat` | on a bar line, section or repeat bracket in the parse tree: a count, or `open` for `x ...` |
+| `text` | on an `unknown` slot that can't be read (2.3): the slot as written (`CM7`, `+?`), a dotted member's dot left off; absent for a written `?` |
 | `harte` | the Harte label: `C:7(b9)`, `N` for N.C. and silence (`--`), `X` for `?`; a tone the chord leaves out is marked `*` (`C:7(*3)`) |
 | `voicing` | on a chord slot: the note set written after its name (4.2), or absent |
 | `articulation` | on a chord slot: `accent` (`>`) or `hit` (`^`), or absent |

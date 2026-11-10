@@ -223,7 +223,7 @@ describe("written bar numbers (issue #70)", () => {
 		expect(written("## V x2\n| D | A |\n## C\n| G |")).toEqual([1, 2, 1, 2, 3]);
 	});
 	test("a bar line dropped for an error still counts its bars, so later numbers hold", () => {
-		expect(written("| C |\n| D | Hm7 | ... |\n| E |")).toEqual([1, 4]);
+		expect(written("| C |\n| D | C_ | ... |\n| E |")).toEqual([1, 4]);
 		expect(written("| C |\n| D |1 F |\n| E |")).toEqual([1, 4]);
 		expect(written("| C |\n| D :| F |\n| E |")).toEqual([1, 4]);
 	});

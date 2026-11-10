@@ -81,7 +81,7 @@ describe("edges", () => {
 		]);
 	});
 	test("an error drops only its own line", () => {
-		const r = parseChart("# T\nkey: D\n| A |\n| D | Hm |\n| G |");
+		const r = parseChart("# T\nkey: D\n| A |\n| D :| A |\n| G |");
 		expect(r.diagnostics.map((d) => [d.line, d.severity])).toEqual([[4, "error"]]);
 		expect(r.bars.map((b) => b.line)).toEqual([3, 5]);
 	});
