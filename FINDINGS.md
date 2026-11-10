@@ -2126,3 +2126,11 @@ those never reached, or reached in a repeat with passes enough for their verse (
   browser suite checks the score loads from jsDelivr with no fallback
   warning. A site using `verovio-url` on Vite 8 needs the same setting;
   the score README should say so.
+
+### `@barmark/midi` has a `src/version.ts` that RELEASING step 2 did not name (2026-11-10, midi 0.3.1)
+
+- **The symptom.** The midi 0.3.1 release PR's `check` job failed on
+  `exportMidi > the version is the package's`.
+- **The cause.** `packages/midi/src/version.ts` holds `VERSION`, and a test
+  compares it with `package.json`; step 2 named only musicxml's.
+- **The fix.** Bump it with the package version; step 2 now names both.
