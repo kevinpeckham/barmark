@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { join } from "node:path";
+import { VEROVIO_CDN_INTEGRITY, VEROVIO_CDN_URL } from "@barmark/score";
 import { chartHtml, scoreHtml } from "../src/lib/chart.ts";
 
 // The ratio is of best-of-three timings; the timeout only keeps a loaded machine from cutting a run short.
@@ -84,5 +85,17 @@ describe("scoreHtml", () => {
 	});
 	test("an empty source is an empty chart, not an exception", () => {
 		expect(scoreHtml("")).toStartWith("<barmark-score");
+	});
+	/** An attribute of the `<barmark-score>` host, or null. */
+	const attr = (html: string, name: string) =>
+		new RegExp(`^<barmark-score[^>]*\\s${name}="([^"]*)"`).exec(html)?.[1] ?? null;
+	test("loads Verovio from jsDelivr, checked against its digest", () => {
+		expect(attr(scoreHtml(demo), "verovio-url")).toBe(VEROVIO_CDN_URL);
+		expect(attr(scoreHtml(demo), "verovio-integrity")).toBe(VEROVIO_CDN_INTEGRITY);
+	});
+	test("preloads only when asked", () => {
+		expect(attr(scoreHtml(demo), "preload")).toBeNull();
+		expect(attr(scoreHtml(demo, { preload: "intent" }), "preload")).toBe("intent");
+		expect(attr(scoreHtml(demo, { preload: "idle" }), "preload")).toBe("idle");
 	});
 });

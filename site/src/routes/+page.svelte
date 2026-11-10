@@ -106,6 +106,7 @@ const description =
 				<ChartRender
 					{text}
 					score
+					preload="intent"
 					{semitones}
 					numerals={spelling === "names" ? null : spelling}
 					label="The chart, rendered"

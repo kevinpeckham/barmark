@@ -140,7 +140,13 @@ const code = "font-mono text-accent";
 			The score is the heavier of the two. Its engraver, Verovio, is several megabytes, so it loads only
 			the first time a reader presses Score, in a background worker, and one copy serves every score on
 			the page. A reader who stays on the grid never downloads it; when the grid is all you need, use
-			<code class={code}>&lt;barmark-chart&gt;</code>.
+			<code class={code}>&lt;barmark-chart&gt;</code>. To have the score sooner,
+			<code class={code}>preload="intent"</code> starts loading Verovio when a reader reaches for Score,
+			and <code class={code}>preload="idle"</code> once the page is idle. With
+			<code class={code}>verovio-url</code> and <code class={code}>verovio-integrity</code> it comes from
+			a CDN, checked against its digest; the package exports jsDelivr's as
+			<code class={code}>VEROVIO_CDN_URL</code> and <code class={code}>VEROVIO_CDN_INTEGRITY</code>, which
+			this site uses.
 		</p>
 		<p class="max-w-prose opacity-80">
 			On a server or a static site, <code class={code}>renderScoreHtml</code> draws the grid and the

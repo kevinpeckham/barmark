@@ -15,7 +15,7 @@ describe("the site builds", () => {
 		expect(pkg.dependencies).toEqual({
 			barmark: "0.22.0",
 			"@barmark/render": "0.18.0",
-			"@barmark/score": "0.2.0",
+			"@barmark/score": "0.3.0",
 			"@vercel/analytics": "2.0.1",
 			"@vercel/speed-insights": "2.0.0",
 		});
@@ -115,6 +115,17 @@ describe("the site builds", () => {
 			),
 		);
 		expect(users).toEqual([]);
+	});
+	test("the score's worker leaves Verovio in a chunk of its own, fetched only if jsDelivr's copy fails", () => {
+		const workers = join(out, "_app/immutable/workers");
+		const files = readdirSync(workers).filter((f) => f.endsWith(".js"));
+		expect(files).toHaveLength(1);
+		// Verovio's module is about 8 MB; the worker without it is a few hundred KB.
+		expect(readFileSync(join(workers, files[0] ?? "")).length).toBeLessThan(1_000_000);
+		const chunks = readdirSync(join(workers, "chunks")).map(
+			(f) => readFileSync(join(workers, "chunks", f)).length,
+		);
+		expect(Math.max(...chunks)).toBeGreaterThan(5_000_000);
 	});
 	test("the OG image is a 1200×630 PNG", () => {
 		const png = readFileSync(join(out, "og.png"));

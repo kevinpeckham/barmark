@@ -756,7 +756,7 @@ test.describe("the score", () => {
 		expect(errors).toEqual([]);
 	});
 
-	test("the home page loads Verovio only when Score is pressed, and draws the score as SVG", async ({
+	test("the home page starts loading Verovio from jsDelivr when a reader reaches for Score", async ({
 		page,
 	}) => {
 		const engine: string[] = [];
@@ -767,8 +767,39 @@ test.describe("the score", () => {
 		await page.waitForFunction(() => customElements.get("barmark-score"));
 		await page.waitForLoadState("networkidle");
 		expect(engine).toEqual([]);
+		const cdn = page.waitForRequest(/^https:\/\/cdn\.jsdelivr\.net\/npm\/verovio@/);
+		await page.locator("main barmark-score").getByRole("radio", { name: "Score" }).hover();
+		await cdn;
+	});
+
+	test("Try It's chart starts loading Verovio from jsDelivr once the page is idle", async ({
+		page,
+	}) => {
+		const cdn = page.waitForRequest(/^https:\/\/cdn\.jsdelivr\.net\/npm\/verovio@/);
+		await page.goto(`/try?q=${encodeURIComponent("key: G\n| G | C |")}`);
+		await expect(page.locator("[data-reading] barmark-score")).toHaveAttribute("preload", "idle");
+		await cdn;
+	});
+
+	test("the home page loads Verovio only on intent, and draws the score as SVG", async ({
+		page,
+	}) => {
+		const engine: string[] = [];
+		page.on("request", (r) => {
+			if (/worker|verovio|wasm/i.test(r.url())) engine.push(r.url());
+		});
+		const warnings: string[] = [];
+		page.on("console", (m) => {
+			if (m.type() === "warning") warnings.push(m.text());
+		});
+		await page.goto("/");
+		await page.waitForFunction(() => customElements.get("barmark-score"));
+		await page.waitForLoadState("networkidle");
+		expect(engine).toEqual([]);
 		await pressScore(page);
-		expect(engine.length).toBeGreaterThan(0);
+		// Verovio came from jsDelivr and matched its digest: the element warns when it falls back to its own copy.
+		expect(engine.filter((u) => u.startsWith("https://cdn.jsdelivr.net/"))).toHaveLength(1);
+		expect(warnings.filter((w) => w.includes("Verovio"))).toEqual([]);
 		expect(await scoreText(page)).toContain("Peaceful Dreams");
 		const score = page.locator("main barmark-score");
 		await expect(score.getByRole("radio", { name: "Score" })).toBeChecked();

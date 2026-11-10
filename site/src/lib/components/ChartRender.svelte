@@ -1,6 +1,6 @@
 <script lang="ts">
 import { onMount, untrack } from "svelte";
-import { chartHtml, scoreHtml } from "#lib/chart.js";
+import { chartHtml, type Preload, scoreHtml } from "#lib/chart.js";
 import { transposed } from "#lib/key.js";
 
 type Numerals = "nashville" | "roman";
@@ -13,6 +13,7 @@ let {
 	barNumbers = true,
 	numerals = null,
 	score = false,
+	preload = "none",
 	semitones = 0,
 	onviewchange,
 }: {
@@ -23,6 +24,8 @@ let {
 	numerals?: Numerals | null;
 	/** A <barmark-score>, with its Grid / Score switch, rather than a <barmark-chart>. Read once. */
 	score?: boolean;
+	/** A score's: when it starts loading Verovio, ahead of the reader's first press. Read once. */
+	preload?: Preload;
 	/** Draw the chart this many semitones from its own key; the text itself never changes. */
 	semitones?: number;
 	/** The reader switched a score between Grid and Score. */
@@ -48,7 +51,7 @@ let rendered = untrack(() => text);
 let moved = untrack(() => semitones);
 const initial = (asScore ? scoreHtml : chartHtml)(
 	transposed(rendered, moved),
-	untrack(() => ({ barNumbers })),
+	untrack(() => ({ barNumbers, preload })),
 );
 let host: HTMLDivElement;
 

@@ -3,6 +3,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { exportMusicXml, importMusicXml } from "@barmark/musicxml";
+import { VEROVIO_CDN_INTEGRITY, VEROVIO_CDN_URL } from "@barmark/score";
 import { renderScoreHtml } from "@barmark/score/server";
 import { barAt, chartFromDetections, secondsAtBar } from "@barmark/sync";
 import { parseChart, printChart, transposeChart } from "barmark";
@@ -113,35 +114,47 @@ describe("the commands Get Started shows", () => {
 		writeFileSync(join(dir, "songs/example-song.chart.md"), SAMPLE_CHART);
 		return dir;
 	};
-	test("every line runs, with the npx form", () => {
-		const lines = USE_CLI.split("\n");
-		expect(lines.length).toBeGreaterThan(3);
-		const dir = folder();
-		for (const line of lines) {
-			expect(line).toStartWith("npx @barmark/cli ");
-			const result = run(line, dir);
-			expect([line, result.exitCode, result.stderr.toString()]).toEqual([line, 0, ""]);
-		}
-	});
-	test("check reads the sample chart cleanly, and transpose, render, export and import do what they say", () => {
-		const dir = folder();
-		const line = (command: string) =>
-			USE_CLI.split("\n").find((l) => l.includes(` ${command} `)) ?? "";
-		expect(run(line("check"), dir).stdout.toString()).toContain("1 file, 0 errors, 0 warnings");
-		expect(run(line("transpose"), dir).stdout.toString()).toContain("|: E | B | C#m | A :|");
-		run(line("render"), dir);
-		expect(existsSync(join(dir, "example-song.html"))).toBe(true);
-		const score = USE_CLI.split("\n").find((l) => l.includes(" render --score ")) ?? "";
-		expect(score).toContain("--out example-song-score.html");
-		expect(run(score, dir).exitCode).toBe(0);
-		const page = readFileSync(join(dir, "example-song-score.html"), "utf8");
-		expect(page).toContain("<svg");
-		expect(page).toContain("Example Song");
-		run(line("export"), dir);
-		expect(readFileSync(join(dir, "example-song.musicxml"), "utf8")).toContain("<score-partwise");
-		expect(run(line("import"), dir).exitCode).toBe(0);
-		expect(readFileSync(join(dir, "imported.chart.md"), "utf8")).toContain("| D | A | Bm | G | x2");
-	});
+	// Each starts the CLI several times, the score engraving with Verovio: past bun's 5 s on a busy machine.
+	const CLI_TIMEOUT = 60_000;
+	test(
+		"every line runs, with the npx form",
+		() => {
+			const lines = USE_CLI.split("\n");
+			expect(lines.length).toBeGreaterThan(3);
+			const dir = folder();
+			for (const line of lines) {
+				expect(line).toStartWith("npx @barmark/cli ");
+				const result = run(line, dir);
+				expect([line, result.exitCode, result.stderr.toString()]).toEqual([line, 0, ""]);
+			}
+		},
+		CLI_TIMEOUT,
+	);
+	test(
+		"check reads the sample chart cleanly, and transpose, render, export and import do what they say",
+		() => {
+			const dir = folder();
+			const line = (command: string) =>
+				USE_CLI.split("\n").find((l) => l.includes(` ${command} `)) ?? "";
+			expect(run(line("check"), dir).stdout.toString()).toContain("1 file, 0 errors, 0 warnings");
+			expect(run(line("transpose"), dir).stdout.toString()).toContain("|: E | B | C#m | A :|");
+			run(line("render"), dir);
+			expect(existsSync(join(dir, "example-song.html"))).toBe(true);
+			const score = USE_CLI.split("\n").find((l) => l.includes(" render --score ")) ?? "";
+			expect(score).toContain("--out example-song-score.html");
+			expect(run(score, dir).exitCode).toBe(0);
+			const page = readFileSync(join(dir, "example-song-score.html"), "utf8");
+			expect(page).toContain("<svg");
+			expect(page).toContain("Example Song");
+			run(line("export"), dir);
+			expect(readFileSync(join(dir, "example-song.musicxml"), "utf8")).toContain("<score-partwise");
+			expect(run(line("import"), dir).exitCode).toBe(0);
+			expect(readFileSync(join(dir, "imported.chart.md"), "utf8")).toContain(
+				"| D | A | Bm | G | x2",
+			);
+		},
+		CLI_TIMEOUT,
+	);
 	test("the CI example pins the version the site installs", () => {
 		expect(version).toMatch(/^\d+\.\d+\.\d+$/);
 		expect(CLI_CI).toContain(`npx -y @barmark/cli@${version} check --strict --format github`);
@@ -292,6 +305,19 @@ describe("the Syntax Guide's score section", () => {
 		expect(section?.querySelectorAll("[data-score-note]").length).toBeGreaterThan(8);
 		expect(section?.querySelector("barmark-score template[shadowrootmode=open]")).not.toBeNull();
 	});
+});
+
+describe("every score on the site", () => {
+	// Try It opens on a chord, drawn as a grid; its chart's score is the browser suite's.
+	for (const path of ["index.html", "syntax.html", "get-started.html"])
+		test(`loads Verovio from jsDelivr with its digest: ${path}`, () => {
+			const scores = [...page(path).querySelectorAll("barmark-score")];
+			expect(scores.length).toBeGreaterThan(0);
+			for (const score of scores) {
+				expect(score.getAttribute("verovio-url")).toBe(VEROVIO_CDN_URL);
+				expect(score.getAttribute("verovio-integrity")).toBe(VEROVIO_CDN_INTEGRITY);
+			}
+		});
 });
 
 describe("the nav", () => {
