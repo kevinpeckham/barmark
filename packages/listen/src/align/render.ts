@@ -102,41 +102,67 @@ export function renderWhole(
 	return { samples, barStarts };
 }
 
-/** One pad of the streamed render: its samples `[from, to)`, and each tone's step and phasor, carried across chunks. */
+/**
+ * One pad of the streamed render: its samples `[from, to)`, its chord,
+ * and its tones' state, made when it first sounds and dropped once it has
+ * passed, so a pass holds only the pads sounding in the current chunk.
+ */
 type Voice = {
 	from: number;
 	to: number;
-	/** Per tone: `cos(w)`, `sin(w)`, then the phasor `c`, `s` at the next sample to render. */
-	tones: Float64Array[];
+	chord: Pitches;
+	/** Four per tone: `cos(w)`, `sin(w)`, then the phasor `c`, `s` at the next sample to render; null before and after. */
+	tones: Float64Array | null;
 };
 
-/** The pads as voices, their phasors at their starts, from and to as `addPad` reckons them. */
+/** The pads as voices, from and to as `addPad` reckons them; no tone state yet. */
 function voicesOf(
 	slots: { start: number; seconds: number; chord: Pitches }[],
 	sampleRate: number,
 	length: number,
 ): Voice[] {
-	return slots.map(({ start, seconds, chord }) => {
-		const from = Math.max(0, Math.floor(start * sampleRate));
-		const to = Math.min(length, Math.floor((start + seconds) * sampleRate));
-		const tones = tonesOf(chord).map((midi) => {
-			const w = (2 * Math.PI * midiHz(midi)) / sampleRate;
-			return Float64Array.of(Math.cos(w), Math.sin(w), Math.cos(w * from), Math.sin(w * from));
-		});
-		return { from, to, tones };
-	});
+	return slots.map(({ start, seconds, chord }) => ({
+		from: Math.max(0, Math.floor(start * sampleRate)),
+		to: Math.min(length, Math.floor((start + seconds) * sampleRate)),
+		chord,
+		tones: null,
+	}));
 }
 
-/** One voice's samples within the chunk starting at `lo`, tone by tone, each phasor left where the chunk ends. */
-function sound(out: Float32Array, lo: number, voice: Voice, attack: number): void {
+/** A voice's tones, each step and its phasor at the voice's start, as `addPad` makes them. */
+function tonesAt(voice: Voice, sampleRate: number): Float64Array {
+	const midis = tonesOf(voice.chord);
+	const tones = new Float64Array(4 * midis.length);
+	for (let t = 0; t < midis.length; t++) {
+		const w = (2 * Math.PI * midiHz(midis[t] as number)) / sampleRate;
+		tones.set(
+			[Math.cos(w), Math.sin(w), Math.cos(w * voice.from), Math.sin(w * voice.from)],
+			4 * t,
+		);
+	}
+	return tones;
+}
+
+/**
+ * One voice's samples within the chunk starting at `lo`, tone by tone, each
+ * phasor left where the chunk ends. Its tones are made here when it first
+ * sounds, and dropped once the chunk has reached its end.
+ */
+function sound(
+	out: Float32Array,
+	lo: number,
+	voice: Voice,
+	sampleRate: number,
+	attack: number,
+): void {
+	const tones = voice.tones ?? tonesAt(voice, sampleRate);
 	const begin = Math.max(voice.from, lo);
 	const end = Math.min(voice.to, lo + out.length);
-	for (let t = 0; t < voice.tones.length; t++) {
-		const tone = voice.tones[t] as Float64Array;
-		const dc = tone[0] as number;
-		const ds = tone[1] as number;
-		let c = tone[2] as number;
-		let s = tone[3] as number;
+	for (let t = 0; t < tones.length; t += 4) {
+		const dc = tones[t] as number;
+		const ds = tones[t + 1] as number;
+		let c = tones[t + 2] as number;
+		let s = tones[t + 3] as number;
 		for (let i = begin; i < end; i++) {
 			const n = i - voice.from;
 			const env = (n < attack ? n / attack : 1) * 0.25;
@@ -145,9 +171,10 @@ function sound(out: Float32Array, lo: number, voice: Voice, attack: number): voi
 			s = s * dc + c * ds;
 			c = next;
 		}
-		tone[2] = c;
-		tone[3] = s;
+		tones[t + 2] = c;
+		tones[t + 3] = s;
 	}
+	voice.tones = voice.to <= lo + out.length ? null : tones;
 }
 
 /** One pass of the render in chunks of `size`: each chunk zeroed, every voice sounding in it added in order, then `each`. */
@@ -169,7 +196,7 @@ function pass(
 		for (let v = first; v < voices.length; v++) {
 			const voice = voices[v] as Voice;
 			if (voice.from >= lo + out.length) break;
-			if (voice.to > lo) sound(out, lo, voice, attack);
+			if (voice.to > lo) sound(out, lo, voice, sampleRate, attack);
 		}
 		each(out);
 	}
