@@ -67,7 +67,7 @@ describe("several parts (grammar 7.4)", () => {
 		expect(text.split("Piano")).toHaveLength(2);
 	});
 	test("a part's errored line shows as an error in its row", () => {
-		const d = doc("part: Gtr = Guitar\npart: Pno = Piano\nGtr | G | C |\nPno | Em | Xq7 |");
+		const d = doc("part: Gtr = Guitar\npart: Pno = Piano\nGtr | G | C |\nPno | Em | C_ |");
 		const rows = d.querySelectorAll(".bm-system > *");
 		expect([...rows].map((r) => r.className)).toEqual(["bm-row bm-part-row", "bm-error"]);
 	});
@@ -138,7 +138,7 @@ describe("show-part on the element", () => {
 describe("render minors", () => {
 	const THREE = "part: Gtr = Guitar\npart: Pno = Piano\npart: Bs = Bass\n\n";
 	test("a system whose first part's line errs numbers its first drawn row", () => {
-		const d = doc(`${THREE}Gtr | G | Xq7 |\nPno | Em | C |\nBs | E | C |\n`);
+		const d = doc(`${THREE}Gtr | G | C_ |\nPno | Em | C |\nBs | E | C |\n`);
 		const numbers = [...d.querySelectorAll(".bm-part-row .bm-bar-number")].map((n) =>
 			n.textContent?.replace(/^[A-Za-z]+/, ""),
 		);

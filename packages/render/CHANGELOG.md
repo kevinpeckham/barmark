@@ -15,7 +15,16 @@ package uses [semantic versioning](https://semver.org/).
   a slot is unknown harmony with the author's text, such as a `%` copying
   a bar with `CM7`, the bar draws `CM7` (escaped) where it would draw
   `?`, and speaks it as "unreadable: CM7". A written `?` is drawn and
-  spoken as before. A line with an error is still drawn as written.
+  spoken as before.
+- **A bar line whose only errors are unreadable slots draws as a row**
+  (barmark's grammar 2.3, 8), as the printer prints it, instead of as the
+  error box: each such slot is drawn as written in the error colour
+  (`--barmark-accent`, wavy underline), with the new `::part(unread)` and
+  class `bm-unread`, its message as a `title` tooltip and in the bar's
+  spoken name ("bar 2: unreadable: CM7, error: …"). The model's slots
+  cell gains `unread`, the messages in order. A `%` copy of the bar draws
+  the text without the error. A line with any other error still draws as
+  the error box.
 
 ## [0.18.0] - 2026-11-09
 

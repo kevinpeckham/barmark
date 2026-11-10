@@ -73,6 +73,8 @@ type View = {
 	numeral: { style: Numerals; key: Key } | null;
 	pitches: boolean;
 	sung: SungBar | null;
+	/** The bar's unreadable slots' messages still to draw, taken in order (barmark's grammar 2.3). */
+	unread?: string[];
 };
 
 export function renderChart(text: string, options: RenderOptions = {}): string {
@@ -403,6 +405,10 @@ type Sung = {
 	beats: string;
 };
 
+/** A bar's unreadable slots' errors, spoken after the bar (barmark's grammar 2.3). */
+const spokenErrors = (cell: CellModel) =>
+	cell.kind === "slots" ? (cell.unread ?? []).map((m) => `error: ${m}`) : [];
+
 function cellHtml(
 	cell: CellModel,
 	barNumber: number | null,
@@ -412,8 +418,8 @@ function cellHtml(
 ): string {
 	const numeral =
 		numerals && cell.kind === "slots" && cell.key ? { style: numerals, key: cell.key } : null;
-	const said = [speakBar(barNumber, cell, numeral !== null), sung.words].filter(Boolean);
-	const spoken = `<span class="bm-sr">${escapeHtml(said.join(", "))}</span>`;
+	const said = [speakBar(barNumber, cell, numeral !== null), ...spokenErrors(cell), sung.words];
+	const spoken = `<span class="bm-sr">${escapeHtml(said.filter(Boolean).join(", "))}</span>`;
 	if (cell.kind !== "slots") return betweenBarsHtml(cell, spoken, marks);
 	const change = cell.tempoChange ? ` data-tempo-change="${cell.tempoChange}"` : "";
 	const [body, end] = barBody(cell, { numeral, pitches: sung.pitches, sung: sung.bar });
@@ -425,7 +431,9 @@ function cellHtml(
 }
 
 /** What a bar shows: its meter, its slots (or `%`), and "cut"; then the words after its last slot. */
-function barBody(cell: Extract<CellModel, { kind: "slots" }>, view: View): [string, string] {
+function barBody(cell: Extract<CellModel, { kind: "slots" }>, given: View): [string, string] {
+	// Each unreadable slot takes its message in turn (barmark's grammar 2.3).
+	const view = { ...given, unread: [...(cell.unread ?? [])] };
 	const meter = cell.meter
 		? `<span class="bm-meter"><span>${cell.meter.n}</span><span>${cell.meter.d}</span></span>`
 		: "";
@@ -559,11 +567,21 @@ function unmarkedSlotHtml(slot: Slot, view: View): string {
 		case "silence":
 			return `<span class="bm-silence"></span>`;
 		case "unknown":
-			// An unreadable slot is drawn as its author wrote it (grammar principle 4).
-			return `<span class="bm-unknown">${escapeHtml(slot.text ?? "?")}</span>`;
+			return unknownHtml(slot.text, view);
 		case "group":
 			return groupHtml(slot.members, view);
 	}
+}
+
+/**
+ * `?`, or an unreadable slot as its author wrote it (barmark's grammar
+ * 2.3); one written on its own line carries its error, a `%` copy doesn't.
+ */
+function unknownHtml(text: string | undefined, view: View): string {
+	if (text === undefined) return `<span class="bm-unknown">?</span>`;
+	const message = view.unread?.shift();
+	if (message === undefined) return `<span class="bm-unknown">${escapeHtml(text)}</span>`;
+	return `<span class="bm-unknown bm-unread" part="unread" title="${escapeHtml(message)}">${escapeHtml(text)}</span>`;
 }
 
 function chordHtml(record: ChordRecord, view: View): string {

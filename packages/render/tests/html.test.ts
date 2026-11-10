@@ -166,7 +166,8 @@ describe("renderChart: chart text is never markup", () => {
 ## <script>alert(1)</script>
 | D |
 "quoted" & <b>bold</b>
-| <img src=x onerror=alert(1)> |`;
+| <img src=x onerror=alert(1)> |
+| <b>x</b> :| D |`;
 	const d = shadow(renderChart(hostile));
 
 	test("no element comes from the chart's text", () => {
@@ -176,7 +177,8 @@ describe("renderChart: chart text is never markup", () => {
 		expect(texts(d, '[part~="title"]')).toEqual(["Tom & Jerry <3"]);
 		expect(texts(d, '[part~="heading"]')[0]).toBe("<script>alert(1)</script>");
 		expect(texts(d, '[part~="text"]')).toContain('"quoted" & <b>bold</b>');
-		expect(texts(d, ".bm-error code")).toEqual(["| <img src=x onerror=alert(1)> |"]);
+		expect(texts(d, ".bm-error code")).toEqual(["| <b>x</b> :| D |"]);
+		expect(texts(d, ".bm-unread")).toEqual(["<img", "src=x", "onerror=alert(1)>"]);
 	});
 	test("an error line's message is in a tooltip and spoken", () => {
 		const err = d.querySelector(".bm-error");
