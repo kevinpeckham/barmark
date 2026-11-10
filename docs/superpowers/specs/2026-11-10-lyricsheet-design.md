@@ -1,11 +1,10 @@
 # Lyric sheets (ChordPro export): design
 
-Status: draft for Kevin (2026-11-10). Asked for by Kevin on 2026-11-10.
+Status: approved by Kevin (2026-11-10). Asked for by Kevin on 2026-11-10.
 Kevin decided on 2026-11-10 that **phase 1 (0.1.0) is export only**;
 import is phase 2, deferred, and is sketched in section 8 as notes, not
 commitments. Calls marked **(design call)** are Claude's, each with its
-reason, and open to correction; section 9 lists Kevin's remaining
-questions.
+reason; Kevin's decisions are marked as his, and section 9 records them.
 
 No grammar change: Kevin ruled on 2026-11-01 that ChordPro inline chords
 are not planned as barmark syntax (grammar, "Open questions"), because
@@ -168,8 +167,8 @@ lyric lines and in a grid. The cells of a grid bar are its beats.
 | repeated name (`G G`) | `[G]` again | `/` (ChordPro: play here) | — |
 | `%` | the copied chords | `%` | — |
 | `N.C.` | `[*N.C.]` (an annotation, printed as text) | `N.C.` cell | — |
-| `--` | `[*Stop]` | a `Stop` cell | the stop is text |
-| `?` | `[*?]` | `?` | — |
+| `--` | `[*Stop]` | `*Stop` (an annotation cell) | the stop is text |
+| `?` | `[*?]` | `*?` | — |
 | note set `{E}` | `[*E]`, `[*C E F# B]`: the notes as text | the same | not a chord to readers; octaves, `!` |
 | voicing `Cmaj7{…}` | `[Cmaj7]` | `Cmaj7` | the voicing |
 | push, accent, hit, pedal | the chord, unmarked | the same | the mark |
@@ -181,8 +180,9 @@ lyric lines and in a grid. The cells of a grid bar are its beats.
 Each "Lost" is reported once per code, naming the bars. Reason: an
 annotation (`[*…]`) is printed as text and never transposed or given a
 diagram, so a reader never mistakes `N.C.`, a stop or a note for a
-chord. The reference check (5.3) confirms readers print the `N.C.`,
-`Stop` and `?` grid cells as text.
+chord. Checked with the reference `chordpro` 6.101.0 on 2026-11-10: a
+bare `Stop` or `?` grid cell is an "Unknown chord" warning, while
+`*Stop`, `*?` and `N.C.` cells print as text with no warning.
 
 **4.4 Several parts (design call).**
 
@@ -211,8 +211,9 @@ section occurrence.**
   because ChordPro recalls choruses only.
 - An open repeat (`x ...`) is written once, followed by
   `{comment: repeat ad lib.}`.
-- Stacked verses on bars that play once (7.7) are written as one pass
-  per verse. This is reported as a loss, since ChordPro has no stacking.
+- **Decided by Kevin (2026-11-10):** stacked verses on bars that play
+  once (7.7) are written as one pass per verse, each with its chords,
+  and reported as a loss, since ChordPro has no stacking.
 
 Reason: a ChordPro reader has no repeat semantics outside grids, and
 written order would print verse 2's words nowhere.
@@ -224,8 +225,10 @@ written order would print verse 2's words nowhere.
   section maps to `start_of_verse`. In every case the label is the
   heading as written: `{start_of_verse: label="Intro"}`.
 - **Unsung sections and the unnamed section.** A section with no words
-  becomes `{start_of_grid: label="Intro" shape="4x4"}`, whose shape is
-  the meter's beats by the line's bar count. The unnamed section gets no
+  becomes `{start_of_grid: label="Intro" shape="1+4x4+1"}`: the meter's
+  beats by the line's bar count, with a margin cell on each side. The
+  reference warns "No margin cell for trailing comment" when an `x2` is
+  written in a grid with no right margin. The unnamed section gets no
   label.
 - **Title and credits.** `# Title` maps to `{title}`. `composer:`,
   `lyricist:` and `copyright:` map to their own directives. `arranger:`
@@ -240,26 +243,41 @@ written order would print verse 2's words nowhere.
 - **Text lines** become `{comment: …}`. `part:` lines are dropped.
 
 **4.7 Chord spelling (design call).** barmark's canonical spellings,
-except where ChordPro's built-in chord list writes the same chord as
-another barmark **alias**:
+except where the reference `chordpro` knows the same chord under another
+barmark **alias**. Every spelling below was checked with `chordpro`
+6.101.0 in strict mode on 2026-11-10: the canonical form warns and the
+alias doesn't.
 
 | barmark canonical | Written as |
 |---|---|
-| `m7(b5)` | `m7b5` |
-| `7(b9)` | `7b9` |
-| `(9)` | `add9` |
-| `mmaj7` | `m(maj7)` |
+| an alteration in parentheses after an extension: `7(b9)`, `7(#9)`, `7(#11)`, `7(b13)`, `7(b5)`, `13(b9)`, `7(b9,#11)` | without parentheses: `7b9`, `7#9`, `7#11`, `7b13`, `7b5`, `13b9`, `7b9#11` |
+| `m7(b5)` | `m7b5` (the canonical form reads too; the alias is the usual spelling) |
+| `(9)`, `(2)`, `(4)`, `(11)` on a triad | `add9`, `add2`, `add4`, `add11` |
 
-Use ASCII `#` and `b` only. A symbol with no ChordPro form (`7(b9,#11)`,
-`(no3)`) is written canonically. Reason: what is read must be the chord
-we meant, both in a ChordPro reader and back in barmark. Section 5 says
-how both are checked.
+`mmaj7`, `m(maj7)`, `6/9`, `7alt`, `sus2`, `sus4`, `7sus4`, `5`,
+`dim7`, `aug7` and most slash chords are known as written.
+
+What the reference doesn't know in any spelling is written canonically
+and is a **known gap**:
+
+- a tone with no extension (`C(b13)`);
+- `5(7)`;
+- omissions (`(no3)`, `(no5)`);
+- `9sus4` and `7sus2`;
+- the roots `Cb` and `E#`;
+- some slash chords whose bass isn't a chord tone (`C/F#` and `C/Db`
+  warn, though `D/F#`, `C/E` and `C/Bb` don't).
+
+Use ASCII `#` and `b` only. Reason: what is read must be the chord we
+meant, both in a ChordPro reader and back in barmark. Section 5 says how
+both are checked.
 
 ## 5. Proving the export right
 
-Phase 1 has no reader of our own, so a round trip back to barmark is
-not available. Three checks stand in for it, each catching what the
-others can't.
+Phase 1 has no importer, so a round trip back to barmark is not
+available. **Decided by Kevin (2026-11-10):** no ChordSheetJS. CI runs
+golden files and our own checks. The independent check is ChordPro's
+own Perl `chordpro`, on the VM only.
 
 **5.1 Golden files (in CI).** Each fixture chart has a hand-checked
 expected `.cho` beside it, and the export must match it byte for byte.
@@ -267,47 +285,84 @@ expected `.cho` beside it, and the export must match it byte for byte.
 - Catches: any change in output; that is, regressions.
 - Misses: a mistake in the golden file itself. It is only as right as
   the person who checked it, so each golden file is reviewed once
-  against sections 4.1–4.7 when it is added.
+  against sections 4.1–4.7 when it is added, and passes 5.3 before it
+  is committed.
 
-**5.2 An independent reader in CI: ChordSheetJS.** `chordsheetjs`,
-pinned exactly as a test-only devDependency, as `@barmark/midi` reads
-its files back with `midi-file`. It parses every golden file. The test
-then compares its result with a **played yardstick** computed from the
-chart alone, through `parseChart`, with no importer:
+**5.2 Our own checks (in CI).** A small test-only reader in `tests/`
+(`read-cho.ts`) splits our output into directives, environments, and
+`[chord]` and word tokens. It is just enough for these assertions, is
+not exported, and is not an importer: it builds no chart. The tests
+compare what it reads with a **played yardstick** computed from the
+chart alone through `parseChart`:
 
-- per section occurrence, in played order, its name and the sequence of
-  chords and sung words. A word is the syllables of `PlayedBar.lyrics`
-  joined; a chord is the canonical name of each attack;
-- each chord name ChordSheetJS parses must denote the same chord as
-  barmark's: both parse it, and barmark's `parseChord` reads the
-  exported spelling back to the same chord (intervals and bass);
-- title, credits, key, time and tempo, from its metadata.
+- **Words and chords:** per section occurrence, in played order, its
+  name and the sequence of chords and sung words. A word is the
+  syllables of `PlayedBar.lyrics` joined; a chord is each attack.
+- **Spellings:** every `[chord]` reads back with barmark's `parseChord`
+  to the same chord as the attack it came from (intervals and bass).
+  Every spelling in Appendix A's tables does too.
+- **Metadata:** title, credits, key, time and tempo.
+- **Well-formed output:** every directive name is on ChordPro 6's list,
+  and environments are balanced, so CI catches what the reference's
+  strict mode would.
+- **Robustness:** the export never throws on the barmark corpus, and a
+  chart with errors gives `ok: false`.
+- **Scale:** a 1,000-bar chart exports in linear time, as
+  `export-scale.test.ts` does in `@barmark/midi`. FINDINGS records two
+  quadratic surprises.
 
-What it catches: malformed directives, unbalanced environments, chords
-attached to the wrong word, words lost or reordered, spellings another
-reader misreads. Its limits: it is one implementation, more lenient than
-the reference, and it is licensed GPL-2.0-only (question 1).
+These catch chords attached to the wrong word, words lost or reordered,
+spellings barmark reads differently, and malformed or unbalanced
+directives. They share our reading of ChordPro, so they cannot catch a
+misreading of the format itself; 5.3 does that.
 
-**5.3 The reference implementation (VM only, never in CI).** The Perl
-`chordpro` from CPAN (`App::Music::ChordPro`), installed in `~/.local`
-with `cpanm`; it is not on the VM yet. `bun scripts/lyricsheet-reference.ts`
-runs it over every golden file and fails on any warning it prints, such
-as an unknown chord or directive. It keeps its text output for a person
-to compare, like the MuseScore and Dorico checks. A spike confirms the
-exact flags.
+**5.3 The reference implementation (VM only, never in CI):
+`scripts/chordpro-check.ts`.** **Decided by Kevin (2026-11-10):** the
+Perl tool is installed on the VM. Installed on 2026-11-10:
+`App::Music::ChordPro` 6.101.0 (`chordpro --version`: "ChordPro core
+6.101.0") in `~/.local/perl5`.
 
-- Catches: whatever the format's own implementation won't accept, which
-  includes our chord spellings (4.7) and the grid's annotation cells.
-- Misses: regressions between runs, since nothing runs it in CI.
+- **How it was installed.** `cpanm --local-lib ~/.local/perl5 --notest`,
+  with no sudo and no GUI (wxPerl is absent, so `wxchordpro` is
+  installed but won't run).
+- **HarfBuzz.** Its required `HarfBuzz::Shaper` needs harfbuzz's
+  headers. They come from Ubuntu's `libharfbuzz-dev` 8.3.0 `.deb`
+  (`apt-get download`, unpacked into `~/.local/harfbuzz-dev`, its `.pc`
+  pointed there). The module links to the system's `libharfbuzz.so.0`.
+- **The environment.** Nothing is in the shell profile. Each run sets
+  `PERL5LIB`, and `PATH` too if `chordpro` is called by name.
 
-**Also, in `bun test`:**
+The script runs, for each golden file:
 
-- every chord spelling in Appendix A's tables, exported and read back
-  with `parseChord`, is the same chord;
-- the export never throws on the barmark corpus, and a chart with errors
-  gives `ok: false`;
-- a 1,000-bar chart exports in linear time, as `export-scale.test.ts`
-  does in `@barmark/midi`; FINDINGS records two quadratic surprises.
+```
+PERL5LIB=$HOME/.local/perl5/lib/perl5 \
+  $HOME/.local/perl5/bin/chordpro --reference --strict -o <out>.pdf <file>.cho
+```
+
+- `--reference` loads no user or system configuration, so runs
+  reproduce.
+- `--strict` adds the "Unknown directive" warning, and "Song is missing
+  {key} directive"; without it, unknown directives pass in silence.
+- PDF output is used because the text backend (`-o <out>.txt`) doesn't
+  draw grids. The script also writes the `.txt` beside the PDF, for a
+  person to compare, like the MuseScore and Dorico checks.
+- **chordpro exits 0 even when it warns.** So the script fails on any
+  stderr line other than "Running in reference mode." and each warning's
+  indented echo of the source line.
+- Warnings seen on hand-written test files:
+  - `"f.cho", line N, Unknown chord: "X"`
+  - `Unknown directive: …`
+  - `Not in Chorus context`
+  - `Unterminated context in song: verse`
+  - `No margin cell for trailing comment`
+  - `Song is missing {key} directive`
+  - `No chord diagram defined for …` (a summary of the unknown chords)
+
+What it catches: whatever the format's own implementation won't
+accept. That covers our chord spellings, grid cells and margins,
+directives and environments. What it misses: regressions between runs,
+since nothing runs it in CI. The known gaps of 4.7, and a chart with no
+`key:`, would make it fail; question 1 asks how to treat them.
 
 **Fixtures (design call): we write them all.** No song text is copied,
 copyrighted or not.
@@ -340,6 +395,10 @@ copyrighted or not.
 
 **Later:**
 
+- **Guitar diagrams.** With diagrams on, the export writes `{define}`
+  for every chord, using `@barmark/fretboard`'s shapes. This comes after
+  fretboard ships; see the guitar-diagrams spec on branch
+  `docs/chord-diagrams`, approved by Kevin on 2026-11-10.
 - Phase 2, import (section 8).
 - Export options: a capo (chord shapes plus `{capo}`), and grid-only
   output.
@@ -348,9 +407,10 @@ copyrighted or not.
 **Risks:**
 
 1. **Readers differ** in what chord spellings and grid cells they
-   accept. 4.7 and the checks of 5.2 and 5.3 reduce this; they don't
-   remove it.
-2. **The GPL test oracle** (question 1).
+   accept. 4.7 and section 5 reduce this; they don't remove it.
+2. **Our checks share our reading of the format**, and only the
+   VM-only reference check is independent. So a golden file passes 5.3
+   before it is committed.
 3. **Golden files are trusted once checked**, so they need that first
    review.
 4. **Complexity.** `plan.ts` will want to grow, so Fallow's thresholds
@@ -362,7 +422,8 @@ Nothing in phase 1 depends on import, and nothing in it should make
 import harder:
 
 - The losses and the yardstick are computed from barmark's own parse.
-- The output carries no hidden hints (question 2).
+- **Decided by Kevin (2026-11-10):** the output carries no hidden
+  `x_barmark` hints in phase 1.
 
 ## 8. Phase 2: import (deferred, sketch)
 
@@ -427,22 +488,30 @@ scheduled. They are not commitments; each needs Kevin's decisions again.
   idempotent after one pass, and the `meaning` yardstick for grid-only
   charts.
 
-## 9. Questions for Kevin
+## 9. Kevin's decisions (2026-11-10)
 
-1. **ChordSheetJS, which is GPL-2.0-only, as a test-only
-   devDependency.** Recommended: yes. It is never bundled or published,
-   and it is the only independent ChordPro reader that can run in CI.
-   Without it, CI has golden files alone, and the reference check runs
-   only on the VM.
-2. **Hidden `x_barmark` hint directives** in the export, which ChordPro
-   readers ignore by rule, carrying each line's slot shapes so a future
-   import could round-trip exactly. Recommended: not in phase 1. Ship
-   the plain export, and decide with phase 2 whether invisible hints in
-   someone's songbook file are welcome.
-3. **Installing the Perl reference on the VM** (`cpanm
-   App::Music::ChordPro` into `~/.local`). Recommended: yes, as
-   MuseScore was installed for the MusicXML checks.
-4. **Stacked verses** on bars that play once (4.5). Recommended: write
-   one pass per verse, with a loss. The alternative is to write verse 1
-   with chords and the others as `{comment}` text, which is shorter but
-   leaves their words without chords.
+1. **Name:** `@barmark/lyricsheet`, with `barmark export --lyricsheet`
+   (section 2).
+2. **Phase 1 is export only;** import is deferred to phase 2
+   (section 8).
+3. **No ChordSheetJS.** CI runs golden files and our own importer-free
+   checks; the independent check is ChordPro's Perl `chordpro`, VM only
+   (section 5).
+4. **The Perl tool is installed on the VM** (5.3).
+5. **Stacked verses:** one pass per verse, each with its chords,
+   reported as a loss (4.5).
+6. **No hidden `x_barmark` hints** in phase 1 (section 7).
+
+**Open, found when the reference was installed:**
+
+1. **Two things in a valid export make strict mode warn:**
+   - a chord in 4.7's known gaps (`C(b13)`, `5(7)`, omissions, `9sus4`,
+     `7sus2`, the roots `Cb` and `E#`, some slash chords);
+   - a chart with no `key:` ("Song is missing {key} directive"; barmark
+     never invents a key).
+
+   Taken literally, "fail on any warning" fails these. Recommended: the
+   check fails on any warning except those two kinds, and only where the
+   chart itself has a gap chord or no key. A test keeps the gap list
+   exact: an entry that stops warning fails, so the list never goes
+   stale.
