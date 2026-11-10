@@ -6,6 +6,7 @@
 # committed (it refuses uncommitted changes, so the bundle is what was built).
 #
 # Cache root: $BARMARK_ENGRAVER_CACHE (default ~/.cache/barmark-engraver).
+# Needs git 2.41 or later, for git archive --mtime.
 set -euo pipefail
 
 if [ $# -ne 1 ]; then
@@ -46,6 +47,7 @@ git -C "$REPO" archive --format=tar.gz --prefix="verovio-$VEROVIO/" \
 # From the top level: git archive run in a subdirectory archives only its paths.
 # A tree, unlike a commit, is stamped with the current time; use HEAD's instead.
 TOP=$(git -C "$HERE" rev-parse --show-toplevel)
+PREFIX=$(git -C "$HERE" rev-parse --show-prefix)
 git -C "$TOP" archive --format=tar.gz --mtime="$(git -C "$TOP" log -1 --format=%cI HEAD)" --prefix="engraver-build-$VERSION/" \
-	-o "$OUT/engraver-build-$VERSION.tar.gz" HEAD:packages/engraver/build
+	-o "$OUT/engraver-build-$VERSION.tar.gz" "HEAD:${PREFIX%/}"
 echo "source.sh: $OUT/verovio-$VEROVIO-source.tar.gz and $OUT/engraver-build-$VERSION.tar.gz"
