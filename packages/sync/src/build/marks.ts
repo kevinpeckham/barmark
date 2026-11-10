@@ -381,13 +381,15 @@ export function readPickup(raw: unknown, bars: BarSpan[], report: Report): BarSp
 	const units = compound ? bar.meter.n : bar.beats;
 	const k = isTime(start) ? Math.round((bar.start - start) / ((bar.end - bar.start) / units)) : 0;
 	if (!isTime(start) || start >= bar.start || k < 1 || k >= units) {
-		report.info("pickup-ignored", "The pickup is not one to a few beats before bar 1; ignored", {
-			path: "pickup",
-		});
+		report.info(
+			"pickup-ignored",
+			"The pickup is not one to a few beats (eighths in a compound meter) before bar 1; ignored",
+			{
+				path: "pickup",
+			},
+		);
 		return null;
 	}
-	if (!compound)
-		return { start, end: bar.start, meter: { n: k, d: bar.meter.d }, beats: k, pickup: true };
-	const beats = k % 3 === 0 ? k / 3 : k;
+	const beats = compound && k % 3 === 0 ? k / 3 : k;
 	return { start, end: bar.start, meter: { n: k, d: bar.meter.d }, beats, pickup: true };
 }

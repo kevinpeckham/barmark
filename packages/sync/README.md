@@ -111,7 +111,7 @@ error, and it gives an empty chart.
 | `label-unknown` | warning | A label or symbol isn't understood; written as `?`. |
 | `no-chord-detected` | warning | Nothing covers a slot; written as `?`. |
 | `outside-bars` | warning | Chords (not `N.C.` or `?` time) before the first bar or after the last were dropped. |
-| `pickup-ignored` | info | The pickup isn't one to a few beats before bar 1; ignored. |
+| `pickup-ignored` | info | The pickup isn't one to a few beats (eighths in a compound meter) before bar 1; ignored. |
 | `section-unnamed` | warning | A section has no name or no usable start; dropped. |
 | `section-marks-stripped` | warning | A section name was changed so it reads as a plain heading. |
 | `section-collision` | warning | Two sections land on one bar; the later one is kept. |
