@@ -60,6 +60,12 @@ test("a page-count difference is named", () => {
 		expect.stringMatching(/c2 at 375: 1 pages in stock, 2 in lite/),
 	]);
 });
+test("a byte-length difference is named, even where the decoded strings agree", () => {
+	const lite = changed(run(60), 4, { bytes: 11 });
+	expect(gateProblems(run(60), lite, () => "<svg/>")).toEqual([
+		expect.stringMatching(/c2 at 375: 10 bytes in stock, 11 in lite/),
+	]);
+});
 test("no engraving over one page fails: page breaks are uncovered", () =>
 	expect(gateProblems(run(60, { pages: 1 }), run(60, { pages: 1 }), () => "<svg/>")).toEqual([
 		expect.stringContaining("no engraving has more than one page"),

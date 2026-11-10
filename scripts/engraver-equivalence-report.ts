@@ -53,6 +53,9 @@ function pairProblems(
 	const problems: string[] = [];
 	if (s.pages !== l.pages)
 		problems.push(`${label(s)}: ${s.pages} pages in stock, ${l.pages} in lite`);
+	// Byte for byte, literally: the recorded UTF-8 lengths, not only the decoded strings.
+	if (s.bytes !== l.bytes)
+		problems.push(`${label(s)}: ${s.bytes} bytes in stock, ${l.bytes} in lite`);
 	const d = firstDifference(stockSvg, liteSvg);
 	if (d)
 		problems.push(
