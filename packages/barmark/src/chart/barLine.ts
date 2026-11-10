@@ -484,15 +484,21 @@ function rehearsalCell(
 			problem: "a rehearsal mark is @ and a label of letters and digits, like @B or @17",
 			token: mark,
 		};
-	if (words.length) return { problem: "words go on a bar, not on a rehearsal mark", token: mark };
+	const others = withWords(list, words, at);
+	// The mark's own cell, the rest on the bar; with no slot left the words have no bar to go on.
+	const split = list.length > 1 && !meter ? { suggestion: `| ${mark} | ${others} |` } : {};
+	if (words.length)
+		return { problem: "words go on a bar, not on a rehearsal mark", token: mark, ...split };
 	if (meter) return { problem: "a one-bar meter cannot go on a rehearsal mark", token: mark };
 	if (list.length === 1) return { cell: { kind: "rehearsal", label: mark.slice(1) } };
-	const others = list.filter((_, i) => i !== at).join(" ");
-	return {
-		problem: "a rehearsal mark is a cell of its own",
-		token: mark,
-		suggestion: `| ${mark} | ${others} |`,
-	};
+	return { problem: "a rehearsal mark is a cell of its own", token: mark, ...split };
+}
+
+/** A cell's tokens with its words back in their places, in straight quotes, leaving out token `skip`. */
+function withWords(list: string[], words: Words[], skip: number): string {
+	const quoted = (i: number) => words.filter((w) => w.at === i).map((w) => `"${w.text}"`);
+	const out = list.flatMap((t, i) => [...quoted(i), ...(i === skip ? [] : [t])]);
+	return [...out, ...quoted(list.length)].join(" ");
 }
 
 /**
