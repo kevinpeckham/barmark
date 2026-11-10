@@ -11,6 +11,7 @@ import {
 	type LoadStatus,
 	type Request,
 	SUPERSEDED_GRACE_MS,
+	type VerovioSource,
 	type WorkerLike,
 	type WorkerMessage,
 } from "../src/engine.js";
@@ -38,7 +39,7 @@ class FakeWorker implements WorkerLike {
 		return this.posted[this.posted.length - 1]?.id as number;
 	}
 	/** Says its Verovio is loaded, for the job it is on. */
-	ready(loaded: { verovioUrl?: string; verovioIntegrity?: string } = {}) {
+	ready(loaded: VerovioSource = {}) {
 		this.send({ id: this.current, loaded });
 	}
 	/** Answers the job it is on. */
@@ -408,6 +409,56 @@ describe("createEngine: loading", () => {
 		await expect(b).rejects.toThrow("The score engine failed");
 		engine.engrave({}, "c", 800);
 		expect(workers[1]?.posted[0]).toMatchObject(loaded);
+	});
+
+	test("a request carries the wasm digest with its verovio-url", () => {
+		const { workers, engine } = fake();
+		engine.engrave({}, "a", 800, "https://cdn.test/v.mjs", {
+			integrity: "sha384-x",
+			wasmIntegrity: "sha384-w",
+		});
+		expect(workers[0]?.posted[0]).toMatchObject({
+			verovioUrl: "https://cdn.test/v.mjs",
+			verovioIntegrity: "sha384-x",
+			verovioWasmIntegrity: "sha384-w",
+		});
+	});
+
+	test("no verovio-url, no wasm digest", () => {
+		const { workers, engine } = fake();
+		engine.engrave({}, "a", 800, undefined, { wasmIntegrity: "sha384-w" });
+		expect(workers[0]?.posted[0]).not.toHaveProperty("verovioWasmIntegrity");
+		expect(workers[0]?.posted[0]).not.toHaveProperty("verovioUrl");
+	});
+
+	test("a replacement worker gets the loaded source's wasm digest", async () => {
+		const { workers, engine } = fake();
+		const loaded = {
+			verovioUrl: "https://cdn.test/v.mjs",
+			verovioIntegrity: "sha384-x",
+			verovioWasmIntegrity: "sha384-w",
+		};
+		const a = engine.engrave({}, "a", 800, loaded.verovioUrl, {
+			integrity: loaded.verovioIntegrity,
+			wasmIntegrity: loaded.verovioWasmIntegrity,
+		});
+		(workers[0] as FakeWorker).ready(loaded);
+		(workers[0] as FakeWorker).onerror?.({} as ErrorEvent);
+		await expect(a).rejects.toThrow("The score engine failed");
+		// The next request names no source: the replacement still loads what the first one did.
+		engine.engrave({}, "b", 800);
+		expect(workers[1]?.posted[0]).toMatchObject(loaded);
+	});
+
+	test("preload passes the wasm digest", () => {
+		const { workers, engine } = fake();
+		engine.preload("https://cdn.test/v.mjs", "sha384-x", "sha384-w");
+		expect(workers[0]?.posted[0]).toMatchObject({
+			preload: true,
+			verovioUrl: "https://cdn.test/v.mjs",
+			verovioIntegrity: "sha384-x",
+			verovioWasmIntegrity: "sha384-w",
+		});
 	});
 
 	test("preload loads Verovio with no job, and the next job uses that load", async () => {

@@ -45,13 +45,15 @@ type Call = {
 	width: number;
 	verovioUrl: string | undefined;
 	integrity: string | undefined;
+	wasmIntegrity: string | undefined;
 	status: (s: EngineStatus) => void;
 	resolve: (reply: EngraveReply | null) => void;
 	reject: (error: Error) => void;
 };
 
 let calls: Call[] = [];
-let preloads: [string | undefined, string | undefined][] = [];
+/** Each preload's url and digest, then its wasm digest when it has one. */
+let preloads: (string | undefined)[][] = [];
 /** Elements a test put in the page, removed after it. */
 const mounted: Element[] = [];
 let made = 0;
@@ -62,10 +64,15 @@ const fakeEngine = (): Engine => {
 			new Promise((resolve, reject) => {
 				const status = (s: EngineStatus) => call.onStatus?.(s);
 				status({ phase: "download", fraction: null, bytes: null });
-				calls.push({ text, width, verovioUrl, integrity: call.integrity, status, resolve, reject });
+				const { integrity, wasmIntegrity } = call;
+				calls.push({ text, width, verovioUrl, integrity, wasmIntegrity, status, resolve, reject });
 			}),
-		preload: (verovioUrl, integrity) => {
-			preloads.push([verovioUrl, integrity]);
+		preload: (verovioUrl, integrity, wasmIntegrity) => {
+			preloads.push([
+				verovioUrl,
+				integrity,
+				...(wasmIntegrity === undefined ? [] : [wasmIntegrity]),
+			]);
 		},
 	};
 };
@@ -743,6 +750,72 @@ describe("<barmark-score verovio-integrity>", () => {
 		} finally {
 			warn.mockRestore();
 		}
+	});
+});
+
+describe("<barmark-score verovio-wasm-integrity>", () => {
+	const url = "https://cdn.test/verovio-module.mjs";
+	const digest = "sha384-iGNyhtxpKLNw90cjbI9ES538TJtbNZjLxsFVUuI8PwE2TTNQ+i2j9CjQnRMhZXHk";
+	const wasm = "sha384-r8Y3uvlFDnTtYrw4dJTQ6xVKQSFb0lrDlZNLAEzEAbW01Mbw0sDmlH0Vf8F0Muug";
+	const reason = "verovio-wasm-integrity must be one sha256-, sha384- or sha512- digest";
+
+	test("a malformed verovio-wasm-integrity keeps the grid with a note", () =>
+		scoreErrors(async (seen) => {
+			const el = await make({
+				view: "score",
+				"verovio-url": url,
+				"verovio-integrity": digest,
+				"verovio-wasm-integrity": "md5-x",
+			});
+			expect(calls).toHaveLength(0);
+			expect(el.view).toBe("grid");
+			expect(parts(el).note).not.toBeNull();
+			expect(seen.map((e) => e.reason)).toEqual([reason]);
+		}));
+
+	test("the wasm digest reaches the engine with the URL and module digest", async () => {
+		await make({
+			view: "score",
+			"verovio-url": url,
+			"verovio-integrity": digest,
+			"verovio-wasm-integrity": ` ${wasm} `,
+		});
+		expect(calls.map((c) => [c.verovioUrl, c.integrity, c.wasmIntegrity])).toEqual([
+			[url, digest, wasm],
+		]);
+	});
+
+	test("changing verovio-wasm-integrity clears a failure", async () => {
+		const warn = spyOn(console, "warn").mockImplementation(() => {});
+		try {
+			const el = await make({ "verovio-url": url, "verovio-wasm-integrity": "md5-x" });
+			el.view = "score";
+			await flush();
+			expect(parts(el).note).not.toBeNull();
+			el.setAttribute("verovio-wasm-integrity", wasm);
+			expect(parts(el).note).toBeNull();
+		} finally {
+			warn.mockRestore();
+		}
+	});
+
+	test("verovio-wasm-integrity without verovio-url is ignored", async () => {
+		await make({ view: "score", "verovio-wasm-integrity": "md5-x" });
+		expect(calls.map((c) => [c.verovioUrl, c.integrity, c.wasmIntegrity])).toEqual([
+			[undefined, undefined, undefined],
+		]);
+	});
+
+	test("preload passes the wasm digest", async () => {
+		const el = await make({
+			preload: "intent",
+			"verovio-url": url,
+			"verovio-integrity": digest,
+			"verovio-wasm-integrity": wasm,
+		});
+		parts(el).radios[1]?.dispatchEvent(new window.Event("pointerenter"));
+		await flush();
+		expect(preloads).toEqual([[url, digest, wasm]]);
 	});
 });
 
