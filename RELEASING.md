@@ -226,7 +226,10 @@ runs, and `verify:package cli` fails on anything else.
     `site/bunfig.toml` exempts our own packages from Bun's seven-day
     install cooldown, not their dependencies: if the release raised a
     third-party pin (Verovio, say) to a version under a week old,
-    `bun add` refuses it until it is a week old (FINDINGS).
+    `bun add` refuses it until it is a week old (FINDINGS). The root
+    waits the same seven days: a Verovio bump in `packages/score` or
+    `packages/cli` (`bun add --exact verovio@X.Y.Z`) is refused until the
+    new Verovio is a week old.
 13. **Release the CLI** (after a `barmark`, `@barmark/render`,
     `@barmark/musicxml`, `@barmark/score`, `@barmark/sync` or
     `@barmark/midi` release; the CLI bundles `@barmark/sync` through

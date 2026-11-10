@@ -57,6 +57,7 @@ jobs:
         with:
           persist-credentials: false
       # zizmor's wheel for the pinned version, checked against the action's own hashes.
+      # Dependabot bumps the action's SHA but not `version:`: bump zizmor by hand.
       - uses: zizmorcore/zizmor-action@53290badfa369cb0bf7ad16342cb62c2fa47ac7b # v0.8.0
         with:
           version: 1.31.1
@@ -64,6 +65,7 @@ jobs:
           advanced-security: false
           annotations: true
       # The image by digest (rhysd/actionlint 1.7.12, with shellcheck).
+      # Dependabot does not bump a docker:// digest: bump actionlint by hand.
       - uses: docker://rhysd/actionlint:1.7.12@sha256:b1934ee5f1c509618f2508e6eb47ee0d3520686341fec936f3b79331f9315667
         with:
           args: -color

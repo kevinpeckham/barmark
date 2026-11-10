@@ -864,10 +864,14 @@ and round-trip it through `format`.
   "0.22.0"` then `bun install`, both with "blocked by
   minimum-release-age". With site/'s lockfile, `bun add --exact` of any
   package re-resolved our day-old releases and failed on all of them.
-- **The cause.** In this Bun the age gate applies to every version
-  resolved from the registry, ranged or exact. A lockfile entry is not
-  re-checked: `bun install --frozen-lockfile` on an empty cache, and a
-  plain `bun install`, both installed the young versions already locked.
+- **The cause.** Bun's docs say so: "Exact version requests (like
+  `package@1.1.1`) still respect the age gate but bypass the stability
+  check" (docs/pm/cli/install.mdx, "Minimum release age"). The stability
+  check is the extra step that skips a burst of quick bugfix releases just
+  outside the gate; lj-website probably saw an exact pin bypass that, not
+  the age gate. A lockfile entry is not re-checked: `bun install
+  --frozen-lockfile` on an empty cache, and a plain `bun install`, both
+  installed the young versions already locked.
 - **The fix.** Seven days at the root and in `site/`, so CI's frozen
   installs are unaffected, and `site/bunfig.toml` excludes our own eight
   packages (`minimumReleaseAgeExcludes`), or RELEASING.md step 12's site
