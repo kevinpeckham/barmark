@@ -874,6 +874,35 @@ and round-trip it through `format`.
 
 ## Tooling
 
+### The release ran `bun test` before `bun run build`, so engraver 0.1.0 never published (2026-11-10, @barmark/engraver 0.1.0)
+
+- **The symptom.** The `engraver-v0.1.0` release run (42869831886) failed
+  in `verify`, before the publish: `packages/engraver/tests/smoke.test.ts`
+  could not find `packages/engraver/dist/info.js` (`ERR_MODULE_NOT_FOUND`
+  from `scripts/smoke-engraver.mjs`). `main` had been green, and so had
+  the local release check. Tags cannot move, so 0.1.0 stays a tag and a
+  GitHub pre-release that never reached npm, and 0.1.1 is the first
+  published version.
+- **The cause.** `verify` downloads `build-engraver`'s artifact into
+  `packages/engraver/dist`. That is the `.mjs` and `.wasm` only, and
+  `dist/info.js` comes from `bun run build`, which `verify` ran after
+  `bun test`. The smoke test runs whenever the `.wasm` is present and was
+  skipped otherwise. CI's `check` job never has the dist, so the test
+  always skipped there, and nothing in CI runs `release.yml`. Every
+  release run downloads that artifact, so every package's release would
+  have failed the same way, not only the engraver's.
+- **The fix.** `verify` runs `bun run build` before `bun test`. The smoke
+  test fails with a clear message when the `.wasm` is there without
+  `dist/info.js`. A test in `packages/engraver/tests/ci.test.ts` reads
+  `release.yml` and `ci.yml` and fails any job that downloads
+  `engraver-dist` and then runs `bun test` with no `bun run build`
+  between them. It runs in `check`, the one place that sees every
+  workflow change. Copying `verify`'s steps into a CI job would test the
+  copy, not the release workflow.
+- **Where.** `.github/workflows/release.yml` (`verify`),
+  `packages/engraver/tests/smoke.test.ts`,
+  `packages/engraver/tests/ci.test.ts`.
+
 ### Bun's install cooldown holds back exact pins too (2026-11-10, CI hardening)
 
 - **The symptom.** lj-website found that `minimumReleaseAge` let an exact
