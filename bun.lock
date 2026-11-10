@@ -80,6 +80,9 @@
         "barmark": "workspace:^",
         "verovio": "6.4.1",
       },
+      "devDependencies": {
+        "@barmark/engraver": "workspace:*",
+      },
     },
     "packages/sync": {
       "name": "@barmark/sync",

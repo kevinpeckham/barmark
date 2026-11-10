@@ -50,6 +50,7 @@ technology the score is one image named for the chart's title, or "Score".
 | `view` (`view`) | `"grid"` (default) or `"score"`; the view being shown. Set before the chart arrives, `"score"` waits for it |
 | `verovio-url` | where to load Verovio from (below) |
 | `verovio-integrity` | the SRI digest (`sha384-…`) the `verovio-url` copy must have; on a mismatch the package's own copy loads (below) |
+| `verovio-wasm-integrity` | the SRI digest of the `.wasm` beside a `verovio-url` that loads one, such as `@barmark/engraver` (below) |
 | `preload` | `"none"` (default), `"intent"` or `"idle"`: when to start loading Verovio (below) |
 
 The `text` property is the chart's text (`null` goes back to `src` or the
@@ -96,9 +97,14 @@ then point at a Verovio module you host (for example
 `verovio/dist/verovio-module.mjs` from the `verovio` package) instead of
 bundling the 7 MB inside the worker; it only changes where that module
 comes from. The URL is resolved against the page and must be http(s);
-anything else is refused and the score is not drawn. The first
-`verovio-url` that loads wins for the whole page: every element shares one
-worker, so a later or different URL is not loaded. The worker downloads a
+anything else is refused and the score is not drawn. Its Verovio must be
+the version this package's toolkit is (`VEROVIO_VERSION`, 6.4.1): any
+other fails to load, or, with `verovio-integrity` set, falls back to the
+package's own copy with a warning. The first `verovio-url` that loads wins
+for the whole page: every element shares one worker, so a later or
+different URL is not loaded, and a second element's different
+`verovio-integrity` or `verovio-wasm-integrity` is ignored too: the
+engine keeps the source it loaded first, digests and all. The worker downloads a
 `verovio-url` with `fetch` (with or without `verovio-integrity`) and
 imports it from a `blob:` URL, so a worker served with its own
 Content-Security-Policy needs the module's origin (a CDN's, say) in
@@ -123,11 +129,17 @@ The download can be measured when the worker fetches Verovio itself,
 which it does for a `verovio-url`: it reads the response as it arrives,
 then imports the module from a `blob:` URL. A compressed response (gzip,
 brotli) has a `Content-Length` that is the compressed size, while the
-bytes read are decoded, so they are measured against Verovio's known
-decoded size (`VEROVIO_MODULE_BYTES`) instead; an uncompressed one is
-measured against its `Content-Length` (a cross-origin server that does
-not expose `Content-Encoding` is taken as compressed when its length is
-short of that size); anything else shows the bar without a percentage.
+bytes read are decoded, so they are measured against the known decoded
+size of the file its declared digest names instead: Verovio's module
+(`VEROVIO_MODULE_BYTES`) for `VEROVIO_CDN_INTEGRITY`, or
+`@barmark/engraver`'s module or `.wasm` for its digests. An uncompressed
+one is measured against its `Content-Length` (a cross-origin server that
+does not expose `Content-Encoding` is taken as compressed when its length
+is short of that size). A compressed one with no digest, or a digest of
+no build this package knows, shows the bar without a percentage. With
+`verovio-wasm-integrity`, the module's small download is shown without a
+percentage and the `.wasm`'s is the one measured, so the bar runs to
+100% once.
 The package's own copy, without `verovio-url`, is loaded by your
 bundler, so its download is shown without a percentage; so is a worker
 bundled with Verovio inside it, whose download is the worker's own
@@ -162,6 +174,66 @@ Verovio once for that site whichever URL it comes from. What a CDN gives
 is delivery from an edge near the reader and the 2.4 MB kept off your own
 server.
 
+### The lighter build (`@barmark/engraver`)
+
+[`@barmark/engraver`](../engraver/) is a modified, smaller build of the
+same Verovio 6.4.1, made by barmark for this package: about 3 MB where
+stock is about 7 MB, checked before each release to draw SVG byte for
+byte the same as stock over a corpus of charts. Its WebAssembly is a
+separate file, `verovio-module.wasm` beside the module, so it takes a
+digest of its own, `verovio-wasm-integrity`. On jsDelivr:
+
+```html
+<barmark-score
+	verovio-url="https://cdn.jsdelivr.net/npm/@barmark/engraver@0.1.1/dist/verovio-module.mjs"
+	verovio-integrity="sha384-klTppHZB0IPzdIOfSXNr8CbdhJU+1yp5eltjmgp8W3E8uhht5dlRy1mwrBSnmKJO"
+	verovio-wasm-integrity="sha384-cBBw1xx6xHEb/I7QDrSFDgImfzzvZVvwru055NG6QbY1zHI/FFLQHjlKdtH7pr5i"
+	src="/charts/peaceful-dreams.chart.md"
+></barmark-score>
+```
+
+The package exports the three as `ENGRAVER_CDN_URL`,
+`ENGRAVER_CDN_INTEGRITY` and `ENGRAVER_WASM_INTEGRITY`. They are written
+into this package, so a site that never uses the lighter build never
+installs it.
+
+The worker downloads the module and checks it against
+`verovio-integrity`, then downloads the `.wasm` from beside the
+`verovio-url` (never from the `blob:` URL the module is imported from),
+checks it against `verovio-wasm-integrity` and only then compiles it. A
+module that does not fit its digest, a `.wasm` that does not fit its own,
+a `.wasm` that is missing or fails to download, or a Verovio other than
+6.4.1 falls back to the package's own copy, once, with a warning naming
+the reason, as for any `verovio-url` with `verovio-integrity`. A failed
+`.wasm` falls back as soon as it fails, not at the 60-second load
+deadline.
+
+**`verovio-wasm-integrity` is required whenever `verovio-integrity` is
+set for a build that loads a separate `.wasm`**: a module digest alone
+would leave the `.wasm` unchecked, so without it the load fails with
+"verovio-wasm-integrity is needed for a Verovio that loads a separate
+.wasm" and the package's own copy loads instead. A wasm digest without a
+module digest is supported: the `.wasm` is checked and the module is not,
+and, as for any `verovio-url` without `verovio-integrity`, there is no
+fallback, so a mismatch is a score that can't be drawn. A malformed
+`verovio-wasm-integrity` is refused like a malformed `verovio-integrity`.
+Stock Verovio, which embeds its WebAssembly, ignores
+`verovio-wasm-integrity` and loads as usual, but the progress shows less:
+the digest marks the `.wasm` as the download to measure, and stock never
+fetches one, so its module's download is shown without a percentage and
+"Preparing…" is never announced. Set `verovio-wasm-integrity` only with a
+build that loads a separate `.wasm`.
+
+A page with a Content-Security-Policy needs the CDN's origin in
+`connect-src` (the worker fetches both files), `blob:` in `script-src`
+(the module is imported from a `blob:` URL) and `'wasm-unsafe-eval'` in
+`script-src`, which stock Verovio needs as well.
+
+The build leaves out what this package never asks Verovio for: only the
+Leipzig font, no footer, no tablature or staff tunings, and no compressed
+MusicXML (`.mxl`). If you pass your own MusicXML to `engraveXml` with a
+toolkit from `@barmark/engraver`, see [its limits](../engraver/README.md#limits).
+
 ### Preloading
 
 `preload` starts loading Verovio before the first press, so the score
@@ -182,10 +254,11 @@ If Verovio fails to load, or rejects the MusicXML, or the chart will not
 export or is too large to draw (see "Engraving directly"), or Verovio
 takes over 60 seconds to load or 20 seconds to engrave, the grid stays and
 a note by the switch says "The score couldn't be drawn". The same happens
-when `verovio-url` or `verovio-integrity` is refused, when the chart's
-`src` could not be loaded, or when the engraving is not clean SVG. The
-Score radio is disabled until the chart (`text`, `src` or the script
-child), `verovio-url` or `verovio-integrity` changes.
+when `verovio-url`, `verovio-integrity` or `verovio-wasm-integrity` is
+refused, when the chart's `src` could not be loaded, or when the
+engraving is not clean SVG. The Score radio is disabled until the
+chart (`text`, `src` or the script child), `verovio-url`,
+`verovio-integrity` or `verovio-wasm-integrity` changes.
 
 The reason goes to the console as a warning, and the element fires a
 `scoreerror` event (`bubbles`, `composed`) whose `detail.reason` is the
@@ -253,7 +326,9 @@ is the export unchanged.
 
 This package is MIT. It uses [Verovio](https://github.com/rism-digital/verovio),
 which is LGPL-3.0-only, as an ordinary npm dependency, loaded unchanged at
-run time; its code is never copied into this package. barmark's own code
+run time, or, if you choose it, the modified build `@barmark/engraver`
+(LGPL-3.0-only, its source published with each release); its code is
+never copied into this package. barmark's own code
 stays MIT. Verovio © Laurent Pugin and others; its licence text is
 [COPYING.LESSER](https://github.com/rism-digital/verovio/blob/develop/COPYING.LESSER).
 

@@ -5,7 +5,12 @@ import type { Download } from "./download.js";
  * with `verovioIntegrity`, a copy that must have that digest (or the
  * package's own is loaded in its place).
  */
-export type VerovioSource = { verovioUrl?: string; verovioIntegrity?: string };
+export type VerovioSource = {
+	verovioUrl?: string;
+	verovioIntegrity?: string;
+	/** The `.wasm`'s digest, for a Verovio that loads a separate one (`@barmark/engraver`). */
+	verovioWasmIntegrity?: string;
+};
 
 /**
  * What a page asks the worker for: one chart, laid out for a width; or,
@@ -48,6 +53,8 @@ export type EngineStatus = LoadStatus | { phase: "engrave" };
 export type EngraveCall = {
 	/** The SRI digest (`sha384-…`) the `verovioUrl` copy must have; on a mismatch the package's own loads. */
 	integrity?: string;
+	/** The SRI digest the `.wasm` beside a `verovioUrl` copy must have, for a Verovio that loads a separate one (`@barmark/engraver`). */
+	wasmIntegrity?: string;
 	/** Hears the engine's status now, and as it changes, until the request settles. */
 	onStatus?: (status: EngineStatus) => void;
 };
@@ -80,10 +87,10 @@ export type Engine = {
 	): Promise<EngraveReply | null>;
 	/**
 	 * Starts loading Verovio (from `verovioUrl`, checked against `integrity`
-	 * when given) with no job, so a first score is quicker. Does nothing if
+	 * and its `.wasm` against `wasmIntegrity` when given) with no job, so a first score is quicker. Does nothing if
 	 * a worker has Verovio loaded or is busy: there is one load to share.
 	 */
-	preload(verovioUrl?: string, integrity?: string): void;
+	preload(verovioUrl?: string, integrity?: string, wasmIntegrity?: string): void;
 };
 
 /** How long one job may engrave, from its worker's Verovio being ready, before the worker is cut off and the request rejects. */
@@ -129,17 +136,24 @@ const isProgress = (m: WorkerMessage): m is Progress => "status" in m;
 const UNMEASURED: EngineStatus = { phase: "download", fraction: null, bytes: null };
 const ENGRAVING: EngineStatus = { phase: "engrave" };
 
-/** `source` without its absent fields (so a request carries no `verovioUrl: undefined`). */
+/**
+ * `source` without its absent fields (so a request carries no `verovioUrl:
+ * undefined`); with no `verovioUrl`, no digest either.
+ */
 const present = ({
 	verovioUrl,
 	verovioIntegrity,
+	verovioWasmIntegrity,
 }: {
-	verovioUrl?: string | undefined;
-	verovioIntegrity?: string | undefined;
-}): VerovioSource => ({
-	...(verovioUrl === undefined ? {} : { verovioUrl }),
-	...(verovioUrl === undefined || verovioIntegrity === undefined ? {} : { verovioIntegrity }),
-});
+	[K in keyof VerovioSource]?: VerovioSource[K] | undefined;
+}): VerovioSource =>
+	verovioUrl === undefined
+		? {}
+		: {
+				verovioUrl,
+				...(verovioIntegrity === undefined ? {} : { verovioIntegrity }),
+				...(verovioWasmIntegrity === undefined ? {} : { verovioWasmIntegrity }),
+			};
 
 const clear = (job: Running) => {
 	for (const t of job.timers) clearTimeout(t);
@@ -255,11 +269,12 @@ export function createEngine(makeWorker: () => WorkerLike, options: EngineOption
 	const next = () => {
 		const request = running ? undefined : waiting.shift();
 		if (!request) return;
-		const { verovioUrl, verovioIntegrity, ...rest } = request;
+		const { verovioUrl, verovioIntegrity, verovioWasmIntegrity, ...rest } = request;
 		const id = rest.id;
 		running = { id, superseded: false, graceOver: false, timers: [] };
 		running.timers = [setTimeout(overdue(id, "loading Verovio"), loadDeadline)];
-		start().postMessage({ ...rest, ...present(loaded ?? { verovioUrl, verovioIntegrity }) });
+		const asked = { verovioUrl, verovioIntegrity, verovioWasmIntegrity };
+		start().postMessage({ ...rest, ...present(loaded ?? asked) });
 	};
 
 	/** No one waits for `id` any more: drop it if it waits its turn, cut it off past its grace if it runs. */
@@ -285,12 +300,16 @@ export function createEngine(makeWorker: () => WorkerLike, options: EngineOption
 					id,
 					text,
 					width,
-					...present({ verovioUrl, verovioIntegrity: call.integrity }),
+					...present({
+						verovioUrl,
+						verovioIntegrity: call.integrity,
+						verovioWasmIntegrity: call.wasmIntegrity,
+					}),
 				});
 				next();
 			});
 		},
-		preload(verovioUrl, integrity) {
+		preload(verovioUrl, integrity, wasmIntegrity) {
 			if (warm || running || waiting.length > 0) return;
 			const id = ++nextId;
 			preloads.add(id);
@@ -299,7 +318,11 @@ export function createEngine(makeWorker: () => WorkerLike, options: EngineOption
 				text: "",
 				width: 0,
 				preload: true,
-				...present({ verovioUrl, verovioIntegrity: integrity }),
+				...present({
+					verovioUrl,
+					verovioIntegrity: integrity,
+					verovioWasmIntegrity: wasmIntegrity,
+				}),
 			});
 			next();
 		},

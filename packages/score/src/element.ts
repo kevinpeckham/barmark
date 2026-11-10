@@ -22,7 +22,7 @@ import {
 } from "@barmark/render/element";
 import { parseChart } from "barmark";
 import { isIntegrity } from "./download.js";
-import type { Engine, EngineStatus, EngraveReply } from "./engine.js";
+import type { Engine, EngineStatus, EngraveCall, EngraveReply } from "./engine.js";
 import { showStatus, UNMEASURED } from "./loading.js";
 import { isLeipzigFace, scorePane } from "./markup.js";
 import { decodeCarried, gridError, scoreShell } from "./shell.js";
@@ -110,8 +110,11 @@ function takeEarlyText(el: object): { text: string | null } | null {
 const OBSERVED = [
 	...["src", "theme", "bar-numbers", "rehearsal-letters", "numerals", "wrap", "show-part"],
 	"columns",
-	...["view", "verovio-url", "verovio-integrity", "preload"],
+	...["view", "verovio-url", "verovio-integrity", "verovio-wasm-integrity", "preload"],
 ];
+
+/** The attributes that say where Verovio comes from: a change clears a failure. */
+const VEROVIO_ATTRIBUTES = new Set(["verovio-url", "verovio-integrity", "verovio-wasm-integrity"]);
 
 /** With no `requestIdleCallback`, how long after connecting `preload="idle"` starts the load. */
 const IDLE_FALLBACK_MS = 500;
@@ -148,6 +151,33 @@ type Grid = { text: string | null | undefined; html: string | null };
 
 const URL_REASON = "verovio-url must be an http(s) URL";
 const INTEGRITY_REASON = "verovio-integrity must be one sha256-, sha384- or sha512- digest";
+const WASM_INTEGRITY_REASON =
+	"verovio-wasm-integrity must be one sha256-, sha384- or sha512- digest";
+
+/** Where Verovio comes from: the URL and the digests its module and `.wasm` must have, each when given. */
+type Verovio = {
+	url: string | undefined;
+	integrity: string | undefined;
+	wasmIntegrity: string | undefined;
+};
+
+/** The engine call for `verovio`'s digests (only those given), hearing its status on `onStatus`. */
+function callOf(
+	{ integrity, wasmIntegrity }: Verovio,
+	onStatus: (s: EngineStatus) => void,
+): EngraveCall {
+	return {
+		onStatus,
+		...(integrity === undefined ? {} : { integrity }),
+		...(wasmIntegrity === undefined ? {} : { wasmIntegrity }),
+	};
+}
+
+/** A digest attribute: undefined when absent, null when malformed, else trimmed. */
+function digest(value: string | null): string | null | undefined {
+	if (value === null) return undefined;
+	return isIntegrity(value) ? value.trim() : null;
+}
 
 /** `verovio-url` resolved against the page: undefined when absent, null unless http(s). */
 function verovioHref(value: string | null, base: string | undefined): string | null | undefined {
@@ -215,7 +245,7 @@ function defineElement(): void {
 		attributeChangedCallback(name: string, old: string | null, value: string | null) {
 			if (!this.isConnected || old === value) return;
 			// A new URL may be the fix: the Score radio works again, as after a new chart.
-			if (name === "verovio-url" || name === "verovio-integrity") this.#clearFailure();
+			if (VEROVIO_ATTRIBUTES.has(name)) this.#clearFailure();
 			else if (name === "preload") this.#preloadChanged();
 			else if (name === "view") this.#applyView();
 			else if (name === "src") this.#chartChanged();
@@ -386,20 +416,24 @@ function defineElement(): void {
 			if (source === null) return;
 			this.#preloaded = true;
 			loadEngine().then(
-				(e) => e.preload(source.url, source.integrity),
+				(e) => e.preload(source.url, source.integrity, source.wasmIntegrity),
 				() => {},
 			);
 		}
 
-		/** Where Verovio comes from, or null (and why) when `verovio-url` or `verovio-integrity` is refused. */
-		#verovio(): { url: string | undefined; integrity: string | undefined } | { refused: string } {
+		/**
+		 * Where Verovio comes from, or why not when `verovio-url` or a digest is
+		 * refused. The digests are read only with a `verovio-url`.
+		 */
+		#verovio(): Verovio | { refused: string } {
 			const url = verovioHref(this.getAttribute("verovio-url"), this.ownerDocument.baseURI);
 			if (url === null) return { refused: URL_REASON };
-			const integrity = url === undefined ? null : this.getAttribute("verovio-integrity");
-			if (integrity === null) return { url, integrity: undefined };
-			return isIntegrity(integrity)
-				? { url, integrity: integrity.trim() }
-				: { refused: INTEGRITY_REASON };
+			if (url === undefined) return { url, integrity: undefined, wasmIntegrity: undefined };
+			const integrity = digest(this.getAttribute("verovio-integrity"));
+			if (integrity === null) return { refused: INTEGRITY_REASON };
+			const wasmIntegrity = digest(this.getAttribute("verovio-wasm-integrity"));
+			if (wasmIntegrity === null) return { refused: WASM_INTEGRITY_REASON };
+			return { url, integrity, wasmIntegrity };
 		}
 
 		#source() {
@@ -477,10 +511,7 @@ function defineElement(): void {
 		}
 
 		/** Engraves `want`; only the newest request this element made is shown, with its status while it waits. */
-		async #engrave(
-			want: Engraving,
-			verovio: { url: string | undefined; integrity: string | undefined },
-		) {
+		async #engrave(want: Engraving, verovio: Verovio) {
 			this.#asked = want;
 			const ask = ++this.#engraves;
 			this.#status = UNMEASURED;
@@ -490,8 +521,7 @@ function defineElement(): void {
 				const { pane } = this.#parts();
 				if (pane && this.#revealed === null) showStatus(pane, s);
 			};
-			const call =
-				verovio.integrity === undefined ? { onStatus } : { onStatus, integrity: verovio.integrity };
+			const call = callOf(verovio, onStatus);
 			const run = (e: Engine) => e.engrave(this, want.text, want.width, verovio.url, call);
 			// A loaded engine is asked at once, so its status (not a provisional one) is the first drawn.
 			const request = loaded ? run(loaded) : loadEngine().then(run);

@@ -118,14 +118,17 @@ function throttled(report: (d: Download) => void) {
 export type FetchModuleOptions = {
 	fetch: (url: string) => Promise<Response>;
 	onProgress: (d: Download) => void;
-	/** The SRI digest the module must have; checked before it is returned. */
-	integrity?: string;
-	/** The module's decoded size, when known. */
-	expected?: number;
+	/** The SRI digest the file must have; checked before it is returned. */
+	integrity?: string | undefined;
+	/** The file's decoded size, when known. */
+	expected?: number | undefined;
 };
 
-/** Downloads the module at `url` with progress, as a JavaScript blob ready to import from an object URL. */
-export async function fetchModule(url: string, options: FetchModuleOptions): Promise<Blob> {
+/** Downloads `url` with progress, its digest checked (when given) before the bytes are returned. */
+export async function fetchBytes(
+	url: string,
+	options: FetchModuleOptions,
+): Promise<Uint8Array<ArrayBuffer>> {
 	const response = await options.fetch(url);
 	if (!response.ok) throw new Error(`${response.status} ${response.statusText}`.trim());
 	const meter = downloadMeter(response.headers, options.expected, response.type === "cors");
@@ -139,7 +142,7 @@ export async function fetchModule(url: string, options: FetchModuleOptions): Pro
 		done += r.value.byteLength;
 		report(meter(done), done);
 	}
-	// One copy of the module: the chunks are joined and dropped before it is digested and wrapped.
+	// One copy of the file: the chunks are joined and dropped before it is digested.
 	const bytes = new Uint8Array(done);
 	let at = 0;
 	for (const chunk of chunks.splice(0)) {
@@ -148,6 +151,10 @@ export async function fetchModule(url: string, options: FetchModuleOptions): Pro
 	}
 	if (options.integrity !== undefined && !(await checkIntegrity(bytes, options.integrity)))
 		throw new Error(`${url} does not match its integrity digest`);
-	const blob = new Blob([bytes], { type: "text/javascript" });
-	return blob;
+	return bytes;
+}
+
+/** Downloads the module at `url` with progress, as a JavaScript blob ready to import from an object URL. */
+export async function fetchModule(url: string, options: FetchModuleOptions): Promise<Blob> {
+	return new Blob([await fetchBytes(url, options)], { type: "text/javascript" });
 }
