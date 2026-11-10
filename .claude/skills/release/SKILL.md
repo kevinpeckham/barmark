@@ -1,6 +1,6 @@
 ---
 name: release
-description: Cut a release of barmark, @barmark/render, @barmark/musicxml, @barmark/score, @barmark/sync, @barmark/midi, @barmark/cli or @barmark/engraver - gates via Swamp, bump version, CHANGELOG, commit, tag, push, GitHub release (which publishes to npm)
+description: Cut a release of barmark, @barmark/render, @barmark/musicxml, @barmark/score, @barmark/sync, @barmark/midi, @barmark/listen, @barmark/cli or @barmark/engraver - gates via Swamp, bump version, CHANGELOG, commit, tag, push, GitHub release (which publishes to npm)
 argument-hint: [package version, e.g. barmark 0.2.0 or render 0.1.0]
 ---
 
@@ -12,7 +12,8 @@ package is `barmark` (`packages/barmark`), `render`
 (`packages/musicxml`, published as `@barmark/musicxml`), `score`
 (`packages/score`, published as `@barmark/score`), `sync`
 (`packages/sync`, published as `@barmark/sync`), `midi`
-(`packages/midi`, published as `@barmark/midi`), `cli`
+(`packages/midi`, published as `@barmark/midi`), `listen`
+(`packages/listen`, published as `@barmark/listen`), `cli`
 (`packages/cli`, published as `@barmark/cli`) or `engraver`
 (`packages/engraver`, published as `@barmark/engraver`); its tag is
 `<pkg>-vX.Y.Z`. If the package or version is missing, read the package's
@@ -29,6 +30,9 @@ Points that are easy to miss:
   patch ("Requires `@barmark/sync` X.Y.0") first, then the CLI, as a
   `barmark` minor needs its caret dependants' patches first;
   `verify:release cli` fails until it is done.
+- `listen`: a listen release needs no CLI release (the CLI does not
+  bundle it). After a `sync` or `barmark` minor, release a `listen` patch
+  raising the dependency ("Requires `@barmark/sync` X.Y.0").
 - When `@barmark/render` needs unreleased `barmark` changes, release
   `barmark` first: the render release check fails until the `barmark`
   version it depends on is on npm.

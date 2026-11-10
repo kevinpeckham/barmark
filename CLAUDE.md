@@ -149,6 +149,31 @@ Fallow, CI, Swamp), the grammar, `examples/`, the scripts and FINDINGS.md.
     repo) and compares Dorico's MusicXML with what the file plays
     (`scripts/dorico-compare.ts`, tested in `tests/dorico-compare.test.ts`),
     VM only, never in CI
+- `packages/listen/`: `@barmark/listen`, a recording to a chart and a
+  chart to a recording: the port of Stem Shovel's audio alignment
+  (`~/projects/stem-shovel`, read only, never written). v1 is a port: the
+  app's arithmetic in the app's order, each threshold an option
+  (`options.ts`, the app's SCREAMING_CASE names and defaults), and every
+  difference from the app a row of the design's §11.3. Every call returns
+  `Ok | Refused` and never throws. Depends on `barmark` and
+  `@barmark/sync` only
+  - `src/features/`: the `./features` entry (`recordingFeatures`,
+    `chromaFeatures`, `onsetFeatures`, `joinFeatures`, `readFeatures`),
+    which imports nothing from `barmark` or `@barmark/sync`: `fft.ts`,
+    `onset.ts`, `chroma.ts`, `sound.ts`, `features.ts`
+  - `src/comb/`: the onset comb (`comb.ts`), the trusted span
+    (`span.ts`), the slide, the re-phase and the v3 end repair
+  - `src/grid/`: `findGrid`: the lattice, beat chords, the three
+    witnesses, the vote and bar one's placement with its pickup
+  - `src/align/`: `alignChart`: the chart's bars as pads (`bars.ts`), the
+    streamed render, the DTW, the path and its re-phase, the fit, the
+    placements and the aligned timing map
+  - `src/pipeline.ts`: `chartFromRecording`; `src/stages.ts`: the
+    `./stages` entry, each stage for the bench (may change shape in a
+    minor before 1.0)
+  - `tests/`: `bun test`, synthetic songs rendered in the tests
+    (`tests/helpers/`), no audio checked in; the scale tests time
+    relatively, as `@barmark/midi`'s do
 - `packages/cli/`: `@barmark/cli`, the `barmark` command (`check`,
   `format`, `part`, `render` (`--score`: the full score, Verovio
   in-process, `src/score.ts`), `transpose`, `export`, `import`; MusicXML
@@ -196,7 +221,7 @@ Fallow, CI, Swamp), the grammar, `examples/`, the scripts and FINDINGS.md.
   `bun test` skips it (`bunfig.toml`), Fallow ignores it
 - `docs/superpowers/`: designs (`specs/`) and implementation plans (`plans/`)
 - `scripts/verify-package.ts`, `scripts/verify-release.ts`: release checks
-  shared by CI and Swamp; both take the package (`barmark`, `render`, `musicxml`, `score`, `sync`, `midi`, `cli` or `engraver`)
+  shared by CI and Swamp; both take the package (`barmark`, `render`, `musicxml`, `score`, `sync`, `midi`, `listen`, `cli` or `engraver`)
 
 ## Commands
 
@@ -232,7 +257,7 @@ cd site && bun run dev|build|check|test|test:browser   # barmark.dev
   or other AI attribution trailer.
 - Releases follow `RELEASING.md` (the `/release` skill walks it). Each
   package is tagged on its own: `barmark-vX.Y.Z`, `render-vX.Y.Z`,
-  `musicxml-vX.Y.Z`, `score-vX.Y.Z`, `sync-vX.Y.Z`, `midi-vX.Y.Z`, `cli-vX.Y.Z`, `engraver-vX.Y.Z`. A library release is followed by a CLI release and a
+  `musicxml-vX.Y.Z`, `score-vX.Y.Z`, `sync-vX.Y.Z`, `midi-vX.Y.Z`, `listen-vX.Y.Z`, `cli-vX.Y.Z`, `engraver-vX.Y.Z`. A library release is followed by a CLI release and a
   bump in `kevinpeckham/songs` (RELEASING.md steps 13–14), a `sync`,
   `midi` or `score` release included (the CLI bundles `sync` through
   `midi`, and `score` with Verovio). After
@@ -241,6 +266,9 @@ cd site && bun run dev|build|check|test|test:browser   # barmark.dev
   `score` depends on `barmark`, `@barmark/render` and `@barmark/musicxml`
   with carets, so a release of any of them may need a `score` patch
   raising that dependency, as `midi` follows `sync`, and then the CLI.
+  `listen` is not bundled by the CLI: a listen release needs no CLI
+  release, and after a `sync` or `barmark` minor, a `listen` patch
+  raises the dependency.
   An engraver version bump runs `bun run compile --update` and commits
   `info.ts`. A Verovio upgrade is one joint PR (`versions.env`, `info.ts`,
   score's `verovio` pin, stock constants and `ENGRAVER_*` literals), then
