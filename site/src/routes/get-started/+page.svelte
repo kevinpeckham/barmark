@@ -20,7 +20,7 @@ import {
 	USE_SCORE_ELEMENT,
 	USE_SCORE_SERVER,
 	USE_SYNC,
-	VITE7_CONFIG,
+	VITE_CONFIG,
 } from "#lib/start.js";
 
 const description =
@@ -155,9 +155,12 @@ const code = "font-mono text-accent";
 		</p>
 		<Code title="page.ts" code={USE_SCORE_SERVER} />
 		<p class="max-w-prose opacity-80">
-			With Vite 8 it needs no configuration. Vite 7 needs two settings, so the worker can find Verovio:
+			Vite 8 draws a score with no configuration, but with <code class={code}>verovio-url</code> it needs
+			<code class={code}>worker: {"{"} format: "es" {"}"}</code>, or the worker carries its own copy of Verovio
+			and a reader downloads it twice. Vite 7 needs that setting in any case, and one more, so the worker
+			can find Verovio:
 		</p>
-		<Code title="vite.config.js" code={VITE7_CONFIG} />
+		<Code title="vite.config.js" code={VITE_CONFIG} />
 		<p class="max-w-prose opacity-80">
 			<code class={code}>@barmark/score</code> is MIT, like every Barmark package. It depends on
 			<a href={LINKS.verovio} class={link}>Verovio</a>, which is licensed

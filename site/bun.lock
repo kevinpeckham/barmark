@@ -12,7 +12,7 @@
         "barmark": "0.22.0",
       },
       "devDependencies": {
-        "@barmark/cli": "0.10.0",
+        "@barmark/cli": "0.10.1",
         "@barmark/musicxml": "0.8.0",
         "@barmark/sync": "0.3.0",
         "@fontsource/noto-mono": "5.3.0",
@@ -42,7 +42,7 @@
 
     "@antfu/install-pkg": ["@antfu/install-pkg@2.1.0", "", { "dependencies": { "package-manager-detector": "^1.8.0", "tinyexec": "^1.3.1" } }, "sha512-sdg9NxU3zR4Mnawfbc/x6GB5Wf17WYud5qOuEuxXjaKpYpMkISSJEjItGebXJ2bQ4DIcly4NYH23mtkGJjvKUw=="],
 
-    "@barmark/cli": ["@barmark/cli@0.10.0", "", { "dependencies": { "@barmark/midi": "0.3.0", "@barmark/musicxml": "0.8.0", "@barmark/render": "0.18.0", "@barmark/score": "0.2.0", "barmark": "0.22.0", "verovio": "6.4.1" }, "bin": { "barmark": "dist/cli.js" } }, "sha512-f5YGfB6xMR/Fht0o5IZMN17YbzcsO2o4EcRnOyAawvpyQkHweqVT4JC+CPfpmLARmanNv65we/9QWpk2HstiDQ=="],
+    "@barmark/cli": ["@barmark/cli@0.10.1", "", { "dependencies": { "@barmark/midi": "0.3.0", "@barmark/musicxml": "0.8.0", "@barmark/render": "0.18.0", "@barmark/score": "0.3.0", "barmark": "0.22.0", "verovio": "6.4.1" }, "bin": { "barmark": "dist/cli.js" } }, "sha512-HTVc+1j+Le9x6W3pQ/OFwVnL1yyhbnyrNH0vaTMXjJTcy65zXOMhuKUjYBjFCybKYrZiI/dn4O63w1KdA1TbBg=="],
 
     "@barmark/midi": ["@barmark/midi@0.3.0", "", { "dependencies": { "@barmark/sync": "^0.3.0", "barmark": "^0.22.0" } }, "sha512-wcPF0fvmJOE9lVwDiIQjy1i3/qdLcPN5n5g2lwrsXwX0uCwxuTj3toP82D5qDAddoezF0DVWtZDUzMn7XFmiXQ=="],
 
@@ -501,8 +501,6 @@
     "yallist": ["yallist@5.0.0", "", {}, "sha512-YgvUTfwqyc7UXVMrB+SImsVYSmTS8X/tSrtdNZMImM+n7+QTriRXyXim0mBrTXNeqzVF0KWGgHPeiyViFFrNDw=="],
 
     "zimmerframe": ["zimmerframe@1.1.5", "", {}, "sha512-msJxIvYDYcoNL+PJsu+7qmpDWsYmAxTY+2TNYXXF0hzBzBk0BMecOqDOG/EckUoKCuKwObfbugIl8QpqHDXeFA=="],
-
-    "@barmark/cli/@barmark/score": ["@barmark/score@0.2.0", "", { "dependencies": { "@barmark/musicxml": "^0.8.0", "@barmark/render": "^0.18.0", "barmark": "^0.22.0", "verovio": "^6.4.1" } }, "sha512-6mAa3CvMCjY7yqKOPqm62i7zy0oN/OE8XpSJcXfKbJrMcjB5Ldhd6J5Nyt9Gc1Occ/pZJj5mJ0hIBugrvk018w=="],
 
     "@types/node/undici-types": ["undici-types@8.9.0", "", {}, "sha512-KTDyRTYX8sWmKXAikPHHSyc63CRPETMctyjKFupcC6OBLXT3xsN0e9aF7m+mIXutFWpUXuedtowG7iLOzp0kQg=="],
 

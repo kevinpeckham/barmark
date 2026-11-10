@@ -83,10 +83,16 @@ const html = renderScoreHtml(text, {
 });`;
 
 /** Vite 7 only; Vite 8 needs nothing (the score package's README). */
-export const VITE7_CONFIG = `// vite.config.js, for Vite 7 (harmless on Vite 8)
+/** Each setting Get Started's Vite config shows, as the score README writes it. */
+export const VITE_SETTINGS = [
+	'worker: { format: "es" }',
+	'optimizeDeps: { exclude: ["@barmark/score"] }',
+];
+
+export const VITE_CONFIG = `// vite.config.js
 export default {
-	optimizeDeps: { exclude: ["@barmark/score"] },
-	worker: { format: "es" },
+	${VITE_SETTINGS[0]}, // Vite 8 with verovio-url; Vite 7 always
+	${VITE_SETTINGS[1]}, // Vite 7 only (harmless on Vite 8)
 };`;
 
 export const INSTALL_MUSICXML = "npm install @barmark/musicxml";
