@@ -85,14 +85,21 @@ describe("what may sit between an ending's lines", () => {
 	test("a blank line means nothing, here as anywhere", () => {
 		expect(marks("|: C |\n|1 D |\n\n| E :|\n|2 F |")).toEqual(["|", "|1", "+1", "|2"]);
 	});
-	test("a directive line ends it: the errors are today's", () => {
+	test("a directive line ends it: today's errors, and one naming the directive", () => {
 		const text = "|: C |\n|1 G |\ntime: 3/4\n| D :|\n|2 E |";
 		expect(marks(text)).toEqual(["|", "|1", "|", "|2"]);
-		expect(errors(text)).toEqual([
+		expect(errors(text).sort((a, b) => Number(a[0]) - Number(b[0]))).toEqual([
 			[2, "a repeat with endings plays at least two passes"],
+			[3, "a directive line ends the ending |1 above it; an ending's lines can't hold one"],
 			[4, ":| has no |: before it in this section"],
 			[5, "an ending follows the bars of a |: … :| repeat"],
 		]);
+		const named = play(text).all.find((d) => d.line === 3);
+		expect(named?.token).toBe("time:");
+	});
+	test("a directive line after an ending that couldn't continue anyway is not named", () => {
+		expect(errors("|: C |\n|1 G |\ntempo: 90\n## B\n| D |").map(([l]) => l)).toEqual([2]);
+		expect(errors("|: C |\n|1 G :|\n|2 E |\nkey: D\n| F |")).toEqual([]);
 	});
 	test("a heading ends it, as it ends every repeat", () => {
 		const text = "|: C |\n|1 G |\n## B\n| D :|\n|2 E |";

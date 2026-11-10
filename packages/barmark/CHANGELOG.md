@@ -43,7 +43,9 @@ spellings read, and an ending may continue onto the lines after it
   as the new optional `continues` on its bar line in the parse tree (A.7),
   and plays on that ending's passes only. Text, credit, lyric-row and
   `---` lines may sit between an ending's lines; a heading, a directive
-  line, a `|:` line or a line that can't be read ends it. A chart that
+  line, a `|:` line or a line that can't be read ends it, and a directive
+  line that stops an ending continuing is an error naming it. Only the
+  endings of a paired repeat continue. A chart that
   read cleanly before reads the same; an ending before the last that runs
   into the next ending with no `:|` now gives one error, "an ending before
   the last goes back with :|", on its first line, where it gave two.

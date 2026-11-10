@@ -1,4 +1,4 @@
-import type { Line } from "./types.js";
+import type { ChartDiagnostic, Directives, Line } from "./types.js";
 
 type BarsLine = Extract<Line, { kind: "bars" }>;
 
@@ -30,27 +30,62 @@ const bars = (l: Line): BarsLine | null => (l.kind === "bars" ? l : null);
 const plain = (l: Line) => l.kind === "bars" && !l.opens && !l.ending;
 const startsEnding = (l: Line | undefined) => l?.kind === "bars" && l.ending !== null;
 
-/** The unit after `from` that isn't a line between endings. */
-function nextHeard(units: Unit[], from: number): Line | undefined {
-	return units.slice(from).find((u) => !BETWEEN_ENDINGS.has(u.ref.kind))?.ref;
+/** The same lines, and directive lines too: what an ending would continue past if directives could sit in it. */
+const PAST_DIRECTIVES = new Set<Line["kind"]>([...BETWEEN_ENDINGS, "directive"]);
+
+/** The first unit from `from` whose kind isn't one of `past`; reads only up to it. */
+function nextHeard(units: Unit[], from: number, past: Set<Line["kind"]>): Line | undefined {
+	let k = from;
+	while (k < units.length && past.has((units[k] as Unit).ref.kind)) k++;
+	return units[k]?.ref;
 }
 
 /**
  * The units an unclosed ending at `at` continues onto: the plain bar lines
  * after it, up to its `:|` or the next ending, when another ending follows
  * (grammar 5.1). The last ending has none, so it ends at its own line.
+ * `past` are the lines that may sit among them.
  */
-function continuation(units: Unit[], at: number): number[] {
+function continuation(units: Unit[], at: number, past = BETWEEN_ENDINGS): number[] {
 	const run: number[] = [];
 	for (let k = at + 1; k < units.length; k++) {
 		const ref = (units[k] as Unit).ref;
-		if (BETWEEN_ENDINGS.has(ref.kind)) continue;
+		if (past.has(ref.kind)) continue;
 		if (startsEnding(ref)) return run;
 		if (!plain(ref)) return [];
 		run.push(k);
-		if (bars(ref)?.closes) return startsEnding(nextHeard(units, k + 1)) ? run : [];
+		if (bars(ref)?.closes) return startsEnding(nextHeard(units, k + 1, past)) ? run : [];
 	}
 	return [];
+}
+
+/** A directive line's own name, as its token: `time:`, `tempo:`. */
+function directiveName(set: Directives): string {
+	const first = Object.keys(set)[0] ?? "key";
+	const name = { tempoChange: "tempo", swingPercent: "feel" }[first] ?? first;
+	return `${name}:`;
+}
+
+/**
+ * The directive line that stopped an ending continuing, when without it
+ * the ending would have continued: named, beside the errors that follow
+ * (grammar 5.1). Null when nothing would have continued anyway.
+ */
+function directiveInside(units: Unit[], at: number, head: BarsLine): ChartDiagnostic | null {
+	if (continuation(units, at).length || !continuation(units, at, PAST_DIRECTIVES).length)
+		return null;
+	for (let k = at + 1; k < units.length; k++) {
+		const ref = (units[k] as Unit).ref;
+		if (startsEnding(ref)) break;
+		if (ref.kind === "directive")
+			return {
+				line: ref.line,
+				severity: "error",
+				message: `a directive line ends the ending |${head.ending?.join(",")} above it; an ending's lines can't hold one`,
+				token: directiveName(ref.set),
+			};
+	}
+	return null;
 }
 
 /**
@@ -59,6 +94,13 @@ function continuation(units: Unit[], at: number): number[] {
  */
 type Pairing = { open: boolean; endings: boolean };
 
+/** Whether a `|:` is waiting for its `:|` after `l`: a heading or a `:|` ends it, a `|:` opens one. */
+function stillOpen(open: boolean, l: Line): boolean {
+	if (l.kind === "section") return false;
+	if (l.kind !== "bars") return open;
+	return !l.closes && (open || l.opens);
+}
+
 /** Whether `l` is an ending of a paired repeat, moving the pairing past it. */
 function paired(p: Pairing, l: Line): boolean {
 	if (l.kind === "bars" && l.ending) {
@@ -66,10 +108,10 @@ function paired(p: Pairing, l: Line): boolean {
 		p.open = false;
 		return p.endings;
 	}
-	if (p.endings && BETWEEN_ENDINGS.has(l.kind)) return false;
-	p.endings = false;
-	if (l.kind === "section") p.open = false;
-	if (l.kind === "bars") p.open = l.closes ? false : p.open || l.opens;
+	if (!(p.endings && BETWEEN_ENDINGS.has(l.kind))) {
+		p.endings = false;
+		p.open = stillOpen(p.open, l);
+	}
 	return false;
 }
 
@@ -79,21 +121,25 @@ function paired(p: Pairing, l: Line): boolean {
  * passes as `continues`. Only an ending of a paired repeat continues, so
  * an ending with no `|:` before it leaves a stray `:|` stray. Never throws.
  */
-export function continueEndings(lines: Line[]): Line[] {
+export function continueEndings(lines: Line[]): { lines: Line[]; diagnostics: ChartDiagnostic[] } {
 	const units = unitsOf(lines);
 	const marked = new Map<Line, number[]>();
+	const diagnostics: ChartDiagnostic[] = [];
 	const pairing: Pairing = { open: false, endings: false };
 	for (let i = 0; i < units.length; i++) {
 		const ref = (units[i] as Unit).ref;
 		if (!paired(pairing, ref) || ref.kind !== "bars" || !ref.ending || ref.closes) continue;
 		const run = continuation(units, i);
 		for (const k of run) for (const l of (units[k] as Unit).lines) marked.set(l, ref.ending);
+		const inside = directiveInside(units, i, ref);
+		if (inside) diagnostics.push(inside);
 		// The lines it continues onto belong to the ending: the pairing goes on after them.
 		i = run.at(-1) ?? i;
 	}
-	if (!marked.size) return lines;
-	return lines.map((l) => {
+	if (!marked.size) return { lines, diagnostics };
+	const out = lines.map((l) => {
 		const passes = marked.get(l);
 		return passes && l.kind === "bars" ? { ...l, continues: passes } : l;
 	});
+	return { lines: out, diagnostics };
 }

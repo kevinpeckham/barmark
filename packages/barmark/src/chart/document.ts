@@ -365,14 +365,15 @@ export function readDocument(text: string): {
 	const read = checkParts(lines, diagnostics);
 	const grouped = groupParts(lines, read);
 	const lyrics = attachLyrics(grouped.lines);
-	diagnostics.push(...grouped.diagnostics, ...lyrics.diagnostics);
+	const ended = continueEndings(lyrics.lines);
+	diagnostics.push(...grouped.diagnostics, ...lyrics.diagnostics, ...ended.diagnostics);
 	const { parts } = grouped;
 	return {
 		title,
 		part: parts.length === 1 ? (parts[0] ?? null) : null,
 		parts,
 		credits: creditsOf(lines),
-		lines: continueEndings(lyrics.lines),
+		lines: ended.lines,
 		diagnostics,
 	};
 }

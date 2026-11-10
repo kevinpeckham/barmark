@@ -680,9 +680,10 @@ This plays `C F G C G G7`, then `C F G C G C`.
   below, bars 1–4, then 5–9, then 10. A line an ending continues
   onto carries the ending's passes as `continues` (A.7).
 
-**An ending may continue onto the lines after it.** An ending not closed
-by `:|` on its own line continues through the plain `|` lines after it,
-up to its `:|` or the next ending:
+**An ending before the last may continue onto the lines after it.** An
+ending of a repeat that another ending follows, not closed by `:|` on its
+own line, continues through the plain `|` lines after it, up to its `:|`
+or the next ending:
 
 ```
 ## Chorus
@@ -695,16 +696,19 @@ up to its `:|` or the next ending:
 The first ending is five bars, `G A B C D`, so a chart keeps four bars a
 row.
 
-- Only an ending that another ending follows continues. The last ending
-  has no `:|` and ends at its own line, so the lines after it play once,
-  as before.
+- Only an ending that another ending follows continues, and only one of
+  a repeat whose `|:` pairs with it (5): endings with no `|:` before them
+  continue nothing. The last ending has no `:|` and ends at its own line,
+  so the lines after it play once, as before.
 - A line it continues onto is a plain bar line: it opens with `|`, not
   `|:` or another ending. Text, credit, lyric-row (7.7) and `---` lines
   may sit between its lines, a blank line means nothing, and a rehearsal
   mark is a cell on a continuation line like any other.
 - Any other line ends it there: a heading (which ends the section), a
   directive line, a line opening with `|:`, or a bar line that can't be
-  read. So a time change or a repeat inside an ending is not possible.
+  read. So a time change or a repeat inside an ending is not possible. A
+  directive line that ends an ending which would otherwise have continued
+  is an **error** naming the directive, beside the errors that follow.
 
 ### 5.2 Directions
 
@@ -1376,7 +1380,7 @@ keeps what cannot reduce:
 | error | a lone `-` in a slot (suggests `--` for silence) |
 | error | `%` or `...` sharing a cell with other slots or inside a group |
 | error | unpaired `\|:` or `:\|` |
-| error | an ending mark not at the start of a bar line, an ending that does not follow a `\|: … :\|` repeat, endings that miss or repeat a pass, a last ending that closes with `:\|` or an earlier one that does not (on its own line or the lines it continues onto), `x N` on an ending or a line it continues onto |
+| error | an ending mark not at the start of a bar line, an ending that does not follow a `\|: … :\|` repeat, endings that miss or repeat a pass, a last ending that closes with `:\|` or an earlier one that does not (on its own line or the lines it continues onto), `x N` on an ending or a line it continues onto, a directive line inside an ending |
 | error | a direction that is not alone in its cell, or a near miss of one (suggests the spelling) |
 | error | a rehearsal mark that is not alone in its cell (suggests a cell of its own), `@` without a label of letters and digits, a meter on a mark, two marks with no bar between them, a mark with no bar after it |
 | error | an unclosed quote, empty quotes, words with no bar to sit on |
@@ -1520,7 +1524,7 @@ human to say whether the band was silent, and the structure line.
 | Pickup | Decided by Kevin (2026-11-09): the chart's first written bar is a pickup when it is in a one-bar meter shorter, by value, than the meter in force at the next written bar, and that next bar is not itself in a one-bar meter shorter than the `time:` in force, so two short bars in a row open no pickup (2.4); it is bar 0, so bar 1 is the first full bar, as notation numbers it. Before, the pickup was bar 1 and the MusicXML export already wrote measure 0. `index`, the play position, does not change, so saved timing maps keep working. Machine output gains `pickup` on the parse (A.7). Rejected: renumbering `index` too (every saved map would answer one bar off with an unchanged hash); a literal 0 in the bar-grid gutter. |
 | An unreadable slot keeps its bar | Decided by Kevin (2026-11-10): "Barmark should not be dropping lines for a chord it can't read." Any slot that can't be read (an unknown chord symbol such as `CM7`, `CSus4`, `C69` or `C−7`, a bad note set such as `{H}`, a mark that can't be read) is still an **error**, with the same message, line, token and suggestion, so `check` still fails; but it keeps its bar as unknown harmony carrying the author's text (principle 4, 2.3, 3, A.7), which prints, renders and stays through transposition as written. Only a bar line whose structure can't be read (a stray or misplaced `\|:` or `:\|`, an unclosed or bad `_` group, a bad ending or `x N`, a rehearsal mark sharing a cell) is still excluded, because there the bar count itself is unknown. Found by porting a listening tool: a chart with `CM7` lost its whole line and played shorter than the recording. Rejected: a warning (an unreadable chord must not publish unnoticed), and keeping only unknown chord symbols (a bad note set or mark loses a line just the same). Two further rulings the same day: **transpose moves the readable chords** on a line that holds an unreadable slot (`key: C`, `\| C \| CM7 \| G \|` to D is `\| D \| CM7 \| A \|`), leaving the text as written with a warning on it, so such a line also prints in canonical form (8) and only a line excluded for its structure prints as written; and **a misplaced or bad dot** (`\| C. \|`) is the slot's error, not the structure's, since a dot never changes the bar count. |
 | Stacked spellings | Decided by Kevin (2026-11-10, stem-shovel issue 16): notation programs print alterations run together ("D6 add9 omit5"), so charts arrive as `D6(omit5add9)`, `Gadd9omit3` and `F#b5(omit3)`. **Accepted, with a warning** whose suggestion is the comma-separated spelling: items run together inside one parenthesis (`D6(omit5add9)` is `D6(omit5,add9)`, and `D6(no5add9)` likewise; generally two or more valid items with no separator, each after the first starting with `add`, `omit`, `no`, `b` or `#`), and a bare `omit`/`no` trailing the chord's name, after the whole quality however it is spelled and before any parenthesis or slash bass (`Gadd9omit3` is `Gadd9(omit3)`, `Gomit5` is `G(omit5)`, `Gno5` is `G(no5)`, `CΔno3` is `CΔ(no3)`; `Cno5maj7` and `Cno3add9` stay errors) (3, A.5). The canonical printer writes the canonical form as for any alias (`D6(9,no5)`). **Not accepted:** an altered fifth before the parenthesis on a chord with no extension (`F#b5(omit3)`), since 3 keeps `Ab5` always the A♭ power chord and `Gb5(omit3)` would be ambiguous; it stays an error, now suggesting `F#(b5,omit3)` where the root carries no accidental that could be the fifth's, and, where it does, giving no suggestion and saying it is ambiguous only when the fifth reading would itself read (`Gb5(omit3)` as `G(b5,omit3)`; not `Gb5(no7)`) (A.6). Before, all three shapes were errors, and since the same day's ruling each kept its bar as unknown harmony. Rejected: splitting digits run together (`C(911)`), which reads no notation program's output and would guess. |
-| An ending across lines | Decided by Kevin (2026-11-10, stem-shovel issue #16, ask 6): an ending not closed by `:\|` on its own line continues through the plain `\|` lines after it, up to its `:\|` or the next ending, so `\|1 G \| A \| B \| C \|` then `\| D :\|` is a five-bar first ending and a chart keeps four bars a row (5.1). The last ending has no `:\|` and still ends at its own line, which keeps the grammar unambiguous. Claude's rulings the same day, conservative where open: only an ending another ending follows continues, so with no ending after it nothing continues and the errors are as before (a `:\|` after the last ending stays a stray `:\|`, and the repeat still plays); text, credit, lyric-row and `---` lines may sit between an ending's lines, as between endings, and a rehearsal mark is a cell on a continuation line; a heading, a directive line, a `\|:` line or a bar line that can't be read ends the ending, so a time change or a repeat inside an ending is not possible; `x N` on a continuation line is an error, as on the ending's own line; an ending before the last that reaches the next ending with no `:\|` is one error on its first line, where before it was two. Machine output gains `continues` on a continuation line (A.7); the canonical form keeps the lines as written. A chart that read cleanly before reads the same. Rejected: continuing the last ending to the section's end, which would make every line after the endings part of them. |
+| An ending across lines | Decided by Kevin (2026-11-10, stem-shovel issue #16, ask 6): an ending not closed by `:\|` on its own line continues through the plain `\|` lines after it, up to its `:\|` or the next ending, so `\|1 G \| A \| B \| C \|` then `\| D :\|` is a five-bar first ending and a chart keeps four bars a row (5.1). The last ending has no `:\|` and still ends at its own line, which keeps the grammar unambiguous. Claude's rulings the same day, conservative where open: only an ending another ending follows continues, so with no ending after it nothing continues and the errors are as before (a `:\|` after the last ending stays a stray `:\|`, and the repeat still plays); text, credit, lyric-row and `---` lines may sit between an ending's lines, as between endings, and a rehearsal mark is a cell on a continuation line; only an ending of a paired repeat continues; a heading, a directive line, a `\|:` line or a bar line that can't be read ends the ending, so a time change or a repeat inside an ending is not possible, and a directive line that stops an ending continuing is an error naming it, beside the errors after it; `x N` on a continuation line is an error, as on the ending's own line; an ending before the last that reaches the next ending with no `:\|` is one error on its first line, where before it was two. Machine output gains `continues` on a continuation line (A.7); the canonical form keeps the lines as written. A chart that read cleanly before reads the same. Rejected: continuing the last ending to the section's end, which would make every line after the endings part of them. |
 
 ## Open questions
 
