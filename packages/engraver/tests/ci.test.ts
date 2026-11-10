@@ -1,6 +1,6 @@
 /** The CI wiring around the engraver build: committed state only. */
 import { expect, test } from "bun:test";
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 
 const read = (path: string) => readFileSync(new URL(path, import.meta.url), "utf8");
 type Step = { if?: string; run?: string; uses?: string; with?: Record<string, string> };
@@ -26,4 +26,18 @@ test("every compile also runs source.sh after the gate, and checks both tarballs
 test("the action uploads nothing from the Corresponding Source", () => {
 	for (const s of steps.filter((s) => s.uses?.startsWith("actions/upload-artifact")))
 		expect(s.with?.path ?? "").not.toContain("source");
+});
+test("Dependabot updates the actions the local composite actions pin", () => {
+	const config = Bun.YAML.parse(read("../../../.github/dependabot.yml")) as {
+		updates: { "package-ecosystem": string; directory?: string; directories?: string[] }[];
+	};
+	const entry = config.updates.find((u) => u["package-ecosystem"] === "github-actions");
+	const dirs = entry?.directories ?? [entry?.directory];
+	expect(dirs).toContain("/");
+	const local = readdirSync(new URL("../../../.github/actions/", import.meta.url));
+	expect(local.length).toBeGreaterThan(0);
+	for (const name of local)
+		expect(dirs.some((d) => d === `/.github/actions/${name}` || d === "/.github/actions/*")).toBe(
+			true,
+		);
 });
