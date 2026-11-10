@@ -41,6 +41,32 @@ jobs:
       # Dead code, duplication and complexity beyond .fallow-health-baseline.json;
       # findings show as annotations on the pull request.
       - run: bun run fallow --format github-annotations
+  # The workflows, the composite action and dependabot.yml: zizmor for
+  # security (injection, credentials, caches, pinning) and actionlint for
+  # correctness, with shellcheck on every run: script. Offline: zizmor's
+  # online audits are off, and the token the action passes it is this job's
+  # read-only one, unused. A deliberate pattern gets a `# zizmor: ignore[rule]`
+  # comment on its line, with the reason. Not a required check.
+  workflow-lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # zizmor's wheel for the pinned version, checked against the action's own hashes.
+      - uses: zizmorcore/zizmor-action@53290badfa369cb0bf7ad16342cb62c2fa47ac7b # v0.8.0
+        with:
+          version: 1.31.1
+          online-audits: false
+          advanced-security: false
+          annotations: true
+      # The image by digest (rhysd/actionlint 1.7.12, with shellcheck).
+      - uses: docker://rhysd/actionlint:1.7.12@sha256:b1934ee5f1c509618f2508e6eb47ee0d3520686341fec936f3b79331f9315667
+        with:
+          args: -color
   # @barmark/engraver: Verovio compiled by emsdk, which must match
   # packages/engraver/src/info.ts byte for byte (.github/actions/engraver-build).
   # A restored dist is checked against info.ts; a miss compiles from clean
@@ -64,7 +90,7 @@ jobs:
       - run: bun install --frozen-lockfile
       # The build, its caches, the gate and the engraver-dist artifact, shared
       # with release.yml's build-engraver job.
-      - uses: ./.github/actions/engraver-build
+      - uses: ./.github/actions/engraver-build # zizmor: ignore[self-repository] actionlint 1.7.12 rejects the $/ form (rhysd/actionlint#711)
         with:
           clean: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' }}
           save-cache: true
@@ -108,7 +134,9 @@ jobs:
         with:
           node-version: ${{ matrix.node }}
       - run: bun install --frozen-lockfile
-      - run: bun run verify:package ${{ matrix.pkg }}
+      - run: bun run verify:package "$PKG"
+        env:
+          PKG: ${{ matrix.pkg }}
   # @barmark/engraver under every Node it supports, packed from the engraver
   # job's artifact: no emcc here, and prepack never compiles.
   package-engraver:
