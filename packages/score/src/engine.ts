@@ -1,5 +1,22 @@
-/** What a page asks the worker for: one chart, laid out for a width. */
-export type Request = { id: number; text: string; width: number; verovioUrl?: string };
+import type { Download } from "./download.js";
+
+/**
+ * Where a worker loads Verovio from: no `verovioUrl`, the package's own;
+ * with `verovioIntegrity`, a copy that must have that digest (or the
+ * package's own is loaded in its place).
+ */
+export type VerovioSource = { verovioUrl?: string; verovioIntegrity?: string };
+
+/**
+ * What a page asks the worker for: one chart, laid out for a width; or,
+ * with `preload`, only to load Verovio (`text` and `width` unused).
+ */
+export type Request = VerovioSource & {
+	id: number;
+	text: string;
+	width: number;
+	preload?: true;
+};
 
 /** What the worker answers. No `xml` or `diagnostics` cross the boundary. */
 export type Reply =
@@ -14,10 +31,26 @@ export type EngraveReply = Reply;
  * and from where (no `verovioUrl`: the package's own), so the engine can
  * start the job's deadline and give a replacement worker the same Verovio.
  */
-export type Ready = { id: number; loaded: { verovioUrl?: string } };
+export type Ready = { id: number; loaded: VerovioSource };
 
-/** Every message a worker sends: a job's `Ready`, then its `Reply`. */
-export type WorkerMessage = Reply | Ready;
+/** How a worker's Verovio load is going: downloading (as far as it can be measured), then preparing. */
+export type LoadStatus = Download | { phase: "prepare" };
+
+/** What the worker says while it loads Verovio for job `id`. */
+export type Progress = { id: number; status: LoadStatus };
+
+/** Every message a worker sends: a job's `Progress` while it loads, its `Ready`, then its `Reply`. */
+export type WorkerMessage = Reply | Ready | Progress;
+
+/** What a caller hears while it waits: the engine's load, then its engraving. */
+export type EngineStatus = LoadStatus | { phase: "engrave" };
+
+export type EngraveCall = {
+	/** The SRI digest (`sha384-…`) the `verovioUrl` copy must have; on a mismatch the package's own loads. */
+	integrity?: string;
+	/** Hears the engine's status now, and as it changes, until the request settles. */
+	onStatus?: (status: EngineStatus) => void;
+};
 
 /**
  * The part of a `Worker` the engine uses, so a test can pass a fake. It is
@@ -43,7 +76,14 @@ export type Engine = {
 		text: string,
 		width: number,
 		verovioUrl?: string,
+		call?: EngraveCall,
 	): Promise<EngraveReply | null>;
+	/**
+	 * Starts loading Verovio (from `verovioUrl`, checked against `integrity`
+	 * when given) with no job, so a first score is quicker. Does nothing if
+	 * a worker has Verovio loaded or is busy: there is one load to share.
+	 */
+	preload(verovioUrl?: string, integrity?: string): void;
 };
 
 /** How long one job may engrave, from its worker's Verovio being ready, before the worker is cut off and the request rejects. */
@@ -66,6 +106,7 @@ export type EngineOptions = { deadline?: number; loadDeadline?: number; grace?: 
 type Pending = {
 	resolve: (reply: EngraveReply | null) => void;
 	reject: (error: Error) => void;
+	onStatus: ((status: EngineStatus) => void) | undefined;
 };
 
 /**
@@ -82,7 +123,23 @@ type Running = {
 
 const FAILED = "The score engine failed";
 
-const isReady = (m: WorkerMessage): m is Ready => !("ok" in m);
+const isReady = (m: WorkerMessage): m is Ready => "loaded" in m;
+const isProgress = (m: WorkerMessage): m is Progress => "status" in m;
+
+const UNMEASURED: EngineStatus = { phase: "download", fraction: null, bytes: null };
+const ENGRAVING: EngineStatus = { phase: "engrave" };
+
+/** `source` without its absent fields (so a request carries no `verovioUrl: undefined`). */
+const present = ({
+	verovioUrl,
+	verovioIntegrity,
+}: {
+	verovioUrl?: string | undefined;
+	verovioIntegrity?: string | undefined;
+}): VerovioSource => ({
+	...(verovioUrl === undefined ? {} : { verovioUrl }),
+	...(verovioUrl === undefined || verovioIntegrity === undefined ? {} : { verovioIntegrity }),
+});
 
 const clear = (job: Running) => {
 	for (const t of job.timers) clearTimeout(t);
@@ -102,11 +159,17 @@ export function createEngine(makeWorker: () => WorkerLike, options: EngineOption
 	const grace = options.grace ?? SUPERSEDED_GRACE_MS;
 	let worker: WorkerLike | null = null;
 	let running: Running | null = null;
-	let loaded: { verovioUrl?: string } | undefined;
+	let loaded: VerovioSource | undefined;
+	/** Whether the current worker has its Verovio loaded. */
+	let warm = false;
+	/** The engine's status, as a new caller first hears it. */
+	let status: EngineStatus = UNMEASURED;
 	let nextId = 0;
 	const waiting: Request[] = [];
 	const pending = new Map<number, Pending>();
 	const newest = new WeakMap<object, number>();
+	/** Preload jobs: no one waits on them, and they end at `Ready`. */
+	const preloads = new Set<number>();
 
 	const settle = (id: number) => {
 		const p = pending.get(id);
@@ -121,16 +184,33 @@ export function createEngine(makeWorker: () => WorkerLike, options: EngineOption
 		running = null;
 		const w = worker;
 		worker = null;
+		warm = false;
+		preloads.delete(id);
 		w?.terminate();
 		if (reason !== null) settle(id)?.reject(new Error(reason));
+		// A fresh worker loads Verovio again: the callers still waiting hear it from the start.
+		tell(UNMEASURED);
 		next();
 	};
 
 	const overdue = (id: number, what: string) => () => cut(id, `${FAILED}: ${what} took too long`);
 
-	/** Verovio is ready: the job's engraving deadline and its grace start now. */
+	/** Tells every waiting caller the engine's new status. */
+	const tell = (now: EngineStatus) => {
+		status = now;
+		for (const p of pending.values()) p.onStatus?.(now);
+	};
+
+	/** Verovio is ready: the job's engraving deadline and its grace start now; a preload is done. */
 	const onReady = (job: Running, ready: Ready) => {
 		loaded ??= ready.loaded;
+		warm = true;
+		// A preload's Ready engraves nothing: the job behind it hears "engrave" at its own Ready.
+		if (preloads.has(job.id)) {
+			finish(job);
+			return next();
+		}
+		tell(ENGRAVING);
 		clear(job);
 		job.timers = [
 			setTimeout(overdue(job.id, "engraving"), deadline),
@@ -141,9 +221,15 @@ export function createEngine(makeWorker: () => WorkerLike, options: EngineOption
 		];
 	};
 
-	const onReply = (job: Running, reply: Reply) => {
+	/** The worker is done with `job`. */
+	const finish = (job: Running) => {
 		clear(job);
 		running = null;
+		preloads.delete(job.id);
+	};
+
+	const onReply = (job: Running, reply: Reply) => {
+		finish(job);
 		settle(reply.id)?.resolve(reply);
 		next();
 	};
@@ -154,7 +240,8 @@ export function createEngine(makeWorker: () => WorkerLike, options: EngineOption
 		w.onmessage = ({ data }) => {
 			const job = running;
 			if (worker !== w || job?.id !== data.id) return;
-			if (isReady(data)) onReady(job, data);
+			if (isProgress(data)) tell(data.status);
+			else if (isReady(data)) onReady(job, data);
 			else onReply(job, data);
 		};
 		w.onerror = () => {
@@ -168,12 +255,11 @@ export function createEngine(makeWorker: () => WorkerLike, options: EngineOption
 	const next = () => {
 		const request = running ? undefined : waiting.shift();
 		if (!request) return;
-		const { verovioUrl, ...rest } = request;
-		const url = loaded ? loaded.verovioUrl : verovioUrl;
+		const { verovioUrl, verovioIntegrity, ...rest } = request;
 		const id = rest.id;
 		running = { id, superseded: false, graceOver: false, timers: [] };
 		running.timers = [setTimeout(overdue(id, "loading Verovio"), loadDeadline)];
-		start().postMessage(url === undefined ? rest : { ...rest, verovioUrl: url });
+		start().postMessage({ ...rest, ...present(loaded ?? { verovioUrl, verovioIntegrity }) });
 	};
 
 	/** No one waits for `id` any more: drop it if it waits its turn, cut it off past its grace if it runs. */
@@ -187,18 +273,35 @@ export function createEngine(makeWorker: () => WorkerLike, options: EngineOption
 	};
 
 	return {
-		engrave(key, text, width, verovioUrl) {
+		engrave(key, text, width, verovioUrl, call = {}) {
 			const id = ++nextId;
 			const before = newest.get(key);
 			newest.set(key, id);
 			return new Promise((resolve, reject) => {
-				pending.set(id, { resolve, reject });
+				pending.set(id, { resolve, reject, onStatus: call.onStatus });
+				call.onStatus?.(warm ? ENGRAVING : status);
 				if (before !== undefined) supersede(before);
-				waiting.push(
-					verovioUrl === undefined ? { id, text, width } : { id, text, width, verovioUrl },
-				);
+				waiting.push({
+					id,
+					text,
+					width,
+					...present({ verovioUrl, verovioIntegrity: call.integrity }),
+				});
 				next();
 			});
+		},
+		preload(verovioUrl, integrity) {
+			if (warm || running || waiting.length > 0) return;
+			const id = ++nextId;
+			preloads.add(id);
+			waiting.push({
+				id,
+				text: "",
+				width: 0,
+				preload: true,
+				...present({ verovioUrl, verovioIntegrity: integrity }),
+			});
+			next();
 		},
 	};
 }

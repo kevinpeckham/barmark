@@ -91,7 +91,11 @@ its dependency, and then by a CLI release (step 13): the CLI pins
 range) followed by a CLI release that raises the CLI's exact `verovio`
 pin to match, so the binaries and an npm install engrave with the same
 Verovio (`verify:release cli` checks the pin is inside `@barmark/score`'s
-range at its tag).
+range at its tag). `@barmark/score` pins Verovio exactly, so a Verovio bump of any
+size, a patch included, is a `@barmark/score` release that also updates
+`packages/score/src/verovio.ts` (the version, the module's bytes and its
+sha384) and the digest in the score README; `tests/download.test.ts`
+fails until all three match the installed file.
 
 ## Checks
 

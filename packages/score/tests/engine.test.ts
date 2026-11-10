@@ -5,8 +5,10 @@ import { VerovioToolkit } from "verovio/esm";
 import createVerovioModule from "verovio/wasm";
 import {
 	createEngine,
+	type EngineStatus,
 	JOB_DEADLINE_MS,
 	LOAD_DEADLINE_MS,
+	type LoadStatus,
 	type Request,
 	SUPERSEDED_GRACE_MS,
 	type WorkerLike,
@@ -36,7 +38,7 @@ class FakeWorker implements WorkerLike {
 		return this.posted[this.posted.length - 1]?.id as number;
 	}
 	/** Says its Verovio is loaded, for the job it is on. */
-	ready(loaded: { verovioUrl?: string } = {}) {
+	ready(loaded: { verovioUrl?: string; verovioIntegrity?: string } = {}) {
 		this.send({ id: this.current, loaded });
 	}
 	/** Answers the job it is on. */
@@ -323,6 +325,163 @@ describe("createEngine", () => {
 	});
 });
 
+describe("createEngine: loading", () => {
+	beforeEach(() => jest.useFakeTimers());
+	afterEach(() => jest.useRealTimers());
+
+	const download = (fraction: number | null): LoadStatus => ({
+		phase: "download",
+		fraction,
+		bytes: null,
+	});
+
+	test("a caller hears the load's progress, then engraving", () => {
+		const { workers, engine } = fake();
+		const seen: EngineStatus[] = [];
+		engine.engrave({}, "a", 800, undefined, { onStatus: (s) => seen.push(s) });
+		const w = workers[0] as FakeWorker;
+		w.send({ id: w.current, status: download(0.5) });
+		w.send({ id: w.current, status: { phase: "prepare" } });
+		w.ready();
+		expect(seen).toEqual([
+			download(null),
+			download(0.5),
+			{ phase: "prepare" },
+			{ phase: "engrave" },
+		]);
+	});
+
+	test("every caller waiting on the load hears it; a caller after it hears engraving at once", () => {
+		const { workers, engine } = fake();
+		const a: EngineStatus[] = [];
+		const b: EngineStatus[] = [];
+		engine.engrave({}, "a", 800, undefined, { onStatus: (s) => a.push(s) });
+		engine.engrave({}, "b", 800, undefined, { onStatus: (s) => b.push(s) });
+		const w = workers[0] as FakeWorker;
+		w.send({ id: w.current, status: download(0.25) });
+		expect(b.at(-1)).toEqual(download(0.25));
+		w.ready();
+		w.answer();
+		const c: EngineStatus[] = [];
+		engine.engrave({}, "c", 800, undefined, { onStatus: (s) => c.push(s) });
+		expect(c).toEqual([{ phase: "engrave" }]);
+	});
+
+	test("progress from another job or an old worker is ignored", () => {
+		const { workers, engine } = fake();
+		const seen: EngineStatus[] = [];
+		engine.engrave({}, "a", 800, undefined, { onStatus: (s) => seen.push(s) });
+		const w = workers[0] as FakeWorker;
+		w.send({ id: w.current + 1, status: download(0.5) });
+		expect(seen).toEqual([download(null)]);
+	});
+
+	test("after a cut, the callers still waiting hear the fresh worker's load from the start", async () => {
+		const { workers, engine } = fake();
+		const a = engine.engrave({}, "a", 800);
+		const seen: EngineStatus[] = [];
+		engine.engrave({}, "b", 800, undefined, { onStatus: (s) => seen.push(s) });
+		(workers[0] as FakeWorker).ready();
+		(workers[0] as FakeWorker).onerror?.({} as ErrorEvent);
+		await expect(a).rejects.toThrow("The score engine failed");
+		expect(seen).toEqual([download(null), { phase: "engrave" }, download(null)]);
+	});
+
+	test("integrity travels with the url", () => {
+		const { workers, engine } = fake();
+		engine.engrave({}, "a", 800, "https://cdn.test/v.mjs", { integrity: "sha384-x" });
+		expect(workers[0]?.posted[0]).toMatchObject({
+			verovioUrl: "https://cdn.test/v.mjs",
+			verovioIntegrity: "sha384-x",
+		});
+	});
+
+	test("a fresh worker loads what the first one loaded, integrity and all", async () => {
+		const { workers, engine } = fake();
+		const loaded = { verovioUrl: "https://cdn.test/v.mjs", verovioIntegrity: "sha384-x" };
+		engine.engrave({}, "a", 800, loaded.verovioUrl, { integrity: loaded.verovioIntegrity });
+		(workers[0] as FakeWorker).ready(loaded);
+		(workers[0] as FakeWorker).answer();
+		const b = engine.engrave({}, "b", 800);
+		workers[0]?.ready(loaded);
+		jest.advanceTimersByTime(JOB_DEADLINE_MS);
+		await expect(b).rejects.toThrow("The score engine failed");
+		engine.engrave({}, "c", 800);
+		expect(workers[1]?.posted[0]).toMatchObject(loaded);
+	});
+
+	test("preload loads Verovio with no job, and the next job uses that load", async () => {
+		const { workers, engine } = fake();
+		engine.preload("https://cdn.test/v.mjs", "sha384-x");
+		const w = workers[0] as FakeWorker;
+		expect(w.posted).toEqual([
+			{
+				id: w.current,
+				text: "",
+				width: 0,
+				preload: true,
+				verovioUrl: "https://cdn.test/v.mjs",
+				verovioIntegrity: "sha384-x",
+			},
+		]);
+		w.ready({ verovioUrl: "https://cdn.test/v.mjs" });
+		const a = engine.engrave({}, "a", 800);
+		expect(w.posted.at(-1)).toMatchObject({ text: "a", verovioUrl: "https://cdn.test/v.mjs" });
+		w.ready({ verovioUrl: "https://cdn.test/v.mjs" });
+		const id = w.answer();
+		expect(await a).toMatchObject({ id, ok: true });
+		expect(workers.length).toBe(1);
+	});
+
+	test("preload is idempotent: loading, loaded or busy, it adds nothing", () => {
+		const { workers, engine } = fake();
+		engine.preload();
+		engine.preload();
+		const w = workers[0] as FakeWorker;
+		expect(w.posted.length).toBe(1);
+		w.ready();
+		engine.preload();
+		expect(w.posted.length).toBe(1);
+		engine.engrave({}, "a", 800);
+		engine.preload();
+		expect(w.posted.length).toBe(2);
+	});
+
+	test("a job asked for during a preload waits for it, hearing its progress", () => {
+		const { workers, engine } = fake();
+		engine.preload();
+		const seen: EngineStatus[] = [];
+		engine.engrave({}, "a", 800, undefined, { onStatus: (s) => seen.push(s) });
+		const w = workers[0] as FakeWorker;
+		expect(w.posted.length).toBe(1);
+		w.send({ id: w.current, status: download(0.5) });
+		w.ready();
+		expect(w.posted.at(-1)).toMatchObject({ text: "a" });
+		// Engraving starts at the job's own Ready, not the preload's.
+		expect(seen).toEqual([download(null), download(0.5)]);
+		w.ready();
+		expect(seen).toEqual([download(null), download(0.5), { phase: "engrave" }]);
+	});
+
+	test("a failed preload moves on to the job waiting behind it", () => {
+		const { workers, engine } = fake();
+		engine.preload();
+		engine.engrave({}, "a", 800);
+		const w = workers[0] as FakeWorker;
+		w.send({ id: w.current, ok: false, reason: "no module" });
+		expect(w.posted.at(-1)).toMatchObject({ text: "a" });
+	});
+
+	test("a preload that never loads is cut off at the load budget", () => {
+		const { workers, engine } = fake();
+		engine.preload();
+		jest.advanceTimersByTime(LOAD_DEADLINE_MS);
+		expect(workers[0]?.terminated).toBe(true);
+		engine.preload();
+		expect(workers.length).toBe(2);
+	});
+});
+
 const vrv = new VerovioToolkit(await createVerovioModule());
 
 describe("handle", () => {
@@ -352,40 +511,51 @@ describe("handle", () => {
 	});
 });
 
+const none = () => {};
+
 describe("toolkitLoader", () => {
-	test("reports the url of the load that succeeded, none before", async () => {
+	test("reports where the load that succeeded came from, nothing before", async () => {
 		const tried: (string | undefined)[] = [];
-		const loader = toolkitLoader(async (url: string | undefined) => {
-			tried.push(url);
-			if (url === "/bad.js") throw new Error("no module");
-			return `toolkit from ${url ?? "the package"}`;
+		const loader = toolkitLoader(async ({ verovioUrl }) => {
+			tried.push(verovioUrl);
+			if (verovioUrl === "/bad.js") throw new Error("no module");
+			return {
+				toolkit: `toolkit from ${verovioUrl ?? "the package"}`,
+				from: verovioUrl ? { verovioUrl } : {},
+			};
 		});
 		expect(loader.loaded()).toBeUndefined();
-		await expect(loader.ready("/bad.js")).rejects.toThrow("no module");
+		await expect(loader.ready({ verovioUrl: "/bad.js" }, none)).rejects.toThrow("no module");
 		expect(loader.loaded()).toBeUndefined();
-		expect(await loader.ready("/good.js")).toBe("toolkit from /good.js");
+		expect(await loader.ready({ verovioUrl: "/good.js" }, none)).toBe("toolkit from /good.js");
 		expect(loader.loaded()).toEqual({ verovioUrl: "/good.js" });
 		// First that loads wins for the worker's life.
-		expect(await loader.ready(undefined)).toBe("toolkit from /good.js");
+		expect(await loader.ready({}, none)).toBe("toolkit from /good.js");
 		expect(tried).toEqual(["/bad.js", "/good.js"]);
 	});
 
-	test("the package's own Verovio is reported with no url", async () => {
-		const loader = toolkitLoader(async () => "toolkit");
-		await loader.ready(undefined);
+	test("a load that fell back is reported as where it fell back to", async () => {
+		const loader = toolkitLoader(async () => ({ toolkit: "toolkit", from: {} }));
+		await loader.ready({ verovioUrl: "/v.js", verovioIntegrity: "sha384-x" }, none);
 		expect(loader.loaded()).toEqual({});
 	});
 });
 
 describe("withReady", () => {
-	test("says the toolkit is ready, and where it came from, before the job is engraved", async () => {
+	test("posts the load's progress, then says the toolkit is ready and where it came from", async () => {
 		const posted: unknown[] = [];
-		const loader = toolkitLoader(async (url: string | undefined) => `toolkit from ${url}`);
+		const loader = toolkitLoader(async ({ verovioUrl }, report) => {
+			report({ phase: "prepare" });
+			return { toolkit: `toolkit from ${verovioUrl}`, from: verovioUrl ? { verovioUrl } : {} };
+		});
 		const ready = withReady(loader, { id: 4, text: "x", width: 800, verovioUrl: "/v.js" }, (m) =>
 			posted.push(m),
 		);
 		expect(await ready()).toBe("toolkit from /v.js");
-		expect(posted).toEqual([{ id: 4, loaded: { verovioUrl: "/v.js" } }]);
+		expect(posted).toEqual([
+			{ id: 4, status: { phase: "prepare" } },
+			{ id: 4, loaded: { verovioUrl: "/v.js" } },
+		]);
 	});
 
 	test("a load that fails says nothing", async () => {
