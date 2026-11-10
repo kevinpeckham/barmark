@@ -163,10 +163,18 @@ function sound(
 		const ds = tones[t + 1] as number;
 		let c = tones[t + 2] as number;
 		let s = tones[t + 3] as number;
-		for (let i = begin; i < end; i++) {
-			const n = i - voice.from;
-			const env = (n < attack ? n / attack : 1) * 0.25;
+		// `addPad`'s envelope, `(n < attack ? n / attack : 1) * 0.25`, split at the first whole n
+		// past the attack: the same products, without the test on every sample.
+		const rise = Math.min(end, Math.max(begin, voice.from + Math.ceil(attack)));
+		for (let i = begin; i < rise; i++) {
+			const env = ((i - voice.from) / attack) * 0.25;
 			out[i - lo] = (out[i - lo] as number) + (s + 0.5 * s * c) * env;
+			const next = c * dc - s * ds;
+			s = s * dc + c * ds;
+			c = next;
+		}
+		for (let k = rise - lo, stop = end - lo; k < stop; k++) {
+			out[k] = (out[k] as number) + (s + 0.5 * s * c) * 0.25;
 			const next = c * dc - s * ds;
 			s = s * dc + c * ds;
 			c = next;
