@@ -9,7 +9,14 @@ export type MidiLossCode =
 	| "channels-shared" // more than 15 pitched tracks
 	| "swing-compound" // swing in 6/8, 9/8 or 12/8 not applied
 	| "ticks-rounded"; // a rhythm finer than 32,640 ticks a quarter, rounded
-export type MidiLoss = { code: MidiLossCode; message: string; bar?: number };
+export type MidiLoss = {
+	code: MidiLossCode;
+	message: string;
+	/** The play position of the bar it happened in (`PlayedBar.index`, counting repeated bars). */
+	bar?: number;
+	/** That bar's written number: 0 for a pickup, as the chart reads. */
+	written?: number;
+};
 
 /** A time or length in quarter notes, exact, from the first bar's downbeat. */
 export type Quarters = { n: number; d: number };
@@ -31,8 +38,8 @@ export type PerformedTrack = {
 export type Performance = {
 	title: string | null;
 	credits: Credits;
-	/** One per played bar: its index, onset and meter. */
-	bars: { index: number; at: Quarters; meter: Meter }[];
+	/** One per played bar: its play position, written number, onset and meter. */
+	bars: { index: number; written: number; at: Quarters; meter: Meter }[];
 	/** Quarter notes a minute, from `at` on; the first is at 0. */
 	tempos: { at: Quarters; qpm: number }[];
 	keys: { at: Quarters; key: Key }[];

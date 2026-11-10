@@ -6,6 +6,100 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- **Loading progress.** While its first score waits, `<barmark-score>`
+  shows a themed status region (`role="status"`) and progress bar in
+  three phases: "Loading the score engine…" (with a percentage while the
+  download can be measured, and "X of Y MB" only when Y is the size
+  actually transferred), "Preparing…" while Verovio's WebAssembly
+  compiles and "Engraving…". Each phase is announced once; the bar
+  carries the percentage and stands still under `prefers-reduced-motion`.
+  A `verovio-url` is now downloaded by the worker with progress and
+  imported from a `blob:` URL. A compressed response is measured against
+  Verovio's decoded size (`VEROVIO_MODULE_BYTES`), never against its
+  compressed `Content-Length`, so the bar never runs past 100%. The
+  worker's new `Progress` message carries it (`LoadStatus`), and
+  `Engine.engrave` takes an `EngraveCall` with `onStatus`
+  (`EngineStatus`).
+- **`verovio-integrity`.** With an SRI digest (`sha256-`, `sha384-` or
+  `sha512-`), the worker checks the `verovio-url` copy with
+  `crypto.subtle` before importing it, and on a mismatch or any failure
+  to load it warns, naming the reason, and loads the package's own copy
+  instead, once. `VEROVIO_CDN_URL` and `VEROVIO_CDN_INTEGRITY` are
+  Verovio 6.4.1 on jsDelivr and its sha384, with `VEROVIO_VERSION` and
+  the `VerovioSource` type.
+- **`preload`.** `"intent"` starts loading Verovio on the first pointer,
+  focus or touch on the Score switch; `"idle"` once the page is idle
+  (`requestIdleCallback`, or half a second later), or on intent when the
+  reader saves data or is on 2G. `"none"`, the default, keeps today's
+  behaviour. A preload loads the engine only, shares the page's one load
+  and does nothing the second time (`Engine.preload`).
+
+### Changed
+
+- **Verovio is pinned exactly at 6.4.1** (was `^6.4.1`): the decoded size
+  and the CDN digest are those of that build.
+- **A `verovio-url` is fetched, then imported from a `blob:` URL**, with
+  or without `verovio-integrity`, where the worker used to `import()` it
+  directly. A worker served with its own Content-Security-Policy needs
+  the module's origin in `connect-src` and `blob:` in `script-src`.
+
+## [0.2.0] - 2026-11-09
+
+### Added
+
+- **Limits on what a score may cost, exported.** `EngraveOptions.maxCost`
+  and `maxXmlLength`, `scoreCost`, `MAX_SCORE_COST` and `MAX_XML_LENGTH`
+  (`engraveChart`), and `createEngine`'s options `grace`, `loadDeadline`
+  and `deadline` with their defaults `SUPERSEDED_GRACE_MS`,
+  `LOAD_DEADLINE_MS` and `JOB_DEADLINE_MS`, and the `EngineOptions`,
+  `Ready` and `WorkerMessage` types. What they bound is under Fixed.
+
+### Changed
+
+- **Requires `barmark` 0.22.0, `@barmark/render` 0.18.0 and
+  `@barmark/musicxml` 0.8.0**, whose minor releases a caret range would
+  not reach. Grid and Score now number a pickup alike: bar 0, with the
+  first full bar 1.
+
+### Fixed
+
+- **A score too large to draw is refused, not attempted.** A short chart
+  with repeats can play thousands of bars, and writing a crowded one out
+  took gigabytes of MusicXML (and a phone's tab). The export now stops
+  writing at `MAX_XML_LENGTH` (50,000,000 characters, `@barmark/musicxml`'s
+  new `maxLength`), and before it, as a cheap early refusal, `engraveChart`
+  estimates the score's size (`scoreCost`: every played bar's measure in
+  every declared part, tacet ones too, each slot, pitch, chord degree,
+  syllable and words with the length of its escaped text, and each bar's
+  heading, in one pass) and refuses more than `MAX_SCORE_COST`
+  (50,000,000) unexported. Either way the reason is "The score is too
+  large to draw", so the element shows its note. `EngraveOptions.maxCost`
+  and `maxXmlLength` set them. Needs the `@barmark/musicxml` release that
+  adds `maxLength`.
+
+- **A slow score no longer holds up every later one.** The worker takes
+  one job at a time; a request its element has since replaced is never
+  sent, and one already engraving is cut off (the worker is terminated and
+  a fresh one takes the requests still waiting) once it has engraved for
+  `SUPERSEDED_GRACE_MS` (3 s), so a normal job still finishes and keeps
+  the loaded Verovio. A job still loading Verovio is never cut for this.
+  Loading Verovio has `LOAD_DEADLINE_MS` (60 s, for a 7 MB download on a
+  slow line) and engraving `JOB_DEADLINE_MS` (20 s, from the worker's new
+  `Ready` message); past either the job is cut off and its request rejects
+  with "The score engine failed", so the element shows its note. A worker
+  that crashes fails only the job it was on; the requests still waiting
+  run on a fresh one. All three are `createEngine` options (`grace`,
+  `loadDeadline`, `deadline`). A fresh worker loads the Verovio the first
+  one loaded (its `Ready` says which), so the first `verovio-url` that
+  loads still wins for the page.
+
+### Technical
+
+- **The README gives Verovio's copyright and source**, and how to build with
+  another Verovio (LGPL-3.0).
+
 ## [0.1.1] - 2026-11-09
 
 Requires `@barmark/musicxml` 0.7.2.
@@ -91,6 +185,7 @@ First release.
   needs no config; Vite 7 needs `optimizeDeps.exclude` and
   `worker.format: "es"`.
 
-[Unreleased]: https://github.com/kevinpeckham/barmark/compare/score-v0.1.1...HEAD
+[Unreleased]: https://github.com/kevinpeckham/barmark/compare/score-v0.2.0...HEAD
+[0.2.0]: https://github.com/kevinpeckham/barmark/compare/score-v0.1.1...score-v0.2.0
 [0.1.1]: https://github.com/kevinpeckham/barmark/compare/score-v0.1.0...score-v0.1.1
 [0.1.0]: https://github.com/kevinpeckham/barmark/releases/tag/score-v0.1.0

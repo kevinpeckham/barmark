@@ -89,10 +89,14 @@ part, "Chart"), at concert pitch except where an instrument transposes:
 - **Order:** repeats, `x N`, endings, `Segno`, `Coda`, `To Coda`, `Fine`,
   `D.C.` and `D.S.` are MusicXML repeats and jumps, so playback follows
   the chart. A replayed section is written out in full; so is a repeated
-  section that holds repeats of its own. Measures show barmark's written
-  bar numbers. A first bar in a one-bar meter shorter than the `time:`
-  (`[1/4]`) is a pickup: measure 0, `implicit`, under the running time
-  signature.
+  section that holds repeats of its own. Each measure's `text` is
+  barmark's written bar number (`PlayedBar.written`). A chart that opens
+  with a pickup (`ChartParse.pickup`, grammar 2.4: `| [1/4] G | C |` in
+  4/4) numbers it measure 0, `text` 0, and the bars after it from 1. The
+  pickup is `implicit`, under the time signature it leads into, where a
+  reader counting that meter's beat reads its length back the same; else
+  (`[1/4]` in 6/8, which would read back `[2/8]`) it keeps its own time
+  signature, still measure 0.
 - **Directives:** key, time, tempo (a metronome mark), rit. and accel.,
   and the feel (MusicXML 4.0 swing).
 - **Lyrics:** syllables on notes (`{G4}:maz-`) are `<lyric>`s on their

@@ -18,14 +18,14 @@
     },
     "packages/barmark": {
       "name": "barmark",
-      "version": "0.21.0",
+      "version": "0.22.0",
       "devDependencies": {
         "@types/bun": "^1.4.4",
       },
     },
     "packages/cli": {
       "name": "@barmark/cli",
-      "version": "0.9.0",
+      "version": "0.10.0",
       "bin": {
         "barmark": "./dist/cli.js",
       },
@@ -40,7 +40,7 @@
     },
     "packages/midi": {
       "name": "@barmark/midi",
-      "version": "0.2.0",
+      "version": "0.3.0",
       "dependencies": {
         "@barmark/sync": "workspace:^",
         "barmark": "workspace:^",
@@ -51,7 +51,7 @@
     },
     "packages/musicxml": {
       "name": "@barmark/musicxml",
-      "version": "0.7.2",
+      "version": "0.8.0",
       "dependencies": {
         "barmark": "workspace:^",
         "fast-xml-parser": "5.12.0",
@@ -59,24 +59,24 @@
     },
     "packages/render": {
       "name": "@barmark/render",
-      "version": "0.17.1",
+      "version": "0.18.0",
       "dependencies": {
         "barmark": "workspace:^",
       },
     },
     "packages/score": {
       "name": "@barmark/score",
-      "version": "0.1.1",
+      "version": "0.2.0",
       "dependencies": {
         "@barmark/musicxml": "workspace:^",
         "@barmark/render": "workspace:^",
         "barmark": "workspace:^",
-        "verovio": "^6.4.1",
+        "verovio": "6.4.1",
       },
     },
     "packages/sync": {
       "name": "@barmark/sync",
-      "version": "0.2.1",
+      "version": "0.3.0",
       "dependencies": {
         "barmark": "workspace:^",
       },

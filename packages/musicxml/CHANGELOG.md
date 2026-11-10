@@ -6,6 +6,56 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-11-09
+
+### Added
+
+- **`maxLength`: a budget for the MusicXML written.** `exportMusicXml(text,
+  { maxLength })` charges each measure as it is written and stops at the
+  first one past the limit, answering `{ ok: false, tooLarge: true }` with
+  a diagnostic ("the MusicXML would be longer than N characters"); it never
+  builds more than the limit, and never throws. A short chart whose repeats
+  are written out can otherwise write gigabytes. Unset, nothing changes.
+
+### Changed
+
+- **Requires `barmark` 0.22.0** (a pickup is bar 0, `ChartParse.pickup`),
+  whose minor release a caret range would not reach.
+- **Measure numbers follow barmark's numbers; a pickup is measure 0, text
+  0.** barmark 0.22 numbers a chart's pickup bar 0 (grammar 2.4: the
+  first written bar, in a one-bar meter shorter, by value, than the meter
+  in force at the next written bar, which is not itself short). The
+  export reads the parser's answer (`ChartParse.pickup`) instead of
+  deciding on its own, and each measure's `text` is the bar's `written`
+  number: the pickup is `number="0" text="0"` (it was `text="1"`), the
+  bar after it `number="1" text="1"`. A pickup into a `time:` line
+  (`| [1/4] D |` then `time: 3/4`) shows the 3/4 it leads into, not the
+  4/4 before it. A pickup whose length a reader of an implicit
+  measure would count another way (`[1/4]` in 6/8 reads back `[2/8]`) is
+  measure 0 without `implicit`, keeping its own time signature. Lyric
+  rows under the bars stay on their measures.
+
+### Fixed
+
+- **A chart that is only one short bar is not a pickup.** `| [1/4] G |`
+  exported a lone measure 0, `implicit`; it is now measure 1 in its own
+  1/4.
+- **The import's self-check is quiet on a score that opens with a
+  pickup.** With barmark 0.22's numbers, importing MuseScore's or
+  Dorico's pickup scores reported "importer bug: bar 0 plays, but the
+  importer wrote …" and every bar one off, because the self-check
+  numbered the importer's bars from 1; it now counts them from the
+  parser's first number.
+- **A crowded bar exports in linear time.** A bar with thousands of
+  syllables, notes or words, inside repeats written out many times, took
+  time quadratic in what the bar holds: each onset scanned the bar's whole
+  lyric row or syllable list, each slot the bar's words, each value the
+  bar's beams and each event a bare line's marks. A 3 KB chart (a
+  thousand-syllable lyric row played a thousand times) took about 40
+  seconds of the scans alone. Each is now one indexed lookup, and a bar
+  line played thousands of times no longer copies its list of passes
+  each time. The MusicXML written is unchanged.
+
 ## [0.7.2] - 2026-11-09
 
 ### Fixed
@@ -578,7 +628,8 @@ and each grammar example's sounding notes and chord symbols.
 - **Errors:** a chart with errors, or with no bars, returns its
   diagnostics and no XML; characters XML can't hold are left out.
 
-[Unreleased]: https://github.com/kevinpeckham/barmark/compare/musicxml-v0.7.2...HEAD
+[Unreleased]: https://github.com/kevinpeckham/barmark/compare/musicxml-v0.8.0...HEAD
+[0.8.0]: https://github.com/kevinpeckham/barmark/compare/musicxml-v0.7.2...musicxml-v0.8.0
 [0.7.2]: https://github.com/kevinpeckham/barmark/compare/musicxml-v0.7.1...musicxml-v0.7.2
 [0.7.1]: https://github.com/kevinpeckham/barmark/compare/musicxml-v0.7.0...musicxml-v0.7.1
 [0.7.0]: https://github.com/kevinpeckham/barmark/compare/musicxml-v0.6.4...musicxml-v0.7.0

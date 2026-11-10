@@ -28,7 +28,7 @@ import { creditsText } from "./credits.js";
 import { escapeHtml } from "./escape.js";
 import { fontFaceCss } from "./font.js";
 import { isTacet as isTacetCell, layoutChart } from "./model.js";
-import { speakBar, speakVerses } from "./speech.js";
+import { barLabel, speakBar, speakVerses } from "./speech.js";
 import { FIT_STEPS, MIN_BAR, stylesheet } from "./styles.js";
 import type { BlockItem, CellModel, ChartModel, SectionBlock, Verse } from "./types.js";
 import {
@@ -292,7 +292,8 @@ function systemHtml(
 /** The left column: the bar number, and in a system the part's label. */
 function gutterHtml(row: Row, settings: Settings, part?: PartRow): string {
 	if (!settings.gutter) return "";
-	const number = settings.barNumbers && (!part || part.first) ? (row.barNumber ?? "") : "";
+	const shown = settings.barNumbers && (!part || part.first) && row.barNumber !== 0;
+	const number = shown ? (row.barNumber ?? "") : "";
 	const label = part
 		? `<span class="bm-part-label" part="part-label">${escapeHtml(part.label)}</span>`
 		: "";
@@ -437,7 +438,7 @@ function barBody(cell: Extract<CellModel, { kind: "slots" }>, view: View): [stri
 /** A bar where the part rests; the first of a row says so, in its body. */
 function tacetHtml(cell: CellModel, n: number | null, marks: string, first: boolean): string {
 	const cut = cell.kind === "slots" && cell.cut;
-	const spoken = `<span class="bm-sr">bar ${n ?? ""}: tacet${cut ? ", cut on this pass" : ""}</span>`;
+	const spoken = `<span class="bm-sr">${barLabel(n)}: tacet${cut ? ", cut on this pass" : ""}</span>`;
 	return `<div class="bm-bar bm-tacet-bar" part="bar"${marks}${cut ? " data-cut" : ""}>${spoken}<span class="bm-bar-body" aria-hidden="true">${first ? "tacet" : ""}</span></div>`;
 }
 

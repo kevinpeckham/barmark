@@ -91,7 +91,8 @@ read stdin.
 (chords voiced on piano, the tempo map, markers and lyrics); `--out` is
 required, and `--part <label>` exports one part. What MIDI can't hold is
 listed on stderr as `song.chart.md: bar 9: warning: message`, such as an
-open repeat (`x ...`) played once. A chart with errors is not exported.
+open repeat (`x ...`) played once. Bars are numbered as the chart
+numbers them: a pickup is bar 0, here and in `import`. A chart with errors is not exported.
 
 `import` reads a MIDI file (`.mid` or `.midi`) as a chart too, naming a
 chord from the notes of the tracks that carry the harmony and turning
@@ -134,6 +135,13 @@ which is LGPL-3.0-only. From npm, Verovio is an ordinary dependency
 binaries bundle it unmodified, at the version this package pins; the
 release carries
 its licence as `Verovio-LGPL-3.0.txt` and the GPL it builds on as
-`Verovio-GPL-3.0.txt`. The binaries are built from this repository's
-source with `bun scripts/compile.ts`, so they can be rebuilt with another
-Verovio. barmark's own code stays MIT.
+`Verovio-GPL-3.0.txt`. barmark's own code stays MIT.
+
+Verovio © Laurent Pugin and others, LGPL-3.0-only. Its source, at the
+version the binaries bundle, is
+[rism-digital/verovio at the matching `version-` tag](https://github.com/rism-digital/verovio/tree/version-6.4.1)
+(`barmark --version` names that version). To build the binaries with
+another or a modified Verovio: in a checkout of this repository, point the
+`verovio` dependency of `packages/cli` and `packages/score` at it, run
+`bun install`, then `bun scripts/compile.ts <target> <out>` (the targets
+are listed in that script).

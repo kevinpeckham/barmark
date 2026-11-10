@@ -40,3 +40,25 @@ export function slotTimes<T extends Member>(
 	}
 	return out;
 }
+
+/**
+ * `make` remembered by its written data (compared by identity) and the
+ * meter it plays in: a bar played again shares what its first play made,
+ * so a chart's cost is its written size plus its plays, never their
+ * product. Callers never mutate what it returns.
+ */
+export function perWritten<K extends object, T>(
+	make: (written: K, meter: Meter) => T,
+): (written: K, meter: Meter) => T {
+	const seen = new WeakMap<K, Map<string, T>>();
+	return (written, meter) => {
+		let byMeter = seen.get(written);
+		if (!byMeter) {
+			byMeter = new Map();
+			seen.set(written, byMeter);
+		}
+		const key = `${meter.n}/${meter.d}`;
+		if (!byMeter.has(key)) byMeter.set(key, make(written, meter));
+		return byMeter.get(key) as T;
+	};
+}

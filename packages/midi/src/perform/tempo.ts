@@ -110,6 +110,7 @@ export function tempoMap(
 					code: "tempo-assumed",
 					message: `the chart has no tempo here; it plays at ${assumed} beats a minute`,
 					bar: unknown.bar.index,
+					written: unknown.bar.written,
 				},
 			]
 		: [];

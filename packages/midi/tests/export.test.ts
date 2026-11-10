@@ -154,6 +154,7 @@ describe("exportMidi", () => {
 				message:
 					"a rhythm needs more ticks a quarter than the file can have (32,640, fewer in a long chart): it plays at 480, rounded to the nearest tick",
 				bar: 1,
+				written: 1,
 			},
 		]);
 		expect(heardByBeat(bytesOf(r))).toEqual(chartByBeat(parseChart(fine)));
@@ -181,7 +182,7 @@ describe("exportMidi", () => {
 			microsecondsPerBeat: 0xffffff,
 		});
 		expect(r.ok && r.losses).toEqual([
-			{ code: "tempo-range", message: expect.any(String), bar: 1 },
+			{ code: "tempo-range", message: expect.any(String), bar: 1, written: 1 },
 		]);
 	});
 

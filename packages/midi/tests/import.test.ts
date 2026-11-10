@@ -245,8 +245,8 @@ describe("importMidi", () => {
 		expect(stripped[0]?.bar).toBe(1);
 	});
 
-	test("one numbering: a pickup is bar 1 in the chart and in every diagnostic", () => {
-		// a 1/4 pickup then 4/4: an unnameable cluster in played bar 3, a marker past the end
+	test("one numbering: a pickup is bar 0 in the chart and in every diagnostic", () => {
+		// a 1/4 pickup then 4/4: an unnameable cluster in written bar 2, a marker past the end
 		const cluster = chord([60, 61, 62, 63, 64], PPQ + BAR, BAR);
 		const notes = [
 			...chord([43, 50, 67], 0, PPQ),
@@ -261,8 +261,8 @@ describe("importMidi", () => {
 		];
 		const r = read(file(meta, notes));
 		expect(r.text).toBe("time: 4/4, tempo: 120\n| [1/4] G5 | C | ? | C |\n");
-		expect(r.diagnostics.find((d) => d.code === "chord-unnamed")?.bar).toBe(3);
-		expect(r.diagnostics.find((d) => d.code === "after-last-bar")?.bar).toBe(4);
+		expect(r.diagnostics.find((d) => d.code === "chord-unnamed")?.bar).toBe(2);
+		expect(r.diagnostics.find((d) => d.code === "after-last-bar")?.bar).toBe(3);
 	});
 
 	test("a first bar sync can't write as a pickup is a bar with its own meter", () => {

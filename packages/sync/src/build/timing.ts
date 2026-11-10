@@ -19,7 +19,7 @@ function recordingOf(recording: unknown): TimingMap["recording"] | null {
 }
 
 /**
- * The builder's own map: every bar once in order (a pickup is bar 1), no
+ * The builder's own map: every bar once in order (a pickup is map bar 1), no
  * `beats`, no `end`, no `ref`, source `detected`.
  */
 export function timingOf(

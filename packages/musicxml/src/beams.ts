@@ -24,9 +24,16 @@ function groups(values: Beamed[], meter: Meter): string[] {
 	const perHalf = halved(meter) ? (bar.n * beat.d) / (2 * bar.d * beat.n) : 0;
 	if (perHalf < 2) return beats.map((b) => `beat ${b}`);
 	const halfOf = (b: number) => Math.floor(b / perHalf);
+	// Each half's count and whether all are plain eighths, read once: a bar may hold thousands.
+	const halves = new Map<number, { count: number; plain: boolean }>();
+	values.forEach((v, i) => {
+		const half = halfOf(beats[i] ?? 0);
+		const seen = halves.get(half) ?? { count: 0, plain: true };
+		halves.set(half, { count: seen.count + 1, plain: seen.plain && plainEighth(v) });
+	});
 	const eighths = (half: number) => {
-		const inHalf = values.filter((_, i) => halfOf(beats[i] ?? 0) === half);
-		return inHalf.length === perHalf * 2 && inHalf.every(plainEighth);
+		const seen = halves.get(half);
+		return seen !== undefined && seen.count === perHalf * 2 && seen.plain;
 	};
 	return beats.map((b) => (eighths(halfOf(b)) ? `half ${halfOf(b)}` : `beat ${b}`));
 }

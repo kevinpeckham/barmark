@@ -91,7 +91,11 @@ its dependency, and then by a CLI release (step 13): the CLI pins
 range) followed by a CLI release that raises the CLI's exact `verovio`
 pin to match, so the binaries and an npm install engrave with the same
 Verovio (`verify:release cli` checks the pin is inside `@barmark/score`'s
-range at its tag).
+range at its tag). `@barmark/score` pins Verovio exactly, so a Verovio bump of any
+size, a patch included, is a `@barmark/score` release that also updates
+`packages/score/src/verovio.ts` (the version, the module's bytes and its
+sha384) and the digest in the score README; `tests/download.test.ts`
+fails until all three match the installed file.
 
 ## Checks
 
@@ -157,7 +161,11 @@ runs, and `verify:package cli` fails on anything else.
    ```
 9. **Release:** `gh release create <pkg>-vX.Y.Z --title "<npm name> X.Y.Z"
    --notes-file <notes>`, with the version's CHANGELOG section as the
-   notes. This starts the release workflow.
+   notes. This starts the release workflow. Releasing several packages,
+   create one release at a time: release runs share a concurrency group
+   that keeps one running and one pending, and a newer pending run
+   cancels the older one, so start the next only when the previous run
+   is running or done (FINDINGS 2026-11-09).
 10. **Approve** the publish when GitHub asks (the run's "Review
     deployments" button, or `gh run view`), after the verify job passes.
 11. **Confirm:** the workflow's `confirm` job installs the new version
@@ -193,7 +201,13 @@ runs, and `verify:package cli` fails on anything else.
     its tag does not admit the version bundled beside it (verify:release
     only). Its release workflow also
     attaches the binaries; check the release page lists all five,
-    `Edwin-OFL.txt`, `Verovio-LGPL-3.0.txt` and `Verovio-GPL-3.0.txt`. Then bump barmark.dev as in step 12: the site
+    `Edwin-OFL.txt`, `Verovio-LGPL-3.0.txt` and `Verovio-GPL-3.0.txt`.
+    End its release notes with a "Third-party software" paragraph: "The
+    binaries bundle Verovio X.Y.Z (© Laurent Pugin and others,
+    LGPL-3.0-only), unmodified; its licence is attached, and its source is
+    at https://github.com/rism-digital/verovio/tree/version-X.Y.Z. To
+    rebuild them with another Verovio, see the CLI README's License
+    section." Then bump barmark.dev as in step 12: the site
     installs the CLI as a dev dependency (`bun add --dev --exact
     @barmark/cli@X.Y.Z`), because Get Started's commands are tested
     against it and its CI example shows that version.

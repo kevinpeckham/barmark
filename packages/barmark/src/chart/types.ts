@@ -194,12 +194,17 @@ export type Line =
 	  };
 
 export type PlayedBar = {
-	/** 1-based measure number in play order; fermatas are not counted. */
+	/**
+	 * 1-based position in play order (not a bar number: a replay gives a bar
+	 * a new position); fermatas are not counted.
+	 */
 	index: number;
 	/**
-	 * 1-based number of the bar as written, counting each written bar once
-	 * (`%` included, fermatas not) in written order: a repeat or replay plays
-	 * its bars under the numbers they were written with.
+	 * The bar's number as written, as `parseChart` and `extractPart` number
+	 * it (`expand` counts from 1): 0 for a pickup (grammar 2.4), else
+	 * counting from 1, each written bar once (`%` included, fermatas not) in
+	 * written order: a repeat or replay plays its bars under the numbers they
+	 * were written with.
 	 */
 	written: number;
 	line: number;
@@ -306,6 +311,8 @@ export type ChartParse = {
 	events: ChartEvent[];
 	/** `events` flattened, with an open repeat's pass included once. */
 	bars: PlayedBar[];
+	/** True when the chart's first written bar is a pickup (grammar 2.4); it is then written bar 0. */
+	pickup: boolean;
 	sections: SectionOccurrence[];
 	/** Sorted by line, then errors before warnings. */
 	diagnostics: ChartDiagnostic[];

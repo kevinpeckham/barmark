@@ -57,6 +57,13 @@ function built(
 	return chart;
 }
 
+/** The grid with a pickup only where sync writes it; the report then numbers the pickup 0. */
+function writable(read: Grid, report: Report): Grid {
+	const grid = withWritablePickup(read);
+	if (grid.pickup) report.writtenBars();
+	return grid;
+}
+
 /** The chart, or "" once an error is reported. */
 function chartOf(bytes: Uint8Array, options: MidiImportOptions, report: Report): string {
 	const { smf, names } = readSmfInto(bytes, report);
@@ -69,7 +76,7 @@ function chartOf(bytes: Uint8Array, options: MidiImportOptions, report: Report):
 	const last = harmony.reduce((end, n) => Math.max(end, lastHeard(n, smf.ppq)), lyric + 1);
 	const read = gridOf(smf, last, report);
 	if (failed(report)) return "";
-	const grid = withWritablePickup(read);
+	const grid = writable(read, report);
 	const directives = directivesOf(smf, grid, harmony, report);
 	const runs = chordRuns(harmony, grid, directives.keys, report);
 	const sections = sectionsOf(smf, grid, report);
