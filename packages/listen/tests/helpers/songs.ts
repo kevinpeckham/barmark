@@ -57,13 +57,13 @@ const CHORDS = ["C", "F", "G", "A:min"];
 
 /**
  * The model's frames: a chord from each of `changes` (seconds, in order) to
- * the next, cycling through four, no chord before the first.
+ * the next, cycling through `labels` (four by default), no chord before the first.
  */
-export function runsOf(changes: number[], duration: number): ListenChordRuns {
+export function runsOf(changes: number[], duration: number, labels = CHORDS): ListenChordRuns {
 	const frames = Math.ceil(duration / FRAME_SEC);
 	const at = (t: number) => Math.min(frames, Math.round(t / FRAME_SEC));
 	const runs = changes.map((t, i) => {
-		const label = CHORDS[i % CHORDS.length] as string;
+		const label = labels[i % labels.length] as string;
 		return { start: at(t), end: at(changes[i + 1] ?? duration), label };
 	});
 	return { frameSec: FRAME_SEC, frames, runs };
