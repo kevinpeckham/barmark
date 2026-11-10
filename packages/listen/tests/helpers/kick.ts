@@ -16,8 +16,8 @@ const BEATS_PER_BAR = 4;
 const PERIOD = BEAT * BEATS_PER_BAR;
 const FIRST_DOWNBEAT = 1;
 
-/** The kick: 65 Hz, a 5 ms linear attack, then 60 ms of exponential decay to −60 dB. Its peak gain is not the brief's: 1. */
-const KICK = { hz: 65, attack: 0.005, decay: 0.06, gain: 1 };
+/** The kick: 65 Hz, a 5 ms linear attack, then 60 ms of exponential decay to −60 dB. Its peak gain is not the brief's: 0.7, so kick and pads together stay under full scale. */
+const KICK = { hz: 65, attack: 0.005, decay: 0.06, gain: 0.7 };
 /** A pad's chord tones (MIDI notes) per bar, and each sine's gain. */
 const PADS = [
 	{ label: "C", notes: [60, 64, 67] },

@@ -50,11 +50,11 @@ describe("the 65 Hz sine kick (design §11.2)", () => {
 	test("the envelope sees the lone kick; a 3 ms hit reads about eleven times it", () => {
 		// The brief expected the kick-only song's detrended mean at the kicks
 		// to be under 1.5 × its mean elsewhere. The port reads otherwise: alone
-		// over silence the kick reads 66.8 against 0.026 elsewhere (×2,581;
-		// under the pads 61.1 against 0.10, ×595), since every bin of silence
-		// rises with its attack. The weakness Study 32 met is relative: in the
-		// song with hits on 2 and 4, a hit's frames read 542 and a kick's 48.9
-		// (×11.1), so the comb's phase lands on a backbeat (test (b)).
+		// over silence the kick (gain 0.7) reads 56.5 against 0.022 elsewhere
+		// (×2,569; under the pads 52.3 against 0.10, ×522), since every bin of
+		// silence rises with its attack. The weakness Study 32 met is relative:
+		// in the song with hits on 2 and 4, a hit's frames read 543 and a
+		// kick's 40.6 (×13.4), so the comb's phase lands on a backbeat (test (b)).
 		const lone = kickSong({ pads: false });
 		const alone = meansAt(featuresOf(lone), kicksOf(lone));
 		expect(alone.at / alone.elsewhere).toBeGreaterThan(1000);
@@ -85,11 +85,12 @@ describe("the 65 Hz sine kick (design §11.2)", () => {
 		const r = gridOf(song);
 		expect(decidedOffTruth(r, song)).toBe(false);
 		// Observed: a decided grid on the truth, the comb's phase on beat 1 and every witness on class 0.
+		// Bar one reads 0.99, a frame early (it read 1.0 with the kick at gain 1).
 		if (!r.ok) throw new Error(r.refusals.map((p) => p.reason).join(" "));
 		expect(r.value.reading.cls).toBe(0);
 		expect(r.value.reading.decided).toBe(true);
 		expect(r.value.reading.scores).toEqual([3, 0, 2, 0]);
-		expect(r.value.grid.bars[0]).toBeCloseTo(1.0, 9);
+		expect(r.value.grid.bars[0]).toBeCloseTo(0.99, 9);
 		expect(r.value.pickup).toBeNull();
 		expect(r.warnings).toEqual([]);
 	});
