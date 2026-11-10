@@ -15,5 +15,7 @@
 	"ignorePatterns": ["extensions/**", ".swamp/**", "site/**"],
 	// Complexity as it stood at 0.1.0 (FINDINGS.md). A new finding, or a file that gets worse, fails.
 	"audit": { "healthBaseline": ".fallow-health-baseline.json" },
+	// @barmark/listen declares barmark for the stages still to come (Tasks 4 to 15); drop this when one imports it.
+	"ignoreDependencies": ["barmark"],
 	"rules": {}
 }

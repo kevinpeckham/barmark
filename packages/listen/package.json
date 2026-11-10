@@ -1,0 +1,58 @@
+{
+	"name": "@barmark/listen",
+	"version": "0.1.0",
+	"description": "Listen to a recording and sync a barmark chord chart with it: audio features, a bar grid, a chart and a timing map, each stage refusing in plain words.",
+	"type": "module",
+	"sideEffects": false,
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"import": "./dist/index.js"
+		},
+		"./features": {
+			"types": "./dist/features/index.d.ts",
+			"import": "./dist/features/index.js"
+		},
+		"./stages": {
+			"types": "./dist/stages.d.ts",
+			"import": "./dist/stages.js"
+		}
+	},
+	"types": "./dist/index.d.ts",
+	"files": [
+		"dist",
+		"CHANGELOG.md"
+	],
+	"engines": {
+		"node": ">=20"
+	},
+	"keywords": [
+		"barmark",
+		"chord-chart",
+		"chords",
+		"music",
+		"audio",
+		"tempo",
+		"sync",
+		"lead-sheet"
+	],
+	"author": "Kevin Peckham",
+	"license": "MIT",
+	"homepage": "https://github.com/kevinpeckham/barmark/tree/main/packages/listen#readme",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/kevinpeckham/barmark.git",
+		"directory": "packages/listen"
+	},
+	"bugs": {
+		"url": "https://github.com/kevinpeckham/barmark/issues"
+	},
+	"dependencies": {
+		"barmark": "workspace:^",
+		"@barmark/sync": "workspace:^"
+	},
+	"scripts": {
+		"build": "rm -rf dist && tsc -p tsconfig.build.json",
+		"prepack": "bun run build"
+	}
+}
