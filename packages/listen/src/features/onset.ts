@@ -40,6 +40,16 @@ export function onsetRate(
 }
 
 /**
+ * The frames `onsetEnvelope` makes of `onsetRate`'s decimation of `length`
+ * samples at `sampleRate`, by arithmetic alone: the decimated length is
+ * `floor(length / factor)`, then `max(0, floor((n − 2048) / 256) + 1)`.
+ */
+export function onsetFrameCount(length: number, sampleRate: number): number {
+	const factor = Math.max(1, Math.floor(sampleRate / BENCH_RATE));
+	return Math.max(0, Math.floor((Math.floor(length / factor) - FRAME) / HOP) + 1);
+}
+
+/**
  * The log magnitudes (`log1p(5·|X|)`) of two real frames' spectra from one
  * complex FFT: frame A went in as `re`, frame B as `im`, so the transform Z
  * splits as A[k] = (Z[k] + conj(Z[N−k])) / 2 and B[k] = (Z[k] − conj(Z[N−k])) / 2i.

@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { fft } from "../src/features/fft.js";
-import { detrend, onsetEnvelope, onsetRate } from "../src/features/onset.js";
+import { detrend, onsetEnvelope, onsetFrameCount, onsetRate } from "../src/features/onset.js";
 import { seeded } from "./helpers/seeded.js";
 
 const RATE = 22050;
@@ -121,5 +121,17 @@ describe("detrend", () => {
 		const out = detrend(onset, 100);
 		expect(out[100]).toBeCloseTo(50 - 50 / 50, 5);
 		expect(out[101]).toBe(0);
+	});
+});
+
+describe("onsetFrameCount", () => {
+	test("equals the decimated envelope's frames for seeded lengths at 8 to 96 kHz", () => {
+		const rand = seeded(3);
+		for (const rate of [8000, 22050, 44100, 48000, 96000])
+			for (let trial = 0; trial < 40; trial++) {
+				const length = Math.floor(rand() * 20_000);
+				const { samples, rate: r } = onsetRate(new Float32Array(length), rate);
+				expect(onsetFrameCount(length, rate)).toBe(onsetEnvelope(samples, r).onset.length);
+			}
 	});
 });

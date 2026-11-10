@@ -148,6 +148,24 @@ describe("readFeatures", () => {
 		}
 	});
 
+	test("refuses a record shorter than its duration: a chroma frame or an onset frame gone", () => {
+		const real = value(recordingFeatures(song(44100), 44100));
+		const short = {
+			...real,
+			chroma: real.chroma.slice(0, (real.frames - 1) * 12),
+			frames: real.frames - 1,
+		};
+		expect(reasons(readFeatures(short))).toEqual(["features-invalid"]);
+		const trimmed = { ...real, onset: real.onset.slice(0, real.onset.length - 1) };
+		expect(reasons(readFeatures(trimmed))).toEqual(["features-invalid"]);
+		const longer = { ...real, onset: Float32Array.from([...real.onset, 0]) };
+		expect(reasons(readFeatures(longer))).toEqual(["features-invalid"]);
+		const join = (c: typeof real, o: typeof real) =>
+			reasons(joinFeatures(44100, real.duration, c, o));
+		expect(join(short, real)).toEqual(["features-invalid"]);
+		expect(join(real, trimmed)).toEqual(["features-invalid"]);
+	});
+
 	test("returns the same record, no copy", () => {
 		const f = featuresOf({ duration: 2 });
 		expect(value(readFeatures(f))).toBe(f);

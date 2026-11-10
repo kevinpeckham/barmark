@@ -8,8 +8,8 @@
  */
 import { type FeatureOptions, isPlainObject, resolveOptions, type Settings } from "../options.js";
 import { type Ok, ok, type Refusal, type Refused, refusal, refused } from "../result.js";
-import { chromagram, chromaWindow } from "./chroma.js";
-import { onsetEnvelope, onsetRate } from "./onset.js";
+import { chromaFrameCount, chromagram, chromaWindow } from "./chroma.js";
+import { onsetEnvelope, onsetFrameCount, onsetRate } from "./onset.js";
 import { audibleSpan } from "./sound.js";
 
 /**
@@ -176,6 +176,33 @@ function checkTiming(v: Record<string, unknown>): Refusal | null {
 	return null;
 }
 
+/**
+ * The two arrays' lengths, each exactly what the duration at the rate
+ * gives, so a truncated record is a miss. The sample count is
+ * `round(duration × rate)`: the producer wrote `duration` as
+ * `length / rate`, and multiplying back is off from the whole `length` by
+ * a rounding error far under half a sample, which the round removes; the
+ * frame counts then come by the producers' own arithmetic, compared
+ * exactly.
+ */
+function checkLengths(v: Record<string, unknown>): Refusal | null {
+	const rate = v.sampleRate as number;
+	const length = Math.round((v.duration as number) * rate);
+	const frames = chromaFrameCount(length, rate);
+	if (v.frames !== frames)
+		return invalid(
+			"frames",
+			`The chroma has ${String(v.frames)} frames where ${String(v.duration)} s at ${rate} Hz gives ${frames}.`,
+		);
+	const onsetFrames = onsetFrameCount(length, rate);
+	if ((v.onset as Float32Array).length !== onsetFrames)
+		return invalid(
+			"onset",
+			`The onset has ${(v.onset as Float32Array).length} frames where ${String(v.duration)} s at ${rate} Hz gives ${onsetFrames}.`,
+		);
+	return null;
+}
+
 /** The audible span inside the recording, and the two sound options in their ranges. */
 function checkSound(v: Record<string, unknown>): Refusal | null {
 	const duration = v.duration as number;
@@ -196,7 +223,7 @@ function checkSound(v: Record<string, unknown>): Refusal | null {
 
 /** The first thing wrong with a record, or null when it is a valid `Features`. */
 function checkRecord(v: Record<string, unknown>): Refusal | null {
-	for (const check of [checkHead, checkArrays, checkTiming, checkSound]) {
+	for (const check of [checkHead, checkArrays, checkTiming, checkLengths, checkSound]) {
 		const problem = check(v);
 		if (problem) return problem;
 	}
