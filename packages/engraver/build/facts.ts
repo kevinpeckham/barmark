@@ -5,7 +5,7 @@
  * `bun run build` (`dist.ts`).
  */
 import { createHash } from "node:crypto";
-import { existsSync, readFileSync } from "node:fs";
+import { readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 
 /** The compiled files' sizes and sha384 digests, as an SRI string. */
@@ -133,13 +133,16 @@ export function checkDist(
 	info: Info,
 	requireModule: boolean,
 ): { problems: string[]; notes: string[] } {
-	const missing = [MODULE_FILE, WASM_FILE].filter((file) => !existsSync(join(dir, file)));
+	// A directory in its place counts as missing: reading it would throw EISDIR.
+	const missing = [MODULE_FILE, WASM_FILE].filter(
+		(file) => !statSync(join(dir, file), { throwIfNoEntry: false })?.isFile(),
+	);
 	if (missing.length === 2)
 		return requireModule
 			? { problems: [NO_MODULE], notes: [] }
 			: { problems: [], notes: [NO_MODULE] };
 	if (missing.length === 1)
-		return { problems: [`dist/${missing[0]} is missing: ${HOW}`], notes: [] };
+		return { problems: [`dist/${missing[0]} is missing or not a file: ${HOW}`], notes: [] };
 	const problems = infoProblems(readFacts(dir), info);
 	return { problems, notes: problems.length ? [] : ["dist/ matches info.ts"] };
 }

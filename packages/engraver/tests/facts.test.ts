@@ -148,3 +148,11 @@ test("a dist matching info.ts passes; a stale one fails", () => {
 	rmSync(good, { recursive: true, force: true });
 	rmSync(stale, { recursive: true, force: true });
 });
+
+test("a directory in place of a compiled file is refused by name, not thrown", () => {
+	const dir = distWith({ "verovio-module.mjs": mjs });
+	mkdirSync(join(dir, "verovio-module.wasm"));
+	const { problems } = checkDist(dir, info, false);
+	expect(problems.join("\n")).toContain("verovio-module.wasm");
+	rmSync(dir, { recursive: true, force: true });
+});
