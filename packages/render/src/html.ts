@@ -559,7 +559,8 @@ function unmarkedSlotHtml(slot: Slot, view: View): string {
 		case "silence":
 			return `<span class="bm-silence"></span>`;
 		case "unknown":
-			return `<span class="bm-unknown">?</span>`;
+			// An unreadable slot is drawn as its author wrote it (grammar principle 4).
+			return `<span class="bm-unknown">${escapeHtml(slot.text ?? "?")}</span>`;
 		case "group":
 			return groupHtml(slot.members, view);
 	}

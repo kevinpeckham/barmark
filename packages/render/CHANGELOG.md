@@ -6,6 +6,14 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- **An unreadable slot is drawn as written** (barmark's grammar 2.3): where
+  a slot is unknown harmony with the author's text, such as a `%` copying
+  a bar with `CM7`, the bar draws `CM7` (escaped) where it would draw
+  `?`, and speaks it as "unreadable: CM7". A written `?` is drawn and
+  spoken as before. A line with an error is still drawn as written.
+
 ## [0.18.0] - 2026-11-09
 
 ### Changed
