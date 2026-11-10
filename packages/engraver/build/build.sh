@@ -38,7 +38,12 @@ source "$CACHE/emsdk/emsdk_env.sh"
 set -u
 EMSDK=$(realpath "$CACHE/emsdk")
 
-# 2. CMake at the pinned version, from PyPI, in a venv.
+# 2. CMake at the pinned version, from PyPI, in a venv. A venv whose
+# python no longer runs (a runner image that moved Python on, under a
+# cache key that still matches) is made again.
+if [ -d "$CACHE/venv" ] && ! "$CACHE/venv/bin/python" -V >/dev/null 2>&1; then
+	rm -rf "$CACHE/venv"
+fi
 if [ ! -d "$CACHE/venv" ]; then
 	python3 -m venv "$CACHE/venv"
 	"$CACHE/venv/bin/pip" install "cmake==$CMAKE_VERSION"
