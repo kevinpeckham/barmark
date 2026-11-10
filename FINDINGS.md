@@ -855,6 +855,26 @@ and round-trip it through `format`.
 
 ## Tooling
 
+### Bun.build empties an entry in a `"sideEffects": false` package (2026-11-10, @barmark/listen)
+
+- **The symptom.** Task 5's check that `@barmark/listen/features`
+  bundles with no imports passed, but on inspection the bundle was 119
+  bytes: an `export { … }` list and no definitions at all. `Bun.build`
+  (Bun 1.3.14) of `packages/sync/src/timing/index.ts` is just as empty.
+- **The cause.** When the entry point itself sits in a package whose
+  `package.json` says `"sideEffects": false`, Bun drops every module the
+  entry only re-exports from, leaving the names unbound. A two-file
+  probe with and without that `package.json` reproduces it;
+  `ignoreDCEAnnotations` does not help. A consumer's import of the same
+  file from outside the package bundles whole, so the published package
+  is fine; only a test that bundles the entry directly is fooled, and a
+  "contains no X" assertion passes vacuously on an empty bundle.
+- **The fix.** The test bundles a one-line `export * from` wrapper
+  written to a temporary directory, as a consumer reaches the entry, then
+  imports the bundle and runs it, so an empty bundle fails
+  (`packages/listen/tests/features-entry.test.ts`). Any check of a
+  bundle's content should also check that the bundle works.
+
 ### A batch of releases lost one: a newer waiting run cancels the older (2026-11-09, render, musicxml and sync releases)
 
 - **The symptom.** Three GitHub releases created back to back

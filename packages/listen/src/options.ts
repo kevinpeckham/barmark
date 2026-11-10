@@ -289,7 +289,8 @@ const RANGES: Record<string, Check> = {
 const bad = (option: string, message: string): Refusal =>
 	refusal("invalid-option", message, { option });
 
-function isPlainObject(v: unknown): v is Record<string, unknown> {
+/** An object made by a literal or `Object.create(null)`: no array, no class instance. */
+export function isPlainObject(v: unknown): v is Record<string, unknown> {
 	if (typeof v !== "object" || v === null || Array.isArray(v)) return false;
 	const proto = Object.getPrototypeOf(v);
 	return proto === Object.prototype || proto === null;
