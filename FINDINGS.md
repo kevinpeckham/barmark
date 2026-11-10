@@ -602,6 +602,25 @@ order, not just the written marks.
 
 ## Design
 
+### An unreadable chord loses its whole bar line, not one slot (2026-11-10, @barmark/listen chartPadBars)
+
+- **The symptom.** The listen design (§6.3) says a stored chart carrying
+  one of the seven spellings barmark 0.22 does not read (`CM7`, `CSus4`,
+  `CmMaj7`, `CmM7`, `C69`, `C(7)sus4`, `C−7`) gets a `?` slot that holds.
+  It does not: `| F |\n| CM7 |\n| G |` plays two bars, F and G, with an
+  error on line 2.
+- **The cause.** barmark reads a line with a token that is not a chord as
+  not a bar line at all, so every bar on it is gone. The app's adapter
+  behaves the same, because it parses with barmark before its `SPELLINGS`
+  rewrite ever runs, so the equivalence holds; the rewrite only ever
+  helped `chordPitchClasses` on symbols that had already parsed.
+- **The fix.** None in the port: `packages/listen/tests/bars.test.ts`
+  asserts what happens (the line's bars are lost, the parse has the
+  error). A chart that loses bars renders shorter than the recording, so
+  the app's `db:chart-check` before adoption matters more than the spec
+  says, and whether barmark should read any of the seven stays Kevin's
+  grammar question (§13).
+
 ### A passing tone at exactly a quarter of the chord named a 9th (2026-11-08, @barmark/midi import)
 
 - **The symptom.** A fill of eighths D5 E5 F5 E5 D5 from beat 2 over a
