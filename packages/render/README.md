@@ -179,6 +179,13 @@ Bar numbers sit in a gutter at the left edge; section headings, lyrics,
 note lines and mid-chart changes start at the first bar line. Chords start
 at the left of their share of the bar. A change written mid-chart names
 itself: `time: 3/4, tempo: 120` draws as "→ Time 3/4 · Tempo ♩ = 120".
+A tempo shows the beat `tempo:` counts (barmark's grammar 2.1), from the
+`time:` in force where it is written: the bottom number in a simple meter
+(♩ in 4/4, 𝅗𝅥 in 2/2, ♪ in 3/8) and the dotted quarter in 6/8, 9/8 and
+12/8, so 6/8 with `tempo: 40` shows "♩. = 40" and a `rit. to 90` there
+"rit. to ♩. = 90". A one-bar meter never changes it (grammar 2.4). The
+note is spoken by name ("dotted quarter note"), and the model gives it as
+`tempoBeat` on the chart (for the header) and on each directive item.
 At the default size chords are 16px and no label is under 12px.
 
 Chords appear in their canonical form whatever the author typed (`Cø`

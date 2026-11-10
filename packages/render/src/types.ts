@@ -26,9 +26,18 @@ export type ChartModel = {
 	credits: Credits;
 	/** Directives before the first heading, bar line or text line. */
 	header: Directives;
+	/** The beat the header's tempo counts. */
+	tempoBeat: TempoBeat;
 	blocks: SectionBlock[];
 	diagnostics: ChartDiagnostic[];
 };
+
+/**
+ * The note a `tempo:` counts (barmark's grammar 2.1), from the `time:` in
+ * force, never a one-bar meter's (2.4): the bottom number in a simple meter
+ * (`note: 4` is a quarter), a dotted quarter in 6/8, 9/8 and 12/8.
+ */
+export type TempoBeat = { note: number; dotted: boolean };
 
 export type SectionBlock = {
 	/** The heading as written; null for content before the first heading. */
@@ -83,7 +92,8 @@ export type BlockItem =
 	  }
 	/** `note` marks a `###` line, whose text is given without the marks. */
 	| { kind: "text"; text: string; note: boolean }
-	| { kind: "directive"; set: Directives }
+	/** A change written mid-chart; `tempoBeat` is the beat a tempo there counts. */
+	| { kind: "directive"; set: Directives; tempoBeat: TempoBeat }
 	| ErrorItem;
 
 /**

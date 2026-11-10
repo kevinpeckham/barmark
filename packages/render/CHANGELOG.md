@@ -6,6 +6,18 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+
+- **A tempo shows the beat it counts.** The header and mid-chart changes
+  always drew `♩ =`, so 6/8 with `tempo: 40` showed "♩ = 40" though
+  barmark (grammar 2.1) and the MIDI and MusicXML exports count 40 dotted
+  quarters. A tempo, and a `rit.` or `accel.` `to` one, now shows the beat
+  of the `time:` in force where it is written: "♩. = 40" in 6/8, 9/8 and
+  12/8, 𝅗𝅥 in 2/2, ♪ in 3/8, ♩ in 4/4 as before. A `time:` change mid-chart
+  moves it; a one-bar meter does not (grammar 2.4). Screen readers hear
+  the note's name ("dotted quarter note"). The model gains `tempoBeat`
+  (`{ note, dotted }`) on `ChartModel` and on each directive item.
+
 ## [0.18.0] - 2026-11-09
 
 ### Changed

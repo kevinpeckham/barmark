@@ -17,6 +17,7 @@ import {
 	parseChart,
 	type SectionOccurrence,
 } from "barmark";
+import { tempoBeatOf, tempoBeats } from "./tempo.js";
 import type {
 	BlockItem,
 	CellModel,
@@ -25,6 +26,7 @@ import type {
 	LayoutOptions,
 	RowItem,
 	SectionBlock,
+	TempoBeat,
 	Verse,
 } from "./types.js";
 import { type Landing, landings, rowVerses, singerOf, sungVerses } from "./verses.js";
@@ -44,6 +46,8 @@ type Context = {
 	written: Map<number, Group>;
 	/** The played bars of each line, by the line they are written on: in a chart of several parts, each part's own. */
 	bars: Map<number, DrawnBar[]>;
+	/** The beat a tempo counts at each directive line, by its line number. */
+	beats: Map<number, TempoBeat>;
 };
 
 /** A played bar as drawn: `perPart` marks a tutti bar its parts play differently. */
@@ -113,6 +117,7 @@ export function layoutChart(text: string, options: LayoutOptions = {}): ChartMod
 		errors: errorsByLine(parse),
 		written: new Map(groups.flatMap((g) => (g.heading ? [[g.heading.line, g] as const] : []))),
 		bars: indexByLine(barsByLine(parse)),
+		beats: tempoBeats(parse.lines),
 	};
 	const blocks = groups.map((g) => layoutGroup(g, ctx));
 	if (options.rehearsalLetters) letterBlocks(blocks);
@@ -122,6 +127,7 @@ export function layoutChart(text: string, options: LayoutOptions = {}): ChartMod
 		parts: parse.parts,
 		credits: parse.credits,
 		header,
+		tempoBeat: tempoBeatOf(header.time),
 		blocks,
 		diagnostics: parse.diagnostics,
 	};
@@ -484,7 +490,11 @@ function layoutLine(
 		case "text":
 			return textItem(l.text);
 		case "directive":
-			return { kind: "directive", set: l.set };
+			return {
+				kind: "directive",
+				set: l.set,
+				tempoBeat: ctx.beats.get(l.line) ?? tempoBeatOf(undefined),
+			};
 		case "invalid":
 			return errorItem(l.line, ctx);
 		default:
