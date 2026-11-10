@@ -12,8 +12,8 @@ import { seeded } from "./helpers/seeded.js";
 
 const RATE = 22050;
 const RATES = [22050, 44100, 48000] as const;
-const CHUNKS = [1, 257, 4096, 65536] as const;
-/** The streamed renders of 40 charts at three rates and four chunk sizes take a few seconds. */
+const CHUNKS = [257, 4096, 65536] as const;
+/** The streamed renders of 40 charts at three rates and three chunk sizes take a few seconds. */
 const TIMEOUT = 120_000;
 
 /** The chart's pad bars, failing the test on a refusal. */
@@ -31,10 +31,18 @@ const peakIn = (samples: Float32Array, from: number, to: number) => {
 	return peak;
 };
 
-/** The first index where `a` and `b` differ under `Object.is` (so -0 and 0 differ); -1 when none does. */
+/**
+ * The first index where `a` and `b` differ bit for bit (so -0 and 0
+ * differ, as under `Object.is`, and so do two NaN payloads); -1 when none
+ * does. The bytes are compared at once, and only a difference is looked for
+ * sample by sample.
+ */
 function firstDifference(a: Float32Array, b: Float32Array): number {
 	if (a.length !== b.length) return Math.min(a.length, b.length);
-	for (let i = 0; i < a.length; i++) if (!Object.is(a[i], b[i])) return i;
+	const bytes = (x: Float32Array) => Buffer.from(x.buffer, x.byteOffset, x.byteLength);
+	if (bytes(a).equals(bytes(b))) return -1;
+	const [ua, ub] = [a, b].map((x) => new Uint32Array(x.buffer, x.byteOffset, x.length));
+	for (let i = 0; i < a.length; i++) if (ua?.[i] !== ub?.[i]) return i;
 	return -1;
 }
 
@@ -77,6 +85,32 @@ function seededChart(rand: () => number): string {
 const rand = seeded(11);
 const CHARTS = Array.from({ length: 40 }, () => seededChart(rand));
 
+/** Streams `chart` at `rate` in each of `chunks` and expects the whole render, bit for bit, with no chunk over its size and the same bar starts. */
+function streamsWhole(c: number, chart: string, rate: number, chunks: readonly number[]): void {
+	const bars = padBars(chart);
+	const whole = renderWhole(bars, rate);
+	expect(renderLength(bars, rate)).toBe(whole.samples.length);
+	for (const chunk of chunks) {
+		const out = new Float32Array(whole.samples.length);
+		let at = 0;
+		let tooLong = 0;
+		const { barStarts } = renderChartPads(
+			bars,
+			rate,
+			(part) => {
+				if (part.length > chunk) tooLong++;
+				out.set(part, at);
+				at += part.length;
+			},
+			chunk,
+		);
+		const where = `chart ${c}, chunk ${chunk}`;
+		expect([where, at, tooLong]).toEqual([where, whole.samples.length, 0]);
+		expect([where, firstDifference(out, whole.samples)]).toEqual([where, -1]);
+		expect(barStarts).toEqual(whole.barStarts);
+	}
+}
+
 describe("the streamed render (design §10)", () => {
 	test("the seeded charts read as charts of 2 to 40 bars", () => {
 		const counts = CHARTS.map((c) => padBars(c).length);
@@ -88,33 +122,17 @@ describe("the streamed render (design §10)", () => {
 		test(
 			`the windowed render equals the whole one bit for bit at ${rate} Hz`,
 			() => {
-				for (const [c, chart] of CHARTS.entries()) {
-					const bars = padBars(chart);
-					const whole = renderWhole(bars, rate);
-					expect(renderLength(bars, rate)).toBe(whole.samples.length);
-					for (const chunk of CHUNKS) {
-						const out = new Float32Array(whole.samples.length);
-						let at = 0;
-						let tooLong = 0;
-						const { barStarts } = renderChartPads(
-							bars,
-							rate,
-							(part) => {
-								if (part.length > chunk) tooLong++;
-								out.set(part, at);
-								at += part.length;
-							},
-							chunk,
-						);
-						const where = `chart ${c}, chunk ${chunk}`;
-						expect([where, at, tooLong]).toEqual([where, whole.samples.length, 0]);
-						expect([where, firstDifference(out, whole.samples)]).toEqual([where, -1]);
-						expect(barStarts).toEqual(whole.barStarts);
-					}
-				}
+				for (const [c, chart] of CHARTS.entries()) streamsWhole(c, chart, rate, CHUNKS);
 			},
 			TIMEOUT,
 		);
+
+	// A chunk of one sample streams every voice through every chunk boundary. It is the slowest
+	// case by far, so it runs on four charts at one rate here; the bit-check script runs it on 400
+	// random charts at 8 to 96 kHz against the app's own render.
+	test("a chunk of one sample equals the whole render bit for bit", () => {
+		for (const [c, chart] of CHARTS.slice(0, 4).entries()) streamsWhole(c, chart, RATE, [1]);
+	});
 
 	test("the default chunk is 65,536 samples", () => {
 		const bars = padBars("time: 4/4, tempo: 60\n| C | G | Am | F |");
@@ -137,8 +155,10 @@ describe("the streamed render (design §10)", () => {
 	test(
 		"the frame count from the bar seconds is the chromagram's of the whole render",
 		() => {
+			// Eight charts: the matrix above already pins renderLength to every chart's render, and
+			// chroma.test.ts pins chromaFrameCount to chromagram on 200 seeded lengths and rates.
 			for (const rate of RATES)
-				for (const chart of CHARTS) {
+				for (const chart of CHARTS.slice(0, 8)) {
 					const bars = padBars(chart);
 					const { frames } = chromagram(renderWhole(bars, rate).samples, rate);
 					expect(chromaFrameCount(renderLength(bars, rate), rate)).toBe(frames);
