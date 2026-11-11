@@ -1,4 +1,5 @@
 /** Get Started's chart and code samples. tests/pages.test.ts runs the claims they make. */
+import { ENGRAVER_CDN_INTEGRITY, ENGRAVER_CDN_URL, ENGRAVER_WASM_INTEGRITY } from "@barmark/score";
 import pkg from "../../package.json" with { type: "json" };
 
 /** The CLI the site installs (a dev dependency, so the tests run it), for the CI example's pin. */
@@ -73,6 +74,14 @@ export const USE_SCORE_ELEMENT = `<script type="module">
 		| D | A | Bm | G |
 	</script>
 </barmark-score>`;
+
+/** The lighter Verovio from jsDelivr: the score package's values, as this site loads it. */
+export const USE_SCORE_ENGRAVER = `<barmark-score
+	verovio-url="${ENGRAVER_CDN_URL}"
+	verovio-integrity="${ENGRAVER_CDN_INTEGRITY}"
+	verovio-wasm-integrity="${ENGRAVER_WASM_INTEGRITY}"
+	src="/charts/example-song.chart.md"
+></barmark-score>`;
 
 export const USE_SCORE_SERVER = `import { renderScoreHtml } from "@barmark/score/server";
 

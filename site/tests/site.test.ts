@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test";
+import { beforeAll, describe, expect, test } from "bun:test";
 import { join } from "node:path";
 import { parseChart } from "barmark";
 import {
@@ -9,6 +9,7 @@ import {
 	TAGLINE_LINK,
 	VALUE,
 } from "../src/lib/site.ts";
+import { build, page } from "./built.ts";
 
 const demo = await Bun.file(join(import.meta.dir, "../src/lib/demo.chart.md")).text();
 /** Peaceful Dreams as Stem Shovel has it, kept in the repository's examples. */
@@ -59,5 +60,47 @@ describe("the demo chart", () => {
 			"Interlude",
 			"Outro",
 		]);
+	});
+});
+
+describe("the lighter Verovio's licence", () => {
+	beforeAll(build, 120_000);
+	/** An element's text, its whitespace collapsed. */
+	const text = (el: Element | null | undefined) => el?.textContent?.replace(/\s+/g, " ") ?? "";
+	test("the footer credits a modified build of Verovio and links its notice and release", () => {
+		expect(LINKS.engraverNotice).toBe(
+			"https://github.com/kevinpeckham/barmark/blob/engraver-v0.1.1/packages/engraver/NOTICE.md",
+		);
+		expect(LINKS.engraverRelease).toBe(
+			"https://github.com/kevinpeckham/barmark/releases/tag/engraver-v0.1.1",
+		);
+		for (const path of ["index.html", "faq.html", "get-started.html"]) {
+			const footer = page(path).querySelector("footer");
+			expect(text(footer)).toContain(
+				"scores engraved by a modified build of Verovio © Laurent Pugin and others, LGPL-3.0",
+			);
+			const hrefs = [...(footer?.querySelectorAll("a") ?? [])].map((a) => a.getAttribute("href"));
+			expect(hrefs).toContain(LINKS.engraverNotice);
+			expect(hrefs).toContain(LINKS.engraverRelease);
+		}
+	});
+	test("the FAQ says the site loads a smaller build made by barmark, the CLI Verovio unmodified", () => {
+		const answer = text(page("faq.html").querySelector("#verovio")?.parentElement);
+		expect(answer).toContain("@barmark/engraver");
+		expect(answer).toContain("smaller build");
+		expect(answer).toContain("CLI's standalone binaries carry Verovio unmodified");
+		expect(answer).not.toContain("loaded unchanged when a score is drawn");
+	});
+	test("Get Started shows the lighter build's attributes beside the stock ones", () => {
+		const step = text(page("get-started.html").querySelector("#score")?.parentElement);
+		for (const name of [
+			"verovio-wasm-integrity",
+			"ENGRAVER_CDN_URL",
+			"ENGRAVER_CDN_INTEGRITY",
+			"ENGRAVER_WASM_INTEGRITY",
+			"@barmark/engraver",
+			"VEROVIO_CDN_URL",
+		])
+			expect(step).toContain(name);
 	});
 });

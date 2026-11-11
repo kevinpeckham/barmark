@@ -304,8 +304,8 @@ onMount(() => {
 			<section>
 				{@render heading("score-package")}
 				<p>
-					Size. The engraver behind the score is several megabytes (about 2.5 MB compressed, as this site
-					serves it), and most pages that show a chart need only the grid. So
+					Size. The engraver behind the score is megabytes (about 1 MB compressed in the smaller build
+					this site serves, 2.4 MB for stock Verovio), and most pages that show a chart need only the grid. So
 					<code class={code}>&lt;barmark-chart&gt;</code> stays as light as it was, with no score code, and
 					<code class={code}>&lt;barmark-score&gt;</code> loads the engraver only the first time a reader
 					presses Score, in a background worker so the page doesn't freeze. A reader who stays on the grid
@@ -318,9 +318,13 @@ onMount(() => {
 				<p>
 					<a href={LINKS.verovio} class={link}>Verovio</a>, an open-source music engraver, licensed under
 					the <a href={LINKS.verovioLicense} class={link}>LGPL-3.0</a>.
-					<code class={code}>@barmark/score</code> uses it as an ordinary npm dependency, loaded unchanged
-					when a score is drawn. None of its code is copied into Barmark's packages, which stay MIT. The
-					CLI's standalone binaries carry Verovio unmodified, with its licence in the release.
+					<code class={code}>@barmark/score</code> uses it as an ordinary npm dependency, and this site
+					loads a smaller build of the same Verovio made by Barmark,
+					<code class={code}>@barmark/engraver</code> (<a href={LINKS.engraverNotice} class={link}>its
+					notice</a>, <a href={LINKS.engraverRelease} class={link}>its source</a>), which draws the same
+					score in under half the download. None of Verovio's code is copied into Barmark's packages,
+					which stay MIT. The CLI's standalone binaries carry Verovio unmodified, with its licence in the
+					release.
 				</p>
 			</section>
 

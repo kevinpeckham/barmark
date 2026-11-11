@@ -746,6 +746,11 @@ test.describe("the FAQ", () => {
 	});
 });
 
+/** The lighter Verovio on jsDelivr: its module, and the WebAssembly beside it. */
+const ENGRAVER = "https://cdn.jsdelivr.net/npm/@barmark/engraver@0.1.1/dist/";
+const ENGRAVER_MODULE = `${ENGRAVER}verovio-module.mjs`;
+const ENGRAVER_WASM = `${ENGRAVER}verovio-module.wasm`;
+
 test.describe("the score", () => {
 	const source = (page: Page) => page.getByRole("textbox", { name: "Barmark source of the chart" });
 	let errors: string[] = [];
@@ -767,7 +772,7 @@ test.describe("the score", () => {
 		await page.waitForFunction(() => customElements.get("barmark-score"));
 		await page.waitForLoadState("networkidle");
 		expect(engine).toEqual([]);
-		const cdn = page.waitForRequest(/^https:\/\/cdn\.jsdelivr\.net\/npm\/verovio@/);
+		const cdn = page.waitForRequest(ENGRAVER_MODULE);
 		await page.locator("main barmark-score").getByRole("radio", { name: "Score" }).hover();
 		await cdn;
 	});
@@ -775,7 +780,7 @@ test.describe("the score", () => {
 	test("Try It's chart starts loading Verovio from jsDelivr once the page is idle", async ({
 		page,
 	}) => {
-		const cdn = page.waitForRequest(/^https:\/\/cdn\.jsdelivr\.net\/npm\/verovio@/);
+		const cdn = page.waitForRequest(ENGRAVER_MODULE);
 		await page.goto(`/try?q=${encodeURIComponent("key: G\n| G | C |")}`);
 		await expect(page.locator("[data-reading] barmark-score")).toHaveAttribute("preload", "idle");
 		await cdn;
@@ -797,8 +802,12 @@ test.describe("the score", () => {
 		await page.waitForLoadState("networkidle");
 		expect(engine).toEqual([]);
 		await pressScore(page);
-		// Verovio came from jsDelivr and matched its digest: the element warns when it falls back to its own copy.
-		expect(engine.filter((u) => u.startsWith("https://cdn.jsdelivr.net/"))).toHaveLength(1);
+		// Verovio came from jsDelivr, its module and its .wasm, and both matched their digests:
+		// the element warns when it falls back to its own copy.
+		expect(engine.filter((u) => u.startsWith("https://cdn.jsdelivr.net/"))).toEqual([
+			ENGRAVER_MODULE,
+			ENGRAVER_WASM,
+		]);
 		expect(warnings.filter((w) => w.includes("Verovio"))).toEqual([]);
 		expect(await scoreText(page)).toContain("Peaceful Dreams");
 		const score = page.locator("main barmark-score");
@@ -809,6 +818,40 @@ test.describe("the score", () => {
 		expect(chords.slice(0, 2)).toEqual(["D7sus4", "D7sus4"]);
 		expect(chords).toContain("G5(7)");
 		expect(chords.filter((c) => c.includes("no3"))).toEqual([]);
+	});
+
+	test("a score loads the lite build, with no fallback warning", async ({ page }) => {
+		const warnings: string[] = [];
+		page.on("console", (m) => {
+			if (m.type() === "warning") warnings.push(m.text());
+		});
+		const fetched: { url: string; status: number; bytes: number }[] = [];
+		page.on("requestfinished", async (r) => {
+			const response = await r.response();
+			const sizes = await r.sizes();
+			fetched.push({
+				url: r.url(),
+				status: response?.status() ?? 0,
+				bytes: sizes.responseBodySize,
+			});
+		});
+		await page.goto("/");
+		await pressScore(page);
+		await expect(
+			page.locator("main barmark-score").getByRole("img", { name: "Peaceful Dreams" }),
+		).toBeVisible();
+		expect(warnings.filter((w) => w.includes("was not used"))).toEqual([]);
+		const wasm = fetched.find((f) => f.url === ENGRAVER_WASM);
+		expect(wasm?.status).toBe(200);
+		expect(fetched.find((f) => f.url === ENGRAVER_MODULE)?.status).toBe(200);
+		// Neither stock Verovio from jsDelivr nor the site's own copy was fetched.
+		expect(fetched.filter((f) => /\/verovio@|verovio-[^/]*\.js$/.test(f.url))).toEqual([]);
+		console.log(
+			`engraver transfer: ${fetched
+				.filter((f) => f.url.startsWith(ENGRAVER))
+				.map((f) => `${f.url.slice(ENGRAVER.length)} ${f.bytes} B`)
+				.join(", ")}`,
+		);
 	});
 
 	test("the score follows the source as it is edited", async ({ page }) => {

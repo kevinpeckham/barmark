@@ -18,6 +18,7 @@ import {
 	USE_PARSER,
 	USE_RENDER,
 	USE_SCORE_ELEMENT,
+	USE_SCORE_ENGRAVER,
 	USE_SCORE_SERVER,
 	USE_SYNC,
 	VITE_CONFIG,
@@ -145,9 +146,18 @@ const code = "font-mono text-accent";
 			and <code class={code}>preload="idle"</code> once the page is idle. With
 			<code class={code}>verovio-url</code> and <code class={code}>verovio-integrity</code> it comes from
 			a CDN, checked against its digest; the package exports jsDelivr's as
-			<code class={code}>VEROVIO_CDN_URL</code> and <code class={code}>VEROVIO_CDN_INTEGRITY</code>, which
-			this site uses.
+			<code class={code}>VEROVIO_CDN_URL</code> and <code class={code}>VEROVIO_CDN_INTEGRITY</code>.
 		</p>
+		<p class="max-w-prose opacity-80">
+			Or load <code class={code}>@barmark/engraver</code>, a smaller build of the same Verovio made by
+			Barmark: about 1 MB compressed where stock is 2.4 MB, drawing the same score. Its WebAssembly is
+			a file of its own, so it takes a second digest,
+			<code class={code}>verovio-wasm-integrity</code>. The package exports jsDelivr's three as
+			<code class={code}>ENGRAVER_CDN_URL</code>, <code class={code}>ENGRAVER_CDN_INTEGRITY</code> and
+			<code class={code}>ENGRAVER_WASM_INTEGRITY</code>, which this site uses. If either file fails its
+			digest, the element loads its own copy of stock Verovio instead.
+		</p>
+		<Code title="index.html" code={USE_SCORE_ENGRAVER} />
 		<p class="max-w-prose opacity-80">
 			On a server or a static site, <code class={code}>renderScoreHtml</code> draws the grid and the
 			switch with no script, as <code class={code}>renderChart</code> does; the element takes it over in
@@ -165,7 +175,9 @@ const code = "font-mono text-accent";
 			<code class={code}>@barmark/score</code> is MIT, like every Barmark package. It depends on
 			<a href={LINKS.verovio} class={link}>Verovio</a>, which is licensed
 			<a href={LINKS.verovioLicense} class={link}>LGPL-3.0</a>, as an ordinary npm package, loaded
-			unchanged. A site that bundles the score ships Verovio inside its bundle; the README says how to keep
+			unchanged, or, if you choose it, the modified build <code class={code}>@barmark/engraver</code>
+			(LGPL-3.0-only, <a href={LINKS.engraverRelease} class={link}>its source</a> published with each
+			release). A site that bundles the score ships Verovio inside its bundle; the README says how to keep
 			it a separate file and its notice.
 		</p>
 		<p class="max-w-prose opacity-80">

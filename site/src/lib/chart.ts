@@ -1,5 +1,5 @@
 import { renderChart } from "@barmark/render";
-import { VEROVIO_CDN_INTEGRITY, VEROVIO_CDN_URL } from "@barmark/score";
+import { ENGRAVER_CDN_INTEGRITY, ENGRAVER_CDN_URL, ENGRAVER_WASM_INTEGRITY } from "@barmark/score";
 import { renderScoreHtml } from "@barmark/score/server";
 
 // The site's charts never wrap: a section wider than its box keeps its rows, and the box scrolls.
@@ -26,13 +26,14 @@ export function chartHtml(
 export type Preload = "none" | "intent" | "idle";
 
 /**
- * The attributes every score on the site carries: Verovio from jsDelivr,
- * checked against its digest (on a mismatch the element loads its own copy),
- * and when to start loading it.
+ * The attributes every score on the site carries: the lighter Verovio
+ * (`@barmark/engraver`) from jsDelivr, its module and its `.wasm` each checked
+ * against a digest (on a mismatch or a failed download the element loads its
+ * own copy of stock Verovio), and when to start loading it.
  */
 function engineAttributes(preload: Preload): string {
 	const when = preload === "none" ? "" : ` preload="${preload}"`;
-	return ` verovio-url="${VEROVIO_CDN_URL}" verovio-integrity="${VEROVIO_CDN_INTEGRITY}"${when}`;
+	return ` verovio-url="${ENGRAVER_CDN_URL}" verovio-integrity="${ENGRAVER_CDN_INTEGRITY}" verovio-wasm-integrity="${ENGRAVER_WASM_INTEGRITY}"${when}`;
 }
 
 /**
