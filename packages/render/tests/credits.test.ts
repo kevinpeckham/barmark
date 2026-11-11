@@ -30,6 +30,37 @@ describe("creditsText", () => {
 	test("none", () => {
 		expect(creditsText(none)).toEqual([]);
 	});
+	test("a Traditional composer prints as written, without Music by", () => {
+		for (const written of ["Traditional", "traditional", "Trad.", "Traditional, 16th century"])
+			expect(creditsText({ ...none, composer: [written] })).toEqual([written]);
+	});
+	test("the same Traditional name for words and music prints once, as written", () => {
+		expect(creditsText({ ...none, composer: ["Traditional"], lyricist: ["Traditional"] })).toEqual([
+			"Traditional",
+		]);
+		expect(
+			creditsText({
+				...none,
+				composer: ["Trad., 1600"],
+				lyricist: ["Trad., 1600"],
+				arranger: ["Z"],
+			}),
+		).toEqual(["Trad., 1600", "Arranged by Z"]);
+	});
+	test("a Traditional composer keeps the other lines", () => {
+		expect(
+			creditsText({ ...none, composer: ["Traditional"], lyricist: ["B"], arranger: ["Z"] }),
+		).toEqual(["Traditional", "Words by B", "Arranged by Z"]);
+	});
+	test("a real name, or one that merely starts with Trad, keeps Music by", () => {
+		expect(creditsText({ ...none, composer: ["Kevin Peckham"] })).toEqual([
+			"Music by Kevin Peckham",
+		]);
+		expect(creditsText({ ...none, composer: ["Tradd Smith"] })).toEqual(["Music by Tradd Smith"]);
+		expect(creditsText({ ...none, composer: ["Traditional", "A"] })).toEqual([
+			"Music by Traditional and A",
+		]);
+	});
 });
 
 describe("rendered credits", () => {

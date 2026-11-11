@@ -6,6 +6,14 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+
+- A chart whose composer is "Traditional" (or "Trad.", "Traditional, 16th
+  century") now prints that credit as written, not "Music by
+  Traditional"; the same name for words and music prints once, as written,
+  not "Words and music by Traditional". A real name, or one that only starts with "Trad", still
+  reads "Music by …"; the lyricist and arranger lines are unchanged.
+
 ## [0.19.0] - 2026-11-10
 
 ### Added
