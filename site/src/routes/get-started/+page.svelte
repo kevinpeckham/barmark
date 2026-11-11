@@ -150,7 +150,7 @@ const code = "font-mono text-accent";
 		</p>
 		<p class="max-w-prose opacity-80">
 			Or load <code class={code}>@barmark/engraver</code>, a smaller build of the same Verovio made by
-			Barmark: about 1 MB compressed where stock is 2.4 MB, drawing the same score. Its WebAssembly is
+			Barmark: under half the download of stock, drawing the same score. Its WebAssembly is
 			a file of its own, so it takes a second digest,
 			<code class={code}>verovio-wasm-integrity</code>. The package exports jsDelivr's three as
 			<code class={code}>ENGRAVER_CDN_URL</code>, <code class={code}>ENGRAVER_CDN_INTEGRITY</code> and

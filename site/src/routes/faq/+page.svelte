@@ -304,8 +304,8 @@ onMount(() => {
 			<section>
 				{@render heading("score-package")}
 				<p>
-					Size. The engraver behind the score is megabytes (about 1 MB compressed in the smaller build
-					this site serves, 2.4 MB for stock Verovio), and most pages that show a chart need only the grid. So
+					Size. The engraver behind the score is megabytes (the smaller build this site serves is under half
+					the download of stock Verovio), and most pages that show a chart need only the grid. So
 					<code class={code}>&lt;barmark-chart&gt;</code> stays as light as it was, with no score code, and
 					<code class={code}>&lt;barmark-score&gt;</code> loads the engraver only the first time a reader
 					presses Score, in a background worker so the page doesn't freeze. A reader who stays on the grid

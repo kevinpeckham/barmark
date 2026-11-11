@@ -10,7 +10,7 @@ const link = "underline decoration-white/30 underline-offset-3 hover-text-accent
 	<a href={LINKS.engraverNotice} class={link}>modified build</a> of
 	<a href={LINKS.verovioBundled} class={link}>Verovio</a> © Laurent Pugin and others,
 	<a href={FILES.verovioLgpl} class={link}>LGPL-3.0</a>
-	(<a href={LINKS.engraverRelease} class={link}>its release</a>,
+	(<a href={LINKS.engraverRelease} class={link}>the build's release</a>,
 	<a href={LINKS.siteSource} class={link}>this site's source</a>) · by
 	<a href={LINKS.lightningJar} class={link}>Lightning Jar</a> · part of
 	<a href={LINKS.stemShovel} class={link}>Stem Shovel</a>

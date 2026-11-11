@@ -825,6 +825,8 @@ test.describe("the score", () => {
 		page.on("console", (m) => {
 			if (m.type() === "warning") warnings.push(m.text());
 		});
+		const requested: string[] = [];
+		page.on("request", (r) => requested.push(r.url()));
 		const fetched: { url: string; status: number; bytes: number }[] = [];
 		page.on("requestfinished", async (r) => {
 			const response = await r.response();
@@ -844,8 +846,12 @@ test.describe("the score", () => {
 		const wasm = fetched.find((f) => f.url === ENGRAVER_WASM);
 		expect(wasm?.status).toBe(200);
 		expect(fetched.find((f) => f.url === ENGRAVER_MODULE)?.status).toBe(200);
-		// Neither stock Verovio from jsDelivr nor the site's own copy was fetched.
-		expect(fetched.filter((f) => /\/verovio@|verovio-[^/]*\.js$/.test(f.url))).toEqual([]);
+		// Neither stock Verovio from jsDelivr nor the site's own copy was asked for. The own copy
+		// is the worker's hashed chunk (about 8 MB), the only file under workers/chunks/, imported
+		// only on a fallback; matched by path, as its hash changes with each build.
+		expect(
+			requested.filter((u) => /\/verovio@|\/_app\/immutable\/workers\/chunks\//.test(u)),
+		).toEqual([]);
 		console.log(
 			`engraver transfer: ${fetched
 				.filter((f) => f.url.startsWith(ENGRAVER))
