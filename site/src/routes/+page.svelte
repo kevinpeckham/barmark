@@ -22,11 +22,25 @@ const example: Example = $derived(EXAMPLES[index] ?? EXAMPLES[0]);
 const original = $derived(chartOf(example));
 let text = $state(chartOf(EXAMPLES[0]));
 
-/** Shows the next (1) or previous (-1) example in its own key; the view and the chord spelling stay. */
+/** Each example's edited text, kept across flips until its Reset; never stored beyond the page. Not reactive (no SvelteMap): only flip and reset read it. */
+const edits = new Map<Example["id"], string>();
+
+/**
+ * Shows the next (1) or previous (-1) example, as the reader last left it,
+ * in its own key; the view and the chord spelling stay.
+ */
 function flip(step: number) {
+	if (text === original) edits.delete(example.id);
+	else edits.set(example.id, text);
 	index = flipped(index, step);
-	text = chartOf(example);
+	text = edits.get(example.id) ?? original;
 	semitones = 0;
+}
+
+/** Back to the example as written, forgetting its edit. */
+function reset() {
+	edits.delete(example.id);
+	text = original;
 }
 
 /** The render window's chord spelling, as Stem Shovel's Chords view offers it. */
@@ -100,7 +114,7 @@ const description =
 						type="button"
 						class="button text-xs"
 						disabled={text === original}
-						onclick={() => (text = original)}
+						onclick={reset}
 					>
 						<span class="i-ph-arrow-counter-clockwise" aria-hidden="true"></span>Reset
 					</button>

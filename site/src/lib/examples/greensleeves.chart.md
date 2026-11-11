@@ -4,7 +4,7 @@ key: Am, time: 6/8, tempo: 60
 
 ## Verse x2
 | Am | G | F | E |
-| Am | G | F E/G# | Am |
+| Am | G | F E | Am |
 
 ## Refrain
 | C | G | Am | E7 |

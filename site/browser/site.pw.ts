@@ -311,6 +311,23 @@ test.describe("home: the examples", () => {
 		await expect(position(page)).toContainText("Greensleeves");
 	});
 
+	test("an edit stays with its example across flips, until Reset", async ({ page }) => {
+		await page.goto("/");
+		await flip(page, "Next", "Greensleeves");
+		await source(page).fill("# Greensleeves, edited\n| Am |");
+		await flip(page, "Next", "Blues in F");
+		await expect(source(page)).toHaveValue(/^# Blues in F\n/);
+		await flip(page, "Previous", "Greensleeves");
+		await expect(source(page)).toHaveValue("# Greensleeves, edited\n| Am |");
+		await expect.poll(() => chartText(page)).toContain("Greensleeves, edited");
+		await page.getByRole("button", { name: "Reset" }).click();
+		await expect(source(page)).toHaveValue(/^# Greensleeves\ncomposer/);
+		// Reset forgets the edit: flipping away and back shows the original.
+		await flip(page, "Next", "Blues in F");
+		await flip(page, "Previous", "Greensleeves");
+		await expect(source(page)).toHaveValue(/^# Greensleeves\ncomposer/);
+	});
+
 	test.describe("on a phone", () => {
 		test.use({ viewport: { width: 360, height: 800 } });
 		/** Whether the page itself scrolls sideways. */
