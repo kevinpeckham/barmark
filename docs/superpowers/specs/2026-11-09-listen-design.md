@@ -189,7 +189,7 @@ to (it does that today in `utils/alignmentReason.ts`).
 | Code | When |
 | --- | --- |
 | `pickup` | The grid reports a pickup. `detail.start` and `detail.beats` are included. |
-| `bar-one-clamped` | Bar one fell before 0:00 (by less than 0.75 beat, §7) and starts at 0:00. |
+| `bar-one-clamped` | Bar one fell before 0:00 and starts at 0:00; `detail.start` is where it fell (§7). |
 | `sound-before-start` | With `startAt` set, sound begins a bar or more before it. Those bars are outside the grid and their chords are dropped (sync's `outside-bars`). |
 | `grid-truncated` | The grid reached `MAX_GRID_BARS` before the recording's end. The app truncated silently. Here it warns (design call). |
 | `bar-one-unplaced` | The pipeline built on the declared grid because the grid could not be placed and the caller asked for that (§6.4). `detail.reason` names the refusal it replaced. |
@@ -219,8 +219,8 @@ name finds the study. The range is what validation accepts (§5.3).
 | `REPAIR_SLIDE_STEP_SEC` | `0.01` | (0, 1] s | Study 26c | comb: `combSlide` |
 | `REPAIR_MIN_TRUSTED_SHARE` | `0.5` | (0, 1] | Study 26c (the one wrong pairing on the bench, no right one) | comb: phase line refusal |
 | `COMB_RANGE_FRACTION` | `0.1` | (0, 1) | Study 24, as Study 26c uses it | comb: period search |
-| `COMB_COARSE_STEP_FRACTION` | `0.002` | (0, range] | Study 24 | comb: coarse ladder |
-| `COMB_FINE_STEP_FRACTION` | `0.0002` | (0, coarse] | Study 24 | comb: fine ladder |
+| `COMB_COARSE_STEP_FRACTION` | `0.002` | > 0, at most `COMB_RANGE_FRACTION` | Study 24 | comb: coarse ladder |
+| `COMB_FINE_STEP_FRACTION` | `0.0002` | > 0, at most `COMB_COARSE_STEP_FRACTION` | Study 24 | comb: fine ladder |
 | `COMB_PHASE_STEP_SEC` | `0.01` | (0, 1] s | Study 24 | comb: phase scan |
 | `TIME_ZERO_SNAP_BEATS` | `0.25` | > 0 beats | Study 31 | grid: time-zero witness |
 | `DOWNBEAT_WEIGHTS` | `{ timeZero: 2, harmonicRhythm: 2, sections: 1 }` | each ≥ 0 | Study 31, registered before it ran | grid: vote |
@@ -245,7 +245,7 @@ confirm or move it:
 | `FIT_MIN_RATIO` | `1.5` | ≥ 1 | `utils/alignmentFit.ts` `MIN_RATIO` | align: `weak-fit` |
 | `SECTION_START_SNAP_SEC` | `0.25` | ≥ 0 s | `utils/alignedPlacements.ts` `START_SNAP` | align: placements |
 | `HEDGE_LOCAL_COST_FACTOR` | `2` | ≥ 1 | `utils/alignedPlacements.ts` (`2 * localMedian`) | align: placements |
-| `DTW_MAX_CELLS` | `150_000_000` | whole number ≥ 1 | `audio/chartAlignment.ts` `MAX_CELLS` | align: `too-long` |
+| `DTW_MAX_CELLS` | `150_000_000` | whole number from 1 to 2^31 | `audio/chartAlignment.ts` `MAX_CELLS` | align: `too-long` |
 | `MAX_GRID_BARS` | `2000` | whole number ≥ 1 | `audio/chartlessGrid.ts` `MAX_BARS` (the app's `ChartDraftSchema` limit) | grid: `grid-truncated` |
 | `PICKUP_MAX_BAR_FRACTION` | `0.5` | (0, 1] | this design, after the app's review (2026-11-09) | grid: the longest pickup reported, as a share of the bar (§7) |
 

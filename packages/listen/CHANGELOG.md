@@ -23,7 +23,7 @@ package uses [semantic versioning](https://semver.org/).
     or a value out of range is `invalid-option` (`resolveOptions`).
   - `@barmark/listen/stages`: each stage on its own, for the bench; the
     stages may change shape in a minor before 1.0.
-  - Depends on `barmark` (^0.22.0) and `@barmark/sync` (^0.4.0, which
+  - Depends on `barmark` (^0.23.1) and `@barmark/sync` (^0.4.1, which
     writes `[k/8]` pickups and has `rehashTiming`), nothing else.
 - **Where it differs from the app**, each asserted on its own:
   - A short pickup (`j ≥ 1`, at most `PICKUP_MAX_BAR_FRACTION` of a bar)

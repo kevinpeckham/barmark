@@ -1,8 +1,9 @@
 /**
  * The `tempo-drift` warning (new, not the app's; Stem Shovel issue #17,
  * Study 34b): how far the comb's settled bar is from the declared one. The
- * app computes the same ratio itself and holds a draft above 4 %; here it
- * is a warning with no threshold, the host's to judge.
+ * app computes the same ratio itself. Here it is a warning with no
+ * threshold: the host chooses its own threshold (the app held drafts above
+ * 4 % at 59da1952).
  */
 import type { ListenWarning } from "../result.js";
 
