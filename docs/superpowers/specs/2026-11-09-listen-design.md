@@ -193,7 +193,7 @@ to (it does that today in `utils/alignmentReason.ts`).
 | `sound-before-start` | With `startAt` set, sound begins a bar or more before it. Those bars are outside the grid and their chords are dropped (sync's `outside-bars`). |
 | `grid-truncated` | The grid reached `MAX_GRID_BARS` before the recording's end. The app truncated silently. Here it warns (design call). |
 | `bar-one-unplaced` | The pipeline built on the declared grid because the grid could not be placed and the caller asked for that (§6.4). `detail.reason` names the refusal it replaced. |
-| `tempo-drift` | The grid's lattice settled on a bar other than the declared one: `detail.ratio` is `period / declaredBar − 1` (signed), with `detail.period` and `detail.declaredBar`. On a placed grid and on `downbeat-undecided` or `nothing-fits` alike; never a refusal and no threshold (the host decides; Stem Shovel holds a draft above 4 %, Study 34b, issue #17). Not emitted when the ratio is zero within floating-point error (8 ulps of 1); the comb's 0.02 % scan step means a recording at its declared tempo usually shows a drift of that size. |
+| `tempo-drift` | The grid's lattice settled on a bar other than the declared one: `detail.ratio` is `period / declaredBar − 1` (signed), with `detail.period` and `detail.declaredBar`. On a placed grid and on `downbeat-undecided` or `nothing-fits` alike; never a refusal and no threshold (the host chooses its own; issue #17). Not emitted when the ratio is zero within floating-point error (8 ulps of 1); the comb's 0.02 % scan step means a recording at its declared tempo usually shows a drift of that size. |
 | `chart-diagnostics` | The aligned chart has parse warnings or errors. The alignment still runs, as the app's adapter does. `detail.count` is included. |
 
 ## 5. Options: the constants
@@ -1046,20 +1046,39 @@ release.
 
 ## 13. Open for Study 34
 
-- **Meter and tempo detection:** a `detectMeterTempo(features)` (a port of
-  `analysis.ts`'s ladder, or a comb over candidate bars) would make
-  `declared` optional, additively.
-- **Extreme tempos:** octave errors would call for comb candidates at ½×,
-  2× and 3⁄2×, with a threshold the study registers.
-- **3/4 and 6/8:** if 6/8 songs fail the vote, the witnesses may need the
-  compound beat (2 classes). That changes `beatsPerBar`, the fence and the
-  pickup's beat (with §14 Q4).
+Answers recorded 2026-11-11 from stem-bench Studies 36b to 41 (commits
+cited per item). None changes listen 0.1.0's code, defaults, refusals or
+warnings.
+
+- **Meter and tempo detection. Answered: do not port `analysis.ts`'s
+  detector ladder** (Study 36b, stem-bench `1be657f`: on a 261-song census
+  the detector is strict on 36 % of songs against 70 % for the beat
+  trackers). `declared` stays required. The app's automatic path takes its
+  bars from a tracker instead (Study 41, `1a8b325`).
+- **Extreme tempos. Answered: no ×2 comb candidate, and half bars are
+  safe.** The finer-bar (×2) rule is net negative at every strength, and no
+  bpm cap rescues it (Study 40, `f7c22b2`). A half-bar draft grades at or
+  above the declared bar (Study 37, `48dae87`, Part D), and Beat This
+  small0's two half bars cost nothing (Study 41, `1a8b325`), so the octave
+  needs no detector.
+- **3/4 and 6/8. Answered: 6/8 is declared by the musician, not called from
+  the sub-beat.** No audio witness separates true from false 6/8, and the
+  detector's 6/8 call has no bar value (Study 40, `f7c22b2`); the app no
+  longer names 6/8 from its scan (v0.259.8). Listen's grammar 2.1 tempo for
+  a declared 6/8 (dotted quarters) is the convention Study 41's label rule
+  lands on.
 - **Phone captures (S34-G3):** the time-zero witness assumes a DAW export.
   Possible outcomes are a `source: "capture"` input, a capture-specific
   sound floor, or a warning.
-- **Confidently wrong (S34-G1):** each failure shape gets a new refusal
-  reason with a registered threshold (a comb-contrast floor for the 65 Hz
-  kick case, a vote-margin floor, a tighter same-piece gate).
+- **Confidently wrong (S34-G1). Answered: nothing measured before the
+  model runs marks the confidently wrong drafts** (Study 41, `1a8b325`,
+  Ask C), so no new pre-model refusal reason. A 4 % drift hold catches 1 of
+  3 bad drafts and holds 12 good ones (S41-D2), which is why `tempo-drift`
+  stays a warning with no threshold. The thin-transcription hold survives,
+  and it belongs to the host, which reads the notes.
+- **Free tempo. Answered: no free-tempo tracker is chartable yet** (Study
+  39, `bc9c915`: the best of eight systems charts 11 of 48 performances
+  against a 36 of 48 floor). The 0.2 tempo-following grid stays open.
 - **The same-piece gate's breadth:** 1.6 and 0.3 come from two songs of
   one band. A new default is a minor that names the study.
 - **Extended harmony:** if extensions thin the harmonic histogram,

@@ -70,7 +70,7 @@ person to check rather than save it as the song's chart.
 one: `detail.ratio` is `period / declaredBar − 1`, signed (negative when
 the recording runs faster), with `detail.period` and
 `detail.declaredBar`. It is a warning with no threshold here; the host
-decides what is too far (Stem Shovel holds a draft above 4 %). The comb
+chooses its own threshold. The comb
 scans its period in steps of 0.02 %, so a recording at its declared
 tempo usually shows a drift of about that size.
 

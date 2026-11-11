@@ -65,8 +65,8 @@ package uses [semantic versioning](https://semver.org/).
     `period / declaredBar − 1`, signed, with `detail.period` and
     `detail.declaredBar`), on a placed grid and on an undecided or
     nothing-fits refusal alike. A warning with no threshold: the host
-    decides (Stem Shovel holds a draft above 4 %, Study 34b). The app
-    computes the same ratio itself; no number changes.
+    chooses its own. The app computes the same ratio itself; no number
+    changes.
 - **The README says why `declared` is required**: detecting tempo and
   meter is where this pipeline fails on real recordings (Study 34), so a
   host that detects what it passes as `declared` should treat the result
