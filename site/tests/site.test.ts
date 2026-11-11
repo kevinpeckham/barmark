@@ -11,7 +11,9 @@ import {
 } from "../src/lib/site.ts";
 import { build, page } from "./built.ts";
 
-const demo = await Bun.file(join(import.meta.dir, "../src/lib/demo.chart.md")).text();
+const demo = await Bun.file(
+	join(import.meta.dir, "../src/lib/examples/peaceful-dreams.chart.md"),
+).text();
 /** Peaceful Dreams as Stem Shovel has it, kept in the repository's examples. */
 const official = await Bun.file(
 	join(import.meta.dir, "../../examples/peaceful-dreams.chart.md"),
@@ -38,7 +40,7 @@ describe("site copy", () => {
 	});
 });
 
-describe("the demo chart", () => {
+describe("Peaceful Dreams, one of the examples", () => {
 	const chart = parseChart(demo);
 	test("parses cleanly", () => {
 		expect(chart.diagnostics).toEqual([]);

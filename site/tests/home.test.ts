@@ -1,6 +1,7 @@
 import { beforeAll, describe, expect, test } from "bun:test";
 import { join } from "node:path";
 import { ENGRAVER_CDN_INTEGRITY, ENGRAVER_CDN_URL, ENGRAVER_WASM_INTEGRITY } from "@barmark/score";
+import { EXAMPLES } from "../src/lib/examples.ts";
 import {
 	HEADLINE,
 	LINKS,
@@ -11,7 +12,10 @@ import {
 } from "../src/lib/site.ts";
 import { build, page } from "./built.ts";
 
-const demo = await Bun.file(join(import.meta.dir, "../src/lib/demo.chart.md")).text();
+/** The default example, Amazing Grace: the one the page prerenders. */
+const demo = await Bun.file(
+	join(import.meta.dir, "../src/lib/examples/amazing-grace.chart.md"),
+).text();
 let doc: Document;
 beforeAll(() => {
 	build();
@@ -38,7 +42,7 @@ describe("the home page, prerendered", () => {
 	});
 	test("the render window shows the chart without JavaScript", () => {
 		const template = doc.querySelector("main barmark-score template[shadowrootmode=open]");
-		expect(template?.innerHTML).toContain("Peaceful Dreams");
+		expect(template?.innerHTML).toContain("Amazing Grace");
 	});
 	test("the render window is a <barmark-score>: the grid drawn, a Grid / Score switch on Grid, the text carried", () => {
 		const score = doc.querySelector("main barmark-score");
@@ -64,10 +68,10 @@ describe("the home page, prerendered", () => {
 		);
 		expect(urls.filter((u) => /worker|verovio|wasm/i.test(u))).toEqual([]);
 	});
-	test("the render window offers the key, named for the demo's own, D", () => {
+	test("the render window offers the key, named for the demo's own, G", () => {
 		const button = doc.querySelector('main button[aria-haspopup="menu"]');
-		expect(button?.getAttribute("aria-label")).toBe("Key: D");
-		expect(button?.textContent?.trim()).toBe("D");
+		expect(button?.getAttribute("aria-label")).toBe("Key: G");
+		expect(button?.textContent?.trim()).toBe("G");
 	});
 	test("the render window's chart scrolls rather than wrapping its rows", () => {
 		const chart = doc.querySelector("main barmark-score");
@@ -101,11 +105,25 @@ describe("the home page, prerendered", () => {
 	});
 });
 
-describe("the demo song", () => {
-	test("is credited to its writer, all rights reserved", () => {
+describe("the examples", () => {
+	const group = () => doc.querySelector('main [role="group"][aria-label="Examples"]');
+	test("a control flips through them: Previous and Next, the title and its place", () => {
+		const buttons = [...(group()?.querySelectorAll("button") ?? [])];
+		expect(buttons.map((b) => b.getAttribute("aria-label"))).toEqual([
+			"Previous example",
+			"Next example",
+		]);
+		expect(buttons.map((b) => b.getAttribute("type"))).toEqual(["button", "button"]);
+		const status = group()?.querySelector('[role="status"]');
+		expect(status?.textContent?.replace(/\s+/g, " ").trim()).toBe(
+			`Amazing Grace ${1} of ${EXAMPLES.length}`,
+		);
+	});
+	test("the default is Amazing Grace, credited as public domain", () => {
+		expect(EXAMPLES[0]?.id).toBe("amazing-grace");
 		const credit = doc.querySelector("[data-credit]")?.textContent?.replace(/\s+/g, " ");
-		expect(credit).toContain("Peaceful Dreams");
-		expect(credit).toContain("© Kevin Peckham, all rights reserved");
+		expect(credit).toContain("John Newton");
+		expect(credit).toContain("public domain");
 	});
 });
 

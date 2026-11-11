@@ -58,7 +58,7 @@ const FILES = [
 	"packages/sync/tests/fixtures/eat-all-the-clocks.symbols.chart.md",
 	"packages/sync/tests/fixtures/letter-lands.chart.md",
 	"packages/sync/tests/fixtures/letter-lands.symbols.chart.md",
-	"site/src/lib/demo.chart.md",
+	"site/src/lib/examples/peaceful-dreams.chart.md",
 ];
 
 const charts: Record<string, string> = {
