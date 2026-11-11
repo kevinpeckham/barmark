@@ -399,7 +399,8 @@ showed the rule needed refining.
 
 - **The symptom.** Two things the 0.1.0 review found. `COMB_PHASE_STEP_SEC`
   and the other three scan steps had a lower bound of "> 0": at 1e-12 the
-  comb ran about 1e11 iterations. And `alignChart`'s map, described as
+  comb ran about 1e11 iterations (and `REPHASE_FENCE_BEATS` had no upper
+  one: 2,000,000 beats took 21.6 s). And `alignChart`'s map, described as
   sitting "a few milliseconds" outside the recording, could hold a whole
   bar past its end: a recording cut a bar short of its chart gave an `ok`
   map whose last bar started at the recording's end.
@@ -408,11 +409,14 @@ showed the rule needed refining.
   recording, so "a few ms" held only for recordings as long as their
   charts, which is what every self-render is.
 - **The fix.** Each step has a floor holding its scan to 100 times the
-  default's steps (`packages/listen/src/options.ts`; the ladders' floors
-  are shares of the range they span, so their length is bounded whatever
-  the range). The map is clamped to [0, duration] in `alignedTimingMap`,
-  and a bar the clamp would leave no length is refused `map-invalid`
-  (`barOutsideRecording`, `packages/listen/src/align/timing.ts`). Size an
+  default's steps, and the fence a 16-beat ceiling
+  (`packages/listen/src/options.ts`; the ladders' floors are shares of
+  the range they span, so their length is bounded whatever the range).
+  The map is clamped to [0, duration] in `alignedTimingMap`, and a bar
+  the clamp would leave no length is dropped with a `bars-cut` warning
+  (`keptBars`, `packages/listen/src/align/timing.ts`). A first pass
+  refused the whole map instead; Kevin chose to keep the bars the
+  recording holds, since a timing map may name fewer bars than the chart. Size an
   option by the work it causes, and test an edge by the input that makes
   it large, not only by the inputs at hand.
 

@@ -293,6 +293,7 @@ describe("the named adapters and exclusions (§11.3, §12.8), each asserted", ()
 			],
 			end: 10,
 		});
+		// A bar the clamp leaves no length is dropped, at either edge (Kevin's decision, 0.1.1).
 		expect(
 			timingAsListen({
 				...app,
@@ -301,7 +302,7 @@ describe("the named adapters and exclusions (§11.3, §12.8), each asserted", ()
 					{ bar: 2, start: 0 },
 				],
 			}),
-		).toBeNull();
+		).toEqual({ ...app, bars: [{ bar: 2, start: 0 }], end: 10 });
 		expect(
 			timingAsListen({
 				...app,
@@ -310,13 +311,15 @@ describe("the named adapters and exclusions (§11.3, §12.8), each asserted", ()
 					{ bar: 2, start: 10 },
 				],
 			}),
-		).toBeNull();
+		).toEqual({ ...app, bars: [{ bar: 1, start: 0 }], end: 10 });
+		// Nothing left: no map.
+		expect(timingAsListen({ ...app, bars: [{ bar: 1, start: 11 }], end: 12 })).toBeNull();
 		expect(timingAsListen(null)).toBeNull();
 		let moved = 0;
 		for (const g of goldens) {
 			const app = g.timing as {
 				recording: { duration: number };
-				bars: { start: number }[];
+				bars: { bar: number; start: number }[];
 				end: number;
 			};
 			const r = run(g);
@@ -325,6 +328,8 @@ describe("the named adapters and exclusions (§11.3, §12.8), each asserted", ()
 			expect(partsOf(r).alignment.barStarts).toEqual(g.alignment.barStarts);
 			expect(map).toEqual(timingAsListen(app) as never);
 			if (map === null) continue;
+			// No golden's map loses a bar: the clamp only trims the first start and the end.
+			expect(map.bars.map((b) => b.bar)).toEqual(app.bars.map((b) => b.bar));
 			expect(map.bars[0]?.start).toBeGreaterThanOrEqual(0);
 			expect(map.end).toBeLessThanOrEqual(app.recording.duration);
 			if ((app.bars[0]?.start ?? 0) < 0 || app.end > app.recording.duration) moved++;

@@ -182,7 +182,7 @@ to (it does that today in `utils/alignmentReason.ts`).
 | `bar-one-far` | align | Bar one is more than one declared bar (§6.3) from where the music starts (`max(startAt, firstSound)`). |
 | `bar-length-off` | align | The median aligned bar is more than `FIT_BAR_TOLERANCE` off the declared bar (§6.3). |
 | `weak-fit` | align | `controlCost / cost < FIT_MIN_RATIO`. |
-| `map-invalid` | align | A bar lies wholly outside the recording, so clamping the map to [0, duration] (§6.3, 0.1.1) would leave it no length: `detail.bar`, `detail.edge` (`start`: it ends at or before 0:00; `end`: it starts at or after the recording's end), `detail.start`, `detail.end`. Otherwise the aligned map fails `checkTimingMap` against the chart (the bar count or the hash), which should be unreachable, and its test proves that. |
+| `map-invalid` | align | The aligned map fails `checkTimingMap` against the chart (the bar count or the hash). This should be unreachable, and its test proves that. |
 
 ### 4.2 Warning codes
 
@@ -195,6 +195,7 @@ to (it does that today in `utils/alignmentReason.ts`).
 | `bar-one-unplaced` | The pipeline built on the declared grid because the grid could not be placed and the caller asked for that (§6.4). `detail.reason` names the refusal it replaced. |
 | `tempo-drift` | The grid's lattice settled on a bar other than the declared one: `detail.ratio` is `period / declaredBar − 1` (signed), with `detail.period` and `detail.declaredBar`. On a placed grid and on `downbeat-undecided` or `nothing-fits` alike; never a refusal and no threshold (the host chooses its own; issue #17). Not emitted when the ratio is zero within floating-point error (8 ulps of 1); the comb's 0.02 % scan step means a recording at its declared tempo usually shows a drift of that size. |
 | `chart-diagnostics` | The aligned chart has parse warnings or errors. The alignment still runs, as the app's adapter does. `detail.count` is included. |
+| `bars-cut` | The aligned map dropped bars lying wholly before 0:00 or after the recording's end, which the clamp to [0, duration] would leave no length (§6.3, 0.1.1). `detail.bars` lists their bar numbers, `detail.edge` is `start` or `end`; one warning an edge. The only warning whose detail holds a list. |
 
 ## 5. Options: the constants
 
@@ -214,7 +215,7 @@ name finds the study. The range is what validation accepts (§5.3).
 | `ALIGNMENT_SOUND_WINDOW_SEC` | `0.05` | (0, 1] s | Study 14's RMS window for the floor | features: first and last sound |
 | `REPAIR_TRUST_FRACTION` | `0.25` | (0, 1] | Study 26c | comb: trusted span; re-phase confidence |
 | `REPAIR_SLIDE_FRACTION` | `0.25` | (0, 1] | Study 26c (the v3 fence; ±0.5 broke Peaceful Dreams' intro by 0.60 s) | comb: `repairEnds` (v3 reference only) |
-| `REPHASE_FENCE_BEATS` | `0.5` | > 0 beats | Study 27, recipe v5 (Mop Heart, 224 bpm in 3/4) | comb: `rephaseGrid` |
+| `REPHASE_FENCE_BEATS` | `0.5` | > 0, at most 16 beats (the ceiling, 0.1.1: a fence beyond a bar is meaningless) | Study 27, recipe v5 (Mop Heart, 224 bpm in 3/4) | comb: `rephaseGrid` |
 | `ONSET_ENVELOPE_LEAD_SEC` | `0.07` | [0, 1] s | Measured 2026-11-08 on synthetic hits (75, 68, 60, 54 ms early); Study 31's 0.058 to 0.079 s and Study 27's residuals are this lead | grid: lattice anchor; align: re-phased starts |
 | `REPAIR_SLIDE_STEP_SEC` | `0.01` | 0.0001 to 1 s (the floor, 0.1.1: at most 100 times the default's `2 × range / step` steps) | Study 26c | comb: `combSlide` |
 | `REPAIR_MIN_TRUSTED_SHARE` | `0.5` | (0, 1] | Study 26c (the one wrong pairing on the bench, no right one) | comb: phase line refusal |
@@ -238,6 +239,10 @@ study has used: 0.1 ms for the two seconds steps (a hundredth of 10 ms),
 and for the two ladders a share of the range they span, so a ladder's
 length is bounded whatever the range (10,001 coarse periods, 2,001 fine).
 Each floor bounds its own scan; several at their floors at once multiply.
+`REPHASE_FENCE_BEATS` has a ceiling for the same reason: it had none,
+2,000,000 beats took 21.6 s and 1e9 was accepted. A fence wider than a
+bar slides the grid past the neighbouring downbeat, which is meaningless,
+so the ceiling is 16 beats, a bar of any meter up to 16 beats.
 
 ### 5.2 Seven set by the app or the design, not by a study
 
@@ -541,11 +546,19 @@ alignChart(input: AlignInput, options?: ListenOptions):
   self-renders start down to −2.3 ms, and 21 end 1 to 6 ms past the
   duration); the app keeps that. Only the map is clamped:
   `Alignment.barStarts` and the placements keep the re-phased values, as
-  the app has them. A bar the clamp would leave no length (it ends at or
-  before 0:00, or starts at or after the end: a recording cut a bar or
-  more short of the chart) is refused `map-invalid` with the bar and its
-  edge, not kept at zero length and not left unclamped: a map whose bar
-  cannot sound in the recording is not a map of it. The pipeline's map
+  the app has them.
+- **A map may stop short of the chart when the recording does (0.1.1,
+  Kevin's decision).** A bar the clamp would leave no length (it ends at
+  or before 0:00, or starts at or after the end: a recording cut a bar or
+  more short of the chart) is dropped from the map, and the call warns
+  `bars-cut` with the bars and the edge. The rest of the map is kept,
+  clamped. Sync's `checkTimingMap` allows such a map with one warning
+  (the bars it never names), and `barAt` and `secondsAtBar` answer for
+  the bars it holds. Only a zero length is cut: a bar that keeps any
+  length stays, however short (a recording cut 1.95 s short of a 2 s bar
+  keeps a 49 ms stub). No minimum is principled: any threshold would be a
+  new constant for a study to set, and the stub is where the recording
+  says the bar starts. `map-invalid` stays the unreachable invariant. The pipeline's map
   (§6.4) needs no clamp: its grid is already held to the recording (bar
   one and a pickup clamped at 0:00, the last bar closed at the end).
 - **A refusal still carries the alignment and the placements** whenever the
@@ -1002,7 +1015,7 @@ differs is a porting bug, and the goldens make it a failing test.
 | A `symbol` run reads as barmark's canonical spelling when `parseChord` reads it, so `A-` and `Am` count as one chord, not a change; the app compares the symbols as written | §11.1. Symbol runs with non-canonical spellings only; no ChordMini (Harte) label is affected |
 | A run whose `start` or `end` is not finite is skipped, and only the frames some beat reads are kept; the app sized its frames from the runs, so such a run threw or voted every beat "N.C." | Review Focus 3; never-throws (FINDINGS.md). A vote never changes on finite runs |
 | Refusals are names: the app's grid reasons map as §12.8 says, and the fit's sentences (`alignmentFit`'s `reasons`) are the refusal reasons `bar-one-far`, `bar-length-off`, `weak-fit`, `bars-off-middle` and `no-bars` | §4: refusals are values with reasons, not sentences |
-| listen clamps the map to [0, duration]; the app does not. A bar the clamp would leave no length is `map-invalid` here, a map in the app | Kevin's decision (0.1.1): a map says where the bars sound in the recording, so it does not run past it (§6.3). Only the map: the alignment and the placements are the app's. The equivalence compares the app's map clamped by the same rule (`timingAsListen`, its own test), so the goldens stand |
+| listen clamps the map to [0, duration]; the app does not. A bar the clamp would leave no length is dropped from the map here, with `bars-cut`; the app's map keeps it past the recording | Kevin's decision (0.1.1): a map says where the bars sound in the recording, so it does not run past it (§6.3). Only the map: the alignment and the placements are the app's. The equivalence compares the app's map clamped by the same rule (`timingAsListen`, its own test), so the goldens stand |
 | listen adds `tempo-drift`; the app computes the same ratio itself | Stem Shovel issue #17 (Study 34b): the grid holds both numbers. A warning only, so no value changes and the goldens stand |
 | `too-long` counts the step table's cells, `(n + 1)(m + 1)`, where the app counts `n × m`: a case within `n + m + 1` cells of `DTW_MAX_CELLS` is refused here and warped by the app (added in Task 12, after a security review) | It is what `dtwTable` allocates. The other new check, `chart-too-long` before the render when the chart's seconds exceed twice the recording's, changes no outcome: it implies more than `2m` chart frames, which no warping fits (the app's own `chart-too-long`, checked on 1,677 seeded warpings) |
 

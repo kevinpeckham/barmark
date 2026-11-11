@@ -27,7 +27,8 @@ export type WarningCode =
 	| "grid-truncated"
 	| "bar-one-unplaced"
 	| "chart-diagnostics"
-	| "tempo-drift";
+	| "tempo-drift"
+	| "bars-cut";
 
 /** One reason a call refused. */
 export type Refusal = {
@@ -42,7 +43,8 @@ export type Refusal = {
 export type ListenWarning = {
 	code: WarningCode;
 	message: string;
-	detail?: Record<string, number | string | boolean>;
+	/** The numbers behind it; a list of bar numbers for `bars-cut`. */
+	detail?: Record<string, number | string | boolean | number[]>;
 };
 
 /** A call that worked. */

@@ -102,9 +102,13 @@ land a few milliseconds outside it (the app's maps keep that overshoot;
 this package clamps it), and only the map is clamped: `alignment.barStarts`
 and the placements keep the re-phased values. A bar lying wholly outside
 the recording, which the clamp would leave no length (a recording cut a
-bar or more short of the chart), is refused `map-invalid`, with
-`detail.bar`, `detail.edge` (`start` or `end`) and the bar's own start
-and end.
+bar or more short of the chart), is dropped: the map stops short of the
+chart where the recording does, and a `bars-cut` warning names the bars
+and the edge. Sync's `checkTimingMap` reads such a map with one warning
+(the bars it never names), and `barAt` and `secondsAtBar` answer for the
+bars it holds. Only a bar of no length is dropped: one that keeps any
+(a 49 ms stub when the recording ends just after its bar line) stays,
+clamped.
 
 ### A recording to a chart
 
@@ -165,7 +169,7 @@ seconds and bar numbers; `detail` has the numbers behind it.
 | `bar-one-far` | align | Bar one is more than one declared bar from where the music starts. |
 | `bar-length-off` | align | The median aligned bar is more than `FIT_BAR_TOLERANCE` off the declared bar. |
 | `weak-fit` | align | The control's cost is under `FIT_MIN_RATIO` times the chart's. |
-| `map-invalid` | align | A bar lies wholly outside the recording, so the clamp to [0, duration] would leave it no length (`detail.bar`, `detail.edge`, `detail.start`, `detail.end`); or the aligned map fails `checkTimingMap` against the chart, which should be unreachable. |
+| `map-invalid` | align | The aligned map fails `checkTimingMap` against the chart. It should be unreachable. |
 
 | Warning | When |
 | --- | --- |
@@ -175,6 +179,7 @@ seconds and bar numbers; `detail` has the numbers behind it.
 | `grid-truncated` | The grid reached `MAX_GRID_BARS` before the recording's end. |
 | `bar-one-unplaced` | The pipeline built on the declared grid (`onUnplaced: "declared"`); `detail.reason` names the refusal it replaced. |
 | `chart-diagnostics` | The aligned chart has parse warnings or errors (a `?` among them); the alignment still runs. |
+| `bars-cut` | align: bars lie wholly before 0:00 or after the recording's end, so the map, clamped to the recording, drops them (`detail.bars`, their bar numbers; `detail.edge`, `start` or `end`). One warning an edge. |
 | `tempo-drift` | grid and pipeline: the comb's bar differs from the declared one (`detail.ratio`, `period / declaredBar − 1`, signed; `detail.period`, `detail.declaredBar`). No threshold: the host decides. Not emitted when the ratio is zero within floating-point error. |
 
 ## Options
@@ -201,7 +206,7 @@ every other sweep reuses them.
 | `ALIGNMENT_SOUND_WINDOW_SEC` | `0.05` | (0, 1] s | Study 14 (features only) |
 | `REPAIR_TRUST_FRACTION` | `0.25` | (0, 1] | Study 26c |
 | `REPAIR_SLIDE_FRACTION` | `0.25` | (0, 1] | Study 26c |
-| `REPHASE_FENCE_BEATS` | `0.5` | > 0 beats | Study 27 |
+| `REPHASE_FENCE_BEATS` | `0.5` | > 0, at most 16 beats | Study 27; ceiling 0.1.1 |
 | `ONSET_ENVELOPE_LEAD_SEC` | `0.07` | [0, 1] s | Measured on synthetic hits; Studies 27 and 31 |
 | `REPAIR_SLIDE_STEP_SEC` | `0.01` | 0.0001 to 1 s | Study 26c; floor 0.1.1 |
 | `REPAIR_MIN_TRUSTED_SHARE` | `0.5` | (0, 1] | Study 26c |
@@ -234,6 +239,10 @@ so their floor is 0.1 ms, a hundredth of 10 ms. The coarse ladder holds
 fine ladder holds `2 × coarse / fine + 1`: at most 2,001 (the default's
 21). The floors bound each scan on its own; several at their floors at
 once multiply (the phase scan runs once per period of both ladders).
+`REPHASE_FENCE_BEATS` has a ceiling of 16 beats (0.1.1): a fence wider
+than a bar slides the grid past the next downbeat, which is meaningless,
+16 beats is a bar of any meter up to 16 beats, and the slide's work grows
+with the fence (2,000,000 beats took 21.6 s).
 
 Each option's doc comment in `DEFAULTS` says what it does and where its
 value comes from. A default changes only with a registered study, named

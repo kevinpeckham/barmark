@@ -16,9 +16,11 @@ package uses [semantic versioning](https://semver.org/).
   duration). Only the map is clamped: `alignment.barStarts` and the
   placements keep the re-phased values. A bar lying wholly outside the
   recording, which the clamp would leave no length (a recording cut a
-  bar or more short of the chart), is now refused `map-invalid`, with
-  `detail.bar`, `detail.edge`, `detail.start` and `detail.end`; 0.1.0
-  returned a map with that bar past the recording's end. The pipeline's
+  bar or more short of the chart), is dropped: the map stops short of
+  the chart where the recording does, and a new warning, `bars-cut`,
+  names the bars (`detail.bars`) and the edge (`detail.edge`). 0.1.0
+  kept such a bar past the recording's end. `ListenWarning.detail`
+  values may now be a list of numbers (`bars-cut` only). The pipeline's
   maps were already inside the recording and are unchanged.
 - **Floors on the four scan steps**, refused as `invalid-option`: a step
   bounded no work by itself, and 1e-12 ran about 1e11 iterations. Each
@@ -28,6 +30,9 @@ package uses [semantic versioning](https://semver.org/).
   (10,001 coarse periods at most); `COMB_FINE_STEP_FRACTION` at least
   `COMB_COARSE_STEP_FRACTION / 1000` (2,001 fine periods at most). No
   default changes.
+- **A ceiling on `REPHASE_FENCE_BEATS`**: at most 16 beats, refused as
+  `invalid-option`. It had none: 2,000,000 beats took 21.6 s and 1e9
+  was accepted, and a fence wider than a bar is meaningless.
 
 ## [0.1.0] - 2026-11-11
 

@@ -305,21 +305,23 @@ type AppMap = {
 /**
  * §11.3 (0.1.1): the package clamps its aligned map to the recording,
  * [0, `recording.duration`]; the app keeps the re-phased lines a few
- * milliseconds before 0:00 or past the end. The app's map with every start
- * and the end clamped; null (no map) when the clamp leaves a bar no length,
- * a bar wholly outside the recording, which the package refuses
- * (`map-invalid`). The app's null map stays null.
+ * milliseconds before 0:00 or past the end. The app's map clamped by the
+ * package's rule: a bar the clamp leaves no length (it ends at or before
+ * 0:00, or starts at or after the end) is dropped, the rest clamped, so
+ * the map stops short of the chart where the recording does. Null when no
+ * bar is left, and the app's null map stays null.
  */
 export function timingAsListen(app: unknown): unknown {
 	if (app === null) return null;
 	const map = app as AppMap;
 	const d = map.recording.duration;
 	const clamp = (t: number) => Math.min(d, Math.max(0, t));
-	const bars = map.bars.map((b) => ({ ...b, start: clamp(b.start) }));
-	const end = clamp(map.end);
-	const lines = [...bars.map((b) => b.start), end];
-	if (lines.some((t, i) => i > 0 && t <= (lines[i - 1] as number))) return null;
-	return { ...map, bars, end };
+	const lines = [...map.bars.map((b) => b.start), map.end];
+	const kept = map.bars.filter((_, i) => (lines[i + 1] as number) > 0 && (lines[i] as number) < d);
+	if (kept.length === 0) return null;
+	const last = map.bars.indexOf(kept.at(-1) as AppMap["bars"][number]);
+	const bars = kept.map((b) => ({ ...b, start: clamp(b.start) }));
+	return { ...map, bars, end: clamp(lines[last + 1] as number) };
 }
 
 /** The title both sides give the built chart. */

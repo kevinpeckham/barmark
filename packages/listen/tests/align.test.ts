@@ -11,7 +11,7 @@ import { parseChart } from "barmark";
 import { type AlignedChart, alignChart } from "../src/align/align.js";
 import { chartPadBars } from "../src/align/bars.js";
 import { renderWhole } from "../src/align/render.js";
-import { alignedTimingMap, barOutsideRecording } from "../src/align/timing.js";
+import { alignedTimingMap, keptBars, mapLines } from "../src/align/timing.js";
 import { type Features, recordingFeatures } from "../src/features/index.js";
 import { featuresOf } from "./helpers/features.js";
 import { seeded } from "./helpers/seeded.js";
@@ -84,15 +84,52 @@ describe("alignedTimingMap: the app's alignedTimingMap", () => {
 		expect(alignedTimingMap(TEXT, parse, [0, 2, 4, 6.5], 6.5, undefined)?.end).toBe(6.5);
 	});
 
-	test("a bar wholly outside the recording, which the clamp would leave no length, gives no map", () => {
-		// Bar 1 ends before 0:00; bar 3 starts at or after the end.
-		expect(alignedTimingMap(TEXT, parse, [-2.5, -0.1, 2, 4], 60, undefined)).toBeNull();
-		expect(alignedTimingMap(TEXT, parse, [-2.5, 0, 2, 4], 60, undefined)).toBeNull();
-		expect(alignedTimingMap(TEXT, parse, [0, 2, 4.1, 6.1], 4, undefined)).toBeNull();
-		expect(alignedTimingMap(TEXT, parse, [0, 2, 4, 6], 4, undefined)).toBeNull();
-		expect(barOutsideRecording([-2.5, -0.1, 2, 4], 60)).toEqual({ bar: 0, edge: "start" });
-		expect(barOutsideRecording([0, 2, 4, 6], 4)).toEqual({ bar: 2, edge: "end" });
-		expect(barOutsideRecording([-0.1, 2, 4, 6.1], 6)).toBeNull();
+	test("bars the clamp would leave no length are dropped: the map stops short where the recording does", () => {
+		const missing = (bars: string) => [
+			{
+				severity: "warning" as const,
+				message: `the map never names map bar${bars.includes(",") ? "s" : ""} ${bars}`,
+				path: "bars",
+			},
+		];
+		// Bar 3 starts after the end of a 4 s recording: bars 1 and 2, the end at 4.
+		const end = alignedTimingMap(TEXT, parse, [0, 2, 4.1, 6.1], 4, undefined);
+		expect(end?.bars).toEqual([
+			{ bar: 1, start: 0 },
+			{ bar: 2, start: 2 },
+		]);
+		expect(end?.end).toBe(4);
+		expect(checkTimingMap(end, { text: TEXT }).diagnostics).toEqual(missing("3"));
+		// A bar line exactly at the end: the bar after it has no length either.
+		expect(alignedTimingMap(TEXT, parse, [0, 2, 4, 6], 4, undefined)?.bars).toHaveLength(2);
+		// Bar 1 ends before 0:00: bars 2 and 3, the first at 0.
+		const start = alignedTimingMap(TEXT, parse, [-2.5, -0.1, 2, 4], 60, undefined);
+		expect(start?.bars).toEqual([
+			{ bar: 2, start: 0 },
+			{ bar: 3, start: 2 },
+		]);
+		expect(checkTimingMap(start, { text: TEXT }).diagnostics).toEqual(missing("1"));
+		// A bar ending exactly at 0:00 has no length; a 49 ms stub keeps its bar.
+		expect(alignedTimingMap(TEXT, parse, [-2, 0, 2, 4], 60, undefined)?.bars[0]).toEqual({
+			bar: 2,
+			start: 0,
+		});
+		expect(alignedTimingMap(TEXT, parse, [0, 2, 3.951, 6], 4, undefined)?.bars).toHaveLength(3);
+		// Nothing left: no map (map-invalid stays the unreachable invariant).
+		expect(alignedTimingMap(TEXT, parse, [5, 6, 7, 8], 4, undefined)).toBeNull();
+	});
+
+	test("keptBars: the played bars the clamp leaves some length, and those cut at each edge", () => {
+		expect(keptBars([0, 2, 4, 6], 6)).toEqual({ from: 0, to: 3 });
+		expect(keptBars([-0.1, 2, 4, 6.1], 6)).toEqual({ from: 0, to: 3 });
+		expect(keptBars([-2.5, -0.1, 2, 4], 60)).toEqual({ from: 1, to: 3 });
+		expect(keptBars([0, 2, 4, 6], 4)).toEqual({ from: 0, to: 2 });
+		expect(keptBars([-4, -2, 0, 2, 4, 6], 3)).toEqual({ from: 2, to: 4 });
+		expect(keptBars([5, 6, 7], 4)).toEqual({ from: 0, to: 0 });
+	});
+
+	test("mapLines: the parse's bars and the end, the rest of barStarts ignored", () => {
+		expect(mapLines(parse, [0, 2, 4, 6, 8, 10])).toEqual([0, 2, 4, 6]);
 	});
 
 	test("a pickup chart's map starts at its pickup, bar 1 by index; recording.id is copied", () => {
@@ -203,31 +240,30 @@ describe("alignChart on a song rendered from its own chart", () => {
 		expect(clamped).toBeGreaterThan(0);
 	}, 60_000);
 
-	test("a recording cut a bar short of the chart: the last bar lies past its end, refused map-invalid", () => {
-		// Before 0.1.1 this was an ok map whose last bar ran 2 s past the recording.
+	test("a recording cut a bar short of the chart: ok, the last bar dropped, warned bars-cut", () => {
+		// 0.1.0 kept bar 24 past the recording's end; Kevin's decision (0.1.1): drop it and warn.
 		const bars = chartPadBars(parseChart(CHART), undefined);
 		if (!bars.ok) throw new Error("no bars");
 		const { samples } = renderWhole(bars.bars, RATE);
 		const cut = recordingFeatures(samples.slice(0, samples.length - 3 * RATE), RATE);
 		if (!cut.ok) throw new Error("no features");
 		const r2 = alignChart({ chart: CHART, features: cut.value });
-		expect(r2.ok).toBe(false);
-		if (r2.ok) return;
-		expect(r2.refusals).toEqual([
+		if (!r2.ok) throw new Error(reasons(r2).join(", "));
+		const { timing, alignment } = r2.value;
+		expect(r2.warnings).toEqual([
 			{
-				reason: "map-invalid",
+				code: "bars-cut",
 				message:
-					"Bar 24 starts at 46.00 s, at or after the recording's end at 45.00 s; the map cannot hold it.",
-				detail: {
-					bar: 24,
-					edge: "end",
-					start: r2.alignment?.barStarts[23] as number,
-					end: r2.alignment?.barStarts[24] as number,
-				},
+					"Bar 24 lies wholly after the recording's end at 45.00 s; the map stops at bar 23.",
+				detail: { bars: [24], edge: "end" },
 			},
 		]);
-		expect(r2.alignment).not.toBeNull();
-		expect(r2.placements).not.toBeNull();
+		expect(timing.bars.map((b) => b.bar)).toEqual(Array.from({ length: 23 }, (_, i) => i + 1));
+		expect(timing.end).toBe(cut.value.duration);
+		expect(alignment.barStarts).toHaveLength(25);
+		expect(checkTimingMap(timing, { text: CHART }).diagnostics).toEqual([
+			{ severity: "warning", message: "the map never names map bar 24", path: "bars" },
+		]);
 	});
 
 	test("the alignment it returns is its own: aligning again gives the same numbers", () => {

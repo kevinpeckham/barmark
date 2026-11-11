@@ -11,35 +11,43 @@ import type { ChartParse } from "barmark";
 const clamp = (t: number, duration: number) => Math.min(duration, Math.max(0, t));
 
 /**
- * The first bar the clamp to [0, `duration`] would leave no length: one
- * that ends at or before 0:00 (`edge: "start"`) or starts at or after the
- * recording's end (`edge: "end"`); `bar` is its 0-based played bar. Null
- * when every bar keeps some length. Re-phased bar lines sit within
- * milliseconds of the recording's ends, so this is an edge: a bar wholly
- * outside the recording, which no clamp can place.
+ * The lines an aligned map is written from: a start per played bar of
+ * `parse` and where the last ends, `barStarts` cut to the bar count. The
+ * map and the `bars-cut` warning both read them, so they cannot drift.
  */
-export function barOutsideRecording(
-	barStarts: number[],
-	duration: number,
-): { bar: number; edge: "start" | "end" } | null {
-	for (let i = 0; i + 1 < barStarts.length; i++) {
-		const start = clamp(barStarts[i] as number, duration);
-		const end = clamp(barStarts[i + 1] as number, duration);
-		if (end <= start) return { bar: i, edge: end <= 0 ? "start" : "end" };
-	}
-	return null;
+export function mapLines(parse: ChartParse, barStarts: number[]): number[] {
+	return barStarts.slice(0, parse.bars.length + 1);
+}
+
+/**
+ * The played bars, `from` (inclusive) to `to` (exclusive), that the clamp
+ * to [0, `duration`] leaves some length, from a start per bar and the end
+ * (`lines`). A bar has none when it ends at or before 0:00 or starts at
+ * or after the recording's end: those lead or trail, and are cut. Only a
+ * zero length is cut; a bar that keeps any (a 49 ms stub at the end of a
+ * recording cut 1.95 s short) is kept, clamped. `from === to` when
+ * nothing is left.
+ */
+export function keptBars(lines: number[], duration: number): { from: number; to: number } {
+	const bars = lines.length - 1;
+	let from = 0;
+	while (from < bars && (lines[from + 1] as number) <= 0) from++;
+	let to = from;
+	while (to < bars && (lines[to] as number) < duration) to++;
+	return { from, to };
 }
 
 /**
  * The chart's timing map from its bar starts (a start per played bar and
  * where the last ends), `source: "aligned"`, `recording.duration` and the
- * `id` when given; null unless it checks clean against `text` (the bar
- * count and the hash fit, the starts in order). The app's
+ * `id` when given; null unless it checks against `text` with no error
+ * (the bar count and the hash fit, the starts in order). The app's
  * `alignedTimingMap`, with one difference (new in 0.1.1, design §11.3):
- * every start and the end are clamped to the recording, [0, `duration`],
- * where the app keeps the re-phased lines a few milliseconds before 0:00
- * or past the end. A bar the clamp would leave no length
- * (`barOutsideRecording`) gives no map: it is refused, not clamped.
+ * the map is clamped to the recording, [0, `duration`], where the app
+ * keeps the re-phased lines a few milliseconds before 0:00 or past the
+ * end; a bar the clamp would leave no length (`keptBars`) is dropped, so
+ * the map stops short of the chart where the recording does (sync's
+ * check warns of the bars it never names). Null when no bar is left.
  * `parse` is `text`'s; `barStarts` is only read.
  */
 export function alignedTimingMap(
@@ -49,22 +57,22 @@ export function alignedTimingMap(
 	duration: number,
 	id: string | undefined,
 ): TimingMap | null {
+	const lines = mapLines(parse, barStarts);
 	const bars = parse.bars.length;
-	const last = barStarts[bars];
-	if (bars < 1 || last === undefined) return null;
-	if (barOutsideRecording(barStarts.slice(0, bars + 1), duration)) return null;
-	const end = clamp(last, duration);
+	if (bars < 1 || lines.length !== bars + 1) return null;
+	const { from, to } = keptBars(lines, duration);
+	if (from >= to) return null;
 	const map: TimingMap = {
 		format: "barmark-timing",
 		version: 1,
 		chart: { bars, hash: chartHash(text, parse) },
 		recording: id === undefined ? { duration } : { duration, id },
 		source: "aligned",
-		bars: parse.bars.map((bar, i) => ({
+		bars: parse.bars.slice(from, to).map((bar, k) => ({
 			bar: bar.index,
-			start: clamp(barStarts[i] as number, duration),
+			start: clamp(lines[from + k] as number, duration),
 		})),
-		end,
+		end: clamp(lines[to] as number, duration),
 	};
 	return checkTimingMap(map, { text, parse }).map;
 }
