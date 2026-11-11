@@ -132,7 +132,13 @@ export const DEFAULTS: Settings = Object.freeze({
 	 * residuals on the real songs are this lead.
 	 */
 	ONSET_ENVELOPE_LEAD_SEC: 0.07,
-	/** The end slide's step in seconds (Study 26c): 10 ms, finer than the onset envelope's frames matter for. */
+	/**
+	 * The end slide's step in seconds (Study 26c): 10 ms, finer than the
+	 * onset envelope's frames matter for. At least `STEP_SEC_FLOOR`
+	 * (0.1 ms, new in 0.1.1): the slide takes `2 × range / step` steps, so
+	 * the floor holds it to 100 times the default's; with no floor, 1e-12
+	 * ran about 1e11.
+	 */
 	REPAIR_SLIDE_STEP_SEC: 0.01,
 	/**
 	 * The least share of the bar starts the trusted span must cover, or the
@@ -155,6 +161,9 @@ export const DEFAULTS: Settings = Object.freeze({
 	 * double-bar lattices the objective would prefer by degeneracy; a 0.2 %
 	 * coarse step, then 0.02 % around the coarse best; the phase in 10 ms
 	 * steps.
+	 * At least `COMB_RANGE_FRACTION / COARSE_LADDER_FLOOR` (5000; new in
+	 * 0.1.1): the coarse ladder holds `2 × range / step + 1` periods, so the
+	 * floor holds it to 10,001, 100 times the default's 101.
 	 */
 	COMB_COARSE_STEP_FRACTION: 0.002,
 	/**
@@ -163,6 +172,9 @@ export const DEFAULTS: Settings = Object.freeze({
 	 * double-bar lattices the objective would prefer by degeneracy; a 0.2 %
 	 * coarse step, then 0.02 % around the coarse best; the phase in 10 ms
 	 * steps.
+	 * At least `COMB_COARSE_STEP_FRACTION / FINE_LADDER_FLOOR` (1000; new in
+	 * 0.1.1): the fine ladder holds `2 × coarse / fine + 1` periods, so the
+	 * floor holds it to 2,001, 100 times the default's 21.
 	 */
 	COMB_FINE_STEP_FRACTION: 0.0002,
 	/**
@@ -171,6 +183,9 @@ export const DEFAULTS: Settings = Object.freeze({
 	 * double-bar lattices the objective would prefer by degeneracy; a 0.2 %
 	 * coarse step, then 0.02 % around the coarse best; the phase in 10 ms
 	 * steps.
+	 * At least `STEP_SEC_FLOOR` (0.1 ms, new in 0.1.1): each period's phase
+	 * scan reads about `duration / step` lattice points, so the floor holds
+	 * it to 100 times the default's.
 	 */
 	COMB_PHASE_STEP_SEC: 0.01,
 	/**
@@ -255,6 +270,20 @@ const atLeast =
 const upTo1: Check = (v) => v > 0 && v <= 1;
 const positive: Check = (v) => v > 0;
 const whole: Check = (v) => Number.isInteger(v) && v >= 1;
+
+/**
+ * The floors on the scans' steps (new in 0.1.1). A step bounds no work by
+ * itself: at 1e-12 the comb's phase scan ran about 1e11 iterations. Each
+ * floor holds its scan to 100 times the default's steps, far below any
+ * value a study has used, so no sane caller meets them.
+ */
+/** The least seconds step of the phase scan and the end slide: 0.1 ms, a hundredth of their 10 ms. */
+const STEP_SEC_FLOOR = 0.0001;
+/** The coarse step is at least `COMB_RANGE_FRACTION` over this: at most 10,001 coarse periods (the default's 101). */
+const COARSE_LADDER_FLOOR = 5000;
+/** The fine step is at least `COMB_COARSE_STEP_FRACTION` over this: at most 2,001 fine periods (the default's 21). */
+const FINE_LADDER_FLOOR = 1000;
+const secondsStep: Check = (v) => v >= STEP_SEC_FLOOR && v <= 1;
 /** The step table is one `Uint8Array`; past 2^31 cells its allocation can throw a RangeError. */
 const cells: Check = (v) => whole(v) && v <= 2 ** 31;
 
@@ -268,12 +297,12 @@ const RANGES: Record<string, Check> = {
 	REPAIR_SLIDE_FRACTION: upTo1,
 	REPHASE_FENCE_BEATS: positive,
 	ONSET_ENVELOPE_LEAD_SEC: (v) => v >= 0 && v <= 1,
-	REPAIR_SLIDE_STEP_SEC: upTo1,
+	REPAIR_SLIDE_STEP_SEC: secondsStep,
 	REPAIR_MIN_TRUSTED_SHARE: upTo1,
 	COMB_RANGE_FRACTION: (v) => v > 0 && v < 1,
 	COMB_COARSE_STEP_FRACTION: positive,
 	COMB_FINE_STEP_FRACTION: positive,
-	COMB_PHASE_STEP_SEC: upTo1,
+	COMB_PHASE_STEP_SEC: secondsStep,
 	TIME_ZERO_SNAP_BEATS: positive,
 	DOWNBEAT_MIN_SCORE: atLeast(0),
 	DOWNBEAT_OFF_COMB_MARGIN: atLeast(0),
@@ -347,10 +376,22 @@ function checkCombSteps(s: Record<string, unknown>): Refusal | null {
 			"The coarse comb step must not exceed COMB_RANGE_FRACTION.",
 		);
 	}
+	if (coarse < range / COARSE_LADDER_FLOOR) {
+		return bad(
+			"COMB_COARSE_STEP_FRACTION",
+			`The coarse comb step must be at least COMB_RANGE_FRACTION / ${COARSE_LADDER_FLOOR}.`,
+		);
+	}
 	if (fine > coarse) {
 		return bad(
 			"COMB_FINE_STEP_FRACTION",
 			"The fine comb step must not exceed COMB_COARSE_STEP_FRACTION.",
+		);
+	}
+	if (fine < coarse / FINE_LADDER_FLOOR) {
+		return bad(
+			"COMB_FINE_STEP_FRACTION",
+			`The fine comb step must be at least COMB_COARSE_STEP_FRACTION / ${FINE_LADDER_FLOOR}.`,
 		);
 	}
 	return null;

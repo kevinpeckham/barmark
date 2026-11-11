@@ -12,12 +12,17 @@ const NUMERIC: [key: string, scope: "listen" | "features", inside: number[], out
 		["REPAIR_SLIDE_FRACTION", "listen", [1, 0.001], [0, 1.001]],
 		["REPHASE_FENCE_BEATS", "listen", [0.001, 4], [0, -1]],
 		["ONSET_ENVELOPE_LEAD_SEC", "listen", [0, 1], [-0.001, 1.001]],
-		["REPAIR_SLIDE_STEP_SEC", "listen", [1, 0.001], [0, 1.001]],
+		["REPAIR_SLIDE_STEP_SEC", "listen", [1, 0.001, 0.0001], [0, 1.001, 0.000099, 1e-12]],
 		["REPAIR_MIN_TRUSTED_SHARE", "listen", [1, 0.001], [0, 1.001]],
 		["COMB_RANGE_FRACTION", "listen", [0.5, 0.0003], [1, 0]],
-		["COMB_COARSE_STEP_FRACTION", "listen", [0.0003, 0.1], [0, 0.1001]],
-		["COMB_FINE_STEP_FRACTION", "listen", [0.0001, 0.002], [0, 0.0021]],
-		["COMB_PHASE_STEP_SEC", "listen", [1, 0.001], [0, 1.001]],
+		["COMB_COARSE_STEP_FRACTION", "listen", [0.0003, 0.1, 0.00002], [0, 0.1001, 0.0000199, 1e-12]],
+		[
+			"COMB_FINE_STEP_FRACTION",
+			"listen",
+			[0.0001, 0.002, 0.000002],
+			[0, 0.0021, 0.00000199, 1e-12],
+		],
+		["COMB_PHASE_STEP_SEC", "listen", [1, 0.001, 0.0001], [0, 1.001, 0.000099, 1e-12]],
 		["TIME_ZERO_SNAP_BEATS", "listen", [0.001, 3], [0, -1]],
 		["DOWNBEAT_MIN_SCORE", "listen", [0, 9], [-0.001]],
 		["DOWNBEAT_OFF_COMB_MARGIN", "listen", [0, 9], [-0.001]],
@@ -148,6 +153,40 @@ describe("resolveOptions", () => {
 			).ok,
 		).toBe(true);
 		expect(resolveOptions({ COMB_RANGE_FRACTION: 0.001 }, "listen").ok).toBe(false);
+	});
+
+	test("the step floors bound each scan at 100 times the default's steps, refused by name", () => {
+		const refusedAs = (o: Record<string, number>) => {
+			const r = resolveOptions(o, "listen");
+			return r.ok ? null : { reason: r.refusals[0]?.reason, option: option(r) };
+		};
+		// The seconds steps: 0.1 ms, a hundredth of the defaults' 10 ms.
+		for (const key of ["COMB_PHASE_STEP_SEC", "REPAIR_SLIDE_STEP_SEC"]) {
+			expect(refusedAs({ [key]: 0.0001 })).toBeNull();
+			expect(refusedAs({ [key]: 0.0000999 })).toEqual({ reason: "invalid-option", option: key });
+		}
+		// The coarse ladder: at most 10,001 periods (COMB_RANGE_FRACTION / 5000), the default's 101 times 100.
+		expect(
+			refusedAs({
+				COMB_RANGE_FRACTION: 0.5,
+				COMB_COARSE_STEP_FRACTION: 0.0001,
+				COMB_FINE_STEP_FRACTION: 0.0001,
+			}),
+		).toBeNull();
+		expect(
+			refusedAs({
+				COMB_RANGE_FRACTION: 0.5,
+				COMB_COARSE_STEP_FRACTION: 0.0000999,
+				COMB_FINE_STEP_FRACTION: 0.0000999,
+			}),
+		).toEqual({ reason: "invalid-option", option: "COMB_COARSE_STEP_FRACTION" });
+		// The fine ladder: at most 2,001 periods (COMB_COARSE_STEP_FRACTION / 1000), the default's 21 times 100.
+		expect(
+			refusedAs({ COMB_COARSE_STEP_FRACTION: 0.01, COMB_FINE_STEP_FRACTION: 0.00001 }),
+		).toBeNull();
+		expect(
+			refusedAs({ COMB_COARSE_STEP_FRACTION: 0.01, COMB_FINE_STEP_FRACTION: 0.00000999 }),
+		).toEqual({ reason: "invalid-option", option: "COMB_FINE_STEP_FRACTION" });
 	});
 
 	test("DOWNBEAT_WEIGHTS merges a partial object and refuses strangers", () => {

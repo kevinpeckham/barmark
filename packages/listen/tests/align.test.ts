@@ -11,7 +11,7 @@ import { parseChart } from "barmark";
 import { type AlignedChart, alignChart } from "../src/align/align.js";
 import { chartPadBars } from "../src/align/bars.js";
 import { renderWhole } from "../src/align/render.js";
-import { alignedTimingMap } from "../src/align/timing.js";
+import { alignedTimingMap, barOutsideRecording } from "../src/align/timing.js";
 import { type Features, recordingFeatures } from "../src/features/index.js";
 import { featuresOf } from "./helpers/features.js";
 import { seeded } from "./helpers/seeded.js";
@@ -73,6 +73,28 @@ describe("alignedTimingMap: the app's alignedTimingMap", () => {
 		expect(alignedTimingMap(TEXT, parse, [0, 2, Number.NaN, 6], 60, undefined)).toBeNull();
 	});
 
+	test("the map is clamped to the recording, [0, duration]; the starts given are not touched", () => {
+		const starts = [-0.003, 2.4, 4.5, 6.504];
+		const map = alignedTimingMap(TEXT, parse, starts, 6.5, undefined);
+		expect(map?.bars.map((b) => b.start)).toEqual([0, 2.4, 4.5]);
+		expect(map?.end).toBe(6.5);
+		expect(checkTimingMap(map, { text: TEXT }).diagnostics).toEqual([]);
+		expect(starts).toEqual([-0.003, 2.4, 4.5, 6.504]);
+		// Inside the recording, nothing moves.
+		expect(alignedTimingMap(TEXT, parse, [0, 2, 4, 6.5], 6.5, undefined)?.end).toBe(6.5);
+	});
+
+	test("a bar wholly outside the recording, which the clamp would leave no length, gives no map", () => {
+		// Bar 1 ends before 0:00; bar 3 starts at or after the end.
+		expect(alignedTimingMap(TEXT, parse, [-2.5, -0.1, 2, 4], 60, undefined)).toBeNull();
+		expect(alignedTimingMap(TEXT, parse, [-2.5, 0, 2, 4], 60, undefined)).toBeNull();
+		expect(alignedTimingMap(TEXT, parse, [0, 2, 4.1, 6.1], 4, undefined)).toBeNull();
+		expect(alignedTimingMap(TEXT, parse, [0, 2, 4, 6], 4, undefined)).toBeNull();
+		expect(barOutsideRecording([-2.5, -0.1, 2, 4], 60)).toEqual({ bar: 0, edge: "start" });
+		expect(barOutsideRecording([0, 2, 4, 6], 4)).toEqual({ bar: 2, edge: "end" });
+		expect(barOutsideRecording([-0.1, 2, 4, 6.1], 6)).toBeNull();
+	});
+
 	test("a pickup chart's map starts at its pickup, bar 1 by index; recording.id is copied", () => {
 		const text = "time: 4/4, tempo: 120\n| [2/4] G | C | G |\n";
 		const p = parseChart(text);
@@ -95,8 +117,10 @@ describe("alignChart on a song rendered from its own chart", () => {
 		expect(timing.chart.bars).toBe(parseChart(CHART).bars.length);
 		expect(timing.recording).toEqual({ duration: features.duration, id: "mix" });
 		expect(timing.source).toBe("aligned");
-		expect(timing.bars.map((b) => b.start)).toEqual(alignment.barStarts.slice(0, -1));
-		expect(timing.end).toBe(alignment.barStarts.at(-1) as number);
+		// The map is the alignment's starts clamped to the recording (0.1.1); the alignment keeps its own.
+		const clamp = (t: number) => Math.min(features.duration, Math.max(0, t));
+		expect(timing.bars.map((b) => b.start)).toEqual(alignment.barStarts.slice(0, -1).map(clamp));
+		expect(timing.end).toBe(clamp(alignment.barStarts.at(-1) as number));
 		expect(alignment.samePiece).toBe(true);
 		expect(alignment.repair).not.toBeNull();
 		expect(fit.declaredBar).toBe(alignment.chartBar);
@@ -149,9 +173,10 @@ describe("alignChart on a song rendered from its own chart", () => {
 	});
 
 	// Each song is rendered and its features read: about 0.4 s a chart.
-	test("map-invalid is unreachable: 30 seeded charts that align all give a map", () => {
+	test("30 seeded charts that align all give a map inside the recording, and map-invalid never", () => {
 		const rand = seeded(13);
 		let aligned = 0;
+		let clamped = 0;
 		for (let k = 0; k < 30; k++) {
 			const count = 6 + Math.floor(rand() * 11);
 			const chords = Array.from(
@@ -160,14 +185,50 @@ describe("alignChart on a song rendered from its own chart", () => {
 			);
 			const meter = rand() < 0.5 ? "4/4" : "3/4";
 			const chart = chartOf(chords, 90 + Math.floor(rand() * 70), meter);
-			const out = alignChart({ chart, features: recordingOf(chart, k + 2) });
+			const recording = recordingOf(chart, k + 2);
+			const out = alignChart({ chart, features: recording });
 			expect(reasons(out)).not.toContain("map-invalid");
 			if (!out.ok) continue;
 			aligned++;
-			expect(checkTimingMap(out.value.timing, { text: chart }).diagnostics).toEqual([]);
+			const { timing, alignment } = out.value;
+			expect(checkTimingMap(timing, { text: chart }).diagnostics).toEqual([]);
+			// Clamped to the recording (0.1.1): the app's maps start a few ms before 0 or end past it.
+			expect(timing.bars[0]?.start).toBeGreaterThanOrEqual(0);
+			expect(timing.end).toBeLessThanOrEqual(recording.duration);
+			const raw = alignment.barStarts;
+			if ((raw[0] as number) < 0 || (raw.at(-1) as number) > recording.duration) clamped++;
 		}
 		expect(aligned).toBeGreaterThanOrEqual(20);
+		// The review saw 3 negative starts and 21 late ends on these 30; the clamp must have had work.
+		expect(clamped).toBeGreaterThan(0);
 	}, 60_000);
+
+	test("a recording cut a bar short of the chart: the last bar lies past its end, refused map-invalid", () => {
+		// Before 0.1.1 this was an ok map whose last bar ran 2 s past the recording.
+		const bars = chartPadBars(parseChart(CHART), undefined);
+		if (!bars.ok) throw new Error("no bars");
+		const { samples } = renderWhole(bars.bars, RATE);
+		const cut = recordingFeatures(samples.slice(0, samples.length - 3 * RATE), RATE);
+		if (!cut.ok) throw new Error("no features");
+		const r2 = alignChart({ chart: CHART, features: cut.value });
+		expect(r2.ok).toBe(false);
+		if (r2.ok) return;
+		expect(r2.refusals).toEqual([
+			{
+				reason: "map-invalid",
+				message:
+					"Bar 24 starts at 46.00 s, at or after the recording's end at 45.00 s; the map cannot hold it.",
+				detail: {
+					bar: 24,
+					edge: "end",
+					start: r2.alignment?.barStarts[23] as number,
+					end: r2.alignment?.barStarts[24] as number,
+				},
+			},
+		]);
+		expect(r2.alignment).not.toBeNull();
+		expect(r2.placements).not.toBeNull();
+	});
 
 	test("the alignment it returns is its own: aligning again gives the same numbers", () => {
 		const again = alignChart({ chart: CHART, features, recording: { id: "mix" } });

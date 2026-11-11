@@ -37,8 +37,15 @@ function okValue(r: ReturnType<typeof chartFromRecording>): RecordingChart {
 	return r.value;
 }
 
-/** The chart parses without errors and the map checks clean against it, an entry per played bar. */
+/**
+ * The chart parses without errors and the map checks clean against it, an
+ * entry per played bar, inside the recording: the grid's bars are already
+ * held to [0, duration] (bar one and a pickup clamped at 0:00, the last bar
+ * closed at the end), so the pipeline's maps need no clamp of their own.
+ */
 function expectSound(v: RecordingChart) {
+	expect(v.timing.bars[0]?.start).toBeGreaterThanOrEqual(0);
+	expect(v.timing.end).toBeLessThanOrEqual(v.features.duration);
 	const parse = parseChart(v.chart);
 	expect(parse.diagnostics.filter((d) => d.severity === "error")).toEqual([]);
 	expect(checkTimingMap(v.timing, { text: v.chart }).diagnostics).toEqual([]);

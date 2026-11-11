@@ -295,6 +295,33 @@ export function pickupAsListen(
 	};
 }
 
+/** The app's aligned map, as far as the adapter reads it. */
+type AppMap = {
+	recording: { duration: number };
+	bars: { bar: number; start: number }[];
+	end: number;
+} & Record<string, unknown>;
+
+/**
+ * §11.3 (0.1.1): the package clamps its aligned map to the recording,
+ * [0, `recording.duration`]; the app keeps the re-phased lines a few
+ * milliseconds before 0:00 or past the end. The app's map with every start
+ * and the end clamped; null (no map) when the clamp leaves a bar no length,
+ * a bar wholly outside the recording, which the package refuses
+ * (`map-invalid`). The app's null map stays null.
+ */
+export function timingAsListen(app: unknown): unknown {
+	if (app === null) return null;
+	const map = app as AppMap;
+	const d = map.recording.duration;
+	const clamp = (t: number) => Math.min(d, Math.max(0, t));
+	const bars = map.bars.map((b) => ({ ...b, start: clamp(b.start) }));
+	const end = clamp(map.end);
+	const lines = [...bars.map((b) => b.start), end];
+	if (lines.some((t, i) => i > 0 && t <= (lines[i - 1] as number))) return null;
+	return { ...map, bars, end };
+}
+
 /** The title both sides give the built chart. */
 export const songTitle = (name: string) => `Equivalence ${name}`;
 

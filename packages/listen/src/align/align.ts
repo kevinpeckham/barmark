@@ -17,7 +17,7 @@ import { alignmentFit, type Fit } from "./fit.js";
 import { type Alignment, alignPath } from "./path.js";
 import { alignedPlacements, type Placements } from "./placements.js";
 import { rephaseAlignment } from "./rephase.js";
-import { alignedTimingMap } from "./timing.js";
+import { alignedTimingMap, barOutsideRecording } from "./timing.js";
 
 /** What `alignChart` reads. */
 export type AlignInput = {
@@ -121,6 +121,26 @@ function padBarsOf(parse: ChartParse, tempo: number | undefined): PadBar[] | Ref
 	return refused([refusal("no-tempo", message, { bar })]);
 }
 
+/**
+ * Why the map could not be made: a bar wholly outside the recording, which
+ * the clamp to [0, duration] would leave no length (0.1.1), else a map
+ * that does not check against the chart (unreachable).
+ */
+function mapRefusal(parse: ChartParse, barStarts: number[], duration: number) {
+	const outside = barOutsideRecording(barStarts, duration);
+	if (outside === null)
+		return refusal("map-invalid", "The aligned map does not check against the chart.");
+	const { bar: i, edge } = outside;
+	const bar = parse.bars[i]?.index ?? i + 1;
+	const start = barStarts[i] as number;
+	const end = barStarts[i + 1] as number;
+	const message =
+		edge === "start"
+			? `Bar ${bar} ends at ${end.toFixed(2)} s, at or before the recording's start; the map cannot hold it.`
+			: `Bar ${bar} starts at ${start.toFixed(2)} s, at or after the recording's end at ${duration.toFixed(2)} s; the map cannot hold it.`;
+	return refusal("map-invalid", message, { bar, edge, start, end });
+}
+
 /** The alignment on a checked input. */
 function alignChecked(c: Checked, s: Settings): AlignResult {
 	const parse = parseChart(c.chart);
@@ -139,8 +159,8 @@ function alignChecked(c: Checked, s: Settings): AlignResult {
 	if (refusals.length > 0) return refused(refusals, warnings, { alignment, placements });
 	const timing = alignedTimingMap(c.chart, parse, alignment.barStarts, c.features.duration, c.id);
 	if (timing === null) {
-		const message = "The aligned map does not check against the chart.";
-		return refused([refusal("map-invalid", message)], warnings, { alignment, placements });
+		const why = mapRefusal(parse, alignment.barStarts, c.features.duration);
+		return refused([why], warnings, { alignment, placements });
 	}
 	return ok({ timing, alignment, fit, placements }, warnings);
 }
@@ -157,7 +177,9 @@ function alignChecked(c: Checked, s: Settings): AlignResult {
  * declared bar, `beatsOf(meter) × 60 / tempo` when `declared` is given,
  * else the chart's median bar, with the same-piece gate (every reason that
  * holds, listed); the placements; then the timing map, checked by
- * `checkTimingMap` (`map-invalid`, unreachable). A refusal after the
+ * `checkTimingMap`, its starts and end clamped to [0, duration]
+ * (`map-invalid` when a bar lies wholly outside the recording, where the
+ * clamp would leave it no length; otherwise unreachable). A refusal after the
  * warping carries the alignment and the placements, as the app places a
  * chart's sections even when it keeps no map; one before it carries
  * neither. Never throws: anything thrown past the input check is

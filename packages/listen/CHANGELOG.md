@@ -6,6 +6,29 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+
+- **`alignChart`'s timing map is clamped to the recording** (Kevin's
+  decision, design §6.3 and §11.3). Its first start is never before 0
+  and its end never past `recording.duration`; 0.1.0 kept the re-phased
+  bar lines' overshoot, as the app does (in the 0.1.0 review, 3 of 30
+  self-renders started down to −2.3 ms and 21 ended 1 to 6 ms past the
+  duration). Only the map is clamped: `alignment.barStarts` and the
+  placements keep the re-phased values. A bar lying wholly outside the
+  recording, which the clamp would leave no length (a recording cut a
+  bar or more short of the chart), is now refused `map-invalid`, with
+  `detail.bar`, `detail.edge`, `detail.start` and `detail.end`; 0.1.0
+  returned a map with that bar past the recording's end. The pipeline's
+  maps were already inside the recording and are unchanged.
+- **Floors on the four scan steps**, refused as `invalid-option`: a step
+  bounded no work by itself, and 1e-12 ran about 1e11 iterations. Each
+  floor holds its scan to 100 times the default's steps:
+  `COMB_PHASE_STEP_SEC` and `REPAIR_SLIDE_STEP_SEC` at least 0.0001 s;
+  `COMB_COARSE_STEP_FRACTION` at least `COMB_RANGE_FRACTION / 5000`
+  (10,001 coarse periods at most); `COMB_FINE_STEP_FRACTION` at least
+  `COMB_COARSE_STEP_FRACTION / 1000` (2,001 fine periods at most). No
+  default changes.
+
 ## [0.1.0] - 2026-11-11
 
 ### Added
