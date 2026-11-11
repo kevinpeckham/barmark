@@ -1,6 +1,6 @@
 import { beforeAll, describe, expect, test } from "bun:test";
 import { join } from "node:path";
-import { VEROVIO_CDN_INTEGRITY, VEROVIO_CDN_URL } from "@barmark/score";
+import { ENGRAVER_CDN_INTEGRITY, ENGRAVER_CDN_URL, ENGRAVER_WASM_INTEGRITY } from "@barmark/score";
 import {
 	HEADLINE,
 	LINKS,
@@ -51,11 +51,12 @@ describe("the home page, prerendered", () => {
 		expect(score?.querySelector('script[type="text/barmark"]')?.textContent).toBe(demo);
 		expect(doc.querySelector("main barmark-chart")).toBeNull();
 	});
-	test("the score preloads Verovio on intent, from jsDelivr, checked", () => {
+	test("the score preloads the lighter Verovio on intent, from jsDelivr, checked", () => {
 		const score = doc.querySelector("main barmark-score");
 		expect(score?.getAttribute("preload")).toBe("intent");
-		expect(score?.getAttribute("verovio-url")).toBe(VEROVIO_CDN_URL);
-		expect(score?.getAttribute("verovio-integrity")).toBe(VEROVIO_CDN_INTEGRITY);
+		expect(score?.getAttribute("verovio-url")).toBe(ENGRAVER_CDN_URL);
+		expect(score?.getAttribute("verovio-integrity")).toBe(ENGRAVER_CDN_INTEGRITY);
+		expect(score?.getAttribute("verovio-wasm-integrity")).toBe(ENGRAVER_WASM_INTEGRITY);
 	});
 	test("no script or link on the page loads the score engine", () => {
 		const urls = [...doc.querySelectorAll("script[src], link[href]")].map(

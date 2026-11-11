@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { join } from "node:path";
-import { VEROVIO_CDN_INTEGRITY, VEROVIO_CDN_URL } from "@barmark/score";
+import { ENGRAVER_CDN_INTEGRITY, ENGRAVER_CDN_URL, ENGRAVER_WASM_INTEGRITY } from "@barmark/score";
 import { chartHtml, scoreHtml } from "../src/lib/chart.ts";
 
 // The ratio is of best-of-three timings; the timeout only keeps a loaded machine from cutting a run short.
@@ -89,9 +89,14 @@ describe("scoreHtml", () => {
 	/** An attribute of the `<barmark-score>` host, or null. */
 	const attr = (html: string, name: string) =>
 		new RegExp(`^<barmark-score[^>]*\\s${name}="([^"]*)"`).exec(html)?.[1] ?? null;
-	test("loads Verovio from jsDelivr, checked against its digest", () => {
-		expect(attr(scoreHtml(demo), "verovio-url")).toBe(VEROVIO_CDN_URL);
-		expect(attr(scoreHtml(demo), "verovio-integrity")).toBe(VEROVIO_CDN_INTEGRITY);
+	test("every score loads the lite build from jsDelivr with both digests", () => {
+		for (const preload of ["none", "intent", "idle"] as const) {
+			const html = scoreHtml(demo, { preload });
+			expect(attr(html, "verovio-url")).toBe(ENGRAVER_CDN_URL);
+			expect(attr(html, "verovio-integrity")).toBe(ENGRAVER_CDN_INTEGRITY);
+			expect(attr(html, "verovio-wasm-integrity")).toBe(ENGRAVER_WASM_INTEGRITY);
+		}
+		expect(ENGRAVER_CDN_URL).toStartWith("https://cdn.jsdelivr.net/npm/@barmark/engraver@");
 	});
 	test("preloads only when asked", () => {
 		expect(attr(scoreHtml(demo), "preload")).toBeNull();

@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { exportMusicXml, importMusicXml } from "@barmark/musicxml";
-import { VEROVIO_CDN_INTEGRITY, VEROVIO_CDN_URL } from "@barmark/score";
+import { ENGRAVER_CDN_INTEGRITY, ENGRAVER_CDN_URL, ENGRAVER_WASM_INTEGRITY } from "@barmark/score";
 import { renderScoreHtml } from "@barmark/score/server";
 import { barAt, chartFromDetections, secondsAtBar } from "@barmark/sync";
 import { parseChart, printChart, transposeChart } from "barmark";
@@ -15,6 +15,7 @@ import {
 	USE_CLI,
 	USE_MUSICXML,
 	USE_SCORE_ELEMENT,
+	USE_SCORE_ENGRAVER,
 	USE_SCORE_SERVER,
 	USE_SYNC,
 	VITE_CONFIG,
@@ -67,6 +68,17 @@ describe("the score code Get Started shows", () => {
 	test("the element sample imports the element and opens one chart on the score", () => {
 		expect(USE_SCORE_ELEMENT).toContain('import "@barmark/score/element";');
 		expect(USE_SCORE_ELEMENT).toContain('<barmark-score view="score"');
+	});
+	test("the lighter build's sample carries the package's three values, as the README shows them", () => {
+		expect(USE_SCORE_ENGRAVER).toContain(`verovio-url="${ENGRAVER_CDN_URL}"`);
+		expect(USE_SCORE_ENGRAVER).toContain(`verovio-integrity="${ENGRAVER_CDN_INTEGRITY}"`);
+		expect(USE_SCORE_ENGRAVER).toContain(`verovio-wasm-integrity="${ENGRAVER_WASM_INTEGRITY}"`);
+		const readme = readFileSync(
+			join(dirname(Bun.resolveSync("@barmark/score/package.json", site)), "README.md"),
+			"utf8",
+		);
+		for (const value of [ENGRAVER_CDN_URL, ENGRAVER_CDN_INTEGRITY, ENGRAVER_WASM_INTEGRITY])
+			expect(readme).toContain(value);
 	});
 	test("the Vite settings are the score README's", () => {
 		const readme = readFileSync(
@@ -285,7 +297,12 @@ describe("the FAQ, prerendered", () => {
 		const hrefs = [
 			...(doc().querySelector("#verovio")?.parentElement?.querySelectorAll("a") ?? []),
 		].map((a) => a.getAttribute("href"));
-		expect(hrefs).toEqual([LINKS.verovio, LINKS.verovioLicense]);
+		expect(hrefs).toEqual([
+			LINKS.verovio,
+			LINKS.verovioLicense,
+			LINKS.engraverNotice,
+			LINKS.engraverRelease,
+		]);
 		expect(text(doc().querySelector("#score-dorico"))).toBe(
 			"Does the score match Dorico or MuseScore?",
 		);
@@ -314,12 +331,13 @@ describe("the Syntax Guide's score section", () => {
 describe("every score on the site", () => {
 	// Try It opens on a chord, drawn as a grid; its chart's score is the browser suite's.
 	for (const path of ["index.html", "syntax.html", "get-started.html"])
-		test(`loads Verovio from jsDelivr with its digest: ${path}`, () => {
+		test(`loads the lighter Verovio from jsDelivr with both digests: ${path}`, () => {
 			const scores = [...page(path).querySelectorAll("barmark-score")];
 			expect(scores.length).toBeGreaterThan(0);
 			for (const score of scores) {
-				expect(score.getAttribute("verovio-url")).toBe(VEROVIO_CDN_URL);
-				expect(score.getAttribute("verovio-integrity")).toBe(VEROVIO_CDN_INTEGRITY);
+				expect(score.getAttribute("verovio-url")).toBe(ENGRAVER_CDN_URL);
+				expect(score.getAttribute("verovio-integrity")).toBe(ENGRAVER_CDN_INTEGRITY);
+				expect(score.getAttribute("verovio-wasm-integrity")).toBe(ENGRAVER_WASM_INTEGRITY);
 			}
 		});
 });
