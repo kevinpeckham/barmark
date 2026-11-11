@@ -51,6 +51,7 @@ import {
 	songChart,
 	songTitle,
 	tempoChangeAsListen,
+	timingAsListen,
 	toGoldenJson,
 	UNREADABLE_CHARTS,
 	type UnreadableGolden,
@@ -512,6 +513,14 @@ function comparePlacements(label: string, a: AppRun, parts: Parts, meter: string
 	same(expected, parts.placements, `${label} placements`);
 }
 
+/** §11.3: the package's aligned map is the app's clamped to [0, duration]. */
+function compareTiming(label: string, a: AppRun, ours: unknown) {
+	const clamped = timingAsListen(a.timing);
+	if (JSON.stringify(clamped) !== JSON.stringify(a.timing))
+		exclude("§11.3 the aligned map is clamped to [0, duration]; the app's is not");
+	same(clamped, ours, `${label} timing, the app's clamped`);
+}
+
 function compareAligned(label: string, a: AppRun, mix: Mix, f: Features) {
 	const aligned = alignChart({
 		chart: mix.chart,
@@ -524,7 +533,7 @@ function compareAligned(label: string, a: AppRun, mix: Mix, f: Features) {
 	compareFit(label, a, parts);
 	comparePlacements(label, a, parts, mix.declared.meter);
 	same(aligned.ok, a.fit.reasons.length === 0 && a.placements.samePiece, `${label} map kept`);
-	same(a.timing, mapOf(aligned, mix.chart, f, parts.alignment.barStarts), `${label} timing`);
+	compareTiming(label, a, mapOf(aligned, mix.chart, f, parts.alignment.barStarts));
 	const kept = aligned.ok ? "kept the map" : `refused ${parts.refusals.join(", ")}`;
 	console.log(`  ${label}: grid ${a.grid.ok ? "placed" : a.grid.reason}; listen ${kept}`);
 }

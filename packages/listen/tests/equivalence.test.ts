@@ -36,6 +36,7 @@ import {
 	songChart,
 	songTitle,
 	tempoChangeAsListen,
+	timingAsListen,
 	UNREADABLE_CHARTS,
 	type UnreadableGolden,
 } from "./helpers/equivalence.js";
@@ -214,7 +215,8 @@ for (const g of goldens) {
 			// the package refuses with the fit's reasons. Its map on the same bar starts is compared either way.
 			expect(r.aligned.ok).toBe(g.fit.reasons.length === 0 && g.placements.samePiece);
 			const map = mapOf(r.aligned, r.chart, r.features, partsOf(r).alignment.barStarts);
-			expect(map).toEqual(g.timing as never);
+			// §11.3: the package's map is clamped to the recording (the adapter's own test below).
+			expect(map).toEqual(timingAsListen(g.timing) as never);
 		});
 
 		test("the chart built on the placed or declared grid", () => {
@@ -270,6 +272,70 @@ describe("the named adapters and exclusions (§11.3, §12.8), each asserted", ()
 		// A lead-in longer than half a bar keeps the app's bar 1: no difference (§11.3).
 		const leadIn = goldens.find((g) => g.case.name === "lead-in-three-beats");
 		if (leadIn) expect(isPickup(leadIn)).toBe(false);
+	});
+
+	test("the aligned map is clamped to [0, duration] (§11.3): listen clamps the map, the app does not", () => {
+		// The adapter itself: the starts and the end held to the recording, a bar left no length no map.
+		const app = {
+			format: "barmark-timing",
+			recording: { duration: 10 },
+			bars: [
+				{ bar: 1, start: -0.004 },
+				{ bar: 2, start: 5 },
+			],
+			end: 10.003,
+		};
+		expect(timingAsListen(app)).toEqual({
+			...app,
+			bars: [
+				{ bar: 1, start: 0 },
+				{ bar: 2, start: 5 },
+			],
+			end: 10,
+		});
+		// A bar the clamp leaves no length is dropped, at either edge (Kevin's decision, 0.1.1).
+		expect(
+			timingAsListen({
+				...app,
+				bars: [
+					{ bar: 1, start: -1 },
+					{ bar: 2, start: 0 },
+				],
+			}),
+		).toEqual({ ...app, bars: [{ bar: 2, start: 0 }], end: 10 });
+		expect(
+			timingAsListen({
+				...app,
+				bars: [
+					{ bar: 1, start: 0 },
+					{ bar: 2, start: 10 },
+				],
+			}),
+		).toEqual({ ...app, bars: [{ bar: 1, start: 0 }], end: 10 });
+		// Nothing left: no map.
+		expect(timingAsListen({ ...app, bars: [{ bar: 1, start: 11 }], end: 12 })).toBeNull();
+		expect(timingAsListen(null)).toBeNull();
+		let moved = 0;
+		for (const g of goldens) {
+			const app = g.timing as {
+				recording: { duration: number };
+				bars: { bar: number; start: number }[];
+				end: number;
+			};
+			const r = run(g);
+			const map = mapOf(r.aligned, r.chart, r.features, partsOf(r).alignment.barStarts);
+			// The alignment keeps the app's unclamped starts; only the map is clamped.
+			expect(partsOf(r).alignment.barStarts).toEqual(g.alignment.barStarts);
+			expect(map).toEqual(timingAsListen(app) as never);
+			if (map === null) continue;
+			// No golden's map loses a bar: the clamp only trims the first start and the end.
+			expect(map.bars.map((b) => b.bar)).toEqual(app.bars.map((b) => b.bar));
+			expect(map.bars[0]?.start).toBeGreaterThanOrEqual(0);
+			expect(map.end).toBeLessThanOrEqual(app.recording.duration);
+			if ((app.bars[0]?.start ?? 0) < 0 || app.end > app.recording.duration) moved++;
+		}
+		// The app's maps run past the recording on these songs, so the adapter is exercised.
+		expect(moved).toBeGreaterThan(0);
 	});
 
 	test("no-period: none in the set (the app voted on noise there)", () => {

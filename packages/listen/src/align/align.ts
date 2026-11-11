@@ -17,7 +17,7 @@ import { alignmentFit, type Fit } from "./fit.js";
 import { type Alignment, alignPath } from "./path.js";
 import { alignedPlacements, type Placements } from "./placements.js";
 import { rephaseAlignment } from "./rephase.js";
-import { alignedTimingMap } from "./timing.js";
+import { alignedTimingMap, keptBars, mapLines } from "./timing.js";
 
 /** What `alignChart` reads. */
 export type AlignInput = {
@@ -121,6 +121,33 @@ function padBarsOf(parse: ChartParse, tempo: number | undefined): PadBar[] | Ref
 	return refused([refusal("no-tempo", message, { bar })]);
 }
 
+/** "Bar 24" or "Bars 23 to 24". */
+const barsNamed = (bars: number[]) =>
+	bars.length === 1 ? `Bar ${bars[0]}` : `Bars ${bars[0]} to ${bars.at(-1)}`;
+
+/**
+ * `bars-cut` for the played bars the map drops at each edge, because the
+ * clamp to [0, duration] leaves them no length (0.1.1, Kevin's decision):
+ * they lie wholly before 0:00 or after the recording's end.
+ */
+function barsCut(parse: ChartParse, barStarts: number[], duration: number): ListenWarning[] {
+	const lines = mapLines(parse, barStarts);
+	const { from, to } = keptBars(lines, duration);
+	const index = (i: number) => parse.bars[i]?.index ?? i + 1;
+	const out: ListenWarning[] = [];
+	if (from > 0 && from < to) {
+		const bars = parse.bars.slice(0, from).map((b) => b.index);
+		const message = `${barsNamed(bars)} ${bars.length === 1 ? "lies" : "lie"} wholly before the recording's start; the map starts at bar ${index(from)}.`;
+		out.push({ code: "bars-cut", message, detail: { bars, edge: "start" } });
+	}
+	if (to < parse.bars.length && from < to) {
+		const bars = parse.bars.slice(to).map((b) => b.index);
+		const message = `${barsNamed(bars)} ${bars.length === 1 ? "lies" : "lie"} wholly after the recording's end at ${duration.toFixed(2)} s; the map stops at bar ${index(to - 1)}.`;
+		out.push({ code: "bars-cut", message, detail: { bars, edge: "end" } });
+	}
+	return out;
+}
+
 /** The alignment on a checked input. */
 function alignChecked(c: Checked, s: Settings): AlignResult {
 	const parse = parseChart(c.chart);
@@ -142,7 +169,8 @@ function alignChecked(c: Checked, s: Settings): AlignResult {
 		const message = "The aligned map does not check against the chart.";
 		return refused([refusal("map-invalid", message)], warnings, { alignment, placements });
 	}
-	return ok({ timing, alignment, fit, placements }, warnings);
+	const cut = barsCut(parse, alignment.barStarts, c.features.duration);
+	return ok({ timing, alignment, fit, placements }, [...warnings, ...cut]);
 }
 
 /**
@@ -157,7 +185,9 @@ function alignChecked(c: Checked, s: Settings): AlignResult {
  * declared bar, `beatsOf(meter) × 60 / tempo` when `declared` is given,
  * else the chart's median bar, with the same-piece gate (every reason that
  * holds, listed); the placements; then the timing map, checked by
- * `checkTimingMap` (`map-invalid`, unreachable). A refusal after the
+ * `checkTimingMap` (`map-invalid`, unreachable), clamped to [0, duration]:
+ * a bar the clamp would leave no length is dropped, warned `bars-cut`, so
+ * the map stops short of the chart where the recording does. A refusal after the
  * warping carries the alignment and the placements, as the app places a
  * chart's sections even when it keeps no map; one before it carries
  * neither. Never throws: anything thrown past the input check is

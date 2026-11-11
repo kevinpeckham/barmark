@@ -96,9 +96,20 @@ after the warping still carries the alignment and the placements.
 `declared` sets the bar the fit measures against (without it, the
 chart's own median bar).
 
-An `ok` map's first start can sit a few milliseconds before 0 and its
-last end a few milliseconds past the recording's duration, as the app's
-maps do: the re-phased bar lines are not clamped to the recording.
+The map is clamped to the recording: its first start is never before 0
+and its end never past `recording.duration`. The re-phased bar lines can
+land a few milliseconds outside it (the app's maps keep that overshoot;
+this package clamps it), and only the map is clamped: `alignment.barStarts`
+and the placements keep the re-phased values. A bar lying wholly outside
+the recording, which the clamp would leave no length (a recording cut a
+bar or more short of the chart), is dropped: the map stops short of the
+chart where the recording does, and a `bars-cut` warning names the bars
+and the edge. Sync's `checkTimingMap` reads such a map with one warning
+(the bars it never names), and `barAt` and `secondsAtBar` answer for the
+bars it holds. Only a bar of no length is dropped: one that keeps any
+(a 49 ms stub when the recording ends just after its bar line) stays,
+clamped. Only the map is cut: a section placed in a cut bar keeps its
+time in `placements`, past the recording's end.
 
 ### A recording to a chart
 
@@ -169,6 +180,7 @@ seconds and bar numbers; `detail` has the numbers behind it.
 | `grid-truncated` | The grid reached `MAX_GRID_BARS` before the recording's end. |
 | `bar-one-unplaced` | The pipeline built on the declared grid (`onUnplaced: "declared"`); `detail.reason` names the refusal it replaced. |
 | `chart-diagnostics` | The aligned chart has parse warnings or errors (a `?` among them); the alignment still runs. |
+| `bars-cut` | align: bars lie wholly before 0:00 or after the recording's end, so the map, clamped to the recording, drops them (`detail.bars`, their bar numbers; `detail.edge`, `start` or `end`). One warning an edge. |
 | `tempo-drift` | grid and pipeline: the comb's bar differs from the declared one (`detail.ratio`, `period / declaredBar − 1`, signed; `detail.period`, `detail.declaredBar`). No threshold: the host decides. Not emitted when the ratio is zero within floating-point error. |
 
 ## Options
@@ -195,14 +207,14 @@ every other sweep reuses them.
 | `ALIGNMENT_SOUND_WINDOW_SEC` | `0.05` | (0, 1] s | Study 14 (features only) |
 | `REPAIR_TRUST_FRACTION` | `0.25` | (0, 1] | Study 26c |
 | `REPAIR_SLIDE_FRACTION` | `0.25` | (0, 1] | Study 26c |
-| `REPHASE_FENCE_BEATS` | `0.5` | > 0 beats | Study 27 |
+| `REPHASE_FENCE_BEATS` | `0.5` | > 0, at most 16 beats | Study 27; ceiling 0.1.1 |
 | `ONSET_ENVELOPE_LEAD_SEC` | `0.07` | [0, 1] s | Measured on synthetic hits; Studies 27 and 31 |
-| `REPAIR_SLIDE_STEP_SEC` | `0.01` | (0, 1] s | Study 26c |
+| `REPAIR_SLIDE_STEP_SEC` | `0.01` | 0.0001 to 1 s | Study 26c; floor 0.1.1 |
 | `REPAIR_MIN_TRUSTED_SHARE` | `0.5` | (0, 1] | Study 26c |
 | `COMB_RANGE_FRACTION` | `0.1` | (0, 1) | Study 24 |
-| `COMB_COARSE_STEP_FRACTION` | `0.002` | > 0, at most `COMB_RANGE_FRACTION` | Study 24 |
-| `COMB_FINE_STEP_FRACTION` | `0.0002` | > 0, at most `COMB_COARSE_STEP_FRACTION` | Study 24 |
-| `COMB_PHASE_STEP_SEC` | `0.01` | (0, 1] s | Study 24 |
+| `COMB_COARSE_STEP_FRACTION` | `0.002` | `COMB_RANGE_FRACTION / 5000` to `COMB_RANGE_FRACTION` | Study 24; floor 0.1.1 |
+| `COMB_FINE_STEP_FRACTION` | `0.0002` | `COMB_COARSE_STEP_FRACTION / 1000` to `COMB_COARSE_STEP_FRACTION` | Study 24; floor 0.1.1 |
+| `COMB_PHASE_STEP_SEC` | `0.01` | 0.0001 to 1 s | Study 24; floor 0.1.1 |
 | `TIME_ZERO_SNAP_BEATS` | `0.25` | > 0 beats | Study 31 |
 | `DOWNBEAT_WEIGHTS` | `{ timeZero: 2, harmonicRhythm: 2, sections: 1 }` | each ≥ 0 | Study 31 |
 | `DOWNBEAT_MIN_SCORE` | `2` | ≥ 0 | Study 31 |
@@ -217,6 +229,21 @@ every other sweep reuses them.
 | `DTW_MAX_CELLS` | `150_000_000` | whole number from 1 to 2^31 | set in the app, not by a study |
 | `MAX_GRID_BARS` | `2000` | whole number ≥ 1 | set in the app, not by a study |
 | `PICKUP_MAX_BAR_FRACTION` | `0.5` | (0, 1] | set in the design, not by a study |
+
+**The step floors.** The four scan steps have floors (new in 0.1.1): a
+step bounds no work by itself, and at 1e-12 the comb's phase scan ran
+about 1e11 iterations. Each floor holds its scan to 100 times the
+default's steps, far below any value a study has used. The phase scan and
+the end slide take about `duration / step` and `2 × range / step` steps,
+so their floor is 0.1 ms, a hundredth of 10 ms. The coarse ladder holds
+`2 × range / coarse + 1` periods: at most 10,001 (the default's 101). The
+fine ladder holds `2 × coarse / fine + 1`: at most 2,001 (the default's
+21). The floors bound each scan on its own; several at their floors at
+once multiply (the phase scan runs once per period of both ladders).
+`REPHASE_FENCE_BEATS` has a ceiling of 16 beats (0.1.1): a fence wider
+than a bar slides the grid past the next downbeat, which is meaningless;
+barmark accepts up to 32 beats a bar, and 16 covers every common meter.
+The slide's work grows with the fence (2,000,000 beats took 21.6 s).
 
 Each option's doc comment in `DEFAULTS` says what it does and where its
 value comes from. A default changes only with a registered study, named
