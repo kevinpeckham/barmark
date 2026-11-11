@@ -1383,7 +1383,7 @@ keeps what cannot reduce:
 | error | an ending mark not at the start of a bar line, an ending that does not follow a `\|: … :\|` repeat, endings that miss or repeat a pass, a last ending that closes with `:\|` or an earlier one that does not (on its own line or the lines it continues onto), `x N` on an ending or a line it continues onto, a directive line inside an ending |
 | error | a direction that is not alone in its cell, or a near miss of one (suggests the spelling) |
 | error | a rehearsal mark that is not alone in its cell (suggests a cell of its own), `@` without a label of letters and digits, a meter on a mark, two marks with no bar between them, a mark with no bar after it |
-| error | an unclosed quote, empty quotes, words with no bar to sit on |
+| error | an unclosed quote, empty quotes, words with no bar to sit on (words on a rehearsal mark's cell with a slot suggest the mark a cell of its own) |
 | error | `no3` or `no5` that leaves out a tone the chord doesn't have or alters, any other omission, an omission written twice |
 | error | a voicing note that is not in its chord |
 | error | a syllable on anything but a note set (a chord name, a voicing, `/`, `--`, `N.C.`, `?`), an empty syllable or an empty side of `~`, a `{` straight after a syllable |

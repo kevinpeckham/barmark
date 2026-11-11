@@ -9,6 +9,16 @@ Releases follow the process in [RELEASING.md](RELEASING.md).
 
 ## [Unreleased]
 
+## [0.23.1] - 2026-11-10
+
+### Changed
+
+- **Words on a rehearsal mark's cell get a suggestion.** They are still
+  an error (`| @B "Play 3 times" C |`), now with a suggestion, as a chord
+  on a mark has: the mark a cell of its own and the words on the bar
+  (`| @B | "Play 3 times" C |`). There is none when no slot is left for
+  the words or the cell has a one-bar meter (stem-shovel issue 16, ask 7).
+
 ## [0.23.0] - 2026-11-10
 
 Grammar changes: an unreadable slot keeps its bar, stacked chord
@@ -844,7 +854,8 @@ The first working release: the reference parser and printer for the
 
 - **A placeholder package that holds the `barmark` name** while the spec and parser are written.
 
-[Unreleased]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.23.0...HEAD
+[Unreleased]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.23.1...HEAD
+[0.23.1]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.23.0...barmark-v0.23.1
 [0.23.0]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.22.0...barmark-v0.23.0
 [0.22.0]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.21.0...barmark-v0.22.0
 [0.21.0]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.20.0...barmark-v0.21.0
