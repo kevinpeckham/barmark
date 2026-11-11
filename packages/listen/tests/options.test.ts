@@ -10,7 +10,7 @@ const NUMERIC: [key: string, scope: "listen" | "features", inside: number[], out
 		["ALIGNMENT_SOUND_WINDOW_SEC", "features", [1, 0.001], [0, 1.001]],
 		["REPAIR_TRUST_FRACTION", "listen", [1, 0.001], [0, 1.001]],
 		["REPAIR_SLIDE_FRACTION", "listen", [1, 0.001], [0, 1.001]],
-		["REPHASE_FENCE_BEATS", "listen", [0.001, 4], [0, -1]],
+		["REPHASE_FENCE_BEATS", "listen", [0.001, 4, 16], [0, -1, 16.001, 2e6, 1e9]],
 		["ONSET_ENVELOPE_LEAD_SEC", "listen", [0, 1], [-0.001, 1.001]],
 		["REPAIR_SLIDE_STEP_SEC", "listen", [1, 0.001, 0.0001], [0, 1.001, 0.000099, 1e-12]],
 		["REPAIR_MIN_TRUSTED_SHARE", "listen", [1, 0.001], [0, 1.001]],

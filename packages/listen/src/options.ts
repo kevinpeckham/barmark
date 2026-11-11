@@ -114,7 +114,9 @@ export const DEFAULTS: Settings = Object.freeze({
 	 * warping's middle sits a coherent sub-beat off the notes (Mop Heart, 224
 	 * bpm in 3/4: 0.42 s); half a beat reaches that and never the neighboring
 	 * beat, which could outscore the downbeat. Gates passed on all four bench
-	 * songs; the refusal is unchanged.
+	 * songs; the refusal is unchanged. At most `FENCE_BEATS_CEILING` (16
+	 * beats, new in 0.1.1): a fence beyond a bar is meaningless, and the
+	 * slide's work grows with it.
 	 */
 	REPHASE_FENCE_BEATS: 0.5,
 	/**
@@ -284,6 +286,13 @@ const COARSE_LADDER_FLOOR = 5000;
 /** The fine step is at least `COMB_COARSE_STEP_FRACTION` over this: at most 2,001 fine periods (the default's 21). */
 const FINE_LADDER_FLOOR = 1000;
 const secondsStep: Check = (v) => v >= STEP_SEC_FLOOR && v <= 1;
+/**
+ * The widest re-phase fence, in beats (new in 0.1.1): 16. A fence wider
+ * than a bar slides the grid past the neighbouring downbeat, which is
+ * meaningless, and 16 beats is a bar of any meter up to 16 beats (16/16,
+ * 16/8); the slide's work grows with the fence (2e6 beats took 21.6 s).
+ */
+const FENCE_BEATS_CEILING = 16;
 /** The step table is one `Uint8Array`; past 2^31 cells its allocation can throw a RangeError. */
 const cells: Check = (v) => whole(v) && v <= 2 ** 31;
 
@@ -295,7 +304,7 @@ const RANGES: Record<string, Check> = {
 	ALIGNMENT_SOUND_WINDOW_SEC: upTo1,
 	REPAIR_TRUST_FRACTION: upTo1,
 	REPAIR_SLIDE_FRACTION: upTo1,
-	REPHASE_FENCE_BEATS: positive,
+	REPHASE_FENCE_BEATS: (v) => v > 0 && v <= FENCE_BEATS_CEILING,
 	ONSET_ENVELOPE_LEAD_SEC: (v) => v >= 0 && v <= 1,
 	REPAIR_SLIDE_STEP_SEC: secondsStep,
 	REPAIR_MIN_TRUSTED_SHARE: upTo1,
