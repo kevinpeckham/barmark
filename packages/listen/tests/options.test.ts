@@ -27,7 +27,7 @@ const NUMERIC: [key: string, scope: "listen" | "features", inside: number[], out
 		["FIT_MIN_RATIO", "listen", [1, 3], [0.999]],
 		["SECTION_START_SNAP_SEC", "listen", [0, 3], [-0.001]],
 		["HEDGE_LOCAL_COST_FACTOR", "listen", [1, 3], [0.999]],
-		["DTW_MAX_CELLS", "listen", [1, 150_000_000], [0, 1.5]],
+		["DTW_MAX_CELLS", "listen", [1, 150_000_000, 2 ** 31], [0, 1.5, 2 ** 31 + 1, 2 ** 40]],
 		["MAX_GRID_BARS", "listen", [1, 2000], [0, 1.5]],
 		["PICKUP_MAX_BAR_FRACTION", "listen", [1, 0.001], [0, 1.001]],
 	];

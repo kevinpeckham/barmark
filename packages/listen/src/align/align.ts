@@ -160,7 +160,8 @@ function alignChecked(c: Checked, s: Settings): AlignResult {
  * `checkTimingMap` (`map-invalid`, unreachable). A refusal after the
  * warping carries the alignment and the placements, as the app places a
  * chart's sections even when it keeps no map; one before it carries
- * neither.
+ * neither. Never throws: anything thrown past the input check is
+ * `invalid-input` (`detail.field: "input"`), as `chartFromRecording` does.
  */
 export function alignChart(input: AlignInput, options?: ListenOptions): AlignResult {
 	const resolved = resolveOptions(options, "listen");
@@ -172,5 +173,9 @@ export function alignChart(input: AlignInput, options?: ListenOptions): AlignRes
 		checked = refused([invalid("input", "The alignment's input could not be read.")]);
 	}
 	if (!checked.ok) return before(checked);
-	return alignChecked(checked.value, resolved.value.settings);
+	try {
+		return alignChecked(checked.value, resolved.value.settings);
+	} catch {
+		return before(refused([invalid("input", "The alignment's input could not be read.")]));
+	}
 }

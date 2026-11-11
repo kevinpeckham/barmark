@@ -247,6 +247,39 @@ describe("alignChart never throws: each bad input is its named refusal", () => {
 		});
 	});
 
+	test("features that throw after they are read refuse, never throw", () => {
+		// A getter that counts its reads: the check reads `chroma` some number of
+		// times, and the alignment reads it again, where this one throws.
+		const counting = (limit: number) => {
+			let reads = 0;
+			const f = { ...features };
+			Object.defineProperty(f, "chroma", {
+				enumerable: true,
+				get() {
+					reads += 1;
+					if (reads > limit) throw new Error("boom");
+					return features.chroma;
+				},
+			});
+			return { f, reads: () => reads };
+		};
+		const checked = counting(Number.POSITIVE_INFINITY);
+		alignChart({ ...good, features: checked.f, declared: { meter: "x", tempo: 90 } });
+		const limit = checked.reads();
+		expect(limit).toBeGreaterThan(0);
+		let out: ReturnType<typeof alignChart> | undefined;
+		expect(() => {
+			out = alignChart({ ...good, features: counting(limit).f });
+		}).not.toThrow();
+		if (!out || out.ok) throw new Error("aligned");
+		expect(out.refusals[0]).toMatchObject({
+			reason: "invalid-input",
+			detail: { field: "input" },
+		});
+		expect(out.alignment).toBeNull();
+		expect(out.placements).toBeNull();
+	});
+
 	test("the path's own refusals pass through: chart-too-long", () => {
 		expect(
 			refusalOf({ ...good, chart: chartOf([...PROGRESSION, ...PROGRESSION], 40) })?.reason,

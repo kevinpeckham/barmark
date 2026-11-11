@@ -255,6 +255,8 @@ const atLeast =
 const upTo1: Check = (v) => v > 0 && v <= 1;
 const positive: Check = (v) => v > 0;
 const whole: Check = (v) => Number.isInteger(v) && v >= 1;
+/** The step table is one `Uint8Array`; past 2^31 cells its allocation can throw a RangeError. */
+const cells: Check = (v) => whole(v) && v <= 2 ** 31;
 
 /** The numeric options and the range each accepts (design 5.1 and 5.2). */
 const RANGES: Record<string, Check> = {
@@ -281,7 +283,7 @@ const RANGES: Record<string, Check> = {
 	FIT_MIN_RATIO: atLeast(1),
 	SECTION_START_SNAP_SEC: atLeast(0),
 	HEDGE_LOCAL_COST_FACTOR: atLeast(1),
-	DTW_MAX_CELLS: whole,
+	DTW_MAX_CELLS: cells,
 	MAX_GRID_BARS: whole,
 	PICKUP_MAX_BAR_FRACTION: upTo1,
 };
