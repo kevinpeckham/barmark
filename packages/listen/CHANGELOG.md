@@ -6,6 +6,8 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-11-11
+
 ### Added
 
 - **The first release.** `@barmark/listen` is the one home of the Stem
@@ -80,3 +82,6 @@ package uses [semantic versioning](https://semver.org/).
   gives at its rate, whose values are not finite, which lacks a key of
   its own, or which throws when read (`features-invalid`). The entry imports nothing from `barmark` or
   `@barmark/sync`.
+
+[Unreleased]: https://github.com/kevinpeckham/barmark/compare/listen-v0.1.0...HEAD
+[0.1.0]: https://github.com/kevinpeckham/barmark/releases/tag/listen-v0.1.0
