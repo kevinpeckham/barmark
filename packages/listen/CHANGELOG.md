@@ -6,6 +6,8 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-11-11
+
 ### Fixed
 
 - **`alignChart`'s timing map is clamped to the recording** (Kevin's
@@ -111,5 +113,6 @@ package uses [semantic versioning](https://semver.org/).
   its own, or which throws when read (`features-invalid`). The entry imports nothing from `barmark` or
   `@barmark/sync`.
 
-[Unreleased]: https://github.com/kevinpeckham/barmark/compare/listen-v0.1.0...HEAD
+[Unreleased]: https://github.com/kevinpeckham/barmark/compare/listen-v0.1.1...HEAD
+[0.1.1]: https://github.com/kevinpeckham/barmark/compare/listen-v0.1.0...listen-v0.1.1
 [0.1.0]: https://github.com/kevinpeckham/barmark/releases/tag/listen-v0.1.0
