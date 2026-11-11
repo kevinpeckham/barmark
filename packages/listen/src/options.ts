@@ -289,8 +289,9 @@ const secondsStep: Check = (v) => v >= STEP_SEC_FLOOR && v <= 1;
 /**
  * The widest re-phase fence, in beats (new in 0.1.1): 16. A fence wider
  * than a bar slides the grid past the neighbouring downbeat, which is
- * meaningless, and 16 beats is a bar of any meter up to 16 beats (16/16,
- * 16/8); the slide's work grows with the fence (2e6 beats took 21.6 s).
+ * meaningless. barmark accepts up to 32 beats a bar; 16 covers every
+ * common meter. The slide's work grows with the fence (2e6 beats took
+ * 21.6 s).
  */
 const FENCE_BEATS_CEILING = 16;
 /** The step table is one `Uint8Array`; past 2^31 cells its allocation can throw a RangeError. */

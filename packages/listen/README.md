@@ -108,7 +108,8 @@ and the edge. Sync's `checkTimingMap` reads such a map with one warning
 (the bars it never names), and `barAt` and `secondsAtBar` answer for the
 bars it holds. Only a bar of no length is dropped: one that keeps any
 (a 49 ms stub when the recording ends just after its bar line) stays,
-clamped.
+clamped. Only the map is cut: a section placed in a cut bar keeps its
+time in `placements`, past the recording's end.
 
 ### A recording to a chart
 
@@ -240,9 +241,9 @@ fine ladder holds `2 × coarse / fine + 1`: at most 2,001 (the default's
 21). The floors bound each scan on its own; several at their floors at
 once multiply (the phase scan runs once per period of both ladders).
 `REPHASE_FENCE_BEATS` has a ceiling of 16 beats (0.1.1): a fence wider
-than a bar slides the grid past the next downbeat, which is meaningless,
-16 beats is a bar of any meter up to 16 beats, and the slide's work grows
-with the fence (2,000,000 beats took 21.6 s).
+than a bar slides the grid past the next downbeat, which is meaningless;
+barmark accepts up to 32 beats a bar, and 16 covers every common meter.
+The slide's work grows with the fence (2,000,000 beats took 21.6 s).
 
 Each option's doc comment in `DEFAULTS` says what it does and where its
 value comes from. A default changes only with a registered study, named

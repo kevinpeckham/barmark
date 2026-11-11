@@ -242,7 +242,8 @@ Each floor bounds its own scan; several at their floors at once multiply.
 `REPHASE_FENCE_BEATS` has a ceiling for the same reason: it had none,
 2,000,000 beats took 21.6 s and 1e9 was accepted. A fence wider than a
 bar slides the grid past the neighbouring downbeat, which is meaningless,
-so the ceiling is 16 beats, a bar of any meter up to 16 beats.
+so the ceiling is 16 beats: barmark accepts up to 32 beats a bar, and
+16 covers every common meter.
 
 ### 5.2 Seven set by the app or the design, not by a study
 
@@ -558,7 +559,9 @@ alignChart(input: AlignInput, options?: ListenOptions):
   length stays, however short (a recording cut 1.95 s short of a 2 s bar
   keeps a 49 ms stub). No minimum is principled: any threshold would be a
   new constant for a study to set, and the stub is where the recording
-  says the bar starts. `map-invalid` stays the unreachable invariant. The pipeline's map
+  says the bar starts. Only the map is cut: a section placed in a cut
+  bar keeps its time in the placements, past the recording's end.
+  `map-invalid` stays the unreachable invariant. The pipeline's map
   (§6.4) needs no clamp: its grid is already held to the recording (bar
   one and a pickup clamped at 0:00, the last bar closed at the end).
 - **A refusal still carries the alignment and the placements** whenever the
