@@ -1,6 +1,6 @@
 # Releasing
 
-This repository publishes eight npm packages from one Bun workspace, each
+This repository publishes nine npm packages from one Bun workspace, each
 versioned and released on its own:
 
 | Package | Directory | Release tag |
@@ -11,6 +11,7 @@ versioned and released on its own:
 | `@barmark/score` | `packages/score` | `score-vX.Y.Z` |
 | `@barmark/sync` | `packages/sync` | `sync-vX.Y.Z` |
 | `@barmark/midi` | `packages/midi` | `midi-vX.Y.Z` |
+| `@barmark/listen` | `packages/listen` | `listen-vX.Y.Z` |
 | `@barmark/cli` | `packages/cli` | `cli-vX.Y.Z` |
 | `@barmark/engraver` | `packages/engraver` | `engraver-vX.Y.Z` |
 
@@ -39,8 +40,8 @@ anywhere.
   `workflow-lint` (zizmor and actionlint) is not required yet. Renaming a CI job or changing a matrix means updating the
   ruleset's required checks.
 - **Release tags** (ruleset "release tags": `v*`, `barmark-v*`,
-  `render-v*`, `musicxml-v*`, `score-v*`, `sync-v*`, `midi-v*`, `cli-v*`
-  and `engraver-v*`): a tag can be created but never moved or deleted, so a
+  `render-v*`, `musicxml-v*`, `score-v*`, `sync-v*`, `midi-v*`, `listen-v*`,
+  `cli-v*` and `engraver-v*`): a tag can be created but never moved or deleted, so a
   version always names the code that was released.
 - **The `npm` environment** holds the publish job: it needs Kevin's
   approval and runs only for release tags. Each package's npm trusted
@@ -70,7 +71,7 @@ npm.
 
 **A `barmark` minor release needs a release of every package that
 depends on `barmark` with a caret** (`@barmark/render`,
-`@barmark/musicxml`, `@barmark/score`, `@barmark/sync` and `@barmark/midi`), even with no
+`@barmark/musicxml`, `@barmark/score`, `@barmark/sync`, `@barmark/midi` and `@barmark/listen`), even with no
 change of their own. In 0.x a caret range stops at the next minor
 (`^0.7.0` allows 0.7.x, not 0.8.0), so a page or the CLI that installs
 the new `barmark` beside an old dependant gets two copies, and the
@@ -86,6 +87,12 @@ same CLI gets the old one through `@barmark/midi`'s range.
 `verify:release cli` checks this: each bundled library's dependency
 ranges, as packed at its tag, must admit the versions the binaries
 bundle beside it.
+
+**`@barmark/listen`** depends on `barmark` and `@barmark/sync` with
+carets, so after a `sync` or `barmark` minor, a `listen` patch raising
+the dependency ("Requires `@barmark/sync` X.Y.0"). The CLI does not
+bundle `@barmark/listen`, so a listen release needs no CLI release
+(step 13 does not follow it).
 
 **`@barmark/score`** depends on `barmark`, `@barmark/render` and
 `@barmark/musicxml` with carets, so it follows their releases the way
@@ -124,7 +131,7 @@ literal values) and a site bump, and the CLI only if score's code changed.
 
 ## Checks
 
-The same scripts run in three places; `<pkg>` is `barmark`, `render`, `musicxml`, `score`, `sync`, `midi`, `cli` or `engraver`:
+The same scripts run in three places; `<pkg>` is `barmark`, `render`, `musicxml`, `score`, `sync`, `midi`, `listen`, `cli` or `engraver`:
 
 | Check | Command | Local (Swamp) | CI (every push and PR) | Release workflow |
 |---|---|---|---|---|
@@ -152,7 +159,7 @@ runs, and `verify:package cli` fails on anything else.
 
 ## Steps
 
-`<pkg>` is the package's key (`barmark`, `render`, `musicxml`, `score`, `sync`, `midi`, `cli` or `engraver`) and the tag is
+`<pkg>` is the package's key (`barmark`, `render`, `musicxml`, `score`, `sync`, `midi`, `listen`, `cli` or `engraver`) and the tag is
 `<pkg>-vX.Y.Z`.
 
 1. **Start a release branch** from an up-to-date `main` with CI green:
@@ -290,14 +297,14 @@ manual step before its first release (the same for `@barmark/cli`):
    environment `npm`. Then set publishing access to require two-factor
    authentication and disallow tokens.
 3. **Rulesets** (repository settings → Rules): add the new tag pattern
-   (`cli-v*` for the CLI, `musicxml-v*` for `@barmark/musicxml`, `score-v*` for `@barmark/score`, `engraver-v*` for `@barmark/engraver`) to
+   (`cli-v*` for the CLI, `musicxml-v*` for `@barmark/musicxml`, `score-v*` for `@barmark/score`, `listen-v*` for `@barmark/listen`, `engraver-v*` for `@barmark/engraver`) to
    "release tags", and the new package job's checks (`package (20, cli)`,
    `package (22, cli)`, `package (24, cli)`; likewise `package (N,
-   musicxml)`; for the engraver, `engraver` and `package (N, engraver)`)
+   musicxml)` and `package (N, listen)`; for the engraver, `engraver` and `package (N, engraver)`)
    to the "main" ruleset's required checks.
 4. **The `npm` environment** (repository settings → Environments →
    npm → Deployment branches and tags): add a tag rule for the same
-   pattern (`cli-v*`, `musicxml-v*`, `score-v*`, `engraver-v*`). Without it the publish job is rejected at once,
+   pattern (`cli-v*`, `musicxml-v*`, `score-v*`, `listen-v*`, `engraver-v*`). Without it the publish job is rejected at once,
    before any approval is asked for ("Tag … is not allowed to deploy to
    npm due to environment protection rules"), and nothing reaches npm;
    after adding it, rerun the failed jobs (`gh run rerun <id> --failed`).

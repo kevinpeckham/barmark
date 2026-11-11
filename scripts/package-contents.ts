@@ -61,6 +61,18 @@ export const CONTENTS: Record<PackageKey, { required: string[]; allowed: RegExp 
 		],
 		allowed: /^(LICENSE|dist\/.+\.(js|d\.ts))$/,
 	},
+	listen: {
+		required: [
+			"LICENSE",
+			"dist/index.js",
+			"dist/index.d.ts",
+			"dist/features/index.js",
+			"dist/features/index.d.ts",
+			"dist/stages.js",
+			"dist/stages.d.ts",
+		],
+		allowed: /^(LICENSE|dist\/.+\.(js|d\.ts))$/,
+	},
 	cli: {
 		required: ["LICENSE", "dist/cli.js", "dist/main.js"],
 		allowed: /^(LICENSE|dist\/.+\.(js|d\.ts))$/,

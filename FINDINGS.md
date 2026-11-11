@@ -395,6 +395,55 @@ showed the rule needed refining.
 
 ## Performance and robustness
 
+### A destructuring swap made the pad render eight times slower (2026-11-10, @barmark/listen render)
+
+- **The symptom.** The streamed-render equality test (40 charts, three
+  rates, four chunk sizes) took over three minutes. The whole render of
+  a 26 s chart took 490 ms at 44.1 kHz.
+- **The cause.** The app's `addPad` advances its phasor with
+  `[c, s] = [c * dc - s * ds, s * dc + c * ds]`, and the peak scan is
+  `for (const v of samples)`. Under Bun (JavaScriptCore) the swap
+  allocates an array a sample: 40 ns a tone-sample against 5 ns for two
+  plain assignments. `for...of` over a typed array was similarly slow.
+- **The fix.** `render.ts` advances the phasor with a temporary and scans
+  with an index. Each right-hand side is still computed from the old
+  values, so the arithmetic is the app's; Task 11's bit-identity check
+  (517 M samples against the app's verbatim `renderChartPads`, 0
+  differences) confirms it. The test file still takes about a minute,
+  most of it chunk size 1, where the per-chunk calls dominate.
+
+### A best-of-three ratio of millisecond runs fails under load; alternate the runs (2026-11-10, @barmark/listen)
+
+- **The symptom.** `comb-scale.test.ts` timed three combs of a 60 s
+  envelope, then three of a 240 s one, and failed one full-suite run in
+  three on the VM (load average 13 to 16) with ratios of 6.2 and 12.7,
+  where the comb measures 3.5 to 4.1 alone.
+- **The cause.** A comb of 60 s takes about 2 ms, shorter than a burst of
+  load, and timing all of one length before the other lets a burst land on
+  one side only.
+- **The fix.** Each run combs its envelope ten times, both lengths warm up
+  first, and the three runs of each alternate, so a burst falls on both
+  alike; best of three of each, as before. Eight full suites in a row then
+  passed under the same load.
+
+### The app's beat chords sized their frames from the runs, so one bad run could throw or blank the song (2026-11-10, @barmark/listen)
+
+- **The symptom.** Porting the app's `chordminiBarChords` as `beatChords`
+  for Review Focus 3: a run whose `end` is `Infinity`, or finite but
+  huge (`1e15` s), made it ask for a frame array that long and throw a
+  `RangeError`; one whose `end` is `NaN` made the frame count `NaN`, so
+  every beat read "N.C." and the harmonic witness silently abstained on
+  a song full of chords (seen running the app's own code on each). And
+  `Math.max(0, ...runs.map(…))` spreads every run onto the stack.
+- **The cause.** The frame array is as long as the runs (or `frames`)
+  say, not as long as the beats read, and nothing checks a run is finite.
+- **The fix.** `beatChords` skips a run whose `start` or `end` is not
+  finite, keeps only the frames some beat reads (`framesRead`), and
+  folds the last end in a loop. A vote never changes: the scratchpad
+  comparison with the app's own code found 0 differences over 400 run
+  sets. In `packages/listen/src/grid/beats.ts`, tested in
+  `tests/beats.test.ts` ("degenerate runs never throw and abstain").
+
 ### A "not inside a parenthesis" lookahead made the chord reader quadratic (2026-11-10, barmark)
 
 - **The symptom.** Writing the linear-time test for stacked spellings,
@@ -617,6 +666,40 @@ When converting to a format that keeps written order, test the played
 order, not just the written marks.
 
 ## Design
+
+### The warping's path can skip the reference's first frame (2026-11-10, @barmark/listen dtw)
+
+- **The symptom.** The planned property "the path starts at reference
+  frame 0" failed on seeded pairs: many paths start at frame 1.
+- **The cause.** The app's `fillRow` lets a cell in row 2 take the (2,1)
+  step from row 0 (`older` is row 0 there, all zeros with subsequence and
+  0 at column 0 without), so the path's first point is frame 1 and frame
+  0 is stepped over. The app does the same: 322 of 816 warpings in Task
+  11's bit-identity check start there, on both sides alike. Without
+  subsequence the recording's first frame can be skipped the same way by
+  a (1,2) step.
+- **The fix.** None: v1 is a port. `dtw.test.ts` asserts the start is
+  frame 0 or 1 (and, without subsequence, `[0, 0]`, `[0, 1]` or
+  `[1, 0]`), and that some seeded paths do start at 1.
+
+### An unreadable chord loses its whole bar line, not one slot (2026-11-10, @barmark/listen chartPadBars)
+
+- **The symptom.** The listen design (§6.3) says a stored chart carrying
+  one of the seven spellings barmark 0.22 does not read (`CM7`, `CSus4`,
+  `CmMaj7`, `CmM7`, `C69`, `C(7)sus4`, `C−7`) gets a `?` slot that holds.
+  It does not: `| F |\n| CM7 |\n| G |` plays two bars, F and G, with an
+  error on line 2.
+- **The cause.** barmark reads a line with a token that is not a chord as
+  not a bar line at all, so every bar on it is gone. The app's adapter
+  behaves the same, because it parses with barmark before its `SPELLINGS`
+  rewrite ever runs, so the equivalence holds; the rewrite only ever
+  helped `chordPitchClasses` on symbols that had already parsed.
+- **The fix.** At first none in the port: `bars.test.ts` asserted the
+  line's bars were lost. barmark then fixed the cause itself (PR #250,
+  the entry below): the bar is kept, the slot reads as unknown harmony
+  `{ kind: "unknown", text }` and holds, as §6.3 first said. `bars.test.ts`
+  now asserts that. The app's adapter still drops the line, which is a
+  §11.3 row for the equivalence (Task 16).
 
 ### The MusicXML export reads repeats again from the lines (2026-11-10, @barmark/musicxml)
 
@@ -939,6 +1022,48 @@ when two rules each define "first", test a chart that tells them apart,
 and round-trip it through `format`.
 
 ## Tooling
+
+### Our Bun cannot install or resolve Stem Shovel's checkout (2026-11-10, @barmark/listen equivalence)
+
+- **The symptom.** In the equivalence script's clone of stem-shovel,
+  `bun install --frozen-lockfile` failed with `UnknownLockfileVersion`
+  ("lockfile had changes, but lockfile is frozen"). Once installed, the
+  first import of `audio/chartlessGrid.ts` failed: "Cannot find module
+  '#lib/constants/chartAlignment.js'".
+- **The cause.** The app pins Bun 1.4.2 (`packageManager`), whose
+  `bun.lock` is lockfile version 2; this repo's Bun 1.3.14 cannot read it.
+  And the app imports its own modules as `#lib/*` (package.json
+  `imports`, mapped to `./src/lib/*`) with `.js` specifiers for `.ts`
+  files; Bun 1.3.14 does not apply its `.js`-to-`.ts` rewrite to a
+  subpath import.
+- **The fix.** The script installs with `bunx bun@<the app's version>`
+  from the start (`--frozen-lockfile --ignore-scripts`, in the clone
+  only), and a `Bun.plugin` resolves `#lib/*` into the clone's `src/lib/`,
+  `.js` to `.ts` when the `.js` file is absent. The app's bare imports
+  (`barmark` 0.22, `@barmark/sync` 0.3.0) resolve from the clone's own
+  `node_modules`, which the unreadable-chord check confirms (barmark 0.22
+  drops the line). In `scripts/listen-equivalence.ts` (`install`, the
+  plugin).
+
+### Bun.build empties an entry in a `"sideEffects": false` package (2026-11-10, @barmark/listen)
+
+- **The symptom.** Task 5's check that `@barmark/listen/features`
+  bundles with no imports passed, but on inspection the bundle was 119
+  bytes: an `export { … }` list and no definitions at all. `Bun.build`
+  (Bun 1.3.14) of `packages/sync/src/timing/index.ts` is just as empty.
+- **The cause.** When the entry point itself sits in a package whose
+  `package.json` says `"sideEffects": false`, Bun drops every module the
+  entry only re-exports from, leaving the names unbound. A two-file
+  probe with and without that `package.json` reproduces it;
+  `ignoreDCEAnnotations` does not help. A consumer's import of the same
+  file from outside the package bundles whole, so the published package
+  is fine; only a test that bundles the entry directly is fooled, and a
+  "contains no X" assertion passes vacuously on an empty bundle.
+- **The fix.** The test bundles a one-line `export * from` wrapper
+  written to a temporary directory, as a consumer reaches the entry, then
+  imports the bundle and runs it, so an empty bundle fails
+  (`packages/listen/tests/features-entry.test.ts`). Any check of a
+  bundle's content should also check that the bundle works.
 
 ### jsDelivr serves the engraver's `.wasm` as `application/wasm`, brotli, CORS open, once it has the version (2026-11-10, @barmark/engraver 0.1.1)
 

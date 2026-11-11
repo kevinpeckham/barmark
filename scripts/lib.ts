@@ -41,6 +41,12 @@ export const PACKAGES = {
 		tagPrefix: "midi-v",
 		smoke: "scripts/smoke-midi.mjs",
 	},
+	listen: {
+		dir: join(root, "packages/listen"),
+		name: "@barmark/listen",
+		tagPrefix: "listen-v",
+		smoke: "scripts/smoke-listen.mjs",
+	},
 	cli: {
 		dir: join(root, "packages/cli"),
 		name: "@barmark/cli",

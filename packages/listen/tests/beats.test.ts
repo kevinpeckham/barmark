@@ -1,0 +1,189 @@
+/** A chord per beat: the app's `chordminiBarChords.test.ts`, ported onto `beatChords`, and the degenerate runs (Review Focus 3). */
+import { describe, expect, test } from "bun:test";
+import { beatChords, type ListenChordRuns } from "../src/grid/beats.js";
+import { latticeBeats } from "../src/grid/lattice.js";
+import { harmonicRhythmWitness } from "../src/grid/witnesses.js";
+import { DEFAULTS } from "../src/options.js";
+
+const frameSec = 2048 / 22050;
+/** Runs over `frames` frames from a list of [label, frames] pairs. */
+const stored = (pairs: [string, number][]) => {
+	let at = 0;
+	const runs = pairs.map(([label, n]) => {
+		const r = { start: at, end: at + n, label };
+		at += n;
+		return r;
+	});
+	return { frameSec, frames: at, runs };
+};
+/** Bar starts for `bars` bars of `frames` frames each, plus the end. */
+const bars = (count: number, framesPerBar: number) =>
+	Array.from({ length: count + 1 }, (_, i) => i * framesPerBar * frameSec);
+
+describe("beatChords (the app's chordminiBarChords)", () => {
+	test("each bar takes the label most of its frames carry, and equal bars merge", () => {
+		// Bars of 20 frames: D for 45 frames, then G.
+		const out = beatChords(
+			stored([
+				["D", 45],
+				["G", 35],
+			]),
+			bars(4, 20),
+		);
+		expect(out).toEqual([
+			{ bar: 1, bars: 2, start: 0, chord: "D", confidence: 1 },
+			{ bar: 3, bars: 2, start: 40 * frameSec, chord: "G", confidence: expect.closeTo(0.875, 3) },
+		]);
+	});
+
+	test("a bar votes only over the frames that exist; a bar past them is N.C.; an empty bar list gives nothing", () => {
+		expect(beatChords(stored([["A", 10]]), bars(2, 20))).toEqual([
+			{ bar: 1, bars: 1, start: 0, chord: "A", confidence: 1 },
+			{ bar: 2, bars: 1, start: 20 * frameSec, chord: "N.C.", confidence: 0 },
+		]);
+		expect(beatChords(stored([["A", 10]]), [])).toEqual([]);
+	});
+
+	test("a very short bar still votes one frame", () => {
+		const out = beatChords(stored([["E", 5]]), [0, 0.01, 0.02]);
+		expect(out.map((s) => s.chord)).toEqual(["E"]);
+		expect(out[0]?.bars).toBe(2);
+	});
+
+	test("the model's N (no chord) reads as N.C. and merges with a bar past the end", () => {
+		const out = beatChords(stored([["N", 20]]), bars(2, 20));
+		expect(out).toEqual([{ bar: 1, bars: 2, start: 0, chord: "N.C.", confidence: 0.5 }]);
+	});
+
+	test("labels are spelled on read: min6, hdim7, X, and an unreadable label", () => {
+		const out = beatChords(
+			stored([
+				["C:min6", 20],
+				["B:hdim7", 20],
+				["X", 20],
+				["nonsense", 20],
+				["A:min7", 20],
+			]),
+			bars(5, 20),
+		);
+		expect(out.map((s) => [s.chord, s.bars])).toEqual([
+			["Cm6", 1],
+			["Bm7(b5)", 1],
+			["?", 2],
+			["Am7", 1],
+		]);
+	});
+
+	test("runs in seconds with barmark symbols read as their frames-based twin", () => {
+		const twin = stored([
+			["D", 45],
+			["G:min", 35],
+			["N", 20],
+		]);
+		const inSeconds = {
+			runs: [
+				{ start: 0, end: 45 * frameSec, symbol: "D" },
+				{ start: 45 * frameSec, end: 80 * frameSec, symbol: "Gm" },
+				{ start: 80 * frameSec, end: 100 * frameSec, symbol: "N.C." },
+			],
+		};
+		const barStarts = bars(6, 20);
+		expect(beatChords(inSeconds, barStarts)).toEqual(beatChords(twin, barStarts));
+		expect(beatChords(inSeconds, barStarts).map((s) => [s.chord, s.bars])).toEqual([
+			["D", 2],
+			["Gm", 2],
+			["N.C.", 2],
+		]);
+	});
+
+	test("without a total, the frames end at the last run's end", () => {
+		const { frames: _, ...noTotal } = stored([["A", 10]]);
+		expect(beatChords(noTotal, bars(2, 20))).toEqual(beatChords(stored([["A", 10]]), bars(2, 20)));
+	});
+
+	test("a symbol run A- and an Am run on adjacent beats merge into one segment", () => {
+		const runs = {
+			runs: [
+				{ start: 0, end: 20 * frameSec, symbol: "A-" },
+				{ start: 20 * frameSec, end: 40 * frameSec, symbol: "Am" },
+			],
+		};
+		expect(beatChords(runs, bars(2, 20))).toEqual([
+			{ bar: 1, bars: 2, start: 0, chord: "Am", confidence: 1 },
+		]);
+	});
+});
+
+describe("degenerate runs never throw and abstain (Review Focus 3)", () => {
+	const lattice = { anchor: 0, beat: 0.5, period: 2, beatsPerBar: 4 };
+	const duration = 10;
+	const { starts } = latticeBeats(lattice, duration);
+	const beatCount = starts.length - 1;
+	const read = (chords: ListenChordRuns) => {
+		const segments = beatChords(chords, starts);
+		expect(segments.reduce((n, s) => n + s.bars, 0)).toBe(beatCount);
+		return { segments, witness: harmonicRhythmWitness(chords, lattice, duration, DEFAULTS) };
+	};
+	const chordsAt = (segments: { bars: number; chord: string }[]) =>
+		segments.flatMap((s) => Array.from({ length: s.bars }, () => s.chord));
+
+	test("empty runs: every beat N.C., the witness abstains", () => {
+		const { segments, witness } = read({ runs: [] });
+		expect(segments).toEqual([{ bar: 1, bars: beatCount, start: 0, chord: "N.C.", confidence: 0 }]);
+		expect(witness.cls).toBeNull();
+	});
+
+	test("a run with a NaN end or a -Infinity start is skipped", () => {
+		const { segments } = read({
+			runs: [
+				{ start: 0, end: 4, symbol: "C" },
+				{ start: 4, end: Number.NaN, symbol: "G" },
+				{ start: Number.NEGATIVE_INFINITY, end: 6, symbol: "F" },
+				{ start: 6, end: Number.POSITIVE_INFINITY, symbol: "D" },
+			],
+		});
+		expect(chordsAt(segments)).toEqual([...Array(8).fill("C"), ...Array(12).fill("N.C.")]);
+	});
+
+	test("overlapping runs: the later one wins on the shared frames, as the app overwrites", () => {
+		const { segments } = read({
+			runs: [
+				{ start: 0, end: 4, symbol: "C" },
+				{ start: 2, end: 6, symbol: "G" },
+			],
+		});
+		expect(chordsAt(segments)).toEqual([
+			...Array(4).fill("C"),
+			...Array(8).fill("G"),
+			...Array(8).fill("N.C."),
+		]);
+	});
+
+	test("frames: 3 with a run ending at frame 10: beats past frame 3 are N.C.", () => {
+		const { segments } = read({
+			frameSec: 0.5,
+			frames: 3,
+			runs: [{ start: 0, end: 10, label: "C" }],
+		});
+		expect(chordsAt(segments)).toEqual([...Array(3).fill("C"), ...Array(17).fill("N.C.")]);
+	});
+
+	test("an unknown Harte label reads ?, and all-unknown runs make the witness abstain", () => {
+		const { segments, witness } = read({
+			runs: [
+				{ start: 0, end: 2, label: "Q:weird" },
+				{ start: 2, end: 4, label: "X" },
+				{ start: 4, end: 6, label: "Q:weird" },
+			],
+		});
+		expect(chordsAt(segments).slice(0, 12)).toEqual(Array(12).fill("?"));
+		expect(witness.cls).toBeNull();
+	});
+
+	test("a run that ends past any beat, finite but huge, reads as the app's would", () => {
+		const { segments } = read({ runs: [{ start: 1, end: 1e15, symbol: "E" }] });
+		expect(chordsAt(segments)).toEqual([...Array(2).fill("N.C."), ...Array(18).fill("E")]);
+		const framed = read({ frameSec, frames: 1e15, runs: [{ start: 0, end: 1e15, label: "E" }] });
+		expect(chordsAt(framed.segments)).toEqual(Array(20).fill("E"));
+	});
+});

@@ -45,6 +45,14 @@
         "verovio": "6.4.1",
       },
     },
+    "packages/listen": {
+      "name": "@barmark/listen",
+      "version": "0.1.0",
+      "dependencies": {
+        "@barmark/sync": "workspace:^",
+        "barmark": "workspace:^",
+      },
+    },
     "packages/midi": {
       "name": "@barmark/midi",
       "version": "0.3.2",
@@ -96,6 +104,8 @@
     "@barmark/cli": ["@barmark/cli@workspace:packages/cli"],
 
     "@barmark/engraver": ["@barmark/engraver@workspace:packages/engraver"],
+
+    "@barmark/listen": ["@barmark/listen@workspace:packages/listen"],
 
     "@barmark/midi": ["@barmark/midi@workspace:packages/midi"],
 

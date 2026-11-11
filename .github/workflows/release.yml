@@ -120,9 +120,10 @@ jobs:
             score-v*) key=score; smoke=scripts/smoke-score.mjs ;;
             sync-v*) key=sync; smoke=scripts/smoke-sync.mjs ;;
             midi-v*) key=midi; smoke=scripts/smoke-midi.mjs ;;
+            listen-v*) key=listen; smoke=scripts/smoke-listen.mjs ;;
             cli-v*) key=cli; smoke=scripts/smoke-cli.mjs ;;
             engraver-v*) key=engraver; smoke=scripts/smoke-engraver.mjs ;;
-            *) echo "::error::${GITHUB_REF_NAME} is not a release tag (barmark-vX.Y.Z, render-vX.Y.Z, musicxml-vX.Y.Z, score-vX.Y.Z, sync-vX.Y.Z, midi-vX.Y.Z, cli-vX.Y.Z or engraver-vX.Y.Z)"; exit 1 ;;
+            *) echo "::error::${GITHUB_REF_NAME} is not a release tag (barmark-vX.Y.Z, render-vX.Y.Z, musicxml-vX.Y.Z, score-vX.Y.Z, sync-vX.Y.Z, midi-vX.Y.Z, listen-vX.Y.Z, cli-vX.Y.Z or engraver-vX.Y.Z)"; exit 1 ;;
           esac
           dir="packages/${key}"
           name=$(node -p "require('./${dir}/package.json').name")
