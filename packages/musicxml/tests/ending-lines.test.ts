@@ -87,13 +87,14 @@ describe("an ending across lines", () => {
 });
 
 describe("many bar lines", () => {
-	/** How much longer 16,000 lines of `line` take to walk than 2,000. */
+	/** How much longer 32,000 lines of `line` take to walk than 4,000. */
 	const walkGrowth = (line = "| C |") => {
-		const [small, large] = [2000, 16000].map((n) =>
+		const [small, large] = [4000, 32000].map((n) =>
 			parseChart(Array.from({ length: n }, () => line).join("\n")),
 		) as [ChartParse, ChartParse];
-		// 2,000 lines walk in 3 to 7 ms: sixteen walks a run against two of 16,000, so both runs are long
-		// beside a pause and last as long (CI's runners failed the single walks at 17 and 18 against 16).
+		// 4,000 lines walk in under 15 ms: sixteen walks a run against two of 32,000, so both runs are long
+		// beside a pause and last as long (CI's runners failed single walks of 2,000 and 16,000 lines at 17
+		// and 18 against 16). At these sizes a quadratic walk is twice as far past linear as at 2,000.
 		return growth(
 			() => writtenMeasures(small),
 			() => writtenMeasures(large),
@@ -103,7 +104,8 @@ describe("many bar lines", () => {
 	test(
 		"eight times as many lines are walked in linear time",
 		() => {
-			// About eight now; 42 when each line copied the lines after it to look for an ending's next line.
+			// About eight now; 42 at 2,000 and 16,000 lines when each line copied the lines after it to look
+			// for an ending's next line.
 			expect(walkGrowth()).toBeLessThan(16);
 			// Each `:|` looks ahead for endings too.
 			expect(walkGrowth("|: C :|")).toBeLessThan(16);

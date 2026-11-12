@@ -258,21 +258,28 @@ describe("scoreCost", () => {
 		expect(MAX_SCORE_COST).toBe(50_000_000);
 	});
 
-	// The exports these charts would start take some twenty seconds; a refusal takes under one alone, so
-	// five seconds is far from both, and a loaded machine can't fail it.
-	const refusedQuickly = (text: string) => {
+	/**
+	 * Engraves `text` with no limit on the MusicXML's length, so only the cost
+	 * check stands between it and the whole export (the length limit would
+	 * cut a late refusal short and hide it).
+	 */
+	const costOnly = (text: string) =>
+		engraveChart(vrv, text, { width: 800, maxXmlLength: Infinity });
+	const refused = (text: string) => {
 		expect(text.length).toBeLessThan(2_000);
-		const start = performance.now();
-		const r = engraveChart(vrv, text, { width: 800 });
-		expect(performance.now() - start).toBeLessThan(5_000);
+		const r = costOnly(text);
 		expect(r).toMatchObject({ ok: false, reason: "The score is too large to draw" });
 	};
 
 	test(
 		"the finding's chart is refused before its export, in a moment",
 		() => {
-			// Its export alone takes some twenty seconds and writes 370 MB.
-			refusedQuickly(`## A x500\n|: C :| x2\nlyrics: | ${many(500, "la")} |\n`);
+			// Its export alone takes some twenty seconds and writes 370 MB; a refusal takes well under one,
+			// so five seconds is far from both, and a loaded machine can't fail it.
+			const text = `## A x500\n|: C :| x2\nlyrics: | ${many(500, "la")} |\n`;
+			const start = performance.now();
+			refused(text);
+			expect(performance.now() - start).toBeLessThan(5_000);
 		},
 		TIMING_TIMEOUT,
 	);
@@ -280,8 +287,18 @@ describe("scoreCost", () => {
 	test(
 		"a link of few notes and long escaped words is refused before its export",
 		() => {
-			// About 9,000 bytes of words a bar, written out 10,000 times: some 90 MB.
-			refusedQuickly(`## A x5000\n|: "${"&".repeat(1800)}" C :| x2\n`);
+			// About 9,000 bytes of words a bar, written out 10,000 times: some 90 MB, in 3.5 to 4.5 s, while
+			// the refusal takes about 0.8 s. A refusal that came after the export would take longer than the
+			// export, so it is timed against it: four refusals a run against one export, alternated.
+			const text = `## A x5000\n|: "${"&".repeat(1800)}" C :| x2\n`;
+			refused(text);
+			expect(
+				growth(
+					() => costOnly(text),
+					() => exportMusicXml(text),
+					{ runs: 2, balance: 4 },
+				),
+			).toBeGreaterThan(2);
 		},
 		TIMING_TIMEOUT,
 	);

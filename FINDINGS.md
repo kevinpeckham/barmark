@@ -46,8 +46,12 @@ not here.
   MusicXML import's test does) at 67.6 M reads against a bound of 10.7 M,
   where the fix reads 59 K. Making each part read every line failed
   `parts-scale`'s "parts with two lines" at 24.6 against 20. An
-  ending-line walk that copies the lines after it failed at 34.6 against
-  16. But a cheap quadratic hides behind a ratio: looking each part's
+  ending-line walk that copies the lines after it failed at 35 to 41
+  against 16 (4,000 and 32,000 lines: at 2,000 and 16,000 a review saw it
+  clear 16 by 11%). Score's refusals are timed with no MusicXML length
+  limit, since the limit would cut a late refusal short and hide it: a
+  refusal moved after the export took 9.3 s against 5, and 0.71 of the
+  export's time against a bound of over 2 (4.2 when refused first). But a cheap quadratic hides behind a ratio: looking each part's
   label up with `parts.find` in `projectPart` (parts × parts) passed every
   `parts-scale` test, and the lyric rows' scan passed an unbalanced 8× ratio
   until the input was large. Where the quadratic step is cheap, count the

@@ -116,9 +116,10 @@ async function run(context: Context, args: string[]) {
 
 const tail = (text: string, lines = 12) => text.trim().split("\n").slice(-lines).join("\n");
 
-/** The tests bun test reports as failing, by their `(fail)` lines, without the time. */
-const failedTests = (output: string) =>
-	[...output.matchAll(/^\(fail\) (.+?)(?: \[[\d.]+m?s\])?$/gm)].map((m) => m[1] as string);
+/** The tests bun test reports as failing, by their `(fail)` lines, without the time, each once. */
+const failedTests = (output: string) => [
+	...new Set([...output.matchAll(/^\(fail\) (.+?)(?: \[[\d.]+m?s\])?$/gm)].map((m) => m[1] as string)),
+];
 
 /** "a; b; c and 4 more": the first few names, so a summary stays one line. */
 const firstFew = (names: string[], few = 3) =>
