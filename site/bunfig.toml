@@ -12,6 +12,7 @@ minimumReleaseAgeExcludes = [
 	"@barmark/score",
 	"@barmark/sync",
 	"@barmark/midi",
+	"@barmark/listen",
 	"@barmark/cli",
 	"@barmark/engraver",
 ]

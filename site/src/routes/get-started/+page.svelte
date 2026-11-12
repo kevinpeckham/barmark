@@ -5,17 +5,24 @@ import Window from "#lib/components/Window.svelte";
 import { LINKS } from "#lib/site.js";
 import {
 	CLI_CI,
+	INSTALL_LISTEN,
+	INSTALL_MIDI,
 	INSTALL_MUSICXML,
 	INSTALL_PARSER,
 	INSTALL_RENDER,
 	INSTALL_SCORE,
 	INSTALL_SYNC,
 	LIVE_EDITOR,
+	PACKAGES,
 	SAMPLE_CHART,
+	USE_BINARY,
 	USE_CLI,
 	USE_ELEMENT,
+	USE_LISTEN,
+	USE_MIDI,
 	USE_MUSICXML,
 	USE_PARSER,
+	USE_PERFORM,
 	USE_RENDER,
 	USE_SCORE_ELEMENT,
 	USE_SCORE_ENGRAVER,
@@ -25,10 +32,11 @@ import {
 } from "#lib/start.js";
 
 const description =
-	"Write a Barmark chart, read it with the parser, draw it with @barmark/render or the <barmark-chart> web component, show it as a full score with @barmark/score, convert it to and from MusicXML with @barmark/musicxml, check charts from the terminal with @barmark/cli, and sync a chart with a recording with @barmark/sync.";
+	"Write a Barmark chart, read it with the parser, draw it with @barmark/render or the <barmark-chart> web component, show it as a full score with @barmark/score, convert it to and from MusicXML with @barmark/musicxml and MIDI with @barmark/midi, check charts from the terminal with @barmark/cli, and line a chart up with a recording with @barmark/sync and @barmark/listen.";
 const step = "font-serif text-xl text-ink";
 const link = "underline decoration-accent/60 underline-offset-3 hover-text-accent";
 const code = "font-mono text-accent";
+const cell = "px-3 py-3 align-top lt-sm:(block px-0 py-1)";
 </script>
 
 <svelte:head>
@@ -47,15 +55,50 @@ const code = "font-mono text-accent";
 		<p class="max-w-prose opacity-80">
 			A Barmark chart is a plain-text file. Two packages read and draw it:
 			<code class={code}>barmark</code>, the parser, and <code class={code}>@barmark/render</code>, which
-			draws the bar grid as HTML or as a web component. <code class={code}>@barmark/score</code> shows the
-			same chart as a full score beside the grid, <code class={code}>@barmark/musicxml</code> converts charts
-			to and from MusicXML, and <code class={code}>@barmark/sync</code> syncs a chart with a recording. All
-			five are ESM, with TypeScript types. The other four run in Node 20 or later, Bun, Deno and the
-			browser; the score's element runs in the browser, and its <code class={code}>renderScoreHtml</code>
-			in Node or Bun. <code class={code}>@barmark/cli</code> puts them in the terminal, for checking
-			charts without writing any code.
+			draws the bar grid as HTML or as a web component. The rest build on those two:
+			<code class={code}>@barmark/score</code> shows the same chart as a full score beside the grid,
+			<code class={code}>@barmark/musicxml</code> and <code class={code}>@barmark/midi</code> convert charts
+			to and from MusicXML and MIDI, <code class={code}>@barmark/sync</code> and
+			<code class={code}>@barmark/listen</code> line a chart up with a recording, and
+			<code class={code}>@barmark/cli</code> puts them in the terminal, for checking charts without
+			writing any code. The libraries are ESM, with TypeScript types, and run in Node 20 or later, Bun
+			and the browser; the score's element runs in the browser, and its
+			<code class={code}>renderScoreHtml</code> in Node or Bun. Every package is before 1.0, so pin the
+			versions you use: each release's changes are in its changelog.
 		</p>
 	</div>
+
+	<section class="flex flex-col gap-4 min-w-0">
+		<h2 id="packages" class="{step} scroll-mt-6">The packages</h2>
+		<p class="max-w-prose opacity-80">
+			Install only what you use. Each has a step below with a short example, and its README has the
+			whole API.
+		</p>
+		<table class="w-full border-collapse text-left lt-sm:block">
+			<thead class="text-xs uppercase tracking-wider opacity-60 border-b border-line lt-sm:sr-only">
+				<tr>
+					<th scope="col" class="px-3 py-2 font-400">Package</th>
+					<th scope="col" class="px-3 py-2 font-400">What it does</th>
+					<th scope="col" class="px-3 py-2 font-400">Use it for</th>
+				</tr>
+			</thead>
+			<tbody class="lt-sm:(flex flex-col gap-3)">
+				{#each PACKAGES as pkg (pkg.name)}
+					<tr
+						data-package={pkg.name}
+						class="border-b border-line lt-sm:(block rounded-lg border border-line bg-row p-4)"
+					>
+						<th scope="row" class="{cell} font-400 whitespace-nowrap">
+							<a href={pkg.step} class={link}><code class={code}>{pkg.name}</code></a>
+							<a href={pkg.readme} class="block text-xs opacity-60 {link}">README</a>
+						</th>
+						<td class="{cell} max-w-sm opacity-80">{pkg.does}</td>
+						<td class="{cell} max-w-xs opacity-80">{pkg.when}</td>
+					</tr>
+				{/each}
+			</tbody>
+		</table>
+	</section>
 
 	<section class="flex flex-col gap-4 min-w-0">
 		<h2 class={step}>1. Write a chart</h2>
@@ -77,7 +120,7 @@ const code = "font-mono text-accent";
 	</section>
 
 	<section class="flex flex-col gap-4 min-w-0">
-		<h2 class={step}>2. Read it with the parser</h2>
+		<h2 id="parser" class="{step} scroll-mt-6">2. Read it with the parser</h2>
 		<p class="max-w-prose opacity-80">
 			<code class={code}>parseChart</code> gives you every bar in play order, with its chords, section,
 			key, meter and tempo, and a list of problems, each with a line number. It never throws on what
@@ -92,7 +135,7 @@ const code = "font-mono text-accent";
 	</section>
 
 	<section class="flex flex-col gap-4 min-w-0">
-		<h2 class={step}>3. Render it as HTML</h2>
+		<h2 id="render" class="{step} scroll-mt-6">3. Render it as HTML</h2>
 		<p class="max-w-prose opacity-80">
 			<code class={code}>renderChart</code> returns the chart as HTML for a server or a static site. It
 			carries its own styles in a declarative shadow root, so it shows without JavaScript and your
@@ -148,7 +191,7 @@ const code = "font-mono text-accent";
 			a CDN, checked against its digest; the package exports jsDelivr's as
 			<code class={code}>VEROVIO_CDN_URL</code> and <code class={code}>VEROVIO_CDN_INTEGRITY</code>.
 		</p>
-		<p class="max-w-prose opacity-80">
+		<p id="engraver" class="max-w-prose opacity-80 scroll-mt-6">
 			Or load <code class={code}>@barmark/engraver</code>, a smaller build of the same Verovio made by
 			Barmark: under half the download of stock, drawing the same score. Its WebAssembly is
 			a file of its own, so it takes a second digest,
@@ -191,7 +234,7 @@ const code = "font-mono text-accent";
 	</section>
 
 	<section class="flex flex-col gap-4 min-w-0">
-		<h2 class={step}>6. Convert to and from MusicXML</h2>
+		<h2 id="musicxml" class="{step} scroll-mt-6">6. Convert to and from MusicXML</h2>
 		<p class="max-w-prose opacity-80">
 			<code class={code}>exportMusicXml</code> writes a chart as MusicXML 4.0, so it opens in MuseScore,
 			Dorico, Sibelius or Finale with the same bars, chords, repeats, sections and parts, and plays in
@@ -208,17 +251,51 @@ const code = "font-mono text-accent";
 	</section>
 
 	<section class="flex flex-col gap-4 min-w-0">
-		<h2 id="terminal" class="{step} scroll-mt-6">7. Check charts from the terminal</h2>
+		<h2 id="midi" class="{step} scroll-mt-6">7. Hear it as MIDI</h2>
+		<p class="max-w-prose opacity-80">
+			<code class={code}>exportMidi</code> writes a chart's play order as a Standard MIDI File, to hear
+			it in a DAW, a practice player or a notation program: each chord as a block chord on piano (or
+			on its part's instrument), with the tempo map, time and key signatures, a marker for each section,
+			and the lyrics. It is a guide to the harmony, not an arrangement.
+			<code class={code}>importMidi</code> reads a MIDI file back as a chart, naming each chord from
+			the notes that sound; repeats come back written out, and a change between beats lands on the beat.
+			Neither throws: what MIDI can't hold comes back as a loss or a diagnostic, each with its bar.
+		</p>
+		<Code title="Terminal" code={INSTALL_MIDI} />
+		<Code title="midi.ts" code={USE_MIDI} />
+		<p class="max-w-prose opacity-80">
+			For a player of your own, the <code class={code}>@barmark/midi/perform</code> subpath gives the
+			same performance as notes with no file: each with its pitch, velocity and time, in exact fractions
+			of a quarter note that <code class={code}>secondsAt</code> turns into seconds through the tempo
+			map. It loads none of the MIDI file code.
+		</p>
+		<Code title="player.ts" code={USE_PERFORM} />
+		<p class="text-sm opacity-80">
+			How each chord is voiced, swing, pushes and the pedal, and what import reads are in the
+			<a href={LINKS.midiReadme} class={link}>MIDI package's README</a>. Export has been checked in
+			MuseScore 4.7.6, and other programs are untested; the CLI's <code class={code}>export --midi</code> does it
+			<a href="#terminal" class={link}>from the terminal</a>.
+		</p>
+	</section>
+
+	<section class="flex flex-col gap-4 min-w-0">
+		<h2 id="terminal" class="{step} scroll-mt-6">8. Check charts from the terminal</h2>
 		<p class="max-w-prose opacity-80">
 			<code class={code}>@barmark/cli</code> is the <code class={code}>barmark</code> command. It
 			checks a folder of charts and names each problem by file and line, rewrites charts in their
 			standard form, transposes them, renders one as a page that opens in any browser (the bar grid, or
-			the full score), and exports one as MusicXML for MuseScore, Dorico or Sibelius. It runs
-			with <code class={code}>npx</code> on Node 20.6 or later, with nothing to install; without Node,
-			download a standalone binary from its
-			<a href={LINKS.cliReleases} class={link}>GitHub releases</a>.
+			the full score), exports one as MusicXML or MIDI, imports a MusicXML score or a MIDI file as a
+			chart, and with <code class={code}>part</code> pulls one part out of a chart of several. It runs
+			with <code class={code}>npx</code> on Node 20.6 or later, with nothing to install.
 		</p>
 		<Code title="Terminal" code={USE_CLI} />
+		<p class="max-w-prose opacity-80">
+			Without Node, download the standalone binary for your system from the CLI's
+			<a href={LINKS.cliReleases} class={link}>GitHub releases</a>: one file, with the parser, the
+			renderer, the converters and Verovio inside. Make it executable, and run it as you would
+			<code class={code}>barmark</code>.
+		</p>
+		<Code title="Terminal" code={USE_BINARY} />
 		<p class="max-w-prose opacity-80">
 			<code class={code}>render --score</code> writes a standalone HTML page of the full engraved score,
 			the one <code class={code}>&lt;barmark-score&gt;</code> shows: open it in a browser and print it to
@@ -242,7 +319,7 @@ const code = "font-mono text-accent";
 	</section>
 
 	<section class="flex flex-col gap-4 min-w-0">
-		<h2 id="sync" class="{step} scroll-mt-6">8. Sync a chart with a recording</h2>
+		<h2 id="sync" class="{step} scroll-mt-6">9. Sync a chart with a recording</h2>
 		<p class="max-w-prose opacity-80">
 			<code class={code}>@barmark/sync</code> is for audio tools. <code class={code}>chartFromDetections</code>
 			takes what a chord detector hears in a recording, its bar starts and chord runs in seconds, and
@@ -253,9 +330,38 @@ const code = "font-mono text-accent";
 		</p>
 		<Code title="Terminal" code={INSTALL_SYNC} />
 		<Code title="sync.ts" code={USE_SYNC} />
+		<p class="max-w-prose opacity-80">
+			A player that only reads timing maps can import <code class={code}>barAt</code> and
+			<code class={code}>secondsAtBar</code> from <code class={code}>@barmark/sync/timing</code>, which
+			leaves the builder out.
+		</p>
 		<p class="text-sm opacity-80">
 			The input it reads, the timing map's format and every diagnostic are in the
 			<a href={LINKS.syncReadme} class={link}>sync package's README</a>.
+		</p>
+	</section>
+
+	<section class="flex flex-col gap-4 min-w-0">
+		<h2 id="listen" class="{step} scroll-mt-6">10. Or start from the recording</h2>
+		<p class="max-w-prose opacity-80">
+			<code class={code}>@barmark/listen</code> is the newest package, at 0.1: the recording-to-chart
+			code of <a href={LINKS.stemShovel} class={link}>Stem Shovel</a>, ported with the app's arithmetic in
+			the app's order, so the app and other tools run one copy. From a recording's samples and a chord model's runs,
+			<code class={code}>chartFromRecording</code> finds the bar lines and bar one, then writes the
+			chart and its timing map with <code class={code}>@barmark/sync</code>.
+			<code class={code}>alignChart</code> lines up a chart you already have with a recording instead.
+		</p>
+		<p class="max-w-prose opacity-80">
+			It detects neither chords, nor tempo, nor meter. The chords come from a chord model of your own,
+			and you declare the tempo and meter: a wrong one gives a faithful chart on the wrong bars, so treat
+			what it writes as a draft for a person to check. Every call returns a result or its refusals, and
+			never throws.
+		</p>
+		<Code title="Terminal" code={INSTALL_LISTEN} />
+		<Code title="listen.ts" code={USE_LISTEN} />
+		<p class="text-sm opacity-80">
+			The features it reads, each option and every refusal are in the
+			<a href={LINKS.listenReadme} class={link}>listen package's README</a>.
 		</p>
 	</section>
 </main>

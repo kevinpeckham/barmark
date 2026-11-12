@@ -1,9 +1,83 @@
 /** Get Started's chart and code samples. tests/pages.test.ts runs the claims they make. */
 import { ENGRAVER_CDN_INTEGRITY, ENGRAVER_CDN_URL, ENGRAVER_WASM_INTEGRITY } from "@barmark/score";
 import pkg from "../../package.json" with { type: "json" };
+import { LINKS } from "./site.js";
 
 /** The CLI the site installs (a dev dependency, so the tests run it), for the CI example's pin. */
 const CLI_VERSION = pkg.devDependencies["@barmark/cli"];
+
+/** Get Started's table of the packages: what each does, when to reach for it, its step and its README. */
+export const PACKAGES: {
+	name: string;
+	does: string;
+	when: string;
+	step: string;
+	readme: string;
+}[] = [
+	{
+		name: "barmark",
+		does: "Reads a chart (bars in play order, with problems by line), prints it in standard form, transposes it, converts Harte labels.",
+		when: "Anything that reads or writes charts. The others build on it.",
+		step: "#parser",
+		readme: LINKS.parserReadme,
+	},
+	{
+		name: "@barmark/render",
+		does: "Draws the bar grid, as HTML from renderChart or as the <barmark-chart> element.",
+		when: "Showing a chart on a page. Light, with no engraver.",
+		step: "#render",
+		readme: LINKS.renderReadme,
+	},
+	{
+		name: "@barmark/score",
+		does: "<barmark-score>: the grid with a Grid / Score switch, the score engraved by Verovio; renderScoreHtml for servers.",
+		when: "Readers want sheet music too, and Verovio's download on demand is acceptable.",
+		step: "#score",
+		readme: LINKS.scoreReadme,
+	},
+	{
+		name: "@barmark/engraver",
+		does: "A smaller build of the same Verovio, which the score element can load from a CDN.",
+		when: "You use the score and want it to download in under half the bytes.",
+		step: "#engraver",
+		readme: LINKS.engraverReadme,
+	},
+	{
+		name: "@barmark/musicxml",
+		does: "Exports a chart as MusicXML 4.0 and imports a score (.musicxml or .mxl) as a chart.",
+		when: "Moving charts to and from MuseScore, Dorico, Sibelius or Finale.",
+		step: "#musicxml",
+		readme: LINKS.musicxmlReadme,
+	},
+	{
+		name: "@barmark/midi",
+		does: "Exports a chart's play order as a MIDI file, imports a MIDI file as a chart, and gives the timed notes.",
+		when: "Hearing a chart in a DAW or a practice player, or building a player of your own.",
+		step: "#midi",
+		readme: LINKS.midiReadme,
+	},
+	{
+		name: "@barmark/cli",
+		does: "A command that checks, formats, renders, transposes, exports and imports charts, and pulls out a part.",
+		when: "Working in a terminal or CI, with no code. Also a standalone binary.",
+		step: "#terminal",
+		readme: LINKS.cliReadme,
+	},
+	{
+		name: "@barmark/sync",
+		does: "Writes a chart and its timing map from a chord detector's bars and chords; reads timing maps.",
+		when: "An audio tool that already knows where the bars and chords are.",
+		step: "#sync",
+		readme: LINKS.syncReadme,
+	},
+	{
+		name: "@barmark/listen",
+		does: "Finds the bars in a recording and writes its chart, or lines a chart up with a recording. Early (0.1).",
+		when: "An audio tool starting from the audio, which can declare the tempo and meter.",
+		step: "#listen",
+		readme: LINKS.listenReadme,
+	},
+];
 
 export const SAMPLE_CHART = `# Example Song
 key: D, time: 4/4, tempo: 145
@@ -117,6 +191,31 @@ const imported = importMusicXml(xml);
 imported.text; // "# Example Song\\nkey: D, tempo: 145\\n\\n## Verse\\n…"
 imported.diagnostics; // what didn't come over, one warning per kind`;
 
+export const INSTALL_MIDI = "npm install @barmark/midi";
+
+export const USE_MIDI = `import { exportMidi, importMidi } from "@barmark/midi";
+
+// The chart's play order as a Standard MIDI File: a block chord a slot,
+// with the tempo map, time and key signatures, section markers and lyrics
+const exported = exportMidi(text); // or exportMidi(text, { part: "Gtr", tempo: 96 })
+if (exported.ok) {
+	save("example-song.mid", exported.bytes);
+	exported.losses; // [] (what MIDI couldn't hold, such as an open repeat)
+}
+
+// A MIDI file back to a chart, each chord named from the notes that sound
+const imported = importMidi(bytes);
+imported.text; // "# Example Song\\nkey: D, time: 4/4, tempo: 145\\n\\n## Verse\\n| D | A | Bm | G |\\n…"`;
+
+export const USE_PERFORM = `import { perform, secondsAt } from "@barmark/midi/perform";
+import { parseChart } from "barmark";
+
+// The same performance with no file: timed notes, for a player to schedule
+const p = perform(parseChart(text));
+for (const track of p.tracks)
+	for (const note of track.notes) play(note.pitch, secondsAt(p, note.at), note.velocity);
+secondsAt(p, p.end); // 26.48…: 16 bars of 4/4 at 145`;
+
 export const INSTALL_SYNC = "npm install @barmark/sync";
 
 /** The detections the sync sample builds from; a test checks USE_SYNC shows these and its results. */
@@ -165,10 +264,50 @@ npx @barmark/cli transpose example-song.chart.md --to E
 npx @barmark/cli render example-song.chart.md --out example-song.html
 npx @barmark/cli render --score example-song.chart.md --out example-song-score.html  # the full score
 npx @barmark/cli export --musicxml example-song.chart.md --out example-song.musicxml
-npx @barmark/cli import example-song.musicxml --out imported.chart.md  # a MusicXML score as a chart`;
+npx @barmark/cli import example-song.musicxml --out imported.chart.md  # a MusicXML score as a chart
+npx @barmark/cli export --midi example-song.chart.md --out example-song.mid  # for a DAW or a practice player
+npx @barmark/cli import example-song.mid --out from-midi.chart.md  # chords named from the notes`;
+
+/** A standalone binary, for a machine without Node: the CLI README's names and steps. */
+export const BINARIES = [
+	"barmark-linux-x64",
+	"barmark-linux-arm64",
+	"barmark-darwin-x64",
+	"barmark-darwin-arm64",
+	"barmark-windows-x64.exe",
+];
+
+export const USE_BINARY = `# ${BINARIES.join(", ")}
+chmod +x barmark-darwin-arm64
+xattr -d com.apple.quarantine barmark-darwin-arm64  # macOS: the binaries aren't signed yet
+./barmark-darwin-arm64 check songs`;
 
 export const CLI_CI = `- uses: actions/setup-node@v4
   with:
     node-version: 22
 - run: npx -y @barmark/cli@${CLI_VERSION} check --strict --format github songs
 - run: npx -y @barmark/cli@${CLI_VERSION} format --check songs`;
+
+export const INSTALL_LISTEN = "npm install @barmark/listen";
+
+export const USE_LISTEN = `import { alignChart, chartFromRecording } from "@barmark/listen";
+
+// Mono samples, and your chord model's runs in seconds (sync's ChordRuns)
+const built = chartFromRecording({
+	samples,
+	sampleRate: 44100,
+	chords: { runs },
+	declared: { meter: "4/4", tempo: 120 }, // required: it detects neither
+	title: "Example Song",
+});
+if (built.ok) {
+	const { chart, timing, features } = built.value;
+	chart; // "# Example Song\\ntime: 4/4, tempo: 120\\n| D | A | Bm | G |\\n…"
+	timing; // when each played bar starts, as @barmark/sync's maps say
+
+	// Or line up a chart you already have with the same recording
+	const aligned = alignChart({ chart: text, features });
+	if (aligned.ok) aligned.value.timing;
+} else {
+	built.refusals; // why not: every rule that failed, not the first only
+}`;
