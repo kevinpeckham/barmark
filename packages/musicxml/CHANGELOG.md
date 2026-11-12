@@ -6,6 +6,16 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+
+- **Only 6/8, 9/8 and 12/8 beat in dotted quarters** (barmark's grammar
+  2.1). The export treated every meter with a top number above 3 that
+  divides by 3 and a bottom number of 8 or more as compound, so 15/8,
+  6/16 and 12/16 got a dotted `<beat-unit>` and a `<sound tempo>` three
+  times too fast, and re-imported at three times their tempo. The meter's beat now comes from barmark's `beatsOf`, as the
+  import's already did: `time: 15/8, tempo: 120` writes an eighth at 120
+  and `<sound tempo="60"/>`.
+
 ## [0.9.0] - 2026-11-10
 
 ### Added

@@ -692,6 +692,24 @@ order, not just the written marks.
 
 ## Design
 
+### A second copy of the compound-meter rule drifted from the grammar (2026-11-12, @barmark/musicxml)
+
+- **The symptom.** A chart in 15/8, 6/16 or 12/16 exported a dotted
+  metronome mark and a `<sound tempo>` three times too fast, and
+  round-tripped through MusicXML at three times its tempo.
+- **The cause.** `packages/musicxml/src/directions.ts` decided
+  compound-ness with its own test (`n > 3 && n % 3 === 0 && d >= 8`),
+  wider than grammar 2.1's "6/8, 9/8 and 12/8", while barmark's exported
+  `beatsOf`, which the import already used, follows the grammar. The
+  export and import of the same package disagreed, and only a round trip
+  in an unusual meter showed it.
+- **The fix.** `directions.ts` derives the beat from `beatsOf` (a meter
+  is compound where `beatsOf(m) !== m.n`). Every other compound test in
+  the workspace already reads `beatsOf`, except `@barmark/midi`'s
+  `perform/swing.ts`, which spells out the same three meters and so
+  agrees. A meter's beat is barmark's question: read `beatsOf`, never a
+  local rule.
+
 ### The warping's path can skip the reference's first frame (2026-11-10, @barmark/listen dtw)
 
 - **The symptom.** The planned property "the path starts at reference
