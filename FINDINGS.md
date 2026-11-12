@@ -2632,3 +2632,25 @@ those never reached, or reached in a repeat with passes enough for their verse (
 - **The decision.** Kevin kept `-Oz` (2026-11-10): the 500 ms rule reads
   real charts only, not `long.chart.md` (the gate's ⚠ line follows), as
   written under Q1 in `docs/superpowers/specs/2026-11-10-engraver-package-design.md`.
+
+### Dependabot proposed `@types/node` 26 for packages that support Node 20 (2026-11-12, repo)
+
+- **The symptom.** Dependabot's grouped dev-dependency PR #275 raised
+  `@types/node` from 20.19.43 to 26.6.5, and every check passed.
+- **The cause.** Every package's `engines` says `node >=20` (the CLI
+  `>=20.6`), and `@types/node` is pinned to 20 so that tsc rejects any API
+  a Node 20 user lacks. Node 26's types accept those APIs, so the guard
+  would have gone quietly; green CI proves only that today's code compiles,
+  and the CLI's Node 20 job runs only the code it reaches.
+- **The fix.** `.github/dependabot.yml` ignores semver-major updates of
+  `@types/node`; raise it by hand together with the engines floor.
+
+### `gh pr edit` fails on the Projects (classic) deprecation (2026-11-12, tooling)
+
+- **The symptom.** `gh pr edit N --body …` failed with an error about
+  GitHub Projects (classic) being deprecated, on the site examples PR #282.
+- **The cause.** The VM's `gh` (2.45) also queries a PR's classic project
+  cards when it edits it, and GitHub has retired that API.
+- **The fix.** Edit through the REST API instead:
+  `gh api -X PATCH repos/kevinpeckham/barmark/pulls/N -f body=@file`
+  (or `-F body=@file`), or upgrade `gh`.
