@@ -9,6 +9,50 @@ not here.
 
 ## Testing
 
+### A timing test that a loaded machine fails: balance the runs, or count the work (2026-11-12, every package)
+
+- **The symptom.** With the VM at a load of 15 to 20, timing tests that
+  pass in CI failed: the lyric rows' "print in linear time" (an absolute
+  1,000 ms bound, and 3.5 to 5.5 s a run against the 5 s default
+  timeout), `nameNotes`' exhaustive double-accidental check (timed out at
+  5 s), `parts-scale` (28.8 against 20), musicxml's `maxLength` (the cut
+  export 210 ms against half of 288). The ending-lines walk failed CI
+  itself twice in a day, at 17.1 and 18.3 against 16, on GitHub's
+  runners: its 2,000-line side takes 3 to 7 ms.
+- **The cause.** Three, compounding. A long test under the 5 s default
+  timeout fails on time, not on its bound. Best-of-three timed all of one
+  size and then the other, so a burst of load could land on one side
+  only. And the worst: a run of a few milliseconds can finish inside one
+  time slice, while a run of hundreds is always shared with the load, so
+  a loaded machine made a linear parse look superlinear: "every part
+  sings" measured 8 alone and 12 to 28 at load 17, best of five or not,
+  until the two runs lasted as long. A forced collection before each run
+  removed some of the rest: without it the large side pays for the
+  garbage of the run before.
+- **The fix.** `test-support/growth.ts`: `growth(small, large, { balance,
+  repeat, runs, floorMs })` warms both sides, alternates the runs,
+  collects before each, runs the small side `balance` times (the ratio of
+  the sizes) so both runs last as long, and floors the small run so a
+  quick one can't blow the ratio up. The scale tests in barmark,
+  musicxml, render, score and sync use it, with `TIMING_TIMEOUT`; the
+  site's paste test copies it (the site can't import the root). Long
+  exhaustive tests (`nameNotes`, midi's property tests, score's engrave-all)
+  carry a timeout of their own. Balanced, `parts-scale` measured at most
+  11.5 across three runs at load 11 to 22, where unbalanced it failed.
+- **Each test still fails on the regression it guards.** Mutants on a
+  private worktree, each reverted: the lyric rows' old heading scan
+  (`lines.some(...)` per row) failed the balanced ratio at 31 against 16,
+  and the new read count (a `Proxy` over the parse's lines, as the
+  MusicXML import's test does) at 67.6 M reads against a bound of 10.7 M,
+  where the fix reads 59 K. Making each part read every line failed
+  `parts-scale`'s "parts with two lines" at 24.6 against 20. An
+  ending-line walk that copies the lines after it failed at 34.6 against
+  16. But a cheap quadratic hides behind a ratio: looking each part's
+  label up with `parts.find` in `projectPart` (parts × parts) passed every
+  `parts-scale` test, and the lyric rows' scan passed an unbalanced 8× ratio
+  until the input was large. Where the quadratic step is cheap, count the
+  steps (`packages/barmark/tests/chart/lyric-rows.test.ts`).
+
 ### Score's browser suite was red for three tasks and nobody noticed (2026-11-10, @barmark/score)
 
 - **The symptom.** From Task 8 to Task 11 of the engraver plan, two of
