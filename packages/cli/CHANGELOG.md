@@ -6,6 +6,15 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.11.3] - 2026-11-12
+
+### Changed
+
+- **Uses** @barmark/musicxml 0.9.1 and @barmark/midi 0.3.3: `export`
+  to MusicXML beats only 6/8, 9/8 and 12/8 in dotted quarters, so 15/8,
+  6/16 and 12/16 no longer get a tempo three times too fast; what MIDI
+  export plays does not change.
+
 ## [0.11.2] - 2026-11-12
 
 ### Changed
@@ -372,7 +381,8 @@ The first release of the `barmark` command. Uses `barmark` 0.8.0 and
 - **The `barmark` command:** `check`, `format`, `render` and `transpose`
   for `.chart.md` files, on npm and as standalone binaries.
 
-[Unreleased]: https://github.com/kevinpeckham/barmark/compare/cli-v0.11.2...HEAD
+[Unreleased]: https://github.com/kevinpeckham/barmark/compare/cli-v0.11.3...HEAD
+[0.11.3]: https://github.com/kevinpeckham/barmark/compare/cli-v0.11.2...cli-v0.11.3
 [0.11.2]: https://github.com/kevinpeckham/barmark/compare/cli-v0.11.1...cli-v0.11.2
 [0.11.1]: https://github.com/kevinpeckham/barmark/compare/cli-v0.11.0...cli-v0.11.1
 [0.11.0]: https://github.com/kevinpeckham/barmark/compare/cli-v0.10.2...cli-v0.11.0
