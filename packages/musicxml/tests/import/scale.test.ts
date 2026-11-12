@@ -1,14 +1,16 @@
 /** Untrusted files with many measures: nothing in the import may grow faster than the file. */
 import { expect, test } from "bun:test";
+import { growth, TIMING_TIMEOUT } from "../../../../test-support/growth.js";
 import { Losses } from "../../src/import/losses.js";
 import { readMarks } from "../../src/import/marks.js";
 import { readScore } from "../../src/import/read.js";
 import { readStructure } from "../../src/import/structure.js";
 import { parseXml } from "../../src/import/tree.js";
-import { type ImportDiagnostic, importMusicXml } from "../../src/index.js";
+import { importMusicXml } from "../../src/index.js";
 
-// The bounds below are best-of-two timings; each test's 30 s timeout only keeps a loaded machine from cutting a run short.
-const TIMEOUT = 30_000;
+// The bounds below are ratios of alternated best-of-three timings (`growth`), so a loaded machine
+// slows both sides alike; the timeout only keeps it from cutting a run short.
+const TIMEOUT = TIMING_TIMEOUT;
 
 const harmony = "<harmony><root><root-step>C</root-step></root><kind>major</kind></harmony>";
 const slash =
@@ -21,27 +23,13 @@ function score(count: number, measure: (i: number) => string, software = "MuseSc
 	return `<?xml version="1.0"?><score-partwise version="4.0"><identification><encoding><software>${software}</software></encoding></identification><part-list><score-part id="P1"><part-name>Gtr</part-name></score-part></part-list><part id="P1">${body}</part></score-partwise>`;
 }
 
-/**
- * The time an import takes: warmed up (the chord tables barmark builds on
- * first use aren't the file's cost), the best of two runs, so a busy
- * machine's pause isn't counted.
- */
-function timed(xml: string): { ms: number; text: string; diagnostics: ImportDiagnostic[] } {
-	importMusicXml(
-		score(
-			4,
-			(i) => (i === 0 ? "<attributes><divisions>1</divisions></attributes>" : "") + harmony + slash,
-		),
+/** How much longer `large`, ten times `small`, takes to import: warmed up, alternated and balanced (`growth`). */
+const importGrowth = (small: string, large: string) =>
+	growth(
+		() => importMusicXml(small),
+		() => importMusicXml(large),
+		{ balance: 10 },
 	);
-	let ms = Number.POSITIVE_INFINITY;
-	let r = importMusicXml("");
-	for (let run = 0; run < 2; run++) {
-		const start = performance.now();
-		r = importMusicXml(xml);
-		ms = Math.min(ms, performance.now() - start);
-	}
-	return { ms, text: r.text, diagnostics: r.diagnostics };
-}
 
 const badTimes = (count: number) =>
 	score(
@@ -53,9 +41,7 @@ const badTimes = (count: number) =>
 test(
 	"5,000 measures each with a time signature barmark can't write import in linear time",
 	() => {
-		const r = timed(badTimes(5000));
-		// Absolute bounds are loose (CI machines are slower); the ratio below catches a quadratic path.
-		expect(r.ms).toBeLessThan(5000);
+		const r = importMusicXml(badTimes(5000));
 		expect(r.diagnostics.filter((d) => d.message.includes("time signature"))).toEqual([
 			{
 				severity: "warning",
@@ -66,7 +52,7 @@ test(
 			},
 		]);
 		// And it grows with the file: ten times the measures, not a hundred times the time.
-		expect(r.ms / timed(badTimes(500)).ms).toBeLessThan(25);
+		expect(importGrowth(badTimes(500), badTimes(5000))).toBeLessThan(25);
 	},
 	TIMEOUT,
 );
@@ -87,10 +73,8 @@ function interleaved(n: number): string {
 test(
 	"one measure of thousands of attacks in two voices, one of slashes and rests in the other's gaps, imports in linear time",
 	() => {
-		const big = timed(interleaved(8000));
-		expect(big.text).not.toBe("");
-		expect(big.ms).toBeLessThan(5000);
-		expect(big.ms / timed(interleaved(800)).ms).toBeLessThan(25);
+		expect(importMusicXml(interleaved(8000)).text).not.toBe("");
+		expect(importGrowth(interleaved(800), interleaved(8000))).toBeLessThan(25);
 	},
 	TIMEOUT,
 );
@@ -98,21 +82,23 @@ test(
 test(
 	"one measure with thousands of attacks and chord symbols, on two staves, imports in linear time",
 	() => {
-		const n = 3000;
-		const at = (i: number) =>
-			`<harmony><root><root-step>${"CDEFGAB"[i % 7]}</root-step></root><kind>major</kind><offset>${i}</offset></harmony>`;
-		let upper = "";
-		let lower = "";
-		let chords = "";
-		for (let i = 0; i < n; i++) {
-			upper += `<note><pitch><step>E</step><octave>4</octave></pitch><duration>1</duration><voice>1</voice><staff>1</staff></note>`;
-			lower += `<note><pitch><step>C</step><octave>3</octave></pitch><duration>1</duration><voice>5</voice><staff>2</staff></note>`;
-			if (i < 200) chords += at(i);
-		}
-		const measure = `<attributes><divisions>${n / 4}</divisions><staves>2</staves><time><beats>4</beats><beat-type>4</beat-type></time></attributes>${chords}${upper}<backup><duration>${n}</duration></backup>${lower}`;
-		const { ms, text } = timed(score(1, () => measure, "@barmark/musicxml 0.4.1"));
-		expect(text).not.toBe("");
-		expect(ms).toBeLessThan(5000);
+		const attacks = (n: number) => {
+			const at = (i: number) =>
+				`<harmony><root><root-step>${"CDEFGAB"[i % 7]}</root-step></root><kind>major</kind><offset>${i}</offset></harmony>`;
+			let upper = "";
+			let lower = "";
+			let chords = "";
+			for (let i = 0; i < n; i++) {
+				upper += `<note><pitch><step>E</step><octave>4</octave></pitch><duration>1</duration><voice>1</voice><staff>1</staff></note>`;
+				lower += `<note><pitch><step>C</step><octave>3</octave></pitch><duration>1</duration><voice>5</voice><staff>2</staff></note>`;
+				if (i < 200) chords += at(i);
+			}
+			const measure = `<attributes><divisions>${n / 4}</divisions><staves>2</staves><time><beats>4</beats><beat-type>4</beat-type></time></attributes>${chords}${upper}<backup><duration>${n}</duration></backup>${lower}`;
+			return score(1, () => measure, "@barmark/musicxml 0.4.1");
+		};
+		expect(importMusicXml(attacks(3000)).text).not.toBe("");
+		// Ten times the attacks: linear is ten times as long, a scan of them all for each a hundred.
+		expect(importGrowth(attacks(300), attacks(3000))).toBeLessThan(25);
 	},
 	TIMEOUT,
 );
@@ -128,13 +114,13 @@ test(
 			'<direction><direction-type><coda/></direction-type><sound coda="c"/></direction>';
 		const after =
 			'<direction><direction-type><words>To Coda</words></direction-type><sound tocoda="c"/></direction><barline location="right"><ending number="1" type="stop"/><repeat direction="backward"/></barline>';
-		const xml = score(
-			2000,
-			(i) =>
-				`${i === 0 ? "<attributes><divisions>1</divisions></attributes>" : ""}${marks(i)}${harmony}${slash}${after}`,
-		);
-		const { ms } = timed(xml);
-		expect(ms).toBeLessThan(5000);
+		const xml = (count: number) =>
+			score(
+				count,
+				(i) =>
+					`${i === 0 ? "<attributes><divisions>1</divisions></attributes>" : ""}${marks(i)}${harmony}${slash}${after}`,
+			);
+		expect(importGrowth(xml(200), xml(2000))).toBeLessThan(25);
 	},
 	TIMEOUT,
 );
@@ -149,8 +135,11 @@ function longNames(number: string, name: string): string {
 test(
 	"a 100,000-digit measure number and a 10,000-character part name import fast, cut short",
 	() => {
-		const r = timed(longNames("7".repeat(100_000), "B".repeat(10_000)));
-		expect(r.ms).toBeLessThan(2000);
+		const xml = longNames("7".repeat(100_000), "B".repeat(10_000));
+		const start = performance.now();
+		const r = importMusicXml(xml);
+		// About 10 ms: the bound is far off, for a file whose names were once copied into every message.
+		expect(performance.now() - start).toBeLessThan(2000);
 		const [d] = r.diagnostics;
 		expect(d?.measure).toBe(`${"7".repeat(63)}…`);
 		expect(d?.part).toBe(`${"B".repeat(199)}…`);
@@ -163,7 +152,7 @@ test(
 test(
 	"a grouped loss carries the measures it names",
 	() => {
-		const r = timed(badTimes(5));
+		const r = importMusicXml(badTimes(5));
 		const [d] = r.diagnostics.filter((x) => x.message.includes("time signature"));
 		expect(d?.measures).toEqual(["1", "2", "3", "4", "5"]);
 	},
@@ -181,10 +170,8 @@ const neverClosed = (count: number) =>
 test(
 	"a word that never ends doesn't make each system read to the end of the piece",
 	() => {
-		const big = timed(neverClosed(4000));
-		expect(big.text).not.toBe("");
-		expect(big.ms).toBeLessThan(5000);
-		expect(big.ms / timed(neverClosed(400)).ms).toBeLessThan(25);
+		expect(importMusicXml(neverClosed(4000)).text).not.toBe("");
+		expect(importGrowth(neverClosed(400), neverClosed(4000))).toBeLessThan(25);
 	},
 	TIMEOUT,
 );
@@ -200,10 +187,8 @@ const verseAMeasure = (count: number) =>
 test(
 	"a verse in every measure doesn't make the rows verses × measures",
 	() => {
-		const big = timed(verseAMeasure(4000));
-		expect(big.text).not.toBe("");
-		expect(big.ms).toBeLessThan(5000);
-		expect(big.ms / timed(verseAMeasure(400)).ms).toBeLessThan(25);
+		expect(importMusicXml(verseAMeasure(4000)).text).not.toBe("");
+		expect(importGrowth(verseAMeasure(400), verseAMeasure(4000))).toBeLessThan(25);
 	},
 	TIMEOUT,
 );

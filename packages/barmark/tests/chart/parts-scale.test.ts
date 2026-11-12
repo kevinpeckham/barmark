@@ -5,6 +5,7 @@
  * for every line it projected).
  */
 import { describe, expect, test } from "bun:test";
+import { growth, TIMING_TIMEOUT } from "../../../../test-support/growth.js";
 import { parseChart } from "../../src/chart/parse.js";
 
 /** `n` declared parts, each writing one bar, in one system. */
@@ -14,24 +15,25 @@ const parts = (n: number) =>
 		...Array.from({ length: n }, (_, i) => `P${i} | C |`),
 	].join("\n");
 
-/** The best of three parses of `text`, after one to warm up. */
-function timed(text: string): number {
-	parseChart(text);
-	let ms = Number.POSITIVE_INFINITY;
-	for (let run = 0; run < 3; run++) {
-		const start = performance.now();
-		parseChart(text);
-		ms = Math.min(ms, performance.now() - start);
-	}
-	return ms;
-}
+/**
+ * How much longer `large` parses than `small`, `balance` times its size
+ * (`growth`): the small side runs that often a run, so both last as long.
+ */
+const parseGrowth = (small: string, large: string, balance: number) =>
+	growth(
+		() => parseChart(small),
+		() => parseChart(large),
+		{ balance },
+	);
 
-test("four times the parts, at most 32 times as long: quadratic is 16, cubic 64", () => {
-	const small = timed(parts(150));
-	const large = timed(parts(600));
-	expect(parseChart(parts(600)).bars[0]?.parts).toHaveLength(600);
-	expect(large / small).toBeLessThan(32);
-}, 120_000);
+test(
+	"four times the parts, at most 32 times as long: quadratic is 16, cubic 64",
+	() => {
+		expect(parseChart(parts(600)).bars[0]?.parts).toHaveLength(600);
+		expect(parseGrowth(parts(150), parts(600), 4)).toBeLessThan(32);
+	},
+	TIMING_TIMEOUT,
+);
 
 /** `n` parts in one system with `n` verses under it. */
 const sungParts = (n: number) =>
@@ -41,12 +43,14 @@ const sungParts = (n: number) =>
 		...Array.from({ length: n }, (_, v) => `lyrics ${v + 1}: | la |`),
 	].join("\n");
 
-test("many parts with many verses: five times both, under 25 times as long (quadratic), not 125", () => {
-	const small = timed(sungParts(150));
-	const large = timed(sungParts(750));
-	expect(parseChart(sungParts(750)).bars[0]?.lyrics).toHaveLength(750);
-	expect(large / small).toBeLessThan(25);
-}, 120_000);
+test(
+	"many parts with many verses: five times both, under 25 times as long (quadratic), not 125",
+	() => {
+		expect(parseChart(sungParts(750)).bars[0]?.lyrics).toHaveLength(750);
+		expect(parseGrowth(sungParts(150), sungParts(750), 5)).toBeLessThan(25);
+	},
+	TIMING_TIMEOUT,
+);
 
 /** `n` parts, all resting while the first writes `lines` one-bar systems. */
 const resting = (n: number, lines: number) =>
@@ -68,11 +72,14 @@ for (const [shape, chart] of [
 	["parts resting through one part's systems", resting],
 	["parts playing many tutti lines", tutti],
 ] as const)
-	test(`${shape}: five times both, under 10 times as long`, () => {
-		const small = timed(chart(400, 400));
-		const large = timed(chart(2000, 2000));
-		expect(large / small).toBeLessThan(10);
-	}, 120_000);
+	test(
+		`${shape}: five times both, under 10 times as long`,
+		() => {
+			// Each side takes a few hundred milliseconds already, so the runs need no balancing.
+			expect(parseGrowth(chart(400, 400), chart(2000, 2000), 1)).toBeLessThan(10);
+		},
+		TIMING_TIMEOUT,
+	);
 
 test("a part past its share of the lines stops, and says so", () => {
 	// 1,000 parts may each play 10 bars, so each reads 100 lines; these 150 text lines come first.
@@ -161,9 +168,11 @@ const shapes: [string, (n: number) => string][] = [
 
 describe("many parts times anything parses in time linear in the source", () => {
 	for (const [shape, chart] of shapes)
-		test(`${shape}: eight times as big, under twenty times as long`, () => {
-			const small = timed(chart(200));
-			const large = timed(chart(1600));
-			expect(large / small).toBeLessThan(20);
-		}, 120_000);
+		test(
+			`${shape}: eight times as big, under twenty times as long`,
+			() => {
+				expect(parseGrowth(chart(200), chart(1600), 8)).toBeLessThan(20);
+			},
+			TIMING_TIMEOUT,
+		);
 });

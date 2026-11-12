@@ -3,20 +3,35 @@ import { join } from "node:path";
 import { ENGRAVER_CDN_INTEGRITY, ENGRAVER_CDN_URL, ENGRAVER_WASM_INTEGRITY } from "@barmark/score";
 import { chartHtml, scoreHtml } from "../src/lib/chart.ts";
 
-// The ratio is of best-of-three timings; the timeout only keeps a loaded machine from cutting a run short.
+// The ratio is of alternated best-of-three timings; the timeout only keeps a loaded machine from
+// cutting a run short.
 const TIMEOUT = 60_000;
 
-/** The best of three renders of a `lines`-line paste, after one to warm up. */
-function timed(lines: number): number {
-	const text = "| D | G |\n".repeat(lines);
-	chartHtml(text);
-	let ms = Number.POSITIVE_INFINITY;
-	for (let run = 0; run < 3; run++) {
+/**
+ * How much longer a 2,000-line paste renders than a 200-line one. Both warm
+ * up, then the runs alternate, so a burst of load falls on both alike, and
+ * a small run renders ten times, so both runs last about as long (the
+ * repository's `test-support/growth.ts`, which the site can't import). The
+ * small run is floored at 5 ms, so a quick one can't blow the ratio up.
+ */
+function pasteGrowth(): number {
+	const [small, large] = [200, 2000].map((lines) => "| D | G |\n".repeat(lines)) as [
+		string,
+		string,
+	];
+	const time = (text: string, calls = 1) => {
 		const start = performance.now();
-		chartHtml(text);
-		ms = Math.min(ms, performance.now() - start);
+		for (let k = 0; k < calls; k++) chartHtml(text);
+		return performance.now() - start;
+	};
+	time(small);
+	time(large);
+	let [smallMs, largeMs] = [Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY];
+	for (let run = 0; run < 3; run++) {
+		smallMs = Math.min(smallMs, time(small, 10));
+		largeMs = Math.min(largeMs, time(large));
 	}
-	return ms;
+	return (largeMs * 10) / Math.max(smallMs, 5);
 }
 
 const demo = await Bun.file(
@@ -49,12 +64,8 @@ describe("chartHtml", () => {
 	test(
 		"a 2,000-line paste renders in time linear in its length",
 		() => {
-			const small = timed(200);
-			const large = timed(2000);
-			// The small side takes at least 5 ms, so a pause in one run can't swing the ratio.
-			expect(small).toBeGreaterThanOrEqual(5);
 			// Ten times the lines: linear is ten times as long, quadratic a hundred.
-			expect(large / small).toBeLessThan(30);
+			expect(pasteGrowth()).toBeLessThan(30);
 		},
 		TIMEOUT,
 	);

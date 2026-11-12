@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+import { growth, TIMING_TIMEOUT } from "../../../test-support/growth.js";
 import { chartFromDetections } from "../src/build/build.js";
 
 const LABELS = ["C:maj", "G:maj", "A:min", "F:maj"];
@@ -81,21 +82,28 @@ test("the build does work linear in the runs and bars", () => {
 	perRun(large.math, small.math);
 });
 
-test("10,000 hostile section names build in linear time", () => {
-	const n = 10_000;
-	const sections = Array.from({ length: n }, (_, i) => ({
-		name: i % 2 ? "Verse x9999 (x2)" : `Chorus ${i} x9999 2x`,
-		start: i * 2,
-	}));
-	const grid = { bars: Array.from({ length: n + 1 }, (_, i) => i * 2) };
-	const t0 = performance.now();
-	const r = chartFromDetections({ grid, meter: "4/4", sections, chords: { runs: [] } });
-	// The same 10,000 bars with no sections take about 0.8 s; the section checks are bounded by a budget (before it, 300 such sections took 6 s).
-	expect(performance.now() - t0).toBeLessThan(4000);
-	// No name was left with a repeat: the chart is a bar a section, not 9,999 of them.
-	expect(r.chart.length).toBeLessThan(n * 40);
-	expect(r.timing?.chart.bars).toBe(n);
-}, 30_000);
+test(
+	"10,000 hostile section names build in linear time",
+	() => {
+		const n = 10_000;
+		const sections = Array.from({ length: n }, (_, i) => ({
+			name: i % 2 ? "Verse x9999 (x2)" : `Chorus ${i} x9999 2x`,
+			start: i * 2,
+		}));
+		const grid = { bars: Array.from({ length: n + 1 }, (_, i) => i * 2) };
+		const hostile = () =>
+			chartFromDetections({ grid, meter: "4/4", sections, chords: { runs: [] } });
+		const r = hostile();
+		// No name was left with a repeat: the chart is a bar a section, not 9,999 of them.
+		expect(r.chart.length).toBeLessThan(n * 40);
+		expect(r.timing?.chart.bars).toBe(n);
+		// Against the same 10,000 bars with no sections: the section checks are bounded by a budget, so
+		// they cost a few times the build at most (before it, 300 such sections took 6 s).
+		const plain = () => chartFromDetections({ grid, meter: "4/4", chords: { runs: [] } });
+		expect(growth(plain, hostile, { runs: 2 })).toBeLessThan(5);
+	},
+	TIMING_TIMEOUT,
+);
 
 test("a huge note set resumed across thousands of bars stays within a linear factor of the input", () => {
 	const bars = 2000;

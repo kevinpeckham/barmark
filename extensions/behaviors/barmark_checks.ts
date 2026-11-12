@@ -17,9 +17,11 @@ const GatesSchema = z.object({
 	checkedAt: z.string(),
 	lint: z.boolean().describe("bun run check (Biome and tsc) exited 0"),
 	tests: z.object({ pass: z.number().int(), fail: z.number().int(), ok: z.boolean() }),
+	failed: z.array(z.string()).describe("Each failing test, as bun test names it"),
 	ok: z.boolean(),
 	summary: z.string(),
 	output: z.string().describe("The tail of any failing command's output"),
+	log: z.string().describe("Where the whole output of bun run check and bun test is kept: the gates-log file"),
 });
 
 const PkgArg = z
@@ -93,6 +95,10 @@ type Context = {
 		name: string,
 		data: Record<string, unknown>,
 	) => Promise<{ name: string }>;
+	createFileWriter: (
+		specName: string,
+		name: string,
+	) => { getFilePath(): Promise<string>; finalize(): Promise<{ name: string }> };
 };
 
 async function run(context: Context, args: string[]) {
@@ -110,6 +116,15 @@ async function run(context: Context, args: string[]) {
 
 const tail = (text: string, lines = 12) => text.trim().split("\n").slice(-lines).join("\n");
 
+/** The tests bun test reports as failing, by their `(fail)` lines, without the time, each once. */
+const failedTests = (output: string) => [
+	...new Set([...output.matchAll(/^\(fail\) (.+?)(?: \[[\d.]+m?s\])?$/gm)].map((m) => m[1] as string)),
+];
+
+/** "a; b; c and 4 more": the first few names, so a summary stays one line. */
+const firstFew = (names: string[], few = 3) =>
+	names.length > few ? `${names.slice(0, few).join("; ")} and ${names.length - few} more` : names.join("; ");
+
 /** Run a verify script with --json and parse its result; a crash before it prints is an error. */
 async function verify(context: Context, script: string, extra: string[] = []) {
 	const r = await run(context, [script, "--json", ...extra]);
@@ -123,9 +138,17 @@ async function verify(context: Context, script: string, extra: string[] = []) {
 
 export const behavior = {
 	type: "@kevin/barmark-checks",
-	version: "2026.11.10.1",
+	version: "2026.11.12.1",
 	description: "barmark's release checks (lint, tests, Fallow, package, engraver equivalence, release readiness) run on the checkout and kept as data",
 	globalArguments: GlobalArgsSchema,
+	files: {
+		"gates-log": {
+			description: "The whole output of bun run check and bun test, as the gates method ran them",
+			contentType: "text/plain",
+			lifetime: "infinite",
+			garbageCollection: 30,
+		},
+	},
 	resources: {
 		gates: {
 			description: "Lint, typecheck and test results",
@@ -166,8 +189,17 @@ export const behavior = {
 				const lint = await run(context, ["run", "check"]);
 				const test = await run(context, ["test"]);
 				const all = `${test.stdout}\n${test.stderr}`;
+				// The whole output is kept as a file, since a summary's tail can miss the failures that matter.
+				const writer = context.createFileWriter("gates-log", "gates-log");
+				const log = await writer.getFilePath();
+				await Deno.writeTextFile(
+					log,
+					`$ bun run check (exit ${lint.code})\n${lint.stdout}${lint.stderr}\n$ bun test (exit ${test.code})\n${all}`,
+				);
+				const logHandle = await writer.finalize();
 				const pass = Number(/(\d+) pass/.exec(all)?.[1] ?? 0);
 				const fail = Number(/(\d+) fail/.exec(all)?.[1] ?? 0);
+				const failed = failedTests(all);
 				const tests = { pass, fail, ok: test.code === 0 && fail === 0 && pass > 0 };
 				const ok = lint.code === 0 && tests.ok;
 				const data: z.infer<typeof GatesSchema> = {
@@ -175,17 +207,25 @@ export const behavior = {
 					checkedAt: new Date().toISOString(),
 					lint: lint.code === 0,
 					tests,
+					failed,
 					ok,
-					summary: `lint ${lint.code === 0 ? "clean" : "failed"}; tests ${pass} pass, ${fail} fail`,
+					summary: [
+						`lint ${lint.code === 0 ? "clean" : "failed"}; tests ${pass} pass, ${fail} fail`,
+						failed.length ? `failed: ${firstFew(failed)}` : "",
+						ok ? "" : `full log: ${log}`,
+					]
+						.filter(Boolean)
+						.join("; "),
 					output: [
 						lint.code === 0 ? "" : tail(lint.stdout + lint.stderr),
 						tests.ok ? "" : tail(all),
 					]
 						.filter(Boolean)
 						.join("\n---\n"),
+					log,
 				};
 				if (!ok) context.logger.warning("Gates failed: {summary}", data);
-				return { dataHandles: [await context.writeResource("gates", "gates", data)] };
+				return { dataHandles: [await context.writeResource("gates", "gates", data), logHandle] };
 			},
 		},
 		package: {

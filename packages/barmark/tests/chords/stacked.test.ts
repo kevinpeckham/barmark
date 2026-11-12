@@ -8,6 +8,7 @@
  * the reading is unambiguous.
  */
 import { describe, expect, test } from "bun:test";
+import { growth, TIMING_TIMEOUT } from "../../../../test-support/growth.js";
 import { parseChord } from "../../src/chords/parse.js";
 
 const ok = (symbol: string) => {
@@ -245,17 +246,6 @@ describe("Harte labels for the accepted shapes", () => {
 });
 
 describe("a long run-together parenthesis reads in linear time", () => {
-	/** The best of five parses of `symbol`, after one to warm up. */
-	const timed = (symbol: string): number => {
-		parseChord(symbol);
-		let ms = Number.POSITIVE_INFINITY;
-		for (let run = 0; run < 5; run++) {
-			const start = performance.now();
-			parseChord(symbol);
-			ms = Math.min(ms, performance.now() - start);
-		}
-		return ms;
-	};
 	const shapes: [string, (n: number) => string][] = [
 		["alterations", (n) => `C7(${"b9#11".repeat(n)})`],
 		["adds", (n) => `D6(${"add9b13".repeat(n)})`],
@@ -263,12 +253,22 @@ describe("a long run-together parenthesis reads in linear time", () => {
 		["bare omissions", (n) => `G${"omit5".repeat(n)}`],
 	];
 	for (const [name, shape] of shapes)
-		test(`${name}: ten times as long takes far less than a hundred times as long`, () => {
-			const small = timed(shape(2_000));
-			const large = timed(shape(20_000));
-			expect(parseChord(shape(20_000))).toBeDefined();
-			expect(large / Math.max(small, 0.5)).toBeLessThan(30);
-		}, 60_000);
+		test(
+			`${name}: ten times as long takes far less than a hundred times as long`,
+			() => {
+				const [small, large] = [shape(2_000), shape(20_000)];
+				expect(parseChord(large)).toBeDefined();
+				// A small read takes about a millisecond: ten of them a run against one large, and both twice.
+				expect(
+					growth(
+						() => parseChord(small),
+						() => parseChord(large),
+						{ runs: 5, balance: 10, repeat: 2 },
+					),
+				).toBeLessThan(30);
+			},
+			TIMING_TIMEOUT,
+		);
 });
 
 describe("review nits (PR #255)", () => {

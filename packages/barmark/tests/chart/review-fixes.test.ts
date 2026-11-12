@@ -1,18 +1,15 @@
 import { describe, expect, test } from "bun:test";
+import { growth, TIMING_TIMEOUT } from "../../../../test-support/growth.js";
 import { parseChart } from "../../src/index.js";
 import { barText } from "./fixtures.js";
 
-/** The best of three parses of `text`, after one to warm up. */
-function timed(text: string): number {
-	parseChart(text);
-	let ms = Number.POSITIVE_INFINITY;
-	for (let run = 0; run < 3; run++) {
-		const start = performance.now();
-		parseChart(text);
-		ms = Math.min(ms, performance.now() - start);
-	}
-	return ms;
-}
+/** How much longer `large`, `balance` times `small`, parses: alternated, balanced best-of-three runs (`growth`). */
+const parseGrowth = (small: string, large: string, balance: number) =>
+	growth(
+		() => parseChart(small),
+		() => parseChart(large),
+		{ balance },
+	);
 
 describe("long whitespace runs parse in linear time", () => {
 	/** `lines` lines, each with a run of `spaces` spaces where `make` puts it. */
@@ -27,11 +24,13 @@ describe("long whitespace runs parse in linear time", () => {
 		["in a heading", (run: string) => `## V${run}B\n| D |`, 100],
 		["inside a cell", (run: string) => `| D${run}A |`, 20],
 	] as const)
-		test(where, () => {
-			const small = timed(chart(make, lines, 2000));
-			const large = timed(chart(make, lines, 8000));
-			expect(large / small).toBeLessThan(8);
-		});
+		test(
+			where,
+			() => {
+				expect(parseGrowth(chart(make, lines, 2000), chart(make, lines, 8000), 4)).toBeLessThan(8);
+			},
+			TIMING_TIMEOUT,
+		);
 	test("repeat tails still read", () => {
 		expect(parseChart("| D | x 2 ").bars).toHaveLength(2);
 		expect(parseChart("## V   x3\n| D |").bars).toHaveLength(3);
@@ -78,10 +77,13 @@ describe("% repeats the previous bar exactly", () => {
 describe("many quoted words in one cell parse in linear time", () => {
 	const cell = (n: number) => `| C ${Array.from({ length: n }, (_, i) => `"w${i}"`).join(" ")} |`;
 	// Best of three after a warm-up; the small size is big enough that timer noise doesn't set the ratio.
-	test("ten times the words, nowhere near a hundred times as long", () => {
-		const ratio = timed(cell(40_000)) / timed(cell(4000));
-		expect(ratio).toBeLessThan(25);
-	}, 30_000);
+	test(
+		"ten times the words, nowhere near a hundred times as long",
+		() => {
+			expect(parseGrowth(cell(4000), cell(40_000), 10)).toBeLessThan(25);
+		},
+		TIMING_TIMEOUT,
+	);
 	test("the words still read, each before its slot", () => {
 		expect(parseChart('| "a" C "b" G |').bars[0]?.words).toEqual([
 			{ text: "a", at: 0 },

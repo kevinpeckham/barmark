@@ -227,6 +227,11 @@ runs, and `verify:package cli` fails on anything else.
     request `chore(site): use <npm name> X.Y.Z` (`site/package.json` and
     `site/bun.lock`). Until it merges, CI's `site-versions` check is red
     on purpose; it is not required, so other pull requests still merge.
+    It checks every barmark package the site installs, dev dependencies
+    too: a `@barmark/musicxml`, `sync`, `midi` or `listen` release needs
+    `bun add --dev --exact`, since Get Started's snippets are tested
+    against the installed version while the `npm install` it shows gets
+    the latest.
     After a `barmark` bump, check `site/bun.lock` holds one barmark:
     `grep '/barmark": \["barmark@' site/bun.lock` prints nothing, or
     delete the nested entries it finds and `bun install` again (FINDINGS).
