@@ -6,6 +6,12 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- **Swing's compound-meter test uses barmark's `beatsOf`** (grammar
+  2.1: 6/8, 9/8 and 12/8) instead of its own copy of the rule. No change
+  in what plays.
+
 ## [0.3.2] - 2026-11-10
 
 ### Changed

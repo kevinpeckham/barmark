@@ -437,6 +437,24 @@ describe("fix round 1", () => {
 		expect(structureOf(in68).bars[0]?.directives).toBe("time: 6/8, tempo: 60");
 	});
 
+	test("a dotted metronome in a meter that isn't compound counts the bottom number (grammar 2.1)", () => {
+		const dotted = (unit: string) =>
+			`<direction placement="above"><direction-type><metronome><beat-unit>${unit}</beat-unit><beat-unit-dot/><per-minute>60</per-minute></metronome></direction-type></direction>`;
+		const inMeter = (n: number, d: number, unit: string, quarters: number) =>
+			xml`${measure(1, attributes(`<divisions>4</divisions><time><beats>${n}</beats><beat-type>${d}</beat-type></time>`) + dotted(unit) + note("C", 4, 4 * quarters))}`;
+		const in158 = inMeter(15, 8, "quarter", 7.5);
+		expect(structureOf(in158).bars[0]?.directives).toBe("time: 15/8, tempo: 180");
+		const in616 = inMeter(6, 16, "eighth", 1.5);
+		expect(structureOf(in616).bars[0]?.directives).toBe("time: 6/16, tempo: 180");
+	});
+
+	test("a tempo round-trips in every meter, compound or not", () => {
+		for (const time of ["6/8", "9/8", "12/8", "15/8", "6/16", "12/16", "3/8", "2/4"])
+			expect(fromChart(`time: ${time}, tempo: 120\n| C |`).bars[0]?.directives).toBe(
+				`time: ${time}, tempo: 120`,
+			);
+	});
+
 	test("a backward repeat with none before it opens at the bar after the last repeat", () => {
 		const back = '<barline location="right"><repeat direction="backward"/></barline>';
 		const r = bars(whole + back, whole + back);

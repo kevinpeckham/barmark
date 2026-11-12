@@ -16,6 +16,31 @@ describe("directives", () => {
 		);
 		expect(m).toContain('<sound tempo="90"/>');
 	});
+	test("only 6/8, 9/8 and 12/8 are compound (grammar 2.1): a dotted quarter, and the sound ×3/2", () => {
+		for (const time of ["6/8", "9/8", "12/8"]) {
+			const [m] = measures(xmlOf(`time: ${time}, tempo: 60\n| G |`));
+			expect(m).toContain(
+				"<metronome><beat-unit>quarter</beat-unit><beat-unit-dot/><per-minute>60</per-minute></metronome>",
+			);
+			expect(m).toContain('<sound tempo="90"/>');
+		}
+	});
+	test("every other meter beats in its bottom number, undotted (grammar 2.1)", () => {
+		const cases: [string, string, number][] = [
+			["15/8", "eighth", 60],
+			["6/16", "16th", 30],
+			["12/16", "16th", 30],
+			["3/8", "eighth", 60],
+			["2/4", "quarter", 120],
+		];
+		for (const [time, unit, quarters] of cases) {
+			const [m] = measures(xmlOf(`time: ${time}, tempo: 120\n| G |`));
+			expect(m).toContain(
+				`<metronome><beat-unit>${unit}</beat-unit><per-minute>120</per-minute></metronome>`,
+			);
+			expect(m).toContain(`<sound tempo="${quarters}"/>`);
+		}
+	});
 	test("a one-bar meter keeps the time: meter's beat (grammar 2.4)", () => {
 		const dotted = "<beat-unit>quarter</beat-unit><beat-unit-dot/><per-minute>60</per-minute>";
 		for (const chart of [

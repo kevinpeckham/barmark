@@ -1,5 +1,5 @@
 /** Directions: words, marks and sounds above or below a measure (tempo, feel, jumps, text lines). */
-import type { Direction, Meter } from "barmark";
+import { beatsOf, type Direction, type Meter } from "barmark";
 import type { Measure } from "./measures.js";
 import { el, text } from "./xml.js";
 
@@ -49,7 +49,8 @@ export function jumpXml(d: Direction): string {
 	);
 }
 
-const compound = (m: Meter) => m.n > 3 && m.n % 3 === 0 && m.d >= 8;
+/** 6/8, 9/8 and 12/8 only (grammar 2.1): barmark's own rule, where a beat is three of the bottom note. */
+const compound = (m: Meter) => beatsOf(m) !== m.n;
 const UNITS: Record<number, string> = {
 	1: "whole",
 	2: "half",
@@ -67,7 +68,7 @@ function beatXml(m: Meter): string {
 
 /** <sound tempo> counts quarter notes a minute. */
 function soundTempo(bpm: number, m: Meter): string {
-	const quarters = compound(m) ? (3 * 4) / m.d : 4 / m.d;
+	const quarters = (4 * m.n) / (m.d * beatsOf(m));
 	return el("sound", { tempo: Number((bpm * quarters).toFixed(2)) });
 }
 
