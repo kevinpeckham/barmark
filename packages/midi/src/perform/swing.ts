@@ -1,5 +1,5 @@
 /** Swing (spec 3.6): the second eighth of each quarter, or sixteenth of each eighth, played late. */
-import type { Feel, Meter } from "barmark";
+import { beatsOf, type Feel, type Meter } from "barmark";
 import type { TimedSlot } from "./line.js";
 import { add, type BarAt, barQuarters, cmp, mul, q, sub } from "./quarters.js";
 import type { MidiLoss, Quarters } from "./types.js";
@@ -24,7 +24,7 @@ export function swingPoint(at: Quarters, feel: Feel, percent: number | undefined
 }
 
 /** 6/8, 9/8 and 12/8: their beats already divide in three. */
-const compound = (meter: Meter) => meter.d === 8 && [6, 9, 12].includes(meter.n);
+const compound = (meter: Meter) => beatsOf(meter) !== meter.n;
 
 /**
  * The chart's swing as a map of time points, each through its own bar's
