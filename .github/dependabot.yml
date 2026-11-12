@@ -23,6 +23,11 @@ updates:
       interval: monthly
     cooldown:
       default-days: 14
+    # @types/node follows the packages' engines floor (Node 20), so tsc
+    # rejects any API a Node 20 user lacks. Raise it with the floor, by hand.
+    ignore:
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
     groups:
       dev-dependencies:
         dependency-type: development
