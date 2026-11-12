@@ -61,9 +61,13 @@ describe("maxLength", () => {
 				expect(full.xml.length).toBeGreaterThan(1_500_000);
 				const cut = () => exportMusicXml(text, { maxLength: 100_000 });
 				expect(cut()).toMatchObject({ ok: false, tooLarge: true });
-				// A twentieth of the score written at most: well under half the time, the measures' text never built.
-				// Two cut exports a run against one whole, so both runs last about as long under load.
-				expect(growth(cut, () => exportMusicXml(text), { runs: 5, balance: 2 })).toBeGreaterThan(2);
+				// A twentieth of the score written at most, the measures' text never built: an export that
+				// didn't stop would take as long as the whole one (a ratio of 1). Read and walk are shared, so
+				// a part's silent lines measure 2.7 alone and as little as 1.8 at load 20: hence 1.5. Two cut
+				// exports a run against one whole, so both runs last about as long under load.
+				expect(growth(cut, () => exportMusicXml(text), { runs: 5, balance: 2 })).toBeGreaterThan(
+					1.5,
+				);
 			},
 			TIMEOUT,
 		);
