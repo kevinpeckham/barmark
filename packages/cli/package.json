@@ -1,6 +1,6 @@
 {
 	"name": "@barmark/cli",
-	"version": "0.11.1",
+	"version": "0.11.2",
 	"description": "The barmark command: check, format, render, transpose and export barmark chord charts (.chart.md) from the terminal and in CI.",
 	"type": "module",
 	"bin": {

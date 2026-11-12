@@ -6,6 +6,14 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.11.2] - 2026-11-12
+
+### Changed
+
+- **Uses** @barmark/render 0.19.1: `render` prints a chart whose composer
+  is "Traditional" (or "Trad.") with that credit as written, not "Music
+  by Traditional"; nothing else changes.
+
 ## [0.11.1] - 2026-11-10
 
 ### Changed
@@ -364,7 +372,8 @@ The first release of the `barmark` command. Uses `barmark` 0.8.0 and
 - **The `barmark` command:** `check`, `format`, `render` and `transpose`
   for `.chart.md` files, on npm and as standalone binaries.
 
-[Unreleased]: https://github.com/kevinpeckham/barmark/compare/cli-v0.11.1...HEAD
+[Unreleased]: https://github.com/kevinpeckham/barmark/compare/cli-v0.11.2...HEAD
+[0.11.2]: https://github.com/kevinpeckham/barmark/compare/cli-v0.11.1...cli-v0.11.2
 [0.11.1]: https://github.com/kevinpeckham/barmark/compare/cli-v0.11.0...cli-v0.11.1
 [0.11.0]: https://github.com/kevinpeckham/barmark/compare/cli-v0.10.2...cli-v0.11.0
 [0.10.2]: https://github.com/kevinpeckham/barmark/compare/cli-v0.10.1...cli-v0.10.2
