@@ -55,7 +55,7 @@
     },
     "packages/midi": {
       "name": "@barmark/midi",
-      "version": "0.3.2",
+      "version": "0.3.3",
       "dependencies": {
         "@barmark/sync": "workspace:^",
         "barmark": "workspace:^",
