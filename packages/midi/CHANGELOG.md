@@ -6,6 +6,8 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.3.3] - 2026-11-12
+
 ### Changed
 
 - **Swing's compound-meter test uses barmark's `beatsOf`** (grammar
@@ -183,7 +185,8 @@ package uses [semantic versioning](https://semver.org/).
   bar, shorter than one, from its downbeat). Needs barmark 0.21.0
   (`PlayedBar.time`).
 
-[Unreleased]: https://github.com/kevinpeckham/barmark/compare/midi-v0.3.2...HEAD
+[Unreleased]: https://github.com/kevinpeckham/barmark/compare/midi-v0.3.3...HEAD
+[0.3.3]: https://github.com/kevinpeckham/barmark/compare/midi-v0.3.2...midi-v0.3.3
 [0.3.2]: https://github.com/kevinpeckham/barmark/compare/midi-v0.3.1...midi-v0.3.2
 [0.3.1]: https://github.com/kevinpeckham/barmark/compare/midi-v0.3.0...midi-v0.3.1
 [0.3.0]: https://github.com/kevinpeckham/barmark/compare/midi-v0.2.0...midi-v0.3.0
