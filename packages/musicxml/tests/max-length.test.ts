@@ -4,6 +4,7 @@
  * the limit. Unset, nothing changes.
  */
 import { describe, expect, test } from "bun:test";
+import { growth, TIMING_TIMEOUT } from "../../../test-support/growth.js";
 import { exportMusicXml } from "../src/index.js";
 
 const parts = (n: number) => Array.from({ length: n }, (_, i) => `part: P${i} = Piano`).join("\n");
@@ -20,20 +21,8 @@ const SHAPES: [string, string][] = [
 	["text lines", `## A x2500\n${"Play it softly. ".repeat(100)}\n|: C :| x2\n`],
 ];
 
-// Each test exports megabytes, some twice: the timeout only keeps a loaded machine from cutting a run short.
-const TIMEOUT = 60_000;
-
-const timed = <T>(f: () => T): [T, number] => {
-	const start = performance.now();
-	const out = f();
-	return [out, performance.now() - start];
-};
-
-/** The quickest of three runs, so one garbage-collection pause doesn't decide a ratio. */
-const fastest = <T>(f: () => T): [T, number] => {
-	const runs = [timed(f), timed(f), timed(f)];
-	return runs.reduce((a, b) => (b[1] < a[1] ? b : a));
-};
+// Each test exports megabytes, some several times: the timeout only keeps a loaded machine from cutting a run short.
+const TIMEOUT = TIMING_TIMEOUT;
 
 describe("maxLength", () => {
 	test(
@@ -67,13 +56,14 @@ describe("maxLength", () => {
 		test(
 			`${name}: stops writing at the limit, well before the whole score`,
 			() => {
-				const [full, whole] = fastest(() => exportMusicXml(text));
+				const full = exportMusicXml(text);
 				if (!full.ok) throw new Error(full.diagnostics[0]?.message);
 				expect(full.xml.length).toBeGreaterThan(1_500_000);
-				const [cut, early] = fastest(() => exportMusicXml(text, { maxLength: 100_000 }));
-				expect(cut).toMatchObject({ ok: false, tooLarge: true });
+				const cut = () => exportMusicXml(text, { maxLength: 100_000 });
+				expect(cut()).toMatchObject({ ok: false, tooLarge: true });
 				// A twentieth of the score written at most: well under half the time, the measures' text never built.
-				expect(early).toBeLessThan(whole / 2);
+				// Two cut exports a run against one whole, so both runs last about as long under load.
+				expect(growth(cut, () => exportMusicXml(text), { runs: 5, balance: 2 })).toBeGreaterThan(2);
 			},
 			TIMEOUT,
 		);

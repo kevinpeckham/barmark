@@ -59,32 +59,44 @@ function jittered(bytes: Uint8Array, seed: number): Uint8Array {
 	return Uint8Array.from(writeMidi({ header: midi.header, tracks }));
 }
 
+// Each test runs hundreds of round trips, a second or two alone and more under load: the timeout is
+// their own, so a busy machine can't cut them short.
+const ROUND_TRIPS_TIMEOUT = 60_000;
+
 describe("property", () => {
-	test("jump charts survive export and import", () => {
-		const failed: string[] = [];
-		let charts = 0;
-		for (let seed = 1; seed <= 300; seed++) {
-			const text = jumpChart(seed);
-			if (text === null || parseChart(text).parts.length > 1) continue;
-			charts++;
-			const { misses } = byEar(parseChart(text), parseChart(throughMidi(text)));
-			if (misses.length > 0) failed.push(`seed ${seed}: ${misses.slice(0, 3).join("; ")}`);
-		}
-		expect(charts).toBeGreaterThan(100);
-		expect(failed).toEqual([]);
-	});
+	test(
+		"jump charts survive export and import",
+		() => {
+			const failed: string[] = [];
+			let charts = 0;
+			for (let seed = 1; seed <= 300; seed++) {
+				const text = jumpChart(seed);
+				if (text === null || parseChart(text).parts.length > 1) continue;
+				charts++;
+				const { misses } = byEar(parseChart(text), parseChart(throughMidi(text)));
+				if (misses.length > 0) failed.push(`seed ${seed}: ${misses.slice(0, 3).join("; ")}`);
+			}
+			expect(charts).toBeGreaterThan(100);
+			expect(failed).toEqual([]);
+		},
+		ROUND_TRIPS_TIMEOUT,
+	);
 
 	// each note-on up to ±60 ticks spreads one chord's notes over a 16th: the attack window
-	test("jitter and legato change nothing", () => {
-		const failed: string[] = [];
-		for (const [name, chart] of GENERATOR_FORM) {
-			const out = exportMidi(chart);
-			if (!out.ok) throw new Error(name);
-			for (let seed = 1; seed <= 50; seed++) {
-				const back = importMidi(jittered(out.bytes, seed)).text;
-				if (back !== chart) failed.push(`${name}, seed ${seed}: ${JSON.stringify(back)}`);
+	test(
+		"jitter and legato change nothing",
+		() => {
+			const failed: string[] = [];
+			for (const [name, chart] of GENERATOR_FORM) {
+				const out = exportMidi(chart);
+				if (!out.ok) throw new Error(name);
+				for (let seed = 1; seed <= 50; seed++) {
+					const back = importMidi(jittered(out.bytes, seed)).text;
+					if (back !== chart) failed.push(`${name}, seed ${seed}: ${JSON.stringify(back)}`);
+				}
 			}
-		}
-		expect(failed).toEqual([]);
-	});
+			expect(failed).toEqual([]);
+		},
+		ROUND_TRIPS_TIMEOUT,
+	);
 });

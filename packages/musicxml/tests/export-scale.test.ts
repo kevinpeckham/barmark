@@ -4,10 +4,8 @@
  * link reaches this code, and a few kilobytes of it once took minutes.
  */
 import { expect, test } from "bun:test";
+import { growth, TIMING_TIMEOUT } from "../../../test-support/growth.js";
 import { exportMusicXml } from "../src/index.js";
-
-// The ratio is of best-of-three timings; the timeout only keeps a loaded machine from cutting a run short.
-const TIMEOUT = 60_000;
 
 const many = (n: number, slot: string) => Array.from({ length: n }, () => slot).join(" ");
 
@@ -33,17 +31,11 @@ const bare = (n: number) =>
 /** One bar line played `n` times under a lyric row: its passes share the one measure. */
 const passes = (n: number) => `| C |\nlyrics: | la |\n| D | x${n}\n`;
 
-/** The best of `runs` exports of `text`, after one to warm up. */
-function timed(text: string, runs = 3): number {
-	let ms = Number.POSITIVE_INFINITY;
-	for (let run = 0; run <= runs; run++) {
-		const start = performance.now();
-		const r = exportMusicXml(text);
-		if (run > 0) ms = Math.min(ms, performance.now() - start);
-		if (!r.ok) throw new Error(r.diagnostics.map((d) => d.message).join("; "));
-	}
-	return ms;
-}
+/** Exports `text`, failing the test if the export does. */
+const exported = (text: string) => () => {
+	const r = exportMusicXml(text);
+	if (!r.ok) throw new Error(r.diagnostics.map((d) => d.message).join("; "));
+};
 
 for (const [name, chart] of [
 	["a lyric row's syllables", lyricRow],
@@ -53,22 +45,22 @@ for (const [name, chart] of [
 	test(
 		`${name}: eight times as many in a bar export in linear time`,
 		() => {
-			const small = timed(chart(2000));
-			const large = timed(chart(16000));
 			// Eight times as many, at most sixteen times as long: about seven now, 25 to 46 before.
-			expect(large / small).toBeLessThan(16);
+			expect(growth(exported(chart(2000)), exported(chart(16000)), { balance: 8 })).toBeLessThan(
+				16,
+			);
 		},
-		TIMEOUT,
+		TIMING_TIMEOUT,
 	);
 
 test(
 	"a bar line played eight times as often exports in linear time",
 	() => {
-		// Best of five: the small export takes milliseconds.
-		const small = timed(passes(1250), 5);
-		const large = timed(passes(9999), 5);
 		// Eight times the passes, at most ten times as long: about four now, fifteen before.
-		expect(large / small).toBeLessThan(10);
+		// Best of five: the small export takes milliseconds.
+		expect(
+			growth(exported(passes(1250)), exported(passes(9999)), { runs: 5, balance: 8 }),
+		).toBeLessThan(10);
 	},
-	TIMEOUT,
+	TIMING_TIMEOUT,
 );

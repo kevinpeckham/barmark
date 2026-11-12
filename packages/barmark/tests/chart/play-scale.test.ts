@@ -4,10 +4,12 @@
  * 01M6V24KFCCKSRW0JSQ2FVE2NE, lyrics, and 01M6MJK1SBHEYJ9NK946Y0W7D1, pedal).
  */
 import { describe, expect, test } from "bun:test";
+import { growth, TIMING_TIMEOUT } from "../../../../test-support/growth.js";
 import { parseChart } from "../../src/chart/parse.js";
 
-// The ratio is of best-of-five timings; the timeout only keeps a loaded machine from cutting a run short.
-const TIMEOUT = 60_000;
+// The ratio is of alternated, balanced best-of-five timings (`growth`); the timeout only keeps a loaded machine
+// from cutting a run short.
+const TIMEOUT = TIMING_TIMEOUT;
 
 /** One bar of `n` slots, the pedal pressed on the first and lifted on the last, played `plays` times. */
 const pedalled = (n: number, plays: number) =>
@@ -20,18 +22,6 @@ const worded = (n: number, plays: number) =>
 /** One bar of `n` notes, each with its syllable, played `plays` times. */
 const melodic = (n: number, plays: number) =>
 	`| ${Array(n).fill("{C4}:la").join(" ")} | x${plays}\n`;
-
-/** The best of five parses of `text`, after one to warm up. */
-function timed(text: string): number {
-	parseChart(text);
-	let ms = Number.POSITIVE_INFINITY;
-	for (let run = 0; run < 5; run++) {
-		const start = performance.now();
-		parseChart(text);
-		ms = Math.min(ms, performance.now() - start);
-	}
-	return ms;
-}
 
 describe("a played bar shares its written bar's data", () => {
 	test("two plays of one bar share its slots and its words", () => {
@@ -63,10 +53,15 @@ describe("parse time grows with written size plus plays, not their product", () 
 		test(
 			shape,
 			() => {
-				const small = timed(chart(written, plays));
-				const large = timed(chart(written * 10, plays * 10));
-				expect(parseChart(chart(written * 10, plays * 10)).bars).toHaveLength(plays * 10);
-				expect(large / small).toBeLessThan(30);
+				const [small, large] = [chart(written, plays), chart(written * 10, plays * 10)];
+				expect(parseChart(large).bars).toHaveLength(plays * 10);
+				expect(
+					growth(
+						() => parseChart(small),
+						() => parseChart(large),
+						{ runs: 5, balance: 10 },
+					),
+				).toBeLessThan(30);
 			},
 			TIMEOUT,
 		);

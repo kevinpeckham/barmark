@@ -7,6 +7,7 @@ import { cleanSvg, engraveChart, engraveXml, scorePane, scoreStyles } from "../s
 import { loadToolkit } from "./helpers/toolkit.js";
 
 const vrv = await loadToolkit();
+const ENGRAVE_ALL_TIMEOUT = 60_000;
 
 const examples = join(import.meta.dir, "../../../examples");
 const fixtures = join(import.meta.dir, "../../musicxml/tests/fixtures/import");
@@ -54,11 +55,16 @@ describe("cleanSvg", () => {
 		expect(text).toContain("</text><script>x()</script>");
 	});
 
-	test("Verovio's own output passes unchanged", () => {
-		const all = everything();
-		expect(all.length).toBeGreaterThan(10);
-		for (const { name, svg } of all) expect([name, cleanSvg(svg)]).toEqual([name, svg]);
-	});
+	// Engraves every example and import fixture: a second or more alone, and more under load.
+	test(
+		"Verovio's own output passes unchanged",
+		() => {
+			const all = everything();
+			expect(all.length).toBeGreaterThan(10);
+			for (const { name, svg } of all) expect([name, cleanSvg(svg)]).toEqual([name, svg]);
+		},
+		ENGRAVE_ALL_TIMEOUT,
+	);
 
 	test("the exact style Verovio emits is kept, any other is not", () => {
 		const css = /<style[\s\S]*?<\/style>/.exec(engrave("| C |"))?.[0] ?? "";

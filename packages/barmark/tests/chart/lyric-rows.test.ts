@@ -1,7 +1,8 @@
 import { describe, expect, test } from "bun:test";
+import { growth, TIMING_TIMEOUT } from "../../../../test-support/growth.js";
 import { readLyricRow } from "../../src/chart/lyricRows.js";
 import { parseChart } from "../../src/chart/parse.js";
-import { printChart, printPart } from "../../src/chart/print.js";
+import { printChart, printParsed, printPart } from "../../src/chart/print.js";
 
 const TWO = "part: G = Guitar\npart: P = Piano\n";
 const errors = (chart: string) =>
@@ -239,23 +240,54 @@ describe("lyric rows and breaks between endings (review fixes)", () => {
 	});
 });
 
+/** `blocks` bar lines of four bars, `VERSES` verses under each, then a heading and one more. */
+const VERSES = 20;
+const manyRows = (blocks: number) => {
+	const block = `| C | F | G | C |\n${Array.from({ length: VERSES }, (_, v) => `lyrics ${v + 1}: | a | b | c | d |`).join("\n")}\n`;
+	return `# Long\n${block.repeat(blocks)}## Coda\n${block}`;
+};
+
+/** Reads of the parse's lines, one element at a time, while it prints. */
+function linesRead(text: string): number {
+	const parsed = parseChart(text);
+	let reads = 0;
+	const lines = new Proxy(parsed.lines, {
+		get(target, key, receiver) {
+			if (typeof key === "string" && /^\d+$/.test(key)) reads++;
+			return Reflect.get(target, key, receiver);
+		},
+	});
+	printParsed(text, { ...parsed, lines });
+	return reads;
+}
+
 describe("printing many lyric rows", () => {
 	test("rows under many bar lines print in linear time (MIDI import, Task 14)", () => {
-		// 2,000 bars, four a line, 100 verses under each: a row's heading check once scanned every line.
-		const line = `| C | F | G | C |\n${Array.from({ length: 100 }, (_, v) => `lyrics ${v + 1}: | a | b | c | d |`).join("\n")}\n`;
-		const chart = `# Long\n${line.repeat(500)}## Coda\n${line}`;
-		const parsed = parseChart(chart);
-		const start = performance.now();
-		const printed = printChart(chart);
-		const ms = performance.now() - start;
-		expect(printed.split("\n").filter((l) => l.startsWith("lyrics 100:"))).toHaveLength(501);
-		// printChart parses too; what's measured is the printing beyond that parse.
-		const parse = (() => {
-			const s = performance.now();
-			parseChart(chart);
-			return performance.now() - s;
-		})();
-		expect(parsed.diagnostics.filter((d) => d.severity === "error")).toEqual([]);
-		expect(ms - parse).toBeLessThan(1000);
+		// A row's heading check once scanned every line: rows times lines. Ten times the lines here:
+		// linear is ten times the reads, that scan a hundred (counted, so a busy machine can't fail it).
+		const [small, large] = [linesRead(manyRows(40)), linesRead(manyRows(400))];
+		expect(large).toBeLessThan(small * 15);
 	});
+
+	test(
+		"eight times the rows print in under sixteen times as long",
+		() => {
+			const [small, large] = [manyRows(100), manyRows(800)];
+			expect(parseChart(large).diagnostics.filter((d) => d.severity === "error")).toEqual([]);
+			expect(
+				printChart(large)
+					.split("\n")
+					.filter((l) => l.startsWith(`lyrics ${VERSES}:`)),
+			).toHaveLength(801);
+			// Linear is eight times as long (about nine measured), quadratic 64; the heading scan above measured 31.
+			expect(
+				growth(
+					() => printChart(small),
+					() => printChart(large),
+					{ balance: 8 },
+				),
+			).toBeLessThan(16);
+		},
+		TIMING_TIMEOUT,
+	);
 });

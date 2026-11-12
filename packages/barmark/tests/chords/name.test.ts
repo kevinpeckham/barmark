@@ -71,6 +71,8 @@ const smallSets = (() => {
 	return sets;
 })();
 
+const EXHAUSTIVE_TIMEOUT = 60_000;
+
 /** A root or slash bass with more than one accidental. */
 const doublySpelled = (symbol: string) => /^[A-G][#b]{2}|\/[A-G][#b]{2}$/.test(symbol);
 
@@ -133,17 +135,27 @@ describe("nameNotes", () => {
 		expect(nameNotes([1, 5, 8], 1, { tonic: "C#", mode: "minor" })).toBe("C#");
 	});
 
-	test("root and bass never take a double accidental, in any major key or none", () => {
-		const bad = keys.flatMap((key) =>
-			smallSets.flatMap((pcs) => pcs.map((bass) => nameNotes(pcs, bass, key) ?? "")),
-		);
-		expect(bad.filter(doublySpelled)).toEqual([]);
-	});
+	// Every set of three or four pitch classes, on each of its notes, in 16 keys: about 40,000 names,
+	// a few seconds alone and more under load, so these exhaustive tests take a timeout of their own.
+	test(
+		"root and bass never take a double accidental, in any major key or none",
+		() => {
+			const bad = keys.flatMap((key) =>
+				smallSets.flatMap((pcs) => pcs.map((bass) => nameNotes(pcs, bass, key) ?? "")),
+			);
+			expect(bad.filter(doublySpelled)).toEqual([]);
+		},
+		EXHAUSTIVE_TIMEOUT,
+	);
 
-	test("keyless: no double accidental and no E#, B#, Cb or Fb anywhere in the name", () => {
-		const bad = smallSets.flatMap((pcs) => pcs.map((bass) => nameNotes(pcs, bass, null) ?? ""));
-		expect(bad.filter((n) => /##|bb|E#|B#|Cb|Fb/.test(n))).toEqual([]);
-	});
+	test(
+		"keyless: no double accidental and no E#, B#, Cb or Fb anywhere in the name",
+		() => {
+			const bad = smallSets.flatMap((pcs) => pcs.map((bass) => nameNotes(pcs, bass, null) ?? ""));
+			expect(bad.filter((n) => /##|bb|E#|B#|Cb|Fb/.test(n))).toEqual([]);
+		},
+		EXHAUSTIVE_TIMEOUT,
+	);
 
 	test("a bass the interval would double is spelled by pitch", () => {
 		expect(name("{G E G#}")).toBe("E(#9)/G");
