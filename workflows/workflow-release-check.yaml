@@ -11,6 +11,9 @@ description: >-
   while preparing on a branch, and `--input pkg=render` or `pkg=cli` to
   check @barmark/render or @barmark/cli instead of barmark; `pkg=engraver`
   needs a compiled packages/engraver/dist and the root `bun run build`.
+  The gates step keeps the whole output of `bun run check` and `bun test`
+  as the barmark behavior's `gates-log` file, and a failure names the
+  failing tests and that file's path.
 tags:
   area: release
 inputs:
