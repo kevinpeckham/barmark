@@ -1170,7 +1170,7 @@ and round-trip it through `format`.
   --frozen-lockfile` on an empty cache, and a plain `bun install`, both
   installed the young versions already locked.
 - **The fix.** Seven days at the root and in `site/`, so CI's frozen
-  installs are unaffected, and `site/bunfig.toml` excludes our own eight
+  installs are unaffected, and `site/bunfig.toml` excludes our own nine
   packages (`minimumReleaseAgeExcludes`), or RELEASING.md step 12's site
   bump would fail for a week after every release. Their third-party
   dependencies still wait: a score release that raises Verovio to a

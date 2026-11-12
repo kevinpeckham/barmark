@@ -86,8 +86,11 @@ describe("the MIDI code Get Started shows", () => {
 		expect(typeof note.pitch).toBe("number");
 		expect(typeof note.velocity).toBe("number");
 		expect(secondsAt(p, note.at)).toBe(0);
-		expect(secondsAt(p, p.end)).toBeCloseTo((64 * 60) / 145, 9);
-		expect(USE_PERFORM).toContain("secondsAt(p, p.end); // 26.48…: 16 bars of 4/4 at 145");
+		const end = secondsAt(p, p.end);
+		expect(end).toBeCloseTo((64 * 60) / 145, 9);
+		// The digits the snippet shows are the performance's own, truncated, so they can't drift.
+		const shown = (Math.floor(end * 100) / 100).toFixed(2);
+		expect(USE_PERFORM).toContain(`secondsAt(p, p.end); // ${shown}…: 16 bars of 4/4 at 145`);
 		expect(USE_PERFORM).toContain('import { perform, secondsAt } from "@barmark/midi/perform";');
 	});
 });
@@ -463,15 +466,18 @@ describe("the FAQ, prerendered", () => {
 		const contents = [...doc().querySelectorAll("main nav a")].map((a) => a.getAttribute("href"));
 		expect(contents).toEqual(ids.map((id) => `#${id}`));
 	});
-	test("names the six packages, and answers how to check charts without code", () => {
+	test("names the nine packages, and answers how to check charts without code", () => {
 		const what = text(doc().querySelector("#what")?.parentElement) ?? "";
-		expect(what).toContain("six npm packages");
+		expect(what).toContain("nine npm packages");
 		for (const name of [
 			"barmark",
 			"@barmark/render",
 			"@barmark/score",
+			"@barmark/engraver",
 			"@barmark/musicxml",
+			"@barmark/midi",
 			"@barmark/sync",
+			"@barmark/listen",
 			"@barmark/cli",
 		])
 			expect(what).toContain(name);
