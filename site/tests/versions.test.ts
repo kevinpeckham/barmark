@@ -40,3 +40,25 @@ describe("the score", () => {
 		]);
 	});
 });
+
+describe("the libraries Get Started documents", () => {
+	// Get Started's snippets for these are tested against the site's dev dependencies, and their
+	// `npm install` gets the latest release: a pin behind it would test an API readers don't install.
+	test.each([
+		["@barmark/musicxml", "musicxml-v"],
+		["@barmark/sync", "sync-v"],
+		["@barmark/midi", "midi-v"],
+		["@barmark/listen", "listen-v"],
+	])("%s is checked against its %s tags", (name, prefix) => {
+		expect(behind({ [name]: "0.1.0" }, [`${prefix}0.2.0`])).toEqual([`${name} 0.1.0 < 0.2.0`]);
+	});
+
+	test("a package that isn't ours is never checked", () => {
+		expect(
+			behind({ verovio: "1.0.0", "@fontsource/noto-mono": "1.0.0" }, [
+				"verovio-v2.0.0",
+				"noto-mono-v2.0.0",
+			]),
+		).toEqual([]);
+	});
+});

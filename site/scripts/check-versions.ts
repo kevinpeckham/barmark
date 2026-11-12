@@ -1,19 +1,22 @@
 /**
- * Fails when barmark.dev runs an older barmark, @barmark/render, @barmark/score or
- * @barmark/cli (a dev dependency: Get Started's commands run against it, and
- * its CI example names its version) than the latest release tag: after a
- * release, bump site/package.json (RELEASING.md).
+ * Fails when barmark.dev runs an older barmark or @barmark/* package than its
+ * latest release tag: after a release, bump site/package.json (RELEASING.md).
+ * Every one the site installs is checked, its dev dependencies too: the CLI,
+ * whose commands Get Started runs and whose version its CI example names,
+ * and the libraries (@barmark/musicxml, sync, midi, listen) whose snippets
+ * Get Started tests against the installed version, while the `npm install`
+ * it shows gets the latest. A pin behind it would test an API readers don't
+ * get.
  * Run from the repository root with the tags fetched: bun site/scripts/check-versions.ts
  */
 import { join } from "node:path";
 
-/** Each package's tag prefix, by npm name. */
-const PREFIXES: Record<string, string> = {
-	barmark: "barmark-v",
-	"@barmark/render": "render-v",
-	"@barmark/score": "score-v",
-	"@barmark/cli": "cli-v",
-};
+/** A package's tag prefix: `barmark-v`, or `render-v` for `@barmark/render`; null when it isn't ours. */
+export function tagPrefix(name: string): string | null {
+	if (name === "barmark") return "barmark-v";
+	const m = /^@barmark\/([a-z-]+)$/.exec(name);
+	return m ? `${m[1]}-v` : null;
+}
 
 const parse = (version: string) => {
 	const m = /^(\d+)\.(\d+)\.(\d+)$/.exec(version);
@@ -35,7 +38,7 @@ export function latestTag(tags: string[], prefix: string): string | null {
 export function behind(pins: Record<string, string>, tags: string[]): string[] {
 	const lagging: string[] = [];
 	for (const [name, pinned] of Object.entries(pins)) {
-		const prefix = PREFIXES[name];
+		const prefix = tagPrefix(name);
 		const tag = prefix ? latestTag(tags, prefix) : null;
 		const released = tag?.slice(prefix?.length);
 		const a = parse(pinned);
