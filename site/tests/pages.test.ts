@@ -2,18 +2,28 @@ import { beforeAll, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
+import { alignChart, chartFromRecording } from "@barmark/listen";
+import { exportMidi, importMidi } from "@barmark/midi";
+import { perform, secondsAt } from "@barmark/midi/perform";
 import { exportMusicXml, importMusicXml } from "@barmark/musicxml";
 import { ENGRAVER_CDN_INTEGRITY, ENGRAVER_CDN_URL, ENGRAVER_WASM_INTEGRITY } from "@barmark/score";
 import { renderScoreHtml } from "@barmark/score/server";
 import { barAt, chartFromDetections, secondsAtBar } from "@barmark/sync";
+import * as timingOnly from "@barmark/sync/timing";
 import { parseChart, printChart, transposeChart } from "barmark";
 import { FILES, LINKS } from "../src/lib/site.ts";
 import {
+	BINARIES,
 	CLI_CI,
+	PACKAGES,
 	SAMPLE_CHART,
 	SYNC_DETECTIONS,
+	USE_BINARY,
 	USE_CLI,
+	USE_LISTEN,
+	USE_MIDI,
 	USE_MUSICXML,
+	USE_PERFORM,
 	USE_SCORE_ELEMENT,
 	USE_SCORE_ENGRAVER,
 	USE_SCORE_SERVER,
@@ -50,6 +60,120 @@ describe("the MusicXML code Get Started shows", () => {
 		expect(imported.text).toStartWith("# Example Song\nkey: D, tempo: 145\n\n## Verse\n");
 		expect(USE_MUSICXML).toContain('"# Example Song\\nkey: D, tempo: 145\\n\\n## Verse\\n…"');
 		expect(imported.diagnostics.filter((d) => d.severity === "error")).toEqual([]);
+	});
+});
+
+describe("the MIDI code Get Started shows", () => {
+	test("exports the sample chart with no losses and imports it back as the page says", () => {
+		const exported = exportMidi(SAMPLE_CHART);
+		if (!exported.ok) throw new Error(exported.diagnostics.map((d) => d.message).join("; "));
+		expect(new TextDecoder().decode(exported.bytes.slice(0, 4))).toBe("MThd");
+		expect(exported.losses).toEqual([]);
+		expect(USE_MIDI).toContain("exported.losses; // []");
+		expect(exportMidi(SAMPLE_CHART, { part: "Gtr", tempo: 96 }).ok).toBe(false); // no such part
+		const imported = importMidi(exported.bytes);
+		expect(imported.diagnostics).toEqual([]);
+		const shown = "# Example Song\nkey: D, time: 4/4, tempo: 145\n\n## Verse\n| D | A | Bm | G |\n";
+		expect(imported.text).toStartWith(shown);
+		expect(USE_MIDI).toContain(`imported.text; // "${shown.replaceAll("\n", "\\n")}…"`);
+		expect(USE_MIDI).toContain('import { exportMidi, importMidi } from "@barmark/midi";');
+	});
+	test("the perform subpath times the sample chart as the page says", () => {
+		const p = perform(parseChart(SAMPLE_CHART));
+		expect(p.tracks.flatMap((t) => t.notes).length).toBeGreaterThan(0);
+		const note = p.tracks[0]?.notes[0];
+		if (!note) throw new Error("no notes");
+		expect(typeof note.pitch).toBe("number");
+		expect(typeof note.velocity).toBe("number");
+		expect(secondsAt(p, note.at)).toBe(0);
+		const end = secondsAt(p, p.end);
+		expect(end).toBeCloseTo((64 * 60) / 145, 9);
+		// The digits the snippet shows are the performance's own, truncated, so they can't drift.
+		const shown = (Math.floor(end * 100) / 100).toFixed(2);
+		expect(USE_PERFORM).toContain(`secondsAt(p, p.end); // ${shown}…: 16 bars of 4/4 at 145`);
+		expect(USE_PERFORM).toContain('import { perform, secondsAt } from "@barmark/midi/perform";');
+	});
+});
+
+/** A seconds-long recording: a click on each beat, louder on one, over the bar's chord as sines. */
+function synthRecording(bars: number) {
+	const rate = 22050;
+	const beat = 0.5; // 120 a minute
+	const samples = new Float32Array(Math.round((bars * 4 * beat - 0.05) * rate));
+	const chords = [
+		[62, 66, 69],
+		[57, 61, 64],
+		[59, 62, 66],
+		[55, 59, 62],
+	];
+	const hz = (m: number) => 440 * 2 ** ((m - 69) / 12);
+	let seed = 1;
+	const noise = () => {
+		seed = (seed * 1103515245 + 12345) % 2 ** 31;
+		return seed / 2 ** 31 - 0.5;
+	};
+	for (let b = 0; b < bars; b++)
+		for (let k = 0; k < 4; k++) {
+			const gain = k === 0 ? 1 : k === 2 ? 0.6 : 0.4;
+			const from = Math.round((b * 4 + k) * beat * rate);
+			for (let i = 0; i < beat * rate && from + i < samples.length; i++) {
+				const t = i / rate;
+				let s = 0;
+				for (const m of chords[b % 4] ?? [])
+					s += Math.sin(2 * Math.PI * hz(m) * t) + 0.5 * Math.sin(2 * Math.PI * hz(m - 12) * t);
+				samples[from + i] = s * 0.15 * Math.exp(-t * 6) * gain + (t < 0.01 ? gain * noise() : 0);
+			}
+		}
+	const labels = ["D:maj", "A:maj", "B:min", "G:maj"];
+	const runs = Array.from({ length: bars }, (_, b) => ({
+		start: b * 4 * beat,
+		end: (b + 1) * 4 * beat,
+		label: labels[b % 4] ?? "N",
+	}));
+	return { samples, runs };
+}
+
+describe("the listen code Get Started shows", () => {
+	test("builds the chart the page says from a recording, and aligns a chart with it", () => {
+		const { samples, runs } = synthRecording(12);
+		const built = chartFromRecording({
+			samples,
+			sampleRate: 22050,
+			chords: { runs },
+			declared: { meter: "4/4", tempo: 120 },
+			title: "Example Song",
+		});
+		if (!built.ok) throw new Error(built.refusals.map((r) => r.reason).join(", "));
+		const { chart, timing, features } = built.value;
+		const shown = "# Example Song\ntime: 4/4, tempo: 120\n| D | A | Bm | G |\n";
+		expect(chart).toStartWith(shown);
+		expect(USE_LISTEN).toContain(`chart; // "${shown.replaceAll("\n", "\\n")}…"`);
+		expect(timing.bars.length).toBe(12);
+		const text =
+			"time: 4/4, tempo: 120\n| D | A | Bm | G |\n| D | A | Bm | G |\n| D | A | Bm | G |\n";
+		const aligned = alignChart({ chart: text, features });
+		if (!aligned.ok) throw new Error(aligned.refusals.map((r) => r.reason).join(", "));
+		expect(aligned.value.timing.bars.length).toBe(12);
+		for (const line of [
+			"\tsamples,",
+			"\tchords: { runs },",
+			'\tdeclared: { meter: "4/4", tempo: 120 },',
+			'\ttitle: "Example Song",',
+			"const { chart, timing, features } = built.value;",
+			"alignChart({ chart: text, features })",
+			"built.refusals;",
+		])
+			expect(USE_LISTEN).toContain(line);
+	}, 30_000);
+	test("refuses, never throws, when it can't read the recording", () => {
+		const r = chartFromRecording({
+			samples: new Float32Array(10),
+			sampleRate: 44100,
+			chords: { runs: [] },
+			declared: { meter: "4/4", tempo: 120 },
+		});
+		expect(r.ok).toBe(false);
+		if (!r.ok) expect(r.refusals.length).toBeGreaterThan(0);
 	});
 });
 
@@ -107,6 +231,11 @@ describe("the sync code Get Started shows", () => {
 		expect(USE_SYNC).toContain("secondsAtBar(timing, 3); // 4");
 		expect(barAt(timing, 5)).toEqual({ entry: 2, bar: 3, fraction: 0.5 });
 		expect(USE_SYNC).toContain("barAt(timing, 5); // { entry: 2, bar: 3, fraction: 0.5 }");
+	});
+	test("the timing subpath has the lookups the page names, without the builder", () => {
+		expect(timingOnly.barAt).toBe(barAt);
+		expect(timingOnly.secondsAtBar).toBe(secondsAtBar);
+		expect("chartFromDetections" in timingOnly).toBe(false);
 	});
 });
 
@@ -171,6 +300,37 @@ describe("the commands Get Started shows", () => {
 		},
 		CLI_TIMEOUT,
 	);
+	test(
+		"export --midi writes a MIDI file, and import reads it back as a chart",
+		() => {
+			const dir = folder();
+			const lines = USE_CLI.split("\n");
+			const exportLine = lines.find((l) => l.includes(" export --midi ")) ?? "";
+			const importLine = lines.find((l) => l.includes(" import example-song.mid ")) ?? "";
+			expect(run(exportLine, dir).exitCode).toBe(0);
+			const bytes = readFileSync(join(dir, "example-song.mid"));
+			expect(bytes.subarray(0, 4).toString()).toBe("MThd");
+			const result = run(importLine, dir);
+			expect([result.exitCode, result.stderr.toString()]).toEqual([0, ""]);
+			expect(readFileSync(join(dir, "from-midi.chart.md"), "utf8")).toContain(
+				"## Verse\n| D | A | Bm | G |\n| D | A | Bm | G |",
+			);
+		},
+		CLI_TIMEOUT,
+	);
+	test("the binaries are the ones the CLI's README names, and the steps are its steps", () => {
+		const readme = readFileSync(
+			join(dirname(Bun.resolveSync("@barmark/cli/package.json", site)), "README.md"),
+			"utf8",
+		);
+		for (const name of BINARIES) {
+			expect(readme).toContain(`\`${name}\``);
+			expect(USE_BINARY).toContain(name);
+		}
+		expect(readme).toContain("xattr -d com.apple.quarantine barmark-darwin-arm64");
+		expect(USE_BINARY).toContain("xattr -d com.apple.quarantine barmark-darwin-arm64");
+		expect(USE_BINARY).toContain("chmod +x barmark-darwin-arm64");
+	});
 	test("the CI example pins the version the site installs", () => {
 		expect(version).toMatch(/^\d+\.\d+\.\d+$/);
 		expect(CLI_CI).toContain(`npx -y @barmark/cli@${version} check --strict --format github`);
@@ -189,14 +349,17 @@ describe("Get Started, prerendered", () => {
 	test("walks from writing a chart to the parser, the renderer and the element", () => {
 		const steps = [...doc().querySelectorAll("main section > h2")].map(text);
 		expect(steps).toEqual([
+			"The packages",
 			"1. Write a chart",
 			"2. Read it with the parser",
 			"3. Render it as HTML",
 			"4. Or use the web component",
 			"5. Or show it as a full score",
 			"6. Convert to and from MusicXML",
-			"7. Check charts from the terminal",
-			"8. Sync a chart with a recording",
+			"7. Hear it as MIDI",
+			"8. Check charts from the terminal",
+			"9. Sync a chart with a recording",
+			"10. Or start from the recording",
 		]);
 		const page = text(doc().querySelector("main")) ?? "";
 		for (const line of [
@@ -205,6 +368,16 @@ describe("Get Started, prerendered", () => {
 			"npm install @barmark/musicxml",
 			"npm install @barmark/sync",
 			"npm install @barmark/score",
+			"npm install @barmark/midi",
+			"npm install @barmark/listen",
+			"exportMidi(",
+			"importMidi(",
+			"@barmark/midi/perform",
+			"export --midi",
+			"chartFromRecording(",
+			"alignChart(",
+			"@barmark/sync/timing",
+			"xattr -d com.apple.quarantine",
 			'import "@barmark/score/element";',
 			"<barmark-score",
 			"renderScoreHtml(",
@@ -224,7 +397,34 @@ describe("Get Started, prerendered", () => {
 			expect(page).toContain(line);
 		const intro = text(doc().querySelector("main h1")?.nextElementSibling) ?? "";
 		expect(intro).toContain("@barmark/score shows the same chart as a full score");
-		expect(intro).toContain("All five are ESM");
+		expect(intro).toContain("@barmark/midi convert charts to and from MusicXML and MIDI");
+		expect(intro).toContain("The libraries are ESM");
+		expect(intro).toContain("Every package is before 1.0");
+	});
+	test("lists every package the site installs or documents, each linking its step and its README", () => {
+		const pkg = JSON.parse(readFileSync(join(site, "package.json"), "utf8"));
+		const ours = Object.keys({ ...pkg.dependencies, ...pkg.devDependencies }).filter(
+			(name) => name === "barmark" || name.startsWith("@barmark/"),
+		);
+		const rows = [...doc().querySelectorAll("#packages ~ table tbody tr")];
+		const names = rows.map((row) => text(row.querySelector("th a")));
+		expect(names).toHaveLength(9);
+		for (const name of ours) expect(names).toContain(name);
+		expect(names).toContain("@barmark/engraver"); // loaded from a CDN, never installed
+		const ids = new Set([...doc().querySelectorAll("main [id]")].map((el) => el.id));
+		for (const row of rows) {
+			const [step, readme] = [...row.querySelectorAll("a")].map((a) => a.getAttribute("href"));
+			expect(ids.has(step?.slice(1) ?? "")).toBe(true);
+			expect(Object.values(LINKS)).toContain(readme as (typeof LINKS)[keyof typeof LINKS]);
+		}
+		expect(PACKAGES.map((p) => p.name)).toEqual(names as string[]);
+	});
+	test("labels listen as early, and says the caller declares tempo and meter", () => {
+		const listen = text(doc().querySelector("#listen")?.parentElement) ?? "";
+		expect(listen).toContain("at 0.1");
+		expect(listen).toContain("Stem Shovel");
+		expect(listen).toContain("you declare the tempo and meter");
+		expect(listen).toContain("a draft for a person to check");
 	});
 	test("shows the sample chart rendered, and again as a score with its switch", () => {
 		expect(doc().querySelector("main barmark-chart template[shadowrootmode=open]")).not.toBeNull();
@@ -266,15 +466,18 @@ describe("the FAQ, prerendered", () => {
 		const contents = [...doc().querySelectorAll("main nav a")].map((a) => a.getAttribute("href"));
 		expect(contents).toEqual(ids.map((id) => `#${id}`));
 	});
-	test("names the six packages, and answers how to check charts without code", () => {
+	test("names the nine packages, and answers how to check charts without code", () => {
 		const what = text(doc().querySelector("#what")?.parentElement) ?? "";
-		expect(what).toContain("six npm packages");
+		expect(what).toContain("nine npm packages");
 		for (const name of [
 			"barmark",
 			"@barmark/render",
 			"@barmark/score",
+			"@barmark/engraver",
 			"@barmark/musicxml",
+			"@barmark/midi",
 			"@barmark/sync",
+			"@barmark/listen",
 			"@barmark/cli",
 		])
 			expect(what).toContain(name);

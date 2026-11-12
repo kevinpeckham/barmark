@@ -23,6 +23,9 @@ export const LINKS = {
 	/** This site's source, so it can be rebuilt with another Verovio. */
 	siteSource: "https://github.com/kevinpeckham/barmark/tree/main/site",
 	syncReadme: "https://github.com/kevinpeckham/barmark/tree/main/packages/sync#readme",
+	midiReadme: "https://github.com/kevinpeckham/barmark/tree/main/packages/midi#readme",
+	listenReadme: "https://github.com/kevinpeckham/barmark/tree/main/packages/listen#readme",
+	engraverReadme: "https://github.com/kevinpeckham/barmark/tree/main/packages/engraver#readme",
 	cliReleases: "https://github.com/kevinpeckham/barmark/releases?q=cli-v",
 	songs: "https://github.com/kevinpeckham/songs",
 	parserReadme: "https://github.com/kevinpeckham/barmark/tree/main/packages/barmark#readme",

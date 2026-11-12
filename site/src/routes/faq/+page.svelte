@@ -102,12 +102,15 @@ onMount(() => {
 					which bars, in which sections, in what key, meter and tempo, and in what order the song plays.
 				</p>
 				<p>
-					It is also six npm packages: <code class={code}>barmark</code> reads and writes charts,
+					It is also nine npm packages: <code class={code}>barmark</code> reads and writes charts,
 					<code class={code}>@barmark/render</code> draws them as a clean bar grid on any web page,
 					<code class={code}>@barmark/score</code> shows the same chart as a full score beside the grid,
+					<code class={code}>@barmark/engraver</code> is a smaller build of the Verovio that engraves it,
 					<code class={code}>@barmark/musicxml</code> converts them to and from MusicXML,
+					<code class={code}>@barmark/midi</code> plays them as MIDI files and reads MIDI files back,
 					<code class={code}>@barmark/sync</code> builds a chart from a recording's detected chords and
-					says when each bar plays, and <code class={code}>@barmark/cli</code> does the rest from the
+					says when each bar plays, <code class={code}>@barmark/listen</code> finds the bars in a
+					recording itself, and <code class={code}>@barmark/cli</code> does the rest from the
 					terminal.
 				</p>
 			</section>
