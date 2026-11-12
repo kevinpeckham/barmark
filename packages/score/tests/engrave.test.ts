@@ -200,14 +200,18 @@ describe("engraveChart", () => {
 describe("scoreCost", () => {
 	const cost = (text: string) => scoreCost(parseChart(text));
 	const many = (n: number, slot: string) => Array.from({ length: n }, () => slot).join(" ");
-	const home = readFileSync(join(import.meta.dir, "../../../site/src/lib/demo.chart.md"), "utf8");
+	/** The site's home charts, which a reader flips through. */
+	const homeDir = join(import.meta.dir, "../../../site/src/lib/examples");
+	const home = readdirSync(homeDir)
+		.filter((f) => f.endsWith(".chart.md"))
+		.map((f) => readFileSync(join(homeDir, f), "utf8"));
 	const gtrPno =
 		"part: Gtr = Guitar\npart: Pno = Piano\n\n| G | C |\nGtr | G | C | D | G |\nPno | G/B | C | D | G |\nGtr | Em | C | D | G |\n| C | G |";
 
 	test("is never less than the MusicXML the export writes", () => {
 		const shapes = [
 			...charts.map(read),
-			home,
+			...home,
 			gtrPno,
 			`## A x10\n|: C :| x2\nlyrics: | ${many(200, "la")} |\n`,
 			`part: Vo = Voice, instrument: voice\n## A x10\nVo |: ${many(200, '"w" {C4}:la')} :| x2\n`,
@@ -247,7 +251,7 @@ describe("scoreCost", () => {
 	});
 
 	test("the examples, the site's home chart and Try It's are far under the budget", () => {
-		for (const text of [...charts.map(read), home, gtrPno])
+		for (const text of [...charts.map(read), ...home, gtrPno])
 			expect(cost(text)).toBeLessThan(MAX_SCORE_COST / 50);
 		expect(MAX_SCORE_COST).toBe(50_000_000);
 	});

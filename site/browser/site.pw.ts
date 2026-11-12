@@ -1,4 +1,5 @@
 import { expect, type Page, test } from "@playwright/test";
+import { EXAMPLES } from "../src/lib/examples.ts";
 
 /** The text inside the first rendered chart's shadow root on the page. */
 const chartText = (page: Page, scope = "main") =>
@@ -95,7 +96,7 @@ test.describe("home: the live editor", () => {
 		const errors = watchErrors(page);
 		await page.goto("/");
 		await page.getByRole("textbox", { name: "Barmark source of the chart" }).fill("");
-		await expect.poll(() => chartText(page)).not.toContain("Peaceful Dreams");
+		await expect.poll(() => chartText(page)).not.toContain("Amazing Grace");
 		expect(errors).toEqual([]);
 	});
 
@@ -196,8 +197,160 @@ test.describe("home: the live editor", () => {
 		const source = page.getByRole("textbox", { name: "Barmark source of the chart" });
 		await source.fill("| D |");
 		await page.getByRole("button", { name: "Reset" }).click();
-		await expect(source).toHaveValue(/# Peaceful Dreams/);
-		await expect.poll(() => chartText(page)).toContain("Peaceful Dreams");
+		await expect(source).toHaveValue(/# Amazing Grace/);
+		await expect.poll(() => chartText(page)).toContain("Amazing Grace");
+	});
+});
+
+test.describe("home: the examples", () => {
+	const source = (page: Page) => page.getByRole("textbox", { name: "Barmark source of the chart" });
+	const examples = (page: Page) => page.getByRole("group", { name: "Examples" });
+	const position = (page: Page) => examples(page).getByRole("status");
+	/** Presses Next (or Previous) and waits for the chart to show `title`; repeated until the page's script has run. */
+	const flip = (page: Page, to: "Next" | "Previous", title: string) =>
+		expect(async () => {
+			await examples(page)
+				.getByRole("button", { name: `${to} example` })
+				.click();
+			await expect(position(page)).toContainText(title, { timeout: 1_000 });
+		}).toPass({ timeout: 15_000 });
+	const titles = EXAMPLES.map((e) => e.title);
+	const n = titles.length;
+	let errors: string[] = [];
+	test.beforeEach(({ page }) => {
+		errors = watchErrors(page);
+	});
+	test.afterEach(() => {
+		expect(errors).toEqual([]);
+	});
+
+	test("Next and Previous flip through every example, round and back", async ({ page }) => {
+		await page.goto("/");
+		await expect(position(page)).toHaveText(`Amazing Grace 1 of ${n}`);
+		for (const [i, title] of titles.entries()) {
+			if (i > 0) await flip(page, "Next", title);
+			await expect(position(page)).toHaveText(`${title} ${i + 1} of ${n}`);
+			await expect(source(page)).toHaveValue(new RegExp(`^# ${title}\\n`));
+			await expect.poll(() => chartText(page)).toContain(title);
+		}
+		// Past the last comes the first; before the first, the last.
+		await flip(page, "Next", "Amazing Grace");
+		await flip(page, "Previous", titles[n - 1] ?? "");
+		await flip(page, "Previous", titles[n - 2] ?? "");
+		await expect.poll(() => chartText(page)).toContain(titles[n - 2] ?? "");
+	});
+
+	test("the controls work from the keyboard", async ({ page }) => {
+		await page.goto("/");
+		const next = examples(page).getByRole("button", { name: "Next example" });
+		await expect(async () => {
+			await next.focus();
+			await page.keyboard.press("Enter");
+			await expect(position(page)).toContainText("Greensleeves", { timeout: 1_000 });
+		}).toPass({ timeout: 15_000 });
+		await page.keyboard.press("Shift+Tab");
+		await expect(examples(page).getByRole("button", { name: "Previous example" })).toBeFocused();
+		await page.keyboard.press("Space");
+		await expect(position(page)).toContainText("Amazing Grace");
+	});
+
+	test("arrow keys in the source move its caret, never the example", async ({ page }) => {
+		await page.goto("/");
+		await flip(page, "Next", "Greensleeves");
+		await source(page).focus();
+		await page.keyboard.press("ArrowRight");
+		await page.keyboard.press("ArrowLeft");
+		await expect(position(page)).toContainText("Greensleeves");
+	});
+
+	test("flipping keeps the Score view, and engraves the new example", async ({ page }) => {
+		await page.goto("/");
+		await pressScore(page);
+		const score = page.locator("main barmark-score");
+		await flip(page, "Previous", "Peaceful Dreams");
+		await expect.poll(() => scoreText(page), { timeout: 15_000 }).toContain("Peaceful Dreams");
+		await expect(score.getByRole("radio", { name: "Score" })).toBeChecked();
+		// Power chords as the chart spells them, never as "no3".
+		const chords = await scoreChords(page);
+		expect(chords.slice(0, 2)).toEqual(["D7sus4", "D7sus4"]);
+		expect(chords).toContain("G5(7)");
+		expect(chords.filter((c) => c.includes("no3"))).toEqual([]);
+		await flip(page, "Next", "Amazing Grace");
+		await expect.poll(() => scoreText(page), { timeout: 15_000 }).toContain("Amazing Grace");
+		await expect(score.getByRole("radio", { name: "Score" })).toBeChecked();
+		await score.getByRole("radio", { name: "Grid" }).click();
+		await flip(page, "Next", "Greensleeves");
+		await expect(score.getByRole("radio", { name: "Grid" })).toBeChecked();
+		await expect.poll(() => chartText(page)).toContain("Greensleeves");
+	});
+
+	test("flipping keeps the chord spelling, and draws the new example in its own key", async ({
+		page,
+	}) => {
+		await page.goto("/");
+		const key = page.getByRole("button", { name: /^Key: / });
+		await expect(key).toHaveAccessibleName("Key: G");
+		await expect(async () => {
+			await key.click();
+			await page.getByRole("menuitemradio", { name: "A", exact: true }).click({ timeout: 1_000 });
+			await expect(key).toHaveAccessibleName("Key: A", { timeout: 1_000 });
+		}).toPass({ timeout: 15_000 });
+		const spelling = page.getByRole("radiogroup", { name: "Chord spelling" });
+		await spelling.getByRole("radio", { name: "Roman" }).check();
+		await flip(page, "Next", "Greensleeves");
+		await expect(key).toHaveAccessibleName("Key: Am");
+		await expect(spelling.getByRole("radio", { name: "Roman" })).toBeChecked();
+	});
+
+	test("Reset restores the example on show, not the default", async ({ page }) => {
+		await page.goto("/");
+		await flip(page, "Next", "Greensleeves");
+		await source(page).fill("| D |");
+		await page.getByRole("button", { name: "Reset" }).click();
+		await expect(source(page)).toHaveValue(/^# Greensleeves\n/);
+		await expect(position(page)).toContainText("Greensleeves");
+	});
+
+	test("an edit stays with its example across flips, until Reset", async ({ page }) => {
+		await page.goto("/");
+		await flip(page, "Next", "Greensleeves");
+		await source(page).fill("# Greensleeves, edited\n| Am |");
+		await flip(page, "Next", "Blues in F");
+		await expect(source(page)).toHaveValue(/^# Blues in F\n/);
+		await flip(page, "Previous", "Greensleeves");
+		await expect(source(page)).toHaveValue("# Greensleeves, edited\n| Am |");
+		await expect.poll(() => chartText(page)).toContain("Greensleeves, edited");
+		await page.getByRole("button", { name: "Reset" }).click();
+		await expect(source(page)).toHaveValue(/^# Greensleeves\ncomposer/);
+		// Reset forgets the edit: flipping away and back shows the original.
+		await flip(page, "Next", "Blues in F");
+		await flip(page, "Previous", "Greensleeves");
+		await expect(source(page)).toHaveValue(/^# Greensleeves\ncomposer/);
+	});
+
+	test.describe("on a phone", () => {
+		test.use({ viewport: { width: 360, height: 800 } });
+		/** Whether the page itself scrolls sideways. */
+		const scrolls = (page: Page) =>
+			page.evaluate(
+				() => document.documentElement.scrollWidth > document.documentElement.clientWidth,
+			);
+
+		test("no example scrolls the page sideways, as a grid or as a score", async ({ page }) => {
+			await page.goto("/");
+			for (const [i, title] of titles.entries()) {
+				if (i > 0) await flip(page, "Next", title);
+				await expect.poll(() => chartText(page)).toContain(title);
+				expect([title, "grid", await scrolls(page)]).toEqual([title, "grid", false]);
+			}
+			await flip(page, "Next", titles[0] ?? "");
+			await pressScore(page);
+			for (const [i, title] of titles.entries()) {
+				if (i > 0) await flip(page, "Next", title);
+				await expect.poll(() => scoreText(page), { timeout: 15_000 }).toContain(title);
+				expect([title, "score", await scrolls(page)]).toEqual([title, "score", false]);
+			}
+		});
 	});
 });
 
@@ -413,7 +566,7 @@ test.describe("navigating inside the site", () => {
 		await page.goto("/syntax");
 		await page.getByRole("link", { name: "barmark", exact: true }).click();
 		await expect(page).toHaveURL(/\/$/);
-		await expect.poll(() => chartText(page)).toContain("Peaceful Dreams");
+		await expect.poll(() => chartText(page)).toContain("Amazing Grace");
 	});
 });
 
@@ -542,7 +695,7 @@ test.describe("without JavaScript", () => {
 
 	test("the home page shows the rendered demo", async ({ page }) => {
 		await page.goto("/");
-		expect(await chartText(page)).toContain("Peaceful Dreams");
+		expect(await chartText(page)).toContain("Amazing Grace");
 	});
 
 	test("the guide shows every row, whatever the link says", async ({ page }) => {
@@ -809,15 +962,13 @@ test.describe("the score", () => {
 			ENGRAVER_WASM,
 		]);
 		expect(warnings.filter((w) => w.includes("Verovio"))).toEqual([]);
-		expect(await scoreText(page)).toContain("Peaceful Dreams");
+		expect(await scoreText(page)).toContain("Amazing Grace");
 		const score = page.locator("main barmark-score");
 		await expect(score.getByRole("radio", { name: "Score" })).toBeChecked();
-		await expect(score.getByRole("img", { name: "Peaceful Dreams" })).toBeVisible();
+		await expect(score.getByRole("img", { name: "Amazing Grace" })).toBeVisible();
 		// Chord symbols as the chart spells them.
 		const chords = await scoreChords(page);
-		expect(chords.slice(0, 2)).toEqual(["D7sus4", "D7sus4"]);
-		expect(chords).toContain("G5(7)");
-		expect(chords.filter((c) => c.includes("no3"))).toEqual([]);
+		expect(chords.slice(0, 4)).toEqual(["D", "G", "G", "G7"]);
 	});
 
 	test("a score loads the lite build, with no fallback warning", async ({ page }) => {
@@ -840,7 +991,7 @@ test.describe("the score", () => {
 		await page.goto("/");
 		await pressScore(page);
 		await expect(
-			page.locator("main barmark-score").getByRole("img", { name: "Peaceful Dreams" }),
+			page.locator("main barmark-score").getByRole("img", { name: "Amazing Grace" }),
 		).toBeVisible();
 		expect(warnings.filter((w) => w.includes("was not used"))).toEqual([]);
 		const wasm = fetched.find((f) => f.url === ENGRAVER_WASM);
@@ -962,7 +1113,7 @@ test.describe("the score without JavaScript", () => {
 		const score = page.locator("main barmark-score");
 		await expect(score.getByRole("radio", { name: "Grid" })).toBeChecked();
 		await expect(score.getByRole("radio", { name: "Score" })).not.toBeChecked();
-		expect(await chartText(page)).toContain("Peaceful Dreams");
+		expect(await chartText(page)).toContain("Amazing Grace");
 	});
 });
 
@@ -988,7 +1139,7 @@ test.describe("the key", () => {
 		page,
 	}) => {
 		await page.goto("/");
-		await expect(keyButton(page)).toHaveAccessibleName("Key: D");
+		await expect(keyButton(page)).toHaveAccessibleName("Key: G");
 		await source(page).fill("key: G\n| G | C |");
 		await expect(keyButton(page)).toHaveAccessibleName("Key: G");
 		await open(page);

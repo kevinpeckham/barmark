@@ -15,16 +15,21 @@ bun install
 bun run dev            # http://localhost:5173
 bun run build          # prerenders into .vercel/output
 bun run check          # svelte-check (TypeScript 6: see FINDINGS.md)
-bun test               # copy, demo chart, guide rows against the parser, built pages
+bun test               # copy, example charts, guide rows against the parser, built pages
 bun run test:browser   # Playwright: live editing, the guide, no JavaScript, phone widths
 ```
 
 - `src/lib/guide/rows.ts`: the guide, one row per construct. Every
   example is parsed in `tests/guide.test.ts`; a row the parser disagrees
   with fails the build.
-- `src/lib/demo.chart.md`: the home page's chart, drawn by
-  `<barmark-score>` (Grid / Score switch; Verovio loads only on Score)
-  with a Key menu (`src/lib/key.ts`, as Stem Shovel's, not remembered).
+- `src/lib/examples.ts` and `src/lib/examples/*.chart.md`: the home
+  page's charts, which Previous and Next flip through (Amazing Grace first,
+  the one prerendered). Each is the same text as the repository's
+  `examples/` copy, parses clean and prints unchanged
+  (`tests/examples.test.ts`). They are drawn by `<barmark-score>` (Grid /
+  Score switch; Verovio loads only on Score; a flip keeps the view and the
+  chord spelling) with a Key menu (`src/lib/key.ts`, as Stem Shovel's, not
+  remembered; a flip starts the new chart in its own key).
 - Scores load `@barmark/engraver`, the smaller modified build of Verovio,
   from jsDelivr with both its digests (`src/lib/chart.ts`, the score
   package's `ENGRAVER_*` values); if either file fails, the element falls

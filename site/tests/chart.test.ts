@@ -19,7 +19,9 @@ function timed(lines: number): number {
 	return ms;
 }
 
-const demo = await Bun.file(join(import.meta.dir, "../src/lib/demo.chart.md")).text();
+const demo = await Bun.file(
+	join(import.meta.dir, "../src/lib/examples/peaceful-dreams.chart.md"),
+).text();
 
 describe("chartHtml", () => {
 	test("an empty source is an empty chart, not an exception", () => {

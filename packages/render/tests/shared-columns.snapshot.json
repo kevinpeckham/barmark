@@ -300,11 +300,11 @@
 	"render:unreadable no-wrap": "1d8264b2cd591aee769909709f128a381b48f0a9ad15662c8dcf12e1a80d2898",
 	"render:unreadable diagnostics": "11f89221f1aa984c239527d6948a7187cde2c6505b5217ab2bdb9a44d5dc5969",
 	"render:unreadable dark": "4b25df69b0bdc18fca174ca80c1954e48bd595bfcb158c2eeeae06152e6a5a0f",
-	"site/src/lib/demo.chart.md default": "333bc42deb7a5af35f5148280454a420a05f474f088ebcd935df368acbe7b057",
-	"site/src/lib/demo.chart.md no-bar-numbers": "8845dc338f3b974b641ade8af4e3877ae086c14010acc9d4c9aa70bd19aa7ea7",
-	"site/src/lib/demo.chart.md rehearsal-letters": "4045fa0dccc4567daecdf6b1f3b960c71a7119c8a2c267a2cc87f6ac4b253a12",
-	"site/src/lib/demo.chart.md nashville": "a991f26a7005860b606212b968ca47d07831522543dae90872be3748fdf6427c",
-	"site/src/lib/demo.chart.md no-wrap": "ec15378c0690dff54f9e6ffff22b11f6798a887099deda2f48d813cbe54b11ee",
-	"site/src/lib/demo.chart.md diagnostics": "333bc42deb7a5af35f5148280454a420a05f474f088ebcd935df368acbe7b057",
-	"site/src/lib/demo.chart.md dark": "edfcb1da3dc3bc735e5818be5cc7678e458fafc192d77cce98e4aa1f076aa915"
+	"site/src/lib/examples/peaceful-dreams.chart.md default": "333bc42deb7a5af35f5148280454a420a05f474f088ebcd935df368acbe7b057",
+	"site/src/lib/examples/peaceful-dreams.chart.md no-bar-numbers": "8845dc338f3b974b641ade8af4e3877ae086c14010acc9d4c9aa70bd19aa7ea7",
+	"site/src/lib/examples/peaceful-dreams.chart.md rehearsal-letters": "4045fa0dccc4567daecdf6b1f3b960c71a7119c8a2c267a2cc87f6ac4b253a12",
+	"site/src/lib/examples/peaceful-dreams.chart.md nashville": "a991f26a7005860b606212b968ca47d07831522543dae90872be3748fdf6427c",
+	"site/src/lib/examples/peaceful-dreams.chart.md no-wrap": "ec15378c0690dff54f9e6ffff22b11f6798a887099deda2f48d813cbe54b11ee",
+	"site/src/lib/examples/peaceful-dreams.chart.md diagnostics": "333bc42deb7a5af35f5148280454a420a05f474f088ebcd935df368acbe7b057",
+	"site/src/lib/examples/peaceful-dreams.chart.md dark": "edfcb1da3dc3bc735e5818be5cc7678e458fafc192d77cce98e4aa1f076aa915"
 }

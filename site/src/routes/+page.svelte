@@ -4,11 +4,44 @@ import ChartRender from "#lib/components/ChartRender.svelte";
 import KeyMenu from "#lib/components/KeyMenu.svelte";
 import SourceEditor from "#lib/components/SourceEditor.svelte";
 import Window from "#lib/components/Window.svelte";
-import demo from "#lib/demo.chart.md?raw";
+import { EXAMPLES, type Example, exampleFile, flipped } from "#lib/examples.js";
 import { chartKey } from "#lib/key.js";
 import { HEADLINE, LINKS, TAGLINE_AFTER, TAGLINE_BEFORE, TAGLINE_LINK, VALUE } from "#lib/site.js";
 
-let text = $state(demo);
+/** Every example's chart, bundled: a flip draws at once, with no request. */
+const charts = import.meta.glob<string>("../lib/examples/*.chart.md", {
+	query: "?raw",
+	import: "default",
+	eager: true,
+});
+const chartOf = (example: Example) => charts[`../lib/examples/${exampleFile(example)}`] ?? "";
+
+/** The example on show; the first, Amazing Grace, is the one prerendered. */
+let index = $state(0);
+const example: Example = $derived(EXAMPLES[index] ?? EXAMPLES[0]);
+const original = $derived(chartOf(example));
+let text = $state(chartOf(EXAMPLES[0]));
+
+/** Each example's edited text, kept across flips until its Reset; never stored beyond the page. Not reactive (no SvelteMap): only flip and reset read it. */
+const edits = new Map<Example["id"], string>();
+
+/**
+ * Shows the next (1) or previous (-1) example, as the reader last left it,
+ * in its own key; the view and the chord spelling stay.
+ */
+function flip(step: number) {
+	if (text === original) edits.delete(example.id);
+	else edits.set(example.id, text);
+	index = flipped(index, step);
+	text = edits.get(example.id) ?? original;
+	semitones = 0;
+}
+
+/** Back to the example as written, forgetting its edit. */
+function reset() {
+	edits.delete(example.id);
+	text = original;
+}
 
 /** The render window's chord spelling, as Stem Shovel's Chords view offers it. */
 const SPELLINGS = [
@@ -57,6 +90,21 @@ const description =
 		<Button href={LINKS.article}>Why we built it</Button>
 	</div>
 
+	<div role="group" aria-label="Examples" class="flex flex-wrap items-center gap-x-3 gap-y-2 -mb-4">
+		<div class="flex gap-2">
+			<button type="button" class="button text-xs" aria-label="Previous example" onclick={() => flip(-1)}>
+				<span class="i-ph-caret-left" aria-hidden="true"></span>Previous
+			</button>
+			<button type="button" class="button text-xs" aria-label="Next example" onclick={() => flip(1)}>
+				Next<span class="i-ph-caret-right" aria-hidden="true"></span>
+			</button>
+		</div>
+		<p role="status" class="text-sm min-w-0">
+			<span class="font-semibold">{example.title}</span>
+			<span class="opacity-70">{index + 1} of {EXAMPLES.length}</span>
+		</p>
+	</div>
+
 	<div class="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)] gap-4">
 		<Window title="Source · edit me">
 			<div class="flex flex-col h-full">
@@ -65,8 +113,8 @@ const description =
 					<button
 						type="button"
 						class="button text-xs"
-						disabled={text === demo}
-						onclick={() => (text = demo)}
+						disabled={text === original}
+						onclick={reset}
 					>
 						<span class="i-ph-arrow-counter-clockwise" aria-hidden="true"></span>Reset
 					</button>
@@ -115,8 +163,5 @@ const description =
 			</div>
 		</Window>
 	</div>
-	<p data-credit class="text-xs opacity-60">
-		The demo is “Peaceful Dreams” by Kevin Peckham, recorded by Badverbs. © Kevin Peckham, all rights
-		reserved.
-	</p>
+	<p data-credit class="text-xs opacity-60">{example.credit}</p>
 </main>
