@@ -6,6 +6,8 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.9.1] - 2026-11-12
+
 ### Fixed
 
 - **Only 6/8, 9/8 and 12/8 beat in dotted quarters** (barmark's grammar
@@ -656,7 +658,8 @@ and each grammar example's sounding notes and chord symbols.
 - **Errors:** a chart with errors, or with no bars, returns its
   diagnostics and no XML; characters XML can't hold are left out.
 
-[Unreleased]: https://github.com/kevinpeckham/barmark/compare/musicxml-v0.9.0...HEAD
+[Unreleased]: https://github.com/kevinpeckham/barmark/compare/musicxml-v0.9.1...HEAD
+[0.9.1]: https://github.com/kevinpeckham/barmark/compare/musicxml-v0.9.0...musicxml-v0.9.1
 [0.9.0]: https://github.com/kevinpeckham/barmark/compare/musicxml-v0.8.0...musicxml-v0.9.0
 [0.8.0]: https://github.com/kevinpeckham/barmark/compare/musicxml-v0.7.2...musicxml-v0.8.0
 [0.7.2]: https://github.com/kevinpeckham/barmark/compare/musicxml-v0.7.1...musicxml-v0.7.2
