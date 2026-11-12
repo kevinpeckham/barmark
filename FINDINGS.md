@@ -2652,5 +2652,5 @@ those never reached, or reached in a repeat with passes enough for their verse (
 - **The cause.** The VM's `gh` (2.45) also queries a PR's classic project
   cards when it edits it, and GitHub has retired that API.
 - **The fix.** Edit through the REST API instead:
-  `gh api -X PATCH repos/kevinpeckham/barmark/pulls/N -f body=@file`
-  (or `-F body=@file`), or upgrade `gh`.
+  `gh api -X PATCH repos/kevinpeckham/barmark/pulls/N -F body=@file`
+  (`-F` reads the file; `-f` would send the text "@file"), or upgrade `gh`.
