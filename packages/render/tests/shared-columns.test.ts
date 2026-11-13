@@ -3,12 +3,14 @@ import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { type RenderOptions, renderChart, stylesheet } from "../src/index.js";
-import { ROW_COLUMNS_CSS } from "../src/styles.js";
+import { DIAGRAMS_CSS, ROW_COLUMNS_CSS } from "../src/styles.js";
 import { AMAZING_GRACE, EXAMPLE } from "./fixtures.js";
 
 // `columns: "shared"`, the default, draws every chart byte for byte as
-// render 0.18.0 did (Kevin, 2026-11-10); the stylesheet only gains the "row"
-// rules at its end, which the comparison takes out. The snapshot was taken
+// render 0.18.0 did (Kevin, 2026-11-10), and with `chordDiagrams` off a chart
+// draws as it did before diagrams existed. The stylesheet only gains the
+// strip's rules and then the "row" rules, at its end, and the comparison takes
+// both out, so what is hashed is the output as it was. The snapshot was taken
 // from main's renderer at d32bdc6, before `columns` existed, over the charts
 // pinned below (the render tests' own and the 39 chart files the repository
 // held then). It is a record of that renderer: regenerate it only against
@@ -81,9 +83,9 @@ const OPTIONS: Record<string, RenderOptions> = {
 };
 
 const hash = (html: string) => createHash("sha256").update(html).digest("hex");
-/** Today's markup with the "row" rules taken out of its stylesheet: what 0.18.0 drew. */
+/** Today's markup with the strip's and the "row" rules taken out of its stylesheet: what 0.18.0 drew. */
 const asBefore = (html: string) =>
-	html.replace(stylesheet, () => stylesheet.replace(ROW_COLUMNS_CSS, ""));
+	html.replace(stylesheet, () => stylesheet.replace(DIAGRAMS_CSS + ROW_COLUMNS_CSS, ""));
 
 /** Every chart's hash under one option set, keyed as the snapshot keys them. */
 function hashes(key: string, options: RenderOptions): Record<string, string> {
@@ -100,6 +102,13 @@ describe('columns: "shared" draws as before', () => {
 		expect(ROW_COLUMNS_CSS.length).toBeGreaterThan(0);
 		expect(stylesheet.endsWith(ROW_COLUMNS_CSS)).toBe(true);
 		expect(ROW_COLUMNS_CSS).not.toContain('data-columns="shared"');
+	});
+
+	test("the stylesheet gains the strip's rules just before the row rules, and nothing else", () => {
+		expect(DIAGRAMS_CSS).toContain(".bm-diagrams");
+		expect(stylesheet.endsWith(DIAGRAMS_CSS + ROW_COLUMNS_CSS)).toBe(true);
+		const before = stylesheet.slice(0, -(DIAGRAMS_CSS + ROW_COLUMNS_CSS).length);
+		expect(before).not.toMatch(/bm-diagram|bm-dg-/);
 	});
 
 	test("the snapshot holds the pinned charts under every option set, and nothing else", () => {

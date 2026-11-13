@@ -8,17 +8,20 @@ import type { Shape } from "@barmark/fretboard";
 import { escapeHtml } from "./escape.js";
 
 /**
- * The drawing, in the viewBox's units: strings 10 apart from x 23 (room at
- * the left for the fret number), fret lines 12 apart from y 13 (room above
- * for the open and muted marks), dots 76% of a string's spacing across.
+ * The drawing, in the viewBox's units: strings 10 apart from x 41 (room at
+ * the left for a fret number as wide as `15fr`), fret lines 12 apart from
+ * y 13 (room above for the open and muted marks), dots 76% of a string's
+ * spacing across. The fret number is 13 units tall and ends 2 units short
+ * of a dot or barre on the first string.
  */
-const STRING = { first: 23, gap: 10 };
+const STRING = { first: 41, gap: 10 };
 const FRET = { top: 13, gap: 12 };
 const DOT = 3.8;
 const MARK = { y: 5, size: 2.8 };
+const LABEL = { size: 13, gap: 2 };
 const LAST = STRING.first + 5 * STRING.gap;
 /** The viewBox's size, and the x of the strings' middle, which the name under it centres on. */
-export const DIAGRAM_VIEW = { width: 78, height: 75, centre: (STRING.first + LAST) / 2 };
+export const DIAGRAM_VIEW = { width: LAST + 5, height: 75, centre: (STRING.first + LAST) / 2 };
 
 const n = (v: number) => String(Math.round(v * 10) / 10);
 const range = (count: number) => Array.from({ length: count }, (_, i) => i);
@@ -78,7 +81,7 @@ const dotsSvg = (shape: Shape, hand: "right" | "left") =>
 const topSvg = (base: number) =>
 	base === 1
 		? NUT
-		: `<text class="bm-dg-fret" x="${STRING.first - 5}" y="${n(spaceY(1) + 3.5)}" font-size="10">${escapeHtml(`${base}fr`)}</text>`;
+		: `<text class="bm-dg-fret" x="${n(STRING.first - DOT - LABEL.gap)}" y="${n(spaceY(1) + 4.5)}" font-size="${LABEL.size}">${escapeHtml(`${base}fr`)}</text>`;
 
 /**
  * A shape as one `<svg role="img">` named by `label`. Left-handed mirrors

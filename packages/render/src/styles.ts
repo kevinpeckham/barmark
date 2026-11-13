@@ -52,15 +52,6 @@ const BRACKET = { top: 0.6, hook: 0.3, line: 0.06 };
  * as the widest note or syllable.
  */
 const SUNG = { note: 1.3, verse: 1.25, barTop: 0.65 };
-/**
- * A chord diagram, in chord sizes: its drawing's width (the height follows
- * its viewBox), and the small print of the frame and note under it.
- */
-const DIAGRAM = { width: 3.5, small: 0.6 };
-const DIAGRAM_HEIGHT = (DIAGRAM.width * DIAGRAM_VIEW.height) / DIAGRAM_VIEW.width;
-/** How far the drawing moves left so its strings, not its fret-number margin, sit over the name. */
-const DIAGRAM_SHIFT =
-	(DIAGRAM.width * (DIAGRAM_VIEW.width - 2 * DIAGRAM_VIEW.centre)) / DIAGRAM_VIEW.width;
 /** The single note's ring, in its own em: padding, and the border it spills past. */
 const RING = { y: 0.21, x: 0.5, border: 0.07 };
 
@@ -219,26 +210,11 @@ const css = `
 .bm-error code{font:.7em/1.4 ui-monospace,Menlo,Consolas,monospace;text-decoration:underline wavy var(--bm-accent);text-decoration-thickness:.08em;text-underline-offset:.25em;white-space:pre-wrap}
 .bm-diagnostics{margin:1em 0 0;padding-left:1.2em;font:${em(SIZES.diagnostics)}/1.5 ${LABEL};color:var(--bm-muted)}
 .bm-diagnostics .bm-error{color:var(--bm-accent)}
-.bm-diagrams ul{display:flex;flex-wrap:wrap;gap:.5em 1em;margin:0 0 .3em;padding:0;list-style:none}
-.bm-diagram{display:flex;flex-direction:column;align-items:center;text-align:center;break-inside:avoid}
-.bm-diagram-svg{display:block;width:${em(DIAGRAM.width)};height:${em(DIAGRAM_HEIGHT)};margin-left:${em(DIAGRAM_SHIFT)}}
-.bm-diagram-none{display:flex;align-items:center;width:${at(DIAGRAM.small, DIAGRAM.width)};min-height:${at(DIAGRAM.small, DIAGRAM_HEIGHT)};padding:.3em;border:.1em dashed var(--bm-rule);border-radius:.4em}
-:is(.bm-diagram-none,.bm-diagram-note){font:${em(DIAGRAM.small)}/1.2 ${LABEL};color:var(--bm-muted)}
-.bm-diagram-note{max-width:${at(DIAGRAM.small, DIAGRAM.width + 1)}}
-.bm-diagram-name{padding-top:.35em;line-height:1.2;white-space:nowrap}
-:is(.bm-diagram-voicing,.bm-diagram-numeral){display:block;font-size:.75em;color:var(--bm-muted);white-space:normal}
-.bm-dg-grid{fill:none;stroke:var(--bm-rule);stroke-width:1.2}
-.bm-dg-mark{fill:none;stroke:var(--bm-muted);stroke-width:1.3}
-:is(.bm-dg-nut,.bm-dg-dot,.bm-dg-barre){fill:var(--bm-ink)}
-.bm-dg-fret{fill:var(--bm-muted);font-family:${TEXT};text-anchor:end}
 @media (forced-colors:active){
 	.bm-bar,.bm-row>div.bm-bar:first-of-type,.bm-row>div.bm-bar[data-repeat-start],.bm-row>div.bm-bar[data-repeat-end]{border-color:CanvasText}
 	.bm-ring,.bm-tuplet::before,.bm-tuplet::after,.bm-extender{border-color:CanvasText}
 	.bm-silence{background:CanvasText;forced-color-adjust:none}
 	.bm-bar[data-cut]{outline-color:CanvasText}
-	:is(.bm-dg-grid,.bm-dg-mark){stroke:CanvasText}
-	:is(.bm-dg-nut,.bm-dg-dot,.bm-dg-barre,.bm-dg-fret){fill:CanvasText}
-	.bm-diagram-none{border-color:CanvasText}
 }
 ${FIT_STEPS.map((w) => {
 	const g = `.bm-chart:not([data-wrap="off"]) .bm-grid[data-fit="${w}"]`;
@@ -272,4 +248,50 @@ const minify = (text: string) =>
 /** The rules only `columns: "row"` uses, at the stylesheet's end. */
 export const ROW_COLUMNS_CSS = minify(rowCss);
 
-export const stylesheet = minify(css) + ROW_COLUMNS_CSS;
+/**
+ * A chord diagram, in chord sizes. A viewBox unit is 3.5/78 of a chord size,
+ * so strings stand .45em apart. The drawing moves left by its fret-number
+ * margin, less its right margin, so its strings sit over the name; its item
+ * pads that much on the left, so nothing reaches into the next one. The
+ * frame of a diagram with no shape is as tall as a drawing, a little wider
+ * so its words break in three lines; it and the note are in small print.
+ */
+const UNIT = 3.5 / 78;
+const DIAGRAM = {
+	width: DIAGRAM_VIEW.width * UNIT,
+	height: DIAGRAM_VIEW.height * UNIT,
+	shift: (DIAGRAM_VIEW.width - 2 * DIAGRAM_VIEW.centre) * UNIT,
+	frame: 4.9,
+	small: 0.6,
+	/** A note set's name: three notes to a line. */
+	set: 5.6,
+};
+
+/** The strip of chord diagrams (design 5): only charts drawn with `chordDiagrams` use it. */
+const diagramsCss = `
+.bm-diagrams ul{display:flex;flex-wrap:wrap;gap:.5em .6em;margin:0 0 .3em;padding:0;list-style:none}
+.bm-diagram{display:flex;flex-direction:column;align-items:center;text-align:center;break-inside:avoid}
+.bm-diagram:has(>svg){padding-left:${em(-DIAGRAM.shift)}}
+.bm-diagram-svg{display:block;width:${em(DIAGRAM.width)};height:${em(DIAGRAM.height)};margin-left:${em(DIAGRAM.shift)}}
+.bm-diagram-none{display:flex;align-items:center;justify-content:center;width:${at(DIAGRAM.small, DIAGRAM.frame)};height:${at(DIAGRAM.small, DIAGRAM.height)};padding:.3em;border:.1em dashed var(--bm-rule);border-radius:.4em;text-wrap:balance}
+:is(.bm-diagram-none,.bm-diagram-note){font:${em(DIAGRAM.small)}/1.2 ${LABEL};color:var(--bm-muted)}
+.bm-diagram-note{max-width:${at(DIAGRAM.small, DIAGRAM.frame)}}
+.bm-diagram-name{padding-top:.35em;line-height:1.2}
+.bm-diagram-set{max-width:${em(DIAGRAM.set)};white-space:normal}
+:is(.bm-diagram-voicing,.bm-diagram-numeral){display:block;font-size:.75em;color:var(--bm-muted)}
+.bm-diagram-voicing{max-width:${at(0.75, DIAGRAM.frame)}}
+.bm-dg-grid{fill:none;stroke:var(--bm-rule);stroke-width:1.2}
+.bm-dg-mark{fill:none;stroke:var(--bm-muted);stroke-width:1.3}
+:is(.bm-dg-nut,.bm-dg-dot,.bm-dg-barre){fill:var(--bm-ink)}
+.bm-dg-fret{fill:var(--bm-muted);font-family:${TEXT};text-anchor:end}
+@media (forced-colors:active){
+	:is(.bm-dg-grid,.bm-dg-mark){stroke:CanvasText}
+	:is(.bm-dg-nut,.bm-dg-dot,.bm-dg-barre,.bm-dg-fret){fill:CanvasText}
+	.bm-diagram-none{border-color:CanvasText}
+}
+`;
+
+/** The strip's rules, between the shared rules and the row rules, so a chart drawn without it is styled byte for byte as before. */
+export const DIAGRAMS_CSS = minify(diagramsCss);
+
+export const stylesheet = minify(css) + DIAGRAMS_CSS + ROW_COLUMNS_CSS;

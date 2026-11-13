@@ -29,7 +29,14 @@ import { diagramSvg } from "./diagram.js";
 import { escapeHtml } from "./escape.js";
 import { fontFaceCss } from "./font.js";
 import { isTacet as isTacetCell, layoutChart } from "./model.js";
-import { barLabel, speakBar, speakDiagram, speakVerses } from "./speech.js";
+import {
+	barLabel,
+	speakBar,
+	speakDiagram,
+	speakVerses,
+	UNPLAYABLE,
+	VOICING_REPLACED,
+} from "./speech.js";
 import { FIT_STEPS, MIN_BAR, stylesheet } from "./styles.js";
 import type {
 	BlockItem,
@@ -207,29 +214,31 @@ const handOf = (options: RenderOptions): Hand =>
 /** The chart's chords as guitar diagrams, in one wrapping row after the header (design 5.1); nothing when it has none. */
 function diagramsHtml(entries: DiagramEntry[], numerals: Numerals | null, hand: Hand): string {
 	if (entries.length === 0) return "";
-	return `<section class="bm-diagrams" part="diagrams" aria-label="Guitar chords"><ul>${entries.map((e) => diagramHtml(e, numerals, hand)).join("")}</ul></section>`;
+	return `<section class="bm-diagrams" part="diagrams" aria-label="Guitar chords"><ul role="list">${entries.map((e) => diagramHtml(e, numerals, hand)).join("")}</ul></section>`;
 }
 
 /** One diagram: the drawing (or, with no shape, a frame saying why), its name, its numeral and its note. */
 function diagramHtml(entry: DiagramEntry, numerals: Numerals | null, hand: Hand): string {
-	const label = speakDiagram(entry);
+	// With numerals on, the label says the degree, as the bar's speech does.
+	const label = speakDiagram(entry, numerals && entry.key ? entry.key : undefined);
 	const drawing = entry.shape
 		? diagramSvg(entry.shape, hand, label)
-		: `<span class="bm-diagram-none" role="img" aria-label="${escapeHtml(label)}">${escapeHtml("not playable in standard tuning")}</span>`;
+		: `<span class="bm-diagram-none" role="img" aria-label="${escapeHtml(label)}">${escapeHtml(UNPLAYABLE)}</span>`;
 	const note =
 		entry.caveat === "voicing-replaced"
-			? `<span class="bm-diagram-note" aria-hidden="true">${escapeHtml("written voicing doesn't fit standard tuning")}</span>`
+			? `<span class="bm-diagram-note" aria-hidden="true">${escapeHtml(VOICING_REPLACED)}</span>`
 			: "";
-	return `<li class="bm-diagram" part="diagram">${drawing}<span class="bm-diagram-name" aria-hidden="true">${diagramNameHtml(entry)}</span>${diagramNumeralHtml(entry, numerals)}${note}</li>`;
+	return `<li class="bm-diagram" part="diagram">${drawing}${diagramNameHtml(entry)}${diagramNumeralHtml(entry, numerals)}${note}</li>`;
 }
 
-/** A name as the grid marks it up, then its written voicing, smaller; a note set as written. */
+/** A name as the grid marks it up, then its written voicing, smaller; a note set as written, free to wrap. */
 function diagramNameHtml({ chord, voicing }: DiagramEntry): string {
-	if (chord.kind === "notes" || !chord.parts) return escapeHtml(chord.canonical);
+	if (chord.kind === "notes" || !chord.parts)
+		return `<span class="bm-diagram-name bm-diagram-set" aria-hidden="true">${escapeHtml(chord.canonical)}</span>`;
 	const voiced = voicing
 		? `<span class="bm-diagram-voicing">${escapeHtml(voicing.canonical)}</span>`
 		: "";
-	return `${piecesHtml(typesetChord(chord.parts), "")}${voiced}`;
+	return `<span class="bm-diagram-name" aria-hidden="true">${piecesHtml(typesetChord(chord.parts), "")}${voiced}</span>`;
 }
 
 /** With `numerals`, a named chord's degree in the key where it first appears; the name above stays in letters. */

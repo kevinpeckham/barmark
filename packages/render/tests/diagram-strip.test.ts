@@ -43,6 +43,8 @@ test("the strip sits after the header and before the first section", () => {
 	expect(strip?.previousElementSibling?.className).toBe("bm-header");
 	expect(strip?.nextElementSibling?.className).toBe("bm-section");
 	expect(strip?.querySelectorAll('li[part="diagram"]')).toHaveLength(4);
+	// list-style:none drops a list's role in Safari with VoiceOver: the role keeps it.
+	expect(strip?.querySelector("ul")?.getAttribute("role")).toBe("list");
 });
 
 test("each diagram is an image with a spoken label and a visible name", () => {
@@ -80,8 +82,10 @@ describe("the names", () => {
 		expect(d.querySelector(".bm-diagram-name .bm-chord")?.outerHTML).toBe(grid as string);
 	});
 
-	test("a note set's name is its written text", () => {
-		expect(texts(strip("| {C3 G3 E4} |"), ".bm-diagram-name")).toEqual(["{C3 G3 E4}"]);
+	test("a note set's name is its written text, marked as one that may wrap; a chord's is not", () => {
+		const d = strip("| {C3 G3 E4} | C |");
+		expect(texts(d, ".bm-diagram-name")).toEqual(["{C3 G3 E4}", "C"]);
+		expect(texts(d, ".bm-diagram-name.bm-diagram-set")).toEqual(["{C3 G3 E4}"]);
 	});
 
 	test("a name with a voicing: the name, then the voicing smaller", () => {
@@ -118,6 +122,35 @@ describe("numerals", () => {
 	});
 });
 
+describe("the label says what a bar says", () => {
+	const CHART = "key: A\n| F#m | E |\n| Cmaj7 | Cmaj7{E3 G3} |";
+
+	test("with numerals on and a key in force, the degree first, as the bar speaks it", () => {
+		const d = strip(CHART, { numerals: "nashville" });
+		expect(labels(d)[0]).toBe("six, F sharp minor: 2, 4, 4, 2, 2, 2");
+		const bar = d.querySelector(".bm-section .bm-bar .bm-sr")?.textContent ?? "";
+		expect(bar).toContain("six, F sharp minor");
+		// The numeral line stays hidden: the label carries it.
+		expect(d.querySelector(".bm-diagram-numeral")?.getAttribute("aria-hidden")).toBe("true");
+	});
+
+	test("with numerals off, no degree", () => {
+		expect(labels(strip(CHART))[0]).toBe("F sharp minor: 2, 4, 4, 2, 2, 2");
+	});
+
+	test("with numerals on and no key in force, no degree", () => {
+		expect(labels(strip("| F#m |", { numerals: "roman" }))[0]).toBe(
+			"F sharp minor: 2, 4, 4, 2, 2, 2",
+		);
+	});
+
+	test("a name with a voicing is spoken with its notes, unlike the bare name", () => {
+		const [, , bare, voiced] = labels(strip(CHART));
+		expect(bare).toStartWith("C major seven: ");
+		expect(voiced).toStartWith("C major seven voiced E3 G3: ");
+	});
+});
+
 describe("what a diagram cannot show", () => {
 	test("not playable: a frame with words in place of the drawing, and its label", () => {
 		const d = strip("| {E2 F2 F#2} |");
@@ -134,7 +167,7 @@ describe("what a diagram cannot show", () => {
 		const d = strip("| Cmaj7{E3 G3 B3 C4} |");
 		expect(texts(d, ".bm-diagram-note")).toEqual(["written voicing doesn't fit standard tuning"]);
 		expect(labels(d)).toEqual([
-			"C major seven: muted, 3, 2, open, open, open, written voicing doesn't fit standard tuning",
+			"C major seven voiced E3 G3 B3 C4: muted, 3, 2, open, open, open, written voicing doesn't fit standard tuning",
 		]);
 	});
 
@@ -167,7 +200,13 @@ describe("speakDiagram", () => {
 		);
 	});
 
-	test("the fret numbers as written, above the fifth fret too; no degree, whatever the key", () => {
+	test("with a key, the degree first, as speakChord gives it", () => {
+		expect(speakDiagram(entry({}), { tonic: "G", mode: "major" })).toBe(
+			"four, C: muted, 3, 2, open, 1, open",
+		);
+	});
+
+	test("the fret numbers as written, above the fifth fret too; no degree without a key passed", () => {
 		expect(
 			speakDiagram(entry({ shape: shapeOf("x35553"), key: { tonic: "G", mode: "major" } })),
 		).toBe("C: muted, 3, 5, 5, 5, 3");
