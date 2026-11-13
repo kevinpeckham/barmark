@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import { type ChordRecord, parseChord } from "barmark";
 import { shapeFor, shapesFor, soundsChord } from "../src/index.js";
-import { withinLimits, wantOf } from "../src/sounds.js";
+import { wantOf, withinLimits } from "../src/sounds.js";
 import { chord, FORMS, ROOTS } from "./helpers/vocabulary.js";
 
 /** The vocabulary's roots and their other spellings, so the sweep covers every name a player may write. */

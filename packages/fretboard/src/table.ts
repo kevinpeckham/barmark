@@ -9,12 +9,12 @@ const rows = (...groups: string[]): readonly (readonly [name: string, frets: str
 export const OPEN = rows(
 	// C
 	"C:x32010 C7:x32310 Cmaj7:x32000 C6:x32210 C6/9:x32233 Csus2:x30013 Csus4:x33011 C7sus4:x33311 " +
-		"C(9):x32033 C(11):x33010 C9:x3233x Caug:x32110 C/E:032010 C/G:332010 C7/E:032310 C/B:x22010",
+		"C(9):x32033 C(11):x33010 C9:x3233x Caug:x32110 C/E:032010 C/G:332010 C7/E:032310 C/B:x22010 C/Bb:x12010",
 	// A
 	"A:x02220 Am:x02210 A7:x02020 Amaj7:x02120 Am7:x02010 Ammaj7:x02110 A6:x02222 Am6:x02212 " +
 		"Asus2:x02200 Asus4:x02230 A7sus4:x02030 A7sus2:x02000 A(9):x02420 Am(9):x02410 A9:x02423 " +
 		"Amaj9:x02424 A13:x02022 A6/9:x02422 A5:x022xx Aaug:x03221 Adim:x0121x Am7(b5):x0101x " +
-		"Adim7:x01212 A/C#:x42220 A/E:002220 A/G:302220 Am/C:x32210 Am/E:002210 Am/G:302210",
+		"Adim7:x01212 A/C#:x42220 A/E:002220 A/G:302220 Am/C:x32210 Am/E:002210 Am/G:302210 A7(b9):x02323",
 	// G
 	"G:320003 G7:320001 Gmaj7:320002 G6:320000 Gsus2:300033 Gsus4:330013 G7sus4:330011 G(9):320203 " +
 		"Gaug:321003 G/B:x20003 G/A:x00003 G/D:xx0003 G/F:120003 G/F#:220003 G7/B:x20001",
@@ -22,16 +22,17 @@ export const OPEN = rows(
 	"E:022100 Em:022000 E7:020100 Emaj7:021100 Em7:020000 Emmaj7:021000 E6:022120 Em6:022020 Em6/9:022022 " +
 		"Esus2:024400 Esus4:022200 E7sus4:020200 E5:022xxx E9:020102 Emaj9:021102 Em9:020002 " +
 		"E7(b9):020101 E13:020122 E(9):024100 Em(9):022002 E7(#9):07678x Eaug:032110 Edim7:012020 " +
-		"E/B:x22100 E/G#:422100 E7/G#:420100 Em/B:x22000 Em/G:322000 Em7/D:xx0000",
+		"E/B:x22100 E/G#:422100 E7/G#:420100 Em/B:x22000 Em/G:322000 Em7/D:xx0000 E7(b13):020110 Eaug7:030110",
 	// D
 	"D:xx0232 Dm:xx0231 D7:xx0212 Dmaj7:xx0222 Dm7:xx0211 D6:xx0202 Dm6:xx0201 Dsus2:xx0230 " +
 		"Dsus4:xx0233 D7sus4:xx0213 D7sus2:xx0210 D(9):xx0252 D5:xx023x Ddim:xx0131 Ddim7:xx0101 " +
 		"Dm7(b5):xx0111 Daug:xx0332 D/A:x00232 D/C:x30232 D/F#:200232 D7/F#:200212 Dm/A:x00231 " +
-		"Dm/F:xx3231 Dm7/C:x30211",
+		"Dm/F:xx3231 Dm7/C:x30211 Dmmaj7:xx0221",
 	// F
-	"Fmaj7:xx3210 Fmaj7(#11):xx3200 Fsus2:xx3011 F/A:x03211",
+	"Fmaj7:xx3210 Fmaj7(#11):xx3200 Fsus2:xx3011 F/A:x03211 F6/9:100011",
 	// B
-	"B7:x21202 Bm7:x20202 Bm7(b5):x20201 B7sus4:x22202 Bm/D:xx0432",
+	"B7:x21202 Bm7:x20202 Bm7(b5):x20201 B7sus4:x22202 Bm/D:xx0432 Bm9:x20222 Bm11:x20220 B6:x21102 " +
+		"Bm6:x20102 Bm/A:x04432 Bbaug:x10332 Baug:x2100x Bb6/9:x10011",
 );
 
 /** Shapes with no open string, written on one root and moved along the neck to any other. */

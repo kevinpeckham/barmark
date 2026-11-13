@@ -185,7 +185,7 @@ test("of two moved shapes at one fret, the lower frets win, compared as numbers"
 	expect(lower(ten, eight)).toBe(false);
 });
 
-test("rows added after review: G/A, Em6/9, and Ab/Bb at its lowest fret (Bbaug and Baug did not fit the size budget)", () => {
+test("rows added after review: G/A, Em6/9, and Ab/Bb at its lowest fret", () => {
 	const first = (n: string) => {
 		const shape = tableShape(chord(n));
 		return shape ? shapeText(shape) : null;
@@ -195,4 +195,24 @@ test("rows added after review: G/A, Em6/9, and Ab/Bb at its lowest fret (Bbaug a
 	expect(first("Ab/Bb")).toBe("x1111x");
 	expect(first("A/B")).toBe("x2222x");
 	expect(first("Bb/C")).toBe("x3333x");
+});
+
+test("familiar first-position shapes that sat behind barres at frets 5 to 7", () => {
+	const expected: [string, string][] = [
+		["Dmmaj7", "xx0221"],
+		["A7(b9)", "x02323"],
+		["E7(b13)", "020110"],
+		["Eaug7", "030110"],
+		["Bm9", "x20222"],
+		["Bm11", "x20220"],
+		["B6", "x21102"],
+		["Bm6", "x20102"],
+		["C/Bb", "x12010"],
+		["Bm/A", "x04432"],
+		["Bbaug", "x10332"],
+		["Baug", "x2100x"],
+		["F6/9", "100011"],
+		["Bb6/9", "x10011"],
+	];
+	expect(expected.map(([n]) => [n, text(n)])).toEqual(expected);
 });
