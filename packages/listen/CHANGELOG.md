@@ -13,16 +13,32 @@ package uses [semantic versioning](https://semver.org/).
   with the chord runs, as a chart, its timing map and its confidence
   record, with no audio and no features. Each downbeat is snapped to its
   nearest beat; the meter is labelled from the modal count of beats in a
-  bar and the tempo from the median beat interval, a third of it in 6/8
-  (stem-bench Study 41); adjacent half bars are joined
-  (Study 44); an unsteady reading is turned away. Beats before bar one
-  are a pickup when they measure 1 beat to half a bar by the builder's own
-  measure and bar one is a usual bar; otherwise they are left off with a warning. `declared` is
-  optional and compared, never obeyed. A refused reading is a refusal with
-  its numbers, never a silent fallback: a host calls `chartFromRecording`
-  itself. `./stages` adds `snapDownbeats`, `beatsLabel`, `joinHalfBars`
-  and `steadyShare`. The design is
+  bar and the tempo from the median beat interval, a third of that tempo
+  in 6/8 (stem-bench Study 41); adjacent half bars are joined (Study 44);
+  an unsteady reading is turned away. Beats before bar one are a pickup
+  when they measure 1 beat to half a bar by the builder's own measure and
+  bar one is a usual bar; otherwise they are left off with a warning.
+  `declared` is optional and compared, never obeyed. A refused reading is
+  a refusal with its numbers, never a silent fallback: a host calls
+  `chartFromRecording` itself. `./stages` adds `snapDownbeats`,
+  `beatsLabel`, `joinHalfBars` and `steadyShare`. The design is
   `docs/superpowers/specs/2026-11-12-listen-beats-design.md`.
+- **Where this path differs from the app** (design §9):
+  - the app returns null for no grid; listen refuses (`too-few-bars` or
+    `bars-unsteady`) with the reading;
+  - a pickup is written when the beats before the first downbeat measure 1
+    beat to half a bar before a usual bar one; the app drops them;
+  - the map's `recording.duration` is the recording's length, where the
+    app passes the grid's end;
+  - the grid stops at `MAX_GRID_BARS` with `grid-truncated`; the app has no
+    cap;
+  - input the app never sees (unsorted, non-finite, past the end, over
+    200,000 beats) is `invalid-input`, not repaired;
+  - downbeats are snapped on every call, where the app snaps once before
+    it stores them;
+  - `changes` reach the builder as given;
+  - the warnings `tempo-drift` (with `fold`), `meter-differs`,
+    `bars-joined` and `beats-before-bar-one` are new.
 - **Three options**: `TRACKER_MIN_BARS` (4), `TRACKER_MIN_STEADY_SHARE`
   (0.4, Study 44) and `TRACKER_MIN_CLOSING_SHARE` (0.5).
 - **Two refusal reasons**, `too-few-bars` and `bars-unsteady`, and

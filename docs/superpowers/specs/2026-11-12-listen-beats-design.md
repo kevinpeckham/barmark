@@ -125,7 +125,7 @@ type BeatsInput = {
 	/** The recording's length: the closing bar ends here. */
 	duration: number;
 	/** What the song is set to, if anything: compared (§5), never obeyed. Either part may be missing. */
-	declared?: { meter?: string; tempo?: number } | null;
+	declared?: { meter?: string | null; tempo?: number | null } | null;
 };
 
 type BeatsReading = {
@@ -174,7 +174,8 @@ whose `detail.field` names the field (and `detail.index` the element):
   number from 1 to 999 (0.1's two rules, each applied on its own). 0.1's
   `readDeclared` needs both parts, so this path has its own reader
   **(design call: the app's notice handles a song with a meter and no
-  tempo, so listen must too)**.
+  tempo, so listen must too)**. A part that is null counts as not given,
+  so the type admits `null` for either.
 
 Each array is read once into a copy, and a read that throws is
 `invalid-input`, as 0.1 reads chord runs.
@@ -221,9 +222,9 @@ A refusal after step 3 carries the reading so far (`counts`,
 `beatsPerBar`, `beatTempo`, and `steadyShare` when it was reached), so a
 page or a study can say why.
 
-**The counts are taken in one pass.** The app counts a bar's beats with a
+**The counts are taken by bisection.** The app counts a bar's beats with a
 filter over every beat, which is quadratic in a long recording. Listen
-walks both lists once. The numbers are the same; the scale test times it
+searches the beats by bisection, never scanning them per bar. The numbers are the same; the scale test times it
 relatively, as the package's others do.
 
 ### 4.3 What the meter and tempo mean
@@ -454,8 +455,9 @@ bug.
   to newer barmark and sync, so regenerating them belongs to a 0.1
   maintenance task, not to this one. The test checks the two commits
   separately. The app's functions do not snap, and they count a bar's
-  beats two ways that agree only on snapped input, so the script snaps
-  each seeded reading before it calls them. It compares:
+  beats two ways that agree only on snapped input, so the seeded readings
+  are written already snapped (every downbeat one of the beats), and a
+  test asserts it. It compares:
   - on a seeded set of synthetic readings (steady 4/4, 3/4 and 6/8, half
     bars, an unsteady reading, a short one, tails either side of the
     closing bound), written as goldens and checked by
@@ -483,6 +485,9 @@ bug.
   before the first downbeat, a bar line one usual bar earlier would keep
   that music on the chart. It is new math, so it needs a study; 0.2 only
   warns (`beats-before-bar-one`).
+- **A tracker that stops early.** The closing bar runs from the last
+  downbeat to the recording's end, however long that is (the app's rule).
+  A cap on the closing bar is new math.
 - **A person's start of bar one** (`startAt`) on this path. The app does
   not use it here. Left out until a host asks.
 - **Bass lines.** Studies 48 to 51 measured a transcribed bass line on the

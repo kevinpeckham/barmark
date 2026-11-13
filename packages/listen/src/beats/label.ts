@@ -47,7 +47,8 @@ function meterOf(beatsPerBar: number | null): BeatsMeter | null {
  * Each bar's beat count is the beats strictly between two downbeats plus
  * one, and the modal count names the meter: 6 is "6/8", counted in dotted
  * quarters so its tempo is a third of the beat tempo; 3 is "3/4"; any
- * other count reads as "4/4" at the beat tempo.
+ * other count reads as "4/4" at the beat tempo. Expects finite, ascending
+ * times, as `gridFromBeats` checks before calling it.
  */
 export function beatsLabel(beats: readonly number[], downbeats: readonly number[]): BeatsLabel {
 	const beatTempo = tempoOf(beats);

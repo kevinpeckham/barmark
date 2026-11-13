@@ -470,7 +470,7 @@ function mergeGiven(
 /**
  * Merge `options` over `DEFAULTS` for a scope, refusing an unknown key, a key
  * the scope does not take and a value outside its range. Never throws.
- * `build` (pipeline scope only) must be an object, passed through for sync to read.
+ * `build` (the pipeline and beats scopes only) must be an object, passed through for sync to read.
  */
 export function resolveOptions(
 	options: unknown,

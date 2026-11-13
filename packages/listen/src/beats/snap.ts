@@ -40,7 +40,8 @@ function nearest(beats: readonly number[], time: number): number {
 /**
  * Beat This's downbeat cleanup: each downbeat moved to its nearest beat,
  * then sorted with duplicates removed (`np.unique`), so every downbeat is
- * also a beat. With no beats the downbeats come back as a copy.
+ * also a beat. With no beats the downbeats come back as a copy. Expects
+ * finite, ascending beats, as `gridFromBeats` checks before calling it.
  */
 export function snapDownbeats(beats: readonly number[], downbeats: readonly number[]): number[] {
 	if (beats.length === 0) return [...downbeats];

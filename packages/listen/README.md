@@ -163,10 +163,15 @@ if (tracked.ok) {
 Each downbeat is moved to its nearest beat. The meter is the usual count
 of beats in a bar: 6 is 6/8, 3 is 3/4 and anything else is 4/4 (stem-bench
 Study 41). When the usual count is even, two bars in a row that each hold
-half of it are joined: the line between them goes (Study 44). The reading is refused when too few bars
-are left (`too-few-bars`) or when too few of them hold the usual count
-(`bars-unsteady`); the grid ends at `duration` when at least half a bar is
-left there.
+half of it are joined: the line between them goes (Study 44). The reading
+is refused when too few bars are left (`too-few-bars`) or when too few of
+them hold the usual count (`bars-unsteady`); the grid ends at `duration`
+when at least half a bar is left there.
+
+`beats` and `downbeats` are plain arrays of numbers. `duration` is the
+length, in seconds, of the audio the tracker read. Every beat must be at
+or before it, so pass that length and not another decode's: a beat past
+it is `invalid-input`.
 
 ```ts
 import { chartFromBeats } from "@barmark/listen";
@@ -189,8 +194,12 @@ warnings are the grid's. Options for the builder go in `build`.
 
 **Which tempo to show.** `reading.tempo` is the tempo from the median
 beat; the chart's `tempo:` line is another number, which sync works out
-from the bars. They differ by a few bpm on real recordings (Peaceful
-Dreams reads 143 from its beats and 145 from its bars). Show and store the
+from the bars. Where the label is the count (3, 4 or 6 beats a bar) they
+differ by a few bpm on real recordings (Peaceful Dreams reads 143 from
+its beats and 145 from its bars). Where it is not (2 or 5 beats a bar,
+labelled 4/4) the chart's tempo is far from the tracker's beat: two-beat
+bars at 120 write `tempo: 240`. A very fast reading may write no tempo
+line at all (the builder's `tempo-unreadable`). Show and store the
 chart's: it is the one the timing map agrees with.
 
 **A pickup** is the run of beats before bar one, when it is at most
@@ -203,11 +212,12 @@ are not a pickup stay off the chart, with a `beats-before-bar-one`
 warning.
 
 **A declared tempo or meter** is compared and never obeyed. Pass
-`declared: { meter, tempo }`. With a meter and a tempo, both are compared
+`declared: { meter, tempo }`; either part may be missing or null, and a
+null counts as not given. With a meter and a tempo, both are compared
 (`tempo-drift` and `meter-differs`); with a meter alone, only the meter is
 compared; with a tempo alone, nothing is, because the bar's length needs
-both. The grid, the meter and the tempo are the tracker's in every case. `tempo-drift` here also carries
-`detail.fold`, the nearest of ½, 1 and 2 to the bar over the declared bar,
+both. The grid, the meter and the tempo are the tracker's in every case.
+`tempo-drift` here also carries `detail.fold`, the nearest of ½, 1 and 2 to the bar over the declared bar,
 and `detail.foldRatio`, the drift left once that fold is taken. Test
 `foldRatio` to treat a half-time or double-time reading as the same song;
 test `ratio` to ask whether the bar numbers will match a player's count.
@@ -270,7 +280,7 @@ seconds and bar numbers; `detail` has the numbers behind it.
 
 | Warning | When |
 | --- | --- |
-| `pickup` | The grid reports a pickup (`detail.start`, `detail.beats`). |
+| `pickup` | The grid reports a pickup (`detail.start`; `detail.beats` in the chart's beats, eighths in 6/8). |
 | `bar-one-clamped` | Bar one fell before 0:00 and starts at 0:00; `detail.start` is where it fell, in seconds (negative). |
 | `sound-before-start` | With `startAt`, sound begins a bar or more before it. Those bars are outside the grid. |
 | `grid-truncated` | The grid (comb or tracker) reached `MAX_GRID_BARS` before the recording's end. |
@@ -279,7 +289,7 @@ seconds and bar numbers; `detail` has the numbers behind it.
 | `bars-cut` | align: bars lie wholly before 0:00 or after the recording's end, so the map, clamped to the recording, drops them (`detail.bars`, their bar numbers; `detail.edge`, `start` or `end`). One warning an edge. |
 | `tempo-drift` | grid and pipeline: the comb's bar differs from the declared one (`detail.ratio`, `period / declaredBar − 1`, signed; `detail.period`, `detail.declaredBar`). No threshold: the host decides. Not emitted when the ratio is zero within floating-point error. From a tracker, the bar is the grid's median bar, and the detail also has `fold` (½, 1 or 2) and `foldRatio` (`period / (fold × declaredBar) − 1`). |
 | `meter-differs` | beats: the declared meter is not the label's (`detail.meter`, `detail.declared`). |
-| `beats-before-bar-one` | beats: beats come before bar one and are not written as a pickup (`detail.beats`, `detail.start`). They stay off the chart. |
+| `beats-before-bar-one` | beats: beats come before bar one and are not written as a pickup (`detail.beats`, the tracker's own count of those beats; `detail.start`). They stay off the chart. |
 | `bars-joined` | beats: half bars were joined into whole bars (`detail.lines`, how many bar lines went). |
 
 ## Options

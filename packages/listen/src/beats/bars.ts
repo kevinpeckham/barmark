@@ -5,7 +5,7 @@
  */
 import { firstAtLeast } from "./snap.js";
 
-/** Beats in [lines[i], lines[i + 1]) for each bar, in one pass. */
+/** Beats in [lines[i], lines[i + 1]) for each bar, found by bisection on each line, never by scanning the beats. */
 export function barBeats(beats: readonly number[], lines: readonly number[]): number[] {
 	const out: number[] = [];
 	let from = lines.length > 0 ? firstAtLeast(beats, lines[0] as number) : 0;
@@ -21,7 +21,8 @@ export function barBeats(beats: readonly number[], lines: readonly number[]): nu
  * The downbeats with each pair of adjacent half bars joined into one bar:
  * where the usual bar has an even count of beats and two bars in a row
  * each have half of it, the line between them goes. A half bar with no
- * partner stays as read.
+ * partner stays as read. Expects finite, ascending times, as
+ * `gridFromBeats` checks before calling it.
  */
 export function joinHalfBars(
 	beats: readonly number[],
@@ -40,7 +41,7 @@ export function joinHalfBars(
 	return out;
 }
 
-/** The share of the bars (line to line) that hold `usual` beats. */
+/** The share of the bars (line to line) that hold `usual` beats. Expects finite, ascending times, as `gridFromBeats` checks. */
 export function steadyShare(
 	beats: readonly number[],
 	lines: readonly number[],
