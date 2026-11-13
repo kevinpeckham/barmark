@@ -55,3 +55,9 @@ test("withinLimits: span, fingers, interior mutes and string count", () => {
 	expect(withinLimits(shapeOf("xxxx13"))).toBe(false); // two strings
 	expect(withinLimits(shapeOf("xxxx13"), 2)).toBe(true);
 });
+
+test("minStrings: only a chord of roots, fifths and sevenths is a power chord", () => {
+	expect(wantOf(chord("C11"))?.minStrings).toBe(3);
+	expect(wantOf(chord("C5"))?.minStrings).toBe(2);
+	expect(wantOf(chord("C5(7)"))?.minStrings).toBe(2);
+});

@@ -35,8 +35,9 @@ function omittable(chord: ChordRecord): number[] {
 	return chord.alteredOpen ? [] : naturals(chord, degrees);
 }
 
-/** A chord with no third, second or fourth: `5`, `5(7)`. */
-const isPower = (chord: ChordRecord): boolean => ![2, 3, 4].some((d) => has(chord, d));
+/** A chord whose every degree is a root, fifth or seventh: `5`, `5(7)`. */
+const isPower = (chord: ChordRecord): boolean =>
+	chord.intervals.every((i) => i.degree === 1 || i.degree === 5 || i.degree === 7);
 
 /** Null for a note set, or a record with no root. */
 export function wantOf(chord: ChordRecord): Want | null {

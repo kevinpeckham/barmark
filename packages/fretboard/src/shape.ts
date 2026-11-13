@@ -13,12 +13,13 @@ function lowestFretted(frets: readonly number[]): number {
 	return fretted.length === 0 ? 0 : Math.min(...fretted);
 }
 
-/** The barre that holds the lowest fret, when more than four strings are fretted and a barre can hold them. */
+/** The barre that holds the lowest fret across at least two strings, when more than four strings are fretted and a barre can hold them. */
 function barreOf(frets: readonly number[]): Barre | undefined {
 	if (frets.filter((f) => f > 0).length <= 4) return undefined;
 	const fret = lowestFretted(frets);
 	const from = frets.indexOf(fret);
 	const to = highestSounding(frets);
+	if (from >= to) return undefined;
 	if (frets.slice(from, to + 1).some((f) => f < fret || f === 0)) return undefined;
 	return { fret, from, to };
 }

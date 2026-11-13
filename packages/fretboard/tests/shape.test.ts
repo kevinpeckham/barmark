@@ -34,3 +34,9 @@ test("shapeOf throws on text that is not six strings", () => {
 	expect(() => shapeOf("x3201")).toThrow("x3201");
 	expect(() => shapeOf("x3201a")).toThrow("x3201a");
 });
+
+test("a barre spans at least two strings", () => {
+	expect(shapeFrom([-1, 3, 3, 3, 3, 1]).barre).toBeUndefined();
+	expect(shapeOf("133211").barre).toEqual({ fret: 1, from: 0, to: 5 });
+	expect(shapeOf("x24432").barre).toEqual({ fret: 2, from: 1, to: 5 });
+});
