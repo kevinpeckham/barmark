@@ -4,13 +4,15 @@
  * (design §4.2).
  */
 import type { BarGrid } from "@barmark/sync";
+import { pickupWarning } from "../grid/place.js";
 import { isRefusal } from "../input.js";
 import { type ListenOptions, resolveOptions, type Settings } from "../options.js";
 import { type ListenWarning, type Ok, ok, type Refused, refusal, refused } from "../result.js";
 import { joinHalfBars, median, steadyShare } from "./bars.js";
+import { declaredWarnings } from "./declared.js";
 import { type CheckedBeats, readBeats } from "./input.js";
 import { type BeatsLabel, type BeatsMeter, beatsLabel } from "./label.js";
-import { snapDownbeats } from "./snap.js";
+import { firstAtLeast, snapDownbeats } from "./snap.js";
 
 /** A tracker's reading, in seconds from the recording's start. */
 export type BeatsInput = {
@@ -110,6 +112,30 @@ function capped(lines: number[], s: Settings): { lines: number[]; warnings: List
 	return { lines: lines.slice(0, s.MAX_GRID_BARS + 1), warnings: [warning] };
 }
 
+/** The beats before bar one: a pickup when few enough and bar one is a usual bar, else the `beats-before-bar-one` warning. */
+function leading(
+	beats: readonly number[],
+	starts: readonly number[],
+	beatsPerBar: number,
+	s: Settings,
+): { pickup: TrackedGrid["pickup"]; warnings: ListenWarning[] } {
+	const before = firstAtLeast(beats, starts[0] as number);
+	if (before < 1) return { pickup: null, warnings: [] };
+	const start = beats[0] as number;
+	const inBarOne = firstAtLeast(beats, starts[1] as number) - before;
+	if (before <= s.PICKUP_MAX_BAR_FRACTION * beatsPerBar && inBarOne === beatsPerBar) {
+		const pickup = { start, beats: before };
+		return { pickup, warnings: [pickupWarning(pickup)] };
+	}
+	const count = `${before} ${before === 1 ? "beat" : "beats"}`;
+	const warning: ListenWarning = {
+		code: "beats-before-bar-one",
+		message: `${count} before bar one, from ${start.toFixed(2)} s, are too many for a pickup and are left out.`,
+		detail: { beats: before, start },
+	};
+	return { pickup: null, warnings: [warning] };
+}
+
 /** Steps 3 to 9 on the snapped downbeats and a complete label. */
 function gridOfLabel(
 	c: CheckedBeats,
@@ -134,8 +160,10 @@ function gridOfLabel(
 	const barSeconds = median(starts.slice(1).map((t, i) => t - (starts[i] as number)));
 	const cut = capped(closed(starts, c.duration, barSeconds, s), s);
 	const reading: BeatsReading = { ...sofar, steadyShare: share, barSeconds };
-	const value = { grid: { bars: cut.lines }, pickup: null, meter: label.meter, reading };
-	return ok(value, [...warnings, ...cut.warnings]);
+	const lead = leading(c.beats, starts, beatsPerBar, s);
+	const value = { grid: { bars: cut.lines }, pickup: lead.pickup, meter: label.meter, reading };
+	const told = declaredWarnings(c.declared, label.meter, barSeconds);
+	return ok(value, [...warnings, ...cut.warnings, ...lead.warnings, ...told]);
 }
 
 /** Steps 1 to 9 on a checked input. */

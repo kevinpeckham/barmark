@@ -36,3 +36,18 @@ export function evenBeats(
 	const downbeats = beats.filter((_, i) => i % perBar === 0);
 	return { beats, downbeats };
 }
+
+/** A reading with `n` beats, `beat` apart, before its first downbeat: every time and the duration shifted later by `n × beat`. */
+export function lead(
+	r: { beats: number[]; downbeats: number[]; duration: number },
+	n: number,
+	beat = 0.5,
+): { beats: number[]; downbeats: number[]; duration: number } {
+	const shift = n * beat;
+	const before = Array.from({ length: n }, (_, i) => i * beat);
+	return {
+		beats: [...before, ...r.beats.map((t) => t + shift)],
+		downbeats: r.downbeats.map((t) => t + shift),
+		duration: r.duration + shift,
+	};
+}
