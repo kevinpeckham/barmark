@@ -31,10 +31,16 @@ export function shapeFrom(frets: readonly number[]): Shape {
 	return barre ? { frets: [...frets], base, barre } : { frets: [...frets], base };
 }
 
-/** A shape from six characters, low string first: `x` muted, `0` to `9` a fret. "x32010" is C. */
+/** A shape from six characters, low string first, `x` muted and `0` to `9` a fret ("x32010" is C), or from six words, as `shapeText` writes them when a fret is 10 or more ("x 10 12 12 11 10"; frets 0 to 24).
+ * @throws on text that is neither form: it reads table and test literals, not user input. */
 export function shapeOf(text: string): Shape {
-	if (!/^[x0-9]{6}$/.test(text)) throw new Error(`not six strings of x or a digit: "${text}"`);
-	return shapeFrom([...text].map((c) => (c === "x" ? MUTED : Number(c))));
+	const words = text.includes(" ") ? text.split(" ") : [...text];
+	if (words.length !== 6 || !words.every((w) => /^(x|0|[1-9]\d?)$/.test(w))) {
+		throw new Error(`not six strings, each x or a fret: "${text}"`);
+	}
+	const frets = words.map((w) => (w === "x" ? MUTED : Number(w)));
+	if (frets.some((f) => f > 24)) throw new Error(`a fret above 24: "${text}"`);
+	return shapeFrom(frets);
 }
 
 /** The shape's text when every fret is under 10, else the frets joined by spaces ("x 10 12 12 11 10"). */

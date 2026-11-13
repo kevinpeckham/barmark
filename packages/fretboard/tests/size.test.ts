@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { gzipSync } from "node:zlib";
 
 const ROOT = join(import.meta.dir, "../../..");
-const BUDGET = 4500;
+const BUDGET = 4800;
 
 test("the minified, gzipped entry is within budget and works", async () => {
 	// The entry lives outside the package: one inside a `sideEffects: false`

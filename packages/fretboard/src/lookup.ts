@@ -1,6 +1,7 @@
 import { type ChordRecord, parseChord } from "barmark";
 import { pitchClass } from "./pitch.js";
 import { shapeFrom, shapeOf } from "./shape.js";
+import { soundsChord } from "./sounds.js";
 import { MOVABLE, OPEN } from "./table.js";
 import type { Shape } from "./types.js";
 
@@ -73,12 +74,17 @@ function lowestMoved(rows: readonly Movable[], root: number): Shape | null {
 	return best;
 }
 
-/** The table's shape for a named chord: its open shape, else the lowest movable shape of its form moved to its root, if it starts at fret 7 or below; null otherwise, so the finder answers. */
-export function tableShape(chord: ChordRecord): Shape | null {
-	if (chord.kind !== "chord" || chord.root === null) return null;
+/** The table's row for a named chord: its open shape, else the lowest movable shape of its form moved to its root, if it starts at fret 7 or below. */
+function rowShape(chord: ChordRecord, root: number): Shape | null {
 	index ??= readTable();
 	const open = index.open.get(keyFrom(chord, 0));
 	if (open) return shapeFrom(open);
-	const root = pitchClass(chord.root);
 	return lowestMoved(index.movable.get(keyFrom(chord, root)) ?? [], root);
+}
+
+/** The table's shape for a named chord, when it sounds that chord (a row may leave out a fifth that another chord with the same notes needs); null otherwise, so the finder answers. */
+export function tableShape(chord: ChordRecord): Shape | null {
+	if (chord.kind !== "chord" || chord.root === null) return null;
+	const shape = rowShape(chord, pitchClass(chord.root));
+	return shape && soundsChord(shape, chord) ? shape : null;
 }

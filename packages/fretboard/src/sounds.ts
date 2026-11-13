@@ -59,8 +59,16 @@ export function wantOf(chord: ChordRecord): Want | null {
 	};
 }
 
-/** Whether a shape sounds a named chord: the bass lowest, every required tone, nothing outside the chord (spec §8). */
+/** Whether a shape sounds a named chord: the bass lowest, every required tone, nothing outside the chord (spec §8). False for anything it cannot read. */
 export function soundsChord(shape: Shape, chord: ChordRecord, tuning: Tuning = GUITAR): boolean {
+	try {
+		return sounds(shape, chord, tuning);
+	} catch {
+		return false;
+	}
+}
+
+function sounds(shape: Shape, chord: ChordRecord, tuning: Tuning): boolean {
 	const want = wantOf(chord);
 	const notes = sounding(shape, tuning);
 	if (!want || notes.length === 0) return false;

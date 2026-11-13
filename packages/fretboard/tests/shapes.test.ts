@@ -156,6 +156,7 @@ test("hand-built records that are not well formed give a reason, never a throw",
 		},
 	];
 	for (const b of bad) {
+		expect(soundsChord(shapeOf("x32010"), b as ChordRecord)).toBe(false);
 		const r = shapeFor(b as ChordRecord);
 		expect(r.ok).toBe(false);
 		expect(shapesFor(b as ChordRecord)).toEqual([]);
@@ -173,6 +174,13 @@ test("hand-built records that are not well formed give a reason, never a throw",
 		ok: true,
 		notes: "voicing-replaced",
 	});
+});
+
+test("soundsChord is false, never a throw, for a shape that is not well formed", () => {
+	const c = chord("C");
+	for (const bad of [null, undefined, {}, { frets: null }, { frets: [1, 2], base: 1 }, 42])
+		expect(soundsChord(bad as unknown as Shape, c)).toBe(false);
+	expect(soundsChord(shapeOf("x32010"), c, null as never)).toBe(false);
 });
 
 test("a chord with no intervals still gives a result", () => {

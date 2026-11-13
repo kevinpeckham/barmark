@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
-import { shapeFrom, shapeOf, shapeText, sounding } from "../src/index.js";
+import { shapeFor, shapeFrom, shapeOf, shapeText, sounding } from "../src/index.js";
+import { chord, vocabulary } from "./helpers/vocabulary.js";
 import { fingersNeeded } from "../src/shape.js";
 
 test("shapeOf and shapeText read and write the six strings", () => {
@@ -39,4 +40,39 @@ test("a barre spans at least two strings", () => {
 	expect(shapeFrom([-1, 3, 3, 3, 3, 1]).barre).toBeUndefined();
 	expect(shapeOf("133211").barre).toEqual({ fret: 1, from: 0, to: 5 });
 	expect(shapeOf("x24432").barre).toEqual({ fret: 2, from: 1, to: 5 });
+});
+
+test("shapeOf reads the spaced form shapeText writes", () => {
+	expect(shapeOf("x 10 12 12 11 10")).toEqual(shapeFrom([-1, 10, 12, 12, 11, 10]));
+	expect(shapeOf("0 3 2 0 1 0")).toEqual(shapeOf("032010"));
+	expect(shapeOf("x 3 2 0 1 24")).toEqual(shapeFrom([-1, 3, 2, 0, 1, 24]));
+});
+
+test("shapeOf throws on text that is neither form", () => {
+	for (const bad of [
+		"x 10 12 12 11",
+		"x 10 12 12 11 10 9",
+		"x 10 12 12 11 25",
+		"x  10 12 12 11 10",
+		" x 10 12 12 11 10",
+		"x 10 12 12 11 1a",
+		"x 10 12 12 11 -1",
+		"x 10 12 12 11 01",
+		"x10 12 12 11 10",
+		"",
+	])
+		expect(() => shapeOf(bad)).toThrow();
+});
+
+test("shapeOf reads what shapeText writes, for every answer of the vocabulary", () => {
+	let tens = 0;
+	for (const { chord: c } of vocabulary()) {
+		const r = shapeFor(c);
+		if (!r.ok) continue;
+		if (r.shape.frets.some((f) => f >= 10)) tens++;
+		expect(shapeOf(shapeText(r.shape))).toEqual(r.shape);
+	}
+	expect(tens).toBeGreaterThan(0);
+	const e = shapeFor(chord("Eaug7"));
+	expect(e.ok && shapeOf(shapeText(e.shape))).toEqual(e.ok ? e.shape : null);
 });
