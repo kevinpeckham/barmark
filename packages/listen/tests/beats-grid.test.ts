@@ -370,3 +370,25 @@ test("the result is a copy: not the caller's arrays, and not changed by changing
 	input.beats.fill(0);
 	expect(r.value.grid.bars).toEqual(bars);
 });
+
+test("each time of beats and downbeats is read exactly once", () => {
+	const base = reading([4, 4, 4, 4]);
+	const reads: Record<string, number[]> = {};
+	const counted = (name: string, list: number[]) => {
+		reads[name] = list.map(() => 0);
+		return new Proxy(list, {
+			get(target, key, receiver) {
+				if (typeof key === "string" && /^\d+$/.test(key)) (reads[name] as number[])[Number(key)]++;
+				return Reflect.get(target, key, receiver);
+			},
+		});
+	};
+	const r = gridFromBeats({
+		beats: counted("beats", base.beats),
+		downbeats: counted("downbeats", base.downbeats),
+		duration: base.duration,
+	});
+	expect(r.ok).toBe(true);
+	expect(reads.beats?.every((n) => n === 1)).toBe(true);
+	expect(reads.downbeats?.every((n) => n === 1)).toBe(true);
+});
