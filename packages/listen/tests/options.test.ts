@@ -60,7 +60,7 @@ describe("result", () => {
 
 describe("DEFAULTS", () => {
 	test("hold the 28 keys with the spec's values, deep-frozen", () => {
-		expect(Object.keys(DEFAULTS)).toHaveLength(28);
+		expect(Object.keys(DEFAULTS)).toHaveLength(31);
 		expect(DEFAULTS.ALIGNMENT_SAME_PIECE_RATIO).toBe(1.6);
 		expect(DEFAULTS.ALIGNMENT_SOUND_FLOOR).toBe(0.02);
 		expect(DEFAULTS.COMB_FINE_STEP_FRACTION).toBe(0.0002);
@@ -259,4 +259,28 @@ describe("resolveOptions", () => {
 			expect(r.refusals[0]?.detail?.option).toBe("");
 		}
 	});
+});
+
+test("the tracker options: defaults and ranges", () => {
+	expect(DEFAULTS.TRACKER_MIN_BARS).toBe(4);
+	expect(DEFAULTS.TRACKER_MIN_STEADY_SHARE).toBe(0.4);
+	expect(DEFAULTS.TRACKER_MIN_CLOSING_SHARE).toBe(0.5);
+	const refuses = (o: object) => {
+		const r = resolveOptions(o, "listen");
+		return !r.ok && r.refusals[0]?.reason === "invalid-option";
+	};
+	expect(refuses({ TRACKER_MIN_BARS: 0 })).toBe(true);
+	expect(refuses({ TRACKER_MIN_BARS: 2.5 })).toBe(true);
+	expect(refuses({ TRACKER_MIN_STEADY_SHARE: -0.1 })).toBe(true);
+	expect(refuses({ TRACKER_MIN_STEADY_SHARE: 1.1 })).toBe(true);
+	expect(refuses({ TRACKER_MIN_CLOSING_SHARE: 0 })).toBe(true);
+	expect(resolveOptions({ TRACKER_MIN_STEADY_SHARE: 0 }, "listen").ok).toBe(true);
+	expect(resolveOptions({ TRACKER_MIN_CLOSING_SHARE: 1 }, "listen").ok).toBe(true);
+});
+
+test('the "beats" scope: the grid and alignment options and build, not the sound options', () => {
+	expect(resolveOptions({ TRACKER_MIN_BARS: 8, build: {} }, "beats").ok).toBe(true);
+	const sound = resolveOptions({ ALIGNMENT_SOUND_FLOOR: 0.1 }, "beats");
+	expect(sound.ok).toBe(false);
+	expect(resolveOptions({ build: {} }, "listen").ok).toBe(false);
 });

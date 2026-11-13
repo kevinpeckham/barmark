@@ -17,7 +17,9 @@ export type RefusalReason =
 	| "bar-one-far"
 	| "bar-length-off"
 	| "weak-fit"
-	| "map-invalid";
+	| "map-invalid"
+	| "too-few-bars"
+	| "bars-unsteady";
 
 /** What a call noticed and carried on past (design §4.2). */
 export type WarningCode =
@@ -28,7 +30,10 @@ export type WarningCode =
 	| "bar-one-unplaced"
 	| "chart-diagnostics"
 	| "tempo-drift"
-	| "bars-cut";
+	| "bars-cut"
+	| "meter-differs"
+	| "beats-before-bar-one"
+	| "bars-joined";
 
 /** One reason a call refused. */
 export type Refusal = {
