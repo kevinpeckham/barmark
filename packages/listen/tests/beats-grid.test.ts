@@ -281,3 +281,92 @@ test("never throws: getters, Proxies, array-likes and holes are invalid-input", 
 	expect(field({ ...ok4, beats: { length: 2, 0: 0, 1: 1 } })).toEqual({ field: "beats" });
 	expect(field({ ...ok4, beats: sparse })).toEqual({ field: "beats", index: 1 });
 });
+
+test("input: a declared part that is null counts as not given; an array is not declared", () => {
+	for (const declared of [
+		{ meter: null },
+		{ tempo: null },
+		{ meter: null, tempo: null },
+		{ meter: "3/4", tempo: null },
+		{ meter: null, tempo: 120 },
+	])
+		expect(beatsGridWith({ ...ok4, declared }, DEFAULTS).ok).toBe(true);
+	expect(field({ ...ok4, declared: [] })).toEqual({ field: "declared" });
+	expect(field({ ...ok4, declared: { meter: "nope", tempo: null } })).toEqual({
+		field: "declared.meter",
+	});
+});
+
+test("input: a length that changes after it was read does not widen the copy", () => {
+	let reads = 0;
+	const shifty = new Proxy([0, 1, 2, 3, 4, 5, 6, 7, 8, 9], {
+		get(target, key, receiver) {
+			if (key === "length") return ++reads === 1 ? 10 : MAX_BEATS + 50_000;
+			return Reflect.get(target, key, receiver);
+		},
+	});
+	const r = beatsGridWith({ beats: shifty, downbeats: [0], duration: 100 }, DEFAULTS);
+	if (r.ok) throw new Error("accepted");
+	expect(r.refusals[0]?.reason).toBe("too-few-bars");
+});
+
+test("input: a bad element's message counts from 1 and reads as a sentence", () => {
+	const r = gridFromBeats({ ...ok4, beats: [0, 1, 99, 3] });
+	if (r.ok) throw new Error("accepted");
+	expect(r.refusals[0]?.message).toBe(
+		"Beat 3 of 4 is not a time in seconds between 0 and the recording's length.",
+	);
+	const d = gridFromBeats({ ...ok4, downbeats: [0, 2, 2] });
+	if (d.ok) throw new Error("accepted");
+	expect(d.refusals[0]?.message).toBe("Downbeat 3 does not come after the one before it.");
+	expect(d.refusals[0]?.detail).toEqual({ field: "downbeats", index: 2 });
+});
+
+test("downbeats off the beats are snapped: the bars are the beats they snap to", () => {
+	const base = reading([4, 4, 4, 4, 4]);
+	const late = { ...base, downbeats: base.downbeats.map((t) => t + 0.02) };
+	const r = value({ ...late, duration: base.duration + 1 });
+	expect(r.value.grid.bars.slice(0, -1)).toEqual(base.downbeats);
+	expect(r.value.reading.counts).toEqual({ 4: 5 });
+});
+
+test("barSeconds is the median of the joined bars, not the unjoined", () => {
+	const r = value(reading([2, 2, 2, 2, 3, 4, 4, 4, 4, 4]));
+	expect(r.value.reading.joined).toBeGreaterThan(0);
+	expect(r.value.reading.barSeconds).toBe(2);
+});
+
+test("the cap: MAX_BEATS times are not refused for length, one more is", () => {
+	const times = (n: number) => Array.from({ length: n }, (_, i) => i * 0.001);
+	const at = gridFromBeats({ beats: times(MAX_BEATS), downbeats: times(MAX_BEATS), duration: 300 });
+	if (!at.ok) expect(at.refusals[0]?.reason).not.toBe("invalid-input");
+	const over = gridFromBeats({
+		beats: times(MAX_BEATS + 1),
+		downbeats: times(MAX_BEATS + 1),
+		duration: 300,
+	});
+	expect(!over.ok && over.refusals[0]?.reason).toBe("invalid-input");
+});
+
+test("input: an over-long downbeats is refused before any beat is read", () => {
+	let reads = 0;
+	const watched = new Proxy([0, 0.5, 1, 1.5, 2], {
+		get(target, key, receiver) {
+			if (typeof key === "string" && /^\d+$/.test(key)) reads++;
+			return Reflect.get(target, key, receiver);
+		},
+	});
+	const long = new Array(MAX_BEATS + 1).fill(0);
+	expect(field({ beats: watched, downbeats: long, duration: 8 })).toEqual({ field: "downbeats" });
+	expect(reads).toBe(0);
+});
+
+test("the result is a copy: not the caller's arrays, and not changed by changing them", () => {
+	const input = reading([4, 4, 4, 4]);
+	const r = value(input);
+	const bars = [...r.value.grid.bars];
+	expect(r.value.grid.bars).not.toBe(input.downbeats);
+	input.downbeats.fill(0);
+	input.beats.fill(0);
+	expect(r.value.grid.bars).toEqual(bars);
+});

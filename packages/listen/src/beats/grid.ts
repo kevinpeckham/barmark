@@ -6,15 +6,7 @@
 import type { BarGrid } from "@barmark/sync";
 import { isRefusal } from "../input.js";
 import { type ListenOptions, resolveOptions, type Settings } from "../options.js";
-import {
-	type ListenWarning,
-	type Ok,
-	ok,
-	type Refusal,
-	type Refused,
-	refusal,
-	refused,
-} from "../result.js";
+import { type ListenWarning, type Ok, ok, type Refused, refusal, refused } from "../result.js";
 import { joinHalfBars, median, steadyShare } from "./bars.js";
 import { type CheckedBeats, readBeats } from "./input.js";
 import { type BeatsLabel, type BeatsMeter, beatsLabel } from "./label.js";
@@ -181,6 +173,6 @@ export function gridFromBeats(input: BeatsInput, options?: ListenOptions): Beats
 /** `gridFromBeats` on options already resolved (the pipeline's): the input checked, then the grid. */
 export function beatsGridWith(input: unknown, s: Settings): BeatsGridResult {
 	const checked = readBeats(input);
-	if (isRefusal(checked)) return refused([checked as Refusal], [], { reading: null });
+	if (isRefusal(checked)) return refused([checked], [], { reading: null });
 	return gridOf(checked, s);
 }

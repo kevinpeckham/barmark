@@ -20,51 +20,64 @@ export type CheckedBeats = {
 	declared: BeatsDeclared;
 };
 
-/** One list copied element by element, or why it cannot be read. */
-function readTimes(list: unknown[], field: string, duration: number): number[] | Refusal {
+/** A list's length, read once, and the list. */
+type Listed = { list: unknown[]; length: number };
+
+/** The sentence for the time at `index` (0-based) that cannot be a beat or a downbeat. */
+function badTime(field: string, index: number, length: number, ordered: boolean): Refusal {
+	const noun = field === "beats" ? "Beat" : "Downbeat";
+	const message = ordered
+		? `${noun} ${index + 1} of ${length} is not a time in seconds between 0 and the recording's length.`
+		: `${noun} ${index + 1} does not come after the one before it.`;
+	return refusal("invalid-input", message, { field, index });
+}
+
+/** One list copied element by element, to the length read once, or why it cannot be read. */
+function readTimes({ list, length }: Listed, field: string, duration: number): number[] | Refusal {
 	const copy: number[] = [];
-	for (let i = 0; i < list.length; i++) {
+	for (let i = 0; i < length; i++) {
 		const t: unknown = list[i];
-		const bad = !isNumber(t) || t < 0 || t > duration || (i > 0 && t <= (copy[i - 1] as number));
-		if (bad)
-			return refusal(
-				"invalid-input",
-				`The ${field}'s time ${i} must be a time in seconds from 0 to the duration, after the one before it.`,
-				{ field, index: i },
-			);
+		if (!isNumber(t) || t < 0 || t > duration) return badTime(field, i, length, true);
+		if (i > 0 && t <= (copy[i - 1] as number)) return badTime(field, i, length, false);
 		copy.push(t);
 	}
 	return copy;
 }
 
-/** The declared meter, when given, or why it cannot be read. */
+/** The declared meter, when given and not null, or why it cannot be read. */
 function readDeclaredMeter(text: unknown): Meter | null | Refusal {
-	if (text === undefined) return null;
+	if (text === undefined || text === null) return null;
 	const meter = typeof text === "string" ? parseMeter(text) : null;
 	return meter ?? invalid("declared.meter", "The declared meter must read as a meter, as 4/4.");
 }
 
-/** The declared meter and tempo, either part optional, or why they cannot be read. */
+/** The declared tempo, when given and not null, or why it cannot be read. */
+function readDeclaredTempo(tempo: unknown): { tempo: number | null } | Refusal {
+	if (tempo === undefined || tempo === null) return { tempo: null };
+	if (isTempo(tempo)) return { tempo };
+	return invalid("declared.tempo", "The declared tempo must be a number from 1 to 999.");
+}
+
+/** The declared meter and tempo, either part optional or null, or why they cannot be read. */
 function readDeclaredParts(declared: unknown): BeatsDeclared | Refusal {
 	if (declared === undefined || declared === null) return { meter: null, tempo: null };
-	if (typeof declared !== "object")
+	if (typeof declared !== "object" || Array.isArray(declared))
 		return invalid("declared", "The declared meter and tempo must be an object.");
 	const { meter: text, tempo } = declared as Record<string, unknown>;
 	const meter = readDeclaredMeter(text);
 	if (meter !== null && isRefusal(meter)) return meter;
-	if (tempo === undefined) return { meter, tempo: null };
-	if (!isTempo(tempo))
-		return invalid("declared.tempo", "The declared tempo must be a number from 1 to 999.");
-	return { meter, tempo };
+	const given = readDeclaredTempo(tempo);
+	return isRefusal(given) ? given : { meter, tempo: given.tempo };
 }
 
-/** `beats` or `downbeats` as a list of at most `MAX_BEATS`, or why it is not. */
-function readList(given: Record<string, unknown>, field: string): unknown[] | Refusal {
+/** `beats` or `downbeats` as a list of at most `MAX_BEATS`, its length read once, or why it is not. */
+function readList(given: Record<string, unknown>, field: string): Listed | Refusal {
 	const list = given[field];
 	if (!Array.isArray(list)) return invalid(field, `The ${field} must be a list of times.`);
-	if (list.length > MAX_BEATS)
+	const length = list.length;
+	if (length > MAX_BEATS)
 		return invalid(field, `The ${field} may hold at most ${MAX_BEATS} times.`);
-	return list;
+	return { list, length };
 }
 
 /** `beats` and `downbeats` (copied) in `given`, or why they cannot be read. */
@@ -74,9 +87,9 @@ function readBothLists(
 ): { beats: number[]; downbeats: number[] } | Refusal {
 	const lists = [readList(given, "beats"), readList(given, "downbeats")];
 	for (const list of lists) if (isRefusal(list)) return list;
-	const beats = readTimes(lists[0] as unknown[], "beats", duration);
+	const beats = readTimes(lists[0] as Listed, "beats", duration);
 	if (isRefusal(beats)) return beats;
-	const downbeats = readTimes(lists[1] as unknown[], "downbeats", duration);
+	const downbeats = readTimes(lists[1] as Listed, "downbeats", duration);
 	return isRefusal(downbeats) ? downbeats : { beats, downbeats };
 }
 
