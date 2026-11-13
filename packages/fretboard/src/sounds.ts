@@ -71,14 +71,14 @@ export function soundsChord(shape: Shape, chord: ChordRecord, tuning: Tuning = G
 	return true;
 }
 
-/** Whether a shape is inside the hand's limits for a named chord: span, fingers, frets 0 to 15, no muted string inside, enough strings. */
-export function withinLimits(shape: Shape, minStrings = 3): boolean {
+/** Whether a shape is inside the hand's limits: span, fingers, frets 0 to 15, enough strings, and no muted string inside unless `gaps` allows one (a written voicing). */
+export function withinLimits(shape: Shape, minStrings = 3, gaps = false): boolean {
 	const frets = shape.frets;
 	const played = frets.flatMap((f, i) => (f >= 0 ? [i] : []));
 	const first = played[0];
 	const last = played[played.length - 1];
 	if (first === undefined || last === undefined || played.length < minStrings) return false;
-	if (played.length !== last - first + 1) return false;
+	if (!gaps && played.length !== last - first + 1) return false;
 	if (frets.some((f) => f > 15)) return false;
 	const fretted = frets.filter((f) => f > 0);
 	if (fretted.length > 0 && Math.max(...fretted) - Math.min(...fretted) > 3) return false;

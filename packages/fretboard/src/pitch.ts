@@ -21,3 +21,6 @@ export function midiOf(note: string): number | null {
 	if (!r || r.octave === null) return null;
 	return (r.octave + 1) * 12 + r.semitone;
 }
+
+/** Whether the text is a note name, with or without an octave. */
+export const isNote = (note: string): boolean => read(note) !== null;
