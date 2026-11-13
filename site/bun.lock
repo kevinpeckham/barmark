@@ -13,7 +13,7 @@
       },
       "devDependencies": {
         "@barmark/cli": "0.11.3",
-        "@barmark/listen": "0.1.1",
+        "@barmark/listen": "0.2.0",
         "@barmark/midi": "0.3.3",
         "@barmark/musicxml": "0.9.1",
         "@barmark/sync": "0.4.1",
@@ -46,7 +46,7 @@
 
     "@barmark/cli": ["@barmark/cli@0.11.3", "", { "dependencies": { "@barmark/midi": "0.3.3", "@barmark/musicxml": "0.9.1", "@barmark/render": "0.19.1", "@barmark/score": "0.5.0", "barmark": "0.23.1", "verovio": "6.4.1" }, "bin": { "barmark": "dist/cli.js" } }, "sha512-UN4li1Ih9xiq6cfne5DlLQWtkyvYwsf03jbHAVWT3hxPzsN/PoFqpHtmpvgGn7sR/MJXt0DbQ4oV2IglUnJt9w=="],
 
-    "@barmark/listen": ["@barmark/listen@0.1.1", "", { "dependencies": { "@barmark/sync": "^0.4.1", "barmark": "^0.23.1" } }, "sha512-JwZ9vhPzIHjyk825l5pUd5+DJT1a/dyT4Eg65DoChoiAqK6r7UARrTSYx5mgxns5zg4/PQkxWNCSK7W3V3xrqQ=="],
+    "@barmark/listen": ["@barmark/listen@0.2.0", "", { "dependencies": { "@barmark/sync": "^0.4.1", "barmark": "^0.23.1" } }, "sha512-9ioWHN6+2Cnn2z8P6FawRMAKByxZvTu5zr9KXf6kPEPPt4ME5kmVeq0P6pPu5aAsEqGgU0dXMPeh2LzZn1Tp7A=="],
 
     "@barmark/midi": ["@barmark/midi@0.3.3", "", { "dependencies": { "@barmark/sync": "^0.4.1", "barmark": "^0.23.1" } }, "sha512-+iRAahG30/KAcgvMk5oUwF05t9bs3e9yCwDRLQzKteyaJYHE5H2fqZkASH5K1+vjqbDGbi8s+ETkE+pDQsnh7A=="],
 
