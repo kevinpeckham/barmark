@@ -12,11 +12,12 @@ package uses [semantic versioning](https://semver.org/).
   downbeats (seconds) read as a bar grid, a meter and a tempo, and then,
   with the chord runs, as a chart, its timing map and its confidence
   record, with no audio and no features. Each downbeat is snapped to its
-  nearest beat; the meter and tempo are labelled from the modal count of
-  beats in a bar (stem-bench Study 41); adjacent half bars are joined
+  nearest beat; the meter is labelled from the modal count of beats in a
+  bar and the tempo from the median beat interval, a third of it in 6/8
+  (stem-bench Study 41); adjacent half bars are joined
   (Study 44); an unsteady reading is turned away. Beats before bar one
   are a pickup when they measure 1 beat to half a bar by the builder's own
-  measure; otherwise they are left off with a warning. `declared` is
+  measure and bar one is a usual bar; otherwise they are left off with a warning. `declared` is
   optional and compared, never obeyed. A refused reading is a refusal with
   its numbers, never a silent fallback: a host calls `chartFromRecording`
   itself. `./stages` adds `snapDownbeats`, `beatsLabel`, `joinHalfBars`
@@ -31,6 +32,12 @@ package uses [semantic versioning](https://semver.org/).
   nearest of ½, 1 and 2 to the bar over the declared bar, and the drift
   left after it (Study 41: a fold is not a wrong draft). `ratio` is as in
   0.1.
+
+### Fixed
+
+- **A call no longer throws on options that cannot be read** (an options
+  object with a getter that throws, or a Proxy that does): `resolveOptions`
+  refuses as `invalid-option`, so every call that takes options refuses too.
 
 ## [0.1.1] - 2026-11-11
 

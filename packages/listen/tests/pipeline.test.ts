@@ -439,3 +439,31 @@ describe("chartFromRecording never throws: each bad input is its named refusal",
 		expect(first(throwingTitle)?.reason).toBe("invalid-input");
 	});
 });
+
+describe("chartFromRecording when a mark cannot be read", () => {
+	const features = okValue(fromSamples).features;
+	const thrower = (): never => {
+		throw new Error("boom");
+	};
+
+	test.each(["title", "changes"])(
+		"a throwing %s getter is the builder's invalid-input, with the reading, the features and the grid's warnings",
+		(mark) => {
+			const input = { features, chords: song.chords, declared: { meter: "4/4", tempo: 121 } };
+			Object.defineProperty(input, mark, { get: thrower, enumerable: true });
+			const r = chartFromRecording(input as never);
+			expect(r.ok).toBe(false);
+			if (r.ok) return;
+			expect(r.refusals).toEqual([
+				{
+					reason: "invalid-input",
+					message: "The builder could not read the detections.",
+					detail: { field: "input" },
+				},
+			]);
+			expect(r.reading).not.toBeNull();
+			expect(r.features).not.toBeNull();
+			expect(codes(r)).toContain("tempo-drift");
+		},
+	);
+});

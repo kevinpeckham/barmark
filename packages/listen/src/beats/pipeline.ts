@@ -7,9 +7,10 @@ import type { BuildOptions, Change, Detected, Detections } from "@barmark/sync";
 import { type Built, buildChart, withMarks } from "../build.js";
 import type { ListenChordRuns } from "../grid/beats.js";
 import { invalid, isRefusal, readRecording } from "../input.js";
-import { type ListenOptions, resolveOptions } from "../options.js";
+import { type ListenOptions, resolveOptions, type Settings } from "../options.js";
 import { type Ok, ok, type Refusal, type Refused, refused } from "../result.js";
-import { type BeatsInput, type BeatsReading, beatsGridWith, type TrackedGrid } from "./grid.js";
+import { type BeatsInput, type BeatsReading, gridOf, type TrackedGrid } from "./grid.js";
+import { readBeats } from "./input.js";
 
 /** What `chartFromBeats` reads: a tracker's reading, the chords and the marks passed to the builder as given. */
 export type BeatsChartInput = BeatsInput & {
@@ -29,25 +30,30 @@ type BeatsChartResult = Ok<BeatsChart> | Refused<{ reading: Partial<BeatsReading
 /** A refusal of the input, with no reading. */
 const unread = (r: Refusal): BeatsChartResult => refused([r], [], { reading: null });
 
-/** The chart from a checked input: the grid, then the builder on it. */
+/** The chart from the input and the options: the beats read once, then the grid, then the builder on it. */
 function chartOf(
 	given: Record<string, unknown>,
 	id: string | undefined,
-	options: Parameters<typeof beatsGridWith>[1],
+	options: Settings,
 	build: BuildOptions | undefined,
 ): BeatsChartResult {
-	const grid = beatsGridWith(given, options);
+	const checked = readBeats(given);
+	if (isRefusal(checked)) return unread(checked);
+	const grid = gridOf(checked, options);
 	if (!grid.ok) return grid;
 	const { value, warnings } = grid;
-	const duration = given.duration as number;
-	const d: Detections = {
-		grid: value.grid,
-		chords: given.chords as ListenChordRuns,
-		meter: value.meter,
-		recording: id === undefined ? { duration } : { id, duration },
+	const { duration } = checked;
+	const detections = (): Detections => {
+		const d: Detections = {
+			grid: value.grid,
+			chords: given.chords as ListenChordRuns,
+			meter: value.meter,
+			recording: id === undefined ? { duration } : { id, duration },
+		};
+		if (value.pickup) d.pickup = { start: value.pickup.start };
+		return withMarks(d, given);
 	};
-	if (value.pickup) d.pickup = { start: value.pickup.start };
-	const built = buildChart(withMarks(d, given), build);
+	const built = buildChart(detections, build);
 	if ("reason" in built) return { ...refused([built], warnings), reading: value.reading };
 	return ok({ ...built, grid: value }, warnings);
 }

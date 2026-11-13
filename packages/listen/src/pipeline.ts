@@ -289,7 +289,7 @@ function run(
 	const bars = barsOf(c, f, s);
 	if (!bars.ok) return refusedWith(bars, bars.reading, f);
 	const { value: b, warnings } = bars;
-	const built = buildChart(detectionsOf(c, b, f), build_);
+	const built = buildChart(() => detectionsOf(c, b, f), build_);
 	if (isRefusal(built)) return refusedWith(refused([built]), b.reading, f, warnings);
 	return ok({ ...built, grid: b.grid, reading: b.reading, features: f }, warnings);
 }

@@ -451,6 +451,22 @@ function mergeOption(merged: Record<string, unknown>, key: string, value: unknow
 	return p;
 }
 
+/** Every given option merged into `merged`, and the refusals of those not accepted or out of range. */
+function mergeGiven(
+	given: Record<string, unknown>,
+	accepts: (key: string) => boolean,
+	merged: Record<string, unknown>,
+): Refusal[] {
+	const problems: Refusal[] = [];
+	for (const [key, value] of Object.entries(given)) {
+		const p = accepts(key)
+			? mergeOption(merged, key, value)
+			: bad(key, `Option ${key} is not an option of this call.`);
+		if (p) problems.push(p);
+	}
+	return problems;
+}
+
 /**
  * Merge `options` over `DEFAULTS` for a scope, refusing an unknown key, a key
  * the scope does not take and a value outside its range. Never throws.
@@ -460,19 +476,23 @@ export function resolveOptions(
 	options: unknown,
 	scope: OptionScope,
 ): Ok<{ settings: Settings; build?: BuildOptions }> | Refused {
+	try {
+		return resolveGiven(options, scope);
+	} catch {
+		return refused([bad("", "The options could not be read.")]);
+	}
+}
+
+function resolveGiven(
+	options: unknown,
+	scope: OptionScope,
+): Ok<{ settings: Settings; build?: BuildOptions }> | Refused {
 	const given = options === undefined ? {} : options;
 	if (!isPlainObject(given)) {
 		return refused([bad("", "Options must be an object of option names and values.")]);
 	}
-	const accepts = acceptedKeys(scope);
 	const merged: Record<string, unknown> = { ...DEFAULTS };
-	const problems: Refusal[] = [];
-	for (const [key, value] of Object.entries(given)) {
-		const p = accepts(key)
-			? mergeOption(merged, key, value)
-			: bad(key, `Option ${key} is not an option of this call.`);
-		if (p) problems.push(p);
-	}
+	const problems = mergeGiven(given, acceptedKeys(scope), merged);
 	const build = given.build as BuildOptions | undefined;
 	if (problems.length === 0 && scope !== "features") {
 		const p = checkCombSteps(merged);

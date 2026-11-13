@@ -181,7 +181,7 @@ function gridOfLabel(
 }
 
 /** Steps 1 to 9 on a checked input. */
-function gridOf(c: CheckedBeats, s: Settings): BeatsGridResult {
+export function gridOf(c: CheckedBeats, s: Settings): BeatsGridResult {
 	const downbeats = snapDownbeats(c.beats, c.downbeats);
 	if (c.beats.length < 2 || downbeats.length < s.TRACKER_MIN_BARS + 1)
 		return tooFew(downbeats.length, c.beats.length, null);

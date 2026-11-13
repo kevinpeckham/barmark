@@ -162,8 +162,8 @@ if (tracked.ok) {
 
 Each downbeat is moved to its nearest beat. The meter is the usual count
 of beats in a bar: 6 is 6/8, 3 is 3/4 and anything else is 4/4 (stem-bench
-Study 41). Two bar lines that each hold half the usual count of beats are
-joined into one bar (Study 44). The reading is refused when too few bars
+Study 41). When the usual count is even, two bars in a row that each hold
+half of it are joined: the line between them goes (Study 44). The reading is refused when too few bars
 are left (`too-few-bars`) or when too few of them hold the usual count
 (`bars-unsteady`); the grid ends at `duration` when at least half a bar is
 left there.
@@ -203,9 +203,10 @@ are not a pickup stay off the chart, with a `beats-before-bar-one`
 warning.
 
 **A declared tempo or meter** is compared and never obeyed. Pass
-`declared: { meter, tempo }` (either part may be left out) and the grid
-warns with `tempo-drift` and `meter-differs`; the grid, the meter and the
-tempo are the tracker's in every case. `tempo-drift` here also carries
+`declared: { meter, tempo }`. With a meter and a tempo, both are compared
+(`tempo-drift` and `meter-differs`); with a meter alone, only the meter is
+compared; with a tempo alone, nothing is, because the bar's length needs
+both. The grid, the meter and the tempo are the tracker's in every case. `tempo-drift` here also carries
 `detail.fold`, the nearest of ½, 1 and 2 to the bar over the declared bar,
 and `detail.foldRatio`, the drift left once that fold is taken. Test
 `foldRatio` to treat a half-time or double-time reading as the same song;

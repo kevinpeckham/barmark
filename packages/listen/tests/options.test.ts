@@ -1,6 +1,10 @@
 import { describe, expect, test } from "bun:test";
+import { gridFromBeats } from "../src/beats/grid.js";
+import { chartFromBeats } from "../src/beats/pipeline.js";
+import { findGrid } from "../src/grid/grid.js";
 import { DEFAULTS, resolveOptions } from "../src/options.js";
 import { ok, refusal, refused } from "../src/result.js";
+import { reading } from "./helpers/beats.js";
 
 const NUMERIC: [key: string, scope: "listen" | "features", inside: number[], outside: unknown[]][] =
 	[
@@ -283,4 +287,56 @@ test('the "beats" scope: the grid and alignment options and build, not the sound
 	const sound = resolveOptions({ ALIGNMENT_SOUND_FLOOR: 0.1 }, "beats");
 	expect(sound.ok).toBe(false);
 	expect(resolveOptions({ build: {} }, "listen").ok).toBe(false);
+});
+
+describe("options that cannot be read", () => {
+	const thrower = (): never => {
+		throw new Error("boom");
+	};
+	const hostile = () => [
+		Object.defineProperty({}, "COMB_RANGE_FRACTION", { get: thrower, enumerable: true }),
+		new Proxy(
+			{},
+			{
+				get: thrower,
+				ownKeys: thrower,
+				getPrototypeOf: thrower,
+				has: thrower,
+				getOwnPropertyDescriptor: thrower,
+			},
+		),
+	];
+
+	test.each(["features", "listen", "beats", "pipeline"] as const)(
+		"resolveOptions in the %s scope refuses",
+		(scope) => {
+			for (const options of hostile()) {
+				const r = resolveOptions(options, scope);
+				expect(r.ok).toBe(false);
+				if (r.ok) return;
+				expect(r.refusals).toEqual([
+					{
+						reason: "invalid-option",
+						message: "The options could not be read.",
+						detail: { option: "" },
+					},
+				]);
+			}
+		},
+	);
+
+	test("gridFromBeats, chartFromBeats and findGrid refuse", () => {
+		const r = reading([4, 4, 4, 4]);
+		for (const options of hostile()) {
+			const calls = [
+				gridFromBeats(r, options as never),
+				chartFromBeats({ ...r, chords: { runs: [] } }, options as never),
+				findGrid(
+					{ features: {} as never, chords: null, declared: { meter: "4/4", tempo: 120 } },
+					options as never,
+				),
+			];
+			for (const c of calls) expect(!c.ok && c.refusals[0]?.reason).toBe("invalid-option");
+		}
+	});
 });

@@ -25,14 +25,16 @@ const reasons = (r: { ok: boolean; refusals?: { reason: string }[] }) =>
 
 describe("a chart on the tracker's bars", () => {
 	test("with the label's meter and the tempo the builder derives from the bars", () => {
-		const out = chartFromBeats({ ...FOUR, chords: FOUR_RUNS, title: "Four Bars" });
+		const tail = reading([4, 4, 4, 4], 0.4);
+		const out = chartFromBeats({ ...tail, chords: FOUR_RUNS, title: "Four Bars" });
 		if (!out.ok) throw new Error(`refused: ${reasons(out)}`);
 		expect(out.value.chart).toContain("# Four Bars");
 		expect(out.value.chart).toContain("time: 4/4, tempo: 120");
 		expect(out.value.chart).toContain("| C | F | G | C |");
 		expect(out.value.timing.bars.map((b) => b.start)).toEqual([0, 2, 4, 6]);
+		expect(out.value.grid.grid.bars.at(-1)).toBe(8);
 		expect(out.value.timing.end).toBe(8);
-		expect(out.value.timing.recording?.duration).toBe(8);
+		expect(out.value.timing.recording?.duration).toBe(8.4);
 		expect(out.value.grid.meter).toBe("4/4");
 		expect(parseChart(out.value.chart).diagnostics.filter((d) => d.severity === "error")).toEqual(
 			[],
@@ -92,6 +94,23 @@ describe("a chart on the tracker's bars", () => {
 		expect(out.value.timing.recording?.id).toBe("mix-1");
 	});
 
+	test("a mark getter that throws is invalid-input with the reading and the grid's warnings", () => {
+		const input = { ...FOUR, chords: FOUR_RUNS, declared: { meter: "4/4", tempo: 121 } };
+		Object.defineProperty(input, "title", {
+			get(): never {
+				throw new Error("boom");
+			},
+			enumerable: true,
+		});
+		const out = chartFromBeats(input);
+		expect(out.ok).toBe(false);
+		if (out.ok) return;
+		expect(out.refusals[0]?.reason).toBe("invalid-input");
+		expect(out.refusals[0]?.message).toBe("The builder could not read the detections.");
+		expect(out.reading?.beatsPerBar).toBe(4);
+		expect(out.warnings.map((w) => w.code)).toContain("tempo-drift");
+	});
+
 	test("chords the builder cannot read (a getter that throws on runs) are invalid-input", () => {
 		const out = chartFromBeats({
 			...FOUR,
@@ -101,7 +120,26 @@ describe("a chart on the tracker's bars", () => {
 				},
 			},
 		});
-		expect(reasons(out)).toEqual(["invalid-input"]);
+		expect(out.ok).toBe(false);
+		if (out.ok) return;
+		expect(out.refusals[0]?.message).toBe("The builder could not read the detections.");
+		expect(out.reading?.beatsPerBar).toBe(4);
+	});
+
+	test("the duration is read once: a getter that answers 8, then 999, gives 8", () => {
+		let reads = 0;
+		const input = {
+			beats: FOUR.beats,
+			downbeats: FOUR.downbeats,
+			chords: FOUR_RUNS,
+			get duration() {
+				reads += 1;
+				return reads === 1 ? 8 : 999;
+			},
+		};
+		const out = chartFromBeats(input);
+		if (!out.ok) throw new Error(`refused: ${reasons(out)}`);
+		expect(out.value.timing.recording?.duration).toBe(8);
 	});
 });
 
@@ -110,11 +148,14 @@ describe("a refused reading", () => {
 		const out = chartFromBeats({ ...reading([3, 3, 3, 2, 4, 5, 2, 4, 5]), chords: { runs: [] } });
 		expect(!out.ok && out.refusals[0]?.reason).toBe("bars-unsteady");
 		expect(!out.ok && out.reading?.beatsPerBar).toBe(3);
+		expect(!out.ok && out.reading?.counts).toEqual({ 2: 2, 3: 3, 4: 2, 5: 2 });
+		expect(!out.ok && out.reading?.steadyShare).toBeCloseTo(3 / 9);
 	});
 
-	test("too few bars refuses, with the reading so far", () => {
+	test("too few bars refuses; no reading yet, as the grid gives none", () => {
 		const out = chartFromBeats({ ...reading([4, 4]), chords: { runs: [] } });
 		expect(reasons(out)).toEqual(["too-few-bars"]);
+		expect(!out.ok && out.reading).toBeNull();
 	});
 });
 

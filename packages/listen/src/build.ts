@@ -34,10 +34,18 @@ export function withMarks(d: Detections, given: Record<string, unknown>): Detect
 	return d;
 }
 
-/** The builder on the detections: its chart, map and confidence, or its error (or a throw) as `invalid-input`. */
-export function buildChart(d: Detections, options: BuildOptions | undefined): Built | Refusal {
+/**
+ * The builder on the detections: its chart, map and confidence, or its error
+ * (or a throw, the detections' own reads included) as `invalid-input`. The
+ * detections come as a function so that reading the caller's marks is inside
+ * the same guard.
+ */
+export function buildChart(
+	detections: () => Detections,
+	options: BuildOptions | undefined,
+): Built | Refusal {
 	try {
-		const built = chartFromDetections(d, options);
+		const built = chartFromDetections(detections(), options);
 		const error = built.diagnostics.find((x) => x.severity === "error");
 		if (error || built.timing === null || built.confidence === null) {
 			const message = error?.message ?? "The builder made no chart.";
