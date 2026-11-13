@@ -189,6 +189,12 @@ Fallow, CI, Swamp), the grammar, `examples/`, the scripts and FINDINGS.md.
     checks them) and compares the three real mixes, VM only, never in CI;
     the goldens' built charts are barmark's printing, so regenerate the
     goldens after a barmark printing change
+  - `bun scripts/listen-beats-equivalence.ts <stem-shovel commit>` (at or
+    after `011cee44`): the app's `trackerBarGrid` and `beatThisGrid` read
+    with `git show` into `~/.cache/barmark/stem-shovel-beats-<sha8>/`;
+    writes `tests/fixtures/beats/equivalence.json`
+    (`tests/beats-equivalence.test.ts` checks it) and compares the five
+    real readings, never written, VM only, never in CI
 - `packages/cli/`: `@barmark/cli`, the `barmark` command (`check`,
   `format`, `part`, `render` (`--score`: the full score, Verovio
   in-process, `src/score.ts`), `transpose`, `export`, `import`; MusicXML
