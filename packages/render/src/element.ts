@@ -20,13 +20,15 @@ type Attributes = {
 	hasAttribute(name: string): boolean;
 };
 
+const HANDS = ["left", "right"] as const;
+
 export function optionsFromAttributes(el: Attributes): RenderOptions {
 	const theme = el.getAttribute("theme");
 	const numerals = NUMERALS.find((n) => n === el.getAttribute("numerals"));
 	// Not `part`: that global attribute names an element for ::part() styling.
 	const part = el.getAttribute("show-part");
 	const diagrams = el.getAttribute("chord-diagrams") === "guitar";
-	const hand = ["left", "right"].find((h) => h === el.getAttribute("diagram-hand"));
+	const hand = HANDS.find((h) => h === el.getAttribute("diagram-hand"));
 	return {
 		theme: THEMES.find((t) => t === theme) ?? "auto",
 		barNumbers: el.getAttribute("bar-numbers") !== "off",
@@ -35,7 +37,7 @@ export function optionsFromAttributes(el: Attributes): RenderOptions {
 		...(numerals ? { numerals } : {}),
 		...(part ? { part } : {}),
 		...(diagrams ? { chordDiagrams: "guitar" as const } : {}),
-		...(hand ? { diagramHand: hand as "left" | "right" } : {}),
+		...(hand ? { diagramHand: hand } : {}),
 		// Only "row" changes the layout; anything else, or none, keeps the shared columns.
 		...(el.getAttribute("columns") === "row" ? { columns: "row" as const } : {}),
 	};

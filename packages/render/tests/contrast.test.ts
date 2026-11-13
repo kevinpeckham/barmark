@@ -65,10 +65,15 @@ describe("the stylesheet", () => {
 		]
 			.map((m) => m[1])
 			.join("");
-		for (const c of ["bm-dg-grid", "bm-dg-mark"])
-			expect(forced).toMatch(new RegExp(`\\.${c}[^{]*\\{stroke:CanvasText\\}`));
-		for (const c of ["bm-dg-nut", "bm-dg-dot", "bm-dg-barre", "bm-dg-fret"])
-			expect(forced).toMatch(new RegExp(`\\.${c}[^{]*\\{fill:CanvasText\\}`));
+		// Everything in the strip draws from these three colours, so forcing them forces the strip.
+		for (const name of ["rule", "muted", "ink"])
+			expect(forced).toMatch(new RegExp(`\\.bm-diagrams\\{[^}]*--bm-${name}:CanvasText`));
+		const draws = (selector: string, rule: string) =>
+			expect(stylesheet).toMatch(new RegExp(`\\.${selector}\\{[^}]*${rule}`));
+		draws("bm-dg-grid", "stroke:var\\(--bm-rule\\)");
+		draws("bm-dg-mark", "stroke:var\\(--bm-muted\\)");
+		draws("bm-dg-fret", "fill:var\\(--bm-muted\\)");
+		draws("bm-diagram-svg", "fill:var\\(--bm-ink\\)");
 	});
 	test("the not-playable frame stands as tall as a drawing", () => {
 		const svg = Number(/\.bm-diagram-svg\{[^}]*;height:([\d.]+)em/.exec(stylesheet)?.[1]);

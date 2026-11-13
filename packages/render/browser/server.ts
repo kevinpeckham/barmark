@@ -36,8 +36,8 @@ const CHARTS: Record<string, string> = {
 	columns:
 		"# Columns\n## A\n| G7 | G7 C6/G Bbmaj7/F Fmaj9 | C | F |\n| C | F | G | C |\n## B\n|: C | D |\n|1 E | F :|\n|2 G | % |\n| C | CM7 |\n| E :| F |\n| A | B | C | D | E | F | G | A |\n",
 	peaceful: PEACEFUL_DREAMS,
-	// A chord that lands at the twelfth fret: its diagram has a fret number.
-	high: "# High\n| E | F#m7 | Bb | {E4 A4 C#5 E5} |\n",
+	// A note set at the twelfth fret: a fret number, and a barre across it.
+	high: "# High\n| {E3 B3 E4 G#4 B4 E5} |\n",
 	long: "# Long\n## A\n| A | B | C | D | E | F | G | A | B | C | D | E |\n| A / B / | C / D / | E / F / | G / A / | B / C / | D / E / |",
 };
 const HOSTILE = `*{margin:2em!important;padding:0!important;font-family:"Comic Sans MS",cursive!important;line-height:3!important}

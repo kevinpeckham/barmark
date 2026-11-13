@@ -274,7 +274,7 @@ const diagramsCss = `
 .bm-diagrams ul{display:flex;flex-wrap:wrap;gap:.5em .6em;margin:0 0 .3em;padding:0;list-style:none}
 .bm-diagram{display:flex;flex-direction:column;align-items:center;text-align:center;break-inside:avoid}
 .bm-diagram-fr{padding-left:${em(DIAGRAM.label)}}
-.bm-diagram-svg{display:block;width:${em(DIAGRAM.narrow)};height:${em(DIAGRAM.height)}}
+.bm-diagram-svg{fill:var(--bm-ink);display:block;width:${em(DIAGRAM.narrow)};height:${em(DIAGRAM.height)}}
 .bm-dg-fr{width:${em(DIAGRAM.wide)};margin-left:${em(-DIAGRAM.label)}}
 .bm-diagram-none{display:flex;align-items:center;justify-content:center;width:${at(DIAGRAM.small, DIAGRAM.frame)};height:${at(DIAGRAM.small, DIAGRAM.height)};padding:.3em;border:.1em dashed var(--bm-rule);border-radius:.4em;text-wrap:balance}
 :is(.bm-diagram-none,.bm-diagram-note){font:${em(DIAGRAM.small)}/1.2 ${LABEL};color:var(--bm-muted)}
@@ -285,13 +285,8 @@ const diagramsCss = `
 .bm-diagram-voicing{max-width:${at(0.75, DIAGRAM.frame)}}
 .bm-dg-grid{fill:none;stroke:var(--bm-rule);stroke-width:1.2}
 .bm-dg-mark{fill:none;stroke:var(--bm-muted);stroke-width:1.3}
-:is(.bm-dg-nut,.bm-dg-dot,.bm-dg-barre){fill:var(--bm-ink)}
 .bm-dg-fret{fill:var(--bm-muted);font-family:${TEXT};text-anchor:end}
-@media (forced-colors:active){
-	:is(.bm-dg-grid,.bm-dg-mark){stroke:CanvasText}
-	:is(.bm-dg-nut,.bm-dg-dot,.bm-dg-barre,.bm-dg-fret){fill:CanvasText}
-	.bm-diagram-none{border-color:CanvasText}
-}
+@media (forced-colors:active){.bm-diagrams{--bm-rule:CanvasText;--bm-muted:CanvasText;--bm-ink:CanvasText}}
 `;
 
 /** The strip's rules, between the shared rules and the row rules, so a chart drawn without it is styled byte for byte as before. */

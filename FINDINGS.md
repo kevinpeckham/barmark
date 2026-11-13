@@ -9,6 +9,27 @@ not here.
 
 ## Testing
 
+### A bundle-size test whose number depended on how the test was started (2026-11-13, @barmark/render)
+
+- **The symptom.** `packages/render/tests/size.test.ts` measured the element
+  at 52,865 gzipped in 18 of 20 runs started by filter (`bun test
+  packages/render/tests/size.test.ts`) and 52,793 in the rest; started by
+  `./` path it gave 52,793 every time. The base number, measured from a
+  `git archive`, matched neither.
+- **The cause.** Two things. The 72 bytes were barmark's `chords/name.ts`,
+  dropped only when barmark's `"sideEffects": false` is honoured, which
+  depends on how the workspace package resolved; the archive had no
+  `package.json` at all, so its base always kept the file. And once the
+  trees agreed, a few bytes still moved with the temp directory's random
+  name, because Bun's minifier picks identifiers from module paths.
+- **The fix.** The test copies the sources it needs (`packages/render`,
+  `barmark`, `fretboard` `src`) and the root `tsconfig.json` into a
+  directory with a fixed name and no `package.json` files, and builds the
+  element from that copy; the base is built from `git archive` into the same
+  path. Twenty runs, ten each way, now give the same number. A size test
+  must measure a tree it made, not one the runner resolves. See
+  `packages/render/tests/size.test.ts`.
+
 ### A finder that drops answers still gives every chord one valid shape (2026-11-13, @barmark/fretboard)
 
 - **The symptom.** The shape finder's first version silently dropped every

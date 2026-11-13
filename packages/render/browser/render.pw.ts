@@ -1104,13 +1104,52 @@ test.describe("chord diagrams", () => {
 			el.numerals = "nashville";
 			el.chordDiagrams = "guitar";
 		});
-		await page.evaluate(() => new Promise((done) => setTimeout(done, 100)));
+		// The theme is restyled in the same pass, so once it shows, the diagrams were left alone.
+		await page.evaluate(() => {
+			(document.querySelector("#server") as HTMLElement & { theme: string }).theme = "dark";
+		});
+		await expect(page.locator("#server .bm-chart")).toHaveAttribute("data-theme", "dark");
 		await expect(page.locator("#server .bm-diagrams")).toHaveCount(0);
 		await expect(page.locator("#server .bm-heading")).toHaveText("Verse");
 		expect(errors).toEqual([]);
 	});
 
-	test("a fret number at the twelfth fret lies inside its drawing and clear of the barre and strings", async ({
+	test("the properties reflect their attributes, and read them back", async ({ page }) => {
+		await page.goto("/element");
+		const el = (p: Page) => p.locator("#diagrams");
+		await expect(page.locator("#diagrams .bm-heading")).toHaveText("Verse");
+		await el(page).evaluate((e) => {
+			const chart = e as HTMLElement & { chordDiagrams: string | null; diagramHand: string };
+			chart.chordDiagrams = "guitar";
+			chart.diagramHand = "left";
+		});
+		await expect(el(page)).toHaveAttribute("chord-diagrams", "guitar");
+		await expect(el(page)).toHaveAttribute("diagram-hand", "left");
+		await expect(page.locator("#diagrams .bm-diagrams")).toHaveCount(1);
+		await el(page).evaluate((e) => {
+			(e as HTMLElement & { diagramHand: string }).diagramHand = "right";
+		});
+		await expect(el(page)).not.toHaveAttribute("diagram-hand");
+		await el(page).evaluate((e) => {
+			(e as HTMLElement & { chordDiagrams: string | null }).chordDiagrams = null;
+		});
+		await expect(el(page)).not.toHaveAttribute("chord-diagrams");
+		await expect(page.locator("#diagrams .bm-diagrams")).toHaveCount(0);
+		const read = await el(page).evaluate((e) => {
+			const chart = e as HTMLElement & { chordDiagrams: string | null; diagramHand: string };
+			const out = [chart.chordDiagrams, chart.diagramHand];
+			chart.setAttribute("chord-diagrams", "guitar");
+			chart.setAttribute("diagram-hand", "left");
+			out.push(chart.chordDiagrams, chart.diagramHand);
+			chart.setAttribute("chord-diagrams", "banjo");
+			chart.setAttribute("diagram-hand", "up");
+			out.push(chart.chordDiagrams, chart.diagramHand);
+			return out;
+		});
+		expect(read).toEqual([null, "right", "guitar", "left", null, "right"]);
+	});
+
+	test("a fret number at the twelfth fret lies inside its drawing, left of the barre and the strings", async ({
 		page,
 	}) => {
 		await page.goto("/chart?chart=high&diagrams=guitar");
@@ -1123,17 +1162,19 @@ test.describe("chord diagrams", () => {
 			const bar = barre?.getBBox();
 			return {
 				text: svg.querySelector(".bm-dg-fret")?.textContent,
+				hasBarre: barre !== null,
 				inside:
 					label.x >= view.x &&
 					label.y >= view.y &&
 					label.x + label.width <= view.x + view.width &&
 					label.y + label.height <= view.y + view.height,
-				clearOfStrings: label.x + label.width <= grid.x,
-				clearOfBarre: bar ? label.x + label.width <= bar.x : true,
+				clearOfStrings: label.x + label.width < grid.x,
+				clearOfBarre: bar !== undefined && label.x + label.width < bar.x,
 			};
 		});
 		expect(found).toEqual({
 			text: "12fr",
+			hasBarre: true,
 			inside: true,
 			clearOfStrings: true,
 			clearOfBarre: true,
