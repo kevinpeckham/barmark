@@ -15,8 +15,8 @@ package uses [semantic versioning](https://semver.org/).
   table of open and movable shapes, then a finder for every other chord),
   a note set (each note placed on its own string, exactly, with a muted
   string allowed inside; `{C3 G3 E4}` is `x3x0x0`) or a chord with a
-  written voicing. It answers `{ ok: true, shape, notes }` or
-  `{ ok: false, reason }` and never throws. `notes` is `"shell"` for an
+  written voicing. It answers `{ ok: true, shape, caveat }` or
+  `{ ok: false, reason }` and never throws. `caveat` is `"shell"` for an
   altered chord (`7alt`: root, third and flat seventh), `"voicing-replaced"`
   when the written voicing fits no hand and the name's own shape stands
   in, else `null`. `reason` is `"single-note"` or `"not-playable"`.

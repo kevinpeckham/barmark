@@ -47,7 +47,7 @@ function check({ chord, voicing }: Item, count: Count): void {
 		count.named++;
 	} else {
 		expect(sounding(r.shape).length).toBeGreaterThan(0);
-		count[r.notes === null ? "placed" : "named"]++;
+		count[r.caveat === null ? "placed" : "named"]++;
 	}
 }
 

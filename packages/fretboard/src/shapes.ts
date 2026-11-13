@@ -7,9 +7,9 @@ import { shapeText } from "./shape.js";
 import { wantOf } from "./sounds.js";
 import { GUITAR, type Shape } from "./types.js";
 
-/** What `shapeFor` answers: a shape (`notes` says how it stands for the written chord) or why there is none. */
+/** What `shapeFor` answers: a shape (`caveat` says how it stands for the written chord) or why there is none. */
 export type ShapeResult =
-	| { ok: true; shape: Shape; notes: "shell" | "voicing-replaced" | null }
+	| { ok: true; shape: Shape; caveat: "shell" | "voicing-replaced" | null }
 	| { ok: false; reason: "single-note" | "not-playable" };
 
 const notPlayable = (): ShapeResult => ({ ok: false, reason: "not-playable" });
@@ -32,7 +32,7 @@ function placed(set: ChordRecord): ShapeResult {
 			? []
 			: exactShapes(midi as number[]);
 	const shape = found[0];
-	return shape ? { ok: true, shape, notes: null } : notPlayable();
+	return shape ? { ok: true, shape, caveat: null } : notPlayable();
 }
 
 /** The part of `shapeFor` that may throw on a record that is not well formed. */
@@ -48,7 +48,7 @@ function pick(slot: ChordRecord, voicing: ChordRecord | undefined): ShapeResult 
 	return {
 		ok: true,
 		shape,
-		notes: voicing ? "voicing-replaced" : slot.alteredOpen ? "shell" : null,
+		caveat: voicing ? "voicing-replaced" : slot.alteredOpen ? "shell" : null,
 	};
 }
 

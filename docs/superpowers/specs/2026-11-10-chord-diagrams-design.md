@@ -290,7 +290,7 @@ type Shape = { frets: number[]; base: number; barre?: { fret: number; from: numb
 // frets: absolute, low string first, -1 muted, 0 open; base: the first fret drawn
 type Tuning = { name: "guitar"; strings: number[] };    // MIDI, low to high
 shapeFor(slot: ChordRecord, voicing?: ChordRecord): ShapeResult;
-// ShapeResult: { ok: true; shape; notes: "shell" | "voicing-replaced" | null } | { ok: false; reason }
+// ShapeResult: { ok: true; shape; caveat: "shell" | "voicing-replaced" | null } | { ok: false; reason }
 shapesFor(slot): Shape[];                               // ranked alternatives, for a future picker
 soundsChord(shape, chord, tuning): boolean;             // the mechanical check of section 8
 ```
@@ -307,16 +307,18 @@ pieces, shape or reason, speech), so other drawers get the same data.
 `"ukulele"` and `"mandolin"` are later values of the same option.
 
 **Render's weight (Decided by Kevin (2026-11-10)): a static import with
-a +5 KB budget enforced by a test.**
+a +5.5 KB budget enforced by a test (amended 2026-11-13).**
 Render imports `@barmark/fretboard` statically. The finder (1.4 KB
 gzipped in the spike), a table of about 250 rows (about 2 KB) and the
 SVG drawer (about 1 KB) add roughly 4.5 KB gzipped to the element's
-43 KB, about 10%. A size test fails the build above +5 KB. Reason: the
+43 KB, about 10%. A size test fails the build above +5.5 KB. Reason: the
 attribute then works everywhere (score's grid, the CLI, barmark.dev)
 with no registration step. The alternative weighed and not taken:
 injecting the instrument (`chordDiagrams: guitar` imported from
 `@barmark/fretboard`, plus a side-effect import that registers it for
 the element), so charts without diagrams pay nothing.
+
+**Amended by Kevin (2026-11-13): the budget is +5.5 KB.** Built, the shapes cost render about 4.5 KB gzipped (`shapeFor` alone measured 4,546 bytes in the package), which leaves about 1 KB for the drawer; the size test enforces +5.5 KB.
 
 **6.3 Tuning and capo: deferred (Decided by Kevin (2026-11-10)).** First
 release: standard tuning only. A capo changes what the strip's names
@@ -401,7 +403,7 @@ All in `bun test` unless marked VM.
   `export-scale.test.ts` guards MIDI. (The unoptimised spike takes 4.4 ms
   a chord; pruning by window and the table hit rate must bring 200 new
   chords under 50 ms.)
-- **Size.** The element bundle's gzipped size stays within +5 KB of the
+- **Size.** The element bundle's gzipped size stays within +5.5 KB (amended 2026-11-13) of the
   last release.
 - **ChordPro comparison (VM only, never in CI).** `bun
   scripts/chordpro-shapes.ts` downloads ChordPro's `guitar.json` at a
@@ -464,7 +466,7 @@ Decided by Kevin (2026-11-10), each as recommended:
    finder, under MIT. ChordPro's tables are only a VM-only check and are
    never shipped (section 3).
 2. **Package and weight: `@barmark/fretboard`,** imported statically by
-   render, with the +5 KB budget enforced by a test (section 6).
+   render, with the +5.5 KB budget (amended 2026-11-13) enforced by a test (section 6).
 3. **ChordPro defines:** with diagrams on, the export writes `{define}`
    for every chord (section 7).
 4. **Strip position:** the top only, for now (section 5.1).
@@ -472,3 +474,4 @@ Decided by Kevin (2026-11-10), each as recommended:
    beside them (section 6.3).
 6. **No syntax for picking a shape.** Authors who want a particular
    fingering write a voicing with octaves.
+7. **The result's field is `caveat`** (Kevin, 2026-11-13), not `notes`: in a music library `notes` reads as musical notes.

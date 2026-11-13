@@ -31,7 +31,7 @@ test("the design's voicings", () => {
 	const fit = (t: string) => shapeFor(chord(t));
 	expect(shapeFor(chord("Cmaj7"), chord("{E3 G3 B3 C4}"))).toMatchObject({
 		ok: true,
-		notes: "voicing-replaced",
+		caveat: "voicing-replaced",
 	});
 	expect(text(shapeFor(chord("Dm7"), chord("{F3 C4 E4}")))).toBe("xx3x10");
 	expect(text(shapeFor(chord("G13"), chord("{F2 B2 E3}")))).toBe("122xxx");
@@ -40,22 +40,22 @@ test("the design's voicings", () => {
 	expect(fit("{E1}")).toEqual({ ok: false, reason: "single-note" });
 });
 
-test("a voicing is placed with notes null; one that does not fit is replaced by the name's shape", () => {
-	expect(shapeFor(chord("Dm7"), chord("{F3 C4 E4}"))).toMatchObject({ ok: true, notes: null });
+test("a voicing is placed with caveat null; one that does not fit is replaced by the name's shape", () => {
+	expect(shapeFor(chord("Dm7"), chord("{F3 C4 E4}"))).toMatchObject({ ok: true, caveat: null });
 	const replaced = shapeFor(chord("Cmaj7"), chord("{E3 G3 B3 C4}"));
-	expect(replaced).toEqual({ ok: true, shape: shapeOf("x32000"), notes: "voicing-replaced" });
+	expect(replaced).toEqual({ ok: true, shape: shapeOf("x32000"), caveat: "voicing-replaced" });
 	expect(shapeFor(chord("Cmaj7"), chord("{E3}"))).toMatchObject({
 		ok: true,
-		notes: "voicing-replaced",
+		caveat: "voicing-replaced",
 	});
-	expect(shapeFor(chord("Cmaj7"), chord("{E1 G1}"))).toMatchObject({ notes: "voicing-replaced" });
+	expect(shapeFor(chord("Cmaj7"), chord("{E1 G1}"))).toMatchObject({ caveat: "voicing-replaced" });
 });
 
 test("named chords: the table's shape, a shell for 7alt, the finder's for the rest", () => {
-	expect(shapeFor(chord("C"))).toEqual({ ok: true, shape: shapeOf("x32010"), notes: null });
-	expect(shapeFor(chord("C7alt"))).toMatchObject({ ok: true, notes: "shell" });
+	expect(shapeFor(chord("C"))).toEqual({ ok: true, shape: shapeOf("x32010"), caveat: null });
+	expect(shapeFor(chord("C7alt"))).toMatchObject({ ok: true, caveat: "shell" });
 	const r = shapeFor(chord("C13(b9)"));
-	expect(r).toMatchObject({ ok: true, notes: null });
+	expect(r).toMatchObject({ ok: true, caveat: null });
 	if (r.ok) {
 		expect(soundsChord(r.shape, chord("C13(b9)"))).toBe(true);
 		expect(withinLimits(r.shape, 3)).toBe(true);
@@ -162,7 +162,7 @@ test("hand-built records that are not well formed give a reason, never a throw",
 		expect(shapesFor(b as ChordRecord)).toEqual([]);
 		const v = shapeFor(base, b as ChordRecord);
 		// no voicing at all (null, undefined) is a bare name
-		if (b != null) expect(v.ok === false || v.notes === "voicing-replaced").toBe(true);
+		if (b != null) expect(v.ok === false || v.caveat === "voicing-replaced").toBe(true);
 	}
 	expect(
 		shapeFor(base, {
@@ -172,7 +172,7 @@ test("hand-built records that are not well formed give a reason, never a throw",
 		} as never),
 	).toMatchObject({
 		ok: true,
-		notes: "voicing-replaced",
+		caveat: "voicing-replaced",
 	});
 });
 
@@ -203,13 +203,13 @@ test("results are not shared: writing to one never changes the next", () => {
 	if (!r.ok) throw new Error("no shape");
 	r.shape.frets[1] = 9;
 	r.shape.base = 9;
-	expect(shapeFor(chord("C"))).toEqual({ ok: true, shape: shapeOf("x32010"), notes: null });
+	expect(shapeFor(chord("C"))).toEqual({ ok: true, shape: shapeOf("x32010"), caveat: null });
 	const t = shapeFor(chord("Cmaj7"), chord("{E3 G3 B3 C4}"));
 	(t as { reason?: string }).reason = "x";
 	expect(shapeFor(chord("Cmaj7"), chord("{E3 G3 B3 C4}"))).toEqual({
 		ok: true,
 		shape: shapeOf("x32000"),
-		notes: "voicing-replaced",
+		caveat: "voicing-replaced",
 	});
 });
 

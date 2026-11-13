@@ -30,7 +30,7 @@ function chord(text: string): ChordRecord {
 
 const result = shapeFor(chord("F"));
 // { ok: true, shape: { frets: [1, 3, 3, 2, 1, 1], base: 1,
-//                      barre: { fret: 1, from: 0, to: 5 } }, notes: null }
+//                      barre: { fret: 1, from: 0, to: 5 } }, caveat: null }
 if (result.ok) shapeText(result.shape); // "133211"
 ```
 
@@ -40,16 +40,16 @@ written after the name) and never throws. It answers with a `ShapeResult`:
 
 ```ts
 type ShapeResult =
-	| { ok: true; shape: Shape; notes: "shell" | "voicing-replaced" | null }
+	| { ok: true; shape: Shape; caveat: "shell" | "voicing-replaced" | null }
 	| { ok: false; reason: "single-note" | "not-playable" };
 ```
 
-- `notes: null`: the shape is the chord, or the notes you wrote.
-- `notes: "shell"`: the chord is an altered one (`C7alt`), and the shape is
+- `caveat: null`: the shape is the chord, or the notes you wrote.
+- `caveat: "shell"`: the chord is an altered one (`C7alt`), and the shape is
   its root, third and flat seventh only. The grammar leaves the altered
   fifth and ninth to the player, so the shape does not pick them:
   `shapeFor` gives `x323xx` for `C7alt`.
-- `notes: "voicing-replaced"`: you wrote a voicing that no hand can play in
+- `caveat: "voicing-replaced"`: you wrote a voicing that no hand can play in
   standard tuning, so the shape is the chord's own. Below, `Cmaj7` written
   as `{E3 G3 B3 C4}` gets `x32000`.
 - `reason: "single-note"`: one pitch (`{E}`, `{E1}`) is a note, not a
@@ -89,7 +89,7 @@ pitch.
 
 ```ts
 shapeFor(chord("{C3 G3 E4}"));
-// { ok: true, shape: { frets: [-1, 3, -1, 0, -1, 0], base: 1 }, notes: null }
+// { ok: true, shape: { frets: [-1, 3, -1, 0, -1, 0], base: 1 }, caveat: null }
 // shapeText: "x3x0x0"
 ```
 
@@ -99,14 +99,14 @@ is the notes:
 ```ts
 const dm7 = chord("Dm7");
 shapeFor(dm7, chord("{F3 C4 E4}"));
-// shape "xx3x10" (frets [-1, -1, 3, -1, 1, 0]), notes: null
+// shape "xx3x10" (frets [-1, -1, 3, -1, 1, 0]), caveat: null
 ```
 
-If they do not fit, `notes` says so and the shape is the name's:
+If they do not fit, `caveat` says so and the shape is the name's:
 
 ```ts
 shapeFor(chord("Cmaj7"), chord("{E3 G3 B3 C4}"));
-// shape "x32000", notes: "voicing-replaced"
+// shape "x32000", caveat: "voicing-replaced"
 ```
 
 Notes written without octaves (`{C E F# B}`) are placed in written order
@@ -198,7 +198,7 @@ player drops too:
 - the fifth, in a chord of four or more tones;
 - the ninth and eleventh, under a thirteenth;
 - an altered chord (`7alt`) is a shell: root, third and flat seventh.
-  `notes: "shell"` says so;
+  `caveat: "shell"` says so;
 - a power chord (`5`, `5(7)`) is two or three strings, root lowest.
 
 Every other tone sounds, and nothing outside the chord does.
