@@ -12,7 +12,7 @@ import {
 	type Slot,
 	type Syllable,
 } from "barmark";
-import type { CellModel } from "./types.js";
+import type { CellModel, DiagramEntry } from "./types.js";
 
 const NUMBERS: Record<string, string> = {
 	"1": "one",
@@ -121,6 +121,25 @@ export function speakChord(record: ChordRecord, key?: Key): string {
 	if (record.kind === "notes" || !record.parts) return speakNotes(record);
 	const degree = key ? speakDegree(record.parts.root, key) : "";
 	return `${degree ? `${degree}, ` : ""}${speakParts(record.parts)}`;
+}
+
+/** What a diagram can't show, said after its strings. */
+const CAVEAT = {
+	shell: ", altered tones not shown",
+	"voicing-replaced": ", written voicing doesn't fit standard tuning",
+} as const;
+const UNPLAYABLE = "not playable in standard tuning";
+
+/**
+ * A chord diagram aloud: the chord, then its strings low to high, whatever
+ * the hand: "A minor: muted, open, 2, 2, 1, open". One with no shape says
+ * why: "C major seven, written voicing: not playable in standard tuning".
+ */
+export function speakDiagram(entry: DiagramEntry): string {
+	const name = speakChord(entry.chord);
+	if (!entry.shape) return `${name}${entry.voicing ? ", written voicing" : ""}: ${UNPLAYABLE}`;
+	const strings = entry.shape.frets.map((f) => (f < 0 ? "muted" : f === 0 ? "open" : String(f)));
+	return `${name}: ${strings.join(", ")}${entry.caveat ? CAVEAT[entry.caveat] : ""}`;
 }
 
 const PUSHED = { eighth: "pushed", sixteenth: "pushed a sixteenth" } as const;

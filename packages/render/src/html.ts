@@ -25,12 +25,21 @@ import {
 	typesetNumeral,
 } from "./chord.js";
 import { creditsText } from "./credits.js";
+import { diagramSvg } from "./diagram.js";
 import { escapeHtml } from "./escape.js";
 import { fontFaceCss } from "./font.js";
 import { isTacet as isTacetCell, layoutChart } from "./model.js";
-import { barLabel, speakBar, speakVerses } from "./speech.js";
+import { barLabel, speakBar, speakDiagram, speakVerses } from "./speech.js";
 import { FIT_STEPS, MIN_BAR, stylesheet } from "./styles.js";
-import type { BlockItem, CellModel, ChartModel, SectionBlock, TempoBeat, Verse } from "./types.js";
+import type {
+	BlockItem,
+	CellModel,
+	ChartModel,
+	DiagramEntry,
+	SectionBlock,
+	TempoBeat,
+	Verse,
+} from "./types.js";
 import {
 	beatLinesHtml,
 	pitchHtml,
@@ -72,6 +81,13 @@ export type RenderOptions = {
 	 * `"shared"`.
 	 */
 	columns?: Columns;
+	/**
+	 * A strip of guitar chord diagrams after the header: one for each distinct
+	 * chord, in written order. Off when absent; any other value is off.
+	 */
+	chordDiagrams?: "guitar";
+	/** The diagrams' hand: `"left"` mirrors the strings, low string on the right. Any other value is right. */
+	diagramHand?: "right" | "left";
 };
 
 export type Columns = "shared" | "row";
@@ -138,6 +154,7 @@ function chartHtml(text: string, options: RenderOptions): string {
 	const model = layoutChart(text, {
 		rehearsalLetters: options.rehearsalLetters ?? false,
 		...(options.part && { part: options.part }),
+		...(options.chordDiagrams === "guitar" && { chordDiagrams: "guitar" as const }),
 	});
 	const barNumbers = options.barNumbers ?? true;
 	const parts = labelled(model);
@@ -150,7 +167,7 @@ function chartHtml(text: string, options: RenderOptions): string {
 	// Every section's left column is as wide as the longest part label, so tutti rows line up with systems.
 	const widest = Math.max(0, ...model.parts.flatMap(rowLabelsOf).map((l) => l.length));
 	const gutter = parts ? ` data-parts style="--bm-label-chars:${widest}"` : "";
-	return `<div class="bm-chart" data-theme="${themeOf(options)}"${gutter}${layoutAttributes(options, settings)}>${headerHtml(model)}${model.blocks.map((b) => blockHtml(b, settings)).join("")}${copyrightHtml(model)}${options.diagnostics ? diagnosticsHtml(model) : ""}</div>`;
+	return `<div class="bm-chart" data-theme="${themeOf(options)}"${gutter}${layoutAttributes(options, settings)}>${headerHtml(model)}${diagramsHtml(model.diagrams, settings.numerals, handOf(options))}${model.blocks.map((b) => blockHtml(b, settings)).join("")}${copyrightHtml(model)}${options.diagnostics ? diagnosticsHtml(model) : ""}</div>`;
 }
 
 /** The chart's layout switches the stylesheet reads, each only when it is off its default. */
@@ -181,6 +198,46 @@ function headerHtml(model: ChartModel): string {
 		.join("");
 	if (!title && !credits && !meta) return "";
 	return `<header class="bm-header">${title}${credits}${meta ? `<p class="bm-meta" part="meta">${meta}</p>` : ""}</header>`;
+}
+
+type Hand = "right" | "left";
+const handOf = (options: RenderOptions): Hand =>
+	options.diagramHand === "left" ? "left" : "right";
+
+/** The chart's chords as guitar diagrams, in one wrapping row after the header (design 5.1); nothing when it has none. */
+function diagramsHtml(entries: DiagramEntry[], numerals: Numerals | null, hand: Hand): string {
+	if (entries.length === 0) return "";
+	return `<section class="bm-diagrams" part="diagrams" aria-label="Guitar chords"><ul>${entries.map((e) => diagramHtml(e, numerals, hand)).join("")}</ul></section>`;
+}
+
+/** One diagram: the drawing (or, with no shape, a frame saying why), its name, its numeral and its note. */
+function diagramHtml(entry: DiagramEntry, numerals: Numerals | null, hand: Hand): string {
+	const label = speakDiagram(entry);
+	const drawing = entry.shape
+		? diagramSvg(entry.shape, hand, label)
+		: `<span class="bm-diagram-none" role="img" aria-label="${escapeHtml(label)}">${escapeHtml("not playable in standard tuning")}</span>`;
+	const note =
+		entry.caveat === "voicing-replaced"
+			? `<span class="bm-diagram-note" aria-hidden="true">${escapeHtml("written voicing doesn't fit standard tuning")}</span>`
+			: "";
+	return `<li class="bm-diagram" part="diagram">${drawing}<span class="bm-diagram-name" aria-hidden="true">${diagramNameHtml(entry)}</span>${diagramNumeralHtml(entry, numerals)}${note}</li>`;
+}
+
+/** A name as the grid marks it up, then its written voicing, smaller; a note set as written. */
+function diagramNameHtml({ chord, voicing }: DiagramEntry): string {
+	if (chord.kind === "notes" || !chord.parts) return escapeHtml(chord.canonical);
+	const voiced = voicing
+		? `<span class="bm-diagram-voicing">${escapeHtml(voicing.canonical)}</span>`
+		: "";
+	return `${piecesHtml(typesetChord(chord.parts), "")}${voiced}`;
+}
+
+/** With `numerals`, a named chord's degree in the key where it first appears; the name above stays in letters. */
+function diagramNumeralHtml({ chord, key }: DiagramEntry, numerals: Numerals | null): string {
+	if (!numerals || !key || chord.kind === "notes" || !chord.parts) return "";
+	const pieces = typesetNumeral(chord.parts, key, numerals);
+	if (!pieces) return "";
+	return `<span class="bm-diagram-numeral" aria-hidden="true">${piecesHtml(pieces, ` data-numeral="${numerals}"`)}</span>`;
 }
 
 /** The copyright lines, small, at the chart's foot. */
