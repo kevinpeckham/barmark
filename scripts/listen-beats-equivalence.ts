@@ -154,7 +154,16 @@ for (const c of cases) report(c.name, c.input, c.app);
 const real = JSON.parse(
 	git("bench reply missing.", "show", `${commit}:docs/bench-reply-beats-2026-11-11.json`),
 ) as Record<string, Reading>;
-for (const [name, r] of Object.entries(real)) {
+const isReading = (r: unknown): boolean => {
+	const x = r as Partial<Reading> | null;
+	return (
+		!!x && Array.isArray(x.beats) && Array.isArray(x.downbeats) && typeof x.duration === "number"
+	);
+};
+const readings = Object.entries(real).filter(([, r]) => isReading(r));
+if (readings.length === 0)
+	fail("bench reply holds no reading with beats, downbeats and duration; nothing to compare.");
+for (const [name, r] of readings) {
 	const snapped = snapDownbeats(r.beats, r.downbeats);
 	if (JSON.stringify(snapped) !== JSON.stringify(r.downbeats))
 		fail(`${name}: snapping changed the downbeats.`);

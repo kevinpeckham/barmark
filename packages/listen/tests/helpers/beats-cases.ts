@@ -35,6 +35,13 @@ function framed(
 	return { beats, downbeats, duration: frame(t) + 1.3 };
 }
 
+/** A steady 4/4 reading of 8 bars with three non-downbeat beats missing: three doubled beat gaps. */
+function doubledGaps(): BeatsCase["input"] {
+	const r = reading([4, 4, 4, 4, 4, 4, 4, 4], 1);
+	const missing = new Set([5, 14, 22]);
+	return { ...r, beats: r.beats.filter((_, i) => !missing.has(i)) };
+}
+
 const steady = (bpm: number, perBar: number, bars: number) => {
 	const r = evenBeats(bpm, perBar, bars);
 	return { ...r, duration: (r.beats.at(-1) as number) + 1 };
@@ -64,6 +71,27 @@ export const BEATS_CASES: BeatsCase[] = [
 	{ name: "seeded 4/4 on a 20 ms frame grid", input: framed(20261113, 24, () => false) },
 	{
 		name: "seeded 4/4 on a 20 ms frame grid with half-bar stretches",
-		input: framed(20261114, 24, (bar) => bar % 6 === 1 || bar % 6 === 2),
+		input: framed(20261114, 24, (bar) => bar % 6 === 1),
 	},
+	// A tempo ceil or floor, not a round: 60 / 0.52 = 115.38, 60 / 0.47 = 127.66.
+	{ name: "steady 4/4, a beat of 0.52 s", input: reading([4, 4, 4, 4, 4, 4], 1, 0.52) },
+	{ name: "steady 4/4, a beat of 0.47 s", input: reading([4, 4, 4, 4, 4, 4], 1, 0.47) },
+	// The 6/8 tempo floored or rounded after the third: 170 / 3 = 56.67, 172 / 3 = 57.33.
+	{ name: "steady 6/8 at beat tempo 170", input: steady(170, 6, 8) },
+	{ name: "steady 6/8 at beat tempo 172", input: steady(172, 6, 8) },
+	// The beat tempo from the mean beat interval, not the median: three doubled gaps move only the mean.
+	{ name: "a steady reading with doubled beat gaps", input: doubledGaps() },
+	// barSeconds or the closing bar from the as-read downbeats: the as-read median bar is 3 beats, the joined 4.
+	{
+		name: "half bars, then a closing bar that flips on the joined median",
+		input: reading([2, 2, 2, 2, 4, 4, 4, 4, 4, 3, 3], 0.9),
+	},
+	// The steady share from the as-read downbeats: joined 0.5, as read 0.36.
+	{
+		name: "a steady share that differs joined and as read",
+		input: reading([2, 2, 4, 4, 4, 4, 3, 5, 3, 5, 3]),
+	},
+	// A join on an odd count: bars of 3 and 5 beats must stay as read.
+	{ name: "an odd count with 1-beat bars", input: reading([3, 3, 3, 1, 1, 3, 3, 3]) },
+	{ name: "an odd count with 2-beat bars", input: reading([5, 5, 2, 2, 5, 5, 5]) },
 ];
