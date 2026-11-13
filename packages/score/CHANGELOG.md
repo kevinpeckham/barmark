@@ -6,12 +6,14 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-11-13
+
 ### Added
 
 - **`chord-diagrams` and `diagram-hand`**: the element observes them and
   its grid view shows `@barmark/render`'s strip of guitar chord diagrams;
   `renderScoreHtml(text, { chordDiagrams: "guitar" })` writes it too. The
-  score view (Verovio) ignores them.
+  score view (Verovio) ignores them. Requires `@barmark/render` 0.20.0.
 
 ### Changed
 
@@ -291,7 +293,8 @@ First release.
   needs no config; Vite 7 needs `optimizeDeps.exclude` and
   `worker.format: "es"`.
 
-[Unreleased]: https://github.com/kevinpeckham/barmark/compare/score-v0.5.0...HEAD
+[Unreleased]: https://github.com/kevinpeckham/barmark/compare/score-v0.6.0...HEAD
+[0.6.0]: https://github.com/kevinpeckham/barmark/compare/score-v0.5.0...score-v0.6.0
 [0.5.0]: https://github.com/kevinpeckham/barmark/compare/score-v0.4.0...score-v0.5.0
 [0.4.0]: https://github.com/kevinpeckham/barmark/compare/score-v0.3.0...score-v0.4.0
 [0.3.0]: https://github.com/kevinpeckham/barmark/compare/score-v0.2.0...score-v0.3.0
