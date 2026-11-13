@@ -9,4 +9,34 @@ package uses [semantic versioning](https://semver.org/).
 ### Added
 
 - The package, with its types (`Tuning`, `Shape`, `Barre`) and standard
-  guitar tuning (`GUITAR`).
+  guitar tuning (`GUITAR`): guitar chord shapes for barmark chords. It
+  draws nothing; standard tuning is the only tuning in 0.1.
+- **`shapeFor(slot, voicing?)`**: the shape for a named chord (our own
+  table of open and movable shapes, then a finder for every other chord),
+  a note set (each note placed on its own string, exactly, with a muted
+  string allowed inside; `{C3 G3 E4}` is `x3x0x0`) or a chord with a
+  written voicing. It answers `{ ok: true, shape, notes }` or
+  `{ ok: false, reason }` and never throws. `notes` is `"shell"` for an
+  altered chord (`7alt`: root, third and flat seventh), `"voicing-replaced"`
+  when the written voicing fits no hand and the name's own shape stands
+  in, else `null`. `reason` is `"single-note"` or `"not-playable"`.
+- **`shapesFor(slot)`**: ranked alternatives for a named chord, the first
+  being `shapeFor`'s, without repeats; `[]` for a note set.
+- **`soundsChord(shape, chord, tuning?)`**: whether a shape sounds a chord:
+  its lowest note is the chord's bass, every tone the chord needs sounds
+  and nothing outside the chord does. **`sounding(shape, tuning?)`** lists
+  a shape's MIDI notes.
+- **`shapeOf(text)`, `shapeText(shape)` and `shapeFrom(frets)`**: a shape
+  from `"x32010"`, as that text (spaces between the frets when one is 10 or
+  more), and from absolute frets with its `base` and `barre` worked out.
+- **The limits of a shape for a named chord**: at most a 3-fret span, four
+  fingers (a barre counts as one finger only at the lowest fret, so the
+  ninth chord `x32333` is not used and `C9` is `x3233x`), frets 0 to 15, a
+  moved shape never starting above the seventh fret, at least three
+  strings (two for a power chord), no muted string inside (`D/F#` is
+  `200232`) and the bass the lowest sounding note, not the lowest string.
+  The fifth may be left out of a chord of four or more tones, and the
+  ninth and eleventh under a thirteenth. Octaves are sounding pitch, so a
+  guitar part written at guitar pitch is an octave off.
+- `shapeFor` and `shapesFor` take no tuning in 0.1: only standard guitar
+  exists, and the parameter comes with the first other tuning.

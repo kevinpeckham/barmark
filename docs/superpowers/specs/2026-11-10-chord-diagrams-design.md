@@ -72,7 +72,8 @@ distinct chords, 27 covered; the 6 missing are all `5(7)` (`G5(7)`,
 a bass, it enumerates standard-tuning fingerings: every 4-fret window up
 to fret 15, open strings allowed; at most a 3-fret span between fretted
 notes; at most 4 fingers, a barre at the lowest fret counting as one;
-the bass on the lowest sounding string; no muted string inside the
+the bass on the lowest sounding note (an open string can sound below a
+fretted lower string); no muted string inside the
 voicing; at least 3 strings (2 for a power chord). The fifth (and the
 9th and 11th under a 13th) may be left out. A cost ranks them: position,
 strings sounding, span, tones left out, the root on top. The weights
@@ -164,7 +165,8 @@ written by hand:
   (the E- and A-shape barres and their 7th-chord cousins): two or three
   for each of the 54 forms, about 130 rows, transposed to any root.
 - Lookup: the open shape if one exists for that root, else the lowest
-  template, else the finder's first choice.
+  template, else the finder's first choice; a moved shape that would
+  start above the seventh fret is not used; the finder answers.
 
 Each row is a test: it must sound its name (section 8).
 
@@ -285,11 +287,13 @@ nothing more. A PDF drawer outside the browser gets the shapes as data
 type Shape = { frets: number[]; base: number; barre?: { fret: number; from: number; to: number } };
 // frets: absolute, low string first, -1 muted, 0 open; base: the first fret drawn
 type Tuning = { name: "guitar"; strings: number[] };    // MIDI, low to high
-shapeFor(slot: ChordRecord, voicing?: ChordRecord, tuning = GUITAR): ShapeResult;
+shapeFor(slot: ChordRecord, voicing?: ChordRecord): ShapeResult;
 // ShapeResult: { ok: true; shape; notes: "shell" | "voicing-replaced" | null } | { ok: false; reason }
-shapesFor(...): Shape[];                                // ranked alternatives, for a future picker
+shapesFor(slot): Shape[];                               // ranked alternatives, for a future picker
 soundsChord(shape, chord, tuning): boolean;             // the mechanical check of section 8
 ```
+
+In 0.1 these take no tuning: only standard guitar exists, and the parameter comes with the first other tuning. `sounding` and `soundsChord` take one.
 
 No SVG in this package: drawing belongs to render, beside the grid's
 theme.

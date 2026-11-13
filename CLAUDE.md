@@ -198,8 +198,27 @@ Fallow, CI, Swamp), the grammar, `examples/`, the scripts and FINDINGS.md.
 - `packages/fretboard/`: `@barmark/fretboard`, guitar chord shapes for
   barmark chords (a table, a shape finder, exact voicings); depends on
   `barmark` only and draws nothing
-  - `src/types.ts`: `Tuning`, `GUITAR`, `Shape`, `Barre`
-  - `tests/`: `bun test`
+  - `src/`: `types.ts` (`Tuning`, `GUITAR`, `Shape`, `Barre`), `pitch.ts`
+    (note names, pitch classes and MIDI), `shape.ts` (`shapeOf`,
+    `shapeText`, `shapeFrom`, `sounding`, the fingers a shape needs),
+    `sounds.ts` (what a chord wants, `soundsChord`, the hand's limits),
+    `finder.ts` (the shape finder: every window, the cost in whole tenths,
+    the bass the lowest pitch), `table.ts` (our hand-written open and
+    movable rows, from the instrument), `lookup.ts` (a chord's row, moved
+    to its root), `exact.ts` (a note set's notes, each on its own string),
+    `shapes.ts` (`shapeFor`, `shapesFor`, `ShapeResult`)
+  - `tests/`: `bun test`; every table row and every finder first choice
+    over the vocabulary must sound its name; `finder-oracle.test.ts` holds
+    the finder to a plain exhaustive search; `size.test.ts` holds the
+    bundle's gzipped size; `corpus.test.ts` walks the examples
+  - `scripts/chordpro-shapes.ts [--json]`: compares our shapes with
+    ChordPro's `guitar.json`, downloaded at a pinned commit into a
+    `mkdtemp` directory and removed after; it never writes into the repo
+    and ChordPro's data is never committed, copied into the table, or
+    imported by a package or a test; advice for a person, VM only, never
+    in CI
+  - `scripts/smoke-fretboard.mjs`: the package smoke check, run by
+    `verify:package` and the release's confirm job
 - `packages/cli/`: `@barmark/cli`, the `barmark` command (`check`,
   `format`, `part`, `render` (`--score`: the full score, Verovio
   in-process, `src/score.ts`), `transpose`, `export`, `import`; MusicXML

@@ -475,10 +475,11 @@ git commit -m "feat(fretboard): the table of open and movable shapes"
   	| { ok: true; shape: Shape; notes: "shell" | "voicing-replaced" | null }
   	| { ok: false; reason: "single-note" | "not-playable" };
   /** The shape a diagram shows for a slot: a chord name, a note set, or a name with a written voicing (spec §4). Never throws. */
-  export function shapeFor(slot: ChordRecord, voicing?: ChordRecord, tuning?: Tuning): ShapeResult;
+  export function shapeFor(slot: ChordRecord, voicing?: ChordRecord): ShapeResult;
   /** Ranked alternatives for a named chord: the table's, then the finder's, without repeats. [] for a note set. */
-  export function shapesFor(slot: ChordRecord, tuning?: Tuning): Shape[];
+  export function shapesFor(slot: ChordRecord): Shape[];
   ```
+  (amended in the build: no tuning parameter in 0.1; placed notes rank by a numeric fret comparison, muted as −1)
   Rules, from spec §4:
   - A named chord, no voicing: the table's shape, else the finder's first; `notes` is `"shell"` for `7alt`, else `null`; `not-playable` when neither has one.
   - A note set (kind `"notes"`): one pitch is `single-note`. With octaves on every note: `exactShapes`. With none: `orderedShapes`. Mixed (some notes with an octave, some without): `not-playable` **(the grammar decides whether this can be written; read `docs/grammar-v0.1-draft.md` §4.1 and report what the parser gives)**. No fingering: `not-playable`.
