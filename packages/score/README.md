@@ -46,7 +46,7 @@ technology the score is one image named for the chart's title, or "Score".
 
 | Attribute (property) | |
 |---|---|
-| `src`, `theme`, `bar-numbers`, `rehearsal-letters`, `numerals`, `wrap`, `show-part`, `columns` | the grid's own, as in [`@barmark/render`](../render/README.md#options-and-attributes) |
+| `src`, `theme`, `bar-numbers`, `rehearsal-letters`, `numerals`, `wrap`, `show-part`, `columns`, `chord-diagrams`, `diagram-hand` | the grid's own, as in [`@barmark/render`](../render/README.md#options-and-attributes). The score view ignores `chord-diagrams` and `diagram-hand`: only the grid shows the guitar chord strip |
 | `view` (`view`) | `"grid"` (default) or `"score"`; the view being shown. Set before the chart arrives, `"score"` waits for it |
 | `verovio-url` | where to load Verovio from (below) |
 | `verovio-integrity` | the SRI digest (`sha384-…`) the `verovio-url` copy must have; on a mismatch the package's own copy loads (below) |
@@ -66,6 +66,10 @@ score.view = "score";
 ```
 
 ### Bundling the worker
+
+Loaded without a bundler, the element also needs `@barmark/fretboard` in the
+page's import map (with `barmark` and `@barmark/render`): the element loads
+`@barmark/render`, which imports it whether or not diagrams are on.
 
 The engine runs in a module Worker, created as
 `new Worker(new URL("./worker.js", import.meta.url), { type: "module" })`.

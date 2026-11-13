@@ -1,3 +1,4 @@
+import { DIAGRAM_VIEW } from "./diagram.js";
 import { FONT_FAMILY } from "./font.js";
 
 /**
@@ -247,4 +248,48 @@ const minify = (text: string) =>
 /** The rules only `columns: "row"` uses, at the stylesheet's end. */
 export const ROW_COLUMNS_CSS = minify(rowCss);
 
-export const stylesheet = minify(css) + ROW_COLUMNS_CSS;
+/**
+ * A chord diagram, in chord sizes. A viewBox unit is 3.5/78 of a chord size,
+ * so strings stand .45em apart in either image. A wide drawing (one with a
+ * fret number) moves left by the room its number takes, and its item
+ * (`bm-diagram-fr`) pads that much on the left, so its strings sit over the
+ * name as a narrow drawing's do, and nothing reaches into the next item. The
+ * frame of a diagram with no shape is as tall as a drawing, a little wider
+ * so its words break in three lines; it and the note are in small print.
+ */
+const UNIT = 3.5 / 78;
+const DIAGRAM = {
+	narrow: DIAGRAM_VIEW.narrow * UNIT,
+	wide: DIAGRAM_VIEW.wide * UNIT,
+	label: DIAGRAM_VIEW.label * UNIT,
+	height: DIAGRAM_VIEW.height * UNIT,
+	frame: 4.9,
+	small: 0.6,
+	/** A note set's name: three notes to a line. */
+	set: 5.6,
+};
+
+/** The strip of chord diagrams (design 5): only charts drawn with `chordDiagrams` use it. */
+const diagramsCss = `
+.bm-diagrams ul{display:flex;flex-wrap:wrap;gap:.5em .6em;margin:0 0 .3em;padding:0;list-style:none}
+.bm-diagram{display:flex;flex-direction:column;align-items:center;text-align:center;break-inside:avoid}
+.bm-diagram-fr{padding-left:${em(DIAGRAM.label)}}
+.bm-diagram-svg{fill:var(--bm-ink);display:block;width:${em(DIAGRAM.narrow)};height:${em(DIAGRAM.height)}}
+.bm-dg-fr{width:${em(DIAGRAM.wide)};margin-left:${em(-DIAGRAM.label)}}
+.bm-diagram-none{display:flex;align-items:center;justify-content:center;width:${at(DIAGRAM.small, DIAGRAM.frame)};height:${at(DIAGRAM.small, DIAGRAM.height)};padding:.3em;border:.1em dashed var(--bm-rule);border-radius:.4em;text-wrap:balance}
+:is(.bm-diagram-none,.bm-diagram-note){font:${em(DIAGRAM.small)}/1.2 ${LABEL};color:var(--bm-muted)}
+.bm-diagram-note{max-width:${at(DIAGRAM.small, DIAGRAM.frame)}}
+.bm-diagram-name{padding-top:.35em;line-height:1.2}
+.bm-diagram-set{max-width:${em(DIAGRAM.set)};white-space:normal}
+:is(.bm-diagram-voicing,.bm-diagram-numeral){display:block;font-size:.75em;color:var(--bm-muted)}
+.bm-diagram-voicing{max-width:${at(0.75, DIAGRAM.frame)}}
+.bm-dg-grid{fill:none;stroke:var(--bm-rule);stroke-width:1.2}
+.bm-dg-mark{fill:none;stroke:var(--bm-muted);stroke-width:1.3}
+.bm-dg-fret{fill:var(--bm-muted);font-family:${TEXT};text-anchor:end}
+@media (forced-colors:active){.bm-diagrams{--bm-rule:CanvasText;--bm-muted:CanvasText;--bm-ink:CanvasText}}
+`;
+
+/** The strip's rules, between the shared rules and the row rules, so a chart drawn without it is styled byte for byte as before. */
+export const DIAGRAMS_CSS = minify(diagramsCss);
+
+export const stylesheet = minify(css) + DIAGRAMS_CSS + ROW_COLUMNS_CSS;

@@ -19,7 +19,9 @@ key: D, time: 4/4, tempo: 145
 - **[`barmark`](packages/barmark/)** on npm: the parser, the canonical
   printer and Harte-label conversion.
 - **[`@barmark/render`](packages/render/)** renders a chart
-  as a clean bar grid, as HTML or as a `<barmark-chart>` web component.
+  as a clean bar grid, as HTML or as a `<barmark-chart>` web component,
+  with guitar chord diagrams above it on request (`chord-diagrams="guitar"`,
+  the shapes from [`@barmark/fretboard`](packages/fretboard/)).
 - **[`@barmark/musicxml`](packages/musicxml/)** exports a chart to MusicXML
   (chords, repeats, parts, melodies and lyrics) and imports a MusicXML or
   `.mxl` file back into a chart, so charts move to and from MuseScore,

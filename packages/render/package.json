@@ -47,6 +47,7 @@
 		"url": "https://github.com/kevinpeckham/barmark/issues"
 	},
 	"dependencies": {
+		"@barmark/fretboard": "workspace:^",
 		"barmark": "workspace:^"
 	},
 	"scripts": {

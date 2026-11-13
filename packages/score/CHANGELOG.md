@@ -6,6 +6,19 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- **`chord-diagrams` and `diagram-hand`**: the element observes them and
+  its grid view shows `@barmark/render`'s strip of guitar chord diagrams;
+  `renderScoreHtml(text, { chordDiagrams: "guitar" })` writes it too. The
+  score view (Verovio) ignores them.
+
+### Changed
+
+- **Unbundled pages: add `@barmark/fretboard` to the import map.**
+  `@barmark/render`, which the element loads, imports it whether or not
+  diagrams are on.
+
 ## [0.5.0] - 2026-11-10
 
 ### Added

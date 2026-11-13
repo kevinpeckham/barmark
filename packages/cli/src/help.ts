@@ -74,6 +74,8 @@ The grid only:
   --columns shared|row     row: each row sizes its own bars, so a busy bar widens
                            only its own row (default shared: bar lines line up
                            down each section)
+  --diagrams guitar        Show a strip of guitar chord diagrams above the grid
+  --left-handed            With --diagrams: mirror the diagrams for a left hand
   --diagnostics            List the chart's problems below it
   --font-url <url>         Link the font instead of embedding it
 `,

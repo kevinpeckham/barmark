@@ -982,3 +982,202 @@ test.describe("columns", () => {
 		expect(Math.abs(width(barAt(shared, 1, 0)) - width(barAt(shared, 0, 0)))).toBeLessThan(1);
 	});
 });
+
+test.describe("chord diagrams", () => {
+	/** The colour a probe with this CSS colour computes to, on this page. */
+	const computed = (page: Page, css: string) =>
+		page.evaluate((c) => {
+			const probe = document.createElement("span");
+			probe.style.color = c;
+			document.body.append(probe);
+			const value = getComputedStyle(probe).color;
+			probe.remove();
+			return value;
+		}, css);
+
+	/** A dot's fill and a string's stroke, in the chart's first diagram. */
+	const drawn = (page: Page) =>
+		inChart(page, (root) => ({
+			dot: getComputedStyle(root.querySelector(".bm-dg-dot, .bm-dg-barre") as Element).fill,
+			string: getComputedStyle(root.querySelector(".bm-dg-grid") as Element).stroke,
+		}));
+
+	for (const [scheme, ink, rule] of [
+		["light", "rgb(29, 29, 31)", "rgb(74, 74, 74)"],
+		["dark", "rgb(236, 232, 224)", "rgb(143, 137, 127)"],
+	] as const)
+		test(`in ${scheme}, a dot is the ink colour and a string the rule colour`, async ({ page }) => {
+			await page.emulateMedia({ colorScheme: scheme });
+			await page.goto(`/chart?chart=peaceful&diagrams=guitar&theme=${scheme}`);
+			expect(await drawn(page)).toEqual({ dot: ink, string: rule });
+		});
+
+	test("printing, the strip uses the light palette", async ({ page }) => {
+		await page.emulateMedia({ colorScheme: "dark", media: "print" });
+		await page.goto("/chart?chart=peaceful&diagrams=guitar");
+		expect(await drawn(page)).toEqual({ dot: "rgb(29, 29, 31)", string: "rgb(74, 74, 74)" });
+	});
+
+	test("in forced colours, dots and strings take the system text colour", async ({ page }) => {
+		await page.emulateMedia({ forcedColors: "active" });
+		await page.goto("/chart?chart=peaceful&diagrams=guitar");
+		const text = await computed(page, "CanvasText");
+		expect(await drawn(page)).toEqual({ dot: text, string: text });
+	});
+
+	for (const [name, width, css] of [
+		["400% zoom", 320, ""],
+		["large text on a phone", 360, "barmark-chart{--barmark-size:2.5rem}"],
+	] as const)
+		test(`on ${name} the strip wraps in rows without scrolling sideways`, async ({ page }) => {
+			await page.setViewportSize({ width, height: 800 });
+			await page.goto(
+				`/chart?chart=peaceful&diagrams=guitar&css=${encodeURIComponent(`body{margin:0}barmark-chart{margin:0}${css}`)}`,
+			);
+			await page.evaluate(() => document.fonts.ready);
+			const { scroll, client } = await page.evaluate(() => ({
+				scroll: document.documentElement.scrollWidth,
+				client: document.documentElement.clientWidth,
+			}));
+			expect(scroll).toBeLessThanOrEqual(client);
+			const tops = await inChart(page, (root) => [
+				...new Set(
+					[...root.querySelectorAll(".bm-diagram")].map((d) => d.getBoundingClientRect().top),
+				),
+			]);
+			expect(tops.length).toBeGreaterThan(1);
+		});
+
+	test("the element draws the strip when chord-diagrams is set, and removes it with the attribute", async ({
+		page,
+	}) => {
+		await page.goto("/element");
+		const strip = page.locator("#diagrams .bm-diagrams");
+		await expect(page.locator("#diagrams .bm-heading")).toHaveText("Verse");
+		await expect(strip).toHaveCount(0);
+		await page.evaluate(() =>
+			document.querySelector("#diagrams")?.setAttribute("chord-diagrams", "guitar"),
+		);
+		await expect(strip).toHaveCount(1);
+		await expect(page.locator("#diagrams .bm-diagram")).toHaveCount(3);
+		await page.evaluate(() =>
+			document.querySelector("#diagrams")?.removeAttribute("chord-diagrams"),
+		);
+		await expect(strip).toHaveCount(0);
+	});
+
+	test("diagram-hand moves the muted string to the right half", async ({ page }) => {
+		await page.goto("/element");
+		await page.evaluate(() =>
+			document.querySelector("#diagrams")?.setAttribute("chord-diagrams", "guitar"),
+		);
+		// Am is x02210: its muted string is the low one, a cross.
+		const cross = () =>
+			page.locator("#diagrams").evaluate((el) => {
+				const svg = el.shadowRoot?.querySelectorAll(".bm-diagram-svg")[1] as SVGSVGElement;
+				const box = (svg.querySelector("path.bm-dg-mark") as SVGGraphicsElement).getBBox();
+				const view = svg.viewBox.baseVal;
+				return box.x + box.width / 2 - (view.x + view.width / 2);
+			});
+		await page.waitForFunction(() =>
+			document.querySelector("#diagrams")?.shadowRoot?.querySelector(".bm-diagram-svg"),
+		);
+		expect(await cross()).toBeLessThan(0);
+		await page.evaluate(() =>
+			document.querySelector("#diagrams")?.setAttribute("diagram-hand", "left"),
+		);
+		await expect.poll(cross).toBeGreaterThan(0);
+	});
+
+	test("a server-rendered chart with no source ignores chord-diagrams, like numerals", async ({
+		page,
+	}) => {
+		const errors: Error[] = [];
+		page.on("pageerror", (e) => errors.push(e));
+		await page.goto("/element");
+		await expect(page.locator("#server .bm-heading")).toHaveText("Verse");
+		await page.evaluate(() => {
+			const el = document.querySelector("#server") as HTMLElement & {
+				chordDiagrams: string | null;
+				numerals: string | null;
+			};
+			el.numerals = "nashville";
+			el.chordDiagrams = "guitar";
+		});
+		// The theme is restyled in the same pass, so once it shows, the diagrams were left alone.
+		await page.evaluate(() => {
+			(document.querySelector("#server") as HTMLElement & { theme: string }).theme = "dark";
+		});
+		await expect(page.locator("#server .bm-chart")).toHaveAttribute("data-theme", "dark");
+		await expect(page.locator("#server .bm-diagrams")).toHaveCount(0);
+		await expect(page.locator("#server .bm-heading")).toHaveText("Verse");
+		expect(errors).toEqual([]);
+	});
+
+	test("the properties reflect their attributes, and read them back", async ({ page }) => {
+		await page.goto("/element");
+		const el = (p: Page) => p.locator("#diagrams");
+		await expect(page.locator("#diagrams .bm-heading")).toHaveText("Verse");
+		await el(page).evaluate((e) => {
+			const chart = e as HTMLElement & { chordDiagrams: string | null; diagramHand: string };
+			chart.chordDiagrams = "guitar";
+			chart.diagramHand = "left";
+		});
+		await expect(el(page)).toHaveAttribute("chord-diagrams", "guitar");
+		await expect(el(page)).toHaveAttribute("diagram-hand", "left");
+		await expect(page.locator("#diagrams .bm-diagrams")).toHaveCount(1);
+		await el(page).evaluate((e) => {
+			(e as HTMLElement & { diagramHand: string }).diagramHand = "right";
+		});
+		await expect(el(page)).not.toHaveAttribute("diagram-hand");
+		await el(page).evaluate((e) => {
+			(e as HTMLElement & { chordDiagrams: string | null }).chordDiagrams = null;
+		});
+		await expect(el(page)).not.toHaveAttribute("chord-diagrams");
+		await expect(page.locator("#diagrams .bm-diagrams")).toHaveCount(0);
+		const read = await el(page).evaluate((e) => {
+			const chart = e as HTMLElement & { chordDiagrams: string | null; diagramHand: string };
+			const out = [chart.chordDiagrams, chart.diagramHand];
+			chart.setAttribute("chord-diagrams", "guitar");
+			chart.setAttribute("diagram-hand", "left");
+			out.push(chart.chordDiagrams, chart.diagramHand);
+			chart.setAttribute("chord-diagrams", "banjo");
+			chart.setAttribute("diagram-hand", "up");
+			out.push(chart.chordDiagrams, chart.diagramHand);
+			return out;
+		});
+		expect(read).toEqual([null, "right", "guitar", "left", null, "right"]);
+	});
+
+	test("a fret number at the twelfth fret lies inside its drawing, left of the barre and the strings", async ({
+		page,
+	}) => {
+		await page.goto("/chart?chart=high&diagrams=guitar");
+		const found = await inChart(page, (root) => {
+			const svg = root.querySelector(".bm-dg-fr") as SVGSVGElement;
+			const label = (svg.querySelector(".bm-dg-fret") as SVGTextElement).getBBox();
+			const view = svg.viewBox.baseVal;
+			const grid = (svg.querySelector(".bm-dg-grid") as SVGGraphicsElement).getBBox();
+			const barre = svg.querySelector(".bm-dg-barre") as SVGGraphicsElement | null;
+			const bar = barre?.getBBox();
+			return {
+				text: svg.querySelector(".bm-dg-fret")?.textContent,
+				hasBarre: barre !== null,
+				inside:
+					label.x >= view.x &&
+					label.y >= view.y &&
+					label.x + label.width <= view.x + view.width &&
+					label.y + label.height <= view.y + view.height,
+				clearOfStrings: label.x + label.width < grid.x,
+				clearOfBarre: bar !== undefined && label.x + label.width < bar.x,
+			};
+		});
+		expect(found).toEqual({
+			text: "12fr",
+			hasBarre: true,
+			inside: true,
+			clearOfStrings: true,
+			clearOfBarre: true,
+		});
+	});
+});

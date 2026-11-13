@@ -14,6 +14,7 @@ import { DEFAULT_WIDTH, MAX_WIDTH, MIN_WIDTH, scoreBody } from "./score.js";
 const THEMES = ["auto", "light", "dark"] as const;
 const NUMERALS = ["nashville", "roman"] as const;
 const COLUMNS = ["shared", "row"] as const;
+const DIAGRAMS = ["guitar"] as const;
 
 const escapeHtml = (text: string) =>
 	text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -41,6 +42,8 @@ const FLAGS = {
 	"rehearsal-letters": { type: "boolean", default: false },
 	"no-wrap": { type: "boolean", default: false },
 	columns: { type: "string" },
+	diagrams: { type: "string" },
+	"left-handed": { type: "boolean", default: false },
 	diagnostics: { type: "boolean", default: false },
 	"font-url": { type: "string" },
 	part: { type: "string" },
@@ -57,6 +60,8 @@ const GRID_ONLY = [
 	"rehearsal-letters",
 	"no-wrap",
 	"columns",
+	"diagrams",
+	"left-handed",
 	"diagnostics",
 	"font-url",
 ] as const;
@@ -86,7 +91,18 @@ function gridOptions(values: Values, theme: (typeof THEMES)[number], io: Io): Re
 	if (values["rehearsal-letters"]) options.rehearsalLetters = true;
 	if (values["no-wrap"]) options.wrap = false;
 	if (values.diagnostics) options.diagnostics = true;
+	Object.assign(options, diagramOptions(values));
 	return Object.assign(options, columnsOption(values.columns));
+}
+
+/** `--diagrams guitar` as the strip, `--left-handed` as its hand; the hand alone has nothing to turn. */
+function diagramOptions(values: Values): Pick<RenderOptions, "chordDiagrams" | "diagramHand"> {
+	if (values.diagrams === undefined) {
+		if (values["left-handed"]) throw new UsageError("--left-handed needs --diagrams");
+		return {};
+	}
+	const chordDiagrams = oneOf("diagrams", values.diagrams, DIAGRAMS);
+	return values["left-handed"] ? { chordDiagrams, diagramHand: "left" } : { chordDiagrams };
 }
 
 /** `--columns row` as the option; `shared`, the default, as none, so the page is the default's. */

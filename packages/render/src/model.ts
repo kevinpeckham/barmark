@@ -19,6 +19,7 @@ import {
 	type SectionOccurrence,
 	unreadSlots,
 } from "barmark";
+import { chartDiagrams } from "./diagrams.js";
 import { tempoBeatOf, tempoBeats } from "./tempo.js";
 import type {
 	BlockItem,
@@ -136,6 +137,7 @@ export function layoutChart(text: string, options: LayoutOptions = {}): ChartMod
 		tempoBeat: headerBeat(parse.lines, ctx.beats),
 		blocks,
 		diagnostics: parse.diagnostics,
+		diagrams: options.chordDiagrams === "guitar" ? chartDiagrams(blocks, parse) : [],
 	};
 }
 

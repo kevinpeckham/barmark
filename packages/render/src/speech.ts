@@ -12,7 +12,7 @@ import {
 	type Slot,
 	type Syllable,
 } from "barmark";
-import type { CellModel } from "./types.js";
+import type { CellModel, DiagramEntry } from "./types.js";
 
 const NUMBERS: Record<string, string> = {
 	"1": "one",
@@ -121,6 +121,34 @@ export function speakChord(record: ChordRecord, key?: Key): string {
 	if (record.kind === "notes" || !record.parts) return speakNotes(record);
 	const degree = key ? speakDegree(record.parts.root, key) : "";
 	return `${degree ? `${degree}, ` : ""}${speakParts(record.parts)}`;
+}
+
+/** A diagram with no shape, shown in its frame and said in its label. */
+export const UNPLAYABLE = "not playable in standard tuning";
+/** A written voicing the diagram replaced with the name's shape, shown under the name and said in its label. */
+export const VOICING_REPLACED = "written voicing doesn't fit standard tuning";
+/** What a diagram can't show, said after its strings. */
+const CAVEAT = {
+	shell: ", altered tones not shown",
+	"voicing-replaced": `, ${VOICING_REPLACED}`,
+} as const;
+
+/**
+ * A chord diagram aloud: the chord as a bar says it (its degree first when a
+ * key is passed, its written voicing after), then its strings low to high,
+ * whatever the hand: "A minor: muted, open, 2, 2, 1, open". One with no
+ * shape says why: "C major seven, written voicing: not playable in
+ * standard tuning". A voicing the diagram replaced is not said as voiced: the
+ * strings do not play those notes.
+ */
+export function speakDiagram(entry: DiagramEntry, key?: Key): string {
+	const name = speakChord(entry.chord, key);
+	if (!entry.shape) return `${name}${entry.voicing ? ", written voicing" : ""}: ${UNPLAYABLE}`;
+	const shown = entry.caveat !== "voicing-replaced";
+	const voiced =
+		entry.voicing && shown ? `${name} voiced ${entry.voicing.pitches.join(" ")}` : name;
+	const strings = entry.shape.frets.map((f) => (f < 0 ? "muted" : f === 0 ? "open" : String(f)));
+	return `${voiced}: ${strings.join(", ")}${entry.caveat ? CAVEAT[entry.caveat] : ""}`;
 }
 
 const PUSHED = { eighth: "pushed", sixteenth: "pushed a sixteenth" } as const;

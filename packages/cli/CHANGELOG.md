@@ -6,6 +6,12 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- **`render --diagrams guitar`** draws a strip of guitar chord diagrams
+  above the grid, and **`--left-handed`** mirrors them (it needs
+  `--diagrams`). Both are grid flags, refused with `--score`.
+
 ## [0.11.3] - 2026-11-12
 
 ### Changed

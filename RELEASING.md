@@ -95,7 +95,9 @@ the dependency ("Requires `@barmark/sync` X.Y.0"). The CLI does not
 bundle `@barmark/listen`, so a listen release needs no CLI release
 (step 13 does not follow it).
 
-**`@barmark/fretboard`** depends on `barmark` with a caret, so after a `barmark` minor a `fretboard` patch raises the dependency. The CLI does not bundle it; `@barmark/render` will import it (then a fretboard release is followed by a render patch).
+**`@barmark/fretboard`** depends on `barmark` with a caret, so after a `barmark` minor a `fretboard` patch raises the dependency, before render's. `@barmark/render` imports it with a caret and the CLI bundles it through render, so a fretboard release is followed by a CLI release (step 13), and by a render patch first when render's range needs to rise ("Requires `@barmark/fretboard` X.Y.0").
+
+**`@barmark/render`'s size test** (`packages/render/tests/size.test.ts`) holds the element to a gzipped size: a change that grows the element outside chord diagrams (the parser, the grid, a Bun upgrade) re-anchors the test's base in the same pull request (the comment above `BEFORE_DIAGRAMS` says how); growth in the diagrams themselves stays inside Kevin's budget or goes to him.
 
 **`@barmark/score`** depends on `barmark`, `@barmark/render` and
 `@barmark/musicxml` with carets, so it follows their releases the way
@@ -246,12 +248,15 @@ runs, and `verify:package cli` fails on anything else.
     `packages/cli` (`bun add --exact verovio@X.Y.Z`) is refused until the
     new Verovio is a week old.
 13. **Release the CLI** (after a `barmark`, `@barmark/render`,
-    `@barmark/musicxml`, `@barmark/score`, `@barmark/sync` or
-    `@barmark/midi` release; the CLI bundles `@barmark/sync` through
-    `@barmark/midi`, and Verovio through `@barmark/score`; after a `barmark`
-    or `@barmark/sync` minor, release the caret dependants' patches first,
-    as above: after a `sync` minor, a `@barmark/midi` patch "Requires
-    `@barmark/sync` X.Y.0"):
+    `@barmark/musicxml`, `@barmark/score`, `@barmark/sync`,
+    `@barmark/midi` or `@barmark/fretboard` release; the CLI bundles
+    `@barmark/sync` through `@barmark/midi`, `@barmark/fretboard` through
+    `@barmark/render`, and Verovio through `@barmark/score`; after a
+    `barmark`, `@barmark/sync` or `@barmark/fretboard` minor, release the
+    caret dependants' patches first, as above: after a `sync` minor, a
+    `@barmark/midi` patch "Requires `@barmark/sync` X.Y.0"; after a
+    `fretboard` minor, a `@barmark/render` patch "Requires
+    `@barmark/fretboard` X.Y.0"):
     `@barmark/cli` pins the libraries exactly, so a library release
     reaches CLI users only through a CLI release. On a new branch, bump
     `packages/cli` (a patch, unless the CLI itself changed) with a
@@ -262,9 +267,10 @@ runs, and `verify:package cli` fails on anything else.
     the CLI's binaries bundle the libraries' code from the repository, so
     `verify:release cli` (and the release workflow) fail if
     `packages/barmark/src`, `packages/render/src`, `packages/render/fonts`,
-    `packages/musicxml/src`, `packages/score/src`, `packages/sync/src` or
-    `packages/midi/src` changed since their own tags, or if a library's dependency range at
-    its tag does not admit the version bundled beside it (verify:release
+    `packages/musicxml/src`, `packages/score/src`, `packages/sync/src`,
+    `packages/midi/src` or `packages/fretboard/src` changed since their
+    own tags, or if a library's dependency range at its tag does not
+    admit the version bundled beside it (verify:release
     only). Its release workflow also
     attaches the binaries; check the release page lists all five,
     `Edwin-OFL.txt`, `Verovio-LGPL-3.0.txt` and `Verovio-GPL-3.0.txt`.

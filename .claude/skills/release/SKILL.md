@@ -23,9 +23,10 @@ for fixes).
 
 Points that are easy to miss:
 
-- After a `barmark`, `render`, `musicxml`, `score`, `sync` or `midi`
-  release, RELEASING.md steps 13–14 follow (the CLI bundles `sync`
-  through `midi`, and `score` with Verovio):
+- After a `barmark`, `render`, `musicxml`, `score`, `sync`, `midi` or
+  `fretboard` release, RELEASING.md steps 13–14 follow (the CLI bundles
+  `sync` through `midi`, `fretboard` through `render`, and `score` with
+  Verovio):
   a CLI patch on the new versions, then a PR in `kevinpeckham/songs`
   raising its pinned CLI version. After a `sync` minor, release a `midi`
   patch ("Requires `@barmark/sync` X.Y.0") first, then the CLI, as a
@@ -34,8 +35,11 @@ Points that are easy to miss:
 - `listen`: a listen release needs no CLI release (the CLI does not
   bundle it). After a `sync` or `barmark` minor, release a `listen` patch
   raising the dependency ("Requires `@barmark/sync` X.Y.0").
-- `fretboard`: not bundled by the CLI; after a `barmark` minor, release a
-  `fretboard` patch raising the dependency.
+- `fretboard`: render imports it with a caret and the CLI bundles it
+  through render, so a fretboard release is followed by a CLI release (and
+  a `render` patch first when its range must rise, "Requires
+  `@barmark/fretboard` X.Y.0"). After a `barmark` minor, release a
+  `fretboard` patch raising the dependency before render's.
 - When `@barmark/render` needs unreleased `barmark` changes, release
   `barmark` first: the render release check fails until the `barmark`
   version it depends on is on npm.

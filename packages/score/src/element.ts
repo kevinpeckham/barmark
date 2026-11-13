@@ -110,6 +110,8 @@ function takeEarlyText(el: object): { text: string | null } | null {
 const OBSERVED = [
 	...["src", "theme", "bar-numbers", "rehearsal-letters", "numerals", "wrap", "show-part"],
 	"columns",
+	"chord-diagrams",
+	"diagram-hand",
 	...["view", "verovio-url", "verovio-integrity", "verovio-wasm-integrity", "preload"],
 ];
 
