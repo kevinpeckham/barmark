@@ -29,6 +29,24 @@ describe("attributes → render options", () => {
 	test("the global part attribute (for ::part styling) draws the whole chart", () => {
 		expect(optionsFromAttributes(el({ part: "chart" })).part).toBeUndefined();
 	});
+	test("chord-diagrams and diagram-hand give their options", () => {
+		expect(optionsFromAttributes(el({ "chord-diagrams": "guitar" })).chordDiagrams).toBe("guitar");
+		expect(optionsFromAttributes(el({ "diagram-hand": "left" })).diagramHand).toBe("left");
+		expect(optionsFromAttributes(el({ "diagram-hand": "right" })).diagramHand).toBe("right");
+		expect(
+			optionsFromAttributes(el({ "chord-diagrams": "guitar", "diagram-hand": "left" })),
+		).toMatchObject({ chordDiagrams: "guitar", diagramHand: "left" });
+	});
+	test("an unknown chord-diagrams or diagram-hand is not set, and none leaves no key", () => {
+		const unknown = optionsFromAttributes(
+			el({ "chord-diagrams": "ukulele", "diagram-hand": "up" }),
+		);
+		expect("chordDiagrams" in unknown).toBe(false);
+		expect("diagramHand" in unknown).toBe(false);
+		const none = optionsFromAttributes(el({}));
+		expect("chordDiagrams" in none).toBe(false);
+		expect("diagramHand" in none).toBe(false);
+	});
 	test("an unknown theme is auto", () => {
 		expect(optionsFromAttributes(el({ theme: "sepia" })).theme).toBe("auto");
 	});

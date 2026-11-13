@@ -49,8 +49,8 @@ whenever one changes; it fetches a `src` once, and renders once however
 many properties and attributes change together. A chart rendered on the
 server by `renderChart` keeps its music until it has a source of its own,
 and still follows `theme`, `bar-numbers`, `wrap` and `columns`; a change to
-`numerals`, `rehearsal-letters` or `show-part` needs the chart's text, so
-it waits for a source.
+`numerals`, `rehearsal-letters`, `show-part`, `chord-diagrams` or
+`diagram-hand` needs the chart's text, so it waits for a source.
 
 For a live editor, set `text`:
 
@@ -81,6 +81,8 @@ the element loads, with `<style data-barmark-font>` holding
 | `wrap` | `wrap="off"` (`wrap`) | `true` | wrap a section's rows when it is wider than the chart's box; off, rows keep their columns and the chart overflows, for its page to scroll |
 | `columns` | `columns="row"` (`columns`) | `"shared"` | `"shared"`: a section's rows share column tracks, so bar lines line up down the section; `"row"`: each row sizes its own bars (below). Any other value is `"shared"` |
 | `part` | `show-part` (`showPart`) | none | draw only the part with this label, as one player reads it: tutti bars, its own bars, and "tacet" where it rests. The attribute isn't `part`, which HTML keeps for `::part()` styling |
+| `chordDiagrams` | `chord-diagrams="guitar"` (`chordDiagrams`) | none | `"guitar"`: a strip of guitar chord diagrams after the header, one for each distinct chord (below). Any other value is off |
+| `diagramHand` | `diagram-hand="left"` (`diagramHand`) | `"right"` | `"left"` mirrors the diagrams for a left hand: the low string on the right. Any other value is right |
 | `diagnostics` | | `false` | list the chart's errors and warnings below it |
 | `fontUrl` | | none | emit Edwin's `@font-face` rule before the chart |
 | (the `text` argument) | (`text`) | `null` | the chart to draw; wins over `src` and the script child |
@@ -118,6 +120,43 @@ power chord's 5 into the superscript (D5 in D is 1⁵ and I⁵, never 15).
 A bar with no key, note sets, N.C., `?` and `--` look as they always
 do, and a screen reader hears both: "bar 5: five, A seven". Numbered
 chords carry `data-numeral`. It's a view: the music and bar numbers don't change.
+
+### Chord diagrams
+
+With `chordDiagrams: "guitar"` (or `chord-diagrams="guitar"` on the
+element), a strip of guitar chord diagrams follows the header: one for
+each distinct chord, in the order the chart first writes it, wrapping to
+as many rows as the width needs. The shapes come from
+[`@barmark/fretboard`](https://github.com/kevinpeckham/barmark/tree/main/packages/fretboard#readme)
+(see its README for what it cannot find); this package draws them and
+copies none. Under each diagram is the chord's name in letters; with
+`numerals` on, its degree sits beneath, in the key where the chord first
+appears. A chord with no shape in standard tuning says so instead of a
+drawing.
+
+```js
+renderChart("key: C\n| C | Am7 | {E4 A4 C#5 E5} |", { chordDiagrams: "guitar", numerals: "nashville" });
+// <barmark-chart numerals="nashville" chord-diagrams="guitar"><template shadowrootmode="open">…
+// diagram 1: aria-label "one, C: muted, 3, 2, open, 1, open"
+// diagram 3: aria-label "notes E four, A four, C sharp five, E five: muted, muted, 14, 14, 14, 12"
+```
+
+A voicing the chart writes is shown exactly when it fits standard tuning
+(a note set is a diagram of those notes); when it does not, the diagram
+shows the chord's own shape and a note saying the written voicing does
+not fit. `diagramHand: "left"` writes `diagram-hand="left"` on the
+element and mirrors the strings only: the low string is drawn on the
+right and a fret number stays at the left. Each diagram has a label that
+speaks the strings, low to high ("muted, 3, 2, open, 1, open"). Style the
+strip through `::part(diagrams)` (the strip) and `::part(diagram)` (one
+chord's diagram, its name and note); the dots and strings follow the
+chart's colours, light, dark and print, and take the system text colour in
+forced-colours mode. It is a view: the chart's music and bar numbers do not
+change, and with the option off a chart renders as it always did.
+
+The strip adds about 6.4 KB gzipped to the element (most of it the shape
+finder). On a chart rendered on the server, setting `chord-diagrams` later
+needs the chart's text, as the web component section says for `numerals`.
 
 ### Spoken names
 
@@ -165,7 +204,7 @@ barmark-chart::part(heading) {
 ```
 
 `::part()` names: `title`, `meta`, `heading`, `bar`, `chord`, `text`,
-`bar-number`, `rehearsal`, `lyrics` (each verse's line of words, inside
+`bar-number`, `rehearsal`, `diagrams`, `diagram`, `lyrics` (each verse's line of words, inside
 its `bar`), `unread` (a slot that can't be read, drawn as written). These, the custom properties and the
 attributes are the public surface: changing them is a breaking change.
 

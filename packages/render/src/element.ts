@@ -25,6 +25,8 @@ export function optionsFromAttributes(el: Attributes): RenderOptions {
 	const numerals = NUMERALS.find((n) => n === el.getAttribute("numerals"));
 	// Not `part`: that global attribute names an element for ::part() styling.
 	const part = el.getAttribute("show-part");
+	const diagrams = el.getAttribute("chord-diagrams") === "guitar";
+	const hand = ["left", "right"].find((h) => h === el.getAttribute("diagram-hand"));
 	return {
 		theme: THEMES.find((t) => t === theme) ?? "auto",
 		barNumbers: el.getAttribute("bar-numbers") !== "off",
@@ -32,6 +34,8 @@ export function optionsFromAttributes(el: Attributes): RenderOptions {
 		wrap: el.getAttribute("wrap") !== "off",
 		...(numerals ? { numerals } : {}),
 		...(part ? { part } : {}),
+		...(diagrams ? { chordDiagrams: "guitar" as const } : {}),
+		...(hand ? { diagramHand: hand as "left" | "right" } : {}),
 		// Only "row" changes the layout; anything else, or none, keeps the shared columns.
 		...(el.getAttribute("columns") === "row" ? { columns: "row" as const } : {}),
 	};
@@ -83,6 +87,8 @@ function defineElement(): void {
 			"wrap",
 			"show-part",
 			"columns",
+			"chord-diagrams",
+			"diagram-hand",
 		];
 		#observer = new MutationObserver(() => this.#schedule());
 		#renders = 0;
@@ -165,6 +171,24 @@ function defineElement(): void {
 		set columns(v: string) {
 			if (v === "row") this.setAttribute("columns", "row");
 			else this.removeAttribute("columns");
+		}
+
+		/** "guitar" when the chart draws its chords as guitar diagrams, else null. */
+		get chordDiagrams() {
+			return optionsFromAttributes(this).chordDiagrams ?? null;
+		}
+		set chordDiagrams(v: string | null) {
+			if (v === null) this.removeAttribute("chord-diagrams");
+			else this.setAttribute("chord-diagrams", v);
+		}
+
+		/** "left" when the diagrams are drawn for a left hand; "right", the default, otherwise. */
+		get diagramHand() {
+			return optionsFromAttributes(this).diagramHand ?? "right";
+		}
+		set diagramHand(v: string) {
+			if (v === "left") this.setAttribute("diagram-hand", "left");
+			else this.removeAttribute("diagram-hand");
 		}
 
 		/** The label of the part to draw on its own, or null for the whole chart. */

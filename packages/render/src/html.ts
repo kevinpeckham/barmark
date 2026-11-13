@@ -131,7 +131,14 @@ function elementAttributes(options: RenderOptions): string {
 		options.wrap === false ? ' wrap="off"' : "",
 		options.part ? ` show-part="${escapeHtml(options.part)}"` : "",
 		byRow(options) ? ' columns="row"' : "",
+		diagramAttributes(options),
 	].join("");
+}
+
+/** The chord diagrams' attributes: only the values the element reads. */
+function diagramAttributes(options: RenderOptions): string {
+	const guitar = options.chordDiagrams === "guitar" ? ' chord-diagrams="guitar"' : "";
+	return `${guitar}${options.diagramHand === "left" ? ' diagram-hand="left"' : ""}`;
 }
 
 export const THEMES = ["auto", "light", "dark"] as const;

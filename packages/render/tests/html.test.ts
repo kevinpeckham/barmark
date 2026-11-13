@@ -324,6 +324,24 @@ describe("the element renderChart wraps the chart in", () => {
 		} as const;
 		expect(optionsFromAttributes(wrapper(options))).toEqual(options);
 	});
+	test("carries the chord diagrams and the hand, and the right hand writes none", () => {
+		const both = wrapper({ chordDiagrams: "guitar", diagramHand: "left" });
+		expect(both.getAttribute("chord-diagrams")).toBe("guitar");
+		expect(both.getAttribute("diagram-hand")).toBe("left");
+		const html = renderChart("| D |", { chordDiagrams: "guitar", diagramHand: "left" });
+		expect(html.slice(html.indexOf("<barmark-chart"))).toStartWith(
+			'<barmark-chart chord-diagrams="guitar" diagram-hand="left">',
+		);
+		const right = wrapper({ chordDiagrams: "guitar", diagramHand: "right" });
+		expect(right.hasAttribute("diagram-hand")).toBe(false);
+		expect(optionsFromAttributes(both)).toMatchObject({
+			chordDiagrams: "guitar",
+			diagramHand: "left",
+		});
+		expect(wrapper({ chordDiagrams: "banjo" as "guitar" }).hasAttribute("chord-diagrams")).toBe(
+			false,
+		);
+	});
 	test("has no attributes at the defaults", () => {
 		expect(wrapper({}).attributes.length).toBe(0);
 		expect(

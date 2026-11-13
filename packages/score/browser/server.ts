@@ -55,6 +55,7 @@ const worker = await workerBundle.text();
 
 const IMPORTS = {
 	barmark: "/barmark/index.js",
+	"@barmark/fretboard": "/fretboard/index.js",
 	"@barmark/render": "/render/index.js",
 	"@barmark/render/element": "/render/element.js",
 };
@@ -201,6 +202,7 @@ const STATIC: [string, string][] = [
 	["/render/fonts/", "packages/render/fonts/"],
 	["/render/", "packages/render/dist/"],
 	["/barmark/", "packages/barmark/dist/"],
+	["/fretboard/", "packages/fretboard/dist/"],
 ];
 
 /** A file under the first STATIC directory whose prefix matches and that has it, or a 404. */

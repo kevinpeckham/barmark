@@ -5,11 +5,16 @@
  *
  *   bun packages/render/browser/server.ts   (PORT, default 5260)
  */
+import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fontFaceCss, type RenderOptions, renderChart } from "../src/index.js";
 import { AMAZING_GRACE, EXAMPLE } from "../tests/fixtures.js";
 import { MORNING_SONG } from "../tests/morning-song.js";
 
+const PEACEFUL_DREAMS = readFileSync(
+	join(import.meta.dir, "../../../examples/peaceful-dreams.chart.md"),
+	"utf8",
+);
 const root = join(import.meta.dir, "../../..");
 const CHARTS: Record<string, string> = {
 	example: EXAMPLE,
@@ -30,6 +35,9 @@ const CHARTS: Record<string, string> = {
 		"# Piano Alone\npart: Pno = Piano\nPno.RH | +G{B3 D4 G4} / C._D / | *C |\nPno.LH | {G2} / / / | {C3} |",
 	columns:
 		"# Columns\n## A\n| G7 | G7 C6/G Bbmaj7/F Fmaj9 | C | F |\n| C | F | G | C |\n## B\n|: C | D |\n|1 E | F :|\n|2 G | % |\n| C | CM7 |\n| E :| F |\n| A | B | C | D | E | F | G | A |\n",
+	peaceful: PEACEFUL_DREAMS,
+	// A chord that lands at the twelfth fret: its diagram has a fret number.
+	high: "# High\n| E | F#m7 | Bb | {E4 A4 C#5 E5} |\n",
 	long: "# Long\n## A\n| A | B | C | D | E | F | G | A | B | C | D | E |\n| A / B / | C / D / | E / F / | G / A / | B / C / | D / E / |",
 };
 const HOSTILE = `*{margin:2em!important;padding:0!important;font-family:"Comic Sans MS",cursive!important;line-height:3!important}
@@ -72,6 +80,8 @@ function chartPage(url: URL, hostile: boolean): Response {
 		wrap: p.get("wrap") !== "off",
 		// Passed through as given, so a page can check that an unknown value falls back to shared.
 		columns: p.get("columns") as NonNullable<RenderOptions["columns"]>,
+		...(p.get("diagrams") === "guitar" ? { chordDiagrams: "guitar" as const } : {}),
+		...(p.get("hand") === "left" ? { diagramHand: "left" as const } : {}),
 	};
 	const chart = CHARTS[param(p, "chart", "example")] ?? "";
 	const charts = renderChart(chart, options).repeat(Number(param(p, "count", "1")));
@@ -79,7 +89,7 @@ function chartPage(url: URL, hostile: boolean): Response {
 	return page(`<style>${pageStyle(p, hostile)}${css}</style>`, body);
 }
 
-const ELEMENT = `<script type="importmap">{"imports":{"barmark":"/barmark/index.js"}}</script>
+const ELEMENT = `<script type="importmap">{"imports":{"barmark":"/barmark/index.js","@barmark/fretboard":"/fretboard/index.js"}}</script>
 <script type="module" src="/render/element.js"></script>`;
 
 function elementPage(): Response {
@@ -94,6 +104,10 @@ function elementPage(): Response {
 		${renderChart("## Verse\n| D | A |").replace("<barmark-chart", '<barmark-chart id="server"')}
 		${renderChart("## Verse\n| D | A |", { theme: "dark", rehearsalLetters: true }).replace("<barmark-chart", '<barmark-chart id="styled"')}
 		${renderChart("## A\n| G7 C6/G Bbmaj7/F Fmaj9 | C |\n| C | F |").replace("<barmark-chart", '<barmark-chart id="columns"')}
+		<barmark-chart id="diagrams"><script type="text/barmark">
+			## Verse
+			| C | Am | G |
+		</script></barmark-chart>
 		<barmark-chart id="early"></barmark-chart>
 		<script>document.querySelector("#early").text = "## Early\\n| E |";</script>
 		<textarea id="editor"></textarea>
@@ -108,6 +122,7 @@ function elementPage(): Response {
 const STATIC: [string, string][] = [
 	["/render/", "packages/render/dist/"],
 	["/barmark/", "packages/barmark/dist/"],
+	["/fretboard/", "packages/fretboard/dist/"],
 	["/fonts/", "packages/render/fonts/"],
 ];
 
