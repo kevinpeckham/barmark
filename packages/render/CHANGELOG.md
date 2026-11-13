@@ -18,22 +18,16 @@ package uses [semantic versioning](https://semver.org/).
   `diagrams` and `diagram`, follows the chart's palette, light, dark and
   print, and takes the system text colour in forced-colours mode. Each
   diagram is labelled for a screen reader: the chord, then its strings low to
-  high. `layoutChart`'s model gains `diagrams` (empty unless the option is
+  high; one that replaced a written voicing names the chord and its strings,
+  then says the written voicing doesn't fit. `layoutChart`'s model gains `diagrams` (empty unless the option is
   on). With the option off a chart renders as before. Requires
-  `@barmark/fretboard` 0.1.0. It adds about 6.5 KB gzipped to the element
+  `@barmark/fretboard` 0.1.0. It adds about 6.6 KB gzipped to the element
   (6,558 bytes on 46,302).
 
 ### Changed
 
 - **Unbundled pages: add `@barmark/fretboard` to the import map.** The
-  element imports it whether or not diagrams are on.
-
-### Fixed
-
-- **A replaced voicing is not said as voiced.** A diagram whose written
-  voicing did not fit is labelled with the chord's name, then its strings
-  ("C major seven: muted, 3, 2, open, open, open, written voicing doesn't fit
-  standard tuning"); it no longer names notes the strings do not play.
+  package imports it whether or not diagrams are on.
 
 ## [0.19.1] - 2026-11-12
 

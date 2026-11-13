@@ -31,8 +31,8 @@ themselves.
 ## As a web component
 
 Without a bundler, the page's import map must also map `@barmark/fretboard`
-(beside `barmark`): the element imports it whether or not diagrams are on,
-so without it the element does not load at all.
+(beside `barmark`): the package imports it whether or not diagrams are on,
+so without it neither the element nor `renderChart` loads.
 
 ```html
 <script type="module">import "@barmark/render/element";</script>
@@ -155,12 +155,12 @@ speaks the strings, low to high ("muted, 3, 2, open, 1, open"). Style the
 strip through `::part(diagrams)` (the strip) and `::part(diagram)` (one
 chord's diagram, its name and note). A chord's name in the strip carries
 the same `chord` part as the names in the grid, so one `::part(chord)` rule
-styles both (a note set's name in the strip does not); the dots and strings follow the
-chart's colours, light, dark and print, and take the system text colour in
-forced-colours mode. It is a view: the chart's music and bar numbers do not
+styles both (a note set's name in the strip does not). The dots and
+strings follow the chart's colours, light, dark and print, and take the
+system text colour in forced-colours mode. It is a view: the chart's music and bar numbers do not
 change, and with the option off a chart renders as it always did.
 
-The strip adds about 6.5 KB gzipped to the element (most of it the shape
+The strip adds about 6.6 KB gzipped to the element (most of it the shape
 finder). On a chart rendered on the server, setting `chord-diagrams` later
 needs the chart's text, as the web component section says for `numerals`.
 

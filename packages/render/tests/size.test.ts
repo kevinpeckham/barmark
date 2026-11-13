@@ -24,12 +24,10 @@ const ROOT = join(import.meta.dir, "../../..");
  * way.
  *
  * When this test fails for a reason other than diagrams (the parser or the
- * grid grew, or Bun was upgraded): re-measure the base with this same method
- * at the commit before the change that grew it (`git archive <commit>
- * packages/render/src packages/barmark/src packages/fretboard/src
- * tsconfig.json`), then replace BEFORE_DIAGRAMS with the new element size
- * minus what diagrams cost (6,558 when written), and say both numbers and the
- * reason in the commit. BUDGET is the product owner's and changes only on his
+ * grid grew, or Bun was upgraded): replace BEFORE_DIAGRAMS with the element's
+ * new size, measured by this test, minus what diagrams cost (6,558 when
+ * written; unchanged unless the diagram code changed too), and say both
+ * numbers and the reason in the commit. BUDGET is the product owner's and changes only on his
  * say.
  */
 const BEFORE_DIAGRAMS = 46_302;
