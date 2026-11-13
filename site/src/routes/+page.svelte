@@ -1,6 +1,7 @@
 <script lang="ts">
 import Button from "#lib/components/Button.svelte";
 import ChartRender from "#lib/components/ChartRender.svelte";
+import DiagramSwitch from "#lib/components/DiagramSwitch.svelte";
 import KeyMenu from "#lib/components/KeyMenu.svelte";
 import SourceEditor from "#lib/components/SourceEditor.svelte";
 import Window from "#lib/components/Window.svelte";
@@ -27,7 +28,7 @@ const edits = new Map<Example["id"], string>();
 
 /**
  * Shows the next (1) or previous (-1) example, as the reader last left it,
- * in its own key; the view and the chord spelling stay.
+ * in its own key; the view, the chord spelling and the guitar diagrams stay.
  */
 function flip(step: number) {
 	if (text === original) edits.delete(example.id);
@@ -53,7 +54,9 @@ let spelling: (typeof SPELLINGS)[number]["id"] = $state("names");
 /** The key the chart is drawn in, as Stem Shovel's Key menu offers it: a viewing choice, not kept (a demo). */
 let semitones = $state(0);
 const key = $derived(chartKey(text));
-/** The score has no chord spelling: the numerals are the grid's. */
+/** The grid's guitar chord diagrams: a viewing choice like the key, off on the prerendered page, not kept. */
+let diagrams = $state(false);
+/** The score has no chord spelling or diagrams: they are the grid's. */
 let view: "grid" | "score" = $state("grid");
 const description =
 	"Barmark is a markdown-inspired plain-text notation for chord charts. Edit a chart and watch it render, as a bar grid or a full score.";
@@ -147,6 +150,7 @@ const description =
 							</label>
 						{/each}
 					</div>
+					<DiagramSwitch bind:on={diagrams} disabled={view === "score"} />
 				</div>
 			{/snippet}
 			<!-- Four ordinary bars' width (the renderer's 24em step) and the padding: narrower, the window scrolls. -->
@@ -157,6 +161,7 @@ const description =
 					preload="intent"
 					{semitones}
 					numerals={spelling === "names" ? null : spelling}
+					{diagrams}
 					label="The chart, rendered"
 					onviewchange={(v) => (view = v)}
 				/>

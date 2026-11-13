@@ -40,6 +40,22 @@ const gridChords = (page: Page) =>
 		].map((c) => c.textContent ?? ""),
 	);
 
+/**
+ * Each guitar diagram's spoken label in the first chart under `scope`, in the
+ * strip's order; null while the chart has no strip.
+ */
+const diagramLabels = (page: Page, scope = "main") =>
+	page.evaluate((selector) => {
+		const strip = document
+			.querySelector(`${selector} :is(barmark-chart, barmark-score)`)
+			?.shadowRoot?.querySelector(".bm-diagrams");
+		return strip
+			? [...strip.querySelectorAll(".bm-diagram [role=img]")].map(
+					(d) => d.getAttribute("aria-label") ?? "",
+				)
+			: null;
+	}, scope);
+
 /** Presses Score in the first chart's switch, repeated until the element has upgraded and shows it. */
 const pressScore = (page: Page, scope = "main") =>
 	expect(async () => {
@@ -302,6 +318,22 @@ test.describe("home: the examples", () => {
 		await expect(spelling.getByRole("radio", { name: "Roman" })).toBeChecked();
 	});
 
+	test("flipping keeps the guitar diagrams, drawn for the new example's chords", async ({
+		page,
+	}) => {
+		await page.goto("/");
+		const toggle = page.getByRole("button", { name: "Guitar diagrams" });
+		await expect(async () => {
+			await toggle.click();
+			await expect(toggle).toHaveAttribute("aria-pressed", "true", { timeout: 1_000 });
+		}).toPass({ timeout: 15_000 });
+		await expect.poll(() => diagramLabels(page)).not.toBeNull();
+		await flip(page, "Next", "Greensleeves");
+		await expect(toggle).toHaveAttribute("aria-pressed", "true");
+		await expect.poll(() => chartText(page)).toContain("Greensleeves");
+		await expect.poll(async () => (await diagramLabels(page))?.[0]).toMatch(/^A minor: /);
+	});
+
 	test("Reset restores the example on show, not the default", async ({ page }) => {
 		await page.goto("/");
 		await flip(page, "Next", "Greensleeves");
@@ -344,12 +376,116 @@ test.describe("home: the examples", () => {
 				expect([title, "grid", await scrolls(page)]).toEqual([title, "grid", false]);
 			}
 			await flip(page, "Next", titles[0] ?? "");
+			// With the guitar diagrams on, the strip wraps or scrolls inside the window too.
+			const toggle = page.getByRole("button", { name: "Guitar diagrams" });
+			await toggle.click();
+			await expect.poll(() => diagramLabels(page)).not.toBeNull();
+			for (const [i, title] of titles.entries()) {
+				if (i > 0) await flip(page, "Next", title);
+				await expect.poll(() => chartText(page)).toContain(title);
+				expect([title, "diagrams", await scrolls(page)]).toEqual([title, "diagrams", false]);
+			}
+			await flip(page, "Next", titles[0] ?? "");
+			await toggle.click();
 			await pressScore(page);
 			for (const [i, title] of titles.entries()) {
 				if (i > 0) await flip(page, "Next", title);
 				await expect.poll(() => scoreText(page), { timeout: 15_000 }).toContain(title);
 				expect([title, "score", await scrolls(page)]).toEqual([title, "score", false]);
 			}
+		});
+	});
+});
+
+test.describe("home: guitar diagrams", () => {
+	const toggle = (page: Page) => page.getByRole("button", { name: "Guitar diagrams" });
+	let errors: string[] = [];
+	test.beforeEach(({ page }) => {
+		errors = watchErrors(page);
+	});
+	test.afterEach(() => {
+		expect(errors).toEqual([]);
+	});
+
+	test("the switch draws a diagram for each distinct chord, and takes them away again", async ({
+		page,
+	}) => {
+		await page.goto("/");
+		await expect(toggle(page)).toHaveAttribute("aria-pressed", "false");
+		expect(await diagramLabels(page)).toBeNull();
+		const chords = new Set(await gridChords(page));
+		// A press made before the page's script runs is lost: repeat it until the chart redraws.
+		await expect(async () => {
+			await toggle(page).click();
+			await expect.poll(() => diagramLabels(page), { timeout: 1_000 }).not.toBeNull();
+		}).toPass({ timeout: 15_000 });
+		await expect(toggle(page)).toHaveAttribute("aria-pressed", "true");
+		const labels = (await diagramLabels(page)) ?? [];
+		expect(labels).toHaveLength(chords.size);
+		// In the order the chart first plays them: Amazing Grace opens on its pickup, D.
+		expect(labels[0]).toMatch(/^D: /);
+		// Editing keeps them, and a new chord gets its own.
+		const source = page.getByRole("textbox", { name: "Barmark source of the chart" });
+		await source.press("ControlOrMeta+End");
+		await source.pressSequentially("\n| F#m7b5 |");
+		await expect
+			.poll(async () => (await diagramLabels(page))?.at(-1))
+			.toMatch(/^F sharp minor seven flat five: /);
+		await toggle(page).click();
+		await expect(toggle(page)).toHaveAttribute("aria-pressed", "false");
+		await expect.poll(() => diagramLabels(page)).toBeNull();
+		await expect.poll(() => chartText(page)).toContain("Amazing Grace");
+	});
+
+	test("the diagrams are the grid's: Score sets the switch aside, Grid brings it back", async ({
+		page,
+	}) => {
+		await page.goto("/");
+		await pressScore(page);
+		await expect(toggle(page)).toBeDisabled();
+		await page.locator("main barmark-score").getByRole("radio", { name: "Grid" }).click();
+		await expect(toggle(page)).toBeEnabled();
+		await toggle(page).click();
+		await expect.poll(() => diagramLabels(page)).not.toBeNull();
+	});
+
+	test("the strip wears the site's dark window: light strings and dots on the dark ground", async ({
+		page,
+	}) => {
+		await page.goto("/");
+		await expect(async () => {
+			await toggle(page).click();
+			await expect.poll(() => diagramLabels(page), { timeout: 1_000 }).not.toBeNull();
+		}).toPass({ timeout: 15_000 });
+		const dot = await page.evaluate(() => {
+			const el = document
+				.querySelector("main barmark-score")
+				?.shadowRoot?.querySelector(".bm-dg-dot");
+			return el ? getComputedStyle(el).fill : "";
+		});
+		// Light on dark: each channel of the dots' colour is well above the middle.
+		const channels = (dot.match(/\d+(\.\d+)?/g) ?? []).slice(0, 3).map(Number);
+		expect(channels).toHaveLength(3);
+		for (const c of channels) expect(c).toBeGreaterThan(160);
+	});
+
+	test.describe("on a phone", () => {
+		test.use({ viewport: { width: 390, height: 800 } });
+		test("the switch wraps with the other controls, and the strip never scrolls the page", async ({
+			page,
+		}) => {
+			await page.goto("/");
+			await expect(async () => {
+				await toggle(page).click();
+				await expect.poll(() => diagramLabels(page), { timeout: 1_000 }).not.toBeNull();
+			}).toPass({ timeout: 15_000 });
+			const [scroll, client] = await page.evaluate(() => [
+				document.documentElement.scrollWidth,
+				document.documentElement.clientWidth,
+			]);
+			expect(scroll).toBeLessThanOrEqual(client);
+			const box = await toggle(page).boundingBox();
+			expect((box?.x ?? 0) + (box?.width ?? 0)).toBeLessThanOrEqual(client);
 		});
 	});
 });
@@ -527,6 +663,61 @@ test.describe("try it", () => {
 		await box(page).pressSequentially("| A |");
 		expect(Date.now() - start).toBeLessThan(1_500);
 		await expect(reading(page).locator("pre")).toContainText("| A |");
+	});
+
+	test("a chord shows its guitar diagram, with no switch", async ({ page }) => {
+		await page.goto("/try");
+		await expect
+			.poll(() => diagramLabels(page, "[data-reading]"))
+			.toEqual(["C minor seven flat five: muted, 3, 4, 3, 4, muted"]);
+		await untilUrl(page, () => box(page).fill("F#m7b5"), /q=F%23m7b5$/);
+		await expect
+			.poll(async () => (await diagramLabels(page, "[data-reading]"))?.[0])
+			.toMatch(/^F sharp minor seven flat five: /);
+		await box(page).fill("{C3 G3 E4}");
+		await expect
+			.poll(() => diagramLabels(page, "[data-reading]"))
+			.toEqual(["notes C three, G three, E four: muted, 3, muted, open, muted, open"]);
+		// One pitch is a note, not a shape: no strip at all.
+		await box(page).fill("{E}");
+		await expect(reading(page)).toContainText("note E");
+		await expect.poll(() => diagramLabels(page, "[data-reading]")).toBeNull();
+		await expect(page.getByRole("button", { name: "Guitar diagrams" })).toHaveCount(0);
+	});
+
+	test("a chart shows the diagram switch, off, and the switch draws the strip", async ({
+		page,
+	}) => {
+		await page.goto("/try");
+		const toggle = page.getByRole("button", { name: "Guitar diagrams" });
+		await untilUrl(page, () => page.getByRole("button", { name: "Gtr + Pno" }).click(), /q=part/);
+		await expect(toggle).toHaveAttribute("aria-pressed", "false");
+		expect(await diagramLabels(page, "[data-reading]")).toBeNull();
+		await toggle.click();
+		await expect
+			.poll(() => diagramLabels(page, "[data-reading]"))
+			.toEqual([
+				"G: 3, 2, open, open, open, 3",
+				"C: muted, 3, 2, open, 1, open",
+				"D: muted, muted, open, 2, 3, 2",
+				"G over B: muted, 2, open, open, open, 3",
+				"E minor: open, 2, 2, open, open, open",
+			]);
+		// Not kept in the link.
+		await expect(page).toHaveURL(/^[^#]*\?q=part[^&]*$/);
+		await toggle.click();
+		await expect.poll(() => diagramLabels(page, "[data-reading]")).toBeNull();
+		// A chord takes the switch away.
+		await box(page).fill("C");
+		await expect(toggle).toHaveCount(0);
+	});
+
+	test("a shared link to a chord shows its diagram once the page is ready", async ({ page }) => {
+		await page.goto("/try?q=G7alt");
+		await expect(reading(page)).toContainText("G seven altered");
+		await expect
+			.poll(() => diagramLabels(page, "[data-reading]"))
+			.toEqual(["G seven altered: 3, 2, 3, muted, muted, muted, altered tones not shown"]);
 	});
 
 	test("a long paste does not freeze the page", async ({ page }) => {
@@ -1088,6 +1279,21 @@ test.describe("the score", () => {
 		await expect
 			.poll(() => scoreText(page, "[data-reading]"), { timeout: 15_000 })
 			.toContain("Retyped");
+	});
+
+	test("Try It's diagram switch is the grid's: Score sets it aside, and a new chart starts on Grid", async ({
+		page,
+	}) => {
+		await page.goto(`/try?q=${encodeURIComponent("| D | A |")}`);
+		const box = page.getByRole("textbox", { name: "Barmark to read" });
+		const toggle = page.getByRole("button", { name: "Guitar diagrams" });
+		await pressScore(page, "[data-reading]");
+		await expect(toggle).toBeDisabled();
+		// A chord takes the chart away; the next chart opens on Grid, its switch usable again.
+		await box.fill("C");
+		await expect(toggle).toHaveCount(0);
+		await box.fill("| D | A |");
+		await expect(toggle).toBeEnabled();
 	});
 
 	test.describe("on a phone", () => {

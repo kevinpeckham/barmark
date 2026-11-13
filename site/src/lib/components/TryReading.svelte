@@ -5,15 +5,25 @@ import { type ChordReading, type Reading, summarize } from "#lib/try/read.js";
 let {
 	reading,
 	text,
+	diagrams = false,
 	ontry,
-}: { reading: Reading; text: string; ontry: (suggestion: string) => void } = $props();
+	onviewchange,
+}: {
+	reading: Reading;
+	text: string;
+	/** A chart's guitar chord diagrams, from the page's switch; a chord always shows its own. */
+	diagrams?: boolean;
+	ontry: (suggestion: string) => void;
+	/** The reader switched the chart between Grid and Score. */
+	onviewchange?: (view: "grid" | "score") => void;
+} = $props();
 
 const term = "text-xs uppercase tracking-wider opacity-60";
 const code = "font-mono text-accent";
 </script>
 
 {#snippet chord(c: ChordReading)}
-	<ChartRender text="| {c.canonical} |" barNumbers={false} label="The chord, drawn" />
+	<ChartRender text="| {c.canonical} |" barNumbers={false} diagrams label="The chord, drawn" />
 	<dl class="grid grid-cols-[auto_minmax(0,1fr)] gap-x-6 gap-y-2 items-baseline">
 		<dt class={term}>Canonical</dt>
 		<dd>
@@ -55,7 +65,7 @@ const code = "font-mono text-accent";
 		</p>
 		{@render chord(reading.chord)}
 	{:else if reading.kind === "chart"}
-		<ChartRender {text} score preload="idle" label="The chart, rendered" />
+		<ChartRender {text} score preload="idle" {diagrams} {onviewchange} label="The chart, rendered" />
 		{#if reading.diagnostics.length}
 			<ul class="flex flex-col gap-1 text-sm">
 				{#each reading.diagnostics as d, i (i)}

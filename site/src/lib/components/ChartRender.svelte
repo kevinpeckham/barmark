@@ -5,13 +5,18 @@ import { transposed } from "#lib/key.js";
 
 type Numerals = "nashville" | "roman";
 type View = "grid" | "score";
-type ChartElement = HTMLElement & { text: string | null; numerals?: Numerals | null };
+type ChartElement = HTMLElement & {
+	text: string | null;
+	numerals?: Numerals | null;
+	chordDiagrams?: "guitar" | null;
+};
 
 let {
 	text,
 	label,
 	barNumbers = true,
 	numerals = null,
+	diagrams = false,
 	score = false,
 	preload = "none",
 	semitones = 0,
@@ -22,6 +27,8 @@ let {
 	barNumbers?: boolean;
 	/** Each chord as its degree in its bar's key; null: chord names. */
 	numerals?: Numerals | null;
+	/** A strip of guitar chord diagrams above the chart, one for each chord; false: none. */
+	diagrams?: boolean;
 	/** A <barmark-score>, with its Grid / Score switch, rather than a <barmark-chart>. Read once. */
 	score?: boolean;
 	/** A score's: when it starts loading Verovio, ahead of the reader's first press. Read once. */
@@ -51,7 +58,7 @@ let rendered = untrack(() => text);
 let moved = untrack(() => semitones);
 const initial = (asScore ? scoreHtml : chartHtml)(
 	transposed(rendered, moved),
-	untrack(() => ({ barNumbers, preload })),
+	untrack(() => ({ barNumbers, preload, chordDiagrams: diagrams })),
 );
 let host: HTMLDivElement;
 
@@ -82,6 +89,21 @@ $effect(() => {
 		else if (next) el.setAttribute("numerals", next);
 		else el.removeAttribute("numerals");
 		// The prerendered chart has no text of its own, and the attribute alone only restyles it.
+		draw();
+	});
+});
+
+let shown = untrack(() => diagrams);
+$effect(() => {
+	const next = diagrams;
+	if (next === shown) return;
+	shown = next;
+	void load().then(() => {
+		const el = chart();
+		// As for numerals: <barmark-score> takes the attribute only, and the chart redraws from its text.
+		if (!asScore) el.chordDiagrams = next ? "guitar" : null;
+		else if (next) el.setAttribute("chord-diagrams", "guitar");
+		else el.removeAttribute("chord-diagrams");
 		draw();
 	});
 });
