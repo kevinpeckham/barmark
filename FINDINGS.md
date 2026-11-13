@@ -766,9 +766,10 @@ order, not just the written marks.
   the tie-break did not decide: shapes whose costs should have been equal
   came out in cost order instead (8 of the 660 vocabulary chords' top-ten
   lists).
-- **The cause.** The cost was summed in floating point, so equal costs
-  that were summed in a different order differed in the last bit and
-  compared unequal.
+- **The cause.** The cost was summed in floating point. The expression's
+  order is fixed, but two shapes with equal true cost got different
+  totals because their terms differed (for example 7.6000000000000005
+  against 7.6), so they compared unequal.
 - **The fix.** The cost is whole tenths, an integer, so equal costs are
   equal and the tie-break by `shapeText` runs. Compare a rank by integers
   or by an exact rule, never by a float sum. Where it lives:

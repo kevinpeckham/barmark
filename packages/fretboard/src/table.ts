@@ -32,7 +32,7 @@ export const OPEN = rows(
 	"Fmaj7:xx3210 Fmaj7(#11):xx3200 Fsus2:xx3011 F/A:x03211 F6/9:100011",
 	// B
 	"B7:x21202 Bm7:x20202 Bm7(b5):x20201 B7sus4:x22202 Bm/D:xx0432 Bm9:x20222 Bm11:x20220 B6:x21102 " +
-		"Bm6:x20102 Bm/A:x04432 Bbaug:x10332 Baug:x2100x Bb6/9:x10011",
+		"Bm6:x20102 Bm/A:x04432 Bbaug:x10332 Baug:x21003 Bb6/9:x10011",
 );
 
 /** Shapes with no open string, written on one root and moved along the neck to any other. */

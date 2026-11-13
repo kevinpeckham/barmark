@@ -210,7 +210,8 @@ test("familiar first-position shapes that sat behind barres at frets 5 to 7", ()
 		["C/Bb", "x12010"],
 		["Bm/A", "x04432"],
 		["Bbaug", "x10332"],
-		["Baug", "x2100x"],
+		["Baug", "x21003"],
+		["Gaug/B", "x21003"],
 		["F6/9", "100011"],
 		["Bb6/9", "x10011"],
 	];

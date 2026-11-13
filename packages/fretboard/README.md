@@ -122,7 +122,7 @@ needs `{E2}` here. A note below or above what six strings reach is
 ## Other shapes: `shapesFor`
 
 ```ts
-import { shapesFor, shapeText } from "@barmark/fretboard";
+import { shapesFor } from "@barmark/fretboard";
 
 shapesFor(chord("Am7")).map(shapeText).slice(0, 3);
 // ["x02010", "x0201x", "x02013"]
