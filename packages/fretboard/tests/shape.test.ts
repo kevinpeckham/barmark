@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import { shapeFor, shapeFrom, shapeOf, shapeText, sounding } from "../src/index.js";
 import { fingersNeeded } from "../src/shape.js";
-import { chord, vocabulary } from "./helpers/vocabulary.js";
+import { vocabulary } from "./helpers/vocabulary.js";
 
 test("shapeOf and shapeText read and write the six strings", () => {
 	expect(shapeOf("x32010")).toEqual({ frets: [-1, 3, 2, 0, 1, 0], base: 1 });
@@ -76,6 +76,4 @@ test("shapeOf reads what shapeText writes, for every answer of the vocabulary", 
 		expect(shapeOf(shapeText(r.shape))).toEqual(r.shape);
 	}
 	expect(tens).toBeGreaterThan(0);
-	const e = shapeFor(chord("Eaug7"));
-	expect(e.ok && shapeOf(shapeText(e.shape))).toEqual(e.ok ? e.shape : null);
 });

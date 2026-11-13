@@ -32,24 +32,37 @@ test("the five chords the review found: each shape sounds its chord", () => {
 	expect(r.ok && r.shape.frets.join(",")).toBe([-1, 3, 2, 0, 5, 5].join(","));
 });
 
-test("every slash chord of the vocabulary: no shape that fails to sound it", () => {
-	let covered = 0;
-	const seen = new Set<string>();
+/** The chord's notes, bass and intervals: what the answer depends on, so equal ones are checked once. */
+const keyOf = (c: ChordRecord): string =>
+	`${c.pitches.join(" ")}|${c.bass}|${c.intervals.map((i) => `${i.degree}${i.alter}`).join()}|${c.alteredOpen}`;
+
+/** Throws, naming the chord, when `shapeFor` or `shapesFor` gives a shape that fails to sound it. */
+function checkAnswers(name: string, c: ChordRecord): void {
+	const r = shapeFor(c);
+	if (r.ok && !shapeOk(r.shape, c)) throw new Error(`${name}/${c.bass}: ${r.shape.frets}`);
+	for (const s of shapesFor(c))
+		if (!shapeOk(s, c)) throw new Error(`${name}/${c.bass} list: ${s.frets}`);
+}
+
+/** Every name `root`+form on the vocabulary's forms, with each of the twelve basses barmark reads for it. */
+function slashChords(): { name: string; chord: ChordRecord }[] {
+	const out: { name: string; chord: ChordRecord }[] = [];
 	for (const root of SPELLINGS)
-		for (const form of Object.values(FORMS).flat()) {
-			const name = `${root}${form}`;
+		for (const form of Object.values(FORMS).flat())
 			for (let pc = 0; pc < 12; pc++) {
-				const c = slash(name, pc);
-				if (!c) continue;
-				covered++;
-				const key = `${c.pitches.join(" ")}|${c.bass}|${c.intervals.map((i) => `${i.degree}${i.alter}`).join()}|${c.alteredOpen}`;
-				if (seen.has(key)) continue;
-				seen.add(key);
-				const r = shapeFor(c);
-				if (r.ok && !shapeOk(r.shape, c)) throw new Error(`${name}/${c.bass}: ${r.shape.frets}`);
-				for (const s of shapesFor(c))
-					if (!shapeOk(s, c)) throw new Error(`${name}/${c.bass} list: ${s.frets}`);
+				const c = slash(`${root}${form}`, pc);
+				if (c) out.push({ name: `${root}${form}`, chord: c });
 			}
-		}
-	expect(covered).toBeGreaterThan(10_000);
+	return out;
+}
+
+test("every slash chord of the vocabulary: no shape that fails to sound it", () => {
+	const all = slashChords();
+	const seen = new Set<string>();
+	for (const { name, chord: c } of all) {
+		if (seen.has(keyOf(c))) continue;
+		seen.add(keyOf(c));
+		checkAnswers(name, c);
+	}
+	expect(all.length).toBeGreaterThan(10_000);
 }, 60_000);
