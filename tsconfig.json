@@ -26,6 +26,7 @@
 			"@barmark/listen": ["./packages/listen/src/index.ts"],
 			"@barmark/listen/features": ["./packages/listen/src/features/index.ts"],
 			"@barmark/listen/stages": ["./packages/listen/src/stages.ts"],
+			"@barmark/fretboard": ["./packages/fretboard/src/index.ts"],
 			"@barmark/engraver/info": ["./packages/engraver/src/info.ts"]
 		}
 	},

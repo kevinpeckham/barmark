@@ -20,7 +20,7 @@ inputs:
   properties:
     pkg:
       type: string
-      enum: [barmark, render, musicxml, score, sync, midi, listen, cli, engraver]
+      enum: [barmark, render, musicxml, score, sync, midi, listen, fretboard, cli, engraver]
       default: barmark
       description: The workspace package whose package and release checks run; `engraver` also runs the equivalence gate
     allowDirty:

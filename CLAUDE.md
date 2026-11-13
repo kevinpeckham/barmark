@@ -149,6 +149,11 @@ Fallow, CI, Swamp), the grammar, `examples/`, the scripts and FINDINGS.md.
     repo) and compares Dorico's MusicXML with what the file plays
     (`scripts/dorico-compare.ts`, tested in `tests/dorico-compare.test.ts`),
     VM only, never in CI
+- `packages/fretboard/`: `@barmark/fretboard`, guitar chord shapes for
+  barmark chords (a table, a shape finder, exact voicings); depends on
+  `barmark` only and draws nothing
+  - `src/types.ts`: `Tuning`, `GUITAR`, `Shape`, `Barre`
+  - `tests/`: `bun test`
 - `packages/listen/`: `@barmark/listen`, a recording to a chart and a
   chart to a recording: the port of Stem Shovel's audio alignment
   (`~/projects/stem-shovel`, read only, never written). v1 is a port: the
@@ -242,7 +247,7 @@ Fallow, CI, Swamp), the grammar, `examples/`, the scripts and FINDINGS.md.
   `bun test` skips it (`bunfig.toml`), Fallow ignores it
 - `docs/superpowers/`: designs (`specs/`) and implementation plans (`plans/`)
 - `scripts/verify-package.ts`, `scripts/verify-release.ts`: release checks
-  shared by CI and Swamp; both take the package (`barmark`, `render`, `musicxml`, `score`, `sync`, `midi`, `listen`, `cli` or `engraver`)
+  shared by CI and Swamp; both take the package (`barmark`, `render`, `musicxml`, `score`, `sync`, `midi`, `listen`, `fretboard`, `cli` or `engraver`)
 
 ## Commands
 
@@ -278,7 +283,7 @@ cd site && bun run dev|build|check|test|test:browser   # barmark.dev
   or other AI attribution trailer.
 - Releases follow `RELEASING.md` (the `/release` skill walks it). Each
   package is tagged on its own: `barmark-vX.Y.Z`, `render-vX.Y.Z`,
-  `musicxml-vX.Y.Z`, `score-vX.Y.Z`, `sync-vX.Y.Z`, `midi-vX.Y.Z`, `listen-vX.Y.Z`, `cli-vX.Y.Z`, `engraver-vX.Y.Z`. A library release is followed by a CLI release and a
+  `musicxml-vX.Y.Z`, `score-vX.Y.Z`, `sync-vX.Y.Z`, `midi-vX.Y.Z`, `listen-vX.Y.Z`, `fretboard-vX.Y.Z`, `cli-vX.Y.Z`, `engraver-vX.Y.Z`. A library release is followed by a CLI release and a
   bump in `kevinpeckham/songs` (RELEASING.md steps 13–14), a `sync`,
   `midi` or `score` release included (the CLI bundles `sync` through
   `midi`, and `score` with Verovio). After
@@ -290,6 +295,8 @@ cd site && bun run dev|build|check|test|test:browser   # barmark.dev
   `listen` is not bundled by the CLI: a listen release needs no CLI
   release, and after a `sync` or `barmark` minor, a `listen` patch
   raises the dependency.
+  `fretboard` is not bundled by the CLI: after a `barmark` minor, a
+  `fretboard` patch raises the dependency.
   An engraver version bump runs `bun run compile --update` and commits
   `info.ts`. A Verovio upgrade is one joint PR (`versions.env`, `info.ts`,
   score's `verovio` pin, stock constants and `ENGRAVER_*` literals), then
