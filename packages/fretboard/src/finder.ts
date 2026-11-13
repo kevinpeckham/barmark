@@ -27,7 +27,7 @@ const count = (mask: number): number => {
 	return n;
 };
 
-/** What a fingering costs, lower is better (spec §2.3). */
+/** What a fingering costs in whole tenths, lower is better (spec §2.3), so equal costs are equal. */
 function costOf(s: Search, frets: readonly number[], sounded: number): number {
 	const fretted = frets.filter((f) => f > 0);
 	const lowest = fretted.length === 0 ? 0 : Math.min(...fretted);
@@ -36,7 +36,9 @@ function costOf(s: Search, frets: readonly number[], sounded: number): number {
 	const top = frets.findLastIndex((f) => f >= 0);
 	const topNote = ((STRINGS[top] ?? 0) + (frets[top] ?? 0)) % 12;
 	const left = count(s.optional & ~sounded);
-	return lowest + 0.8 * (6 - strings) + 1.5 * left + span - (topNote === s.want.root ? 0.3 : 0);
+	return (
+		10 * lowest + 8 * (6 - strings) + 15 * left + 10 * span - (topNote === s.want.root ? 3 : 0)
+	);
 }
 
 /** The pitch class of the lowest note a fingering sounds. */
@@ -88,10 +90,8 @@ function walk(
 	}
 	if (count(s.required & ~sounded) > STRINGS.length - i) return;
 	if (!ended) play(s, frets, i, base, sounded, played);
-	if (!ended || played === 0) {
-		frets[i] = MUTED;
-		walk(s, frets, i + 1, base, sounded, played, played > 0);
-	}
+	frets[i] = MUTED;
+	walk(s, frets, i + 1, base, sounded, played, played > 0);
 }
 
 /** Sound string `i` at each fret it may take, and go on. */
@@ -135,7 +135,6 @@ function keyOf(want: Want): string {
 		want.bass,
 		want.root,
 		want.minStrings,
-		want.shell ? 1 : 0,
 	].join("|");
 }
 
