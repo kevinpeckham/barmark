@@ -29,26 +29,28 @@ function entryFor(chord: ChordRecord, voicing: ChordRecord | null, key: Key | nu
 /** What a bar line is in its part (barmark's grammar 7.6, 7.7). */
 type Role = { first: boolean; singing: boolean };
 
-const same = (a: string, b: string) => a.toLowerCase() === b.toLowerCase();
-
-/** Whether a bar line is its part's first line, the one that carries the harmony (7.6); every line of a chart with no declared part is. */
-function isFirstLine(l: Extract<Line, { kind: "bars" }>, parse: ChartParse): boolean {
-	const p = partOf(l, parse);
-	// A bare line plays as the part's first line.
-	return !p || l.lineName === undefined || same(l.lineName, p.lines?.[0] ?? "");
+/** The lines that carry the harmony where they play: the parser's answer, the first line of each part playing in a played bar (barmark's grammar 7.6). */
+function harmonyLines(parse: ChartParse): Set<number> {
+	return new Set(
+		parse.bars.flatMap((b) => [
+			...(b.parts ?? []).flatMap((p) => (p ? [p.line] : [])),
+			...(b.lines?.[0] ? [b.lines[0].line] : []),
+		]),
+	);
 }
 
 /** Each bar line's role, by its line number. */
 function rolesOf(parse: ChartParse): Map<number, Role> {
+	const harmony = harmonyLines(parse);
+	// A line of a part that writes no other line is its first.
+	const isFirst = (l: Extract<Line, { kind: "bars" }>) => {
+		const p = partOf(l, parse);
+		return !p?.lines || harmony.has(l.line);
+	};
 	return new Map(
 		parse.lines.flatMap((l) =>
 			l.kind === "bars"
-				? [
-						[
-							l.line,
-							{ first: isFirstLine(l, parse), singing: singerOf(l, parse) !== null },
-						] as const,
-					]
+				? [[l.line, { first: isFirst(l), singing: singerOf(l, parse) !== null }] as const]
 				: [],
 		),
 	);

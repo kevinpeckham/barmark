@@ -139,11 +139,40 @@ describe("diagram entries: sung notes skip, names stay (design 4.2)", () => {
 });
 
 describe("diagram entries: a part's first line only (grammar 7.6)", () => {
-	const PNO = "part: Pno = Piano\nPno | C | G |\nPno.LH | {C2 G2} | G |\n";
+	test("a second line in the same system gives nothing, note sets included", () => {
+		const chart = "part: Pno = Piano\nPno | C | G |\nPno.LH | {C2 G2} | {G1 D2} |\n";
+		expect(names(chart)).toEqual(["C", "G"]);
+	});
 
-	test("a second line gives nothing, a name on it included", () => {
-		expect(names(PNO)).toEqual(["C", "G"]);
-		expect(entries(PNO).every((e) => e.shape !== null)).toBe(true);
+	test("the first line present in a system carries the harmony, whichever it is", () => {
+		const chart =
+			"part: Pno = Piano\n## Intro\nPno.LH | Em | A7 |\n## Verse\nPno.RH | C | G |\nPno.LH | {C2 G2} | {G1 D2} |\n";
+		expect(names(chart)).toEqual(["Em", "A7", "C", "G"]);
+	});
+
+	test("a later line written alone in its own system is that system's first", () => {
+		const chart = "part: Pno = Piano\n## A\nPno.RH | C | G |\n## B\nPno.LH | Dm | E7 |\n";
+		expect(names(chart)).toEqual(["C", "G", "Dm", "E7"]);
+	});
+
+	test("a melody line alone in a system gives its chord names", () => {
+		const chart =
+			"part: Gtr = Guitar\nGtr | C | G |\nGtr.Mel | {C4} | {D4} |\n\n## B\nGtr.Mel | Bm | F#m |\n";
+		expect(names(chart)).toEqual(["C", "G", "Bm", "F#m"]);
+	});
+
+	test("a singing line alone in a system gives its names, not its sung notes", () => {
+		const chart =
+			"part: Vox = Voice, instrument: voice\nVox | C | Am |\nVox.Mel | {C4}:a | {D4}:b |\n\n## B\nVox.Mel | F {A4}:la | G {B4}:oh |\n";
+		expect(names(chart)).toEqual(["C", "Am", "F", "G"]);
+	});
+
+	test("two parts each with a second line give each part's first line, in score order", () => {
+		const chart =
+			"part: Gtr = Guitar\npart: Pno = Piano\nGtr | D | A |\nGtr.Mel | {D4} | {A4} |\nPno | C | G |\nPno.LH | {C2} | {G2} |\n";
+		expect(names(chart)).toEqual(["D", "A", "C", "G"]);
+		expect(names(chart, { part: "Pno" })).toEqual(["C", "G"]);
+		expect(names(chart, { part: "Gtr" })).toEqual(["D", "A"]);
 	});
 
 	test("a system with Pno and Pno.LH gives the first lines' chords only", () => {
