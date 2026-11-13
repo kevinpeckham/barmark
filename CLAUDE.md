@@ -168,6 +168,14 @@ Fallow, CI, Swamp), the grammar, `examples/`, the scripts and FINDINGS.md.
   - `src/align/`: `alignChart`: the chart's bars as pads (`bars.ts`), the
     streamed render, the DTW, the path and its re-phase, the fit, the
     placements and the aligned timing map
+  - `src/beats/`: `gridFromBeats` and `chartFromBeats`, a beat tracker's
+    beats and downbeats as a bar grid and then a chart (spec
+    `docs/superpowers/specs/2026-11-12-listen-beats-design.md`): the
+    input (`input.ts`), downbeats snapped to beats (`snap.ts`), the
+    meter and tempo label (`label.ts`), half bars joined and the steady
+    share (`bars.ts`), the grid with its pickup (`grid.ts`), `declared`
+    compared (`declared.ts`), the chart (`pipeline.ts`); `src/build.ts`
+    is the builder call both pipelines share
   - `src/pipeline.ts`: `chartFromRecording`; `src/stages.ts`: the
     `./stages` entry, each stage for the bench (may change shape in a
     minor before 1.0)
@@ -181,6 +189,12 @@ Fallow, CI, Swamp), the grammar, `examples/`, the scripts and FINDINGS.md.
     checks them) and compares the three real mixes, VM only, never in CI;
     the goldens' built charts are barmark's printing, so regenerate the
     goldens after a barmark printing change
+  - `bun scripts/listen-beats-equivalence.ts <stem-shovel commit>` (at or
+    after `011cee44`): the app's `trackerBarGrid` and `beatThisGrid` read
+    with `git show` into `~/.cache/barmark/stem-shovel-beats-<sha8>/`;
+    writes `tests/fixtures/beats/equivalence.json`
+    (`tests/beats-equivalence.test.ts` checks it) and compares the five
+    real readings, never written, VM only, never in CI
 - `packages/cli/`: `@barmark/cli`, the `barmark` command (`check`,
   `format`, `part`, `render` (`--score`: the full score, Verovio
   in-process, `src/score.ts`), `transpose`, `export`, `import`; MusicXML

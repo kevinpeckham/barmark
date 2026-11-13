@@ -1120,6 +1120,8 @@ warnings.
 - **Free tempo. Answered: no free-tempo tracker is chartable yet** (Study
   39, `bc9c915`: the best of eight systems charts 11 of 48 performances
   against a 36 of 48 floor). The 0.2 tempo-following grid stays open.
+  The grid from a tracker's beats is designed in
+  `2026-11-12-listen-beats-design.md`.
 - **The same-piece gate's breadth:** 1.6 and 0.3 come from two songs of
   one band. A new default is a minor that names the study.
 - **Extended harmony:** if extensions thin the harmonic histogram,

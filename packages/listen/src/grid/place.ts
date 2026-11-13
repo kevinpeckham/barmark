@@ -77,7 +77,7 @@ function placed(
 	return { bars: from.bars, pickup, warnings };
 }
 
-function pickupWarning(pickup: { start: number; beats: number }): ListenWarning {
+export function pickupWarning(pickup: { start: number; beats: number }): ListenWarning {
 	const beats = pickup.beats === 1 ? "1 beat" : `${pickup.beats} beats`;
 	return {
 		code: "pickup",

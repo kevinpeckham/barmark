@@ -125,7 +125,7 @@ type BeatsInput = {
 	/** The recording's length: the closing bar ends here. */
 	duration: number;
 	/** What the song is set to, if anything: compared (§5), never obeyed. Either part may be missing. */
-	declared?: { meter?: string; tempo?: number } | null;
+	declared?: { meter?: string | null; tempo?: number | null } | null;
 };
 
 type BeatsReading = {
@@ -174,7 +174,8 @@ whose `detail.field` names the field (and `detail.index` the element):
   number from 1 to 999 (0.1's two rules, each applied on its own). 0.1's
   `readDeclared` needs both parts, so this path has its own reader
   **(design call: the app's notice handles a song with a meter and no
-  tempo, so listen must too)**.
+  tempo, so listen must too)**. A part that is null counts as not given,
+  so the type admits `null` for either.
 
 Each array is read once into a copy, and a read that throws is
 `invalid-input`, as 0.1 reads chord runs.
@@ -221,10 +222,11 @@ A refusal after step 3 carries the reading so far (`counts`,
 `beatsPerBar`, `beatTempo`, and `steadyShare` when it was reached), so a
 page or a study can say why.
 
-**The counts are taken in one pass.** The app counts a bar's beats with a
+**The counts are taken by bisection.** The app counts a bar's beats with a
 filter over every beat, which is quadratic in a long recording. Listen
-walks both lists once. The numbers are the same; the scale test times it
-relatively, as the package's others do.
+searches the beats by bisection, never scanning them per bar. The numbers
+are the same; the scale test times it relatively, as the package's others
+do.
 
 ### 4.3 What the meter and tempo mean
 
@@ -255,28 +257,49 @@ the grid, and their chords are dropped (sync's `outside-bars`).
 Listen reports them as a pickup when there are few enough, by 0.1's bound
 (0.1 §7, Kevin's decision of 2026-11-09):
 
-- `p` = the number of beats before the first bar line.
-- `1 ≤ p ≤ PICKUP_MAX_BAR_FRACTION × beatsPerBar` (at most half a bar by
-  default) **and bar one holds `beatsPerBar` beats**: `pickup = { start:
-  the first beat, beats: p }`, with a `pickup` warning. `chartFromBeats`
-  passes `pickup.start` to the builder, which writes bar 0 with its own
-  one-bar meter (grammar 2.4).
-- Otherwise, with `p ≥ 1`: no pickup, and a new warning
-  **`beats-before-bar-one`** (`detail.beats`, `detail.start`). Those beats
-  stay outside the grid, as in the app.
+- `p` = the number of beats before the first bar line. With `p = 0`
+  there is nothing to report.
+- The length is measured as sync's builder measures it (`readPickup`), so
+  the two cannot disagree: `k = round(gap / (bar one's length / units))`,
+  where `gap` is the time from the first beat to the first bar line and
+  `units` is the label's count of written beats in a bar (4 in 4/4, 3 in
+  3/4, 6 in 6/8, where the unit is the eighth).
+- A pickup when bar one holds `beatsPerBar` beats and `1 ≤ k ≤
+  PICKUP_MAX_BAR_FRACTION × units` (at most half a bar by default) and
+  `k < units`: `pickup = { start: the first beat, beats: k }`, with a
+  `pickup` warning. `chartFromBeats` passes `pickup.start` to the builder,
+  which writes bar 0 with its own one-bar meter, `[k/4]` or `[k/8]`
+  (grammar 2.4).
+- Otherwise: no pickup, and a new warning **`beats-before-bar-one`**
+  (`detail.beats`, which is `p`, and `detail.start`). Those beats stay
+  outside the grid, as in the app.
 
 `grid.bars` is the same either way, so this moves no bar line.
 
-**Why bar one must be a usual bar.** sync's `readPickup` does not take
-the pickup's length from listen. It measures the gap against bar one's
-own length and ignores a pickup that comes out a bar or longer. In 0.1
-bar one was always a usual bar; a tracker's may be an unpaired half bar,
-where two beats would measure as a whole bar and be ignored, or a double
-bar, where they would be written as one. Requiring a usual bar one keeps
-`grid.pickup` and the written chart in step. `pickup.beats` stays
-nominal, as in 0.1, and the builder's own diagnostics (`pickup-ignored`
-among them) are passed through unchanged, so if the two ever disagree the
-caller sees it. A test asserts they agree on the seeded set.
+**`pickup.beats` is in the chart's beats, not the tracker's.** Where the
+label is the count (3, 4 and 6 beats a bar) they are the same number.
+Where it is not, they differ: a tracker that counts two beats a bar is
+labelled 4/4 (§4.3), so its one leading beat is half a bar, `k = 2`, and
+the chart writes `[2/4]`.
+
+**Why the builder's measure, and why bar one must be a usual bar
+(amended 2026-11-13, in the build, after the review of the pickup).** The
+first rule here counted beats: a pickup when `p` was at most half of
+`beatsPerBar`. sync's `readPickup` does not take the pickup's length from
+listen; it measures the gap against bar one's own length and ignores a
+pickup that comes out a bar or longer. A sweep of seeded readings through
+the builder showed the count and the measure disagree: where the label is
+not the count (2, 7, 8 or 12 beats a bar), where the leading beats run at
+another pace than bar one, and where a lone beat sits more than a bar
+before bar one. Listen then reported a pickup the chart did not have, or
+one of another length. Measuring by the builder's own expression on the
+same numbers removes the disagreement. The usual-bar condition stays for
+the music's sake: before a half bar or a double bar the measure would
+still agree with the builder, but the bar it measures against is not the
+song's bar. The half-bar bound is Kevin's (0.1 §7), now applied to the
+measured length. The builder's own diagnostics are passed through
+unchanged, and a test puts a seeded sweep of readings through the builder
+and asserts it never answers `pickup-ignored` and always writes `k`.
 
 It is **not measured**. Of the app's five real readings, one has beats
 before its first downbeat (eat all the clocks: two beats, in a song whose
@@ -399,7 +422,7 @@ bug.
 | Difference | Why |
 | --- | --- |
 | The app returns `null` for no grid; listen refuses `too-few-bars` or `bars-unsteady` with the reading | 0.1 §4: refusals are values with reasons |
-| A pickup when 1 to half a bar of beats come before the first downbeat; the app drops them | §4.4, Kevin's 0.1 pickup decision carried over (§13 Q1). `grid.bars` is unchanged |
+| A pickup when the beats before the first downbeat measure 1 beat to half a bar (the builder's measure), before a usual bar one; the app drops them | §4.4, Kevin's 0.1 pickup decision carried over (§13 Q1). `grid.bars` is unchanged |
 | The map's `recording.duration` is the recording's length | As 0.1; the app passes the grid's end |
 | `grid-truncated` at `MAX_GRID_BARS` | The app has no cap |
 | Input the app never sees (unsorted, non-finite, past the end, over 200,000 beats) is `invalid-input` | The app reads only what it stored; a package reads anything |
@@ -433,8 +456,9 @@ bug.
   to newer barmark and sync, so regenerating them belongs to a 0.1
   maintenance task, not to this one. The test checks the two commits
   separately. The app's functions do not snap, and they count a bar's
-  beats two ways that agree only on snapped input, so the script snaps
-  each seeded reading before it calls them. It compares:
+  beats two ways that agree only on snapped input, so the seeded readings
+  are written already snapped (every downbeat one of the beats), and a
+  test asserts it. It compares:
   - on a seeded set of synthetic readings (steady 4/4, 3/4 and 6/8, half
     bars, an unsteady reading, a short one, tails either side of the
     closing bound), written as goldens and checked by
@@ -462,6 +486,9 @@ bug.
   before the first downbeat, a bar line one usual bar earlier would keep
   that music on the chart. It is new math, so it needs a study; 0.2 only
   warns (`beats-before-bar-one`).
+- **A tracker that stops early.** The closing bar runs from the last
+  downbeat to the recording's end, however long that is (the app's rule).
+  A cap on the closing bar is new math.
 - **A person's start of bar one** (`startAt`) on this path. The app does
   not use it here. Left out until a host asks.
 - **Bass lines.** Studies 48 to 51 measured a transcribed bass line on the

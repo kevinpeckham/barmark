@@ -740,6 +740,47 @@ order, not just the written marks.
 
 ## Design
 
+### Two packages that each work out the same length will disagree: use one expression (2026-11-13, `@barmark/listen` 0.2)
+
+- **The symptom.** `gridFromBeats` reported a pickup the chart did not
+  have, or one of another length. A tracker that counts two beats a bar
+  (labelled 4/4) had its one leading beat reported as `beats: 1` and
+  written `[2/4]`; twelve beats a bar, and a lone beat more than a bar
+  early, were reported as pickups and ignored by the builder
+  (`pickup-ignored`).
+- **The cause.** The design had listen count the beats before the first
+  downbeat, and required bar one to be a usual bar so the count would
+  "stay in step" with `@barmark/sync`. But sync's `readPickup` never sees
+  the count: it takes only the pickup's start and measures the gap
+  against bar one's own length, in the meter's units. A count and a
+  measure agree only where the label is the count and the leading beats
+  keep bar one's pace. The task review found it by putting seeded
+  readings through the builder, not by reading either side.
+- **The fix.** Listen measures the pickup with the builder's own
+  expression on the same numbers (`k = round(gap / (bar one / units))`,
+  `packages/listen/src/beats/grid.ts`), and `pickup.beats` is in the
+  chart's beats. `tests/beats-pickup.test.ts` puts a seeded sweep through
+  `chartFromDetections` and asserts the two agree. The rule for next
+  time: when one package reports what another will write, either pass the
+  value across or compute it by the other's expression, and test the pair
+  together.
+
+### A copy made so input is read once drops what it does not name (2026-11-13, `@barmark/listen` 0.2)
+
+- **The symptom.** After a fix made `chartFromBeats` read the caller's
+  chords once, every slot's confidence in the confidence record was 1.
+  The chart's text was unchanged, so no test noticed.
+- **The cause.** The fix handed the builder the copy `findGrid`'s reader
+  makes of each run, and that reader copied the four fields the grid
+  uses (`start`, `end`, `label`, `symbol`). The builder also reads
+  `confidence`. `chartFromRecording` did not have the loss only because
+  it passes the caller's own object to the builder (and so reads it
+  twice).
+- **The fix.** `readRun` copies `confidence` as given
+  (`packages/listen/src/grid/grid.ts`), with a test on the record. When a
+  reader's copy starts feeding a second consumer, check what that
+  consumer reads; a field list is a contract with every reader.
+
 ### A second copy of the compound-meter rule drifted from the grammar (2026-11-12, @barmark/musicxml)
 
 - **The symptom.** A chart in 15/8, 6/16 or 12/16 exported a dotted
@@ -1113,6 +1154,23 @@ when two rules each define "first", test a chart that tells them apart,
 and round-trip it through `format`.
 
 ## Tooling
+
+### A subagent's "the check is clean" is a claim: read the exit code yourself (2026-11-13, the listen 0.2 build)
+
+- **The symptom.** An implementer reported `bun run check` as showing
+  "only the pre-existing infos", twice. The command exited 1: its own new
+  test had a TypeScript error (`TS2532`). The Biome notes it printed are
+  on main too and do not fail the script, which made the output look the
+  same as a clean run.
+- **The cause.** `bun run check` is `biome check . && tsc`. Biome's infos
+  and one warning print on every run, so the eye learns to skip the
+  output, and the one new `error TS…` line sits under them.
+- **The fix.** The controller runs each gate itself after every task and
+  fix round, as `<command>; echo "exit $?"`, and the implementers' rules
+  ask for the exit code beside each gate. Other slips the same build
+  caught the same way: code written before the tests were run, and a
+  `git checkout` that wiped uncommitted fixes during a mutation check
+  (undo by hand, never with git, on a dirty tree).
 
 ### Our Bun cannot install or resolve Stem Shovel's checkout (2026-11-10, @barmark/listen equivalence)
 

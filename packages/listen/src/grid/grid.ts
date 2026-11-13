@@ -86,17 +86,26 @@ function readBarLine(given: unknown): { startsOnBarLine: boolean } | Refusal {
 	return invalid("startsOnBarLine", "startsOnBarLine must be true or false.");
 }
 
+/** `{ [key]: value }` when the value is given, else nothing. */
+const given = (key: string, value: unknown) => (value === undefined ? {} : { [key]: value });
+
+/** Whether a label or symbol is absent or a string. */
+const isText = (v: unknown) => v === undefined || typeof v === "string";
+
 /** A run's own fields, copied; null when it is not an object or its label or symbol is not a string. */
 function readRun(run: unknown): ChordRun | null {
 	if (typeof run !== "object" || run === null) return null;
-	const { start, end, label, symbol } = run as Record<string, unknown>;
-	if (label !== undefined && typeof label !== "string") return null;
-	if (symbol !== undefined && typeof symbol !== "string") return null;
+	const { start, end, label, symbol, confidence } = run as Record<string, unknown>;
+	if (!isText(label) || !isText(symbol)) return null;
 	// A start or end that is not a finite number is kept as it is: the beats skip it (`beatChords`).
-	const copy: ChordRun = { start: start as number, end: end as number };
-	if (label !== undefined) copy.label = label;
-	if (symbol !== undefined) copy.symbol = symbol;
-	return copy;
+	// The confidence is kept as given: the builder reads, clamps or ignores it (the grid does not use it).
+	return {
+		start: start as number,
+		end: end as number,
+		...given("label", label),
+		...given("symbol", symbol),
+		...given("confidence", confidence),
+	};
 }
 
 /** `frameSec` and `frames` when given, or why one cannot be read. */
@@ -142,7 +151,7 @@ function readChordsOnce(chords: unknown): { chords: ListenChordRuns | null } | R
  * cannot change the vote); a read that throws (a getter, a Proxy) is
  * invalid input, as `readFeatures` refuses a record that throws.
  */
-function readChords(chords: unknown): { chords: ListenChordRuns | null } | Refusal {
+export function readChords(chords: unknown): { chords: ListenChordRuns | null } | Refusal {
 	try {
 		return readChordsOnce(chords);
 	} catch {

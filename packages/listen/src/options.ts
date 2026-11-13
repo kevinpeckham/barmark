@@ -32,6 +32,9 @@ export type ListenOptions = Partial<{
 	DTW_MAX_CELLS: number;
 	MAX_GRID_BARS: number;
 	PICKUP_MAX_BAR_FRACTION: number;
+	TRACKER_MIN_BARS: number;
+	TRACKER_MIN_STEADY_SHARE: number;
+	TRACKER_MIN_CLOSING_SHARE: number;
 }>;
 
 /** The two options that change `firstSound` and `lastSound`, so only the features accept them. */
@@ -257,10 +260,22 @@ export const DEFAULTS: Settings = Object.freeze({
 	MAX_GRID_BARS: 2000,
 	/** The longest pickup the grid reports, as a share of the bar (design §7). Set in the design, not by a study; Study 34's pickup slot is to confirm or move it. */
 	PICKUP_MAX_BAR_FRACTION: 0.5,
+	/** The fewest bars a tracker's reading may hold (Stem Shovel's `MIN_BARS`, `utils/trackerBarGrid.ts`); fewer is not a reading of the song. Not a study's. */
+	TRACKER_MIN_BARS: 4,
+	/**
+	 * The least share of the bars that must hold the usual count of beats
+	 * (stem-bench Study 44). At 0.6 the rule removed more right readings than
+	 * wrong; 0.4 removed 12 of 261 census readings and kept every good 6/8
+	 * draft. It keeps a reading with no bar off the chart; it does not predict
+	 * a wrong bar. 0 turns the rule off.
+	 */
+	TRACKER_MIN_STEADY_SHARE: 0.4,
+	/** What is left after the last downbeat is a closing bar when it is at least this share of the usual bar (Stem Shovel's `MIN_CLOSING_SHARE`, `utils/trackerBarGrid.ts`). Not a study's. */
+	TRACKER_MIN_CLOSING_SHARE: 0.5,
 });
 
-/** Which options a call accepts: the feature functions, the grid and alignment stages, or the pipeline (both, plus `build`). */
-export type OptionScope = "features" | "listen" | "pipeline";
+/** Which options a call accepts: the feature functions, the grid and alignment stages, the beats calls (those, plus `build`) or the pipeline (every option, plus `build`). */
+export type OptionScope = "features" | "listen" | "beats" | "pipeline";
 
 const FEATURE_KEYS = ["ALIGNMENT_SOUND_FLOOR", "ALIGNMENT_SOUND_WINDOW_SEC"];
 
@@ -325,6 +340,9 @@ const RANGES: Record<string, Check> = {
 	DTW_MAX_CELLS: cells,
 	MAX_GRID_BARS: whole,
 	PICKUP_MAX_BAR_FRACTION: upTo1,
+	TRACKER_MIN_BARS: whole,
+	TRACKER_MIN_STEADY_SHARE: (v) => v >= 0 && v <= 1,
+	TRACKER_MIN_CLOSING_SHARE: upTo1,
 };
 
 const bad = (option: string, message: string): Refusal =>
@@ -412,6 +430,7 @@ function acceptedKeys(scope: OptionScope): (key: string) => boolean {
 	const isListen = (k: string) => Object.hasOwn(DEFAULTS, k) && !isFeature(k);
 	if (scope === "features") return isFeature;
 	if (scope === "listen") return isListen;
+	if (scope === "beats") return (k) => k === "build" || isListen(k);
 	return (k) => k === "build" || Object.hasOwn(DEFAULTS, k);
 }
 
@@ -432,21 +451,12 @@ function mergeOption(merged: Record<string, unknown>, key: string, value: unknow
 	return p;
 }
 
-/**
- * Merge `options` over `DEFAULTS` for a scope, refusing an unknown key, a key
- * the scope does not take and a value outside its range. Never throws.
- * `build` (pipeline scope only) must be an object, passed through for sync to read.
- */
-export function resolveOptions(
-	options: unknown,
-	scope: OptionScope,
-): Ok<{ settings: Settings; build?: BuildOptions }> | Refused {
-	const given = options === undefined ? {} : options;
-	if (!isPlainObject(given)) {
-		return refused([bad("", "Options must be an object of option names and values.")]);
-	}
-	const accepts = acceptedKeys(scope);
-	const merged: Record<string, unknown> = { ...DEFAULTS };
+/** Every given option merged into `merged`, and the refusals of those not accepted or out of range. */
+function mergeGiven(
+	given: Record<string, unknown>,
+	accepts: (key: string) => boolean,
+	merged: Record<string, unknown>,
+): Refusal[] {
 	const problems: Refusal[] = [];
 	for (const [key, value] of Object.entries(given)) {
 		const p = accepts(key)
@@ -454,6 +464,35 @@ export function resolveOptions(
 			: bad(key, `Option ${key} is not an option of this call.`);
 		if (p) problems.push(p);
 	}
+	return problems;
+}
+
+/**
+ * Merge `options` over `DEFAULTS` for a scope, refusing an unknown key, a key
+ * the scope does not take and a value outside its range. Never throws.
+ * `build` (the pipeline and beats scopes only) must be an object, passed through for sync to read.
+ */
+export function resolveOptions(
+	options: unknown,
+	scope: OptionScope,
+): Ok<{ settings: Settings; build?: BuildOptions }> | Refused {
+	try {
+		return resolveGiven(options, scope);
+	} catch {
+		return refused([bad("", "The options could not be read.")]);
+	}
+}
+
+function resolveGiven(
+	options: unknown,
+	scope: OptionScope,
+): Ok<{ settings: Settings; build?: BuildOptions }> | Refused {
+	const given = options === undefined ? {} : options;
+	if (!isPlainObject(given)) {
+		return refused([bad("", "Options must be an object of option names and values.")]);
+	}
+	const merged: Record<string, unknown> = { ...DEFAULTS };
+	const problems = mergeGiven(given, acceptedKeys(scope), merged);
 	const build = given.build as BuildOptions | undefined;
 	if (problems.length === 0 && scope !== "features") {
 		const p = checkCombSteps(merged);
