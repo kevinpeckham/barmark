@@ -1,5 +1,7 @@
+import type { Shape } from "@barmark/fretboard";
 import type {
 	ChartDiagnostic,
+	ChordRecord,
 	Credits,
 	DeclaredPart,
 	Direction,
@@ -21,6 +23,8 @@ export type LayoutOptions = {
 	 */
 	rehearsalLetters?: boolean;
 	part?: string;
+	/** Give the model a diagram entry for each chord, as a guitar plays it; off when absent. */
+	chordDiagrams?: "guitar";
 };
 
 /** What to draw, with every musical decision already made. */
@@ -38,6 +42,22 @@ export type ChartModel = {
 	tempoBeat: TempoBeat;
 	blocks: SectionBlock[];
 	diagnostics: ChartDiagnostic[];
+	/** The chart's chords as guitar diagrams show them, in written order; empty unless `chordDiagrams` is set. */
+	diagrams: DiagramEntry[];
+};
+
+/** One chord of the chart as a diagram shows it (design 4 and 5.2). */
+export type DiagramEntry = {
+	/** The chord as written: a name, or a note set. */
+	chord: ChordRecord;
+	/** The notes written after a name (`Cmaj7{E3 G3}`), else null. */
+	voicing: ChordRecord | null;
+	/** The key in force where the chord first appears, for a numeral; null when the chart has none there. */
+	key: Key | null;
+	/** The fingering; null when the written notes cannot be played in standard tuning. */
+	shape: Shape | null;
+	/** "shell": a 7alt's root, third and flat seventh. "voicing-replaced": the written voicing did not fit, so the name's own shape is shown. */
+	caveat: "shell" | "voicing-replaced" | null;
 };
 
 /**

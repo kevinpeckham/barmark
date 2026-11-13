@@ -19,6 +19,7 @@ import {
 	type SectionOccurrence,
 	unreadSlots,
 } from "barmark";
+import { chartDiagrams } from "./diagrams.js";
 import { tempoBeatOf, tempoBeats } from "./tempo.js";
 import type {
 	BlockItem,
@@ -136,7 +137,16 @@ export function layoutChart(text: string, options: LayoutOptions = {}): ChartMod
 		tempoBeat: headerBeat(parse.lines, ctx.beats),
 		blocks,
 		diagnostics: parse.diagnostics,
+		diagrams: options.chordDiagrams === "guitar" ? chartDiagrams(blocks, voiceRows(parse)) : [],
 	};
+}
+
+/** Whether a row is a part's voice line (barmark's grammar 7.7), whether or not it has words: found by its line, since a row is copied as it is laid out. */
+function voiceRows(parse: ChartParse): (row: RowItem) => boolean {
+	const lines = new Set(
+		parse.lines.flatMap((l) => (l.kind === "bars" && singerOf(l, parse) !== null ? [l.line] : [])),
+	);
+	return (row) => lines.has(row.line);
 }
 
 /** The beat the header's tempo counts: its directives' (they share the next bar line), or the default. */
