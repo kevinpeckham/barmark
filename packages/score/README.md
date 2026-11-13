@@ -67,6 +67,10 @@ score.view = "score";
 
 ### Bundling the worker
 
+Loaded without a bundler, the element also needs `@barmark/fretboard` in the
+page's import map (with `barmark` and `@barmark/render`): the element loads
+`@barmark/render`, which imports it whether or not diagrams are on.
+
 The engine runs in a module Worker, created as
 `new Worker(new URL("./worker.js", import.meta.url), { type: "module" })`.
 That is the pattern Vite and webpack follow, so a bundler finds the worker

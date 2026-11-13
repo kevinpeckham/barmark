@@ -30,6 +30,10 @@ themselves.
 
 ## As a web component
 
+Without a bundler, the page's import map must also map `@barmark/fretboard`
+(beside `barmark`): the element imports it whether or not diagrams are on,
+so without it the element does not load at all.
+
 ```html
 <script type="module">import "@barmark/render/element";</script>
 
@@ -149,7 +153,9 @@ element and mirrors the strings only: the low string is drawn on the
 right and a fret number stays at the left. Each diagram has a label that
 speaks the strings, low to high ("muted, 3, 2, open, 1, open"). Style the
 strip through `::part(diagrams)` (the strip) and `::part(diagram)` (one
-chord's diagram, its name and note); the dots and strings follow the
+chord's diagram, its name and note). A chord's name in the strip carries
+the same `chord` part as the names in the grid, so one `::part(chord)` rule
+styles both (a note set's name in the strip does not); the dots and strings follow the
 chart's colours, light, dark and print, and take the system text colour in
 forced-colours mode. It is a view: the chart's music and bar numbers do not
 change, and with the option off a chart renders as it always did.

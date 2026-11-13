@@ -21,12 +21,18 @@ not here.
   depends on how the workspace package resolved; the archive had no
   `package.json` at all, so its base always kept the file. And once the
   trees agreed, a few bytes still moved with the temp directory's random
-  name, because Bun's minifier picks identifiers from module paths.
+  name. The cause was the ABSOLUTE path the test wrote into the generated
+  entry file (`export * from "/tmp/.../element.ts"`), which changes the
+  bundle; it is not that the minifier names identifiers from module paths
+  in general.
 - **The fix.** The test copies the sources it needs (`packages/render`,
   `barmark`, `fretboard` `src`) and the root `tsconfig.json` into a
-  directory with a fixed name and no `package.json` files, and builds the
-  element from that copy; the base is built from `git archive` into the same
-  path. Twenty runs, ten each way, now give the same number. A size test
+  random directory (`mkdtemp`) with no `package.json` files, and builds the
+  element from that copy through an entry at the copy's root with a
+  RELATIVE specifier (`export * from "./packages/render/src/element.ts"`),
+  so the directory can be anything; the base is built from `git archive` the
+  same way. Eighteen random directories gave one size, and twenty runs, ten
+  each way, give the same number. A size test
   must measure a tree it made, not one the runner resolves. See
   `packages/render/tests/size.test.ts`.
 

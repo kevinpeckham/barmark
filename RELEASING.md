@@ -97,6 +97,8 @@ bundle `@barmark/listen`, so a listen release needs no CLI release
 
 **`@barmark/fretboard`** depends on `barmark` with a caret, so after a `barmark` minor a `fretboard` patch raises the dependency, before render's. `@barmark/render` imports it with a caret and the CLI bundles it through render, so a fretboard release is followed by a CLI release (step 13), and by a render patch first when render's range needs to rise ("Requires `@barmark/fretboard` X.Y.0").
 
+**`@barmark/render`'s size test** (`packages/render/tests/size.test.ts`) holds the element to a gzipped size: a render change that grows the element re-anchors the test's base in the same pull request (the comment above `BEFORE_DIAGRAMS` says how).
+
 **`@barmark/score`** depends on `barmark`, `@barmark/render` and
 `@barmark/musicxml` with carets, so it follows their releases the way
 `@barmark/midi` follows `@barmark/sync`: a release of any of them may need

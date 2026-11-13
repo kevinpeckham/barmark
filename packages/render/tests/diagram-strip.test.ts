@@ -178,7 +178,7 @@ describe("what a diagram cannot show", () => {
 		const d = strip("| Cmaj7{E3 G3 B3 C4} |");
 		expect(texts(d, ".bm-diagram-note")).toEqual(["written voicing doesn't fit standard tuning"]);
 		expect(labels(d)).toEqual([
-			"C major seven voiced E3 G3 B3 C4: muted, 3, 2, open, open, open, written voicing doesn't fit standard tuning",
+			"C major seven: muted, 3, 2, open, open, open, written voicing doesn't fit standard tuning",
 		]);
 	});
 

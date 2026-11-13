@@ -138,12 +138,15 @@ const CAVEAT = {
  * key is passed, its written voicing after), then its strings low to high,
  * whatever the hand: "A minor: muted, open, 2, 2, 1, open". One with no
  * shape says why: "C major seven, written voicing: not playable in
- * standard tuning".
+ * standard tuning". A voicing the diagram replaced is not said as voiced: the
+ * strings do not play those notes.
  */
 export function speakDiagram(entry: DiagramEntry, key?: Key): string {
 	const name = speakChord(entry.chord, key);
 	if (!entry.shape) return `${name}${entry.voicing ? ", written voicing" : ""}: ${UNPLAYABLE}`;
-	const voiced = entry.voicing ? `${name} voiced ${entry.voicing.pitches.join(" ")}` : name;
+	const shown = entry.caveat !== "voicing-replaced";
+	const voiced =
+		entry.voicing && shown ? `${name} voiced ${entry.voicing.pitches.join(" ")}` : name;
 	const strings = entry.shape.frets.map((f) => (f < 0 ? "muted" : f === 0 ? "open" : String(f)));
 	return `${voiced}: ${strings.join(", ")}${entry.caveat ? CAVEAT[entry.caveat] : ""}`;
 }

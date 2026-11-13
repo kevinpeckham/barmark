@@ -13,6 +13,12 @@ package uses [semantic versioning](https://semver.org/).
   `renderScoreHtml(text, { chordDiagrams: "guitar" })` writes it too. The
   score view (Verovio) ignores them.
 
+### Changed
+
+- **Unbundled pages: add `@barmark/fretboard` to the import map.**
+  `@barmark/render`, which the element loads, imports it whether or not
+  diagrams are on.
+
 ## [0.5.0] - 2026-11-10
 
 ### Added

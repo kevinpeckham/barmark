@@ -23,6 +23,18 @@ package uses [semantic versioning](https://semver.org/).
   `@barmark/fretboard` 0.1.0. It adds about 6.5 KB gzipped to the element
   (6,539 bytes on 46,302).
 
+### Changed
+
+- **Unbundled pages: add `@barmark/fretboard` to the import map.** The
+  element imports it whether or not diagrams are on.
+
+### Fixed
+
+- **A replaced voicing is not said as voiced.** A diagram whose written
+  voicing did not fit is labelled with the chord's name, then its strings
+  ("C major seven: muted, 3, 2, open, open, open, written voicing doesn't fit
+  standard tuning"); it no longer names notes the strings do not play.
+
 ## [0.19.1] - 2026-11-12
 
 ### Fixed
