@@ -1,10 +1,10 @@
 # @barmark/listen 0.2: the grid from a tracker's beats: design
 
-**Status:** draft for Kevin's review (2026-11-12). The direction is
-Kevin's (2026-11-11, "Both": a tracker's beats as input first, a
-model-free path later, §2). My own choices are marked **(design call)** so
-he can check them. The questions only he can answer are in §13. No grammar
-change. Nothing here is code yet.
+**Status:** approved by Kevin on 2026-11-13, with both of §13's
+recommendations. The direction is Kevin's (2026-11-11, "Both": a tracker's
+beats as input first, a model-free path later, §2). My own choices are
+marked **(design call)**; he approved the design with them in it. No
+grammar change. Nothing here is code yet.
 
 It extends `2026-11-09-listen-design.md` (the 0.1 design, "the 0.1 design"
 below). Section numbers with "0.1" in front point there.
@@ -365,12 +365,15 @@ take a `TRACKER_` prefix **(design call)**.
 | Option | Default | From | Range |
 | --- | --- | --- | --- |
 | `TRACKER_MIN_BARS` | 4 | The app's (`MIN_BARS`); not a study's | a whole number ≥ 1 |
-| `TRACKER_MIN_STEADY_SHARE` | 0.4 | stem-bench Study 44: at 0.6 the rule removed more right readings than wrong; 0.4 removed 12 of 261 census readings and kept every good 6/8 draft | 0 to 1 |
-| `TRACKER_MIN_CLOSING_SHARE` | 0.5 | The app's (`MIN_CLOSING_SHARE`); not a study's | 0 to 1 |
+| `TRACKER_MIN_STEADY_SHARE` | 0.4 | stem-bench Study 44: at 0.6 the rule removed more right readings than wrong; 0.4 removed 12 of 261 census readings and kept every good 6/8 draft | 0 to 1; 0 turns the rule off |
+| `TRACKER_MIN_CLOSING_SHARE` | 0.5 | The app's (`MIN_CLOSING_SHARE`); not a study's | above 0, to 1 (at 0 a recording that ends on a bar line would get a bar of no length) |
 
 `MAX_GRID_BARS` and `PICKUP_MAX_BAR_FRACTION` are 0.1's, read here too.
-The other options are accepted and unused, as `findGrid` accepts the
-alignment's. An unknown or out-of-range option is `invalid-option`.
+The other grid and alignment options are accepted and unused, as
+`findGrid` accepts the alignment's. `chartFromBeats` also takes `build`,
+and neither call takes the two sound options, which belong to features
+this path never reads. An unknown or out-of-range option is
+`invalid-option`.
 
 ## 8. Refusals and warnings added
 
@@ -418,11 +421,14 @@ bug.
   `test-support/growth.ts`.
 - **Never throws:** hostile input (getters, a Proxy, sparse arrays,
   `NaN`, huge lengths) is a refusal.
-- **Equivalence, in a mode of its own.** `scripts/listen-equivalence.ts
-  --beats <commit>` (at or after `011cee44`) runs only the app's
-  `trackerBarGrid` and `beatThisGrid` from its read-only clone, and writes
-  only `beats.json`, which records its own commit. Without `--beats` the
-  script does what it does today. **The 0.1 goldens stay at `59da1952`
+- **Equivalence, in a script of its own.**
+  `scripts/listen-beats-equivalence.ts <commit>` (at or after `011cee44`)
+  runs only the app's `trackerBarGrid` and `beatThisGrid`, and writes only
+  `tests/fixtures/beats/equivalence.json`, which records its own commit.
+  The three app files import nothing but each other, so the script reads
+  them with `git show` into `~/.cache/barmark/` and needs no clone and no
+  install. `scripts/listen-equivalence.ts` is not touched. **The 0.1
+  goldens stay at `59da1952`
   (design call):** the app has since changed modules they read and moved
   to newer barmark and sync, so regenerating them belongs to a 0.1
   maintenance task, not to this one. The test checks the two commits
@@ -431,11 +437,10 @@ bug.
   each seeded reading before it calls them. It compares:
   - on a seeded set of synthetic readings (steady 4/4, 3/4 and 6/8, half
     bars, an unsteady reading, a short one, tails either side of the
-    closing bound), written as goldens in
-    `tests/fixtures/equivalence/beats.json` and checked by
-    `tests/equivalence.test.ts`;
+    closing bound), written as goldens and checked by
+    `tests/beats-equivalence.test.ts`;
   - on the app's five real readings in its
-    `docs/bench-reply-beats-2026-11-11.json`, read from the clone and
+    `docs/bench-reply-beats-2026-11-11.json`, read with `git show` and
     compared on the VM only. They are not copied into barmark **(design
     call: as 0.1 keeps its three real mixes out of the repository)**.
 
@@ -480,7 +485,13 @@ bug.
   equivalence passes on its side. Nothing is written in stem-shovel from
   here.
 
-## 13. Questions for Kevin
+## 13. Kevin's answers
+
+**Decided by Kevin (2026-11-13): yes to both recommendations below.**
+Where the text says "I recommend", read "Decided": beats before the first
+downbeat are a pickup when they are at most half a bar and bar one is a
+usual bar (§4.4), and `chartFromBeats` is its own call with no fallback
+inside (§6).
 
 1. **The pickup (§4.4).** The app drops beats that come before the first
    downbeat. I recommend listen write them as a pickup bar when they are
