@@ -369,6 +369,21 @@ describe("<barmark-score>", () => {
 		expect(strip()).toBeNull();
 	});
 
+	test("the score view ignores chord-diagrams and diagram-hand: no strip, no new engraving", async () => {
+		const el = await make({ view: "score" });
+		calls[0]?.resolve({ id: 1, ok: true, svg: svg("first"), pages: 1 });
+		await flush();
+		const { pane, grid, radios } = parts(el);
+		el.setAttribute("chord-diagrams", "guitar");
+		el.setAttribute("diagram-hand", "left");
+		await flush();
+		expect(pane.querySelector(".bm-diagrams")).toBeNull();
+		expect(calls).toHaveLength(1);
+		click(radios[0] as HTMLElement);
+		await flush();
+		expect(grid.querySelector(".bm-diagrams")).not.toBeNull();
+	});
+
 	test("text changed while engraving shows the new score", async () => {
 		const el = await make({ view: "score" });
 		el.text = "| D |";

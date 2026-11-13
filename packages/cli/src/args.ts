@@ -23,7 +23,8 @@ export function parseFlags<T extends Options>(args: string[], options: T) {
 /** A flag that takes one of a few values. */
 export function oneOf<V extends string>(flag: string, value: string, allowed: readonly V[]): V {
 	if ((allowed as readonly string[]).includes(value)) return value as V;
-	const list = `${allowed.slice(0, -1).join(", ")} or ${allowed.at(-1)}`;
+	const list =
+		allowed.length === 1 ? allowed[0] : `${allowed.slice(0, -1).join(", ")} or ${allowed.at(-1)}`;
 	throw new UsageError(`--${flag} must be ${list}, not "${value}"`);
 }
 

@@ -70,12 +70,17 @@ describe("barmark render", () => {
 		);
 		expect(b.html).toContain("bm-diagrams");
 	});
-	test("--diagrams ukulele names the allowed value", async () => {
-		const io = folder({ "pd.chart.md": PD });
-		await expect(render(["pd.chart.md", "--diagrams", "ukulele"], io)).rejects.toThrow(
-			/--diagrams.*guitar/,
-		);
-	});
+	for (const [args, given] of [
+		[["--diagrams", "ukulele"], "ukulele"],
+		[["--diagrams="], ""],
+		[["--diagrams", "Guitar"], "Guitar"],
+	] as const)
+		test(`${args.join(" ")} names the one allowed value`, async () => {
+			const io = folder({ "pd.chart.md": PD });
+			await expect(render(["pd.chart.md", ...args], io)).rejects.toThrow(
+				`--diagrams must be guitar, not "${given}"`,
+			);
+		});
 	test("--left-handed without --diagrams is a usage error", async () => {
 		const io = folder({ "pd.chart.md": PD });
 		await expect(render(["pd.chart.md", "--left-handed"], io)).rejects.toThrow(
