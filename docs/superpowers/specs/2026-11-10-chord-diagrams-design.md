@@ -72,7 +72,7 @@ distinct chords, 27 covered; the 6 missing are all `5(7)` (`G5(7)`,
 a bass, it enumerates standard-tuning fingerings: every 4-fret window up
 to fret 15, open strings allowed; at most a 3-fret span between fretted
 notes; at most 4 fingers, a barre at the lowest fret counting as one;
-the bass on the lowest sounding note (an open string can sound below a
+the bass is the lowest sounding note (an open string can sound below a
 fretted lower string); no muted string inside the
 voicing; at least 3 strings (2 for a power chord). The fifth (and the
 9th and 11th under a 13th) may be left out. A cost ranks them: position,
@@ -166,7 +166,9 @@ written by hand:
   for each of the 54 forms, about 130 rows, transposed to any root.
 - Lookup: the open shape if one exists for that root, else the lowest
   template, else the finder's first choice; a moved shape that would
-  start above the seventh fret is not used; the finder answers.
+  start above the seventh fret is not used; the finder answers. A table
+  shape is used only when it sounds the chord: a row may leave out a fifth
+  that another chord with the same notes needs.
 
 Each row is a test: it must sound its name (section 8).
 

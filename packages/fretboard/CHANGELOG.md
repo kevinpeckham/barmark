@@ -27,12 +27,16 @@ package uses [semantic versioning](https://semver.org/).
   and nothing outside the chord does. **`sounding(shape, tuning?)`** lists
   a shape's MIDI notes.
 - **`shapeOf(text)`, `shapeText(shape)` and `shapeFrom(frets)`**: a shape
-  from `"x32010"`, as that text (spaces between the frets when one is 10 or
-  more), and from absolute frets with its `base` and `barre` worked out.
+  from `"x32010"` or from the spaced form (`"x 10 12 12 11 10"`, which is
+  what `shapeText` writes when a fret is 10 or more; `shapeOf` reads both
+  and throws on anything else), as that text, and from absolute frets with
+  its `base` and `barre` worked out.
 - **The limits of a shape for a named chord**: at most a 3-fret span, four
   fingers (a barre counts as one finger only at the lowest fret, so the
   ninth chord `x32333` is not used and `C9` is `x3233x`), frets 0 to 15, a
-  moved shape never starting above the seventh fret, at least three
+  moved shape never starting above the seventh fret (the table steps aside
+  there, and whenever its shape does not sound the chord, so the finder
+  answers), at least three
   strings (two for a power chord), no muted string inside (`D/F#` is
   `200232`) and the bass the lowest sounding note, not the lowest string.
   The fifth may be left out of a chord of four or more tones, and the

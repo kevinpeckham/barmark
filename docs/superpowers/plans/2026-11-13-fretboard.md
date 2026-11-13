@@ -17,9 +17,9 @@
 - Standard guitar tuning only: MIDI `[40, 45, 50, 55, 59, 64]` (E2 A2 D3 G3 B3 E4), low string first. Octaves are sounding pitch.
 - A `Shape`'s `frets` are absolute, low string first: `-1` muted, `0` open.
 - **Never throws.** `shapeFor` returns a result or a reason for any `ChordRecord`.
-- **Every shape the package returns for a named chord passes `soundsChord`** and the limits: at most a 3-fret span between fretted notes, at most 4 fingers (a barre counts as one), frets 0 to 15, the bass on the lowest sounding string, no muted string inside the voicing, at least 3 strings (2 for a power chord).
+- **Every shape the package returns for a named chord passes `soundsChord`** and the limits: at most a 3-fret span between fretted notes, at most 4 fingers (a barre counts as one), frets 0 to 15, the bass is the lowest sounding note, no muted string inside the voicing, at least 3 strings (2 for a power chord).
 - **Deterministic.** The same chord always gets the same shape; ties break on the fret string.
-- The package's own minified, gzipped entry (with `barmark` external) is at most 4.5 KB, enforced by a test. (The spec's +5 KB budget is on render's element; this keeps the package inside its share.)
+- The package's own minified, gzipped entry (with `barmark` external) is at most 4.8 KB (raised in the final review), enforced by a test. (The spec's +5 KB budget is on render's element; this keeps the package inside its share.)
 - `bun test packages/fretboard`, `bun run check`, `bun run fallow` are clean at the end of every task, each read by its exit code. Refactor rather than grow Fallow's baseline.
 - Commits are conventional commits with **no** `Co-Authored-By` or other AI trailer.
 - Version `0.1.0` from the first commit; the release is a separate step (`RELEASING.md`, "A new package's first release").
@@ -511,7 +511,7 @@ More, each asserted exactly:
 
 `tests/corpus.test.ts`: every chord slot of every chart in `examples/` (walk `parseChart`'s result for slots with a `chord`; pass a slot's `voicing` when it has one; skip voice-line note sets as spec §4.2 says) gets `ok: true` with a shape that sounds it, or a `not-playable`/`single-note` reason for a note set or voicing; print the count of each outcome in the report.
 
-`tests/size.test.ts`: `Bun.build` the entry (`minify: true`, `external: ["barmark"]`), gzip it, and expect at most 4,500 bytes; also run the built bundle and call `shapeFor` from it (FINDINGS: a `sideEffects: false` bundle can be emptied, so a size check must run what it measured).
+`tests/size.test.ts`: `Bun.build` the entry (`minify: true`, `external: ["barmark"]`), gzip it, and expect at most 4,800 bytes (raised in the final review); also run the built bundle and call `shapeFor` from it (FINDINGS: a `sideEffects: false` bundle can be emptied, so a size check must run what it measured).
 
 Run: `bun test packages/fretboard` — Expected: FAIL (modules not found).
 

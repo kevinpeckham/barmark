@@ -19,7 +19,7 @@ import { join } from "node:path";
 import { type Shape, shapeFor, shapesFor, soundsChord } from "@barmark/fretboard";
 import { type ChordRecord, parseChord } from "barmark";
 
-const COMMIT = "4b25408";
+const COMMIT = "4b25408d830bd3f4c53fc6fb544b2babe4da09e1";
 const URL_ = `https://raw.githubusercontent.com/ChordPro/chordpro/${COMMIT}/lib/ChordPro/res/config/guitar.json`;
 
 type Entry = { name: string; copy?: string; base?: number; frets?: (number | string)[] };

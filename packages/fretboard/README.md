@@ -17,16 +17,24 @@ It needs `barmark`, which reads the chords.
 ## A named chord
 
 ```ts
-import { parseChord } from "barmark";
+import { type ChordRecord, parseChord, parseNoteSet } from "barmark";
 import { shapeFor, shapeText } from "@barmark/fretboard";
 
-const result = shapeFor(parseChord("F").value);
+// `parseChord` and `parseNoteSet` answer `{ ok, value }` or `{ ok: false, error }`;
+// this reads a chord name or a `{...}` note set and throws, naming it, when it does not read.
+function chord(text: string): ChordRecord {
+	const r = text.startsWith("{") ? parseNoteSet(text) : parseChord(text);
+	if (!r.ok) throw new Error(`"${text}" does not read: ${r.error.message}`);
+	return r.value;
+}
+
+const result = shapeFor(chord("F"));
 // { ok: true, shape: { frets: [1, 3, 3, 2, 1, 1], base: 1,
 //                      barre: { fret: 1, from: 0, to: 5 } }, notes: null }
 if (result.ok) shapeText(result.shape); // "133211"
 ```
 
-`shapeFor(slot, voicing?)` takes a chord from barmark's `parseChord` (or a
+`shapeFor(slot, voicing?)` takes a chord record from barmark's `parseChord` (or a
 parsed chart's slot: `slot.chord`, and `slot.voicing` when notes were
 written after the name) and never throws. It answers with a `ShapeResult`:
 
@@ -65,7 +73,11 @@ for (const bar of bars)
 // xxx010
 ```
 
-`?`, `N.C.`, `--` and `/` slots are not chords: skip them. A note set
+The loop walks each bar's own `slots`, which are the first part's in a chart
+of several parts (`bar.parts` holds each part's bar), and reads the slots that
+are chords. It skips a group (`kind: "group"`, whose chords are in
+`members`) and the part lines (`bar.lines`), so walk those too to cover
+them. `?`, `N.C.`, `--` and `/` slots are not chords: skip them. A note set
 that a chart writes alone is a slot's `chord` too, so `shapeFor` takes it
 the same way. (A note set sung on a voice line is melody; leave it out.)
 
@@ -76,9 +88,7 @@ low to high, and a string between them may be muted. Octaves are sounding
 pitch.
 
 ```ts
-import { parseNoteSet } from "barmark";
-
-shapeFor(parseNoteSet("{C3 G3 E4}").value);
+shapeFor(chord("{C3 G3 E4}"));
 // { ok: true, shape: { frets: [-1, 3, -1, 0, -1, 0], base: 1 }, notes: null }
 // shapeText: "x3x0x0"
 ```
@@ -87,15 +97,15 @@ A voicing is a chord name with notes after it. If the notes fit, the shape
 is the notes:
 
 ```ts
-const dm7 = parseChord("Dm7").value;
-shapeFor(dm7, parseNoteSet("{F3 C4 E4}").value);
+const dm7 = chord("Dm7");
+shapeFor(dm7, chord("{F3 C4 E4}"));
 // shape "xx3x10" (frets [-1, -1, 3, -1, 1, 0]), notes: null
 ```
 
 If they do not fit, `notes` says so and the shape is the name's:
 
 ```ts
-shapeFor(parseChord("Cmaj7").value, parseNoteSet("{E3 G3 B3 C4}").value);
+shapeFor(chord("Cmaj7"), chord("{E3 G3 B3 C4}"));
 // shape "x32000", notes: "voicing-replaced"
 ```
 
@@ -114,7 +124,7 @@ needs `{E2}` here. A note below or above what six strings reach is
 ```ts
 import { shapesFor, shapeText } from "@barmark/fretboard";
 
-shapesFor(parseChord("Am7").value).map(shapeText).slice(0, 3);
+shapesFor(chord("Am7")).map(shapeText).slice(0, 3);
 // ["x02010", "x0201x", "x02013"]
 ```
 
@@ -126,10 +136,10 @@ first is `shapeFor`'s, with no repeats. It is `[]` for a note set.
 ```ts
 import { soundsChord } from "@barmark/fretboard";
 
-const am = shapeFor(parseChord("Am").value);
+const am = shapeFor(chord("Am"));
 if (am.ok) {
-	soundsChord(am.shape, parseChord("Am").value); // true
-	soundsChord(am.shape, parseChord("A").value); // false
+	soundsChord(am.shape, chord("Am")); // true
+	soundsChord(am.shape, chord("A")); // false
 }
 ```
 
@@ -147,14 +157,17 @@ type Barre = { fret: number; from: number; to: number };
 
 - `frets` are absolute, low string first: `-1` is muted, `0` is open.
 - `base` is the first fret a diagram draws: 1 when every fret is 5 or
-  under, else the lowest fretted fret (`C#` is `x46664`, `base: 4`).
+  under (through the fifth fret), else the lowest fretted fret (`C#` is
+  `x46664`, `base: 4`).
 - `barre` is one finger across strings `from` to `to` (indexes, low
-  string 0) at `fret`. `Bm` is `x24432`, with
-  `barre: { fret: 2, from: 1, to: 5 }`.
+  string 0) at `fret`. It is present only when more than four strings are
+  fretted and one finger can hold the lowest fret across them. `Bm` is
+  `x24432`, with `barre: { fret: 2, from: 1, to: 5 }`; `Am` (`x02210`) has
+  none.
 
 `shapeText(shape)` writes frets as characters (`x32010`; spaces between
 frets when one is 10 or more: `x 10 12 12 11 10`), `shapeOf(text)` reads
-six characters back (it throws on anything else), `shapeFrom(frets)` makes
+six characters back, or the spaced form (it throws on anything else), `shapeFrom(frets)` makes
 a shape from frets, and `GUITAR` is the tuning. Its `Tuning` type is
 `{ name: "guitar"; strings: readonly number[] }`, MIDI notes low to high.
 
@@ -169,12 +182,13 @@ A shape for a named chord stays inside what one hand plays:
 - frets 0 to 15, and a moved shape never starts above the seventh fret;
 - at least three strings sound (two for a power chord);
 - no muted string inside the shape. `D/F#` is `200232`, not `2x0232`;
-- the bass is the lowest sounding note, and a slash bass included. An open
+- the bass, a slash bass included, is the lowest sounding note. An open
   string can sound below a fretted lower string, so it is the pitch that
   counts, not the string.
 
-A note set you wrote is not held to the last two: it may mute a string
-inside, since you said which notes.
+A note set or a voicing you wrote is exempt from the least count of strings
+and from the no-muted-string-inside rule (it may mute a string inside, since
+you said which notes). The span, finger and fret limits hold for it too.
 
 ## What a chord leaves out
 

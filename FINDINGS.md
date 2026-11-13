@@ -762,11 +762,13 @@ order, not just the written marks.
 ### A cost summed in floating point made equal costs unequal (2026-11-13, @barmark/fretboard)
 
 - **The symptom.** The finder breaks ties between equal-cost shapes by
-  their text, so the same chord always gets the same shape. Shapes that
-  should have tied came out in cost order instead, and the tie-break never
-  ran.
+  their text, so the same chord always gets the same shape. For some chords
+  the tie-break did not decide: shapes whose costs should have been equal
+  came out in cost order instead (8 of the 660 vocabulary chords' top-ten
+  lists).
 - **The cause.** The cost was summed in floating point, so equal costs
-  compared unequal by a rounding error.
+  that were summed in a different order differed in the last bit and
+  compared unequal.
 - **The fix.** The cost is whole tenths, an integer, so equal costs are
   equal and the tie-break by `shapeText` runs. Compare a rank by integers
   or by an exact rule, never by a float sum. Where it lives:
@@ -774,16 +776,19 @@ order, not just the written marks.
 
 ### The bass and the top note are the lowest and highest pitch, not string (2026-11-13, @barmark/fretboard)
 
-- **The symptom.** `Ebmaj13` came out `x60563`, whose lowest string
-  played is the Eb but whose open D string, above it, sounds below it.
-  The finder's check "the bass is on the lowest string" passed a shape
-  whose bass was not Eb. The same slip put the root "on top" when an open
-  B sounded below the root on the string beside it (`Db5(7)`).
+- **The symptom.** The design's wording said the bass is "the lowest
+  sounding string". Read that way, `x60563` passes as `Ebmaj13`: its lowest
+  string played is the Eb, but the open D string above it sounds below it.
+  The finder never did this (its bass check used the lowest pitch from its
+  first commit). What did slip was the top-note bonus, which first read the
+  highest sounding string: it counted the root "on top" when an open B
+  sounded below the root on the string beside it (`Db5(7)`).
 - **The cause.** Strings are not in pitch order once frets are added: an
   open string can sound below, or above, a fretted neighbour.
-- **The fix.** The bass is the lowest sounding NOTE and the top note the
-  highest PITCH, in the finder, in `soundsChord` and in the oracle test.
-  Design §2.3 says so. See `packages/fretboard/src/finder.ts`.
+- **The fix.** The top note is the highest PITCH, and the bass the lowest
+  sounding NOTE, in the finder, in `soundsChord` and in the oracle test.
+  The design's wording was corrected to match (§2.3). See
+  `packages/fretboard/src/finder.ts`.
 
 ### Two packages that each work out the same length will disagree: use one expression (2026-11-13, `@barmark/listen` 0.2)
 
