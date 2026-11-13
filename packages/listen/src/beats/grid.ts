@@ -48,6 +48,13 @@ export type BeatsReading = {
 export type TrackedGrid = {
 	/** Bar one's start … the end; never includes the pickup. */
 	grid: BarGrid;
+	/**
+	 * The beats before bar one, when they are a pickup. `beats` is in the
+	 * chart's beats (eighths in 6/8), measured as the builder measures it:
+	 * the same number as the tracker's count for 3, 4 and 6 beats a bar,
+	 * but a tracker that counts two a bar is labelled 4/4, so its one
+	 * leading beat is `beats: 2`.
+	 */
 	pickup: { start: number; beats: number } | null;
 	meter: BeatsMeter;
 	reading: BeatsReading;

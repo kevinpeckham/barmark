@@ -168,6 +168,14 @@ Fallow, CI, Swamp), the grammar, `examples/`, the scripts and FINDINGS.md.
   - `src/align/`: `alignChart`: the chart's bars as pads (`bars.ts`), the
     streamed render, the DTW, the path and its re-phase, the fit, the
     placements and the aligned timing map
+  - `src/beats/`: `gridFromBeats` and `chartFromBeats`, a beat tracker's
+    beats and downbeats as a bar grid and then a chart (spec
+    `docs/superpowers/specs/2026-11-12-listen-beats-design.md`): the
+    input (`input.ts`), downbeats snapped to beats (`snap.ts`), the
+    meter and tempo label (`label.ts`), half bars joined and the steady
+    share (`bars.ts`), the grid with its pickup (`grid.ts`), `declared`
+    compared (`declared.ts`), the chart (`pipeline.ts`); `src/build.ts`
+    is the builder call both pipelines share
   - `src/pipeline.ts`: `chartFromRecording`; `src/stages.ts`: the
     `./stages` entry, each stage for the bench (may change shape in a
     minor before 1.0)

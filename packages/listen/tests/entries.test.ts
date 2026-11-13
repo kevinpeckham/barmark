@@ -57,13 +57,24 @@ const STAGES = [
 	"alignmentFit",
 	"alignedPlacements",
 	"alignedTimingMap",
+	"snapDownbeats",
+	"beatsLabel",
+	"joinHalfBars",
+	"steadyShare",
 ];
 
 describe("the root entry", () => {
 	test("the calls, the options and every feature name; nothing internal, nothing from sync", async () => {
 		const root = await import(join(SRC, "index.ts"));
 		const names = Object.keys(root);
-		for (const name of ["findGrid", "alignChart", "chartFromRecording", "resolveOptions"])
+		for (const name of [
+			"findGrid",
+			"alignChart",
+			"chartFromRecording",
+			"gridFromBeats",
+			"chartFromBeats",
+			"resolveOptions",
+		])
 			expect(typeof root[name]).toBe("function");
 		for (const name of FEATURES) expect(names).toContain(name);
 		expect(Object.isFrozen(root.DEFAULTS)).toBe(true);
@@ -74,8 +85,10 @@ describe("the root entry", () => {
 				...FEATURES,
 				"DEFAULTS",
 				"alignChart",
+				"chartFromBeats",
 				"chartFromRecording",
 				"findGrid",
+				"gridFromBeats",
 				"resolveOptions",
 			].sort(),
 		);

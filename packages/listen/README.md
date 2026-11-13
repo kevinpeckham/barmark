@@ -3,7 +3,8 @@
 Find the bars in a recording and line a [barmark](https://barmark.dev)
 chord chart up with them. It reads a recording's audio features, finds its bar grid
 and where bar one is, builds a chart and its timing map from a chord
-model's runs, and aligns an existing chart to the recording.
+model's runs, and aligns an existing chart to the recording. It also
+reads a beat tracker's beats and downbeats as a bar grid, with no audio.
 
 It is a port, not a rewrite: the recording-to-chart math of the Stem
 Shovel app, with the app's arithmetic in the app's order and every
@@ -19,7 +20,7 @@ It requires `barmark` 0.23.1 and `@barmark/sync` 0.4.1 or later, and
 Node 20 or later (or any modern browser: the package uses only `Math`
 and typed arrays, no DOM or Node API).
 
-## The four calls
+## The six calls
 
 ### Features
 
@@ -138,6 +139,98 @@ carries the vote. Options for the builder go in `build`.
 To carry the map over to a refined copy of the chart, use sync's
 `rehashTiming`.
 
+### From a beat tracker
+
+A beat tracker (Stem Shovel's is Beat This) gives the times of the beats
+and of the first beat of each bar. Two calls read them, with no audio and
+no features, and no declared tempo or meter.
+
+```ts
+import { gridFromBeats } from "@barmark/listen";
+
+const tracked = gridFromBeats({
+	beats, // seconds, ascending
+	downbeats, // seconds, ascending: the first beat of each bar
+	duration, // the recording's length, in seconds
+});
+if (tracked.ok) {
+	const { grid, pickup, meter, reading } = tracked.value;
+	grid.bars; // bar one's start, every bar line, the end
+	meter; // "4/4", "3/4" or "6/8"
+} else tracked.reading; // why, when it got far enough to read anything
+```
+
+Each downbeat is moved to its nearest beat. The meter is the usual count
+of beats in a bar: 6 is 6/8, 3 is 3/4 and anything else is 4/4 (stem-bench
+Study 41). Two bar lines that each hold half the usual count of beats are
+joined into one bar (Study 44). The reading is refused when too few bars
+are left (`too-few-bars`) or when too few of them hold the usual count
+(`bars-unsteady`); the grid ends at `duration` when at least half a bar is
+left there.
+
+```ts
+import { chartFromBeats } from "@barmark/listen";
+
+const built = chartFromBeats({
+	beats,
+	downbeats,
+	duration,
+	chords: runs, // a chord model's runs (sync's ChordRuns)
+	title: "Peaceful Dreams",
+});
+if (built.ok) {
+	const { chart, timing, confidence, grid } = built.value;
+}
+```
+
+`chartFromBeats` is `gridFromBeats`, then sync's `chartFromDetections` on
+the grid, with the title, key, sections and changes passed on as given. The
+warnings are the grid's. Options for the builder go in `build`.
+
+**Which tempo to show.** `reading.tempo` is the tempo from the median
+beat; the chart's `tempo:` line is another number, which sync works out
+from the bars. They differ by a few bpm on real recordings (Peaceful
+Dreams reads 143 from its beats and 145 from its bars). Show and store the
+chart's: it is the one the timing map agrees with.
+
+**A pickup** is the run of beats before bar one, when it is at most
+`PICKUP_MAX_BAR_FRACTION` of a bar and bar one holds the usual count.
+`pickup.beats` is in the chart's beats (eighths in 6/8), measured as sync
+measures it: for 3, 4 and 6 beats a bar it is the tracker's own count, but
+a tracker that counts two beats a bar is labelled 4/4, so its one leading
+beat is `beats: 2` and the chart writes `[2/4]`. Beats before bar one that
+are not a pickup stay off the chart, with a `beats-before-bar-one`
+warning.
+
+**A declared tempo or meter** is compared and never obeyed. Pass
+`declared: { meter, tempo }` (either part may be left out) and the grid
+warns with `tempo-drift` and `meter-differs`; the grid, the meter and the
+tempo are the tracker's in every case. `tempo-drift` here also carries
+`detail.fold`, the nearest of ½, 1 and 2 to the bar over the declared bar,
+and `detail.foldRatio`, the drift left once that fold is taken. Test
+`foldRatio` to treat a half-time or double-time reading as the same song;
+test `ratio` to ask whether the bar numbers will match a player's count.
+
+**The tracker's label is one meter for the piece.** A count of 5 or 7 is
+read as 4/4, and a count of 2 as 4/4 with two-beat bars. It is wrong for a
+song in 5/4. That is open work, not a setting.
+
+**When it refuses**, `chartFromBeats` does not fall back. A host that has a
+declared tempo and the recording's features calls `chartFromRecording`
+itself:
+
+```ts
+const tracked = chartFromBeats({ beats, downbeats, duration, chords: runs });
+const built = tracked.ok
+	? tracked
+	: chartFromRecording({ features, chords: runs, declared: { meter: "4/4", tempo: 120 } });
+```
+
+A host whose tempo and meter changes sit on its own declared timeline
+should pass only its key changes in `changes`: the tracker's grid does not
+follow that timeline, so tempo and meter changes placed on it would land
+on the wrong bars.
+
 ## Results and refusals
 
 Every call returns one shape and never throws:
@@ -153,10 +246,12 @@ seconds and bar numbers; `detail` has the numbers behind it.
 
 | Reason | Stage | When |
 | --- | --- | --- |
-| `invalid-input` | all | Samples empty or not finite; a sample rate outside 8,000 to 384,000; a meter `parseMeter` cannot read; a tempo not 1 to 999; `startAt` not a finite number ≥ 0; a chart not a string; `chords.frames` not a whole number ≥ 0; samples and features both given. `detail.field` names the field. |
+| `invalid-input` | all | `beats` or `downbeats` not an ascending list of at most 200,000 times from 0 to `duration`; `duration` not above 0; a declared meter or tempo that cannot be read; samples empty or not finite; a sample rate outside 8,000 to 384,000; a meter `parseMeter` cannot read; a tempo not 1 to 999; `startAt` not a finite number ≥ 0; a chart not a string; `chords.frames` not a whole number ≥ 0; samples and features both given. `detail.field` names the field. |
 | `invalid-option` | all | An option is unknown, not taken by that call, or out of its range. `detail.option` names it. |
 | `features-invalid` | features | Not a features record, or one whose arrays, rates or values do not match what it says. |
 | `features-version` | features | The record's `version` is not this package's `FEATURES_VERSION`. A cache treats it as a miss. |
+| `too-few-bars` | beats | Fewer than 2 beats, or fewer than `TRACKER_MIN_BARS + 1` bar lines, as read or after joining. `detail.bars`, `detail.beats`. |
+| `bars-unsteady` | beats | The share of the bars that hold the usual count of beats is under `TRACKER_MIN_STEADY_SHARE`. `detail.share`, `detail.beatsPerBar`. The reading comes beside the refusal. |
 | `no-period` | grid, align | The onset envelope is empty or all zero after detrending: no lattice to find. |
 | `downbeat-undecided` | grid | The vote did not decide. The reading comes beside the refusal. |
 | `nothing-fits` | grid | Bar one lands at or after the recording's end. |
@@ -177,11 +272,14 @@ seconds and bar numbers; `detail` has the numbers behind it.
 | `pickup` | The grid reports a pickup (`detail.start`, `detail.beats`). |
 | `bar-one-clamped` | Bar one fell before 0:00 and starts at 0:00; `detail.start` is where it fell, in seconds (negative). |
 | `sound-before-start` | With `startAt`, sound begins a bar or more before it. Those bars are outside the grid. |
-| `grid-truncated` | The grid reached `MAX_GRID_BARS` before the recording's end. |
+| `grid-truncated` | The grid (comb or tracker) reached `MAX_GRID_BARS` before the recording's end. |
 | `bar-one-unplaced` | The pipeline built on the declared grid (`onUnplaced: "declared"`); `detail.reason` names the refusal it replaced. |
 | `chart-diagnostics` | The aligned chart has parse warnings or errors (a `?` among them); the alignment still runs. |
 | `bars-cut` | align: bars lie wholly before 0:00 or after the recording's end, so the map, clamped to the recording, drops them (`detail.bars`, their bar numbers; `detail.edge`, `start` or `end`). One warning an edge. |
-| `tempo-drift` | grid and pipeline: the comb's bar differs from the declared one (`detail.ratio`, `period / declaredBar − 1`, signed; `detail.period`, `detail.declaredBar`). No threshold: the host decides. Not emitted when the ratio is zero within floating-point error. |
+| `tempo-drift` | grid and pipeline: the comb's bar differs from the declared one (`detail.ratio`, `period / declaredBar − 1`, signed; `detail.period`, `detail.declaredBar`). No threshold: the host decides. Not emitted when the ratio is zero within floating-point error. From a tracker, the bar is the grid's median bar, and the detail also has `fold` (½, 1 or 2) and `foldRatio` (`period / (fold × declaredBar) − 1`). |
+| `meter-differs` | beats: the declared meter is not the label's (`detail.meter`, `detail.declared`). |
+| `beats-before-bar-one` | beats: beats come before bar one and are not written as a pickup (`detail.beats`, `detail.start`). They stay off the chart. |
+| `bars-joined` | beats: half bars were joined into whole bars (`detail.lines`, how many bar lines went). |
 
 ## Options
 
@@ -229,6 +327,9 @@ every other sweep reuses them.
 | `DTW_MAX_CELLS` | `150_000_000` | whole number from 1 to 2^31 | set in the app, not by a study |
 | `MAX_GRID_BARS` | `2000` | whole number ≥ 1 | set in the app, not by a study |
 | `PICKUP_MAX_BAR_FRACTION` | `0.5` | (0, 1] | set in the design, not by a study |
+| `TRACKER_MIN_BARS` | `4` | whole number ≥ 1 | set in the app, not by a study |
+| `TRACKER_MIN_STEADY_SHARE` | `0.4` | [0, 1]; 0 turns the rule off | Study 44 |
+| `TRACKER_MIN_CLOSING_SHARE` | `0.5` | (0, 1] | set in the app, not by a study |
 
 **The step floors.** The four scan steps have floors (new in 0.1.1): a
 step bounds no work by itself, and at 1e-12 the comb's phase scan ran
@@ -326,10 +427,11 @@ pickup: bar one opens with its silence.
 ## Stages
 
 `@barmark/listen/stages` exports each stage on its own (the comb, the
-lattice, each witness, the vote, the render, the warping, the fit and the
-rest), with `DEFAULTS`, `resolveOptions` and their types, for the
+lattice, each witness, the vote, the render, the warping, the fit, the
+tracker's `snapDownbeats`, `beatsLabel`, `joinHalfBars` and `steadyShare`,
+and the rest), with `DEFAULTS`, `resolveOptions` and their types, for the
 benchmark that measures them one at a time. The stages are the bench's
-instruments and may change shape in a minor before 1.0; the four calls
+instruments and may change shape in a minor before 1.0; the six calls
 are the stable surface.
 
 ## License

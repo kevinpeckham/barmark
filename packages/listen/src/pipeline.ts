@@ -6,17 +6,17 @@
  * `buildChartFromDetections`); one call is all a public tool or the bench
  * needs.
  */
-import {
-	type BuildDiagnostic,
-	type BuildOptions,
-	type Change,
-	type ConfidenceRecord,
-	chartFromDetections,
-	type Detected,
-	type Detections,
-	type TimingMap,
+import type {
+	BuildDiagnostic,
+	BuildOptions,
+	Change,
+	ConfidenceRecord,
+	Detected,
+	Detections,
+	TimingMap,
 } from "@barmark/sync";
 import { beatsOf, type Meter } from "barmark";
+import { buildChart, withMarks } from "./build.js";
 import { type Features, readFeatures, recordingFeatures } from "./features/features.js";
 import type { ListenChordRuns } from "./grid/beats.js";
 import { type Declared, type GridReading, gridWith, type PlacedGrid } from "./grid/grid.js";
@@ -273,29 +273,7 @@ function detectionsOf(c: Checked, b: Bars, f: Features): Detections {
 		recording: c.id === undefined ? { duration: f.duration } : { id: c.id, duration: f.duration },
 	};
 	if (b.pickup !== null) d.pickup = { start: b.pickup };
-	if (given.title !== undefined) d.title = given.title as string;
-	if (given.key !== undefined) d.key = given.key as Detected<string> | null;
-	if (given.sections !== undefined)
-		d.sections = given.sections as NonNullable<Detections["sections"]>;
-	if (given.changes !== undefined) d.changes = given.changes as Change[];
-	return d;
-}
-
-/** The builder on the bars: its chart, map and confidence, or its error as `invalid-input`. */
-function build(c: Checked, b: Bars, f: Features, options: BuildOptions | undefined) {
-	const built = chartFromDetections(detectionsOf(c, b, f), options);
-	const error = built.diagnostics.find((d) => d.severity === "error");
-	if (error || built.timing === null || built.confidence === null) {
-		const message = error?.message ?? "The builder made no chart.";
-		const detail = { field: "grid", code: error?.code ?? "none" };
-		return refusal("invalid-input", message, detail);
-	}
-	return {
-		chart: built.chart,
-		timing: built.timing,
-		confidence: built.confidence,
-		diagnostics: built.diagnostics,
-	};
+	return withMarks(d, given);
 }
 
 /** The pipeline on a checked input and resolved options. */
@@ -311,12 +289,7 @@ function run(
 	const bars = barsOf(c, f, s);
 	if (!bars.ok) return refusedWith(bars, bars.reading, f);
 	const { value: b, warnings } = bars;
-	let built: ReturnType<typeof build>;
-	try {
-		built = build(c, b, f, build_);
-	} catch {
-		built = invalid("input", "The builder could not read the detections.");
-	}
+	const built = buildChart(detectionsOf(c, b, f), build_);
 	if (isRefusal(built)) return refusedWith(refused([built]), b.reading, f, warnings);
 	return ok({ ...built, grid: b.grid, reading: b.reading, features: f }, warnings);
 }
