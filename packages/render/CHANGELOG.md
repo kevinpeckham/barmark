@@ -6,6 +6,8 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.20.0] - 2026-11-13
+
 ### Added
 
 - **Chord diagrams.** `chordDiagrams: "guitar"` draws a strip of guitar chord
@@ -19,10 +21,10 @@ package uses [semantic versioning](https://semver.org/).
   print, and takes the system text colour in forced-colours mode. Each
   diagram is labelled for a screen reader: the chord, then its strings low to
   high; one that replaced a written voicing names the chord and its strings,
-  then says the written voicing doesn't fit. `layoutChart`'s model gains `diagrams` (empty unless the option is
-  on). With the option off a chart renders as before. Requires
-  `@barmark/fretboard` 0.1.0. It adds about 6.6 KB gzipped to the element
-  (6,558 bytes on 46,302).
+  then says the written voicing doesn't fit. `layoutChart`'s model gains
+  `diagrams` (empty unless the option is on). With the option off a chart
+  renders as before. Requires `@barmark/fretboard` 0.1.0. It adds about
+  6.6 KB gzipped to the element (6,558 bytes on 46,302).
 
 ### Changed
 
@@ -558,7 +560,8 @@ that needs no script or as the `<barmark-chart>` web component. Requires
   zoom without sideways scrolling, the element renders and re-renders, and
   a screen reader hears "bar 9: D". Run them with `bun run test:browser`.
 
-[Unreleased]: https://github.com/kevinpeckham/barmark/compare/render-v0.19.1...HEAD
+[Unreleased]: https://github.com/kevinpeckham/barmark/compare/render-v0.20.0...HEAD
+[0.20.0]: https://github.com/kevinpeckham/barmark/compare/render-v0.19.1...render-v0.20.0
 [0.19.1]: https://github.com/kevinpeckham/barmark/compare/render-v0.19.0...render-v0.19.1
 [0.19.0]: https://github.com/kevinpeckham/barmark/compare/render-v0.18.0...render-v0.19.0
 [0.18.0]: https://github.com/kevinpeckham/barmark/compare/render-v0.17.1...render-v0.18.0
