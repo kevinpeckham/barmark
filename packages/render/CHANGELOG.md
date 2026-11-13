@@ -20,8 +20,8 @@ package uses [semantic versioning](https://semver.org/).
   diagram is labelled for a screen reader: the chord, then its strings low to
   high. `layoutChart`'s model gains `diagrams` (empty unless the option is
   on). With the option off a chart renders as before. Requires
-  `@barmark/fretboard` 0.1.0. It adds about 6.4 KB gzipped to the element
-  (6,565 bytes on 46,300).
+  `@barmark/fretboard` 0.1.0. It adds about 6.5 KB gzipped to the element
+  (6,539 bytes on 46,302).
 
 ## [0.19.1] - 2026-11-12
 

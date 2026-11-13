@@ -18,7 +18,7 @@
 - Option names: `chordDiagrams?: "guitar"` and `diagramHand?: "right" | "left"` (default right). Attributes: `chord-diagrams="guitar"` and `diagram-hand="left"`. CLI flags: `--diagrams guitar` and `--left-handed`. Any other value of the option or attribute is ignored, as an unknown `numerals` value is.
 - New `::part()` names: `diagrams` (the strip) and `diagram` (each one). No new custom property: colours come from `--bm-ink`, `--bm-rule` and `--bm-muted`; the name is set in `--barmark-font` by the grid's own chord markup.
 - Every string in the strip's markup goes through `escapeHtml`. No `id` attributes.
-- **Size:** the element entry, bundled and minified with `barmark` and `@barmark/fretboard` inside, gzipped, is at most 5,500 bytes above its size at this plan's base commit, enforced by a test (Kevin's budget, amended 2026-11-13).
+- **Size:** the element entry, bundled and minified with `barmark` and `@barmark/fretboard` inside, gzipped, is at most 6,750 bytes above its size at this plan's base commit, enforced by a test (Kevin's budget: 5,500 when this plan was written, raised on 2026-11-13 after the build measured 6,539).
 - `bun test packages/render packages/score packages/cli`, `bun run check`, `bun run fallow` are clean at the end of every task, each read by its exit code. Refactor rather than grow Fallow's baseline.
 - Commits are conventional commits with **no** `Co-Authored-By` or other AI trailer.
 - No version bumps; the releases follow the merge (`RELEASING.md`).

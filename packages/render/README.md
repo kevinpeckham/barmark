@@ -154,7 +154,7 @@ chart's colours, light, dark and print, and take the system text colour in
 forced-colours mode. It is a view: the chart's music and bar numbers do not
 change, and with the option off a chart renders as it always did.
 
-The strip adds about 6.4 KB gzipped to the element (most of it the shape
+The strip adds about 6.5 KB gzipped to the element (most of it the shape
 finder). On a chart rendered on the server, setting `chord-diagrams` later
 needs the chart's text, as the web component section says for `numerals`.
 
