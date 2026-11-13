@@ -33,8 +33,7 @@ function costOf(s: Search, frets: readonly number[], sounded: number): number {
 	const lowest = fretted.length === 0 ? 0 : Math.min(...fretted);
 	const span = fretted.length === 0 ? 0 : Math.max(...fretted) - lowest;
 	const strings = frets.filter((f) => f >= 0).length;
-	const top = frets.findLastIndex((f) => f >= 0);
-	const topNote = ((STRINGS[top] ?? 0) + (frets[top] ?? 0)) % 12;
+	const topNote = Math.max(...frets.map((f, i) => (f < 0 ? -1 : (STRINGS[i] ?? 0) + f))) % 12;
 	const left = count(s.optional & ~sounded);
 	return (
 		10 * lowest + 8 * (6 - strings) + 15 * left + 10 * span - (topNote === s.want.root ? 3 : 0)
