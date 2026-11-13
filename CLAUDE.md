@@ -98,7 +98,7 @@ Fallow, CI, Swamp), the grammar, `examples/`, the scripts and FINDINGS.md.
 - `packages/score/`: `@barmark/score`, `<barmark-score>` (the bar grid or a
   full score engraved by Verovio in a Web Worker) and `renderScoreHtml`
   for the server; the heavier sibling of `@barmark/render`'s
-  `<barmark-chart>`, which never loads Verovio; its grid view takes
+  `<barmark-chart>`, which never loads Verovio; score's grid view takes
   render's chord-diagram attributes. Depends on `barmark`,
   `@barmark/render` and `@barmark/musicxml`; Verovio is LGPL-3.0, loaded
   unchanged from npm
@@ -225,8 +225,9 @@ Fallow, CI, Swamp), the grammar, `examples/`, the scripts and FINDINGS.md.
     `verify:package` and the release's confirm job
 - `packages/cli/`: `@barmark/cli`, the `barmark` command (`check`,
   `format`, `part`, `render` (`--score`: the full score, Verovio
-  in-process, `src/score.ts`; `--diagrams guitar [--left-handed]`), `transpose`, `export`, `import`; MusicXML
-  and MIDI), a thin layer over the libraries, pinned to them exactly
+  in-process, `src/score.ts`; `--diagrams guitar [--left-handed]`),
+  `transpose`, `export`, `import`; MusicXML and MIDI), a thin layer
+  over the libraries, pinned to them exactly
   (`verovio` too); `licenses/` holds Verovio's LGPL and GPL, which the
   release attaches beside the binaries
   - each command is `(args, io) => Promise<number>` with injected I/O
