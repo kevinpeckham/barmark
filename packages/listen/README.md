@@ -217,10 +217,11 @@ null counts as not given. With a meter and a tempo, both are compared
 (`tempo-drift` and `meter-differs`); with a meter alone, only the meter is
 compared; with a tempo alone, nothing is, because the bar's length needs
 both. The grid, the meter and the tempo are the tracker's in every case.
-`tempo-drift` here also carries `detail.fold`, the nearest of ½, 1 and 2 to the bar over the declared bar,
-and `detail.foldRatio`, the drift left once that fold is taken. Test
-`foldRatio` to treat a half-time or double-time reading as the same song;
-test `ratio` to ask whether the bar numbers will match a player's count.
+`tempo-drift` here also carries `detail.fold`, the nearest of ½, 1 and 2
+to the bar over the declared bar, and `detail.foldRatio`, the drift left
+once that fold is taken. Test `foldRatio` to treat a half-time or
+double-time reading as the same song; test `ratio` to ask whether the bar
+numbers will match a player's count.
 
 **The tracker's label is one meter for the piece.** A count of 5 or 7 is
 read as 4/4, and a count of 2 as 4/4 with two-beat bars. It is wrong for a

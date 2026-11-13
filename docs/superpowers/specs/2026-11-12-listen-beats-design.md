@@ -224,8 +224,9 @@ page or a study can say why.
 
 **The counts are taken by bisection.** The app counts a bar's beats with a
 filter over every beat, which is quadratic in a long recording. Listen
-searches the beats by bisection, never scanning them per bar. The numbers are the same; the scale test times it
-relatively, as the package's others do.
+searches the beats by bisection, never scanning them per bar. The numbers
+are the same; the scale test times it relatively, as the package's others
+do.
 
 ### 4.3 What the meter and tempo mean
 

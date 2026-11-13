@@ -290,6 +290,23 @@ describe("the chords are refused as chartFromRecording refuses them, and read on
 		expect(out.value.chart).toContain("| C | F | G | C |");
 	});
 
+	test("each run's confidence reaches the confidence record", () => {
+		const confidences = [0.2, 0.4, 0.6, 0.8];
+		const runs = FOUR_RUNS.runs.map((r, i) => ({ ...r, confidence: confidences[i] as number }));
+		const out = chartFromBeats({ ...reading([4, 4, 4, 4], 0.4), chords: { runs } });
+		if (!out.ok) throw new Error(`refused: ${reasons(out)}`);
+		const bars = out.value.confidence.bars;
+		expect(bars.map((b) => b.slots)).toEqual(confidences.map((c) => [c]));
+		expect(bars.map((b) => b.confidence)).toEqual(confidences);
+	});
+
+	test("a run whose confidence is not a number still builds a chart", () => {
+		const runs = FOUR_RUNS.runs.map((r) => ({ ...r, confidence: "high" }));
+		const out = chartFromBeats({ ...reading([4, 4, 4, 4], 0.4), chords: { runs } } as never);
+		if (!out.ok) throw new Error(`refused: ${reasons(out)}`);
+		expect(out.value.chart).toContain("| C | F | G | C |");
+	});
+
 	test("valid chords build the chart they always did", () => {
 		const out = chartFromBeats({ ...reading([4, 4, 4, 4], 0.4), chords: FOUR_RUNS, title: "Four" });
 		if (!out.ok) throw new Error(`refused: ${reasons(out)}`);
