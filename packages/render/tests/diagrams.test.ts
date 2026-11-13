@@ -11,7 +11,7 @@ const names = (text: string, o?: LayoutOptions) =>
 	entries(text, o).map((e) => e.chord.canonical + (e.voicing?.canonical ?? ""));
 
 describe("diagram entries (design 4.2, 4.3, 5.2)", () => {
-	test("off by default: no entries, and the shapes are never asked for", () => {
+	test("off by default: no entries", () => {
 		expect(layoutChart("| C | F | G | C |").diagrams).toEqual([]);
 	});
 
@@ -102,5 +102,68 @@ describe("diagram entries: parts and voice lines (grammar 7.4, 7.7)", () => {
 		expect(entries("part: Vox = Voice, instrument: voice\nVox | {C4 E4} | {D4 F4} |\n")).toEqual(
 			[],
 		);
+	});
+
+	test("an unsung note set on a singing line still gives nothing", () => {
+		const chart =
+			"part: Vox = Voice, instrument: voice\nVox | C | G |\nVox.Mel | {C4 E4} | {D4 F4} |\n";
+		expect(names(chart)).toEqual(["C", "G"]);
+	});
+});
+
+describe("diagram entries: sung notes skip, names stay (design 4.2)", () => {
+	test("a line mixing chord names and sung notes gives its names", () => {
+		expect(names("| C {E4}:la | G {D4}:oh |\n")).toEqual(["C", "G"]);
+	});
+
+	test("names in the verse, sung notes in the chorus, names in the bridge", () => {
+		const chart =
+			"## Verse\n| C | Am | F | G |\n## Chorus\n| C {E4}:la | Am {D4}:oh | F | G |\n## Bridge\n| Dm | E7 |\n";
+		expect(names(chart)).toEqual(["C", "Am", "F", "G", "Dm", "E7"]);
+	});
+
+	test("one sung note at the end of a line of names", () => {
+		expect(names("| C | Am | F | G {G4}:yeah |\n")).toEqual(["C", "Am", "F", "G"]);
+	});
+
+	test("a lone declared voice part's bare line mixing names and sung notes", () => {
+		expect(names("part: Vox = Voice, instrument: voice\n| C {E4}:la | G {D4}:oh |\n")).toEqual([
+			"C",
+			"G",
+		]);
+	});
+
+	test("a declared part's bare line carrying one syllable keeps its names", () => {
+		expect(names("part: Gtr = Guitar\n| C {E4}:la | G |\n")).toEqual(["C", "G"]);
+	});
+});
+
+describe("diagram entries: a part's first line only (grammar 7.6)", () => {
+	const PNO = "part: Pno = Piano\nPno | C | G |\nPno.LH | {C2 G2} | G |\n";
+
+	test("a second line gives nothing, a name on it included", () => {
+		expect(names(PNO)).toEqual(["C", "G"]);
+		expect(entries(PNO).every((e) => e.shape !== null)).toBe(true);
+	});
+
+	test("a system with Pno and Pno.LH gives the first lines' chords only", () => {
+		const chart =
+			"part: Gtr = Guitar\npart: Pno = Piano\nGtr | D | A |\nPno | C | G |\nPno.LH | {C2 G2} | {D2 A2} |\n";
+		expect(names(chart)).toEqual(["D", "A", "C", "G"]);
+	});
+
+	test("a chart with no declared parts is unaffected", () => {
+		expect(names("| C | G |\n| {C3 G3 E4} | Am |\n")).toEqual(["C", "G", "{C3 G3 E4}", "Am"]);
+	});
+});
+
+describe("diagram entries: groups and error rows", () => {
+	test("a group's members each get an entry, in order", () => {
+		expect(names("| C_G_D | Am |\n")).toEqual(["C", "G", "D", "Am"]);
+	});
+
+	test("a system with an error row gives the other rows' chords", () => {
+		const chart = "part: Gtr = Guitar\npart: Pno = Piano\nGtr | C | G |\nPno | D || Am\n";
+		expect(names(chart)).toEqual(["C", "G"]);
 	});
 });

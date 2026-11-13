@@ -6,6 +6,7 @@
  */
 import {
 	type ChartParse,
+	type DeclaredPart,
 	type Line,
 	type Meter,
 	memberShares,
@@ -29,6 +30,13 @@ const barLength = (m: Meter) => m.n / m.d;
 /** Whose words a verse is: its part's label, or "" for the chart's. */
 const keyOf = (v: PlayedLyrics) => v.part ?? "";
 
+/** The declared part a bar line belongs to: its label's, or the lone part for a bare line; undefined when none. */
+export function partOf(l: BarsLine, parse: ChartParse): DeclaredPart | undefined {
+	const { parts } = parse;
+	if (l.part === undefined) return parts.length === 1 ? parts[0] : undefined;
+	return parts.find((x) => same(x.label ?? "", l.part ?? ""));
+}
+
 /**
  * Whose words a row sings under its slots: the label of the part whose
  * singing line it is ("" in a chart that sings with no part declared), or
@@ -37,12 +45,7 @@ const keyOf = (v: PlayedLyrics) => v.part ?? "";
 export function singerOf(l: BarsLine, parse: ChartParse): string | null {
 	const { parts } = parse;
 	if (!parts.length) return l.part === undefined && singsOnNotes(parse) ? "" : null;
-	const p =
-		l.part === undefined
-			? parts.length === 1
-				? parts[0]
-				: undefined
-			: parts.find((x) => same(x.label ?? "", l.part ?? ""));
+	const p = partOf(l, parse);
 	if (p?.sings === undefined) return null;
 	// A bare line plays as the part's first line (7.6).
 	const name = l.lineName ?? p.lines?.[0] ?? "";
