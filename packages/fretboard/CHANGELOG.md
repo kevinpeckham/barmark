@@ -6,6 +6,8 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-11-13
+
 ### Added
 
 - The package, with its types (`Tuning`, `Shape`, `Barre`) and standard
@@ -44,3 +46,6 @@ package uses [semantic versioning](https://semver.org/).
   guitar part written at guitar pitch is an octave off.
 - `shapeFor` and `shapesFor` take no tuning in 0.1: only standard guitar
   exists, and the parameter comes with the first other tuning.
+
+[Unreleased]: https://github.com/kevinpeckham/barmark/compare/fretboard-v0.1.0...HEAD
+[0.1.0]: https://github.com/kevinpeckham/barmark/releases/tag/fretboard-v0.1.0
