@@ -149,11 +149,6 @@ Fallow, CI, Swamp), the grammar, `examples/`, the scripts and FINDINGS.md.
     repo) and compares Dorico's MusicXML with what the file plays
     (`scripts/dorico-compare.ts`, tested in `tests/dorico-compare.test.ts`),
     VM only, never in CI
-- `packages/fretboard/`: `@barmark/fretboard`, guitar chord shapes for
-  barmark chords (a table, a shape finder, exact voicings); depends on
-  `barmark` only and draws nothing
-  - `src/types.ts`: `Tuning`, `GUITAR`, `Shape`, `Barre`
-  - `tests/`: `bun test`
 - `packages/listen/`: `@barmark/listen`, a recording to a chart and a
   chart to a recording: the port of Stem Shovel's audio alignment
   (`~/projects/stem-shovel`, read only, never written). v1 is a port: the
@@ -200,6 +195,11 @@ Fallow, CI, Swamp), the grammar, `examples/`, the scripts and FINDINGS.md.
     writes `tests/fixtures/beats/equivalence.json`
     (`tests/beats-equivalence.test.ts` checks it) and compares the five
     real readings, never written, VM only, never in CI
+- `packages/fretboard/`: `@barmark/fretboard`, guitar chord shapes for
+  barmark chords (a table, a shape finder, exact voicings); depends on
+  `barmark` only and draws nothing
+  - `src/types.ts`: `Tuning`, `GUITAR`, `Shape`, `Barre`
+  - `tests/`: `bun test`
 - `packages/cli/`: `@barmark/cli`, the `barmark` command (`check`,
   `format`, `part`, `render` (`--score`: the full score, Verovio
   in-process, `src/score.ts`), `transpose`, `export`, `import`; MusicXML

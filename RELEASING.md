@@ -72,7 +72,7 @@ npm.
 
 **A `barmark` minor release needs a release of every package that
 depends on `barmark` with a caret** (`@barmark/render`,
-`@barmark/musicxml`, `@barmark/score`, `@barmark/sync`, `@barmark/midi` and `@barmark/listen`), even with no
+`@barmark/musicxml`, `@barmark/score`, `@barmark/sync`, `@barmark/midi`, `@barmark/listen` and `@barmark/fretboard`), even with no
 change of their own. In 0.x a caret range stops at the next minor
 (`^0.7.0` allows 0.7.x, not 0.8.0), so a page or the CLI that installs
 the new `barmark` beside an old dependant gets two copies, and the
@@ -308,7 +308,7 @@ manual step before its first release (the same for `@barmark/cli`):
    (`cli-v*` for the CLI, `musicxml-v*` for `@barmark/musicxml`, `score-v*` for `@barmark/score`, `listen-v*` for `@barmark/listen`, `fretboard-v*` for `@barmark/fretboard`, `engraver-v*` for `@barmark/engraver`) to
    "release tags", and the new package job's checks (`package (20, cli)`,
    `package (22, cli)`, `package (24, cli)`; likewise `package (N,
-   musicxml)` `package (N, listen)` and `package (N, fretboard)`; for the engraver, `engraver` and `package (N, engraver)`)
+   musicxml)`, `package (N, listen)` and `package (N, fretboard)`; for the engraver, `engraver` and `package (N, engraver)`)
    to the "main" ruleset's required checks.
 4. **The `npm` environment** (repository settings → Environments →
    npm → Deployment branches and tags): add a tag rule for the same
