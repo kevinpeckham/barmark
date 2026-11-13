@@ -110,8 +110,8 @@ onMount(() => {
 					<code class={code}>@barmark/midi</code> plays them as MIDI files and reads MIDI files back,
 					<code class={code}>@barmark/sync</code> builds a chart from a recording's detected chords and
 					says when each bar plays, <code class={code}>@barmark/listen</code> finds the bars in a
-					recording itself, and <code class={code}>@barmark/cli</code> does the rest from the
-					terminal.
+					recording itself or reads them from a beat tracker's beats, and
+					<code class={code}>@barmark/cli</code> does the rest from the terminal.
 				</p>
 			</section>
 
