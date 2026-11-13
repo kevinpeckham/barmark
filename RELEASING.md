@@ -95,7 +95,7 @@ the dependency ("Requires `@barmark/sync` X.Y.0"). The CLI does not
 bundle `@barmark/listen`, so a listen release needs no CLI release
 (step 13 does not follow it).
 
-**`@barmark/fretboard`** depends on `barmark` with a caret, so after a `barmark` minor a `fretboard` patch raises the dependency. The CLI does not bundle it; `@barmark/render` will import it (then a fretboard release is followed by a render patch).
+**`@barmark/fretboard`** depends on `barmark` with a caret, so after a `barmark` minor a `fretboard` patch raises the dependency, before render's. `@barmark/render` imports it with a caret and the CLI bundles it through render, so a fretboard release is followed by a CLI release (step 13), and by a render patch first when render's range needs to rise ("Requires `@barmark/fretboard` X.Y.0").
 
 **`@barmark/score`** depends on `barmark`, `@barmark/render` and
 `@barmark/musicxml` with carets, so it follows their releases the way
@@ -246,9 +246,10 @@ runs, and `verify:package cli` fails on anything else.
     `packages/cli` (`bun add --exact verovio@X.Y.Z`) is refused until the
     new Verovio is a week old.
 13. **Release the CLI** (after a `barmark`, `@barmark/render`,
-    `@barmark/musicxml`, `@barmark/score`, `@barmark/sync` or
-    `@barmark/midi` release; the CLI bundles `@barmark/sync` through
-    `@barmark/midi`, and Verovio through `@barmark/score`; after a `barmark`
+    `@barmark/musicxml`, `@barmark/score`, `@barmark/sync`,
+    `@barmark/midi` or `@barmark/fretboard` release; the CLI bundles
+    `@barmark/sync` through `@barmark/midi`, `@barmark/fretboard` through
+    `@barmark/render`, and Verovio through `@barmark/score`; after a `barmark`
     or `@barmark/sync` minor, release the caret dependants' patches first,
     as above: after a `sync` minor, a `@barmark/midi` patch "Requires
     `@barmark/sync` X.Y.0"):
@@ -262,8 +263,8 @@ runs, and `verify:package cli` fails on anything else.
     the CLI's binaries bundle the libraries' code from the repository, so
     `verify:release cli` (and the release workflow) fail if
     `packages/barmark/src`, `packages/render/src`, `packages/render/fonts`,
-    `packages/musicxml/src`, `packages/score/src`, `packages/sync/src` or
-    `packages/midi/src` changed since their own tags, or if a library's dependency range at
+    `packages/musicxml/src`, `packages/score/src`, `packages/sync/src`,
+    `packages/midi/src` or `packages/fretboard/src` changed since their own tags, or if a library's dependency range at
     its tag does not admit the version bundled beside it (verify:release
     only). Its release workflow also
     attaches the binaries; check the release page lists all five,

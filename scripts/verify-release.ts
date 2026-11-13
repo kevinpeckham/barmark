@@ -93,6 +93,7 @@ const RELEASED_CODE = {
 	score: ["src"],
 	sync: ["src"],
 	midi: ["src"],
+	fretboard: ["src"],
 } as const;
 if (pkg.key === "cli")
 	for (const [key, folders] of Object.entries(RELEASED_CODE)) {

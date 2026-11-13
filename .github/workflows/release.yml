@@ -153,7 +153,7 @@ jobs:
       - name: The CLI's libraries are their released code
         if: steps.package.outputs.key == 'cli'
         run: |
-          for dep in barmark render musicxml sync midi; do
+          for dep in barmark render musicxml sync midi fretboard; do
             version=$(node -p "require('./packages/${dep}/package.json').version")
             paths=("packages/${dep}/src")
             [ "$dep" = render ] && paths+=(packages/render/fonts)
