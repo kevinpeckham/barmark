@@ -157,8 +157,8 @@ const cell = "px-3 py-3 align-top lt-sm:(block px-0 py-1)";
 			the text inside it, or from its <code class={code}>text</code> property, and draws it again when
 			any of them change. Attributes set the theme, bar numbers, rehearsal letters, a Nashville or
 			Roman numeral view, and <code class={code}>chord-diagrams="guitar"</code>: a strip of guitar chord
-			diagrams above the chart, one for each chord (<code class={code}>diagram-hand="left"</code> mirrors
-			them for a left hand).
+			diagrams under the title, above the first section, one for each distinct chord
+			(<code class={code}>diagram-hand="left"</code> mirrors them for a left hand).
 		</p>
 		<Code title="index.html" code={USE_ELEMENT} />
 		<p class="max-w-prose opacity-80">For a live editor, set its text as the reader types:</p>

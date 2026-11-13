@@ -576,6 +576,7 @@ describe("the FAQ, prerendered", () => {
 			"How is Barmark different from other chord notations?",
 			"What is Barmark a good fit for?",
 			"Is Barmark open source?",
+			"Can it show guitar chord diagrams?",
 		])
 			expect(questions).toContain(q);
 		const ids = [...doc().querySelectorAll("main h2[id]")].map((h) => h.id);
@@ -605,12 +606,33 @@ describe("the FAQ, prerendered", () => {
 		expect(hrefs).toContain("/get-started#terminal");
 		expect(hrefs).toContain(LINKS.songs);
 	});
-	test("says the renderer draws guitar chord diagrams, mirrored for a left hand", () => {
+	test("answers its own question on guitar chord diagrams, listed in the contents", () => {
+		expect(text(doc().querySelector("#diagrams"))).toBe("Can it show guitar chord diagrams?");
+		const contents = [...doc().querySelectorAll("main nav a")].map((a) => a.getAttribute("href"));
+		expect(contents.indexOf("#diagrams")).toBe(contents.indexOf("#numerals") + 1);
+		const answer = text(doc().querySelector("#diagrams")?.parentElement) ?? "";
+		for (const words of [
+			'chord-diagrams="guitar"',
+			'diagram-hand="left"',
+			"--diagrams guitar",
+			"@barmark/fretboard",
+			"one for each distinct chord",
+			"under the title, above the first section",
+			"exactly as written when it fits",
+		])
+			expect(answer).toContain(words);
 		const numerals = text(doc().querySelector("#numerals")?.parentElement) ?? "";
-		expect(numerals).toContain('chord-diagrams="guitar"');
-		expect(numerals).toContain('diagram-hand="left"');
+		expect(numerals).not.toContain("chord-diagrams");
 		const what = text(doc().querySelector("#what")?.parentElement) ?? "";
-		expect(what).toMatch(/@barmark\/fretboard finds guitar chord shapes/);
+		expect(what).toContain("@barmark/fretboard finds the guitar chord shapes the renderer draws");
+	});
+	test("never says the strip is above the chart, or one for each chord", () => {
+		for (const path of ["faq.html", "get-started.html"]) {
+			const words = text(page(path).querySelector("main")) ?? "";
+			expect(words).not.toContain("above the chart");
+			expect(words).not.toMatch(/one for each chord/);
+			expect(words).toContain("one for each distinct chord");
+		}
 	});
 	test("answers what the score is, why it is its own package, what engraves it and how it compares", () => {
 		const answer = (id: string) => text(doc().querySelector(`#${id}`)?.parentElement) ?? "";

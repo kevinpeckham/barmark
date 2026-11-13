@@ -135,9 +135,10 @@ const description =
 						class="inline-flex flex-wrap rounded-md border border-white/45 text-xs overflow-hidden {view === 'score' ? 'opacity-40' : ''}"
 					>
 						{#each SPELLINGS as s (s.id)}
+							<!-- The group clips an outside ring, so the ring is inset: accent on the dark items, dark on the accent-filled one. -->
 							<label
 								title={s.title}
-								class="relative px-2.5 py-1 cursor-pointer opacity-80 hover-opacity-100 has-[:checked]:(bg-accent text-on-accent opacity-100) has-[:focus-visible]:(outline-2 outline-accent -outline-offset-2)"
+								class="relative px-2.5 py-1 cursor-pointer opacity-80 hover-opacity-100 has-[:checked]:(bg-accent text-on-accent opacity-100) has-[:focus-visible]:(outline-2 outline-accent -outline-offset-2) [&:has(:checked:focus-visible)]:outline-on-accent"
 							>
 								<input
 									type="radio"

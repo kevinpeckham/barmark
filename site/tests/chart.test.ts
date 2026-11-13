@@ -58,7 +58,7 @@ describe("chartHtml", () => {
 	test("charts use the dark palette", () => {
 		expect(chartHtml(demo)).toContain('data-theme="dark"');
 	});
-	test("a chart can open with its guitar diagrams, one for each chord; without the flag it has none", () => {
+	test("a chart can open with its guitar diagrams, one for each distinct chord; without the flag it has none", () => {
 		const host = (html: string) => html.slice(0, html.indexOf(">") + 1);
 		const html = chartHtml("| C | Am | C |", { chordDiagrams: true });
 		expect(host(html)).toContain('chord-diagrams="guitar"');

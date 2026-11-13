@@ -129,9 +129,12 @@ const chip =
 
 		<Window title="Barmark reads">
 			{#snippet controls()}
-				{#if isChart}
-					<DiagramSwitch bind:on={diagrams} disabled={view === "score"} />
-				{/if}
+				<!-- The switch's height (text-xs line, py-1, border) is kept for every reading, so the bar never jumps. -->
+				<div class="flex items-center min-h-[calc(1.5rem+2px)]">
+					{#if isChart}
+						<DiagramSwitch bind:on={diagrams} disabled={view === "score"} />
+					{/if}
+				</div>
 			{/snippet}
 			<TryReading {reading} text={settled} {diagrams} ontry={tryFix} onviewchange={(v) => (view = v)} />
 		</Window>

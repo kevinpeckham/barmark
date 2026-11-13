@@ -118,7 +118,7 @@ export const USE_RENDER = `import { renderChart } from "@barmark/render";
 const html = renderChart(text, {
 	theme: "auto", // or "light" / "dark"
 	rehearsalLetters: true, // A, B, C on each section
-	chordDiagrams: "guitar", // a guitar chord diagram for each chord (chord-diagrams="guitar" on the element)
+	chordDiagrams: "guitar", // a guitar diagram for each distinct chord, above the bars (chord-diagrams="guitar" on the element)
 	fontUrl: "/fonts/Edwin-Roman.otf", // copy it from @barmark/render/fonts/
 });`;
 

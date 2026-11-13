@@ -21,6 +21,7 @@ const QUESTIONS = [
 	["stable", "Is the notation finished?"],
 	["cli", "Can I check my charts without writing code?"],
 	["numerals", "Can I write Nashville numbers or Roman numerals?"],
+	["diagrams", "Can it show guitar chord diagrams?"],
 	["lyrics", "Can a chart hold lyrics?"],
 	["score", "Can Barmark show a chart as sheet music?"],
 	["score-package", "Why is the score view a separate package?"],
@@ -111,8 +112,8 @@ onMount(() => {
 					<code class={code}>@barmark/sync</code> builds a chart from a recording's detected chords and
 					says when each bar plays, <code class={code}>@barmark/listen</code> finds the bars in a
 					recording itself or reads them from a beat tracker's beats,
-					<code class={code}>@barmark/fretboard</code> finds guitar chord shapes for its chords, which
-					the renderer draws, and <code class={code}>@barmark/cli</code> does the rest from the terminal.
+					<code class={code}>@barmark/fretboard</code> finds the guitar chord shapes the renderer draws,
+					and <code class={code}>@barmark/cli</code> does the rest from the terminal.
 				</p>
 			</section>
 
@@ -273,11 +274,26 @@ onMount(() => {
 					the chart and each chord appears as its degree in the key: Bm in D is 6m, or vi. The home page's
 					chart has a switch for it.
 				</p>
+			</section>
+
+			<section>
+				{@render heading("diagrams")}
 				<p>
-					It can show guitarists where the chords go, too. Set
-					<code class={code}>chord-diagrams="guitar"</code> and a strip of chord diagrams sits above the
-					chart, one for each chord it plays; <code class={code}>diagram-hand="left"</code> mirrors them
-					for a left hand. The home page's chart has a switch for that as well.
+					Yes. Set <code class={code}>chord-diagrams="guitar"</code> on the chart and the renderer draws a
+					strip of guitar chord diagrams under the title, above the first section: one for each distinct
+					chord, in the order the chart first writes them. <code class={code}>diagram-hand="left"</code>
+					mirrors them for a left hand, and from the terminal
+					<code class={code}>npx @barmark/cli render song.chart.md --diagrams guitar</code> draws the same
+					strip. The home page's chart has a switch for it, and <a href="/try" class={link}>Try It</a>
+					draws the diagram for any chord you type.
+				</p>
+				<p>
+					The shapes come from
+					<a href={LINKS.fretboardReadme} class={link}><code class={code}>@barmark/fretboard</code></a>, in
+					standard tuning. A voicing the chart writes, such as
+					<code class={code}>Am7&#123;G3 C4 E4&#125;</code>, is drawn exactly as written when it fits the
+					guitar; when it doesn't, the diagram shows the chord's own shape and says so. A chord no hand can
+					play in standard tuning says that instead of a drawing.
 				</p>
 			</section>
 

@@ -27,7 +27,10 @@ let {
 	barNumbers?: boolean;
 	/** Each chord as its degree in its bar's key; null: chord names. */
 	numerals?: Numerals | null;
-	/** A strip of guitar chord diagrams above the chart, one for each chord; false: none. */
+	/**
+	 * A strip of guitar chord diagrams under the title, above the first section,
+	 * one for each distinct chord; false: none.
+	 */
 	diagrams?: boolean;
 	/** A <barmark-score>, with its Grid / Score switch, rather than a <barmark-chart>. Read once. */
 	score?: boolean;
@@ -77,12 +80,15 @@ onMount(() => {
 	return () => host.removeEventListener("viewchange", changed);
 });
 
+// Each change waits for the element's module, and two waits may end in either
+// order: so whichever runs last applies the option as it is NOW, never as it was
+// when its change was made (a stale value could otherwise win).
 let spelled = untrack(() => numerals);
 $effect(() => {
-	const next = numerals;
-	if (next === spelled) return;
-	spelled = next;
+	if (numerals === spelled) return;
+	spelled = numerals;
 	void load().then(() => {
+		const next = numerals;
 		const el = chart();
 		// <barmark-score> reads the grid's options from its attributes only.
 		if (!asScore) el.numerals = next;
@@ -95,10 +101,10 @@ $effect(() => {
 
 let shown = untrack(() => diagrams);
 $effect(() => {
-	const next = diagrams;
-	if (next === shown) return;
-	shown = next;
+	if (diagrams === shown) return;
+	shown = diagrams;
 	void load().then(() => {
+		const next = diagrams;
 		const el = chart();
 		// As for numerals: <barmark-score> takes the attribute only, and the chart redraws from its text.
 		if (!asScore) el.chordDiagrams = next ? "guitar" : null;

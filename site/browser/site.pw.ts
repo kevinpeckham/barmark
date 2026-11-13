@@ -1,3 +1,6 @@
+import { readdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { expect, type Page, test } from "@playwright/test";
 import { EXAMPLES } from "../src/lib/examples.ts";
 
@@ -55,6 +58,61 @@ const diagramLabels = (page: Page, scope = "main") =>
 				)
 			: null;
 	}, scope);
+
+/** CSS colours as sRGB bytes [r, g, b, a], whatever form the browser writes them in (rgb, oklab, color()). */
+const toRgba = (page: Page, colors: string[]) =>
+	page.evaluate((list) => {
+		const canvas = document.createElement("canvas");
+		canvas.width = canvas.height = 1;
+		const ctx = canvas.getContext("2d");
+		if (!ctx) throw new Error("no 2d canvas");
+		return list.map((color) => {
+			ctx.clearRect(0, 0, 1, 1);
+			ctx.fillStyle = color;
+			ctx.fillRect(0, 0, 1, 1);
+			return [...ctx.getImageData(0, 0, 1, 1).data];
+		});
+	}, colors);
+
+/** Waits until the page's script has run: the key menu opens only then. */
+const hydrated = async (page: Page) => {
+	const key = page.getByRole("button", { name: /^Key: / });
+	await expect(async () => {
+		await key.click();
+		await expect(key).toHaveAttribute("aria-expanded", "true", { timeout: 1_000 });
+	}).toPass({ timeout: 15_000 });
+	await page.keyboard.press("Escape");
+	await expect(key).toHaveAttribute("aria-expanded", "false");
+};
+
+/**
+ * Holds back the built chunk that defines <barmark-score>, as a slow
+ * connection would, until the returned function releases it.
+ */
+async function holdScoreElement(page: Page): Promise<() => void> {
+	const dir = fileURLToPath(
+		new URL("../.vercel/output/static/_app/immutable/chunks", import.meta.url),
+	);
+	const file = readdirSync(dir).find((f) =>
+		/customElements\.define\([`'"]barmark-score/.test(readFileSync(join(dir, f), "utf8")),
+	);
+	if (!file) throw new Error("no built chunk defines <barmark-score>");
+	let release = () => {};
+	const held = new Promise<void>((resolve) => {
+		release = resolve;
+	});
+	await page.route(`**/_app/immutable/chunks/${file}`, async (route) => {
+		await held;
+		await route.continue();
+	});
+	return release;
+}
+
+/** Once the held element has arrived and upgraded, gives every waiting callback time to run. */
+const settledElement = async (page: Page) => {
+	await page.waitForFunction(() => customElements.get("barmark-score") !== undefined);
+	await page.waitForTimeout(500);
+};
 
 /** Presses Score in the first chart's switch, repeated until the element has upgraded and shows it. */
 const pressScore = (page: Page, scope = "main") =>
@@ -443,7 +501,10 @@ test.describe("home: guitar diagrams", () => {
 		await page.goto("/");
 		await pressScore(page);
 		await expect(toggle(page)).toBeDisabled();
+		// The reason is the button's own, so assistive technology reaches it.
+		await expect(toggle(page)).toHaveAttribute("title", /switch to Grid/);
 		await page.locator("main barmark-score").getByRole("radio", { name: "Grid" }).click();
+		await expect(toggle(page)).not.toHaveAttribute("title");
 		await expect(toggle(page)).toBeEnabled();
 		await toggle(page).click();
 		await expect.poll(() => diagramLabels(page)).not.toBeNull();
@@ -457,16 +518,87 @@ test.describe("home: guitar diagrams", () => {
 			await toggle(page).click();
 			await expect.poll(() => diagramLabels(page), { timeout: 1_000 }).not.toBeNull();
 		}).toPass({ timeout: 15_000 });
-		const dot = await page.evaluate(() => {
+		const [dot, ground] = await page.evaluate(() => {
 			const el = document
 				.querySelector("main barmark-score")
 				?.shadowRoot?.querySelector(".bm-dg-dot");
-			return el ? getComputedStyle(el).fill : "";
+			const window = document.querySelectorAll("main section.device-window")[1];
+			return [
+				el ? getComputedStyle(el).fill : "",
+				window ? getComputedStyle(window).backgroundColor : "",
+			];
 		});
-		// Light on dark: each channel of the dots' colour is well above the middle.
-		const channels = (dot.match(/\d+(\.\d+)?/g) ?? []).slice(0, 3).map(Number);
-		expect(channels).toHaveLength(3);
-		for (const c of channels) expect(c).toBeGreaterThan(160);
+		const [dotRgba, groundRgba] = await toRgba(page, [dot ?? "", ground ?? ""]);
+		// Light on dark: the dots' channels well above the middle, the window's well below, both opaque.
+		for (const c of dotRgba?.slice(0, 3) ?? []) expect(c).toBeGreaterThan(160);
+		for (const c of groundRgba?.slice(0, 3) ?? []) expect(c).toBeLessThan(60);
+		expect([dotRgba?.[3], groundRgba?.[3]]).toEqual([255, 255]);
+	});
+
+	test("on, then off, before the element arrives: the latest press wins", async ({ page }) => {
+		const release = await holdScoreElement(page);
+		await page.goto("/");
+		await hydrated(page);
+		await toggle(page).click();
+		await toggle(page).click();
+		await expect(toggle(page)).toHaveAttribute("aria-pressed", "false");
+		release();
+		await settledElement(page);
+		await expect(page.locator("main barmark-score")).not.toHaveAttribute("chord-diagrams");
+		expect(await diagramLabels(page)).toBeNull();
+	});
+
+	test("Nashville, then Roman, before the element arrives: the chart ends on Roman", async ({
+		page,
+	}) => {
+		const release = await holdScoreElement(page);
+		await page.goto("/");
+		await hydrated(page);
+		const spelling = page.getByRole("radiogroup", { name: "Chord spelling" });
+		await spelling.getByRole("radio", { name: "Nashville" }).check();
+		await spelling.getByRole("radio", { name: "Roman" }).check();
+		release();
+		await settledElement(page);
+		await expect(page.locator("main barmark-score")).toHaveAttribute("numerals", "roman");
+		const numerals = await page.evaluate(() => [
+			...new Set(
+				[
+					...(document
+						.querySelector("main barmark-score")
+						?.shadowRoot?.querySelectorAll("[data-numeral]") ?? []),
+				].map((el) => el.getAttribute("data-numeral")),
+			),
+		]);
+		expect(numerals).toEqual(["roman"]);
+	});
+
+	test("the keyboard's focus ring shows on the switch, on, and on the checked spelling", async ({
+		page,
+	}) => {
+		await page.goto("/");
+		await hydrated(page);
+		/** The focused control's outline against what it sits on: visible if offset outside, or another colour. */
+		const ringShows = async (el: import("@playwright/test").Locator, box = el) => {
+			expect(await el.evaluate((e) => e.matches(":focus-visible"))).toBe(true);
+			const ring = await box.evaluate((e) => {
+				const s = getComputedStyle(e);
+				return [s.outlineStyle, s.outlineOffset, s.outlineColor, s.backgroundColor];
+			});
+			const [style, offset, color, bg] = ring as [string, string, string, string];
+			expect(style).not.toBe("none");
+			const [c, b] = await toRgba(page, [color, bg]);
+			return Number.parseFloat(offset) > 0 || JSON.stringify(c) !== JSON.stringify(b);
+		};
+		await toggle(page).focus();
+		await page.keyboard.press("Space");
+		await expect(toggle(page)).toHaveAttribute("aria-pressed", "true");
+		expect(await ringShows(toggle(page))).toBe(true);
+		const names = page
+			.getByRole("radiogroup", { name: "Chord spelling" })
+			.getByRole("radio", { name: "Names" });
+		await expect(names).toBeChecked();
+		await names.focus();
+		expect(await ringShows(names, names.locator("xpath=.."))).toBe(true);
 	});
 
 	test.describe("on a phone", () => {
@@ -488,6 +620,38 @@ test.describe("home: guitar diagrams", () => {
 			expect((box?.x ?? 0) + (box?.width ?? 0)).toBeLessThanOrEqual(client);
 		});
 	});
+});
+
+test.describe("the switch's focus ring stays inside its window", () => {
+	for (const width of [1280, 390])
+		for (const path of ["/", `/try?q=${encodeURIComponent("| D | A |")}`])
+			test(`${path.split("?")[0]} at ${width} wide`, async ({ page }) => {
+				await page.setViewportSize({ width, height: 900 });
+				await page.goto(path);
+				const toggle = page.getByRole("button", { name: "Guitar diagrams" });
+				await expect(toggle).toBeVisible();
+				await toggle.focus();
+				const [ring, bar, win] = await toggle.evaluate((el) => {
+					const s = getComputedStyle(el);
+					const reach = Number.parseFloat(s.outlineOffset) + Number.parseFloat(s.outlineWidth);
+					const r = el.getBoundingClientRect();
+					const header = el.closest("header")?.getBoundingClientRect();
+					const section = el.closest("section")?.getBoundingClientRect();
+					const box = (b?: DOMRect) => (b ? [b.left, b.top, b.right, b.bottom] : []);
+					return [
+						[r.left - reach, r.top - reach, r.right + reach, r.bottom + reach],
+						box(header),
+						box(section),
+					];
+				});
+				const [l, t, r, b] = ring as number[];
+				for (const outer of [bar, win] as number[][]) {
+					expect(l).toBeGreaterThanOrEqual(outer[0] ?? 0);
+					expect(t).toBeGreaterThanOrEqual(outer[1] ?? 0);
+					expect(r).toBeLessThanOrEqual(outer[2] ?? 0);
+					expect(b).toBeLessThanOrEqual(outer[3] ?? 0);
+				}
+			});
 });
 
 test.describe("the guide", () => {
@@ -718,6 +882,23 @@ test.describe("try it", () => {
 		await expect
 			.poll(() => diagramLabels(page, "[data-reading]"))
 			.toEqual(["G seven altered: 3, 2, 3, muted, muted, muted, altered tones not shown"]);
+	});
+
+	test("the window's bar keeps its height whether the reading is a chord or a chart", async ({
+		page,
+	}) => {
+		await page.goto("/try");
+		const bar = page
+			.locator("section.device-window", {
+				has: page.getByRole("heading", { name: "Barmark reads" }),
+			})
+			.locator("header");
+		await untilUrl(page, () => box(page).fill("C"), /q=C$/);
+		const chord = (await bar.boundingBox())?.height;
+		await box(page).fill("| D | A |");
+		await expect(page.getByRole("button", { name: "Guitar diagrams" })).toBeVisible();
+		const chart = (await bar.boundingBox())?.height;
+		expect(chart).toBe(chord);
 	});
 
 	test("a long paste does not freeze the page", async ({ page }) => {
