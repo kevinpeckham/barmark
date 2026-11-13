@@ -228,7 +228,9 @@ function diagramHtml(entry: DiagramEntry, numerals: Numerals | null, hand: Hand)
 		entry.caveat === "voicing-replaced"
 			? `<span class="bm-diagram-note" aria-hidden="true">${escapeHtml(VOICING_REPLACED)}</span>`
 			: "";
-	return `<li class="bm-diagram" part="diagram">${drawing}${diagramNameHtml(entry)}${diagramNumeralHtml(entry, numerals)}${note}</li>`;
+	// A drawing with a fret number is wider at the left: its item makes room for it.
+	const wide = entry.shape && entry.shape.base > 1 ? " bm-diagram-fr" : "";
+	return `<li class="bm-diagram${wide}" part="diagram">${drawing}${diagramNameHtml(entry)}${diagramNumeralHtml(entry, numerals)}${note}</li>`;
 }
 
 /** A name as the grid marks it up, then its written voicing, smaller; a note set as written, free to wrap. */

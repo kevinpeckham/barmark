@@ -250,17 +250,19 @@ export const ROW_COLUMNS_CSS = minify(rowCss);
 
 /**
  * A chord diagram, in chord sizes. A viewBox unit is 3.5/78 of a chord size,
- * so strings stand .45em apart. The drawing moves left by its fret-number
- * margin, less its right margin, so its strings sit over the name; its item
- * pads that much on the left, so nothing reaches into the next one. The
+ * so strings stand .45em apart in either image. A wide drawing (one with a
+ * fret number) moves left by the room its number takes, and its item
+ * (`bm-diagram-fr`) pads that much on the left, so its strings sit over the
+ * name as a narrow drawing's do, and nothing reaches into the next item. The
  * frame of a diagram with no shape is as tall as a drawing, a little wider
  * so its words break in three lines; it and the note are in small print.
  */
 const UNIT = 3.5 / 78;
 const DIAGRAM = {
-	width: DIAGRAM_VIEW.width * UNIT,
+	narrow: DIAGRAM_VIEW.narrow * UNIT,
+	wide: DIAGRAM_VIEW.wide * UNIT,
+	label: DIAGRAM_VIEW.label * UNIT,
 	height: DIAGRAM_VIEW.height * UNIT,
-	shift: (DIAGRAM_VIEW.width - 2 * DIAGRAM_VIEW.centre) * UNIT,
 	frame: 4.9,
 	small: 0.6,
 	/** A note set's name: three notes to a line. */
@@ -271,8 +273,9 @@ const DIAGRAM = {
 const diagramsCss = `
 .bm-diagrams ul{display:flex;flex-wrap:wrap;gap:.5em .6em;margin:0 0 .3em;padding:0;list-style:none}
 .bm-diagram{display:flex;flex-direction:column;align-items:center;text-align:center;break-inside:avoid}
-.bm-diagram:has(>svg){padding-left:${em(-DIAGRAM.shift)}}
-.bm-diagram-svg{display:block;width:${em(DIAGRAM.width)};height:${em(DIAGRAM.height)};margin-left:${em(DIAGRAM.shift)}}
+.bm-diagram-fr{padding-left:${em(DIAGRAM.label)}}
+.bm-diagram-svg{display:block;width:${em(DIAGRAM.narrow)};height:${em(DIAGRAM.height)}}
+.bm-dg-fr{width:${em(DIAGRAM.wide)};margin-left:${em(-DIAGRAM.label)}}
 .bm-diagram-none{display:flex;align-items:center;justify-content:center;width:${at(DIAGRAM.small, DIAGRAM.frame)};height:${at(DIAGRAM.small, DIAGRAM.height)};padding:.3em;border:.1em dashed var(--bm-rule);border-radius:.4em;text-wrap:balance}
 :is(.bm-diagram-none,.bm-diagram-note){font:${em(DIAGRAM.small)}/1.2 ${LABEL};color:var(--bm-muted)}
 .bm-diagram-note{max-width:${at(DIAGRAM.small, DIAGRAM.frame)}}

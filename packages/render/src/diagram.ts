@@ -12,7 +12,9 @@ import { escapeHtml } from "./escape.js";
  * the left for a fret number as wide as `15fr`), fret lines 12 apart from
  * y 13 (room above for the open and muted marks), dots 76% of a string's
  * spacing across. The fret number is 13 units tall and ends 2 units short
- * of a dot or barre on the first string.
+ * of a dot or barre on the first string. A drawing with no fret number is
+ * a narrow image, 5 units either side of the strings; one with a fret
+ * number is wider by the room at the left, with the same coordinates.
  */
 const STRING = { first: 41, gap: 10 };
 const FRET = { top: 13, gap: 12 };
@@ -20,8 +22,14 @@ const DOT = 3.8;
 const MARK = { y: 5, size: 2.8 };
 const LABEL = { size: 13, gap: 2 };
 const LAST = STRING.first + 5 * STRING.gap;
-/** The viewBox's size, and the x of the strings' middle, which the name under it centres on. */
-export const DIAGRAM_VIEW = { width: LAST + 5, height: 75, centre: (STRING.first + LAST) / 2 };
+const SIDE = 5;
+/** The two viewBoxes' widths, the room the wide one adds for the fret number, and their height. */
+export const DIAGRAM_VIEW = {
+	narrow: LAST - STRING.first + 2 * SIDE,
+	wide: LAST + SIDE,
+	label: STRING.first - SIDE,
+	height: 75,
+};
 
 const n = (v: number) => String(Math.round(v * 10) / 10);
 const range = (count: number) => Array.from({ length: count }, (_, i) => i);
@@ -84,11 +92,16 @@ const topSvg = (base: number) =>
 		: `<text class="bm-dg-fret" x="${n(STRING.first - DOT - LABEL.gap)}" y="${n(spaceY(1) + 4.5)}" font-size="${LABEL.size}">${escapeHtml(`${base}fr`)}</text>`;
 
 /**
- * A shape as one `<svg role="img">` named by `label`. Left-handed mirrors
- * the strings only: the low string is drawn on the right, and the fret
- * number stays at the left.
+ * A shape as one `<svg role="img">` named by `label`: narrow in first
+ * position, wide (`bm-dg-fr`) with a fret number. Left-handed mirrors the
+ * strings only: the low string is drawn on the right, and the fret number
+ * stays at the left.
  */
 export function diagramSvg(shape: Shape, hand: "right" | "left", label: string): string {
 	const marks = shape.frets.map((fret, i) => markSvg(fret, stringX(i, hand))).join("");
-	return `<svg class="bm-diagram-svg" role="img" aria-label="${escapeHtml(label)}" viewBox="0 0 ${DIAGRAM_VIEW.width} ${DIAGRAM_VIEW.height}">${GRID}${topSvg(shape.base)}${marks}${barreSvg(shape, hand)}${dotsSvg(shape, hand)}</svg>`;
+	const [wide, x, w] =
+		shape.base === 1
+			? ["", DIAGRAM_VIEW.label, DIAGRAM_VIEW.narrow]
+			: [" bm-dg-fr", 0, DIAGRAM_VIEW.wide];
+	return `<svg class="bm-diagram-svg${wide}" role="img" aria-label="${escapeHtml(label)}" viewBox="${x} 0 ${w} ${DIAGRAM_VIEW.height}">${GRID}${topSvg(shape.base)}${marks}${barreSvg(shape, hand)}${dotsSvg(shape, hand)}</svg>`;
 }

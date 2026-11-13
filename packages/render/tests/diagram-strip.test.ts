@@ -75,6 +75,17 @@ test("any other value of the option draws no strip", () => {
 		).not.toContain("bm-diagrams");
 });
 
+test("an item whose drawing has a fret number says so in its class, set in the markup", () => {
+	const d = strip("| Am | C#m7 | {E2 F2 F#2} |");
+	const items = [...d.querySelectorAll("li.bm-diagram")];
+	expect(items.map((li) => li.getAttribute("class"))).toEqual([
+		"bm-diagram",
+		"bm-diagram bm-diagram-fr",
+		"bm-diagram",
+	]);
+	expect(items[1]?.querySelector("svg")?.getAttribute("class")).toBe("bm-diagram-svg bm-dg-fr");
+});
+
 describe("the names", () => {
 	test("a name is the chord's own markup, as the grid sets it", () => {
 		const d = strip("| F#m7b5 |");

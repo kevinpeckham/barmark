@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { PALETTES, stylesheet } from "../src/styles.js";
+import { DIAGRAMS_CSS, PALETTES, stylesheet } from "../src/styles.js";
 
 /** WCAG 2 relative luminance of a #rrggbb colour. */
 function luminance(hex: string): number {
@@ -76,6 +76,31 @@ describe("the stylesheet", () => {
 		const font = Number(/\.bm-diagram-none[^{]*\{font:([\d.]+)em/.exec(stylesheet)?.[1]);
 		expect(svg).toBeGreaterThan(0);
 		expect(frame * font).toBeCloseTo(svg, 2);
+	});
+	test("the narrow and the wide drawing share a string pitch: widths in the ratio of their viewBoxes (60 and 96)", () => {
+		const narrow = Number(/\.bm-diagram-svg\{[^}]*[{;]width:([\d.]+)em/.exec(DIAGRAMS_CSS)?.[1]);
+		const wide = Number(/\.bm-dg-fr\{[^}]*?\bwidth:([\d.]+)em/.exec(DIAGRAMS_CSS)?.[1]);
+		expect(narrow).toBeGreaterThan(0);
+		expect(wide / narrow).toBeCloseTo(96 / 60, 2);
+	});
+	test("the strip's rules use no :has()", () => {
+		expect(DIAGRAMS_CSS).not.toContain(":has(");
+	});
+	test("the strip's rules select only the strip's own classes", () => {
+		// Each rule's selector, inside media blocks too: the text before each `{` that opens a declaration block.
+		const selectors = [
+			...DIAGRAMS_CSS.replace(/@media[^{]*\{/g, "").matchAll(/(?:^|[{}])([^{}@]+)\{/g),
+		].map((m) => m[1] ?? "");
+		expect(selectors.length).toBeGreaterThan(5);
+		for (const selector of selectors) {
+			const classes = [...selector.matchAll(/\.([\w-]+)/g)].map((m) => m[1] ?? "");
+			expect(classes.length).toBeGreaterThan(0);
+			for (const c of classes) expect(c).toMatch(/^(bm-diagram|bm-dg-)/);
+			// Beyond classes, only the list's element and the drawing's.
+			expect(
+				selector.replace(/\.[\w-]+/g, "").replace(/[\s,>:()]|\bis\b|\bul\b|\bsvg\b/g, ""),
+			).toBe("");
+		}
 	});
 	test("a note set's name may wrap; a chord name stays on one line", () => {
 		expect(stylesheet).toMatch(/\.bm-diagram-set\{[^}]*white-space:normal/);

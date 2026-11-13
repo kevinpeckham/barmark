@@ -16,8 +16,11 @@ const xOf = (mark: Element) => Number(/^M([\d.]+)/.exec(mark.getAttribute("d") ?
 
 // The grid, the nut and the marks every first-position diagram shares.
 // Regenerated on purpose in fix round 1: the strings moved right (x 41 to 91)
-// to give a larger fret number room at the left.
-const OPEN = '<svg class="bm-diagram-svg" role="img" aria-label="L" viewBox="0 0 96 75">';
+// to give a larger fret number room at the left; and in fix round 2: a
+// diagram with no fret number (base 1) is a narrow image, its viewBox 5
+// units either side of the strings, and one with a fret number the wide one.
+const OPEN = '<svg class="bm-diagram-svg" role="img" aria-label="L" viewBox="36 0 60 75">';
+const WIDE = '<svg class="bm-diagram-svg bm-dg-fr" role="img" aria-label="L" viewBox="0 0 96 75">';
 const GRID =
 	'<path class="bm-dg-grid" d="M41 13v60M51 13v60M61 13v60M71 13v60M81 13v60M91 13v60M41 13h50M41 25h50M41 37h50M41 49h50M41 61h50M41 73h50"/>';
 const NUT = '<rect class="bm-dg-nut" x="40.5" y="9.5" width="51" height="4"/>';
@@ -35,7 +38,7 @@ describe("diagramSvg: golden drawings", () => {
 
 	test("577655, a barre at the fifth fret", () => {
 		expect(diagramSvg(shapeOf("577655"), "right", "L")).toBe(
-			`${OPEN}${GRID}<text class="bm-dg-fret" x="35.2" y="23.5" font-size="13">5fr</text><rect class="bm-dg-barre" x="37.2" y="15.2" width="57.6" height="7.6" rx="3.8"/>${dot(51, 43)}${dot(61, 43)}${dot(71, 31)}</svg>`,
+			`${WIDE}${GRID}<text class="bm-dg-fret" x="35.2" y="23.5" font-size="13">5fr</text><rect class="bm-dg-barre" x="37.2" y="15.2" width="57.6" height="7.6" rx="3.8"/>${dot(51, 43)}${dot(61, 43)}${dot(71, 31)}</svg>`,
 		);
 	});
 
@@ -158,4 +161,82 @@ describe("the fret number has room", () => {
 		const label = svgOf(diagramSvg(barreAt(5), "right", "L")).querySelector(".bm-dg-fret");
 		expect(Number(label?.getAttribute("font-size"))).toBeGreaterThanOrEqual(12);
 	});
+});
+
+/** The viewBox's left edge and width. */
+const viewBoxOf = (svg: Element) => {
+	const [x, , w] = (svg.getAttribute("viewBox") ?? "").split(" ").map(Number);
+	return { x: x ?? Number.NaN, w: w ?? Number.NaN };
+};
+
+describe("narrow and wide drawings", () => {
+	test("a base 1 shape is the narrow image: no fret number, no label class", () => {
+		const svg = svgOf(diagramSvg(shapeOf("x02210"), "right", "L"));
+		expect(svg.getAttribute("class")).toBe("bm-diagram-svg");
+		expect(svg.getAttribute("viewBox")).toBe("36 0 60 75");
+		expect(count(svg, ".bm-dg-fret")).toBe(0);
+	});
+
+	test("a base 5 shape is the wide image, with the label class and its fret number", () => {
+		const svg = svgOf(diagramSvg(shapeOf("577655"), "left", "L"));
+		expect(svg.getAttribute("class")).toBe("bm-diagram-svg bm-dg-fr");
+		expect(svg.getAttribute("viewBox")).toBe("0 0 96 75");
+		expect(count(svg, ".bm-dg-fret")).toBe(1);
+	});
+
+	/** Shapes in first position and above it, open, muted, barred and partly barred. */
+	const SHAPES = [
+		"x02210",
+		"x32010",
+		"133211",
+		"x24432",
+		"xx0232",
+		"x3x0x0",
+		"577655",
+		"x 12 14 14 13 12",
+		"x x 7 9 10 9",
+	];
+	const STRINGS = [41, 51, 61, 71, 81, 91];
+
+	for (const text of SHAPES)
+		test(`${text}: dots on their strings and in their fret spaces, inside the viewBox, mirrored exactly`, () => {
+			const shape = shapeOf(text);
+			const drawn = (hand: "right" | "left") => svgOf(diagramSvg(shape, hand, "L"));
+			const right = drawn("right");
+			const left = drawn("left");
+			for (const [hand, svg] of [
+				["right", right],
+				["left", left],
+			] as const) {
+				const { x, w } = viewBoxOf(svg);
+				// Everything drawn lies inside the viewBox: dots, marks, the barre.
+				for (const c of svg.querySelectorAll("circle")) {
+					const [cx, r] = [Number(c.getAttribute("cx")), Number(c.getAttribute("r"))];
+					expect(cx - r).toBeGreaterThanOrEqual(x);
+					expect(cx + r).toBeLessThanOrEqual(x + w);
+				}
+				for (const r of svg.querySelectorAll("rect")) {
+					expect(Number(r.getAttribute("x"))).toBeGreaterThanOrEqual(x);
+					expect(Number(r.getAttribute("x")) + Number(r.getAttribute("width"))).toBeLessThanOrEqual(
+						x + w,
+					);
+				}
+				// Each dot sits on a fretted string, in the space fret - base + 1.
+				const want = shape.frets.flatMap((f, i) =>
+					f > 0 &&
+					!(shape.barre && f === shape.barre.fret && i >= shape.barre.from && i <= shape.barre.to)
+						? [`${STRINGS[hand === "left" ? 5 - i : i]},${13 + (f - shape.base + 1) * 12 - 6}`]
+						: [],
+				);
+				const dots = [...svg.querySelectorAll(".bm-dg-dot")].map(
+					(d) => `${d.getAttribute("cx")},${d.getAttribute("cy")}`,
+				);
+				expect(dots).toEqual(want);
+			}
+			// The mirror is exact about the strings' middle, x 66.
+			const xs = (svg: Element) =>
+				[...svg.querySelectorAll("circle")].map((c) => Number(c.getAttribute("cx")));
+			expect(xs(left).map((v) => 132 - v)).toEqual(xs(right));
+			expect(viewBoxOf(left)).toEqual(viewBoxOf(right));
+		});
 });
