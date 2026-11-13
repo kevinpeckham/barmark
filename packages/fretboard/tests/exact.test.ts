@@ -49,12 +49,22 @@ test("exact: frets of 10 or more order as numbers, not as text", () => {
 	const all = exactShapes([52, 59]);
 	const tops = all.map((s) => Math.max(...s.frets));
 	expect(tops).toEqual([...tops].sort((a, b) => a - b));
-	const tied = all.filter((s) => Math.max(...s.frets) === tops[0]);
-	for (let i = 1; i < tied.length; i++) {
-		const [p, q] = [tied[i - 1]?.frets ?? [], tied[i]?.frets ?? []];
-		const at = p.findIndex((f, k) => f !== q[k]);
-		if (at >= 0) expect(p[at] as number).toBeLessThan(q[at] as number);
-	}
+	expect(tops[0]).toBeLessThan(tops.at(-1) as number);
+});
+
+test("exact: equal in top fret and reach, the frets decide, a muted string first", () => {
+	// E2, D3, C4: 0x05xx and 05x5xx both top out at fret 5 and reach four strings
+	expect(texts(exactShapes([40, 50, 60]))).toEqual(["0x0x1x", "0x05xx", "05x5xx"]);
+});
+
+test("exact: equal in top fret and reach with a fret of 10 or more, a muted string comes before it", () => {
+	// E2, G3, A4: both of the last two top out at fret 10 and reach five strings; as text "x" would sort after "10"
+	expect(texts(exactShapes([40, 55, 69]))).toEqual([
+		"0xx0x5",
+		"0x5xx5",
+		"0 x x 0 10 x",
+		"0 10 x x 10 x",
+	]);
 });
 
 test("exact: span, fingers and frets", () => {

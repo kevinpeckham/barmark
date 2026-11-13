@@ -11,5 +11,6 @@ test("midiOf: an octave gives MIDI, none gives null", () => {
 	expect(midiOf("E2")).toBe(40);
 	expect(midiOf("C4")).toBe(60);
 	expect(midiOf("Cb4")).toBe(59);
+	expect(midiOf("B#3")).toBe(60);
 	expect(midiOf("C")).toBeNull();
 });

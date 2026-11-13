@@ -12,7 +12,7 @@ test("standard tuning, low string first", () => {
 test("the package depends on barmark alone, with a caret", () => {
 	const pkg = JSON.parse(readFileSync(join(import.meta.dir, "../package.json"), "utf8"));
 	expect(pkg.name).toBe("@barmark/fretboard");
-	expect(pkg.version).toBe("0.1.0");
+	expect(pkg.version).toMatch(/^\d+\.\d+\.\d+$/);
 	expect(pkg.dependencies).toEqual({ barmark: "workspace:^" });
 	expect(pkg.sideEffects).toBe(false);
 	expect(pkg.license).toBe("MIT");

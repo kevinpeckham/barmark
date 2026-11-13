@@ -25,6 +25,9 @@ test("fingersNeeded: a barre counts as one; an open string under it is impossibl
 	expect(fingersNeeded([1, 3, 3, 2, 1, 1])).toBe(4);
 	expect(fingersNeeded([-1, 3, 2, 0, 1, 0])).toBe(3);
 	expect(fingersNeeded([2, 2, 2, 0, 2, 2])).toBe(99);
+	// 022222: the lowest string rings open beside a barre on strings 1 to 5, held by one finger
+	expect(shapeOf("022222").barre).toEqual({ fret: 2, from: 1, to: 5 });
+	expect(fingersNeeded(shapeOf("022222").frets)).toBe(1);
 });
 
 test("sounding: C from x32010", () => {
