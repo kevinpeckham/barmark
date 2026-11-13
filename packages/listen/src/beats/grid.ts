@@ -4,6 +4,7 @@
  * (design §4.2).
  */
 import type { BarGrid } from "@barmark/sync";
+import { parseMeter } from "barmark";
 import { pickupWarning } from "../grid/place.js";
 import { isRefusal } from "../input.js";
 import { type ListenOptions, resolveOptions, type Settings } from "../options.js";
@@ -112,25 +113,31 @@ function capped(lines: number[], s: Settings): { lines: number[]; warnings: List
 	return { lines: lines.slice(0, s.MAX_GRID_BARS + 1), warnings: [warning] };
 }
 
-/** The beats before bar one: a pickup when few enough and bar one is a usual bar, else the `beats-before-bar-one` warning. */
+/** The beats before bar one, as `@barmark/sync`'s `readPickup` measures a pickup: `k` units of bar one's own length. */
 function leading(
 	beats: readonly number[],
 	starts: readonly number[],
-	beatsPerBar: number,
+	label: Labelled,
 	s: Settings,
 ): { pickup: TrackedGrid["pickup"]; warnings: ListenWarning[] } {
 	const before = firstAtLeast(beats, starts[0] as number);
 	if (before < 1) return { pickup: null, warnings: [] };
 	const start = beats[0] as number;
-	const inBarOne = firstAtLeast(beats, starts[1] as number) - before;
-	if (before <= s.PICKUP_MAX_BAR_FRACTION * beatsPerBar && inBarOne === beatsPerBar) {
-		const pickup = { start, beats: before };
+	const units = parseMeter(label.meter)?.n as number;
+	const barOne = (starts[1] as number) - (starts[0] as number);
+	const k = Math.round(((starts[0] as number) - start) / (barOne / units));
+	const usual = firstAtLeast(beats, starts[1] as number) - before === label.beatsPerBar;
+	if (usual && k >= 1 && k <= s.PICKUP_MAX_BAR_FRACTION * units && k < units) {
+		const pickup = { start, beats: k };
 		return { pickup, warnings: [pickupWarning(pickup)] };
 	}
-	const count = `${before} ${before === 1 ? "beat" : "beats"}`;
+	const where =
+		before === 1
+			? `The beat before bar one, at ${start.toFixed(2)} s, is`
+			: `The ${before} beats before bar one, from ${start.toFixed(2)} s, are`;
 	const warning: ListenWarning = {
 		code: "beats-before-bar-one",
-		message: `${count} before bar one, from ${start.toFixed(2)} s, are too many for a pickup and are left out.`,
+		message: `${where} not written as a pickup; ${before === 1 ? "it is" : "they are"} left off the chart.`,
 		detail: { beats: before, start },
 	};
 	return { pickup: null, warnings: [warning] };
@@ -160,7 +167,7 @@ function gridOfLabel(
 	const barSeconds = median(starts.slice(1).map((t, i) => t - (starts[i] as number)));
 	const cut = capped(closed(starts, c.duration, barSeconds, s), s);
 	const reading: BeatsReading = { ...sofar, steadyShare: share, barSeconds };
-	const lead = leading(c.beats, starts, beatsPerBar, s);
+	const lead = leading(c.beats, starts, label, s);
 	const value = { grid: { bars: cut.lines }, pickup: lead.pickup, meter: label.meter, reading };
 	const told = declaredWarnings(c.declared, label.meter, barSeconds);
 	return ok(value, [...warnings, ...cut.warnings, ...lead.warnings, ...told]);

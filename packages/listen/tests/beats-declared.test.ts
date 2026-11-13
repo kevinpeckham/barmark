@@ -45,3 +45,18 @@ test("declared never moves the grid, the meter or the tempo", () => {
 	if (!plain.ok || !told.ok) throw new Error("refused");
 	expect(told.value).toEqual(plain.value);
 });
+
+test("the fold is the nearest by the quotient's log, not by distance", () => {
+	// Bars of 2 s against a declared bar of 240 / 174 s: the quotient is 1.45, nearer 2 than 1 by the log.
+	const r = gridFromBeats({ ...four, declared: { meter: "4/4", tempo: 174 } });
+	if (!r.ok) throw new Error("refused");
+	expect(r.warnings.find((w) => w.code === "tempo-drift")?.detail).toMatchObject({ fold: 2 });
+});
+
+test("the meter is compared on both parts: 4/2 is not 4/4", () => {
+	const r = gridFromBeats({ ...four, declared: { meter: "4/2" } });
+	expect(r.ok && r.warnings[0]).toMatchObject({
+		code: "meter-differs",
+		detail: { meter: "4/4", declared: "4/2" },
+	});
+});
