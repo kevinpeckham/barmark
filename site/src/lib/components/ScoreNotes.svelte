@@ -15,7 +15,8 @@ const cell = "px-3 py-3 align-top lt-sm:(block px-0 py-1)";
 		<code class={code}>&lt;barmark-score&gt;</code> (<a href="/get-started#score" class={link}>Get Started</a>
 		shows how). The score is engraved from the chart's MusicXML export, so it draws what the chart says and
 		nothing more: no voicing is guessed for a chord name. It always writes chord names and every part;
-		Nashville or Roman numerals and <code class={code}>show-part</code> change only the grid.
+		Nashville or Roman numerals, guitar chord diagrams and <code class={code}>show-part</code> change
+		only the grid.
 	</p>
 	<Window title="A lead sheet · press Score">
 		<div class="p-4 min-w-[26rem]">

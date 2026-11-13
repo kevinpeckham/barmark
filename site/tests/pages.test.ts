@@ -2,15 +2,17 @@ import { beforeAll, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
+import { shapeFor, shapeText } from "@barmark/fretboard";
 import { alignChart, chartFromBeats, chartFromRecording } from "@barmark/listen";
 import { exportMidi, importMidi } from "@barmark/midi";
 import { perform, secondsAt } from "@barmark/midi/perform";
 import { exportMusicXml, importMusicXml } from "@barmark/musicxml";
+import { renderChart } from "@barmark/render";
 import { ENGRAVER_CDN_INTEGRITY, ENGRAVER_CDN_URL, ENGRAVER_WASM_INTEGRITY } from "@barmark/score";
 import { renderScoreHtml } from "@barmark/score/server";
 import { barAt, chartFromDetections, secondsAtBar } from "@barmark/sync";
 import * as timingOnly from "@barmark/sync/timing";
-import { parseChart, printChart, transposeChart } from "barmark";
+import { parseChart, parseChord, parseNoteSet, printChart, transposeChart } from "barmark";
 import { FILES, LINKS } from "../src/lib/site.ts";
 import {
 	BINARIES,
@@ -20,11 +22,13 @@ import {
 	SYNC_DETECTIONS,
 	USE_BINARY,
 	USE_CLI,
+	USE_FRETBOARD,
 	USE_LISTEN,
 	USE_LISTEN_BEATS,
 	USE_MIDI,
 	USE_MUSICXML,
 	USE_PERFORM,
+	USE_RENDER,
 	USE_SCORE_ELEMENT,
 	USE_SCORE_ENGRAVER,
 	USE_SCORE_SERVER,
@@ -245,6 +249,47 @@ describe("the beat tracker code Get Started shows", () => {
 	});
 });
 
+describe("the fretboard code Get Started shows", () => {
+	test("finds the shape the page says for Cmaj7", () => {
+		const chord = parseChord("Cmaj7");
+		if (!chord.ok) throw new Error(chord.error.message);
+		const result = shapeFor(chord.value);
+		if (!result.ok) throw new Error(result.reason);
+		expect(result.caveat).toBeNull();
+		const frets = `[${result.shape.frets.join(", ")}]`;
+		expect(USE_FRETBOARD).toContain(`result.shape.frets; // ${frets}`);
+		expect(USE_FRETBOARD).toContain(`shapeText(result.shape); // "${shapeText(result.shape)}"`);
+		for (const line of [
+			'import { shapeFor, shapeText } from "@barmark/fretboard";',
+			'import { parseChord } from "barmark";',
+			'const chord = parseChord("Cmaj7");',
+			"const result = shapeFor(chord.value);",
+		])
+			expect(USE_FRETBOARD).toContain(line);
+	});
+	test("a single note is no shape, by the reason the page names", () => {
+		const set = parseNoteSet("{E}");
+		if (!set.ok) throw new Error(set.error.message);
+		const result = shapeFor(set.value);
+		expect(result.ok ? null : result.reason).toBe("single-note");
+		expect(USE_FRETBOARD).toContain('"single-note"');
+		expect(USE_FRETBOARD).toContain('"not-playable"');
+	});
+	test("the renderer's option draws the strip, as the render sample sets it", () => {
+		expect(USE_RENDER).toContain('chordDiagrams: "guitar",');
+		expect(USE_RENDER).toContain('chord-diagrams="guitar"');
+		const html = renderChart(SAMPLE_CHART, { chordDiagrams: "guitar" });
+		expect(html).toContain('class="bm-diagrams"');
+	});
+	test("the packages table says what fretboard finds, and that the renderer draws with it", () => {
+		const fretboard = PACKAGES.find((p) => p.name === "@barmark/fretboard");
+		expect(fretboard?.step).toBe("#fretboard");
+		expect(fretboard?.readme).toBe(LINKS.fretboardReadme);
+		expect(fretboard?.does).toContain("guitar chord shapes");
+		expect(fretboard?.when).toContain("chord-diagrams");
+	});
+});
+
 describe("the score code Get Started shows", () => {
 	test("renderScoreHtml draws the grid and the switch, as the page says, with the font", () => {
 		const html = renderScoreHtml(SAMPLE_CHART, {
@@ -428,6 +473,7 @@ describe("Get Started, prerendered", () => {
 			"8. Check charts from the terminal",
 			"9. Sync a chart with a recording",
 			"10. Or start from the recording",
+			"11. Find guitar chord shapes",
 		]);
 		const page = text(doc().querySelector("main")) ?? "";
 		for (const line of [
@@ -438,6 +484,9 @@ describe("Get Started, prerendered", () => {
 			"npm install @barmark/score",
 			"npm install @barmark/midi",
 			"npm install @barmark/listen",
+			"npm install @barmark/fretboard",
+			'chord-diagrams="guitar"',
+			"shapeFor(",
 			"exportMidi(",
 			"importMidi(",
 			"@barmark/midi/perform",
@@ -476,7 +525,7 @@ describe("Get Started, prerendered", () => {
 		);
 		const rows = [...doc().querySelectorAll("#packages ~ table tbody tr")];
 		const names = rows.map((row) => text(row.querySelector("th a")));
-		expect(names).toHaveLength(9);
+		expect(names).toHaveLength(10);
 		for (const name of ours) expect(names).toContain(name);
 		expect(names).toContain("@barmark/engraver"); // loaded from a CDN, never installed
 		const ids = new Set([...doc().querySelectorAll("main [id]")].map((el) => el.id));
@@ -534,9 +583,9 @@ describe("the FAQ, prerendered", () => {
 		const contents = [...doc().querySelectorAll("main nav a")].map((a) => a.getAttribute("href"));
 		expect(contents).toEqual(ids.map((id) => `#${id}`));
 	});
-	test("names the nine packages, and answers how to check charts without code", () => {
+	test("names the ten packages, and answers how to check charts without code", () => {
 		const what = text(doc().querySelector("#what")?.parentElement) ?? "";
-		expect(what).toContain("nine npm packages");
+		expect(what).toContain("ten npm packages");
 		for (const name of [
 			"barmark",
 			"@barmark/render",
@@ -546,6 +595,7 @@ describe("the FAQ, prerendered", () => {
 			"@barmark/midi",
 			"@barmark/sync",
 			"@barmark/listen",
+			"@barmark/fretboard",
 			"@barmark/cli",
 		])
 			expect(what).toContain(name);
@@ -554,6 +604,13 @@ describe("the FAQ, prerendered", () => {
 		const hrefs = [...(cli?.querySelectorAll("a") ?? [])].map((a) => a.getAttribute("href"));
 		expect(hrefs).toContain("/get-started#terminal");
 		expect(hrefs).toContain(LINKS.songs);
+	});
+	test("says the renderer draws guitar chord diagrams, mirrored for a left hand", () => {
+		const numerals = text(doc().querySelector("#numerals")?.parentElement) ?? "";
+		expect(numerals).toContain('chord-diagrams="guitar"');
+		expect(numerals).toContain('diagram-hand="left"');
+		const what = text(doc().querySelector("#what")?.parentElement) ?? "";
+		expect(what).toMatch(/@barmark\/fretboard finds guitar chord shapes/);
 	});
 	test("answers what the score is, why it is its own package, what engraves it and how it compares", () => {
 		const answer = (id: string) => text(doc().querySelector(`#${id}`)?.parentElement) ?? "";

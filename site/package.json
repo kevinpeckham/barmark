@@ -25,6 +25,7 @@
 	},
 	"devDependencies": {
 		"@barmark/cli": "0.12.0",
+		"@barmark/fretboard": "0.1.0",
 		"@barmark/listen": "0.2.0",
 		"@barmark/midi": "0.3.3",
 		"@barmark/musicxml": "0.9.1",

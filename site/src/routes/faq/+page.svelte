@@ -102,7 +102,7 @@ onMount(() => {
 					which bars, in which sections, in what key, meter and tempo, and in what order the song plays.
 				</p>
 				<p>
-					It is also nine npm packages: <code class={code}>barmark</code> reads and writes charts,
+					It is also ten npm packages: <code class={code}>barmark</code> reads and writes charts,
 					<code class={code}>@barmark/render</code> draws them as a clean bar grid on any web page,
 					<code class={code}>@barmark/score</code> shows the same chart as a full score beside the grid,
 					<code class={code}>@barmark/engraver</code> is a smaller build of the Verovio that engraves it,
@@ -110,8 +110,9 @@ onMount(() => {
 					<code class={code}>@barmark/midi</code> plays them as MIDI files and reads MIDI files back,
 					<code class={code}>@barmark/sync</code> builds a chart from a recording's detected chords and
 					says when each bar plays, <code class={code}>@barmark/listen</code> finds the bars in a
-					recording itself or reads them from a beat tracker's beats, and
-					<code class={code}>@barmark/cli</code> does the rest from the terminal.
+					recording itself or reads them from a beat tracker's beats,
+					<code class={code}>@barmark/fretboard</code> finds guitar chord shapes for its chords, which
+					the renderer draws, and <code class={code}>@barmark/cli</code> does the rest from the terminal.
 				</p>
 			</section>
 
@@ -271,6 +272,12 @@ onMount(() => {
 					<code class={code}>numerals="nashville"</code> or <code class={code}>numerals="roman"</code> on
 					the chart and each chord appears as its degree in the key: Bm in D is 6m, or vi. The home page's
 					chart has a switch for it.
+				</p>
+				<p>
+					It can show guitarists where the chords go, too. Set
+					<code class={code}>chord-diagrams="guitar"</code> and a strip of chord diagrams sits above the
+					chart, one for each chord it plays; <code class={code}>diagram-hand="left"</code> mirrors them
+					for a left hand. The home page's chart has a switch for that as well.
 				</p>
 			</section>
 
