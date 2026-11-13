@@ -1,6 +1,6 @@
 {
 	"name": "@barmark/listen",
-	"version": "0.1.1",
+	"version": "0.2.0",
 	"description": "Find the bars in a recording and line a barmark chord chart up with them.",
 	"type": "module",
 	"sideEffects": false,
