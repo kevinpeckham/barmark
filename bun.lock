@@ -45,6 +45,13 @@
         "verovio": "6.4.1",
       },
     },
+    "packages/fretboard": {
+      "name": "@barmark/fretboard",
+      "version": "0.1.0",
+      "dependencies": {
+        "barmark": "workspace:^",
+      },
+    },
     "packages/listen": {
       "name": "@barmark/listen",
       "version": "0.2.0",
@@ -106,6 +113,8 @@
     "@barmark/cli": ["@barmark/cli@workspace:packages/cli"],
 
     "@barmark/engraver": ["@barmark/engraver@workspace:packages/engraver"],
+
+    "@barmark/fretboard": ["@barmark/fretboard@workspace:packages/fretboard"],
 
     "@barmark/listen": ["@barmark/listen@workspace:packages/listen"],
 

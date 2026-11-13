@@ -9,6 +9,25 @@ not here.
 
 ## Testing
 
+### A finder that drops answers still gives every chord one valid shape (2026-11-13, @barmark/fretboard)
+
+- **The symptom.** The shape finder's first version silently dropped every
+  voicing that has two muted strings above it (`x32010` was found, `x320xx`
+  was not). Every chord of the vocabulary still got a valid shape, so 29
+  tests passed.
+- **The cause.** The pruned search treated a muted string after the
+  voicing began as the end of the search, and was wrong about how many
+  muted strings it could still take. The tests checked only that each
+  chord got one shape that sounds it, a question a search missing half the
+  answers still passes.
+- **The fix.** An oracle: `tests/finder-oracle.test.ts` enumerates every
+  fingering by brute force over the whole vocabulary and requires the
+  finder's list to equal the oracle's, order included. It failed on the
+  first run ("finder x32010 x32013 x3201x x32050 ... / oracle x32010
+  x32013 x3201x x320xx ..."). Muting a string is always allowed now; only
+  playing after the voicing ended is not. Where a search prunes, test it
+  against one that does not. See `packages/fretboard/src/finder.ts`.
+
 ### A timing test that a loaded machine fails: balance the runs, or count the work (2026-11-12, every package)
 
 - **The symptom.** With the VM at a load of 15 to 20, timing tests that
@@ -739,6 +758,38 @@ When converting to a format that keeps written order, test the played
 order, not just the written marks.
 
 ## Design
+
+### A cost summed in floating point made equal costs unequal (2026-11-13, @barmark/fretboard)
+
+- **The symptom.** The finder breaks ties between equal-cost shapes by
+  their text, so the same chord always gets the same shape. For some chords
+  the tie-break did not decide: shapes whose costs should have been equal
+  came out in cost order instead (8 of the 660 vocabulary chords' top-ten
+  lists).
+- **The cause.** The cost was summed in floating point. The expression's
+  order is fixed, but two shapes with equal true cost got different
+  totals because their terms differed (for example 7.6000000000000005
+  against 7.6), so they compared unequal.
+- **The fix.** The cost is whole tenths, an integer, so equal costs are
+  equal and the tie-break by `shapeText` runs. Compare a rank by integers
+  or by an exact rule, never by a float sum. Where it lives:
+  `packages/fretboard/src/finder.ts`.
+
+### The bass and the top note are the lowest and highest pitch, not string (2026-11-13, @barmark/fretboard)
+
+- **The symptom.** The design's wording said the bass is "the lowest
+  sounding string". Read that way, `x60563` passes as `Ebmaj13`: its lowest
+  string played is the Eb, but the open D string above it sounds below it.
+  The finder never did this (its bass check used the lowest pitch from its
+  first commit). What did slip was the top-note bonus, which first read the
+  highest sounding string: it counted the root "on top" when an open B
+  sounded below the root on the string beside it (`Db5(7)`).
+- **The cause.** Strings are not in pitch order once frets are added: an
+  open string can sound below, or above, a fretted neighbour.
+- **The fix.** The top note is the highest PITCH, and the bass the lowest
+  sounding NOTE, in the finder, in `soundsChord` and in the oracle test.
+  The design's wording was corrected to match (§2.3). See
+  `packages/fretboard/src/finder.ts`.
 
 ### Two packages that each work out the same length will disagree: use one expression (2026-11-13, `@barmark/listen` 0.2)
 

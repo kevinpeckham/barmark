@@ -1,0 +1,66 @@
+// Written by hand from the instrument: the open strings are E A D G B E, and a fret raises a
+// string a semitone. Six characters per shape, low string first, `x` muted.
+
+/** The table's rows from groups of `name:frets` words, so the table is one string a group. */
+const rows = (...groups: string[]): readonly (readonly [name: string, frets: string])[] =>
+	groups.flatMap((g) => g.split(" ").map((row) => row.split(":") as [string, string]));
+
+/** Shapes for first position: a chord name and its six strings. Open strings allowed. */
+export const OPEN = rows(
+	// C
+	"C:x32010 C7:x32310 Cmaj7:x32000 C6:x32210 C6/9:x32233 Csus2:x30013 Csus4:x33011 C7sus4:x33311 " +
+		"C(9):x32033 C(11):x33010 C9:x3233x Caug:x32110 C/E:032010 C/G:332010 C7/E:032310 C/B:x22010 C/Bb:x12010",
+	// A
+	"A:x02220 Am:x02210 A7:x02020 Amaj7:x02120 Am7:x02010 Ammaj7:x02110 A6:x02222 Am6:x02212 " +
+		"Asus2:x02200 Asus4:x02230 A7sus4:x02030 A7sus2:x02000 A(9):x02420 Am(9):x02410 A9:x02423 " +
+		"Amaj9:x02424 A13:x02022 A6/9:x02422 A5:x022xx Aaug:x03221 Adim:x0121x Am7(b5):x0101x " +
+		"Adim7:x01212 A/C#:x42220 A/E:002220 A/G:302220 Am/C:x32210 Am/E:002210 Am/G:302210 A7(b9):x02323",
+	// G
+	"G:320003 G7:320001 Gmaj7:320002 G6:320000 Gsus2:300033 Gsus4:330013 G7sus4:330011 G(9):320203 " +
+		"Gaug:321003 G/B:x20003 G/A:x00003 G/D:xx0003 G/F:120003 G/F#:220003 G7/B:x20001",
+	// E
+	"E:022100 Em:022000 E7:020100 Emaj7:021100 Em7:020000 Emmaj7:021000 E6:022120 Em6:022020 Em6/9:022022 " +
+		"Esus2:024400 Esus4:022200 E7sus4:020200 E5:022xxx E9:020102 Emaj9:021102 Em9:020002 " +
+		"E7(b9):020101 E13:020122 E(9):024100 Em(9):022002 E7(#9):07678x Eaug:032110 Edim7:012020 " +
+		"E/B:x22100 E/G#:422100 E7/G#:420100 Em/B:x22000 Em/G:322000 Em7/D:xx0000 E7(b13):020110 Eaug7:030110",
+	// D
+	"D:xx0232 Dm:xx0231 D7:xx0212 Dmaj7:xx0222 Dm7:xx0211 D6:xx0202 Dm6:xx0201 Dsus2:xx0230 " +
+		"Dsus4:xx0233 D7sus4:xx0213 D7sus2:xx0210 D(9):xx0252 D5:xx023x Ddim:xx0131 Ddim7:xx0101 " +
+		"Dm7(b5):xx0111 Daug:xx0332 D/A:x00232 D/C:x30232 D/F#:200232 D7/F#:200212 Dm/A:x00231 " +
+		"Dm/F:xx3231 Dm7/C:x30211 Dmmaj7:xx0221",
+	// F
+	"Fmaj7:xx3210 Fmaj7(#11):xx3200 Fsus2:xx3011 F/A:x03211 F6/9:100011",
+	// B
+	"B7:x21202 Bm7:x20202 Bm7(b5):x20201 B7sus4:x22202 Bm/D:xx0432 Bm9:x20222 Bm11:x20220 B6:x21102 " +
+		"Bm6:x20102 Bm/A:x04432 Bbaug:x10332 Baug:x21003 Bb6/9:x10011",
+);
+
+/** Shapes with no open string, written on one root and moved along the neck to any other. */
+export const MOVABLE = rows(
+	// Triads: root on the sixth string (F), the fifth (Bb), the fourth (Eb)
+	"F:133211 Bb:x13331 Fm:133111 Bbm:x13321 Fdim:1231xx Bbdim:x1232x Ebdim:xx1242 Faug:xx3221 " +
+		"Caug:x3211x Bbsus2:x13311 Ebsus2:xx1341 Fsus4:133311 Bbsus4:x13341",
+	// Power chords
+	"F5:133xxx Bb5:x133xx F5(7):131xxx Bb5(7):x131xx",
+	// Sixths
+	"Ab6:431111 C6:x3221x Eb6:xx1313 Fm6:133131 Cm6:x3121x Ebm6:xx1312 F#6/9:211122 B6/9:x21122 " +
+		"Cm6/9:x3123x",
+	// Sevenths
+	"F7:131211 Bb7:x13131 Eb7:xx1323 Fmaj7:132211 Bbmaj7:x13231 Ebmaj7:xx1333 Fm7:131111 Bbm7:x13121 " +
+		"Ebm7:xx1322 Fmmaj7:132111 Bbmmaj7:x13221 Ebmmaj7:xx1332 Fdim7:123131 Bdim7:x2313x Ebdim7:xx1212 " +
+		"Fm7(b5):1211xx Bbm7(b5):x1212x Ebm7(b5):xx1222 Faug7:141221 Bbaug7:x14132 Bbaugmaj7:x1423x " +
+		"Ebaugmaj7:xx1433 F7sus4:131311 Bb7sus4:x13141 Eb7sus4:xx1324 Bb7sus2:x13111 Eb7sus2:xx1321",
+	// Ninths, elevenths, thirteenths
+	"F9:131213 B9:x2122x Bmaj9:x2132x Fm9:131113 Cm9:x3133x Fmmaj9:132113 Cmmaj9:x3143x F11:111313 " +
+		"Fm11:111113 Cm11:x31331 Bb9sus4:x11111 F13:131231 Bb13:x13133 Fm13:111131 Bbm13:x11123 " +
+		"F13sus4:111331 Bb13sus4:x11113 F(9):xx3213 Fm(9):133113 F(11):113211 Bb(11):x11331",
+	// Altered dominants and the sharp eleven
+	"F7(b9):131212 B7(b9):x21212 F7(#9):131214 B7(#9):x2123x F7(#11):1212xx Bb7(#11):x1213x " +
+		"F7(b5):1212xx Bb7(b5):x1213x F7(b13):131221 Bb7(b13):x13132 F#7alt:212xxx B7alt:x212xx " +
+		"E7alt:xx213x F9(#11):121213 B9(#11):x21221 B13(b9):x21214 F7(b9,#11):121212 B7(b9,#11):x21211 " +
+		"Fmaj7(#11):1222xx Bbmaj7(#11):x1223x",
+	// Slash chords: the third, the fifth, the seventh or the ninth in the bass
+	"Db/F:1431xx Ab/C:x3111x Bb/F:113331 F/C:x33211 Fm/Ab:433111 Am/C:x3221x Bbm/F:113321 Fm/C:x33111 " +
+		"Ab/Gb:2311xx C#/B:x23121 F/Eb:xx1211 Db7/F:1434xx Ab7/C:x31112 Bbm7/Ab:413121 Fm7/Eb:xx1111 " +
+		"Db/Eb:xx1121 Ab/Bb:x1111x",
+);

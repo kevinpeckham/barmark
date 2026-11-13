@@ -195,6 +195,30 @@ Fallow, CI, Swamp), the grammar, `examples/`, the scripts and FINDINGS.md.
     writes `tests/fixtures/beats/equivalence.json`
     (`tests/beats-equivalence.test.ts` checks it) and compares the five
     real readings, never written, VM only, never in CI
+- `packages/fretboard/`: `@barmark/fretboard`, guitar chord shapes for
+  barmark chords (a table, a shape finder, exact voicings); depends on
+  `barmark` only and draws nothing
+  - `src/`: `types.ts` (`Tuning`, `GUITAR`, `Shape`, `Barre`), `pitch.ts`
+    (note names, pitch classes and MIDI), `shape.ts` (`shapeOf`,
+    `shapeText`, `shapeFrom`, `sounding`, the fingers a shape needs),
+    `sounds.ts` (what a chord wants, `soundsChord`, the hand's limits),
+    `finder.ts` (the shape finder: every window, the cost in whole tenths,
+    the bass the lowest pitch), `table.ts` (our hand-written open and
+    movable rows, from the instrument), `lookup.ts` (a chord's row, moved
+    to its root), `exact.ts` (a note set's notes, each on its own string),
+    `shapes.ts` (`shapeFor`, `shapesFor`, `ShapeResult`)
+  - `tests/`: `bun test`; every table row and every finder first choice
+    over the vocabulary must sound its name; `finder-oracle.test.ts` holds
+    the finder to a plain exhaustive search; `size.test.ts` holds the
+    bundle's gzipped size; `corpus.test.ts` walks the examples
+  - `scripts/chordpro-shapes.ts [--json]`: compares our shapes with
+    ChordPro's `guitar.json`, downloaded at a pinned commit into a
+    `mkdtemp` directory and removed after; it never writes into the repo
+    and ChordPro's data is never committed, copied into the table, or
+    imported by a package or a test; advice for a person, VM only, never
+    in CI
+  - `scripts/smoke-fretboard.mjs`: the package smoke check, run by
+    `verify:package` and the release's confirm job
 - `packages/cli/`: `@barmark/cli`, the `barmark` command (`check`,
   `format`, `part`, `render` (`--score`: the full score, Verovio
   in-process, `src/score.ts`), `transpose`, `export`, `import`; MusicXML
@@ -242,7 +266,7 @@ Fallow, CI, Swamp), the grammar, `examples/`, the scripts and FINDINGS.md.
   `bun test` skips it (`bunfig.toml`), Fallow ignores it
 - `docs/superpowers/`: designs (`specs/`) and implementation plans (`plans/`)
 - `scripts/verify-package.ts`, `scripts/verify-release.ts`: release checks
-  shared by CI and Swamp; both take the package (`barmark`, `render`, `musicxml`, `score`, `sync`, `midi`, `listen`, `cli` or `engraver`)
+  shared by CI and Swamp; both take the package (`barmark`, `render`, `musicxml`, `score`, `sync`, `midi`, `listen`, `fretboard`, `cli` or `engraver`)
 
 ## Commands
 
@@ -278,7 +302,7 @@ cd site && bun run dev|build|check|test|test:browser   # barmark.dev
   or other AI attribution trailer.
 - Releases follow `RELEASING.md` (the `/release` skill walks it). Each
   package is tagged on its own: `barmark-vX.Y.Z`, `render-vX.Y.Z`,
-  `musicxml-vX.Y.Z`, `score-vX.Y.Z`, `sync-vX.Y.Z`, `midi-vX.Y.Z`, `listen-vX.Y.Z`, `cli-vX.Y.Z`, `engraver-vX.Y.Z`. A library release is followed by a CLI release and a
+  `musicxml-vX.Y.Z`, `score-vX.Y.Z`, `sync-vX.Y.Z`, `midi-vX.Y.Z`, `listen-vX.Y.Z`, `fretboard-vX.Y.Z`, `cli-vX.Y.Z`, `engraver-vX.Y.Z`. A library release is followed by a CLI release and a
   bump in `kevinpeckham/songs` (RELEASING.md steps 13–14), a `sync`,
   `midi` or `score` release included (the CLI bundles `sync` through
   `midi`, and `score` with Verovio). After
@@ -290,6 +314,8 @@ cd site && bun run dev|build|check|test|test:browser   # barmark.dev
   `listen` is not bundled by the CLI: a listen release needs no CLI
   release, and after a `sync` or `barmark` minor, a `listen` patch
   raises the dependency.
+  `fretboard` is not bundled by the CLI: after a `barmark` minor, a
+  `fretboard` patch raises the dependency.
   An engraver version bump runs `bun run compile --update` and commits
   `info.ts`. A Verovio upgrade is one joint PR (`versions.env`, `info.ts`,
   score's `verovio` pin, stock constants and `ENGRAVER_*` literals), then

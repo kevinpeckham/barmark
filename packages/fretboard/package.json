@@ -1,0 +1,48 @@
+{
+	"name": "@barmark/fretboard",
+	"version": "0.1.0",
+	"description": "Guitar chord shapes for barmark chords: a table, a shape finder and exact voicings.",
+	"type": "module",
+	"sideEffects": false,
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"import": "./dist/index.js"
+		}
+	},
+	"types": "./dist/index.d.ts",
+	"files": [
+		"dist",
+		"CHANGELOG.md"
+	],
+	"engines": {
+		"node": ">=20"
+	},
+	"keywords": [
+		"barmark",
+		"chord-chart",
+		"chords",
+		"music",
+		"guitar",
+		"fretboard",
+		"chord-shapes"
+	],
+	"author": "Kevin Peckham",
+	"license": "MIT",
+	"homepage": "https://github.com/kevinpeckham/barmark/tree/main/packages/fretboard#readme",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/kevinpeckham/barmark.git",
+		"directory": "packages/fretboard"
+	},
+	"bugs": {
+		"url": "https://github.com/kevinpeckham/barmark/issues"
+	},
+	"dependencies": {
+		"barmark": "workspace:^"
+	},
+	"scripts": {
+		"build": "rm -rf dist && tsc -p tsconfig.build.json",
+		"prepack": "bun run build"
+	}
+}

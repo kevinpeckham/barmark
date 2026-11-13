@@ -25,9 +25,9 @@ const GatesSchema = z.object({
 });
 
 const PkgArg = z
-	.enum(["barmark", "render", "musicxml", "score", "sync", "midi", "listen", "cli", "engraver"])
+	.enum(["barmark", "render", "musicxml", "score", "sync", "midi", "listen", "fretboard", "cli", "engraver"])
 	.default("barmark")
-	.describe("The workspace package to check: barmark, render (@barmark/render), musicxml (@barmark/musicxml), score (@barmark/score), sync (@barmark/sync), midi (@barmark/midi), listen (@barmark/listen), cli (@barmark/cli) or engraver (@barmark/engraver)");
+	.describe("The workspace package to check: barmark, render (@barmark/render), musicxml (@barmark/musicxml), score (@barmark/score), sync (@barmark/sync), midi (@barmark/midi), listen (@barmark/listen), fretboard (@barmark/fretboard), cli (@barmark/cli) or engraver (@barmark/engraver)");
 
 const PackageSchema = z.object({
 	label: z.string(),
@@ -138,7 +138,7 @@ async function verify(context: Context, script: string, extra: string[] = []) {
 
 export const behavior = {
 	type: "@kevin/barmark-checks",
-	version: "2026.11.12.1",
+	version: "2026.11.13.1",
 	description: "barmark's release checks (lint, tests, Fallow, package, engraver equivalence, release readiness) run on the checkout and kept as data",
 	globalArguments: GlobalArgsSchema,
 	files: {
