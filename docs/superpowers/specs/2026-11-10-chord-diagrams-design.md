@@ -232,6 +232,14 @@ appearance's key. Transposing (`transposeChart`, `barmark transpose`)
 happens before rendering, so the shapes follow. With `part` (show-part),
 only that part's chords; otherwise every part's chord lines.
 
+**As built (2026-11-13).** Entries are read from the rows the grid draws,
+not from the events, and from each part's harmony line only: the line the
+parser names for that part in each system (grammar 7.6), so a part that
+writes several lines gives its chords once. On a line that is sung, chord
+names still count and only note sets are passed over (they are the
+melody's notes, section 4.2). Which line is a part's harmony line, what a
+`%` copies and which key is in force all come from the parser.
+
 **5.3 The SVG (design call).**
 
 - One `<svg>` per diagram, drawn in em units from `--barmark-size`, so
@@ -249,6 +257,26 @@ only that part's chords; otherwise every part's chord lines.
   generate, and still goes through `escapeHtml`; no `id` attributes, so
   two charts on a page can't collide.
 
+**As built (2026-11-13).**
+
+- Two drawings at one scale. A shape in first position is a narrow image
+  (`viewBox="36 0 60 75"`); a shape up the neck is a wider one (`viewBox="0
+  0 96 75"`, class `bm-dg-fr`) with its fret number at the left, 13 units
+  tall, clear of the strings and of a barre. Their CSS widths are in the
+  viewBox ratio, so strings, dots and text are the same size in both, and
+  a first-position diagram gives up no room to a label it does not have.
+  The name stays centred under the strings. No `:has()`.
+- `forced-colors` sets the three tokens the strip draws from (`--bm-rule`,
+  `--bm-muted`, `--bm-ink`) to `CanvasText` on the strip, in one rule,
+  not `currentColor` on each mark.
+- The strip's rules (`DIAGRAMS_CSS`) are part of every chart's stylesheet,
+  whether or not the strip is drawn: about 0.35 KB gzipped. Reason: score's
+  shell shares one stylesheet across views, and `ROW_COLUMNS_CSS` is the
+  precedent. A standing test removes them before comparing a chart with
+  the option off to its output before this feature, byte for byte.
+- The list is `<ul role="list">`; a diagram that can't be drawn is a
+  frame the height of a drawing with the reason inside.
+
 **5.4 Accessibility (design call).** The strip is a `<section
 aria-label="Guitar chords">` holding a list; each diagram is `<svg
 role="img" aria-label="…">` with a visible caption. The label is
@@ -257,6 +285,15 @@ muted, open, 2, 2, 1, open". Reason: "x" and "0" read aloud as letters
 and digits; "muted" and "open" are what a teacher says. A diagram that
 can't be drawn says why ("C major seven, written voicing: not playable in
 standard tuning"). The grid's bar speech is unchanged.
+
+**As built (2026-11-13).** The label says what the bar's speech says for
+the same slot: with `numerals` on and a key in force it begins with the
+degree ("six, F sharp minor: 2, 4, 4, 2, 2, 2"), and a name with a
+written voicing the diagram shows is said with its notes ("C major seven
+voiced E3 G3: …"), so two entries of one name are told apart. A voicing
+the diagram replaced is not said as voiced: the label gives the name, the
+strings, then "written voicing doesn't fit standard tuning". The numeral
+shown under a name is `aria-hidden`, since the label carries it.
 
 **5.5 Left-handed (design call: in the first release).** Option
 `diagramHand: "left"`, attribute `diagram-hand="left"`: the grid of
@@ -304,6 +341,12 @@ theme.
 diagramHand: "left" })`, attributes `chord-diagrams="guitar"` and
 `diagram-hand`. `layoutChart` gains `diagrams: DiagramEntry[]` (name
 pieces, shape or reason, speech), so other drawers get the same data.
+As built (2026-11-13): `DiagramEntry` is `{ chord, voicing, key, shape,
+caveat }`, the parser's records and fretboard's shape; `shape` is null
+when nothing fits, and `diagrams` is an empty list when the option is
+off. Name pieces and speech are not stored: a drawer typesets `chord`
+with `typesetChord`, as the grid does. The spoken label (`speakDiagram`)
+is internal for now; export it when another drawer needs it.
 `"ukulele"` and `"mandolin"` are later values of the same option.
 
 **Render's weight (Decided by Kevin (2026-11-10)): a static import with
@@ -339,6 +382,9 @@ finder-only until they get tables.
 - CLI: `barmark render --diagrams guitar` (a value, so `ukulele` fits
   later) and `--left-handed`. They are grid flags: refused with
   `--score`, as `--numerals` is.
+  As built (2026-11-13): `--left-handed` without `--diagrams` is a usage
+  error (`--left-handed needs --diagrams`), so a flag that would do
+  nothing is not accepted silently.
 - barmark.dev: a "Guitar diagrams" switch in the playground, a line in
   the guide's renderer options, and Peaceful Dreams shown with diagrams
   on its example page. The site pins exact versions, so it follows the
