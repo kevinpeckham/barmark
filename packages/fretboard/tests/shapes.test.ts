@@ -1,7 +1,6 @@
 import { expect, test } from "bun:test";
 import { type ChordRecord, parseChart } from "barmark";
 import {
-	GUITAR,
 	type Shape,
 	type ShapeResult,
 	shapeFor,
@@ -180,10 +179,41 @@ test("a chord with no intervals still gives a result", () => {
 	expect(shapeFor({ ...chord("C"), intervals: [] }).ok).toBe(true);
 });
 
-test("a tuning other than standard skips the table", () => {
-	const dropD = { name: "guitar" as const, strings: [38, 45, 50, 55, 59, 64] };
-	expect(shapeFor(chord("{D2 A2}"), undefined, dropD)).toMatchObject({ ok: true });
-	expect(shapeFor(chord("C"), undefined, GUITAR)).toMatchObject({ ok: true });
+test("the public calls take a slot and a voicing, and a slot", () => {
+	expect(shapeFor.length).toBe(2);
+	expect(shapesFor.length).toBe(1);
+});
+
+test("results are not shared: writing to one never changes the next", () => {
+	const np = shapeFor(chord("{E1 G1}"));
+	(np as { reason: string }).reason = "single-note";
+	expect(shapeFor(chord("{E1 G1}"))).toEqual({ ok: false, reason: "not-playable" });
+	const one = shapeFor(chord("{E3}"));
+	(one as { reason: string }).reason = "not-playable";
+	expect(shapeFor(chord("{E3}"))).toEqual({ ok: false, reason: "single-note" });
+	const r = shapeFor(chord("C"));
+	if (!r.ok) throw new Error("no shape");
+	r.shape.frets[1] = 9;
+	r.shape.base = 9;
+	expect(shapeFor(chord("C"))).toEqual({ ok: true, shape: shapeOf("x32010"), notes: null });
+	const t = shapeFor(chord("Cmaj7"), chord("{E3 G3 B3 C4}"));
+	(t as { reason?: string }).reason = "x";
+	expect(shapeFor(chord("Cmaj7"), chord("{E3 G3 B3 C4}"))).toEqual({
+		ok: true,
+		shape: shapeOf("x32000"),
+		notes: "voicing-replaced",
+	});
+});
+
+test("more than six written notes is not-playable at once", () => {
+	const huge = { ...chord("{C E G}"), pitches: Array.from({ length: 100_000 }, () => "C") };
+	let best = Number.POSITIVE_INFINITY;
+	for (let i = 0; i < 3; i++) {
+		const t = performance.now();
+		expect(shapeFor(huge)).toEqual({ ok: false, reason: "not-playable" });
+		best = Math.min(best, performance.now() - t);
+	}
+	expect(best).toBeLessThan(20);
 });
 
 test("shapesFor: the table's shape first, no repeats, every one sounds the chord", () => {

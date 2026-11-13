@@ -184,3 +184,15 @@ test("of two moved shapes at one fret, the lower frets win, compared as numbers"
 	expect(lower(eight, ten)).toBe(true);
 	expect(lower(ten, eight)).toBe(false);
 });
+
+test("rows added after review: G/A, Em6/9, and Ab/Bb at its lowest fret (Bbaug and Baug did not fit the size budget)", () => {
+	const first = (n: string) => {
+		const shape = tableShape(chord(n));
+		return shape ? shapeText(shape) : null;
+	};
+	expect(first("G/A")).toBe("x00003");
+	expect(first("Em6/9")).toBe("022022");
+	expect(first("Ab/Bb")).toBe("x1111x");
+	expect(first("A/B")).toBe("x2222x");
+	expect(first("Bb/C")).toBe("x3333x");
+});

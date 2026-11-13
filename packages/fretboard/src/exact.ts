@@ -1,6 +1,6 @@
 import { shapeFrom } from "./shape.js";
 import { withinLimits } from "./sounds.js";
-import { GUITAR, type Shape, type Tuning } from "./types.js";
+import { GUITAR, type Shape } from "./types.js";
 
 /** The frets note `k` might take on a string with this open pitch. */
 type Frets = (k: number, open: number) => number[];
@@ -11,7 +11,13 @@ const LAST_FRET = 15;
 const reach = (frets: readonly number[]): number =>
 	frets.findLastIndex((f) => f >= 0) - frets.findIndex((f) => f >= 0);
 
-/** Lowest highest-fret first, then the fewest muted strings inside, then the frets as numbers, low string first. */
+/**
+ * Orders two fingerings of the same notes, best first: the lower highest fret;
+ * then the fewer muted strings between the lowest and highest sounding
+ * strings; then the frets compared as numbers, string by string from the
+ * lowest, a muted string counting as -1 (so frets of 10 and more order
+ * correctly, and a muted string comes before a fret).
+ */
 function better(a: Shape, b: Shape): number {
 	const d = Math.max(...a.frets) - Math.max(...b.frets) || reach(a.frets) - reach(b.frets);
 	const i = a.frets.findIndex((f, s) => f !== b.frets[s]);
@@ -43,15 +49,15 @@ function place(strings: readonly number[], count: number, at: Frets): Shape[] {
 }
 
 /** Fingerings that sound exactly these MIDI notes (a repeated pitch has none), one a string, strings ascending; muted strings between them allowed. Best first. */
-export function exactShapes(notes: readonly number[], tuning: Tuning = GUITAR): Shape[] {
+export function exactShapes(notes: readonly number[]): Shape[] {
 	const sorted = [...notes].sort((a, b) => a - b);
-	return place(tuning.strings, sorted.length, (k, open) => [(sorted[k] as number) - open]);
+	return place(GUITAR.strings, sorted.length, (k, open) => [(sorted[k] as number) - open]);
 }
 
 /** Fingerings that sound these pitch classes in this order, low to high, one a string, octaves free. Best first. */
-export function orderedShapes(pitchClasses: readonly number[], tuning: Tuning = GUITAR): Shape[] {
-	return place(tuning.strings, pitchClasses.length, (k, open) => {
-		const f = ((pitchClasses[k] as number) - open + 120) % 12;
+export function orderedShapes(pitchClasses: readonly number[]): Shape[] {
+	return place(GUITAR.strings, pitchClasses.length, (k, open) => {
+		const f = ((pitchClasses[k] as number) + 12 - (open % 12)) % 12;
 		return [f, f + 12];
 	});
 }

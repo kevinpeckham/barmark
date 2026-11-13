@@ -24,20 +24,28 @@ test("exact: two notes of one string, a note below or above the guitar", () => {
 	expect(exactShapes([40, 41, 42, 43, 44, 45, 46])).toEqual([]);
 });
 
-test("exact: the best has the lowest highest fret, then the fewest muted strings inside", () => {
-	const [first, ...rest] = exactShapes([40, 64]);
-	expect(shapeText(first as never)).toBe("0xxxx0");
-	for (const s of rest) expect(Math.max(...s.frets)).toBeGreaterThanOrEqual(0);
-	const top = (frets: number[]) => Math.max(...frets);
+test("exact: the best has the lowest highest fret", () => {
+	expect(texts(exactShapes([40, 64]))[0]).toBe("0xxxx0");
 	const all = exactShapes([53, 60, 64]);
-	for (let i = 1; i < all.length; i++)
-		expect(top((all[i - 1] as never as { frets: number[] }).frets)).toBeLessThanOrEqual(
-			top((all[i] as never as { frets: number[] }).frets),
-		);
+	const tops = all.map((s) => Math.max(...s.frets));
+	expect(tops).toEqual([...tops].sort((a, b) => a - b));
+	expect(tops[0]).toBeLessThan(tops.at(-1) as number);
+});
+
+test("exact: then the fewest muted strings inside", () => {
+	// E2 open; C#3 on the A string fret 4; B3 on the G string fret 4 or the B string open.
+	// Both top out at fret 4; the G string leaves one muted string inside, the B string two.
+	expect(texts(exactShapes([40, 49, 59]))).toEqual(["04x4xx", "04xx0x"]);
+});
+
+test("exact: then the frets as numbers, muted before any fret", () => {
+	// E2 open, B3 (G string fret 4 or B string open), G#4 (e string fret 4 or B string fret 9).
+	// All top out at fret 4 and span five strings: 0xxx04 has a muted fourth string, 0xx4x4 a fret.
+	expect(texts(exactShapes([40, 59, 68]))[0]).toBe("0xxx04");
 });
 
 test("exact: frets of 10 or more order as numbers, not as text", () => {
-	// D4 and A4 on one string pair: 12 and 10, 17 and 15 sit beside each other
+	// E3 and B3: the same notes on several string pairs, frets of 7 to 14
 	const all = exactShapes([52, 59]);
 	const tops = all.map((s) => Math.max(...s.frets));
 	expect(tops).toEqual([...tops].sort((a, b) => a - b));
@@ -56,11 +64,6 @@ test("exact: span, fingers and frets", () => {
 			expect(Math.max(...fretted) - Math.min(...fretted)).toBeLessThanOrEqual(3);
 	}
 	expect(exactShapes([41, 69])).toEqual([]);
-});
-
-test("exact: a tuning other than standard", () => {
-	const dropD = { name: "guitar" as const, strings: [38, 45, 50, 55, 59, 64] };
-	expect(texts(exactShapes([38, 45], dropD))[0]).toBe("00xxxx");
 });
 
 test("ordered: pitch classes low to high, each higher than the last, octaves free", () => {
