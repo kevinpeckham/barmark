@@ -72,8 +72,8 @@ export const PACKAGES: {
 	},
 	{
 		name: "@barmark/listen",
-		does: "Finds the bars in a recording and writes its chart, or lines a chart up with a recording. Early (0.1).",
-		when: "An audio tool starting from the audio, which can declare the tempo and meter.",
+		does: "Finds the bars in a recording, or reads them from a beat tracker's beats, and writes the chart; or lines a chart up with a recording. Early (0.2).",
+		when: "An audio tool starting from the audio, which can declare the tempo and meter or has a beat tracker's reading.",
 		step: "#listen",
 		readme: LINKS.listenReadme,
 	},
@@ -310,4 +310,25 @@ if (built.ok) {
 	if (aligned.ok) aligned.value.timing;
 } else {
 	built.refusals; // why not: every rule that failed, not the first only
+}`;
+
+export const USE_LISTEN_BEATS = `import { chartFromBeats } from "@barmark/listen";
+
+// A beat tracker's reading in seconds, and your chord model's runs
+const drafted = chartFromBeats({
+	beats, // [0, 0.5, 1, 1.5, 2, …]
+	downbeats, // [0, 2, 4, …]: the first beat of each bar
+	duration: 24, // seconds of audio the tracker read
+	chords: { runs },
+	title: "Example Song",
+});
+if (drafted.ok) {
+	const { chart, timing, grid } = drafted.value;
+	chart; // "# Example Song\\ntime: 4/4, tempo: 120\\n| D | A | Bm | G |\\n…"
+	timing; // when each played bar starts, on the tracker's bars
+	grid.meter; // "4/4", from the usual count of beats in a bar
+	grid.reading.beatsPerBar; // 4
+} else {
+	drafted.refusals; // "too-few-bars" or "bars-unsteady": no fallback inside,
+	// so call chartFromRecording yourself if you can declare a tempo
 }`;

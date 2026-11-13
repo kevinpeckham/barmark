@@ -2,7 +2,7 @@ import { beforeAll, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import { alignChart, chartFromRecording } from "@barmark/listen";
+import { alignChart, chartFromBeats, chartFromRecording } from "@barmark/listen";
 import { exportMidi, importMidi } from "@barmark/midi";
 import { perform, secondsAt } from "@barmark/midi/perform";
 import { exportMusicXml, importMusicXml } from "@barmark/musicxml";
@@ -21,6 +21,7 @@ import {
 	USE_BINARY,
 	USE_CLI,
 	USE_LISTEN,
+	USE_LISTEN_BEATS,
 	USE_MIDI,
 	USE_MUSICXML,
 	USE_PERFORM,
@@ -174,6 +175,73 @@ describe("the listen code Get Started shows", () => {
 		});
 		expect(r.ok).toBe(false);
 		if (!r.ok) expect(r.refusals.length).toBeGreaterThan(0);
+	});
+});
+
+describe("the beat tracker code Get Started shows", () => {
+	/** A tracker's reading of the page's song: a beat every half second, four to a bar, and the chord model's runs. */
+	const reading = (bars: number) => {
+		const beat = 0.5;
+		const beats = Array.from({ length: bars * 4 + 1 }, (_, i) => i * beat);
+		const downbeats = beats.filter((_, i) => i % 4 === 0);
+		const labels = ["D:maj", "A:maj", "B:min", "G:maj"];
+		const runs = Array.from({ length: bars }, (_, b) => ({
+			start: b * 4 * beat,
+			end: (b + 1) * 4 * beat,
+			label: labels[b % 4] ?? "N",
+		}));
+		return { beats, downbeats, duration: bars * 4 * beat, runs };
+	};
+	test("builds the chart the page says from a tracker's beats, with no audio", () => {
+		const { beats, downbeats, duration, runs } = reading(12);
+		const drafted = chartFromBeats({
+			beats,
+			downbeats,
+			duration,
+			chords: { runs },
+			title: "Example Song",
+		});
+		if (!drafted.ok) throw new Error(drafted.refusals.map((r) => r.reason).join(", "));
+		const { chart, timing, grid } = drafted.value;
+		const shown = "# Example Song\ntime: 4/4, tempo: 120\n| D | A | Bm | G |\n";
+		expect(chart).toStartWith(shown);
+		expect(USE_LISTEN_BEATS).toContain(`chart; // "${shown.replaceAll("\n", "\\n")}…"`);
+		expect(timing.bars.length).toBe(12);
+		expect(USE_LISTEN_BEATS).toContain(`grid.meter; // "${grid.meter}"`);
+		expect(USE_LISTEN_BEATS).toContain(`grid.reading.beatsPerBar; // ${grid.reading.beatsPerBar}`);
+		expect(USE_LISTEN_BEATS).toContain(`duration: ${duration},`);
+		for (const line of [
+			'import { chartFromBeats } from "@barmark/listen";',
+			"\tbeats,",
+			"\tdownbeats,",
+			"\tchords: { runs },",
+			'\ttitle: "Example Song",',
+			"const { chart, timing, grid } = drafted.value;",
+			"drafted.refusals;",
+		])
+			expect(USE_LISTEN_BEATS).toContain(line);
+	});
+	test("a reading with too few bars is refused by the name the page gives", () => {
+		const r = chartFromBeats({
+			beats: [0, 0.5, 1],
+			downbeats: [0],
+			duration: 2,
+			chords: { runs: [] },
+		});
+		expect(r.ok).toBe(false);
+		if (!r.ok) expect(r.refusals.map((x) => x.reason)).toEqual(["too-few-bars"]);
+		expect(USE_LISTEN_BEATS).toContain("too-few-bars");
+		expect(USE_LISTEN_BEATS).toContain("bars-unsteady");
+	});
+	test("the packages table says listen reads a tracker's beats too", () => {
+		const listen = PACKAGES.find((p) => p.name === "@barmark/listen");
+		expect(listen?.does).toContain("beat tracker");
+	});
+	test("the page has the step, linked by its own anchor", () => {
+		const doc = page("get-started.html");
+		const intro = doc.getElementById("beats");
+		expect(intro?.textContent).toContain("chartFromBeats");
+		expect(doc.body.textContent).toContain('import { chartFromBeats } from "@barmark/listen";');
 	});
 });
 
@@ -421,7 +489,7 @@ describe("Get Started, prerendered", () => {
 	});
 	test("labels listen as early, and says the caller declares tempo and meter", () => {
 		const listen = text(doc().querySelector("#listen")?.parentElement) ?? "";
-		expect(listen).toContain("at 0.1");
+		expect(listen).toContain("at 0.2");
 		expect(listen).toContain("Stem Shovel");
 		expect(listen).toContain("you declare the tempo and meter");
 		expect(listen).toContain("a draft for a person to check");

@@ -19,6 +19,7 @@ import {
 	USE_CLI,
 	USE_ELEMENT,
 	USE_LISTEN,
+	USE_LISTEN_BEATS,
 	USE_MIDI,
 	USE_MUSICXML,
 	USE_PARSER,
@@ -344,7 +345,7 @@ const cell = "px-3 py-3 align-top lt-sm:(block px-0 py-1)";
 	<section class="flex flex-col gap-4 min-w-0">
 		<h2 id="listen" class="{step} scroll-mt-6">10. Or start from the recording</h2>
 		<p class="max-w-prose opacity-80">
-			<code class={code}>@barmark/listen</code> is the newest package, at 0.1: the recording-to-chart
+			<code class={code}>@barmark/listen</code> is the newest package, at 0.2: the recording-to-chart
 			code of <a href={LINKS.stemShovel} class={link}>Stem Shovel</a>, ported with the app's arithmetic in
 			the app's order, so the app and other tools run one copy. From a recording's samples and a chord model's runs,
 			<code class={code}>chartFromRecording</code> finds the bar lines and bar one, then writes the
@@ -359,6 +360,20 @@ const cell = "px-3 py-3 align-top lt-sm:(block px-0 py-1)";
 		</p>
 		<Code title="Terminal" code={INSTALL_LISTEN} />
 		<Code title="listen.ts" code={USE_LISTEN} />
+		<p id="beats" class="max-w-prose opacity-80 scroll-mt-6">
+			Or bring a beat tracker. If a model of yours already finds the beats and the downbeats,
+			<code class={code}>chartFromBeats</code> takes them as plain lists of seconds and needs no audio:
+			the downbeats give the bar lines, the meter comes from the usual count of beats in a bar (4/4, 3/4 or
+			6/8), and the tempo from the bars themselves. You declare nothing. It runs no tracker of its own,
+			as it runs no chord model.
+		</p>
+		<p class="max-w-prose opacity-80">
+			A reading with too few bars, or one whose bars settle on no count of beats, is refused by name,
+			with the numbers beside it. Up to half a bar of beats before the first downbeat is written as a
+			pickup bar. The meter is one label for the whole piece, so a song in 5/4 or 7/4 reads as 4/4:
+			check the draft.
+		</p>
+		<Code title="beats.ts" code={USE_LISTEN_BEATS} />
 		<p class="text-sm opacity-80">
 			The features it reads, each option and every refusal are in the
 			<a href={LINKS.listenReadme} class={link}>listen package's README</a>.
