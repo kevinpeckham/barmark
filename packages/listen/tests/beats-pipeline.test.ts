@@ -7,7 +7,10 @@ import { describe, expect, test } from "bun:test";
 import { checkTimingMap } from "@barmark/sync";
 import { parseChart } from "barmark";
 import { chartFromBeats } from "../src/beats/pipeline.js";
+import { recordingFeatures } from "../src/features/index.js";
+import { chartFromRecording } from "../src/pipeline.js";
 import { lead, reading } from "./helpers/beats.js";
+import { synthSong } from "./helpers/synthetic.js";
 
 /** One symbol run a bar: `bars` are the bar lines, one more than `symbols`. */
 const runsOn = (bars: number[], symbols: string[]) => ({
@@ -111,7 +114,7 @@ describe("a chart on the tracker's bars", () => {
 		expect(out.warnings.map((w) => w.code)).toContain("tempo-drift");
 	});
 
-	test("chords the builder cannot read (a getter that throws on runs) are invalid-input", () => {
+	test("chords that cannot be read (a getter that throws on runs) are invalid-input, as the grid refuses them", () => {
 		const out = chartFromBeats({
 			...FOUR,
 			chords: {
@@ -122,8 +125,9 @@ describe("a chart on the tracker's bars", () => {
 		});
 		expect(out.ok).toBe(false);
 		if (out.ok) return;
-		expect(out.refusals[0]?.message).toBe("The builder could not read the detections.");
-		expect(out.reading?.beatsPerBar).toBe(4);
+		expect(out.refusals[0]?.reason).toBe("invalid-input");
+		expect(out.refusals[0]?.message).toBe("The chords could not be read.");
+		expect(out.refusals[0]?.detail).toEqual({ field: "chords" });
 	});
 
 	test("the duration is read once: a getter that answers 8, then 999, gives 8", () => {
@@ -219,5 +223,76 @@ describe("every bad input is a refusal, never a throw", () => {
 	test("the options are checked before the input", () => {
 		const out = chartFromBeats(null as never, { TRACKER_MIN_BARS: 0 });
 		expect(reasons(out)).toEqual(["invalid-option"]);
+	});
+});
+
+describe("the chords are refused as chartFromRecording refuses them, and read once", () => {
+	const song = synthSong({ meter: "4/4", tempo: 120, bars: 4, downbeat: 1, seed: 1 });
+	const features = recordingFeatures(song.samples, song.sampleRate);
+	if (!features.ok) throw new Error("features refused");
+	const run = { start: 0, end: 10, symbol: "C" };
+	const bad: [string, unknown][] = [
+		["null", null],
+		["a string", "x"],
+		["undefined", undefined],
+		["no runs", {}],
+		["runs a string", { runs: "x" }],
+		["an array", []],
+		["a Date", new Date()],
+		["a run that is a number", { runs: [1] }],
+		["the second run null", { runs: [run, null] }],
+		["a run with a symbol that is a number", { runs: [{ start: 0, end: 1, symbol: 5 }] }],
+		["frameSec 0", { runs: [run], frameSec: 0 }],
+		["frameSec a string", { runs: [run], frameSec: "0.1" }],
+		["frames 1.5", { runs: [run], frames: 1.5 }],
+		["frames -1", { runs: [run], frames: -1 }],
+	];
+
+	test("each is refused with the same field, index and message by both calls", () => {
+		for (const [name, chords] of bad) {
+			const beats = chartFromBeats({ ...FOUR, chords } as never);
+			const rec = chartFromRecording({
+				features: features.value,
+				chords,
+				declared: { meter: "4/4", tempo: 120 },
+			} as never);
+			expect(beats.ok, name).toBe(false);
+			expect(rec.ok, name).toBe(false);
+			if (beats.ok || rec.ok) continue;
+			expect(beats.refusals[0], name).toEqual(rec.refusals[0] as never);
+			expect(beats.refusals[0]?.reason, name).toBe("invalid-input");
+		}
+	});
+
+	test("the fields: chords.runs for no list, the index for a bad run", () => {
+		const of = (chords: unknown) => {
+			const out = chartFromBeats({ ...FOUR, chords } as never);
+			return out.ok ? null : out.refusals[0]?.detail;
+		};
+		expect(of({})).toEqual({ field: "chords.runs" });
+		expect(of({ runs: [1] })).toEqual({ field: "chords.runs", index: 0 });
+		expect(of({ runs: [run], frameSec: 0 })).toEqual({ field: "chords.frameSec" });
+		expect(of({ runs: [run], frames: -1 })).toEqual({ field: "chords.frames" });
+	});
+
+	test("the chords are read once: a getter that answers an object, then 7, builds from the first", () => {
+		let reads = 0;
+		const input = {
+			...FOUR,
+			get chords() {
+				reads += 1;
+				return reads === 1 ? FOUR_RUNS : 7;
+			},
+		};
+		const out = chartFromBeats(input as never);
+		if (!out.ok) throw new Error(`refused: ${reasons(out)}`);
+		expect(reads).toBe(1);
+		expect(out.value.chart).toContain("| C | F | G | C |");
+	});
+
+	test("valid chords build the chart they always did", () => {
+		const out = chartFromBeats({ ...reading([4, 4, 4, 4], 0.4), chords: FOUR_RUNS, title: "Four" });
+		if (!out.ok) throw new Error(`refused: ${reasons(out)}`);
+		expect(out.value.chart).toContain("| C | F | G | C |");
 	});
 });

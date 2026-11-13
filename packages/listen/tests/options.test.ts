@@ -63,7 +63,7 @@ describe("result", () => {
 });
 
 describe("DEFAULTS", () => {
-	test("hold the 28 keys with the spec's values, deep-frozen", () => {
+	test("hold the 31 keys with the spec's values, deep-frozen", () => {
 		expect(Object.keys(DEFAULTS)).toHaveLength(31);
 		expect(DEFAULTS.ALIGNMENT_SAME_PIECE_RATIO).toBe(1.6);
 		expect(DEFAULTS.ALIGNMENT_SOUND_FLOOR).toBe(0.02);

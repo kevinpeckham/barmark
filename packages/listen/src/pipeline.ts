@@ -141,7 +141,7 @@ function readSource(given: Record<string, unknown>): Checked["source"] | Refusal
 }
 
 /** The chords: the builder needs runs, so null (which the grid alone accepts) is refused here. */
-function readChordsGiven(chords: unknown): Refusal | null {
+export function readChordsGiven(chords: unknown): Refusal | null {
 	if (typeof chords === "object" && chords !== null) return null;
 	return invalid("chords", "The chords must be an object with a runs list.");
 }

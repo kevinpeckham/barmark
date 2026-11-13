@@ -24,9 +24,9 @@ export type CheckedBeats = {
 type Listed = { list: unknown[]; length: number };
 
 /** The sentence for the time at `index` (0-based) that cannot be a beat or a downbeat. */
-function badTime(field: string, index: number, length: number, ordered: boolean): Refusal {
+function badTime(field: string, index: number, length: number, outOfRange: boolean): Refusal {
 	const noun = field === "beats" ? "Beat" : "Downbeat";
-	const message = ordered
+	const message = outOfRange
 		? `${noun} ${index + 1} of ${length} is not a time in seconds between 0 and the recording's length.`
 		: `${noun} ${index + 1} does not come after the one before it.`;
 	return refusal("invalid-input", message, { field, index });

@@ -6,8 +6,10 @@
 import type { BuildOptions, Change, Detected, Detections } from "@barmark/sync";
 import { type Built, buildChart, withMarks } from "../build.js";
 import type { ListenChordRuns } from "../grid/beats.js";
+import { readChords } from "../grid/grid.js";
 import { invalid, isRefusal, readRecording } from "../input.js";
 import { type ListenOptions, resolveOptions, type Settings } from "../options.js";
+import { readChordsGiven } from "../pipeline.js";
 import { type Ok, ok, type Refusal, type Refused, refused } from "../result.js";
 import { type BeatsInput, type BeatsReading, gridOf, type TrackedGrid } from "./grid.js";
 import { readBeats } from "./input.js";
@@ -30,9 +32,18 @@ type BeatsChartResult = Ok<BeatsChart> | Refused<{ reading: Partial<BeatsReading
 /** A refusal of the input, with no reading. */
 const unread = (r: Refusal): BeatsChartResult => refused([r], [], { reading: null });
 
+/** The chords as `chartFromRecording` reads them, once into a copy; null is refused, the builder needs runs. */
+function readChordsOf(given: unknown): ListenChordRuns | Refusal {
+	const present = readChordsGiven(given);
+	if (present) return present;
+	const read = readChords(given);
+	return isRefusal(read) ? read : (read.chords as ListenChordRuns);
+}
+
 /** The chart from the input and the options: the beats read once, then the grid, then the builder on it. */
 function chartOf(
 	given: Record<string, unknown>,
+	chords: ListenChordRuns,
 	id: string | undefined,
 	options: Settings,
 	build: BuildOptions | undefined,
@@ -46,7 +57,7 @@ function chartOf(
 	const detections = (): Detections => {
 		const d: Detections = {
 			grid: value.grid,
-			chords: given.chords as ListenChordRuns,
+			chords,
 			meter: value.meter,
 			recording: id === undefined ? { duration } : { id, duration },
 		};
@@ -62,8 +73,10 @@ function chartOf(
  * A chart, its timing map and its confidence record from a tracker's beats
  * and the chords (spec §6). In order: the options (`invalid-option`: those
  * of `gridFromBeats`, and `build`, an object passed to the builder); the
- * input is an object and `chords` an object (`invalid-input`,
- * `detail.field`), and `recording.id` a string; then `gridFromBeats`
+ * input is an object and `chords` read once as `chartFromRecording` reads
+ * them, with a runs list (`invalid-input`, `detail.field`: `chords`,
+ * `chords.runs`, `chords.frameSec`, `chords.frames`), and `recording.id` a
+ * string; then `gridFromBeats`
  * (its refusals, with the reading so far).
  *
  * Then `chartFromDetections` with the grid, the pickup's start when there
@@ -86,12 +99,11 @@ export function chartFromBeats(
 		if (typeof input !== "object" || input === null)
 			return unread(invalid("input", "The input must be an object."));
 		const given = input as unknown as Record<string, unknown>;
-		const chords = given.chords;
-		if (typeof chords !== "object" || chords === null)
-			return unread(invalid("chords", "The chords must be an object with a runs list."));
+		const chords = readChordsOf(given.chords);
+		if (isRefusal(chords)) return unread(chords);
 		const recording = readRecording(given.recording);
 		if (isRefusal(recording)) return unread(recording);
-		return chartOf(given, recording.id, settings, build);
+		return chartOf(given, chords, recording.id, settings, build);
 	} catch {
 		return unread(invalid("input", "The input could not be read."));
 	}

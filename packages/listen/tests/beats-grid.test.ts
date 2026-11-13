@@ -339,7 +339,7 @@ test("barSeconds is the median of the joined bars, not the unjoined", () => {
 test("the cap: MAX_BEATS times are not refused for length, one more is", () => {
 	const times = (n: number) => Array.from({ length: n }, (_, i) => i * 0.001);
 	const at = gridFromBeats({ beats: times(MAX_BEATS), downbeats: times(MAX_BEATS), duration: 300 });
-	if (!at.ok) expect(at.refusals[0]?.reason).not.toBe("invalid-input");
+	expect(at.ok).toBe(true);
 	const over = gridFromBeats({
 		beats: times(MAX_BEATS + 1),
 		downbeats: times(MAX_BEATS + 1),
@@ -394,4 +394,19 @@ test("each time of beats and downbeats is read exactly once", () => {
 	expect(reads.beats?.size).toBe(base.beats.length);
 	expect([...(reads.downbeats?.values() ?? [])].every((n) => n === 1)).toBe(true);
 	expect(reads.downbeats?.size).toBe(base.downbeats.length);
+});
+
+test("declared: null parts type-check as not given, and compare nothing", () => {
+	const input: BeatsInput = { ...reading([4, 4, 4, 4]), declared: { meter: null, tempo: 120 } };
+	const r = gridFromBeats(input);
+	expect(r.ok).toBe(true);
+	const both: BeatsInput = { ...reading([4, 4, 4, 4]), declared: { meter: "3/4", tempo: null } };
+	expect(gridFromBeats(both).warnings.map((w) => w.code)).toEqual(["meter-differs"]);
+});
+
+test("a closing share so small the product underflows to 0 does not close a bar of no length", () => {
+	const r = value(reading([1, 1, 1, 1, 1], 0), { TRACKER_MIN_CLOSING_SHARE: 5e-324 });
+	const bars = r.value.grid.bars;
+	expect(bars.at(-1)).toBe(2.5);
+	expect(new Set(bars).size).toBe(bars.length);
 });

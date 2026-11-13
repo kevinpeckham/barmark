@@ -23,7 +23,7 @@ export type BeatsInput = {
 	/** The recording's length: the closing bar ends here. */
 	duration: number;
 	/** What the song is set to, if anything: compared, never obeyed. Either part may be missing. */
-	declared?: { meter?: string; tempo?: number } | null;
+	declared?: { meter?: string | null; tempo?: number | null } | null;
 };
 
 /** How the tracker's reading was labelled and checked. */
@@ -105,7 +105,8 @@ function unsteady(
 /** The bar lines closed: to `duration` when at least `TRACKER_MIN_CLOSING_SHARE` of a bar is left, else as they are. */
 function closed(starts: number[], duration: number, barSeconds: number, s: Settings): number[] {
 	const last = starts.at(-1) as number;
-	const closes = duration - last >= s.TRACKER_MIN_CLOSING_SHARE * barSeconds;
+	const left = duration - last;
+	const closes = left > 0 && left >= s.TRACKER_MIN_CLOSING_SHARE * barSeconds;
 	return closes ? [...starts, duration] : starts;
 }
 

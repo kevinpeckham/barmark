@@ -111,6 +111,34 @@ test("the pickup warning comes before meter-differs", () => {
 	expect(r.ok && r.warnings.map((w) => w.code)).toEqual(["pickup", "meter-differs"]);
 });
 
+test("a whole bar of leading beats is no pickup, even when the bound allows a whole bar", () => {
+	const r = gridFromBeats(lead(reading([4, 4, 4, 4]), 4), { PICKUP_MAX_BAR_FRACTION: 1 });
+	if (!r.ok) throw new Error("refused");
+	expect(r.value.pickup).toBeNull();
+	expect(r.warnings.map((w) => w.code)).toEqual(["beats-before-bar-one"]);
+	expect(r.warnings[0]?.detail).toEqual({ beats: 4, start: 0 });
+	const built = chartFromDetections({
+		grid: r.value.grid,
+		chords: { runs: [] },
+		meter: r.value.meter,
+	});
+	expect(built.diagnostics.map((d) => d.code)).not.toContain("pickup-ignored");
+	expect(agreesWithBuilder(r.value)).toBe(false);
+});
+
+test("the pickup is measured in bar one's own length: a stretched bar one gives the k the builder writes", () => {
+	// One beat 0.8 s before a bar one of 2.6 s: in bar one's units (0.65 s) it is 1; in the nominal bar's (0.5 s) it would round to 2.
+	const slow = [0.8, 1.45, 2.1, 2.75];
+	const rest = Array.from({ length: 13 }, (_, i) => Math.round((3.4 + i * 0.5) * 1000) / 1000);
+	const beats = [0, ...slow, ...rest];
+	const downbeats = [0.8, 3.4, 5.4, 7.4, 9.4];
+	const r = gridFromBeats({ beats, downbeats, duration: 10 });
+	if (!r.ok) throw new Error("refused");
+	expect(r.value.grid.bars.slice(0, 3)).toEqual([0.8, 3.4, 5.4]);
+	expect(r.value.pickup).toEqual({ start: 0, beats: 1 });
+	expect(agreesWithBuilder(r.value)).toBe(true);
+});
+
 /** A seeded reading: `perBar` beats a bar on a 20 ms frame grid with jitter, and 0 to 4 leading beats, some at another pace, some lone and early. */
 function sweepReading(rand: () => number) {
 	const perBar = [2, 3, 4, 5, 6, 7, 8, 12][Math.floor(rand() * 8)] as number;

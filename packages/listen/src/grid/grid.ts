@@ -142,7 +142,7 @@ function readChordsOnce(chords: unknown): { chords: ListenChordRuns | null } | R
  * cannot change the vote); a read that throws (a getter, a Proxy) is
  * invalid input, as `readFeatures` refuses a record that throws.
  */
-function readChords(chords: unknown): { chords: ListenChordRuns | null } | Refusal {
+export function readChords(chords: unknown): { chords: ListenChordRuns | null } | Refusal {
 	try {
 		return readChordsOnce(chords);
 	} catch {
