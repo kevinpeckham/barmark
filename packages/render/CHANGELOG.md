@@ -21,7 +21,7 @@ package uses [semantic versioning](https://semver.org/).
   high. `layoutChart`'s model gains `diagrams` (empty unless the option is
   on). With the option off a chart renders as before. Requires
   `@barmark/fretboard` 0.1.0. It adds about 6.5 KB gzipped to the element
-  (6,539 bytes on 46,302).
+  (6,558 bytes on 46,302).
 
 ### Changed
 

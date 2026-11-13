@@ -28,7 +28,7 @@ const ROOT = join(import.meta.dir, "../../..");
  * at the commit before the change that grew it (`git archive <commit>
  * packages/render/src packages/barmark/src packages/fretboard/src
  * tsconfig.json`), then replace BEFORE_DIAGRAMS with the new element size
- * minus what diagrams cost (6,539 when written), and say both numbers and the
+ * minus what diagrams cost (6,558 when written), and say both numbers and the
  * reason in the commit. BUDGET is the product owner's and changes only on his
  * say.
  */
