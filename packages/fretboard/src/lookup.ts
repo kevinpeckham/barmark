@@ -1,6 +1,6 @@
 import { type ChordRecord, parseChord } from "barmark";
 import { pitchClass } from "./pitch.js";
-import { shapeFrom, shapeOf, shapeText } from "./shape.js";
+import { shapeFrom, shapeOf } from "./shape.js";
 import { MOVABLE, OPEN } from "./table.js";
 import type { Shape } from "./types.js";
 
@@ -49,26 +49,31 @@ function readTable(): Index {
 /** The lowest fretted fret, the measure by which the lower of two moved shapes wins. */
 const lowestFret = (frets: readonly number[]): number => Math.min(...frets.filter((f) => f > 0));
 
-/** Whether shape `a` sits lower on the neck than `b`, ties broken on their text. */
-function lower(a: Shape, b: Shape): boolean {
+/** The highest fret a moved shape may start at; above it the table steps aside for the finder. */
+const HIGHEST_START = 7;
+
+/** Whether shape `a` sits lower on the neck than `b`; ties broken on the frets as numbers, low string first, muted as -1. */
+export function lower(a: Shape, b: Shape): boolean {
 	const d = lowestFret(a.frets) - lowestFret(b.frets);
-	return d !== 0 ? d < 0 : shapeText(a) < shapeText(b);
+	if (d !== 0) return d < 0;
+	const i = a.frets.findIndex((f, s) => f !== b.frets[s]);
+	return i >= 0 && (a.frets[i] ?? 0) < (b.frets[i] ?? 0);
 }
 
-/** The lowest of the movable rows moved up to `root`, or null when every one passes fret 15. */
+/** The lowest of the movable rows moved up to `root`, or null when none starts at fret 7 or below. */
 function lowestMoved(rows: readonly Movable[], root: number): Shape | null {
 	let best: Shape | null = null;
 	for (const row of rows) {
 		const up = (root - row.root + 12) % 12;
 		const frets = row.frets.map((f) => (f < 0 ? f : f + up));
-		if (frets.some((f) => f > 15)) continue;
+		if (lowestFret(frets) > HIGHEST_START) continue;
 		const shape = shapeFrom(frets);
 		if (!best || lower(shape, best)) best = shape;
 	}
 	return best;
 }
 
-/** The table's shape for a named chord: its open shape, else the lowest movable shape of its form moved to its root; null when the table has neither. */
+/** The table's shape for a named chord: its open shape, else the lowest movable shape of its form moved to its root, if it starts at fret 7 or below; null otherwise, so the finder answers. */
 export function tableShape(chord: ChordRecord): Shape | null {
 	if (chord.kind !== "chord" || chord.root === null) return null;
 	index ??= readTable();
