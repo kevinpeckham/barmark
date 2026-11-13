@@ -6,11 +6,18 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.12.0] - 2026-11-13
+
 ### Added
 
 - **`render --diagrams guitar`** draws a strip of guitar chord diagrams
   above the grid, and **`--left-handed`** mirrors them (it needs
   `--diagrams`). Both are grid flags, refused with `--score`.
+
+### Changed
+
+- **Uses** @barmark/render 0.20.0 and @barmark/score 0.6.0, and through
+  render @barmark/fretboard 0.1.0, whose shapes the diagrams draw.
 
 ## [0.11.3] - 2026-11-12
 
@@ -387,7 +394,8 @@ The first release of the `barmark` command. Uses `barmark` 0.8.0 and
 - **The `barmark` command:** `check`, `format`, `render` and `transpose`
   for `.chart.md` files, on npm and as standalone binaries.
 
-[Unreleased]: https://github.com/kevinpeckham/barmark/compare/cli-v0.11.3...HEAD
+[Unreleased]: https://github.com/kevinpeckham/barmark/compare/cli-v0.12.0...HEAD
+[0.12.0]: https://github.com/kevinpeckham/barmark/compare/cli-v0.11.3...cli-v0.12.0
 [0.11.3]: https://github.com/kevinpeckham/barmark/compare/cli-v0.11.2...cli-v0.11.3
 [0.11.2]: https://github.com/kevinpeckham/barmark/compare/cli-v0.11.1...cli-v0.11.2
 [0.11.1]: https://github.com/kevinpeckham/barmark/compare/cli-v0.11.0...cli-v0.11.1
