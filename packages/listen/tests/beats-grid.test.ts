@@ -373,12 +373,13 @@ test("the result is a copy: not the caller's arrays, and not changed by changing
 
 test("each time of beats and downbeats is read exactly once", () => {
 	const base = reading([4, 4, 4, 4]);
-	const reads: Record<string, number[]> = {};
+	const reads: Record<string, Map<string, number>> = { beats: new Map(), downbeats: new Map() };
 	const counted = (name: string, list: number[]) => {
-		reads[name] = list.map(() => 0);
+		const seen = new Map<string, number>();
+		reads[name] = seen;
 		return new Proxy(list, {
 			get(target, key, receiver) {
-				if (typeof key === "string" && /^\d+$/.test(key)) (reads[name] as number[])[Number(key)]++;
+				if (typeof key === "string" && /^\d+$/.test(key)) seen.set(key, (seen.get(key) ?? 0) + 1);
 				return Reflect.get(target, key, receiver);
 			},
 		});
@@ -389,6 +390,8 @@ test("each time of beats and downbeats is read exactly once", () => {
 		duration: base.duration,
 	});
 	expect(r.ok).toBe(true);
-	expect(reads.beats?.every((n) => n === 1)).toBe(true);
-	expect(reads.downbeats?.every((n) => n === 1)).toBe(true);
+	expect([...(reads.beats?.values() ?? [])].every((n) => n === 1)).toBe(true);
+	expect(reads.beats?.size).toBe(base.beats.length);
+	expect([...(reads.downbeats?.values() ?? [])].every((n) => n === 1)).toBe(true);
+	expect(reads.downbeats?.size).toBe(base.downbeats.length);
 });
