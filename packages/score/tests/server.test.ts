@@ -58,6 +58,17 @@ describe("renderScoreHtml", () => {
 		expect(renderScoreHtml(chart, { columns: "rows" as "row" })).toBe(renderScoreHtml(chart));
 	});
 
+	test("the grid takes render's chord diagrams: the attributes on the element and the strip in the grid", () => {
+		const { host, inner } = parse(
+			renderScoreHtml(chart, { chordDiagrams: "guitar", diagramHand: "left" }),
+		);
+		expect(host.getAttribute("chord-diagrams")).toBe("guitar");
+		expect(host.getAttribute("diagram-hand")).toBe("left");
+		expect(inner.querySelector(".bms-grid .bm-diagrams")).not.toBeNull();
+		expect(renderScoreHtml(chart, {})).toBe(renderScoreHtml(chart));
+		expect(parse(renderScoreHtml(chart)).host.hasAttribute("chord-diagrams")).toBe(false);
+	});
+
 	test("carries chart text holding </script> intact", () => {
 		const text = `${chart}</script><b>\n</SCRIPT >\n<!-- x -->\na < b & "c"\n`;
 		const html = renderScoreHtml(text);

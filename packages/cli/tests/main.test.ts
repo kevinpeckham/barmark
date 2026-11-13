@@ -49,7 +49,16 @@ describe("main", () => {
 		const flags: Record<string, string[]> = {
 			check: ["--strict", "--format"],
 			format: ["--write", "--check"],
-			render: ["--out", "--theme", "--numerals", "--font-url", "--score", "--width"],
+			render: [
+				"--out",
+				"--theme",
+				"--numerals",
+				"--font-url",
+				"--score",
+				"--width",
+				"--diagrams",
+				"--left-handed",
+			],
 			transpose: ["--to", "--semitones", "--out"],
 		};
 		for (const [command, names] of Object.entries(flags)) {

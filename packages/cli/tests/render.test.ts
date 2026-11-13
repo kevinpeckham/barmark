@@ -61,6 +61,27 @@ describe("barmark render", () => {
 		});
 		expect(html).toContain(expected);
 	});
+	test("--diagrams guitar is renderChart's chordDiagrams, --left-handed its diagramHand", async () => {
+		const a = await rendered(["pd.chart.md", "--diagrams", "guitar"]);
+		expect(a.html).toContain(renderChart(PD, { chordDiagrams: "guitar", fontUrl: DATA_URL }));
+		const b = await rendered(["pd.chart.md", "--diagrams", "guitar", "--left-handed"]);
+		expect(b.html).toContain(
+			renderChart(PD, { chordDiagrams: "guitar", diagramHand: "left", fontUrl: DATA_URL }),
+		);
+		expect(b.html).toContain("bm-diagrams");
+	});
+	test("--diagrams ukulele names the allowed value", async () => {
+		const io = folder({ "pd.chart.md": PD });
+		await expect(render(["pd.chart.md", "--diagrams", "ukulele"], io)).rejects.toThrow(
+			/--diagrams.*guitar/,
+		);
+	});
+	test("--left-handed without --diagrams is a usage error", async () => {
+		const io = folder({ "pd.chart.md": PD });
+		await expect(render(["pd.chart.md", "--left-handed"], io)).rejects.toThrow(
+			"--left-handed needs --diagrams",
+		);
+	});
 	test("with no flags, the body is renderChart's defaults", async () => {
 		const { html } = await rendered(["pd.chart.md"]);
 		expect(html).toContain(renderChart(PD, { fontUrl: DATA_URL }));

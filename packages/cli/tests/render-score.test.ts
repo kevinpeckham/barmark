@@ -119,6 +119,7 @@ describe("barmark render --score", () => {
 		["--no-wrap"],
 		["--diagnostics"],
 		["--columns", "row"],
+		["--diagrams", "guitar"],
 		["--font-url", "/fonts/Edwin-Roman.otf"],
 	])
 		test(`${flag[0]} with --score is a usage error`, async () => {
@@ -127,6 +128,12 @@ describe("barmark render --score", () => {
 				`${flag[0]} does not apply to --score`,
 			);
 		});
+	test("--left-handed with --score alone is refused as a grid flag, not as needing --diagrams", async () => {
+		const io = folder({ "pd.chart.md": PD });
+		await expect(render(["--score", "pd.chart.md", "--left-handed"], io)).rejects.toThrow(
+			"--left-handed does not apply to --score",
+		);
+	});
 	test("--width without --score is a usage error", async () => {
 		const io = folder({ "pd.chart.md": PD });
 		await expect(render(["pd.chart.md", "--width", "500"], io)).rejects.toThrow(
