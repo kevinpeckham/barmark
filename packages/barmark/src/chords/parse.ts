@@ -154,15 +154,16 @@ function logicGroups(rest: string): string {
 }
 
 const BARE_ADD = bareScan(`add(?:${BARE_ADD_TONE})`);
-/** The alterations a bare `add` left at the start of the text after the root. */
-const LEADING_ALTERATIONS = new RegExp(`^(?:${ALTERATIONS})+`);
+/** A bare `add` and the accidental straight after it: `add9b` in `Cadd9b13`. */
+const ADD_THEN_ACCIDENTAL = bareScan(`add(?:${BARE_ADD_TONE})[#b]`);
+/** A bare `add` and the alterations straight after it: `add9b13` in `Cmadd9b13`. */
+const ADD_THEN_ALTERATIONS = bareScan(`(add(?:${BARE_ADD_TONE}))((?:${ALTERATIONS})+)`);
+const EACH_ALTERATION = new RegExp(ALTERATIONS, "g");
 /** `add` before a tone inside a group: `(add9)`, `(b9,addb6)`. */
 const GROUP_ADD = new RegExp(String.raw`(?<=[(,]\s*)add(${ADD_TONE})(?=\s*[,)])`, "g");
-/** A refused tone with a counterpart, as an item in a group. */
-const REFUSED_TONE = new RegExp(
-	String.raw`(?<=[(,]\s*)(${Object.keys(COUNTERPARTS).join("|")})(?=\s*[,)])`,
-	"g",
-);
+/** A group and its items. */
+const GROUP_ITEMS = /\(([^()]*)\)/g;
+const BASS_AT_END = /\/([A-G][#b]?)$/;
 
 /** The text a symbol is read from: ♯ and ♭ as # and b (Appendix A.5). */
 const ascii = (symbol: string) => symbol.replace(/♯/g, "#").replace(/♭/g, "b");
@@ -188,25 +189,65 @@ function normalizeSymbol(text: string): Normal | Diagnostic {
 	const bare = pullBare(rest, BARE_ADD);
 	const added = bare.taken.map((a) => a.slice(3));
 	if (added.length && root.length === 1 && /^[b#]/.test(bare.text))
-		return joinsRoot(text, root, bare.text, added);
+		return (
+			addThenAlteration(text, true) ?? {
+				message: `${text}: an accidental would join the root ${root}`,
+				token: text,
+			}
+		);
 	return { text: root + intoGroup(bare.text, added), separated };
 }
 
 /**
- * A bare `add` taken out from between a root with no accidental and an
- * alteration (`Cadd9b13`) would leave the alteration's `b` or `#` on the
- * root: an error, suggesting the items in one parenthesis when that reads.
+ * A bare `add` straight before an accidental (`Cadd9b13`, `Cmadd9b13`): an
+ * error when taking the `add` out would join the accidental to the root
+ * (`joins`) or leave text that does not read, suggesting the items in one
+ * parenthesis when that reads with the root and bass as written; null when
+ * there is no such `add`.
  */
-function joinsRoot(text: string, root: string, rest: string, added: string[]): Diagnostic {
-	const lead = LEADING_ALTERATIONS.exec(rest)?.[0] ?? "";
-	const alterations = lead.match(new RegExp(ALTERATIONS, "g")) ?? [];
-	const items = root + intoGroup(rest.slice(lead.length), [...added, ...alterations]);
-	const r = lead ? parseChord(items) : null;
+function addThenAlteration(text: string, joins: boolean): Diagnostic | null {
+	const found = pullBare(text, ADD_THEN_ACCIDENTAL).taken[0];
+	if (!found) return null;
+	const [add, accidental] = [found.slice(0, -1), found.slice(-1)];
+	const root = ROOT.exec(text)?.[0] ?? "";
+	const why = joins ? `would join the root ${root}` : "starts an alteration";
+	const suggestion = offered(text, eachAdded(text));
 	return {
-		message: `${text}: the "${rest[0]}" after add${added.at(-1)} would join the root ${root}; the items go in one parenthesis`,
+		message: `${text}: the "${accidental}" after ${add} ${why}; the items go in one parenthesis`,
 		token: text,
-		...(r?.ok ? { suggestion: r.value.canonical } : {}),
+		...(suggestion ? { suggestion: suggestion.canonical } : {}),
 	};
+}
+
+/** The text with each alteration straight after a bare `add` given an `add` of its own: `Cadd9addb13`. */
+function eachAdded(text: string): string {
+	return text.replace(ADD_THEN_ALTERATIONS, (match: string, ...args: unknown[]) => {
+		const [inner, add = "", alterations = ""] = args as (string | undefined)[];
+		if (inner !== undefined) return match;
+		return add + alterations.replace(EACH_ALTERATION, "add$&");
+	});
+}
+
+/** The chord `candidate` names, when it reads and keeps the root and bass `text` is written with. */
+function offered(text: string, candidate: string): ChordRecord | null {
+	if (candidate === text) return null;
+	const r = parseChord(candidate);
+	const root = ROOT.exec(text)?.[0];
+	const bass = BASS_AT_END.exec(text)?.[1] ?? root;
+	return r.ok && r.value.root === root && r.value.bass === bass ? r.value : null;
+}
+
+/** Each refused tone in a group replaced by its counterpart (`(b2)` is `(b9)`), item by item. */
+function counterparts(normal: string): string {
+	return normal.replace(GROUP_ITEMS, (_, inner: string) => {
+		const items = inner.split(",").map((item) => {
+			const tone = item.trim();
+			return Object.hasOwn(COUNTERPARTS, tone)
+				? item.replace(tone, COUNTERPARTS[tone] ?? tone)
+				: item;
+		});
+		return `(${items.join(",")})`;
+	});
 }
 
 /**
@@ -235,17 +276,23 @@ export function parseChord(symbol: string): ParseResult {
 }
 
 /**
- * The error with a suggestion where one reads (Appendix A.6): an alteration
- * moved into the parentheses (`Cmb6` is `Cm(b6)`), or each refused tone
- * replaced by its counterpart (`C7(b2,#4)` is `C7(b9,#11)`).
+ * The error with a suggestion where one reads with the root and bass as
+ * written (Appendix A.6): an alteration after a bare `add` in one
+ * parenthesis with it (`Cmadd9b13` is `Cm(9,b13)`), an alteration moved into
+ * the parentheses (`Cmb6` is `Cm(b6)`), or each refused tone replaced by its
+ * counterpart (`C7(b2,#4)` is `C7(b9,#11)`).
  */
 function suggest(symbol: string, text: string, normal: string, error: Diagnostic): Diagnostic {
+	const added = addThenAlteration(text, false);
+	if (added?.suggestion) return added;
 	const reads = (s: string) => parseChord(s).ok;
-	const moved = bareAlteration(symbol, text, error, reads);
-	if (moved !== error || !error.message.endsWith("is not a tone a parenthesis can add"))
-		return moved;
-	const suggestion = normal.replace(REFUSED_TONE, (tone) => COUNTERPARTS[tone] ?? tone);
-	return suggestion !== normal && reads(suggestion) ? { ...error, suggestion } : error;
+	const offers = (s: string) => offered(text, s) !== null;
+	const moved = bareAlteration(symbol, text, error, reads, offers);
+	if (moved !== error) return moved;
+	// Only the refused tones change, so a rewrite that reads is the fix for this error. An
+	// unchanged `normal` is never read again: that would recurse once per bare omission.
+	const suggestion = counterparts(normal);
+	return suggestion !== normal && offers(suggestion) ? { ...error, suggestion } : error;
 }
 
 /** The chord a normalized symbol names. */

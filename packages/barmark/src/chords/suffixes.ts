@@ -4,10 +4,12 @@ import type { Interval } from "./types.js";
 import {
 	type ChordParts,
 	chordIntervals,
+	EXTENSIONS,
 	type Quality,
 	SUS_ALLOWED_WITH,
 	type Sus,
 	TONES,
+	toneInterval,
 	VALID_EXTENSIONS,
 } from "./vocabulary.js";
 
@@ -64,3 +66,18 @@ export function enumerateSuffixes(): Map<string, Suffix[]> {
 
 export const intervalSetKey = (intervals: Interval[]) =>
 	[...new Set(intervals.map(intervalKey))].sort().join("|");
+
+/**
+ * A suffix whose parentheses alter a tone its own extension supplies
+ * (`6(b6)`, `6/9(b6)`, `9(b9)`, `11(#11)`): a spelling to choose only when
+ * nothing plainer names the same notes. A tone of the quality is not counted:
+ * `m7(b5)` is the half-diminished chord's own name, and `9(#5)` is how
+ * Billboard's `aug(b7,9)` has always converted.
+ */
+export function replacesOwnTone({ parts }: Suffix): boolean {
+	const own = EXTENSIONS.find(([name]) => name === parts.extension)?.[1] ?? [];
+	return parts.tones.some((tone) => {
+		const i = toneInterval(tone);
+		return tone !== "7" && i.alter !== 0 && own.some((o) => o.degree === i.degree && o.alter === 0);
+	});
+}

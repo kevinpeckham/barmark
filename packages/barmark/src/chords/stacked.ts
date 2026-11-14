@@ -6,6 +6,7 @@
  * text, so a long symbol costs its length.
  */
 import type { Diagnostic } from "./types.js";
+import { TONES } from "./vocabulary.js";
 
 /** The shape of one parenthesis item; the tokenizer judges what it names. */
 const ITEM = /^(?:add[b#]?\d+|(?:omit\s*|no)\d+|[b#]?\d+)$/;
@@ -101,11 +102,13 @@ export function stackedWarning(
 	return { message: `${symbol}: ${why.join("; ")}`, token: symbol, suggestion };
 }
 
-/** The alterations that may follow an extension with no parenthesis (grammar 3). */
-export const ALTERATIONS = "b5|#5|b6|b9|#9|#11|b13";
+/** The altered tones, which may follow an extension with no parenthesis (grammar 3). */
+export const ALTERATIONS = TONES.filter((t) => /^[b#]/.test(t)).join("|");
 const GROUP_AND_BASS = String.raw`(?:\(([^()]*)\))?(\/[A-G][#b]?)?$`;
-/** An alteration straight after the root (and `m`), with no extension: `F#b5(omit3)`, `Cmb6`. */
-const ALTERED = new RegExp(`^([A-G][#b]?)(m?)(${ALTERATIONS})${GROUP_AND_BASS}`);
+/** An alteration straight after the root (and its quality or sus), with no extension: `F#b5(omit3)`, `Cmb6`. */
+const ALTERED = new RegExp(
+	`^([A-G][#b]?)(m|dim|aug|5|sus2|sus4)?(${ALTERATIONS})${GROUP_AND_BASS}`,
+);
 /** A root whose accidental a following number could be read with: `Gb5`, `G#5`, `Ab6`. */
 const SWALLOWED = new RegExp(`^([A-G])(${ALTERATIONS})${GROUP_AND_BASS}`);
 /** What a root's accidental and the number after it always are (grammar 3). */
@@ -122,7 +125,8 @@ const CHORD_KIND: Record<string, string> = {
  * writes an alteration (an altered fifth, `b6`, `b9`, …) before the
  * parenthesis on a chord with no extension (grammar 3 keeps `Ab5` the A♭
  * power chord and `Cb6` the C♭ sixth chord). `reads` says whether a
- * suggestion reads. Where the root's own accidental could be the
+ * symbol reads, `offers` whether it reads as a suggestion may (its root and
+ * bass as written). Where the root's own accidental could be the
  * alteration's (`Gb5(omit3)`), the message says it is ambiguous, with no
  * suggestion; only when that reading would itself read.
  */
@@ -131,6 +135,7 @@ export function bareAlteration(
 	text: string,
 	error: Diagnostic,
 	reads: (symbol: string) => boolean,
+	offers: (suggestion: string) => boolean,
 ): Diagnostic {
 	const s = SWALLOWED.exec(text);
 	if (s) {
@@ -146,10 +151,10 @@ export function bareAlteration(
 	}
 	const m = ALTERED.exec(text);
 	if (!m) return error;
-	const [, root = "", minor = "", alteration = "", inner, bass = ""] = m;
+	const [, root = "", quality = "", alteration = "", inner, bass = ""] = m;
 	const items = inner?.trim() ? `,${inner}` : "";
-	const suggestion = root + separate(`${minor}(${alteration}${items})${bass}`).text;
-	if (!reads(suggestion)) return error;
+	const suggestion = root + separate(`${quality}(${alteration}${items})${bass}`).text;
+	if (!offers(suggestion)) return error;
 	return {
 		message: `${symbol}: an altered ${alteration.slice(1)}th goes in the parentheses unless it follows an extension (grammar 3)`,
 		token: symbol,

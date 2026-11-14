@@ -11,13 +11,15 @@ Releases follow the process in [RELEASING.md](RELEASING.md).
 
 Grammar changes: the flat sixth, `add` before any tone, and `Δ9`/`Δ13`
 (Kevin, 2026-11-13 and 2026-11-14). No chord that read before changes
-meaning.
+meaning, except the misreadings fixed below.
 
 ### Added
 
 - **The flat sixth.** `b6` is a tone a parenthesis can add, with its own
-  canonical spelling: `F#m(b6)`, `F#m(♭6)` and `F#m7b6` read (F♯ A C♯ D,
-  Harte `F#:min(b6)`), and print as written, never rewritten to `(b13)`.
+  canonical spelling: `F#m(b6)` and `F#m(♭6)` read (F♯ A C♯ D, Harte
+  `F#:min(b6)`) and print `F#m(b6)`, never rewritten to `(b13)`; after an
+  extension it needs no parentheses (`F#m7b6` is F♯ A C♯ D E and prints
+  `F#m7(b6)`).
   It replaces the 6 of a sixth chord (`C6(b6)` is C E G A♭) and adds on
   any other; `C(b6,b13)` warns that the chord already contains the note.
   `Cb6` is still the C♭ sixth chord.
@@ -32,24 +34,29 @@ meaning.
 - **Suggestions for refused tones.** `(b2)`, `(#2)`, `(#4)` and `(b7)`
   stay errors, now suggesting `(b9)`, `(#9)`, `(#11)` and `(7)`, every
   such tone in a list replaced (`C7(b2,#4)` suggests `C7(b9,#11)`); and
-  an alteration straight after a quality with no extension suggests the
-  parenthesised form, as an altered fifth did (`Cmb6` suggests `Cm(b6)`,
-  `Cmb13` `Cm(b13)`). A suggestion is offered only when it reads.
+  an alteration straight after a quality or `sus` with no extension
+  suggests the parenthesised form, as an altered fifth after `m` did
+  (`Cmb6` suggests `Cm(b6)`, `Cdimb9` `Cdim(b9)`, `Csus4b9`
+  `Csus4(b9)`). A suggestion is offered only when it reads with the root
+  and bass as written.
 
 ### Fixed
 
 - **A bare `add` never changes the root.** `Cadd9b13` read as `Cb13(9)`,
   a C♭ chord, and `Cadd9#11` as a C♯ chord: taking `add9` out left the
   alteration's accidental against the root. Such a symbol is now an
-  error suggesting the items in one parenthesis (`C(9,b13)`, `C(9,#11)`).
-  `Bbadd9` and `Abaddb6` keep their roots.
+  error suggesting the items in one parenthesis (`C(9,b13)`, `C(9,#11)`),
+  and none where that too would change the root (`Cadd9b13b7`).
+  `Bbadd9` and `Abaddb6` keep their roots; `Bbadd9b13` and `Cmadd9b13`
+  now suggest `Bb(9,b13)` and `Cm(9,b13)`.
 
 ### Changed
 
 - **A Harte label with `b6` converts to `(b6)`**: `harteToBarmark("C:min(b6)")`
   is `Cm(b6)`, where it was `Cm(b13)`, the same notes. Labels with `b13`
   are unchanged, and naming a set of notes (`nameNotes`) still writes
-  `(b13)`.
+  `(b13)`. With another tone, a label keeps the plain spelling:
+  `C:maj(b6,9)` is `C(b6,9)`, not `C6/9(b6)`; `C:maj6(b6)` is `C(b6,6)`.
 
 ## [0.23.1] - 2026-11-10
 
