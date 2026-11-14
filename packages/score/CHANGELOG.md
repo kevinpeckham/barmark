@@ -6,8 +6,12 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.6.1] - 2026-11-14
+
 ### Changed
 
+- **Requires `barmark` 0.24.0 (with `@barmark/render` 0.20.1 and `@barmark/musicxml` 0.9.2)**, whose minor release a caret range
+  would not reach.
 - **A chart with a flat sixth, an `add` before any tone or `Δ9` engraves**
   (`F#m(b6)`, `Cadd13`, `CΔ9`), as `barmark` now reads them.
 
@@ -298,7 +302,8 @@ First release.
   needs no config; Vite 7 needs `optimizeDeps.exclude` and
   `worker.format: "es"`.
 
-[Unreleased]: https://github.com/kevinpeckham/barmark/compare/score-v0.6.0...HEAD
+[Unreleased]: https://github.com/kevinpeckham/barmark/compare/score-v0.6.1...HEAD
+[0.6.1]: https://github.com/kevinpeckham/barmark/compare/score-v0.6.0...score-v0.6.1
 [0.6.0]: https://github.com/kevinpeckham/barmark/compare/score-v0.5.0...score-v0.6.0
 [0.5.0]: https://github.com/kevinpeckham/barmark/compare/score-v0.4.0...score-v0.5.0
 [0.4.0]: https://github.com/kevinpeckham/barmark/compare/score-v0.3.0...score-v0.4.0
