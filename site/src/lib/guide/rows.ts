@@ -424,16 +424,7 @@ export const ROWS: GuideRow[] = [
 		category: "chords",
 		meaning:
 			"A flat sixth is added with (b6). (b13) is the same note written an octave higher; each prints as it was written.",
-		terms: [
-			"b6",
-			"♭6",
-			"flat six",
-			"flat sixth",
-			"minor sixth",
-			"b13",
-			"flat thirteen",
-			"aeolian",
-		],
+		terms: ["b6", "♭6", "flat six", "flat sixth", "minor sixth", "b13", "flat thirteen", "aeolian"],
 		example: "| F#m(b6) | F#m7b6 | D |",
 		ref: "§3",
 		expect: { bars: 3, chord: { symbol: "F#m(b6)", canonical: "F#m(b6)", harte: "F#:min(b6)" } },
