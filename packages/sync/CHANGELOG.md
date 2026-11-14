@@ -6,8 +6,12 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.4.2] - 2026-11-14
+
 ### Changed
 
+- **Requires `barmark` 0.24.0**, whose minor release a caret range
+  would not reach.
 - **A detection label with `b6` builds `(b6)`**: `C:min(b6)` builds
   `Cm(b6)`, where it built `Cm(b13)`. `C:min(b13)` still builds `Cm(b13)`.
 
@@ -99,7 +103,8 @@ exports: `keyFromText`, `conventionalKey`, `printKey`, `spellPitch`).
   times the runs' own confidence; `?` is 0), and the confidences the input
   gave for `key`, `meter`, `tempo` and `sections`. The shape may change.
 
-[Unreleased]: https://github.com/kevinpeckham/barmark/compare/sync-v0.4.1...HEAD
+[Unreleased]: https://github.com/kevinpeckham/barmark/compare/sync-v0.4.2...HEAD
+[0.4.2]: https://github.com/kevinpeckham/barmark/compare/sync-v0.4.1...sync-v0.4.2
 [0.4.1]: https://github.com/kevinpeckham/barmark/compare/sync-v0.4.0...sync-v0.4.1
 [0.4.0]: https://github.com/kevinpeckham/barmark/compare/sync-v0.3.0...sync-v0.4.0
 [0.3.0]: https://github.com/kevinpeckham/barmark/compare/sync-v0.2.1...sync-v0.3.0

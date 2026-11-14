@@ -102,7 +102,7 @@
     },
     "packages/sync": {
       "name": "@barmark/sync",
-      "version": "0.4.1",
+      "version": "0.4.2",
       "dependencies": {
         "barmark": "workspace:^",
       },
