@@ -1,6 +1,6 @@
 {
 	"name": "@barmark/fretboard",
-	"version": "0.1.0",
+	"version": "0.1.1",
 	"description": "Guitar chord shapes for barmark chords: a table, a shape finder and exact voicings.",
 	"type": "module",
 	"sideEffects": false,
