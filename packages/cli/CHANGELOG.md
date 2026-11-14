@@ -6,6 +6,8 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.13.0] - 2026-11-14
+
 ### Changed
 
 - **`check` prints a problem's suggestion** (so do `part`, `transpose` and
@@ -17,6 +19,9 @@ package uses [semantic versioning](https://semver.org/).
 - **`check`, `format`, `render` and the exports read a flat sixth, an
   `add` before any tone and `Δ9`** (`F#m(b6)`, `Cadd13`, `CΔ9`), as
   `barmark` now reads them.
+- **Uses** barmark 0.24.0, @barmark/render 0.20.1, @barmark/musicxml
+  0.9.2, @barmark/score 0.6.1 and @barmark/midi 0.3.4 (and through them
+  @barmark/fretboard 0.1.1 and @barmark/sync 0.4.2).
 
 ## [0.12.0] - 2026-11-13
 
@@ -406,7 +411,8 @@ The first release of the `barmark` command. Uses `barmark` 0.8.0 and
 - **The `barmark` command:** `check`, `format`, `render` and `transpose`
   for `.chart.md` files, on npm and as standalone binaries.
 
-[Unreleased]: https://github.com/kevinpeckham/barmark/compare/cli-v0.12.0...HEAD
+[Unreleased]: https://github.com/kevinpeckham/barmark/compare/cli-v0.13.0...HEAD
+[0.13.0]: https://github.com/kevinpeckham/barmark/compare/cli-v0.12.0...cli-v0.13.0
 [0.12.0]: https://github.com/kevinpeckham/barmark/compare/cli-v0.11.3...cli-v0.12.0
 [0.11.3]: https://github.com/kevinpeckham/barmark/compare/cli-v0.11.2...cli-v0.11.3
 [0.11.2]: https://github.com/kevinpeckham/barmark/compare/cli-v0.11.1...cli-v0.11.2
