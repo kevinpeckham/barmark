@@ -272,3 +272,78 @@ describe("names from notes are unchanged (Review Focus 5)", () => {
 		);
 	}, 60_000);
 });
+
+describe("a new bare add tone is not followed by a digit", () => {
+	// Each message as the base commit, a23242b, gives it.
+	test.each([
+		"Cadd69",
+		"Cadd67",
+		"Cadd613",
+		"Cadd79",
+		"Cadd713",
+		"Cadd1311",
+		"Caddb69",
+		"Caddb139",
+	])("%s is refused, as before b6 and the new add tones", (symbol) => {
+		const e = fails(symbol);
+		expect(e.message).toBe(`${symbol}: cannot read "${symbol.slice(1)}"`);
+		expect(e.suggestion).toBeUndefined();
+	});
+	test.each([
+		["Cadd13", "C(13)"],
+		["Cadd13(b9)", "C(b9,13)"],
+		["Cadd13/E", "C(13)/E"],
+		["Cadd13omit3", "C5(13)"],
+		["Cadd6add9", "C(6,9)"],
+		["Caddb6", "C(b6)"],
+	])("%s still reads as %s", (symbol, canonical) => {
+		expect(ok(symbol).value.canonical).toBe(canonical);
+	});
+	test("the four tones that read before keep their reading, digits after included", () => {
+		// Kept as at base, pending the product owner: see the task report.
+		expect(ok("Cadd27").value.canonical).toBe("C7(2)");
+		expect(ok("Cadd911").value.canonical).toBe("C11(9)");
+		expect(ok("Cadd49").value.canonical).toBe("C9(4)");
+		expect(ok("Cadd1113").value.canonical).toBe("C13(11)");
+		expect(ok("Cadd96").value.canonical).toBe("C6(9)");
+	});
+});
+
+describe("a bare add never changes the root", () => {
+	// At base, `Cadd9b13` read as `Cb13(9)`: a C-flat chord.
+	test.each([
+		["Cadd9b13", "C(9,b13)"],
+		["Cadd13b9", "C(b9,13)"],
+		["Cadd9#11", "C(9,#11)"],
+		["Caddb6b9", "C(b6,b9)"],
+		["Cadd6#11", "C(6,#11)"],
+		["Cadd13#11", "C(#11,13)"],
+		["Cadd9b5", "C(b5,9)"],
+		["Cadd9b13/E", "C(9,b13)/E"],
+	])("%s is refused, suggesting %s", (symbol, suggestion) => {
+		const e = fails(symbol);
+		expect(e.message).toContain("would join the root");
+		expect(e.suggestion).toBe(suggestion);
+		expect(ok(suggestion).value.root).toBe("C");
+	});
+	test("no suggestion when the items in one parenthesis would not read", () => {
+		expect(fails("Cadd9b13(x)").suggestion).toBeUndefined();
+	});
+	test.each([
+		["Bbadd9", "Bb(9)", "Bb"],
+		["F#add9", "F#(9)", "F#"],
+		["Abaddb6", "Ab(b6)", "Ab"],
+		["C#add#11", "C#(#11)", "C#"],
+		["C7add9b13", "C7(9,b13)", "C"],
+		["Cadd9(b13)", "C(9,b13)", "C"],
+	])("%s keeps its root: %s", (symbol, canonical, root) => {
+		const r = ok(symbol);
+		expect(r.value.canonical).toBe(canonical);
+		expect(r.value.root).toBe(root);
+	});
+	test("a bare omission never joins the root: it only ends the name", () => {
+		// As at base: an accidental after a bare omit/no is unreadable, never the root's.
+		for (const symbol of ["Comit5b13", "Cno3#11"])
+			expect(fails(symbol).message).toBe(`${symbol}: cannot read "${symbol.slice(1)}"`);
+	});
+});

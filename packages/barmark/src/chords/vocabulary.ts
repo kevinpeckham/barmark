@@ -68,14 +68,25 @@ export const TONES = "2 4 6 7 9 11 13 b5 #5 b6 b9 #9 #11 b13".split(" ");
  */
 export const COUNTERPARTS: Record<string, string> = { b2: "b9", "#2": "#9", "#4": "#11", b7: "7" };
 
+/** A pattern alternation of `tones`, longest first, so `#11` and `13` are read whole. */
+const alternation = (tones: string[]) => [...tones].sort((a, b) => b.length - a.length).join("|");
+
+/** The tones `add` took before 2026-11-14: bare, they read with a digit after, as before (`Cadd27`). */
+const FIRST_ADD_TONES = ["2", "4", "9", "11"];
+const ADD_TONES = [...TONES, ...Object.keys(COUNTERPARTS)];
+
 /**
  * What `add` may stand before (Appendix A.5), as a pattern alternation:
  * every tone, and the refused tones with a counterpart, so the refusal can
- * suggest it. Longest first, so `#11` and `13` are read whole.
+ * suggest it.
  */
-export const ADD_TONE = [...TONES, ...Object.keys(COUNTERPARTS)]
-	.sort((a, b) => b.length - a.length)
-	.join("|");
+export const ADD_TONE = alternation(ADD_TONES);
+
+/**
+ * What a bare `add` may stand before: a tone added on 2026-11-14 only when
+ * no digit follows it, so `Cadd69` never reads as `C9(6)`.
+ */
+export const BARE_ADD_TONE = `(?:${alternation(ADD_TONES.filter((t) => !FIRST_ADD_TONES.includes(t)))})(?!\\d)|${alternation(FIRST_ADD_TONES)}`;
 
 /** Tones a parenthesis may leave out (grammar 3): the 3rd or the 5th. */
 export const OMISSIONS = ["no3", "no5"];

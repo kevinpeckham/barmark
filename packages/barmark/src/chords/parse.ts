@@ -15,6 +15,7 @@ import type { ChordRecord, Diagnostic, Interval, ParseResult } from "./types.js"
 import {
 	ADD_TONE,
 	ALIASES,
+	BARE_ADD_TONE,
 	type ChordParts,
 	COUNTERPARTS,
 	chordIntervals,
@@ -152,7 +153,9 @@ function logicGroups(rest: string): string {
 	return `5${others.length ? `(${others.join(",")})` : ""}${joined.slice(group[0].length)}`;
 }
 
-const BARE_ADD = bareScan(`add(?:${ADD_TONE})`);
+const BARE_ADD = bareScan(`add(?:${BARE_ADD_TONE})`);
+/** The alterations a bare `add` left at the start of the text after the root. */
+const LEADING_ALTERATIONS = new RegExp(`^(?:${ALTERATIONS})+`);
 /** `add` before a tone inside a group: `(add9)`, `(b9,addb6)`. */
 const GROUP_ADD = new RegExp(String.raw`(?<=[(,]\s*)add(${ADD_TONE})(?=\s*[,)])`, "g");
 /** A refused tone with a counterpart, as an item in a group. */
@@ -183,11 +186,27 @@ function normalizeSymbol(text: string): Normal | Diagnostic {
 	rest = rest.replace(GROUP_ADD, "$1");
 	// A bare `add9` outside any group; what is left inside one is the tokenizer's to name.
 	const bare = pullBare(rest, BARE_ADD);
-	rest = intoGroup(
-		bare.text,
-		bare.taken.map((a) => a.slice(3)),
-	);
-	return { text: root + rest, separated };
+	const added = bare.taken.map((a) => a.slice(3));
+	if (added.length && root.length === 1 && /^[b#]/.test(bare.text))
+		return joinsRoot(text, root, bare.text, added);
+	return { text: root + intoGroup(bare.text, added), separated };
+}
+
+/**
+ * A bare `add` taken out from between a root with no accidental and an
+ * alteration (`Cadd9b13`) would leave the alteration's `b` or `#` on the
+ * root: an error, suggesting the items in one parenthesis when that reads.
+ */
+function joinsRoot(text: string, root: string, rest: string, added: string[]): Diagnostic {
+	const lead = LEADING_ALTERATIONS.exec(rest)?.[0] ?? "";
+	const alterations = lead.match(new RegExp(ALTERATIONS, "g")) ?? [];
+	const items = root + intoGroup(rest.slice(lead.length), [...added, ...alterations]);
+	const r = lead ? parseChord(items) : null;
+	return {
+		message: `${text}: the "${rest[0]}" after add${added.at(-1)} would join the root ${root}; the items go in one parenthesis`,
+		token: text,
+		...(r?.ok ? { suggestion: r.value.canonical } : {}),
+	};
 }
 
 /**

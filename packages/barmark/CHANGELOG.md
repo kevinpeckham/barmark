@@ -25,7 +25,8 @@ meaning.
   parentheses, alone or in a list: `Cadd13` is `C(13)`, `Cadd#11` is
   `C(#11)`, `F#maddb6` and `F#m(addb6)` are `F#m(b6)`, `F#maddb13` is
   `F#m(b13)`, `Am(b9,add13)` is `Am(b9,13)`. Before, only `add2`, `add4`,
-  `add9` and `add11` read.
+  `add9` and `add11` read. Bare, a newly accepted tone is not followed by
+  a digit: `Cadd69` stays an error, never `C9(6)`.
 - **`Δ9` and `Δ13`** are `maj9` and `maj13`, with whatever follows:
   `CΔ9(#11)` is `Cmaj9(#11)`, `DΔ9/F#` is `Dmaj9/F#`. `Δ11` stays an error.
 - **Suggestions for refused tones.** `(b2)`, `(#2)`, `(#4)` and `(b7)`
@@ -34,6 +35,14 @@ meaning.
   an alteration straight after a quality with no extension suggests the
   parenthesised form, as an altered fifth did (`Cmb6` suggests `Cm(b6)`,
   `Cmb13` `Cm(b13)`). A suggestion is offered only when it reads.
+
+### Fixed
+
+- **A bare `add` never changes the root.** `Cadd9b13` read as `Cb13(9)`,
+  a C♭ chord, and `Cadd9#11` as a C♯ chord: taking `add9` out left the
+  alteration's accidental against the root. Such a symbol is now an
+  error suggesting the items in one parenthesis (`C(9,b13)`, `C(9,#11)`).
+  `Bbadd9` and `Abaddb6` keep their roots.
 
 ### Changed
 
