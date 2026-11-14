@@ -5,20 +5,27 @@ import { renderScoreHtml } from "@barmark/score/server";
 // The site's charts never wrap: a section wider than its box keeps its rows, and the box scrolls.
 const options = { theme: "dark", rehearsalLetters: true, wrap: false } as const;
 
+/** What a chart on the site may change: its bar numbers, and a strip of guitar chord diagrams. */
+type Look = { barNumbers?: boolean; chordDiagrams?: boolean };
+
+/** The renderer's options for a look; with diagrams off the option is left out, so the markup is as before. */
+const chosen = ({ barNumbers = true, chordDiagrams = false }: Look) => ({
+	...options,
+	barNumbers,
+	...(chordDiagrams ? { chordDiagrams: "guitar" as const } : {}),
+});
+
 /**
  * The chart as `<barmark-chart>` markup with a declarative shadow root, for
  * the prerendered page; the element takes it from there. The parser reports
  * problems as diagnostics rather than throwing; the catch is a last guard.
  */
-export function chartHtml(
-	text: string,
-	{ barNumbers = true }: { barNumbers?: boolean } = {},
-): string {
-	const chosen = { ...options, barNumbers };
+export function chartHtml(text: string, look: Look = {}): string {
+	const opts = chosen(look);
 	try {
-		return renderChart(text, chosen);
+		return renderChart(text, opts);
 	} catch {
-		return renderChart("", chosen);
+		return renderChart("", opts);
 	}
 }
 
@@ -43,14 +50,14 @@ function engineAttributes(preload: Preload): string {
  */
 export function scoreHtml(
 	text: string,
-	{ barNumbers = true, preload = "none" }: { barNumbers?: boolean; preload?: Preload } = {},
+	{ preload = "none", ...look }: Look & { preload?: Preload } = {},
 ): string {
-	const chosen = { ...options, barNumbers };
+	const opts = chosen(look);
 	let html: string;
 	try {
-		html = renderScoreHtml(text, chosen);
+		html = renderScoreHtml(text, opts);
 	} catch {
-		html = renderScoreHtml("", chosen);
+		html = renderScoreHtml("", opts);
 	}
 	return html.replace("<barmark-score", `<barmark-score${engineAttributes(preload)}`);
 }

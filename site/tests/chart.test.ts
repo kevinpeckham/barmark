@@ -58,6 +58,18 @@ describe("chartHtml", () => {
 	test("charts use the dark palette", () => {
 		expect(chartHtml(demo)).toContain('data-theme="dark"');
 	});
+	test("a chart can open with its guitar diagrams, one for each distinct chord; without the flag it has none", () => {
+		const host = (html: string) => html.slice(0, html.indexOf(">") + 1);
+		const html = chartHtml("| C | Am | C |", { chordDiagrams: true });
+		expect(host(html)).toContain('chord-diagrams="guitar"');
+		expect(html).toContain('class="bm-diagrams"');
+		expect(html).toContain('aria-label="C: muted, 3, 2, open, 1, open"');
+		expect(html.match(/part="diagram"/g)?.length).toBe(2);
+		for (const plain of [chartHtml("| C | Am |"), chartHtml("| C |", { chordDiagrams: false })]) {
+			expect(host(plain)).not.toContain("chord-diagrams");
+			expect(plain).not.toContain(`class="bm-diagrams"`);
+		}
+	});
 	test("sections are lettered A, B, C in play order", () => {
 		expect(chartHtml(demo)).toContain('<span class="bm-rehearsal"');
 	});
@@ -110,6 +122,13 @@ describe("scoreHtml", () => {
 			expect(attr(html, "verovio-wasm-integrity")).toBe(ENGRAVER_WASM_INTEGRITY);
 		}
 		expect(ENGRAVER_CDN_URL).toStartWith("https://cdn.jsdelivr.net/npm/@barmark/engraver@");
+	});
+	test("a score's grid can open with its guitar diagrams; without the flag it has none", () => {
+		const html = scoreHtml("| G | D |", { chordDiagrams: true });
+		expect(attr(html, "chord-diagrams")).toBe("guitar");
+		expect(html).toContain('class="bm-diagrams"');
+		expect(attr(scoreHtml("| G | D |"), "chord-diagrams")).toBeNull();
+		expect(scoreHtml("| G | D |")).not.toContain(`class="bm-diagrams"`);
 	});
 	test("preloads only when asked", () => {
 		expect(attr(scoreHtml(demo), "preload")).toBeNull();

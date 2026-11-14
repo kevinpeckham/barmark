@@ -1,5 +1,6 @@
 <script lang="ts">
 import { onMount, tick, untrack } from "svelte";
+import DiagramSwitch from "#lib/components/DiagramSwitch.svelte";
 import GuideTable from "#lib/components/GuideTable.svelte";
 import TryReading from "#lib/components/TryReading.svelte";
 import Window from "#lib/components/Window.svelte";
@@ -34,6 +35,18 @@ const query = $derived(guideQuery(reading, settled));
 /** null: too long to keep in the link. */
 const link = $derived(linkQuery(settled));
 const rows = $derived(Math.min(8, text.split("\n").length));
+/** A chart's guitar chord diagrams: a viewing choice, off at first and never kept in the link. */
+let diagrams = $state(false);
+const isChart = $derived(reading.kind === "chart");
+/**
+ * The chart's Grid / Score view, as its element reports it. Leaving the chart
+ * (for a chord, say) removes the element, and the next chart opens on Grid, so
+ * the view starts again on Grid whenever the reading turns into a chart or out of one.
+ */
+let view = $derived.by((): "grid" | "score" => {
+	void isChart;
+	return "grid";
+});
 
 onMount(async () => {
 	const q = new URLSearchParams(location.search).get("q");
@@ -115,7 +128,15 @@ const chip =
 		</div>
 
 		<Window title="Barmark reads">
-			<TryReading {reading} text={settled} ontry={tryFix} />
+			{#snippet controls()}
+				<!-- The switch's height (text-xs line, py-1, border) is kept for every reading, so the bar never jumps. -->
+				<div class="flex items-center min-h-[calc(1.5rem+2px)]">
+					{#if isChart}
+						<DiagramSwitch bind:on={diagrams} disabled={view === "score"} />
+					{/if}
+				</div>
+			{/snippet}
+			<TryReading {reading} text={settled} {diagrams} ontry={tryFix} onviewchange={(v) => (view = v)} />
 		</Window>
 
 		{#if query === null}

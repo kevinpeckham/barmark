@@ -88,6 +88,20 @@ describe("the home page, prerendered", () => {
 		]);
 		expect(radios.map((r) => r.hasAttribute("checked"))).toEqual([true, false, false]);
 	});
+	test("the render window offers guitar diagrams, beside the spelling, off: the chart prerenders without them", () => {
+		const toggle = [...doc.querySelectorAll("main button[aria-pressed]")].filter(
+			(b) => b.textContent?.trim() === "Guitar diagrams",
+		);
+		expect(toggle).toHaveLength(1);
+		expect(toggle[0]?.getAttribute("type")).toBe("button");
+		expect(toggle[0]?.getAttribute("aria-pressed")).toBe("false");
+		expect(toggle[0]?.hasAttribute("disabled")).toBe(false);
+		const spelling = doc.querySelector('[role="radiogroup"][aria-label="Chord spelling"]');
+		expect(spelling?.parentElement?.contains(toggle[0] ?? null)).toBe(true);
+		const score = doc.querySelector("main barmark-score");
+		expect(score?.hasAttribute("chord-diagrams")).toBe(false);
+		expect(score?.querySelector("template")?.innerHTML).not.toContain(`class="bm-diagrams"`);
+	});
 	test("has a title, canonical URL and Open Graph tags", () => {
 		expect(doc.title).toBe("Barmark: plain-text chord charts");
 		expect(doc.querySelector('link[rel="canonical"]')?.getAttribute("href")).toBe(

@@ -77,6 +77,13 @@ export const PACKAGES: {
 		step: "#listen",
 		readme: LINKS.listenReadme,
 	},
+	{
+		name: "@barmark/fretboard",
+		does: "Finds guitar chord shapes for Barmark chords, from a table and a shape finder, and the exact frets for notes you wrote. It draws nothing itself.",
+		when: "Drawing chord boxes your own way, or fret numbers as text. The renderer already uses it for chord-diagrams.",
+		step: "#fretboard",
+		readme: LINKS.fretboardReadme,
+	},
 ];
 
 export const SAMPLE_CHART = `# Example Song
@@ -111,6 +118,7 @@ export const USE_RENDER = `import { renderChart } from "@barmark/render";
 const html = renderChart(text, {
 	theme: "auto", // or "light" / "dark"
 	rehearsalLetters: true, // A, B, C on each section
+	chordDiagrams: "guitar", // a guitar diagram for each distinct chord, above the bars (chord-diagrams="guitar" on the element)
 	fontUrl: "/fonts/Edwin-Roman.otf", // copy it from @barmark/render/fonts/
 });`;
 
@@ -331,4 +339,20 @@ if (drafted.ok) {
 } else {
 	drafted.refusals; // "too-few-bars" or "bars-unsteady": no fallback inside,
 	// so call chartFromRecording yourself if you can declare a tempo
+}`;
+
+export const INSTALL_FRETBOARD = "npm install @barmark/fretboard";
+
+export const USE_FRETBOARD = `import { shapeFor, shapeText } from "@barmark/fretboard";
+import { parseChord } from "barmark";
+
+const chord = parseChord("Cmaj7");
+if (chord.ok) {
+	const result = shapeFor(chord.value);
+	if (result.ok) {
+		result.shape.frets; // [-1, 3, 2, 0, 0, 0]: low E to high E, -1 muted
+		shapeText(result.shape); // "x32000"
+	} else {
+		result.reason; // "single-note" or "not-playable": no shape to show
+	}
 }`;

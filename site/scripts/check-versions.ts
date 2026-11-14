@@ -3,7 +3,7 @@
  * latest release tag: after a release, bump site/package.json (RELEASING.md).
  * Every one the site installs is checked, its dev dependencies too: the CLI,
  * whose commands Get Started runs and whose version its CI example names,
- * and the libraries (@barmark/musicxml, sync, midi, listen) whose snippets
+ * and the libraries (@barmark/musicxml, sync, midi, listen, fretboard) whose snippets
  * Get Started tests against the installed version, while the `npm install`
  * it shows gets the latest. A pin behind it would test an API readers don't
  * get.

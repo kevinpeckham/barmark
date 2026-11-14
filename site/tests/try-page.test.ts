@@ -28,6 +28,20 @@ describe("/try, prerendered", () => {
 		expect(chart?.getAttribute("bar-numbers")).toBe("off");
 		expect(chart?.querySelector("template[shadowrootmode=open]")).not.toBeNull();
 	});
+	test("draws Cø's guitar diagram above its bar, with no JavaScript", () => {
+		const chart = doc.querySelector("[data-reading] barmark-chart");
+		expect(chart?.getAttribute("chord-diagrams")).toBe("guitar");
+		const shadow = chart?.querySelector("template")?.innerHTML ?? "";
+		expect(shadow).toContain('class="bm-diagrams"');
+		expect(shadow.match(/part="diagram"/g)?.length).toBe(1);
+		expect(shadow).toContain('aria-label="C minor seven flat five: muted, 3, 4, 3, 4, muted"');
+	});
+	test("a chord has no diagram switch: that is a chart's", () => {
+		const toggles = [...doc.querySelectorAll("main button[aria-pressed]")].map((b) =>
+			b.textContent?.trim(),
+		);
+		expect(toggles).not.toContain("Guitar diagrams");
+	});
 	test("shows the chords rows of the guide, and no others", () => {
 		const shown = [...doc.querySelectorAll("[data-row]")]
 			.filter((r) => !r.hasAttribute("hidden"))

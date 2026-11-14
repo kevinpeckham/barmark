@@ -5,6 +5,7 @@ import Window from "#lib/components/Window.svelte";
 import { LINKS } from "#lib/site.js";
 import {
 	CLI_CI,
+	INSTALL_FRETBOARD,
 	INSTALL_LISTEN,
 	INSTALL_MIDI,
 	INSTALL_MUSICXML,
@@ -18,6 +19,7 @@ import {
 	USE_BINARY,
 	USE_CLI,
 	USE_ELEMENT,
+	USE_FRETBOARD,
 	USE_LISTEN,
 	USE_LISTEN_BEATS,
 	USE_MIDI,
@@ -33,7 +35,7 @@ import {
 } from "#lib/start.js";
 
 const description =
-	"Write a Barmark chart, read it with the parser, draw it with @barmark/render or the <barmark-chart> web component, show it as a full score with @barmark/score, convert it to and from MusicXML with @barmark/musicxml and MIDI with @barmark/midi, check charts from the terminal with @barmark/cli, and line a chart up with a recording with @barmark/sync and @barmark/listen.";
+	"Write a Barmark chart, read it with the parser, draw it with @barmark/render or the <barmark-chart> web component, show it as a full score with @barmark/score, convert it to and from MusicXML with @barmark/musicxml and MIDI with @barmark/midi, check charts from the terminal with @barmark/cli, line a chart up with a recording with @barmark/sync and @barmark/listen, and find guitar chord shapes with @barmark/fretboard.";
 const step = "font-serif text-xl text-ink";
 const link = "underline decoration-accent/60 underline-offset-3 hover-text-accent";
 const code = "font-mono text-accent";
@@ -60,7 +62,8 @@ const cell = "px-3 py-3 align-top lt-sm:(block px-0 py-1)";
 			<code class={code}>@barmark/score</code> shows the same chart as a full score beside the grid,
 			<code class={code}>@barmark/musicxml</code> and <code class={code}>@barmark/midi</code> convert charts
 			to and from MusicXML and MIDI, <code class={code}>@barmark/sync</code> and
-			<code class={code}>@barmark/listen</code> line a chart up with a recording, and
+			<code class={code}>@barmark/listen</code> line a chart up with a recording,
+			<code class={code}>@barmark/fretboard</code> finds guitar chord shapes, and
 			<code class={code}>@barmark/cli</code> puts them in the terminal, for checking charts without
 			writing any code. The libraries are ESM, with TypeScript types, and run in Node 20 or later, Bun
 			and the browser; the score's element runs in the browser, and its
@@ -152,8 +155,10 @@ const cell = "px-3 py-3 align-top lt-sm:(block px-0 py-1)";
 		<p class="max-w-prose opacity-80">
 			In the browser, <code class={code}>&lt;barmark-chart&gt;</code> draws a chart from a file, from
 			the text inside it, or from its <code class={code}>text</code> property, and draws it again when
-			any of them change. Attributes set the theme, bar numbers, rehearsal letters and a Nashville or
-			Roman numeral view.
+			any of them change. Attributes set the theme, bar numbers, rehearsal letters, a Nashville or
+			Roman numeral view, and <code class={code}>chord-diagrams="guitar"</code>: a strip of guitar chord
+			diagrams under the title, above the first section, one for each distinct chord
+			(<code class={code}>diagram-hand="left"</code> mirrors them for a left hand).
 		</p>
 		<Code title="index.html" code={USE_ELEMENT} />
 		<p class="max-w-prose opacity-80">For a live editor, set its text as the reader types:</p>
@@ -377,6 +382,24 @@ const cell = "px-3 py-3 align-top lt-sm:(block px-0 py-1)";
 		<p class="text-sm opacity-80">
 			The features it reads, each option and every refusal are in the
 			<a href={LINKS.listenReadme} class={link}>listen package's README</a>.
+		</p>
+	</section>
+
+	<section class="flex flex-col gap-4 min-w-0">
+		<h2 id="fretboard" class="{step} scroll-mt-6">11. Find guitar chord shapes</h2>
+		<p class="max-w-prose opacity-80">
+			<code class={code}>@barmark/fretboard</code> answers where the fingers go.
+			<code class={code}>shapeFor</code> takes a chord the parser read and gives its frets in standard
+			tuning, from a table of the usual open and movable shapes or, past it, a shape finder; a note set
+			comes back exactly as written, each note on its own string. It draws nothing: the renderer's
+			<code class={code}>chord-diagrams="guitar"</code> draws its shapes, and you can draw chord boxes of
+			your own, or write the frets as text. It never throws.
+		</p>
+		<Code title="Terminal" code={INSTALL_FRETBOARD} />
+		<Code title="shapes.ts" code={USE_FRETBOARD} />
+		<p class="text-sm opacity-80">
+			What a shape holds, how an altered chord becomes a shell and what it cannot find are in the
+			<a href={LINKS.fretboardReadme} class={link}>fretboard package's README</a>.
 		</p>
 	</section>
 </main>

@@ -26,6 +26,7 @@ export const LINKS = {
 	midiReadme: "https://github.com/kevinpeckham/barmark/tree/main/packages/midi#readme",
 	listenReadme: "https://github.com/kevinpeckham/barmark/tree/main/packages/listen#readme",
 	engraverReadme: "https://github.com/kevinpeckham/barmark/tree/main/packages/engraver#readme",
+	fretboardReadme: "https://github.com/kevinpeckham/barmark/tree/main/packages/fretboard#readme",
 	cliReleases: "https://github.com/kevinpeckham/barmark/releases?q=cli-v",
 	songs: "https://github.com/kevinpeckham/songs",
 	parserReadme: "https://github.com/kevinpeckham/barmark/tree/main/packages/barmark#readme",

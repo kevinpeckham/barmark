@@ -21,6 +21,7 @@ const QUESTIONS = [
 	["stable", "Is the notation finished?"],
 	["cli", "Can I check my charts without writing code?"],
 	["numerals", "Can I write Nashville numbers or Roman numerals?"],
+	["diagrams", "Can it show guitar chord diagrams?"],
 	["lyrics", "Can a chart hold lyrics?"],
 	["score", "Can Barmark show a chart as sheet music?"],
 	["score-package", "Why is the score view a separate package?"],
@@ -102,7 +103,7 @@ onMount(() => {
 					which bars, in which sections, in what key, meter and tempo, and in what order the song plays.
 				</p>
 				<p>
-					It is also nine npm packages: <code class={code}>barmark</code> reads and writes charts,
+					It is also ten npm packages: <code class={code}>barmark</code> reads and writes charts,
 					<code class={code}>@barmark/render</code> draws them as a clean bar grid on any web page,
 					<code class={code}>@barmark/score</code> shows the same chart as a full score beside the grid,
 					<code class={code}>@barmark/engraver</code> is a smaller build of the Verovio that engraves it,
@@ -110,8 +111,9 @@ onMount(() => {
 					<code class={code}>@barmark/midi</code> plays them as MIDI files and reads MIDI files back,
 					<code class={code}>@barmark/sync</code> builds a chart from a recording's detected chords and
 					says when each bar plays, <code class={code}>@barmark/listen</code> finds the bars in a
-					recording itself or reads them from a beat tracker's beats, and
-					<code class={code}>@barmark/cli</code> does the rest from the terminal.
+					recording itself or reads them from a beat tracker's beats,
+					<code class={code}>@barmark/fretboard</code> finds the guitar chord shapes the renderer draws,
+					and <code class={code}>@barmark/cli</code> does the rest from the terminal.
 				</p>
 			</section>
 
@@ -271,6 +273,27 @@ onMount(() => {
 					<code class={code}>numerals="nashville"</code> or <code class={code}>numerals="roman"</code> on
 					the chart and each chord appears as its degree in the key: Bm in D is 6m, or vi. The home page's
 					chart has a switch for it.
+				</p>
+			</section>
+
+			<section>
+				{@render heading("diagrams")}
+				<p>
+					Yes. Set <code class={code}>chord-diagrams="guitar"</code> on the chart and the renderer draws a
+					strip of guitar chord diagrams under the title, above the first section: one for each distinct
+					chord, in the order the chart first writes them. <code class={code}>diagram-hand="left"</code>
+					mirrors them for a left hand, and from the terminal
+					<code class={code}>npx @barmark/cli render song.chart.md --diagrams guitar</code> draws the same
+					strip. The home page's chart has a switch for it, and <a href="/try" class={link}>Try It</a>
+					draws the diagram for any chord you type.
+				</p>
+				<p>
+					The shapes come from
+					<a href={LINKS.fretboardReadme} class={link}><code class={code}>@barmark/fretboard</code></a>, in
+					standard tuning. A voicing the chart writes, such as
+					<code class={code}>Am7&#123;G3 C4 E4&#125;</code>, is drawn exactly as written when it fits the
+					guitar; when it doesn't, the diagram shows the chord's own shape and says so. A chord no hand can
+					play in standard tuning says that instead of a drawing.
 				</p>
 			</section>
 
