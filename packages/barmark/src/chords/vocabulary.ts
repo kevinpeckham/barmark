@@ -59,8 +59,23 @@ export const VALID_EXTENSIONS: Record<Quality, (Extension | null)[]> = {
 /** `sus` is allowed only on the major quality, with these extensions. */
 export const SUS_ALLOWED_WITH: (Extension | null)[] = [null, "7", "9", "13"];
 
-/** Tones a parenthesis may hold. Tone `7` means the interval b7. */
-export const TONES = ["2", "4", "6", "7", "9", "11", "13", "b5", "#5", "b9", "#9", "#11", "b13"];
+/** Tones a parenthesis may hold, in the grammar's order. Tone `7` means the interval b7. */
+export const TONES = "2 4 6 7 9 11 13 b5 #5 b6 b9 #9 #11 b13".split(" ");
+
+/**
+ * Tones a parenthesis refuses that name a tone it can add (Appendix A.6):
+ * the refusal suggests the counterpart. Tone `7` is already the flat seventh.
+ */
+export const COUNTERPARTS: Record<string, string> = { b2: "b9", "#2": "#9", "#4": "#11", b7: "7" };
+
+/**
+ * What `add` may stand before (Appendix A.5), as a pattern alternation:
+ * every tone, and the refused tones with a counterpart, so the refusal can
+ * suggest it. Longest first, so `#11` and `13` are read whole.
+ */
+export const ADD_TONE = [...TONES, ...Object.keys(COUNTERPARTS)]
+	.sort((a, b) => b.length - a.length)
+	.join("|");
 
 /** Tones a parenthesis may leave out (grammar 3): the 3rd or the 5th. */
 export const OMISSIONS = ["no3", "no5"];
@@ -136,6 +151,8 @@ export function chordIntervals(
  * own accidental.
  */
 export const ALIASES: [RegExp, string][] = [
+	[/^Δ9/, "maj9"],
+	[/^Δ13/, "maj13"],
 	[/^Δ7?/, "maj7"],
 	[/^ø7?/, "m7(b5)"],
 	[/^°7/, "dim7"],

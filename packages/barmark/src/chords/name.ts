@@ -93,8 +93,8 @@ function family(suffix: Suffix): number {
 	return 4;
 }
 
-/** A tone the plain-tone tie-break puts last: `(2)`, `(4)`, `(6)` lose to `(9)`, `(11)`, `(13)`. */
-const PLAIN_TONES = ["2", "4", "6"];
+/** A tone the plain-tone tie-break puts last: `(2)`, `(4)`, `(6)`, `(b6)` lose to `(9)`, `(11)`, `(13)`, `(b13)`. */
+const PLAIN_TONES = ["2", "4", "6", "b6"];
 
 /**
  * The order spec 5.6 ranks candidates by: cost (added tones, a slash, a

@@ -121,7 +121,8 @@ describe("run-together items that are themselves wrong are still errors", () => 
 		expect(fails("C7(omit7add9)").message).toContain('"no7": a chord leaves out only');
 	});
 	test("a tone a parenthesis can't add", () => {
-		expect(fails("C(omit5add13)").message).toContain('"add13"');
+		// Turned over on purpose (Kevin, 2026-11-14): add13 is now an alias of 13.
+		expect(ok("C(omit5add13)").value.canonical).toBe("C(13,no5)");
 		expect(fails("C(b9#12)").message).toContain('"#12"');
 	});
 	test("an altered tone left out", () => {

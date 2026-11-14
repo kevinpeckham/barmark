@@ -2,7 +2,8 @@ import { toHarte } from "./harte.js";
 import { noteSemitone, transpose } from "./intervals.js";
 import { canonicalParts, printChord } from "./print.js";
 import {
-	alteredFifth,
+	ALTERATIONS,
+	bareAlteration,
 	bareScan,
 	intoGroup,
 	pullBare,
@@ -12,8 +13,10 @@ import {
 } from "./stacked.js";
 import type { ChordRecord, Diagnostic, Interval, ParseResult } from "./types.js";
 import {
+	ADD_TONE,
 	ALIASES,
 	type ChordParts,
+	COUNTERPARTS,
 	chordIntervals,
 	EXTENSIONS,
 	isOmission,
@@ -26,7 +29,7 @@ import {
 } from "./vocabulary.js";
 
 const ROOT = /^[A-G][#b]?/;
-const INLINE_ALTERATION = /^(b5|#5|b9|#9|#11|b13)/;
+const INLINE_ALTERATION = new RegExp(`^(${ALTERATIONS})`);
 
 /** Splits a symbol into its parts, or names the text it could not read. */
 function tokenize(symbol: string): ChordParts | string {
@@ -149,7 +152,14 @@ function logicGroups(rest: string): string {
 	return `5${others.length ? `(${others.join(",")})` : ""}${joined.slice(group[0].length)}`;
 }
 
-const BARE_ADD = bareScan("add(?:2|4|9|11)");
+const BARE_ADD = bareScan(`add(?:${ADD_TONE})`);
+/** `add` before a tone inside a group: `(add9)`, `(b9,addb6)`. */
+const GROUP_ADD = new RegExp(String.raw`(?<=[(,]\s*)add(${ADD_TONE})(?=\s*[,)])`, "g");
+/** A refused tone with a counterpart, as an item in a group. */
+const REFUSED_TONE = new RegExp(
+	String.raw`(?<=[(,]\s*)(${Object.keys(COUNTERPARTS).join("|")})(?=\s*[,)])`,
+	"g",
+);
 
 /** The text a symbol is read from: ♯ and ♭ as # and b (Appendix A.5). */
 const ascii = (symbol: string) => symbol.replace(/♯/g, "#").replace(/♭/g, "b");
@@ -170,7 +180,7 @@ function normalizeSymbol(text: string): Normal | Diagnostic {
 	// `(omit3)` and `(omit 3)` are `(no3)`.
 	rest = rest.replace(/(?<=[(,]\s*)omit\s*(\d+)(?=\s*[,)])/g, "no$1");
 	// `(add9)` is `(9)`: inside a group, `add` before a tone it may add is dropped.
-	rest = rest.replace(/(?<=[(,]\s*)add(2|4|9|11)(?=\s*[,)])/g, "$1");
+	rest = rest.replace(GROUP_ADD, "$1");
 	// A bare `add9` outside any group; what is left inside one is the tokenizer's to name.
 	const bare = pullBare(rest, BARE_ADD);
 	rest = intoGroup(
@@ -200,11 +210,23 @@ export function parseChord(symbol: string): ParseResult {
 	const normal = normalizeSymbol(text);
 	if (!("text" in normal)) return { ok: false, error: normal };
 	const r = readChord(symbol, normal.text);
-	if (!r.ok) {
-		return { ok: false, error: alteredFifth(symbol, text, r.error, (s) => parseChord(s).ok) };
-	}
+	if (!r.ok) return { ok: false, error: suggest(symbol, text, normal.text, r.error) };
 	const warning = stacked(symbol, text, normal, r.value.canonical);
 	return warning ? { ...r, warnings: [warning, ...r.warnings] } : r;
+}
+
+/**
+ * The error with a suggestion where one reads (Appendix A.6): an alteration
+ * moved into the parentheses (`Cmb6` is `Cm(b6)`), or each refused tone
+ * replaced by its counterpart (`C7(b2,#4)` is `C7(b9,#11)`).
+ */
+function suggest(symbol: string, text: string, normal: string, error: Diagnostic): Diagnostic {
+	const reads = (s: string) => parseChord(s).ok;
+	const moved = bareAlteration(symbol, text, error, reads);
+	if (moved !== error || !error.message.endsWith("is not a tone a parenthesis can add"))
+		return moved;
+	const suggestion = normal.replace(REFUSED_TONE, (tone) => COUNTERPARTS[tone] ?? tone);
+	return suggestion !== normal && reads(suggestion) ? { ...error, suggestion } : error;
 }
 
 /** The chord a normalized symbol names. */
