@@ -6,8 +6,12 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-11-14
+
 ### Changed
 
+- **Requires `barmark` 0.24.0 (with `@barmark/sync` 0.4.2)**, whose minor release a caret range
+  would not reach.
 - **A tracker's or detector's Harte label with `b6` builds `(b6)`**:
   `C:min(b6)` becomes `Cm(b6)` in the chart (both pipelines pass labels
   through barmark's `harteToBarmark`), where it became `Cm(b13)`. Labels
@@ -171,7 +175,8 @@ package uses [semantic versioning](https://semver.org/).
   its own, or which throws when read (`features-invalid`). The entry imports nothing from `barmark` or
   `@barmark/sync`.
 
-[Unreleased]: https://github.com/kevinpeckham/barmark/compare/listen-v0.2.0...HEAD
+[Unreleased]: https://github.com/kevinpeckham/barmark/compare/listen-v0.2.1...HEAD
+[0.2.1]: https://github.com/kevinpeckham/barmark/compare/listen-v0.2.0...listen-v0.2.1
 [0.2.0]: https://github.com/kevinpeckham/barmark/compare/listen-v0.1.1...listen-v0.2.0
 [0.1.1]: https://github.com/kevinpeckham/barmark/compare/listen-v0.1.0...listen-v0.1.1
 [0.1.0]: https://github.com/kevinpeckham/barmark/releases/tag/listen-v0.1.0
