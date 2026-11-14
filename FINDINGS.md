@@ -1274,6 +1274,25 @@ and round-trip it through `format`.
 
 ## Tooling
 
+### The registry lists a version before it serves its tarball (2026-11-14, the midi 0.3.4 release)
+
+**Symptom:** `@barmark/midi` 0.3.4 published, and the release's `confirm`
+job failed one second later: `npm error 404 Not Found - GET
+https://registry.npmjs.org/@barmark/midi/-/midi-0.3.4.tgz`. The job's
+earlier step had already seen `npm view @barmark/midi version` say 0.3.4.
+Seven other releases the same afternoon passed.
+
+**Cause:** the registry's metadata and its tarballs are served separately,
+and the metadata can be ahead by a few seconds. The job waited for the
+version to be listed (FINDINGS 2026-10-31), then installed once.
+
+**Fix:** the package was fine: the same install and smoke script by hand
+passed a minute later, and `gh run rerun <id> --failed` turned the job
+green. The `confirm` job now tries the install up to six times, ten
+seconds apart, before failing.
+
+**Where it lives:** `.github/workflows/release.yml`, `confirm`.
+
 ### A subagent's "the check is clean" is a claim: read the exit code yourself (2026-11-13, the listen 0.2 build)
 
 - **The symptom.** An implementer reported `bun run check` as showing
