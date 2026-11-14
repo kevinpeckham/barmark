@@ -249,7 +249,15 @@ jobs:
           dir="$RUNNER_TEMP/confirm"
           mkdir -p "$dir" && cd "$dir"
           npm init -y >/dev/null
-          npm install --ignore-scripts "${NAME}@${VERSION}"
+          # The registry can list a version before it serves the tarball
+          # (a 404 for a few seconds: FINDINGS 2026-11-14), so try again.
+          for attempt in 1 2 3 4 5 6; do
+            if npm install --ignore-scripts "${NAME}@${VERSION}"; then break; fi
+            if [ "$attempt" = 6 ]; then
+              echo "::error::${NAME}@${VERSION} would not install after 6 tries"; exit 1
+            fi
+            sleep 10
+          done
           cp "$GITHUB_WORKSPACE/${SMOKE}" smoke.mjs
           node smoke.mjs "${NAME}" "$GITHUB_WORKSPACE/examples/peaceful-dreams.chart.md"
   # @barmark/cli only: the standalone binaries (Bun's compiler, the font,
