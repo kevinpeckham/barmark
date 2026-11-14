@@ -13,7 +13,8 @@ package uses [semantic versioning](https://semver.org/).
   reads `F#m(b6)`. A flat thirteenth (`<degree>` 13, alter -1) still reads
   `(b13)`. The export writes degree 6 for `(b6)` (`F#m(b6)` is `minor` with
   one degree), and `Cadd13` and `CΔ9` export and import as their canonical
-  `C(13)` and `Cmaj9`.
+  `C(13)` and `Cmaj9`. A `major-sixth` harmony with an added flat sixth
+  imports as `C(b6,6)` (it was `C6(b13)`: the same two sounds).
 
 ## [0.9.1] - 2026-11-12
 
