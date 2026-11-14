@@ -11,6 +11,8 @@ describe("labels", () => {
 		expect(labelSymbol("A#:maj", key("D"))).toBe("Bb");
 		expect(labelSymbol("A:min6", null)).toBe("Am6");
 		expect(labelSymbol("C:hdim7", null)).toBe("Cm7(b5)");
+		expect(labelSymbol("C:min(b6)", null)).toBe("Cm(b6)");
+		expect(labelSymbol("C:min(b13)", null)).toBe("Cm(b13)");
 		expect(labelSymbol("N", null)).toBe("N.C.");
 		expect(labelSymbol("X", null)).toBe("?");
 	});

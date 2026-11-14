@@ -6,6 +6,12 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- **`check`, `format`, `render` and the exports read a flat sixth, an
+  `add` before any tone and `Δ9`** (`F#m(b6)`, `Cadd13`, `CΔ9`), as
+  `barmark` now reads them.
+
 ## [0.12.0] - 2026-11-13
 
 ### Added

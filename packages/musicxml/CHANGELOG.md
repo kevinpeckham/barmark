@@ -6,6 +6,15 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- **A harmony with an added flat sixth imports as `(b6)`**, where it
+  imported as `(b13)`: a `<degree>` of 6 with alter -1 and type `add`
+  reads `F#m(b6)`. A flat thirteenth (`<degree>` 13, alter -1) still reads
+  `(b13)`. The export writes degree 6 for `(b6)` (`F#m(b6)` is `minor` with
+  one degree), and `Cadd13` and `CΔ9` export and import as their canonical
+  `C(13)` and `Cmaj9`.
+
 ## [0.9.1] - 2026-11-12
 
 ### Fixed

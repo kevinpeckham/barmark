@@ -24,6 +24,14 @@ describe("typesetChord: canonical form, never the author's spelling", () => {
 	test("F#m7(b5): sharps and flats as glyphs", () => {
 		expect(set("F#m7(b5)")).toEqual({ root: "F♯", quality: "m", superscript: "7(♭5)", bass: null });
 	});
+	test("F#m(b6) is set as F#m(b13) is: (♭6) in the superscript", () => {
+		expect(set("F#m(b13)")).toEqual({ root: "F♯", quality: "m", superscript: "(♭13)", bass: null });
+		expect(set("F#m(b6)")).toEqual({ root: "F♯", quality: "m", superscript: "(♭6)", bass: null });
+	});
+	test("Cadd13 and CΔ9 are set as their canonical names", () => {
+		expect(set("Cadd13")).toEqual({ root: "C", quality: "", superscript: "(13)", bass: null });
+		expect(set("CΔ9")).toEqual({ root: "C", quality: "", superscript: "maj9", bass: null });
+	});
 	test("A7sus4, Bbmaj7, C/E, Cdim7, C5", () => {
 		expect(set("A7sus4")).toEqual({ root: "A", quality: "", superscript: "7sus4", bass: null });
 		expect(set("Bbmaj7")).toEqual({ root: "B♭", quality: "", superscript: "maj7", bass: null });

@@ -6,6 +6,11 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- **A flat sixth gets a shape**: `Cm(b6)` and `Cm(b13)` are the same note
+  set and get the same shape, which sounds the flat sixth.
+
 ## [0.1.0] - 2026-11-13
 
 ### Added

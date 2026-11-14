@@ -66,6 +66,13 @@ describe("readHarmony", () => {
 		const r = readHarmony(harmony(`${root(step)}<kind>${kind}</kind>${degrees}`), CONCERT);
 		expect(r).toEqual({ slot: canonical(slot), original: null });
 	});
+	test("an added flat sixth is (b6); an added flat thirteenth is (b13)", () => {
+		const read = (kind: string, d: string) =>
+			readHarmony(harmony(`${root("F", 1)}<kind>${kind}</kind>${d}`), CONCERT).slot;
+		expect(read("minor", degree(6, -1, "add"))).toBe("F#m(b6)");
+		expect(read("minor", degree(13, -1, "add"))).toBe("F#m(b13)");
+		expect(read("major", degree(6, -1, "add"))).toBe("F#(b6)");
+	});
 	test("meaning wins over display text", () => {
 		const r = readHarmony(
 			harmony(`${root("C")}<kind text="whatever">major-seventh</kind>`),
@@ -153,6 +160,29 @@ describe("readHarmony", () => {
 					expect(got).toEqual({ slot: canonical(h.expected), original: null });
 				}
 			});
+	});
+
+	test("the flat sixth and the new add and Δ spellings round-trip to the same chord", () => {
+		const symbols = ["F#m(b6)", "C6(b6)", "Cadd13", "CΔ9", "Cm7b6", "C(b6,9)", "Cm(b13)"];
+		const { harmonies } = exported(`key: C\n| ${symbols.join(" ")} |\n`);
+		expect(harmonies).toHaveLength(symbols.length);
+		symbols.forEach((symbol, i) => {
+			const h = harmonies[i];
+			if (!h) throw new Error("missing harmony");
+			const got = readHarmony(h.node, h.by).slot;
+			const before = parseChord(symbol);
+			const after = parseChord(got);
+			if (!before.ok || !after.ok) throw new Error(`${symbol} or ${got} does not parse`);
+			const pitches = (r: typeof before.value) =>
+				r.intervals
+					.map((iv) => `${iv.degree}:${iv.alter}`)
+					.sort()
+					.join(" ");
+			expect(`${symbol} → ${got} ${pitches(after.value)}`).toBe(
+				`${symbol} → ${got} ${pitches(before.value)}`,
+			);
+			expect(got).toBe(before.value.canonical);
+		});
 	});
 
 	test("a transposing part reads back at concert pitch", () => {

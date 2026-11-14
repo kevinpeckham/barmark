@@ -6,6 +6,11 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- **A chart with a flat sixth, an `add` before any tone or `Δ9` engraves**
+  (`F#m(b6)`, `Cadd13`, `CΔ9`), as `barmark` now reads them.
+
 ## [0.6.0] - 2026-11-13
 
 ### Added

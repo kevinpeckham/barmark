@@ -66,6 +66,15 @@ describe("the examples, bar for bar", () => {
 	});
 });
 
+describe("the flat sixth: naming notes is unchanged", () => {
+	// C E♭ G A♭ was named Abmaj7/C before (b6) was a spelling (run at a23242b), and still is:
+	// naming goes by the notes, so a chart's Cm(b6) and Cm(b13) come back as the same name.
+	test("C E♭ G A♭ is named Abmaj7/C, whether it was written as notes, (b6) or (b13)", () => {
+		for (const body of ["{C4 Eb4 G4 Ab4}", "Cm(b6)", "Cm(b13)"])
+			expect(bars(`key: C\n| ${body} |\n`)).toBe("| Abmaj7/C |");
+	});
+});
+
 describe("the re-review's inputs come back (Critical 1, Important 2-4)", () => {
 	test("Critical 1: a re-strike dropping notes is a new chord", () => {
 		expect(bars("key: C\n| Cmaj7 | C | G7 | G | C6 | C |\n")).toBe(
