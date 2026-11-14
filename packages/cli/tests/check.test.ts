@@ -61,6 +61,16 @@ describe("barmark check", () => {
 	});
 	describe("a problem's suggestion", () => {
 		const SUGGESTING = "| C(b2) | Cadd9b13 |\n| D6(omit5add9) |\n";
+		test("a message that already says what to write does not say it twice", async () => {
+			const io = folder({ "d.chart.md": "| C | G | DS. al Coda |\n" });
+			expect(await check(["d.chart.md"], io)).toBe(1);
+			const line = io.out().split("\n")[0] ?? "";
+			expect(line).toEndWith("not a direction; write D.S. al Coda");
+			// A message that names only part of the symbol still gets the whole one.
+			const part = folder({ "m.chart.md": "| CM7 |\n" });
+			await check(["m.chart.md"], part);
+			expect(part.out().split("\n")[0]).toEndWith("write maj (write Cmaj7)");
+		});
 		test("text: the line ends with (write <suggestion>), for errors and warnings", async () => {
 			const io = folder({ "s.chart.md": SUGGESTING });
 			expect(await check(["s.chart.md"], io)).toBe(1);

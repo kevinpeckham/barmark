@@ -1,9 +1,14 @@
 /** Diagnostics as lines: plain text for people and editors, workflow commands for GitHub. */
 import type { ChartDiagnostic } from "barmark";
 
-/** A diagnostic's message, ending with what to write instead when the parser has a suggestion. */
+/**
+ * A diagnostic's message, ending with what to write instead when the parser
+ * has a suggestion the message does not already spell out.
+ */
 const sentence = (d: ChartDiagnostic) =>
-	d.suggestion ? `${d.message} (write ${d.suggestion})` : d.message;
+	d.suggestion && !d.message.includes(d.suggestion)
+		? `${d.message} (write ${d.suggestion})`
+		: d.message;
 
 export function textLine(path: string, d: ChartDiagnostic): string {
 	return `${path}:${d.line}: ${d.severity}: ${sentence(d)}`;

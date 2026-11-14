@@ -47,9 +47,9 @@ meaning, except the misreadings fixed below.
 - **A Harte label with `b6` converts to `(b6)`**: `harteToBarmark("C:min(b6)")`
   is `Cm(b6)`, where it was `Cm(b13)`, the same notes. Labels with `b13`
   are unchanged, and naming a set of notes (`nameNotes`) still writes
-  `(b13)`. A Harte label with a flat sixth is never given a sixth-chord
-  name with its sixth replaced: `C:maj(b6,9)` is `C(b6,9)`, not
-  `C6/9(b6)`; `C:maj6(b6)` is `C(b6,6)`. Labels without a flat sixth
+  `(b13)`. A Harte label with a flat sixth is not given a sixth-chord
+  name with its sixth replaced where a plainer name exists:
+  `C:maj(b6,9)` is `C(b6,9)`, not `C6/9(b6)`; `C:maj6(b6)` is `C(b6,6)`. Labels without a flat sixth
   convert as before (`C:7(b9,13)` is `C13(b9)`).
 
 ### Fixed

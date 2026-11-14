@@ -540,9 +540,9 @@ after 5000ms" at 5 to 13 s. Alone the whole file runs in under 6 s and both
 pass, on the branch and on `main` alike; CI never failed on them.
 
 **Cause:** the tests render synthetic songs and read them, a second or two
-of CPU each. Bun runs the suite's files beside one another, and on the VM,
-with other sessions' servers running, that work stretched past Bun's
-default 5 s per test. Nothing was slower: there was less CPU.
+of CPU each. In a full-suite run on the VM, with other sessions' servers
+running beside it, that work stretched past Bun's default 5 s per test.
+Nothing was slower: there was less CPU.
 
 **Fix:** `setDefaultTimeout(30_000)` at the top of that file, with the
 reason. A timeout is not a timing assertion: the scale tests still compare
