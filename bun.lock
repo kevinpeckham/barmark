@@ -54,7 +54,7 @@
     },
     "packages/listen": {
       "name": "@barmark/listen",
-      "version": "0.2.0",
+      "version": "0.2.1",
       "dependencies": {
         "@barmark/sync": "workspace:^",
         "barmark": "workspace:^",
