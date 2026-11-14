@@ -20,6 +20,11 @@ const xml = (text: string, options = {}) => {
 };
 
 describe("barmark export", () => {
+	test("a problem prints its suggestion, as check does", async () => {
+		const io = folder({ "s.chart.md": "| C(b2) |\n" });
+		expect(await exportCommand(["--musicxml", "s.chart.md"], io)).toBe(1);
+		expect(io.err()).toContain('"b2" is not a tone a parenthesis can add (write C(b9))\n');
+	});
 	test("--musicxml prints the score", async () => {
 		const io = folder({ "s.chart.md": SONG });
 		expect(await exportCommand(["--musicxml", "s.chart.md"], io)).toBe(0);

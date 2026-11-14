@@ -49,7 +49,10 @@ barmark render song.chart.md --diagrams guitar --left-handed --out song.html   #
 barmark transpose song.chart.md --to E   # or --semitones -2
 ```
 
-`check --format json` prints the diagnostics for other tools. `render`
+A problem the parser can suggest a fix for ends with it, as `song.chart.md:4:
+error: C(b2): "b2" is not a tone a parenthesis can add (write C(b9))`
+(`check`, `export`, `part` and `transpose`; `--format json` gives it as a
+`suggestion` field). `check --format json` prints the diagnostics for other tools. `render`
 takes the renderer's options as flags: `--theme auto|light|dark`,
 `--numerals nashville|roman`, `--no-bar-numbers`, `--rehearsal-letters`,
 `--no-wrap`, `--columns shared|row`, `--diagrams guitar` (a strip of guitar
