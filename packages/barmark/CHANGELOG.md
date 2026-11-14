@@ -9,6 +9,8 @@ Releases follow the process in [RELEASING.md](RELEASING.md).
 
 ## [Unreleased]
 
+## [0.24.0] - 2026-11-14
+
 Grammar changes: the flat sixth, `add` before any tone, and `Δ9`/`Δ13`
 (Kevin, 2026-11-13 and 2026-11-14). No chord that read before changes
 meaning, except the misreadings fixed below.
@@ -909,7 +911,8 @@ The first working release: the reference parser and printer for the
 
 - **A placeholder package that holds the `barmark` name** while the spec and parser are written.
 
-[Unreleased]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.23.1...HEAD
+[Unreleased]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.24.0...HEAD
+[0.24.0]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.23.1...barmark-v0.24.0
 [0.23.1]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.23.0...barmark-v0.23.1
 [0.23.0]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.22.0...barmark-v0.23.0
 [0.22.0]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.21.0...barmark-v0.22.0
