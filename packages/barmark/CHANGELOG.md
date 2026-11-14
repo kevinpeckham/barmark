@@ -28,7 +28,8 @@ meaning, except the misreadings fixed below.
   `C(#11)`, `F#maddb6` and `F#m(addb6)` are `F#m(b6)`, `F#maddb13` is
   `F#m(b13)`, `Am(b9,add13)` is `Am(b9,13)`. Before, only `add2`, `add4`,
   `add9` and `add11` read. Bare, a newly accepted tone is not followed by
-  a digit: `Cadd69` stays an error, never `C9(6)`.
+  a digit, nor by a slash that starts no bass: `Cadd69` stays an error,
+  never `C9(6)`, and `Cadd6/9` is refused as written.
 - **`Δ9` and `Δ13`** are `maj9` and `maj13`, with whatever follows:
   `CΔ9(#11)` is `Cmaj9(#11)`, `DΔ9/F#` is `Dmaj9/F#`. `Δ11` stays an error.
 - **Suggestions for refused tones.** `(b2)`, `(#2)`, `(#4)` and `(b7)`
@@ -37,8 +38,19 @@ meaning, except the misreadings fixed below.
   an alteration straight after a quality or `sus` with no extension
   suggests the parenthesised form, as an altered fifth after `m` did
   (`Cmb6` suggests `Cm(b6)`, `Cdimb9` `Cdim(b9)`, `Csus4b9`
-  `Csus4(b9)`). A suggestion is offered only when it reads with the root
+  `Csus4(b9)`), however the quality is spelled (`C-b6` and `Cminb6`
+  suggest `Cm(b6)`, `C+b6` `Caug(b6)`, `Csusb9` `Csus4(b9)`). A suggestion is offered only when it reads with the root
   and bass as written.
+
+### Changed
+
+- **A Harte label with `b6` converts to `(b6)`**: `harteToBarmark("C:min(b6)")`
+  is `Cm(b6)`, where it was `Cm(b13)`, the same notes. Labels with `b13`
+  are unchanged, and naming a set of notes (`nameNotes`) still writes
+  `(b13)`. A Harte label with a flat sixth is never given a sixth-chord
+  name with its sixth replaced: `C:maj(b6,9)` is `C(b6,9)`, not
+  `C6/9(b6)`; `C:maj6(b6)` is `C(b6,6)`. Labels without a flat sixth
+  convert as before (`C:7(b9,13)` is `C13(b9)`).
 
 ### Fixed
 
@@ -46,17 +58,11 @@ meaning, except the misreadings fixed below.
   a C♭ chord, and `Cadd9#11` as a C♯ chord: taking `add9` out left the
   alteration's accidental against the root. Such a symbol is now an
   error suggesting the items in one parenthesis (`C(9,b13)`, `C(9,#11)`),
-  and none where that too would change the root (`Cadd9b13b7`).
+  refused tones replaced by their counterparts (`Cadd9#4` suggests
+  `C(9,#11)`), and none where that too would change the root
+  (`Cadd9b13bm7`).
   `Bbadd9` and `Abaddb6` keep their roots; `Bbadd9b13` and `Cmadd9b13`
   now suggest `Bb(9,b13)` and `Cm(9,b13)`.
-
-### Changed
-
-- **A Harte label with `b6` converts to `(b6)`**: `harteToBarmark("C:min(b6)")`
-  is `Cm(b6)`, where it was `Cm(b13)`, the same notes. Labels with `b13`
-  are unchanged, and naming a set of notes (`nameNotes`) still writes
-  `(b13)`. With another tone, a label keeps the plain spelling:
-  `C:maj(b6,9)` is `C(b6,9)`, not `C6/9(b6)`; `C:maj6(b6)` is `C(b6,6)`.
 
 ## [0.23.1] - 2026-11-10
 

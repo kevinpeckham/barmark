@@ -157,13 +157,21 @@ const BARE_ADD = bareScan(`add(?:${BARE_ADD_TONE})`);
 /** A bare `add` and the accidental straight after it: `add9b` in `Cadd9b13`. */
 const ADD_THEN_ACCIDENTAL = bareScan(`add(?:${BARE_ADD_TONE})[#b]`);
 /** A bare `add` and the alterations straight after it: `add9b13` in `Cmadd9b13`. */
-const ADD_THEN_ALTERATIONS = bareScan(`(add(?:${BARE_ADD_TONE}))((?:${ALTERATIONS})+)`);
-const EACH_ALTERATION = new RegExp(ALTERATIONS, "g");
+/** An alteration, or a refused tone with a counterpart (`#4`), as written after a bare `add`. */
+const AFTER_ADD = `${ALTERATIONS}|${Object.keys(COUNTERPARTS).join("|")}`;
+const ADD_THEN_ALTERATIONS = bareScan(`(add(?:${BARE_ADD_TONE}))((?:${AFTER_ADD})+)`);
+const EACH_ALTERATION = new RegExp(AFTER_ADD, "g");
 /** `add` before a tone inside a group: `(add9)`, `(b9,addb6)`. */
 const GROUP_ADD = new RegExp(String.raw`(?<=[(,]\s*)add(${ADD_TONE})(?=\s*[,)])`, "g");
 /** A group and its items. */
 const GROUP_ITEMS = /\(([^()]*)\)/g;
 const BASS_AT_END = /\/([A-G][#b]?)$/;
+
+/** The text after a root with Appendix A.5's aliases applied: `-b6` is `mb6`. */
+function aliased(rest: string): string {
+	for (const [pattern, replacement] of ALIASES) rest = rest.replace(pattern, replacement);
+	return rest;
+}
 
 /** The text a symbol is read from: ♯ and ♭ as # and b (Appendix A.5). */
 const ascii = (symbol: string) => symbol.replace(/♯/g, "#").replace(/♭/g, "b");
@@ -179,7 +187,7 @@ function normalizeSymbol(text: string): Normal | Diagnostic {
 	// Stacked spellings first, on the name as written; the aliases then read what is left.
 	const separated = separate(rest);
 	rest = separated.text;
-	for (const [pattern, replacement] of ALIASES) rest = rest.replace(pattern, replacement);
+	rest = aliased(rest);
 	rest = logicGroups(rest);
 	// `(omit3)` and `(omit 3)` are `(no3)`.
 	rest = rest.replace(/(?<=[(,]\s*)omit\s*(\d+)(?=\s*[,)])/g, "no$1");
@@ -224,14 +232,17 @@ function eachAdded(text: string): string {
 	return text.replace(ADD_THEN_ALTERATIONS, (match: string, ...args: unknown[]) => {
 		const [inner, add = "", alterations = ""] = args as (string | undefined)[];
 		if (inner !== undefined) return match;
-		return add + alterations.replace(EACH_ALTERATION, "add$&");
+		return add + alterations.replace(EACH_ALTERATION, (tone) => `add${COUNTERPARTS[tone] ?? tone}`);
 	});
 }
 
 /** The chord `candidate` names, when it reads and keeps the root and bass `text` is written with. */
 function offered(text: string, candidate: string): ChordRecord | null {
-	if (candidate === text) return null;
-	const r = parseChord(candidate);
+	return candidate === text ? null : keepsWritten(text, parseChord(candidate));
+}
+
+/** The chord read, when it reads with the root and bass `text` is written with. */
+function keepsWritten(text: string, r: ParseResult): ChordRecord | null {
 	const root = ROOT.exec(text)?.[0];
 	const bass = BASS_AT_END.exec(text)?.[1] ?? root;
 	return r.ok && r.value.root === root && r.value.bass === bass ? r.value : null;
@@ -287,12 +298,21 @@ function suggest(symbol: string, text: string, normal: string, error: Diagnostic
 	if (added?.suggestion) return added;
 	const reads = (s: string) => parseChord(s).ok;
 	const offers = (s: string) => offered(text, s) !== null;
-	const moved = bareAlteration(symbol, text, error, reads, offers);
+	const root = ROOT.exec(text)?.[0] ?? "";
+	const moved = bareAlteration(
+		symbol,
+		root + aliased(text.slice(root.length)),
+		error,
+		reads,
+		offers,
+	);
 	if (moved !== error) return moved;
-	// Only the refused tones change, so a rewrite that reads is the fix for this error. An
-	// unchanged `normal` is never read again: that would recurse once per bare omission.
+	// Only the refused tones change, so a rewrite that reads is the fix for this error. It is
+	// read as the normalised text it already is; an unchanged `normal` is never read again,
+	// which would recurse once per bare omission.
 	const suggestion = counterparts(normal);
-	return suggestion !== normal && offers(suggestion) ? { ...error, suggestion } : error;
+	if (suggestion === normal) return error;
+	return keepsWritten(text, readChord(symbol, suggestion)) ? { ...error, suggestion } : error;
 }
 
 /** The chord a normalized symbol names. */

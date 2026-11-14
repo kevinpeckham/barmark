@@ -11,7 +11,7 @@ import { harteToBarmark, toHarte } from "../../src/chords/harte.js";
 import { nameNotes } from "../../src/chords/name.js";
 import { parseChord } from "../../src/chords/parse.js";
 import { printSuffix } from "../../src/chords/print.js";
-import { enumerateSuffixes, replacesOwnTone, type Suffix } from "../../src/chords/suffixes.js";
+import { enumerateSuffixes, replacesOwnSixth, type Suffix } from "../../src/chords/suffixes.js";
 
 const ok = (symbol: string) => {
 	const r = parseChord(symbol);
@@ -357,7 +357,7 @@ const written = (symbol: string) => {
 };
 
 describe("a suggestion never changes the root or the bass", () => {
-	test.each(["Cadd9b13b7", "Eadd9b13b7", "Cadd9b13b", "Cadd9b5bm7"])(
+	test.each(["Cadd9b13bm7", "Eadd9b13bm7", "Cadd9b13b", "Cadd9b5bm7"])(
 		"%s: no suggestion, since the items in one parenthesis would join the root",
 		(symbol) => {
 			const e = fails(symbol);
@@ -365,6 +365,11 @@ describe("a suggestion never changes the root or the bass", () => {
 			expect(e.suggestion).toBeUndefined();
 		},
 	);
+	test("a b7 after a bare add's alterations is its counterpart, the flat seventh", () => {
+		// Since the final wave the counterparts apply here too; at 3690c48 this had no suggestion.
+		expect(fails("Cadd9b13b7").suggestion).toBe("C(7,9,b13)");
+		expect(fails("Eadd9b13b7").suggestion).toBe("E(7,9,b13)");
+	});
 	// One per path that builds a suggestion by rewriting the symbol.
 	test.each([
 		["Cadd9b13/E", "C(9,b13)/E"],
@@ -493,7 +498,7 @@ describe("a Harte flat sixth with another tone keeps its plain spelling", () => 
 	test("every canonical suffix with b6 round-trips through Harte wherever its b13 twin does", () => {
 		const suffixes = [...enumerateSuffixes().values()]
 			.flat()
-			.filter((s) => s.parts.tones.includes("b6") && !replacesOwnTone(s));
+			.filter((s) => s.parts.tones.includes("b6") && !replacesOwnSixth(s));
 		expect(suffixes.length).toBeGreaterThan(100);
 		const exceptions = suffixes.flatMap((s) =>
 			["C", "F#", "Bb"].flatMap((root) => {
@@ -523,5 +528,88 @@ describe("the refused-tone rewrite reads items, not the text around them", () =>
 		const [plain, refused] = [time(`C(x,${spaces}x)`), time(`C(b2,${spaces}x)`)];
 		// The lookbehind rewrite took about three plain reads (155 ms against 48).
 		expect(refused).toBeLessThan(plain * 2.6 + 5);
+	});
+});
+
+describe("the Harte spelling rule is the flat sixth's only", () => {
+	test.each([
+		["C:7(b9,13)", "C13(b9)"],
+		["C:min7(b9,11,13)", "Cm13(b9)"],
+		["C:sus4(b7,b9,13)", "C13sus4(b9)"],
+		["C:maj7(#9,13)", "Cmaj13(#9)"],
+	])("%s is %s, as at base", (label, symbol) => {
+		expect(harteToBarmark(label)).toBe(symbol);
+	});
+	test.each(["Cm13(b9)", "C13sus4(b9)", "Cmaj13(#9)", "C13(b9)"])(
+		"%s round-trips through its Harte label",
+		(symbol) => {
+			expect(harteToBarmark(toHarte(ok(symbol).value))).toBe(symbol);
+		},
+	);
+	test("every interval set of the suffix table, on C, F# and Bb: the base commit's names", () => {
+		const lines: string[] = [];
+		for (const list of enumerateSuffixes().values()) {
+			// The first spelling without b6: the base table's first spelling of the set.
+			const first = list.find((s) => !s.parts.tones.includes("b6"));
+			if (!first) continue;
+			for (const root of ["C", "F#", "Bb"]) {
+				const r = parseChord(root + first.suffix);
+				if (!r.ok) continue;
+				const label = toHarte(r.value);
+				if (!label.includes("b6")) lines.push(`${label}\t${harteToBarmark(label)}`);
+			}
+		}
+		lines.sort();
+		const hash = new Bun.CryptoHasher("sha256");
+		for (const line of lines) hash.update(`${line}\n`);
+		// The same loop run at 9c6af51 (main before the flat sixth), in a clone.
+		expect(lines.length).toBe(5_892);
+		expect(hash.digest("hex")).toBe(
+			"13be97722436e3fbd116cc4cd91549c0c1d821a68593004dfde8178021e816b7",
+		);
+	}, 60_000);
+});
+
+describe("the final wave's small items", () => {
+	test.each([
+		["Cadd6/9", 'Cadd6/9: cannot read "add6/9"'],
+		["Cadd13/9", 'Cadd13/9: cannot read "add13/9"'],
+		["Caddb6/x", 'Caddb6/x: cannot read "addb6/x"'],
+	])("%s is refused in the writer's own text, as at base", (symbol, message) => {
+		expect(fails(symbol).message).toBe(message);
+	});
+	test("a new add tone before a slash bass still reads", () => {
+		expect(ok("Cadd13/E").value.canonical).toBe("C(13)/E");
+		expect(ok("Caddb6/Ab").value.canonical).toBe("C(b6)/Ab");
+	});
+	test.each([
+		["Cadd9#4", "C(9,#11)"],
+		["Cadd9b2", "C(b9,9)"],
+	])("%s: the root-joining error suggests %s, refused tones replaced", (symbol, suggestion) => {
+		const e = fails(symbol);
+		expect(e.message).toContain("would join the root C");
+		expect(e.suggestion).toBe(suggestion);
+	});
+	test.each([
+		["C-b6", "Cm(b6)"],
+		["Cminb6", "Cm(b6)"],
+		["C+b6", "Caug(b6)"],
+		["Csusb9", "Csus4(b9)"],
+	])("%s, an aliased quality, suggests %s as Cmb6 does", (symbol, suggestion) => {
+		const e = fails(symbol);
+		expect(e.message).toContain("goes in the parentheses unless it follows an extension");
+		expect(e.suggestion).toBe(suggestion);
+	});
+	test("a refused tone in a long list is read once more at most, on the normalised text", () => {
+		const spaces = " ".repeat(10_000);
+		const time = (symbol: string) => {
+			parseChord(symbol);
+			const start = performance.now();
+			parseChord(symbol);
+			return performance.now() - start;
+		};
+		const [plain, refused] = [time(`C(x,${spaces}x)`), time(`C(b2,${spaces}x)`)];
+		// At 3690c48 the refused list took about twice the plain one (608 ms against 298).
+		expect(refused).toBeLessThan(plain * 1.5 + 10);
 	});
 });

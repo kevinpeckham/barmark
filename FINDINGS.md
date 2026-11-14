@@ -800,7 +800,8 @@ order, not just the written marks.
 - **The fix.** When a bare `add` was pulled, the root has no accidental and
   what is left starts with `b` or `#`, the symbol is an error suggesting
   the items in one parenthesis (`C(9,b13)`), offered only when that reads:
-  `joinsRoot` in `packages/barmark/src/chords/parse.ts`, tests in
+  `addThenAlteration` (with `offered` and `eachAdded`) in
+  `packages/barmark/src/chords/parse.ts`, tests in
   `tests/chords/flat-sixth.test.ts` ("a bare add never changes the root").
   A bare `omit`/`no` cannot do this: it is taken only at the end of the
   name, so nothing is joined after it. The general lesson: when a

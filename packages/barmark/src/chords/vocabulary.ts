@@ -84,9 +84,10 @@ export const ADD_TONE = alternation(ADD_TONES);
 
 /**
  * What a bare `add` may stand before: a tone added on 2026-11-14 only when
- * no digit follows it, so `Cadd69` never reads as `C9(6)`.
+ * no digit follows it, nor a slash but one before a bass, so `Cadd69` never
+ * reads as `C9(6)` and `Cadd6/9` is refused as written.
  */
-export const BARE_ADD_TONE = `(?:${alternation(ADD_TONES.filter((t) => !FIRST_ADD_TONES.includes(t)))})(?!\\d)|${alternation(FIRST_ADD_TONES)}`;
+export const BARE_ADD_TONE = `(?:${alternation(ADD_TONES.filter((t) => !FIRST_ADD_TONES.includes(t)))})(?!\\d|\\/(?![A-G]))|${alternation(FIRST_ADD_TONES)}`;
 
 /** Tones a parenthesis may leave out (grammar 3): the 3rd or the 5th. */
 export const OMISSIONS = ["no3", "no5"];

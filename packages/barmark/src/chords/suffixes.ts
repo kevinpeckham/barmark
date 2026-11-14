@@ -4,12 +4,10 @@ import type { Interval } from "./types.js";
 import {
 	type ChordParts,
 	chordIntervals,
-	EXTENSIONS,
 	type Quality,
 	SUS_ALLOWED_WITH,
 	type Sus,
 	TONES,
-	toneInterval,
 	VALID_EXTENSIONS,
 } from "./vocabulary.js";
 
@@ -68,16 +66,12 @@ export const intervalSetKey = (intervals: Interval[]) =>
 	[...new Set(intervals.map(intervalKey))].sort().join("|");
 
 /**
- * A suffix whose parentheses alter a tone its own extension supplies
- * (`6(b6)`, `6/9(b6)`, `9(b9)`, `11(#11)`): a spelling to choose only when
- * nothing plainer names the same notes. A tone of the quality is not counted:
- * `m7(b5)` is the half-diminished chord's own name, and `9(#5)` is how
- * Billboard's `aug(b7,9)` has always converted.
+ * A sixth chord whose flat sixth replaces its own sixth (`6(b6)`, `6/9(b6)`,
+ * `m6(b6)`): a spelling to choose only when nothing plainer names the same
+ * notes, so a Harte label with a flat sixth is never given a sixth-chord
+ * name with its sixth replaced. The rule is the flat sixth's only: other
+ * altered tones keep the names they always had (`C:7(b9,13)` is `C13(b9)`).
  */
-export function replacesOwnTone({ parts }: Suffix): boolean {
-	const own = EXTENSIONS.find(([name]) => name === parts.extension)?.[1] ?? [];
-	return parts.tones.some((tone) => {
-		const i = toneInterval(tone);
-		return tone !== "7" && i.alter !== 0 && own.some((o) => o.degree === i.degree && o.alter === 0);
-	});
+export function replacesOwnSixth({ parts }: Suffix): boolean {
+	return parts.tones.includes("b6") && (parts.extension === "6" || parts.extension === "6/9");
 }
