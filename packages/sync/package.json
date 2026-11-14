@@ -1,6 +1,6 @@
 {
 	"name": "@barmark/sync",
-	"version": "0.4.1",
+	"version": "0.4.2",
 	"description": "Sync a barmark chord chart with a recording: build a chart and its timing map from chord detections, and check and read timing maps.",
 	"type": "module",
 	"sideEffects": false,
