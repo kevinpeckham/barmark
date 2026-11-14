@@ -531,6 +531,25 @@ showed the rule needed refining.
   differences) confirms it. The test file still takes about a minute,
   most of it chunk size 1, where the per-chunk calls dominate.
 
+### Tests that render whole songs time out in the full suite on a loaded machine (2026-11-14, @barmark/listen)
+
+**Symptom:** `bun test` at the root failed, three times in two days, on the
+same two tests in `packages/listen/tests/pipeline.test.ts` ("Review Focus 5:
+a truncated grid…", "build options reach the builder…"), each "timed out
+after 5000ms" at 5 to 13 s. Alone the whole file runs in under 6 s and both
+pass, on the branch and on `main` alike; CI never failed on them.
+
+**Cause:** the tests render synthetic songs and read them, a second or two
+of CPU each. Bun runs the suite's files beside one another, and on the VM,
+with other sessions' servers running, that work stretched past Bun's
+default 5 s per test. Nothing was slower: there was less CPU.
+
+**Fix:** `setDefaultTimeout(30_000)` at the top of that file, with the
+reason. A timeout is not a timing assertion: the scale tests still compare
+relative times.
+
+**Where it lives:** `packages/listen/tests/pipeline.test.ts`.
+
 ### A best-of-three ratio of millisecond runs fails under load; alternate the runs (2026-11-10, @barmark/listen)
 
 - **The symptom.** `comb-scale.test.ts` timed three combs of a 60 s
