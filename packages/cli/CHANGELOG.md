@@ -6,6 +6,18 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- **`check` prints a problem's suggestion** (so do `part`, `transpose` and
+  `export`, which print problems the same way): `bad.chart.md:4: error: C(b2): "b2" is
+  not a tone a parenthesis can add (write C(b9))`, for errors and warnings.
+  `--format github` carries the same sentence in the annotation, and
+  `--format json` a `suggestion` field beside `message`, absent when there
+  is none. A problem with no suggestion prints as before.
+- **`check`, `format`, `render` and the exports read a flat sixth, an
+  `add` before any tone and `Δ9`** (`F#m(b6)`, `Cadd13`, `CΔ9`), as
+  `barmark` now reads them.
+
 ## [0.12.0] - 2026-11-13
 
 ### Added

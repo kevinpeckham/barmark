@@ -2,7 +2,8 @@ import { toHarte } from "./harte.js";
 import { noteSemitone, transpose } from "./intervals.js";
 import { canonicalParts, printChord } from "./print.js";
 import {
-	alteredFifth,
+	ALTERATIONS,
+	bareAlteration,
 	bareScan,
 	intoGroup,
 	pullBare,
@@ -12,8 +13,11 @@ import {
 } from "./stacked.js";
 import type { ChordRecord, Diagnostic, Interval, ParseResult } from "./types.js";
 import {
+	ADD_TONE,
 	ALIASES,
+	BARE_ADD_TONE,
 	type ChordParts,
+	COUNTERPARTS,
 	chordIntervals,
 	EXTENSIONS,
 	isOmission,
@@ -26,7 +30,7 @@ import {
 } from "./vocabulary.js";
 
 const ROOT = /^[A-G][#b]?/;
-const INLINE_ALTERATION = /^(b5|#5|b9|#9|#11|b13)/;
+const INLINE_ALTERATION = new RegExp(`^(${ALTERATIONS})`);
 
 /** Splits a symbol into its parts, or names the text it could not read. */
 function tokenize(symbol: string): ChordParts | string {
@@ -149,7 +153,25 @@ function logicGroups(rest: string): string {
 	return `5${others.length ? `(${others.join(",")})` : ""}${joined.slice(group[0].length)}`;
 }
 
-const BARE_ADD = bareScan("add(?:2|4|9|11)");
+const BARE_ADD = bareScan(`add(?:${BARE_ADD_TONE})`);
+/** A bare `add` and the accidental straight after it: `add9b` in `Cadd9b13`. */
+const ADD_THEN_ACCIDENTAL = bareScan(`add(?:${BARE_ADD_TONE})[#b]`);
+/** A bare `add` and the alterations straight after it: `add9b13` in `Cmadd9b13`. */
+/** An alteration, or a refused tone with a counterpart (`#4`), as written after a bare `add`. */
+const AFTER_ADD = `${ALTERATIONS}|${Object.keys(COUNTERPARTS).join("|")}`;
+const ADD_THEN_ALTERATIONS = bareScan(`(add(?:${BARE_ADD_TONE}))((?:${AFTER_ADD})+)`);
+const EACH_ALTERATION = new RegExp(AFTER_ADD, "g");
+/** `add` before a tone inside a group: `(add9)`, `(b9,addb6)`. */
+const GROUP_ADD = new RegExp(String.raw`(?<=[(,]\s*)add(${ADD_TONE})(?=\s*[,)])`, "g");
+/** A group and its items. */
+const GROUP_ITEMS = /\(([^()]*)\)/g;
+const BASS_AT_END = /\/([A-G][#b]?)$/;
+
+/** The text after a root with Appendix A.5's aliases applied: `-b6` is `mb6`. */
+function aliased(rest: string): string {
+	for (const [pattern, replacement] of ALIASES) rest = rest.replace(pattern, replacement);
+	return rest;
+}
 
 /** The text a symbol is read from: ♯ and ♭ as # and b (Appendix A.5). */
 const ascii = (symbol: string) => symbol.replace(/♯/g, "#").replace(/♭/g, "b");
@@ -165,19 +187,78 @@ function normalizeSymbol(text: string): Normal | Diagnostic {
 	// Stacked spellings first, on the name as written; the aliases then read what is left.
 	const separated = separate(rest);
 	rest = separated.text;
-	for (const [pattern, replacement] of ALIASES) rest = rest.replace(pattern, replacement);
+	rest = aliased(rest);
 	rest = logicGroups(rest);
 	// `(omit3)` and `(omit 3)` are `(no3)`.
 	rest = rest.replace(/(?<=[(,]\s*)omit\s*(\d+)(?=\s*[,)])/g, "no$1");
 	// `(add9)` is `(9)`: inside a group, `add` before a tone it may add is dropped.
-	rest = rest.replace(/(?<=[(,]\s*)add(2|4|9|11)(?=\s*[,)])/g, "$1");
+	rest = rest.replace(GROUP_ADD, "$1");
 	// A bare `add9` outside any group; what is left inside one is the tokenizer's to name.
 	const bare = pullBare(rest, BARE_ADD);
-	rest = intoGroup(
-		bare.text,
-		bare.taken.map((a) => a.slice(3)),
-	);
-	return { text: root + rest, separated };
+	const added = bare.taken.map((a) => a.slice(3));
+	if (added.length && root.length === 1 && /^[b#]/.test(bare.text))
+		return (
+			addThenAlteration(text, true) ?? {
+				message: `${text}: an accidental would join the root ${root}`,
+				token: text,
+			}
+		);
+	return { text: root + intoGroup(bare.text, added), separated };
+}
+
+/**
+ * A bare `add` straight before an accidental (`Cadd9b13`, `Cmadd9b13`): an
+ * error when taking the `add` out would join the accidental to the root
+ * (`joins`) or leave text that does not read, suggesting the items in one
+ * parenthesis when that reads with the root and bass as written; null when
+ * there is no such `add`.
+ */
+function addThenAlteration(text: string, joins: boolean): Diagnostic | null {
+	const found = pullBare(text, ADD_THEN_ACCIDENTAL).taken[0];
+	if (!found) return null;
+	const [add, accidental] = [found.slice(0, -1), found.slice(-1)];
+	const root = ROOT.exec(text)?.[0] ?? "";
+	const why = joins ? `would join the root ${root}` : "starts an alteration";
+	const suggestion = offered(text, eachAdded(text));
+	return {
+		message: `${text}: the "${accidental}" after ${add} ${why}; the items go in one parenthesis`,
+		token: text,
+		...(suggestion ? { suggestion: suggestion.canonical } : {}),
+	};
+}
+
+/** The text with each alteration straight after a bare `add` given an `add` of its own: `Cadd9addb13`. */
+function eachAdded(text: string): string {
+	return text.replace(ADD_THEN_ALTERATIONS, (match: string, ...args: unknown[]) => {
+		const [inner, add = "", alterations = ""] = args as (string | undefined)[];
+		if (inner !== undefined) return match;
+		return add + alterations.replace(EACH_ALTERATION, (tone) => `add${COUNTERPARTS[tone] ?? tone}`);
+	});
+}
+
+/** The chord `candidate` names, when it reads and keeps the root and bass `text` is written with. */
+function offered(text: string, candidate: string): ChordRecord | null {
+	return candidate === text ? null : keepsWritten(text, parseChord(candidate));
+}
+
+/** The chord read, when it reads with the root and bass `text` is written with. */
+function keepsWritten(text: string, r: ParseResult): ChordRecord | null {
+	const root = ROOT.exec(text)?.[0];
+	const bass = BASS_AT_END.exec(text)?.[1] ?? root;
+	return r.ok && r.value.root === root && r.value.bass === bass ? r.value : null;
+}
+
+/** Each refused tone in a group replaced by its counterpart (`(b2)` is `(b9)`), item by item. */
+function counterparts(normal: string): string {
+	return normal.replace(GROUP_ITEMS, (_, inner: string) => {
+		const items = inner.split(",").map((item) => {
+			const tone = item.trim();
+			return Object.hasOwn(COUNTERPARTS, tone)
+				? item.replace(tone, COUNTERPARTS[tone] ?? tone)
+				: item;
+		});
+		return `(${items.join(",")})`;
+	});
 }
 
 /**
@@ -200,11 +281,38 @@ export function parseChord(symbol: string): ParseResult {
 	const normal = normalizeSymbol(text);
 	if (!("text" in normal)) return { ok: false, error: normal };
 	const r = readChord(symbol, normal.text);
-	if (!r.ok) {
-		return { ok: false, error: alteredFifth(symbol, text, r.error, (s) => parseChord(s).ok) };
-	}
+	if (!r.ok) return { ok: false, error: suggest(symbol, text, normal.text, r.error) };
 	const warning = stacked(symbol, text, normal, r.value.canonical);
 	return warning ? { ...r, warnings: [warning, ...r.warnings] } : r;
+}
+
+/**
+ * The error with a suggestion where one reads with the root and bass as
+ * written (Appendix A.6): an alteration after a bare `add` in one
+ * parenthesis with it (`Cmadd9b13` is `Cm(9,b13)`), an alteration moved into
+ * the parentheses (`Cmb6` is `Cm(b6)`), or each refused tone replaced by its
+ * counterpart (`C7(b2,#4)` is `C7(b9,#11)`).
+ */
+function suggest(symbol: string, text: string, normal: string, error: Diagnostic): Diagnostic {
+	const added = addThenAlteration(text, false);
+	if (added?.suggestion) return added;
+	const reads = (s: string) => parseChord(s).ok;
+	const offers = (s: string) => offered(text, s) !== null;
+	const root = ROOT.exec(text)?.[0] ?? "";
+	const moved = bareAlteration(
+		symbol,
+		root + aliased(text.slice(root.length)),
+		error,
+		reads,
+		offers,
+	);
+	if (moved !== error) return moved;
+	// Only the refused tones change, so a rewrite that reads is the fix for this error. It is
+	// read as the normalised text it already is; an unchanged `normal` is never read again,
+	// which would recurse once per bare omission.
+	const suggestion = counterparts(normal);
+	if (suggestion === normal) return error;
+	return keepsWritten(text, readChord(symbol, suggestion)) ? { ...error, suggestion } : error;
 }
 
 /** The chord a normalized symbol names. */

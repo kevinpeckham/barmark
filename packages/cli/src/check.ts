@@ -24,7 +24,12 @@ export async function check(args: string[], io: Io): Promise<number> {
 	if (format === "json") {
 		const files = results.map(({ path, diagnostics }) => ({
 			file: path,
-			diagnostics: diagnostics.map(({ line, severity, message }) => ({ line, severity, message })),
+			diagnostics: diagnostics.map(({ line, severity, message, suggestion }) => ({
+				line,
+				severity,
+				message,
+				...(suggestion ? { suggestion } : {}),
+			})),
 		}));
 		io.stdout(`${JSON.stringify(files, null, 2)}\n`);
 	} else {

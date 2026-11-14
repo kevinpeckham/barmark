@@ -101,23 +101,25 @@ describe("(addN) inside parentheses (issue #62)", () => {
 			);
 		}
 	});
-	test("(add13) and (add#11) stay rejected, with a message that names what was written", () => {
-		for (const [input, token] of [
-			["C(add13)", "add13"],
-			["C(add#11)", "add#11"],
-			["Am(b9,add13)", "add13"],
-			["C(add9x)", "add9x"],
-		] as const) {
-			const r = parseChord(input);
-			expect(r.ok).toBe(false);
-			if (!r.ok)
-				expect(r.error.message).toBe(`${input}: "${token}" is not a tone a parenthesis can add`);
-		}
+	// Turned over on purpose (Kevin, 2026-11-14): `add` goes before any tone a
+	// parenthesis can add, superseding the 2026-11-02 decision that kept these errors.
+	test("(add13) and (add#11) read as (13) and (#11)", () => {
+		for (const [input, expected] of [
+			["C(add13)", "C(13)"],
+			["C(add#11)", "C(#11)"],
+			["Am(b9,add13)", "Am(b9,13)"],
+		] as const)
+			expect(canonical(input)).toBe(expected);
 	});
-	test("a rejected group after a bare addN still names what was written", () => {
-		const r = parseChord("Cm7(add13)add9");
+	test("an add before what is not a tone is still rejected, naming what was written", () => {
+		const r = parseChord("C(add9x)");
 		expect(r.ok).toBe(false);
-		if (!r.ok) expect(r.error.message).toContain('"add13"');
+		if (!r.ok)
+			expect(r.error.message).toBe(`C(add9x): "add9x" is not a tone a parenthesis can add`);
+	});
+	test("a group after a bare addN reads as (add11) does there", () => {
+		expect(canonical("Cm7(add11)add9")).toBe("Cm7(9,11)");
+		expect(canonical("Cm7(add13)add9")).toBe("Cm7(9,13)");
 	});
 });
 

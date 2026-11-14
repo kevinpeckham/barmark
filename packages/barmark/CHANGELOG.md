@@ -9,6 +9,61 @@ Releases follow the process in [RELEASING.md](RELEASING.md).
 
 ## [Unreleased]
 
+Grammar changes: the flat sixth, `add` before any tone, and `Δ9`/`Δ13`
+(Kevin, 2026-11-13 and 2026-11-14). No chord that read before changes
+meaning, except the misreadings fixed below.
+
+### Added
+
+- **The flat sixth.** `b6` is a tone a parenthesis can add, with its own
+  canonical spelling: `F#m(b6)` and `F#m(♭6)` read (F♯ A C♯ D, Harte
+  `F#:min(b6)`) and print `F#m(b6)`, never rewritten to `(b13)`; after an
+  extension it needs no parentheses (`F#m7b6` is F♯ A C♯ D E and prints
+  `F#m7(b6)`).
+  It replaces the 6 of a sixth chord (`C6(b6)` is C E G A♭) and adds on
+  any other; `C(b6,b13)` warns that the chord already contains the note.
+  `Cb6` is still the C♭ sixth chord.
+- **`add` before any tone a parenthesis can add**, bare or in the
+  parentheses, alone or in a list: `Cadd13` is `C(13)`, `Cadd#11` is
+  `C(#11)`, `F#maddb6` and `F#m(addb6)` are `F#m(b6)`, `F#maddb13` is
+  `F#m(b13)`, `Am(b9,add13)` is `Am(b9,13)`. Before, only `add2`, `add4`,
+  `add9` and `add11` read. Bare, a newly accepted tone is not followed by
+  a digit, nor by a slash that starts no bass: `Cadd69` stays an error,
+  never `C9(6)`, and `Cadd6/9` is refused as written.
+- **`Δ9` and `Δ13`** are `maj9` and `maj13`, with whatever follows:
+  `CΔ9(#11)` is `Cmaj9(#11)`, `DΔ9/F#` is `Dmaj9/F#`. `Δ11` stays an error.
+- **Suggestions for refused tones.** `(b2)`, `(#2)`, `(#4)` and `(b7)`
+  stay errors, now suggesting `(b9)`, `(#9)`, `(#11)` and `(7)`, every
+  such tone in a list replaced (`C7(b2,#4)` suggests `C7(b9,#11)`); and
+  an alteration straight after a quality or `sus` with no extension
+  suggests the parenthesised form, as an altered fifth after `m` did
+  (`Cmb6` suggests `Cm(b6)`, `Cdimb9` `Cdim(b9)`, `Csus4b9`
+  `Csus4(b9)`), however the quality is spelled (`C-b6` and `Cminb6`
+  suggest `Cm(b6)`, `C+b6` `Caug(b6)`, `Csusb9` `Csus4(b9)`). A suggestion is offered only when it reads with the root
+  and bass as written.
+
+### Changed
+
+- **A Harte label with `b6` converts to `(b6)`**: `harteToBarmark("C:min(b6)")`
+  is `Cm(b6)`, where it was `Cm(b13)`, the same notes. Labels with `b13`
+  are unchanged, and naming a set of notes (`nameNotes`) still writes
+  `(b13)`. A Harte label with a flat sixth is not given a sixth-chord
+  name with its sixth replaced where a plainer name exists:
+  `C:maj(b6,9)` is `C(b6,9)`, not `C6/9(b6)`; `C:maj6(b6)` is `C(b6,6)`. Labels without a flat sixth
+  convert as before (`C:7(b9,13)` is `C13(b9)`).
+
+### Fixed
+
+- **A bare `add` never changes the root.** `Cadd9b13` read as `Cb13(9)`,
+  a C♭ chord, and `Cadd9#11` as a C♯ chord: taking `add9` out left the
+  alteration's accidental against the root. Such a symbol is now an
+  error suggesting the items in one parenthesis (`C(9,b13)`, `C(9,#11)`),
+  refused tones replaced by their counterparts (`Cadd9#4` suggests
+  `C(9,#11)`), and none where that too would change the root
+  (`Cadd9b13bm7`).
+  `Bbadd9` and `Abaddb6` keep their roots; `Bbadd9b13` and `Cmadd9b13`
+  now suggest `Bb(9,b13)` and `Cm(9,b13)`.
+
 ## [0.23.1] - 2026-11-10
 
 ### Changed

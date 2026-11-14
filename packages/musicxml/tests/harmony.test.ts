@@ -102,6 +102,24 @@ describe("harmony", () => {
 		expect(textSpells("C", "", add9)).toBe(false);
 		expect(textSpells("C", "(", add9)).toBe(false);
 	});
+	test("F#m(b6) is minor with one degree: 6, flattened, added; the file validates", () => {
+		const xml = harmonyXml(record("F#m(b6)"));
+		expect(xml).toContain('<kind text="m(b6)">minor</kind>');
+		expect(xml.match(/<degree[ >]/g)).toHaveLength(1);
+		expect(xml).toContain(
+			"<degree-value>6</degree-value><degree-alter>-1</degree-alter><degree-type>add</degree-type>",
+		);
+		// xmlOf validates the whole file against the vendored XSD
+		expect(xmlOf("| F#m(b6) | C6(b6) | Cadd13 | CΔ9 |")).toContain(
+			"<degree-value>6</degree-value>",
+		);
+	});
+	test("(b6) and (b13) are one note, written as different degrees", () => {
+		const b6 = kindOf(record("Cm(b6)").intervals);
+		const b13 = kindOf(record("Cm(b13)").intervals);
+		expect(b6.degrees).toEqual([{ value: 6, alter: -1, type: "add" }]);
+		expect(b13.degrees).toEqual([{ value: 13, alter: -1, type: "add" }]);
+	});
 	test("N.C. is kind none with its root hidden", () => {
 		expect(noChordXml()).toBe(
 			'<harmony><root><root-step text="">C</root-step></root><kind text="N.C.">none</kind></harmony>',

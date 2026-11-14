@@ -64,3 +64,14 @@ export function enumerateSuffixes(): Map<string, Suffix[]> {
 
 export const intervalSetKey = (intervals: Interval[]) =>
 	[...new Set(intervals.map(intervalKey))].sort().join("|");
+
+/**
+ * A sixth chord whose flat sixth replaces its own sixth (`6(b6)`, `6/9(b6)`,
+ * `m6(b6)`): a spelling to choose only when nothing plainer names the same
+ * notes, so a Harte label with a flat sixth is never given a sixth-chord
+ * name with its sixth replaced. The rule is the flat sixth's only: other
+ * altered tones keep the names they always had (`C:7(b9,13)` is `C13(b9)`).
+ */
+export function replacesOwnSixth({ parts }: Suffix): boolean {
+	return parts.tones.includes("b6") && (parts.extension === "6" || parts.extension === "6/9");
+}

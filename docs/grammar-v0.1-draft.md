@@ -428,7 +428,9 @@ quality    = "m" | "dim" | "aug" | "5"
 extension  = "6" | "6/9" | "7" | "maj7" | "9" | "maj9" | "11" | "13" | "maj13" | "7alt"
 sus        = "sus2" | "sus4"
 tones      = ( "(" tone ("," tone)* ")" )+  (groups in a row are one list)
-tone       = accidental? ("2" | "4" | "5" | "6" | "7" | "9" | "11" | "13")
+tone       = "2" | "4" | "6" | "7" | "9" | "11" | "13"
+           | "b5" | "#5" | "b6" | "b9" | "#9" | "#11" | "b13"
+           | "5"                           (on a bare root: the power chord)
            | "no3" | "no5"
 bass       = "/" root
 ```
@@ -437,8 +439,15 @@ bass       = "/" root
 
 **The parentheses rule (Logic semantics).** The quality and extension
 define the chord, and a parenthesis adds exactly the tones listed. An
-altered tone (`b5`, `#5`, `b9`, `#9`, `#11`, `b13`) **replaces** the
+altered tone (`b5`, `#5`, `b6`, `b9`, `#9`, `#11`, `b13`) **replaces** the
 natural tone of the same number if the chord has one; otherwise it adds.
+So `b6` replaces the 6 of a sixth chord (`C6(b6)` is C E G A♭, as
+`C9(b9)` is C E G B♭ D♭) and adds on any other (`F#m(b6)` is F♯ A C♯ D;
+`C13(b6)` keeps its A, a 13 being another number). `b6` and `b13` are
+the same note, each its own written form: neither is rewritten to the
+other, and written together (`C(b6,b13)`) the second warns that the chord
+already contains it. Tones print in degree order, flat before natural
+before sharp: `C(b6,9)`, `C(#5,b6)`.
 `5` means no third: on a bare root, `(5)` is the power chord, so
 `F#(5,7)` is `F#5(7)`; after a quality or an extension it is an
 **error**. Groups in a row read as one list, as Logic Pro writes them:
@@ -468,9 +477,10 @@ comma-separated form with a **warning** whose suggestion is that form:
 
 - items run together inside one parenthesis, each item a valid one on its
   own and each after the first starting with `add`, `omit`, `no`, `b` or
-  `#`: `D6(omit5add9)` is `D6(omit5,add9)`, `D6(no5add9)` is
-  `D6(no5,add9)`, `C7(b9#11)` is `C7(b9,#11)`. Digits run together are not
-  split: `C(911)` stays an error.
+  `#` (an accidental straight after `add` belongs to its tone):
+  `D6(omit5add9)` is `D6(omit5,add9)`, `D6(no5add9)` is `D6(no5,add9)`,
+  `D6(omit5addb6)` is `D6(omit5,addb6)`, `C7(b9#11)` is `C7(b9,#11)`.
+  Digits run together are not split: `C(911)` stays an error.
 - a bare `omit` or `no` trailing the chord's name: after the whole
   quality, however it is spelled (`Gm7omit5`, `G-7omit5`, `Gmin7no5`,
   `CΔno3`), and before any parenthesis or slash bass. It joins the
@@ -479,16 +489,40 @@ comma-separated form with a **warning** whose suggestion is that form:
   `Gadd9omit3` is `Gadd9(omit3)`, `Gadd9omit3(b13)` is `Gadd9(b13,omit3)`,
   `Gomit5` is `G(omit5)` and `Gno5` is `G(no5)`.
 
+**A bare `add`.** `add` before any tone a parenthesis can add is that
+tone in the parentheses, bare or inside them (A.5): `Cadd13` is `C(13)`,
+`F#maddb6` is `F#m(b6)`. Bare, a tone `add` took on 2026-11-14 (every one
+but `2`, `4`, `9` and `11`) is not followed by a digit, nor by a slash
+that starts no bass, so `Cadd69` stays an error rather than reading as
+`C9(6)`, and `Cadd6/9` is refused as written (`Cadd13/E` reads). And a bare `add` never joins an
+accidental to the root: taken out from between a root with no accidental
+and an alteration (`Cadd9b13`), it would leave `Cb13`, so the symbol is
+an **error**, suggesting the items in one parenthesis, `C(9,b13)` (A.6).
+A root's own accidental stays the root's: `Bbadd9` is `Bb(9)`, `Abaddb6`
+is `Ab(b6)`; `Bbadd9b13` and `Cmadd9b13`, which don't read, suggest
+`Bb(9,b13)` and `Cm(9,b13)`. No suggestion ever changes the written root
+or bass: `Cadd9b13bm7` gets none, since `C(9,b13)` then `bm7` would be a
+C♭ chord. Refused tones after the `add` take their counterparts in the
+suggestion, as in a parenthesis: `Cadd9#4` suggests `C(9,#11)`.
+
 The suggestion is the symbol as written with its items separated (or the
 canonical form, if that would not read as the same chord); the canonical
 printer writes the canonical form, as for any alias: `D6(omit5add9)`
 prints as `D6(9,no5)`. Items that are wrong on their own stay errors once
 separated: `C(omit5omit5)` leaves out the 5th twice.
 
-**Alterations without parentheses** (`C7b9`, `Am7b5`) are accepted, but
-only directly after an extension. That keeps the root's accidental
-unambiguous: `Ab5` is always the A♭ power chord, never A(♭5), and `Cb9` is
-C♭9. The canonical form puts alterations in parentheses.
+**Alterations without parentheses** (`C7b9`, `Am7b5`, `F#m7b6`: `b5`,
+`#5`, `b6`, `b9`, `#9`, `#11`, `b13`) are accepted, but only directly
+after an extension. That keeps the root's accidental unambiguous: `Ab5` is
+always the A♭ power chord, never A(♭5), `Cb9` is C♭9 and `Cb6` is the C♭
+sixth chord, never C with a flat sixth. The canonical form puts
+alterations in parentheses. After a quality or `sus` with no extension
+(`m`, `dim`, `aug`, `5`, `sus2`, `sus4`, or none) an alteration is an
+**error**, suggesting the parenthesised form where that reads with the
+root as written and the root's own accidental can't be the alteration's:
+`Cmb6` suggests `Cm(b6)`, `Cmb13` `Cm(b13)`, `Abmb6` `Abm(b6)`, `Cdimb9`
+`Cdim(b9)`, `Csus4b9` `Csus4(b9)`, and an aliased quality the same in
+canonical form (`C-b6` suggests `Cm(b6)`, `C+b6` `Caug(b6)`).
 
 So an altered fifth written before the parenthesis on a chord with no
 extension, `F#b5(omit3)`, is an **error** (not a stacked spelling: `Gb5(omit3)`
@@ -1409,7 +1443,7 @@ keeps what cannot reduce:
 | warning | top-level slot count uneven for the meter |
 | warning | `x N` with N > 8 |
 | warning | note set with octaves out of ascending order; repeated note without octaves |
-| warning | a natural tone in parentheses that the chord already has (`C7(7)`) |
+| warning | a tone in parentheses that the chord already has (`C7(7)`, `C(b6,b13)`) |
 | warning | a stacked spelling: items run together in a parenthesis (`D6(omit5add9)`) or a bare `omit`/`no` (`Gadd9omit3`), suggesting the comma-separated form (3) |
 | warning | a text line that looks like an old-style label (`Chorus:`, `[Chorus]`), an old bare chord line, a bar line written with escaped pipes (`D \\| A \\|`), a misnamed directive (`meter:`, `bpm:`), `title:` (suggesting the `#` title) or a misnamed credit (`author:`, `words:`), with a suggested fix |
 | warning | a credit with a directive after its value on the line (`composer: A, key: G`) |
@@ -1475,7 +1509,7 @@ human to say whether the band was silent, and the structure line.
 | Logic Pro's parentheses | Decided by Kevin (2026-11-01): groups in a row are one list (`C7(b9)(#11)` = `C7(b9,#11)`), and `(5)` on a bare root is the power chord (`F#(5)(7)` = `F#5(7)`, F♯ C♯ E). Both are aliases: the canonical form keeps one group and the `5` quality, and no chart that read before changes meaning. `(5)` after a quality or an extension stays an error. |
 | Directives under a replay heading | Decided by Kevin: they take effect after the replay, because the heading stands for its bars (written order is play order). Before, the parser applied them to the replay. |
 | Gradual tempo changes | Decided by Kevin (2026-11-01): `tempo:` also takes `rit.`, `accel.` (each optionally `to` a tempo) and `a tempo`. A change runs from the next bar to the next `tempo:` or the end; its shape is never written; machine output marks every bar inside one (7.2, A.7). |
-| `(addN)` in parentheses | Decided by Kevin (2026-11-02, issue #62): `(add2)`, `(add4)`, `(add9)` and `(add11)` are aliases of `(2)`, `(4)`, `(9)` and `(11)`, alone or in a list (`C(b9,add11)` = `C(b9,11)`), because chord players and DAWs spell `Am(add9)` that way. Only the four tones `addN` already takes: `add13` and `add#11` stay errors, in or out of parentheses. |
+| `(addN)` in parentheses | Decided by Kevin (2026-11-02, issue #62): `(add2)`, `(add4)`, `(add9)` and `(add11)` are aliases of `(2)`, `(4)`, `(9)` and `(11)`, alone or in a list (`C(b9,add11)` = `C(b9,11)`), because chord players and DAWs spell `Am(add9)` that way. Only the four tones `addN` already takes: `add13` and `add#11` stay errors, in or out of parentheses. Superseded 2026-11-14, see "`add` before any tone". |
 | Custom swing ratios | Decided by Kevin (2026-11-02, issue #66): first not planned, then reopened the same day with the evidence of Stem Shovel's chart export, whose swing is a continuous amount that `swing` alone could only round to 2:1 or nothing. Decided: `swing`, `shuffle` and `swing 16` take an optional amount (`swing 58%`), where the swung note lands, from 50% to 75% inclusive (MPC style); `shuffle` takes one on the same scale; the `%` is required. The bare word is 66.7% and prints as the word, so no chart that read before changes meaning or form (7.1). |
 | Endings | Decided by Kevin (2026-11-03, issue #70): an ending is a bar line that starts with its passes (`\|1`, `\|2`, `\|1-3`, `\|1,3`), following a `\|: … :\|` repeat; the highest pass gives the count (5.1). The ending is its line, as `x N` repeats its line (amended 2026-11-10 below: an ending before the last may continue onto further lines). Rejected: inline marks as ABC writes them (`… \|1 G :\|2 C \|`), because nothing marks where the last ending ends; and no syntax, because a score's correction editor loses the printed bars and a renderer the brackets. An ending marks a line, not a bar or a slot, so accents are no longer decided with endings. |
 | Directions | Decided by Kevin (2026-11-03, issue #70): `Segno`, `Coda`, `To Coda`, `Fine` and the jumps `D.C.`/`D.S.` (each alone or `al Fine`/`al Coda`) are cells, marks between bars that take no time (5.2). One jump per chart for now, taken once; after it every repeat plays once, `\|: :\|` taking its last ending. Rejected: direction lines (`jump: D.S. al Coda`), which cannot sit mid-line where scores put a segno; and no syntax with converters rewriting jumps as replays, which would split sections at arbitrary bars. The one exception to written order being play order. |
@@ -1525,6 +1559,9 @@ human to say whether the band was silent, and the structure line.
 | An unreadable slot keeps its bar | Decided by Kevin (2026-11-10): "Barmark should not be dropping lines for a chord it can't read." Any slot that can't be read (an unknown chord symbol such as `CM7`, `CSus4`, `C69` or `C−7`, a bad note set such as `{H}`, a mark that can't be read) is still an **error**, with the same message, line, token and suggestion, so `check` still fails; but it keeps its bar as unknown harmony carrying the author's text (principle 4, 2.3, 3, A.7), which prints, renders and stays through transposition as written. Only a bar line whose structure can't be read (a stray or misplaced `\|:` or `:\|`, an unclosed or bad `_` group, a bad ending or `x N`, a rehearsal mark sharing a cell) is still excluded, because there the bar count itself is unknown. Found by porting a listening tool: a chart with `CM7` lost its whole line and played shorter than the recording. Rejected: a warning (an unreadable chord must not publish unnoticed), and keeping only unknown chord symbols (a bad note set or mark loses a line just the same). Two further rulings the same day: **transpose moves the readable chords** on a line that holds an unreadable slot (`key: C`, `\| C \| CM7 \| G \|` to D is `\| D \| CM7 \| A \|`), leaving the text as written with a warning on it, so such a line also prints in canonical form (8) and only a line excluded for its structure prints as written; and **a misplaced or bad dot** (`\| C. \|`) is the slot's error, not the structure's, since a dot never changes the bar count. |
 | Stacked spellings | Decided by Kevin (2026-11-10, stem-shovel issue 16): notation programs print alterations run together ("D6 add9 omit5"), so charts arrive as `D6(omit5add9)`, `Gadd9omit3` and `F#b5(omit3)`. **Accepted, with a warning** whose suggestion is the comma-separated spelling: items run together inside one parenthesis (`D6(omit5add9)` is `D6(omit5,add9)`, and `D6(no5add9)` likewise; generally two or more valid items with no separator, each after the first starting with `add`, `omit`, `no`, `b` or `#`), and a bare `omit`/`no` trailing the chord's name, after the whole quality however it is spelled and before any parenthesis or slash bass (`Gadd9omit3` is `Gadd9(omit3)`, `Gomit5` is `G(omit5)`, `Gno5` is `G(no5)`, `CΔno3` is `CΔ(no3)`; `Cno5maj7` and `Cno3add9` stay errors) (3, A.5). The canonical printer writes the canonical form as for any alias (`D6(9,no5)`). **Not accepted:** an altered fifth before the parenthesis on a chord with no extension (`F#b5(omit3)`), since 3 keeps `Ab5` always the A♭ power chord and `Gb5(omit3)` would be ambiguous; it stays an error, now suggesting `F#(b5,omit3)` where the root carries no accidental that could be the fifth's, and, where it does, giving no suggestion and saying it is ambiguous only when the fifth reading would itself read (`Gb5(omit3)` as `G(b5,omit3)`; not `Gb5(no7)`) (A.6). Before, all three shapes were errors, and since the same day's ruling each kept its bar as unknown harmony. Rejected: splitting digits run together (`C(911)`), which reads no notation program's output and would guess. |
 | An ending across lines | Decided by Kevin (2026-11-10, stem-shovel issue #16, ask 6): an ending not closed by `:\|` on its own line continues through the plain `\|` lines after it, up to its `:\|` or the next ending, so `\|1 G \| A \| B \| C \|` then `\| D :\|` is a five-bar first ending and a chart keeps four bars a row (5.1). The last ending has no `:\|` and still ends at its own line, which keeps the grammar unambiguous. Claude's rulings the same day, conservative where open: only an ending another ending follows continues, so with no ending after it nothing continues and the errors are as before (a `:\|` after the last ending stays a stray `:\|`, and the repeat still plays); text, credit, lyric-row and `---` lines may sit between an ending's lines, as between endings, and a rehearsal mark is a cell on a continuation line; only an ending of a paired repeat continues; a heading, a directive line, a `\|:` line or a bar line that can't be read ends the ending, so a time change or a repeat inside an ending is not possible, and a directive line that stops an ending continuing is an error naming it, beside the errors after it; `x N` on a continuation line is an error, as on the ending's own line; an ending before the last that reaches the next ending with no `:\|` is one error on its first line, where before it was two. Machine output gains `continues` on a continuation line (A.7); the canonical form keeps the lines as written. A chart that read cleanly before reads the same. Rejected: continuing the last ending to the section's end, which would make every line after the endings part of them. |
+| The flat sixth | Decided by Kevin (2026-11-13): a user wrote `F#m(♭6)`, `F#maddb6` and `F#maddb13`, meaning F♯ A C♯ D, and barmark refused all three. `b6` is a tone a parenthesis can add, with its own canonical spelling: `F#m(b6)` prints `F#m(b6)`, never rewritten to `(b13)`, nor `(b13)` to it. What follows from the existing rules (the design's calls, 2026-11-14): as an altered tone it replaces the 6 of a sixth chord (`C6(b6)` is C E G A♭) and adds on any other; after an extension it needs no parentheses (`F#m7b6`); `C(b6,b13)` warns that the chord already contains the second. A Harte label with `b6` now converts to `(b6)` (`C:min(b6)` is `Cm(b6)`), where it became `(b13)`; naming a set of notes still writes `(b13)`, `b6` a plain tone there as `2`, `4` and `6` are (3, A.1, A.6). Claude's ruling the same day, about the flat sixth only: a Harte label with a flat sixth is never given a sixth-chord name with its sixth replaced when another name has the same notes, so `C:maj(b6,9)` is `C(b6,9)`, not `C6/9(b6)`; `C:maj6(b6)` stays `C(b6,6)`, both notes. Labels without a flat sixth convert as before (`C:7(b9,13)` is `C13(b9)`). |
+| `add` before any tone | Decided by Kevin (2026-11-14), superseding the 2026-11-02 "`(addN)` in parentheses": `add` is an alias before every tone a parenthesis can add (`2 4 6 7 9 11 13 b5 #5 b6 b9 #9 #11 b13`), bare or in the parentheses, alone or in a list: `Cadd13` is `C(13)`, `Cadd#11` is `C(#11)`, `F#maddb6` and `F#m(addb6)` are `F#m(b6)`, `F#maddb13` is `F#m(b13)`, `Am(b9,add13)` is `Am(b9,13)`, and, by the existing rules, run together `D6(omit5addb6)` reads as `D6(b6,no5)` with the stacked-spelling warning (3, A.5). `(b2)`, `(#2)` and `(#4)` stay refused (Kevin, 2026-11-14: no user has asked), each now suggesting `(b9)`, `(#9)` or `(#11)`; by the design's call `(b7)` likewise suggests `(7)`, and a suggestion is offered only when it reads with the root and bass as written (A.6). Claude's rulings the same day: bare, a tone `add` newly takes is not followed by a digit (`Cadd69` stays an error, never `C9(6)`; `Cadd27` still reads `C7(2)` as before); and a bare `add` never joins an accidental to the root: `Cadd9b13`, which read as the C♭ chord `Cb13(9)`, is an error suggesting `C(9,b13)` (3, A.6); an alteration after any quality or sus with no extension suggests the parenthesised form (`Cdimb9` suggests `Cdim(b9)`). |
+| `Δ9` and `Δ13` | Decided by Kevin (2026-11-14): `Δ9` and `Δ13` are `maj9` and `maj13`, with whatever follows (`CΔ9(#11)`, `DΔ9/F#`), as `Δ` and `Δ7` are `maj7` (A.5). `Δ11` stays refused: `maj11` is not a barmark chord, so there is nothing for it to be an alias of. |
 
 ## Open questions
 
@@ -1546,7 +1583,7 @@ row is a conformance test.
 ### A.1 Intervals
 
 Intervals are written as scale degrees above the root: `1 b2 2 b3 3 4 b5 5
-#5 6 bb7 b7 7 b9 9 #9 11 #11 b13 13`. A chord's pitches are spelled from
+#5 b6 6 bb7 b7 7 b9 9 #9 11 #11 b13 13`. A chord's pitches are spelled from
 the root's letter, so B♭m gives D♭, never C♯.
 
 ### A.2 Building blocks
@@ -1625,11 +1662,11 @@ Accepted on input, printed canonically:
 | `+7` | `aug7` |
 | `sus` | `sus4` |
 | `Maj7`, `ma7`, `Δ`, `Δ7` | `maj7` |
+| `Δ9`, `Δ13`, with whatever follows (`CΔ9(#11)`, `DΔ9/F#`) | `maj9`, `maj13` (`Cmaj9(#11)`, `Dmaj9/F#`) |
 | `ø`, `ø7` | `m7(b5)` |
 | `m(maj7)`, `minmaj7` | `mmaj7` |
-| `add2`, `add4`, `add9`, `add11` | `(2)`, `(4)`, `(9)`, `(11)` |
-| `(add2)`, `(add4)`, `(add9)`, `(add11)`, also in a list (`(b9,add11)`) | `(2)`, `(4)`, `(9)`, `(11)` (`(b9,11)`) |
-| `7b9`, `m7b5` (alteration after an extension) | `7(b9)`, `m7(b5)` |
+| `add` before any tone a parenthesis can add (`add9`, `add13`, `addb6`, `add#11`), bare or in the parentheses, alone or in a list (`Cadd13`, `F#maddb6`, `(b9,add11)`); bare, a tone other than `2`, `4`, `9`, `11` not followed by a digit (3) | the tone in the parentheses (`C(13)`, `F#m(b6)`, `(b9,11)`) |
+| `7b9`, `m7b5`, `m7b6` (alteration after an extension) | `7(b9)`, `m7(b5)`, `m7(b6)` |
 | groups in a row (`(b9)(#11)`, Logic Pro) | one group (`(b9,#11)`) |
 | `(5)` on a bare root (`F#(5)`, `F#(5,7)`) | `5` (`F#5`, `F#5(7)`) |
 | `(omit3)`, `(omit 3)`, `(omit5)`, `(omit 5)` | `(no3)`, `(no5)` |
@@ -1648,6 +1685,12 @@ Accepted on input, printed canonically:
 | double accidentals (`Cbb`) | never needed for a root | the enharmonic root |
 | German `H` | ambiguous with B | `B` |
 | an altered fifth before the parenthesis on a chord with no extension (`F#b5(omit3)`) | an alteration without parentheses goes only after an extension (3) | `F#(b5,omit3)`; none where the root's accidental could be the fifth's, said to be ambiguous only when the fifth reading would itself read (`Gb5(omit3)`, as `G(b5,omit3)`; `Gb5(no7)` keeps its plain error) |
+| any other alteration after a quality or `sus` with no extension (`Cmb6`, `Cmb13`, `Cdimb9`, `Csus4b9`) | the same (3); `Cb6`, `Ab9`, `Bb13` are chords on flat roots, never an error | `Cm(b6)`, `Cm(b13)`, `Cdim(b9)`, `Csus4(b9)`; none where the root's accidental could be the alteration's |
+| `(b2)`, `(#2)`, `(#4)` (`F#m(b2)`, also `addb2`) | not tones a parenthesis can add | `(b9)`, `(#9)`, `(#11)` (`F#m(b9)`) |
+| `(b7)` | tone `7` is already the flat seventh | `(7)` |
+| several in one list (`C7(b2,#4)`) | as above | each replaced (`C7(b9,#11)`); none when the symbol would still not read (`C(b2,x)`) |
+| a bare `add` between a root with no accidental and an alteration (`Cadd9b13`, `Cadd13b9`) | taking the `add` out would join the alteration's accidental to the root (`Cb13`) (3) | the items in one parenthesis (`C(9,b13)`, `C(b9,13)`), when that reads with the root and bass as written, refused tones replaced by their counterparts (`Cadd9#4` suggests `C(9,#11)`); none for `Cadd9b13bm7` |
+| a bare `add` and an alteration that don't read on another root or quality (`Bbadd9b13`, `Cmadd9b13`) | the alteration goes in the parenthesis with the `add`'s tone (3) | `Bb(9,b13)`, `Cm(9,b13)` |
 
 ### A.7 Machine output
 

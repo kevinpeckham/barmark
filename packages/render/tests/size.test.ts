@@ -9,7 +9,16 @@ const ROOT = join(import.meta.dir, "../../..");
 /**
  * The element's gzipped size at this plan's base commit (4ee2724, main before
  * chord diagrams), by this test's own method, 2026-11-13: 46,302 bytes.
- * Today's size by the same method: 52,860 bytes (see FINDINGS.md).
+ * With diagrams, by the same method: 52,860 bytes (see FINDINGS.md).
+ *
+ * Re-anchored 2026-11-14 for the larger parser (the flat sixth, `add` before
+ * any tone, `Δ9`, and their suggestions): the element measured 53,321 bytes,
+ * 461 more than 52,860, all of it barmark's chord parser; the diagram code is
+ * unchanged, so the base is 53,321 - 6,558 = 46,763. Re-anchored again the
+ * same day after the parser's review fixes (suggestions that keep the root,
+ * the flat sixth's Harte spelling, refused tones after a bare `add`, aliased
+ * qualities): the element measured 53,581 bytes, 260 more, so the base is
+ * 53,581 - 6,558 = 47,023.
  *
  * The method: copy the sources the element needs (`packages/*\/src`) and the
  * root `tsconfig.json` into a temp directory with no `package.json`, and
@@ -30,7 +39,7 @@ const ROOT = join(import.meta.dir, "../../..");
  * numbers and the reason in the commit. BUDGET is the product owner's and changes only on his
  * say.
  */
-const BEFORE_DIAGRAMS = 46_302;
+const BEFORE_DIAGRAMS = 47_023;
 // Kevin's decision (design §6.2): 5,500 at first, raised on 2026-11-13 once the
 // built feature measured 6,539 bytes and no trimming could close the gap.
 const BUDGET = 6_750;
@@ -97,7 +106,7 @@ test("the bundles that are measured work", async () => {
 	});
 });
 
-test("the element is at most 53,052 bytes gzipped (46,302 before chord diagrams, plus their 6,750 budget)", async () => {
+test("the element is at most 53,773 bytes gzipped (47,023 before chord diagrams, plus their 6,750 budget)", async () => {
 	const bytes = await inCopy(async (dir) => gzipped(await bundle(dir, "element", elementEntry)));
 	console.log(`element: ${bytes} gzipped`);
 	expect(bytes).toBeLessThanOrEqual(BEFORE_DIAGRAMS + BUDGET);

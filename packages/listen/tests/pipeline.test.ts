@@ -4,8 +4,12 @@
  * truncated grid (Review Focus 5); the declared grid when the bars cannot
  * be placed; the app's `server/chartBuild.test.ts` cases that still apply;
  * and every bad input a named refusal, never a throw.
+ *
+ * These tests render whole songs, so the file takes a longer timeout than
+ * Bun's 5 s: alone each test runs in a second or two, but in the full suite
+ * on a loaded machine the two heaviest have taken 5 to 13 s (FINDINGS).
  */
-import { afterAll, describe, expect, spyOn, test } from "bun:test";
+import { afterAll, describe, expect, setDefaultTimeout, spyOn, test } from "bun:test";
 import * as sync from "@barmark/sync";
 import { checkTimingMap } from "@barmark/sync";
 import { parseChart } from "barmark";
@@ -18,6 +22,8 @@ import {
 } from "../src/pipeline.js";
 import { featuresOf } from "./helpers/features.js";
 import { type SynthSpec, synthSong } from "./helpers/synthetic.js";
+
+setDefaultTimeout(30_000);
 
 const reasons = (r: { ok: boolean; refusals?: { reason: string }[] }) =>
 	r.ok ? [] : (r.refusals ?? []).map((x) => x.reason);

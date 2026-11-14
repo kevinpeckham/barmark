@@ -157,6 +157,13 @@ describe("nameNotes", () => {
 		EXHAUSTIVE_TIMEOUT,
 	);
 
+	test("a flat sixth is named as it was before b6 was a tone: (b13) wins", () => {
+		expect(name("C7(b6)")).toBe("C7(b13)");
+		expect(name("C9(b6)")).toBe("C9(b13)");
+		expect(name("C(b6,9)")).toBe("C(9,b13)");
+		expect(name("F#m(b6)")).toBe("Dmaj7/F#");
+	});
+
 	test("a bass the interval would double is spelled by pitch", () => {
 		expect(name("{G E G#}")).toBe("E(#9)/G");
 	});

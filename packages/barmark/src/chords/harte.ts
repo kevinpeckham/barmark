@@ -6,7 +6,7 @@ import {
 	transpose,
 } from "./intervals.js";
 import { printSuffix } from "./print.js";
-import { enumerateSuffixes, intervalSetKey, type Suffix } from "./suffixes.js";
+import { enumerateSuffixes, intervalSetKey, replacesOwnSixth, type Suffix } from "./suffixes.js";
 import type { ChordRecord, Interval } from "./types.js";
 import {
 	byDegree,
@@ -113,7 +113,11 @@ function shorthandFor(intervals: Interval[]): string | undefined {
 	return shorthandNames.get(intervalSetKey(intervals));
 }
 
-/** The candidate naming most degrees as written; on a tie, a shorthand's name, else the first. */
+/**
+ * The candidate naming most degrees as written; on a tie, a shorthand's
+ * name, else the first that is not a sixth chord with its sixth replaced
+ * by a flat sixth (`C(b6,9)`, not `C6/9(b6)`), else the first.
+ */
 function bestSuffix(
 	candidates: Suffix[],
 	exact: (c: Suffix) => number,
@@ -122,7 +126,8 @@ function bestSuffix(
 	const most = Math.max(...candidates.map(exact));
 	const tied = candidates.filter((c) => exact(c) === most);
 	const shorthand = shorthandFor(intervals);
-	return (tied.find((c) => c.suffix === shorthand) ?? tied[0])?.suffix;
+	const plain = tied.find((c) => !replacesOwnSixth(c));
+	return (tied.find((c) => c.suffix === shorthand) ?? plain ?? tied[0])?.suffix;
 }
 
 const HARTE = /^([A-G][#b]*)(?::([^(/]*)(?:\(([^)]*)\))?)?(?:\/([#b]*\d+))?$/;

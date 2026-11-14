@@ -6,6 +6,12 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- **A chart with a flat sixth exports**: `Cm(b6)` plays C E♭ G A♭ as
+  `Cm(b13)` does. Naming notes on import is unchanged: those notes still
+  come back as `Abmaj7/C`.
+
 ## [0.3.3] - 2026-11-12
 
 ### Changed

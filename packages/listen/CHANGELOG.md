@@ -6,6 +6,13 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- **A tracker's or detector's Harte label with `b6` builds `(b6)`**:
+  `C:min(b6)` becomes `Cm(b6)` in the chart (both pipelines pass labels
+  through barmark's `harteToBarmark`), where it became `Cm(b13)`. Labels
+  with `b13` are unchanged, and no equivalence golden changes.
+
 ## [0.2.0] - 2026-11-13
 
 ### Added

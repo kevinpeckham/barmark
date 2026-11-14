@@ -335,3 +335,13 @@ test(
 	},
 	TIMING_TIMEOUT,
 );
+
+test("the flat sixth, an add and a Δ9 draw as their canonical names, each with a diagram", () => {
+	const d = strip("| F#m(b6) | Cadd13 | CΔ9 |");
+	expect(texts(d, ".bm-diagram-name")).toEqual(["F♯m(♭6)", "C(13)", "Cmaj9"]);
+	const svgs = [...d.querySelectorAll(".bm-diagram svg")];
+	expect(svgs).toHaveLength(3);
+	for (const svg of svgs) expect(svg.getAttribute("role")).toBe("img");
+	const grid = shadow(doc(renderChart("| F#m(b6) | Cadd13 | CΔ9 |")));
+	expect(texts(grid, ".bm-chord")).toEqual(["F♯m(♭6)", "C(13)", "Cmaj9"]);
+});

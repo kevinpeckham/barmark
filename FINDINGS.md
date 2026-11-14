@@ -531,6 +531,25 @@ showed the rule needed refining.
   differences) confirms it. The test file still takes about a minute,
   most of it chunk size 1, where the per-chunk calls dominate.
 
+### Tests that render whole songs time out in the full suite on a loaded machine (2026-11-14, @barmark/listen)
+
+**Symptom:** `bun test` at the root failed, three times in two days, on the
+same two tests in `packages/listen/tests/pipeline.test.ts` ("Review Focus 5:
+a truncated grid…", "build options reach the builder…"), each "timed out
+after 5000ms" at 5 to 13 s. Alone the whole file runs in under 6 s and both
+pass, on the branch and on `main` alike; CI never failed on them.
+
+**Cause:** the tests render synthetic songs and read them, a second or two
+of CPU each. In a full-suite run on the VM, with other sessions' servers
+running beside it, that work stretched past Bun's default 5 s per test.
+Nothing was slower: there was less CPU.
+
+**Fix:** `setDefaultTimeout(30_000)` at the top of that file, with the
+reason. A timeout is not a timing assertion: the scale tests still compare
+relative times.
+
+**Where it lives:** `packages/listen/tests/pipeline.test.ts`.
+
 ### A best-of-three ratio of millisecond runs fails under load; alternate the runs (2026-11-10, @barmark/listen)
 
 - **The symptom.** `comb-scale.test.ts` timed three combs of a 60 s
@@ -785,6 +804,28 @@ When converting to a format that keeps written order, test the played
 order, not just the written marks.
 
 ## Design
+
+### Pulling a bare `add` out of a chord name changed its root (2026-11-14, barmark)
+
+- **The symptom.** `Cadd9b13` read as `Cb13(9)`, a C♭ chord with no C in
+  it, and `Cadd9#11` as a C♯ chord; it had done so since bare `add9` was
+  accepted. Making `add` an alias before every tone (`Cadd13b9`,
+  `Caddb6b9`) multiplied the shape.
+- **The cause.** `normalizeSymbol` takes the root off, pulls each bare
+  `add` out of the rest, and joins the root back to what is left. With
+  `add9` gone, the `b` of `b13` sat straight after the root letter, and
+  the tokenizer's root pattern (`[A-G][#b]?`) read it as the root's own
+  accidental. Each step was right on its own; the join was not checked.
+- **The fix.** When a bare `add` was pulled, the root has no accidental and
+  what is left starts with `b` or `#`, the symbol is an error suggesting
+  the items in one parenthesis (`C(9,b13)`), offered only when that reads:
+  `addThenAlteration` (with `offered` and `eachAdded`) in
+  `packages/barmark/src/chords/parse.ts`, tests in
+  `tests/chords/flat-sixth.test.ts` ("a bare add never changes the root").
+  A bare `omit`/`no` cannot do this: it is taken only at the end of the
+  name, so nothing is joined after it. The general lesson: when a
+  normaliser removes text and re-reads the join, test what the join
+  brings together.
 
 ### A cost summed in floating point made equal costs unequal (2026-11-13, @barmark/fretboard)
 

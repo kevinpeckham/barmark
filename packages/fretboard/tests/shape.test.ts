@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
-import { shapeFor, shapeFrom, shapeOf, shapeText, sounding } from "../src/index.js";
+import { parseChord } from "barmark";
+import { shapeFor, shapeFrom, shapeOf, shapeText, sounding, soundsChord } from "../src/index.js";
 import { fingersNeeded } from "../src/shape.js";
 import { vocabulary } from "./helpers/vocabulary.js";
 
@@ -76,4 +77,22 @@ test("shapeOf reads what shapeText writes, for every answer of the vocabulary", 
 		expect(shapeOf(shapeText(r.shape))).toEqual(r.shape);
 	}
 	expect(tens).toBeGreaterThan(0);
+});
+
+test("the flat sixth gets a shape that sounds it, the shape its pitch classes give (b13 is the same note)", () => {
+	const chord = (symbol: string) => {
+		const r = parseChord(symbol);
+		if (!r.ok || r.value.kind !== "chord") throw new Error(`${symbol} did not parse`);
+		return r.value;
+	};
+	for (const symbol of ["F#m(b6)", "Cm(b6)", "C(b6)"]) {
+		const c = chord(symbol);
+		const r = shapeFor(c);
+		if (!r.ok) throw new Error(`${symbol}: ${r.reason}`);
+		expect(soundsChord(r.shape, c)).toBe(true);
+	}
+	const b6 = shapeFor(chord("Cm(b6)"));
+	const b13 = shapeFor(chord("Cm(b13)"));
+	expect(b6).toEqual(b13);
+	expect(b6.ok).toBe(true);
 });

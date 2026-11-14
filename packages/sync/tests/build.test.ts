@@ -22,6 +22,16 @@ describe("holds", () => {
 	});
 });
 
+describe("a flat sixth in a label", () => {
+	test("C:min(b6) builds Cm(b6), and C:min(b13) still builds Cm(b13)", () => {
+		expect(make([0, 2, 4], [C(0, 2, "C:min(b6)"), C(2, 4, "C:min(b13)")]).chart).toBe(
+			"time: 4/4, tempo: 120\n| Cm(b6) | Cm(b13) |\n",
+		);
+		const parsed = parseChart(make([0, 2, 4], [C(0, 4, "C:min(b6)")]).chart);
+		expect(parsed.diagnostics.filter((d) => d.severity === "error")).toEqual([]);
+	});
+});
+
 describe("simile", () => {
 	const runs = [0, 2, 4].flatMap((t) => [C(t, t + 1), C(t + 1, t + 2, "G:maj")]);
 	test("% for a repeated multi-chord bar", () => {

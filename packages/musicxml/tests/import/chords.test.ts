@@ -66,6 +66,38 @@ describe("readHarmony", () => {
 		const r = readHarmony(harmony(`${root(step)}<kind>${kind}</kind>${degrees}`), CONCERT);
 		expect(r).toEqual({ slot: canonical(slot), original: null });
 	});
+	test("an added flat sixth is (b6); an added flat thirteenth is (b13)", () => {
+		const read = (kind: string, d: string) =>
+			readHarmony(harmony(`${root("F", 1)}<kind>${kind}</kind>${d}`), CONCERT).slot;
+		expect(read("minor", degree(6, -1, "add"))).toBe("F#m(b6)");
+		expect(read("minor", degree(13, -1, "add"))).toBe("F#m(b13)");
+		expect(read("major", degree(6, -1, "add"))).toBe("F#(b6)");
+	});
+	test("a flat sixth with a second degree: C(b6,9) and Cm(b6,9)", () => {
+		const read = (kind: string) =>
+			readHarmony(
+				harmony(`${root("C")}<kind>${kind}</kind>${degree(6, -1, "add")}${degree(9, 0, "add")}`),
+				CONCERT,
+			).slot;
+		expect(read("major")).toBe("C(b6,9)");
+		expect(read("minor")).toBe("Cm(b6,9)");
+	});
+	test("a major-sixth kind with no text: a sixth altered flat is (b6), one added is (b6,6)", () => {
+		const read = (type: string) =>
+			readHarmony(harmony(`${root("C")}<kind>major-sixth</kind>${degree(6, -1, type)}`), CONCERT)
+				.slot;
+		expect(read("alter")).toBe("C(b6)");
+		// the kind's own sixth stays and a flat one joins it: both sound
+		expect(read("add")).toBe("C(b6,6)");
+	});
+	test("a thirteenth with a flattened ninth reads as it did at the base, with no text", () => {
+		const r = readHarmony(
+			harmony(`${root("C")}<kind>dominant-13th</kind>${degree(9, -1, "alter")}`),
+			CONCERT,
+		);
+		// MusicXML's dominant-13th holds the 11 too, so the base (a23242b) already read C13(b9,11), not C13(b9)
+		expect(r.slot).toBe("C13(b9,11)");
+	});
 	test("meaning wins over display text", () => {
 		const r = readHarmony(
 			harmony(`${root("C")}<kind text="whatever">major-seventh</kind>`),
@@ -153,6 +185,65 @@ describe("readHarmony", () => {
 					expect(got).toEqual({ slot: canonical(h.expected), original: null });
 				}
 			});
+	});
+
+	test("the flat sixth and the new add and Δ spellings round-trip to the same chord", () => {
+		const symbols = ["F#m(b6)", "C6(b6)", "Cadd13", "CΔ9", "Cm7b6", "C(b6,9)", "Cm(b13)"];
+		const { harmonies } = exported(`key: C\n| ${symbols.join(" ")} |\n`);
+		expect(harmonies).toHaveLength(symbols.length);
+		symbols.forEach((symbol, i) => {
+			const h = harmonies[i];
+			if (!h) throw new Error("missing harmony");
+			const got = readHarmony(h.node, h.by).slot;
+			const before = parseChord(symbol);
+			const after = parseChord(got);
+			if (!before.ok || !after.ok) throw new Error(`${symbol} or ${got} does not parse`);
+			const pitches = (r: typeof before.value) =>
+				r.intervals
+					.map((iv) => `${iv.degree}:${iv.alter}`)
+					.sort()
+					.join(" ");
+			expect(`${symbol} → ${got} ${pitches(after.value)}`).toBe(
+				`${symbol} → ${got} ${pitches(before.value)}`,
+			);
+			expect(got).toBe(before.value.canonical);
+		});
+	});
+
+	test("with the kind's text stripped, the meaning alone brings the symbol back", () => {
+		// The export's text wins over the notes when they agree, so only a stripped file tests the meaning.
+		// C6(b6) comes back as C(b6): the 6 is replaced by its flat, the same notes, and the plainer spelling.
+		// Cadd13 is C(13), and without text stays C(13): a 13 is not a 6 for barmark.
+		const cases: [string, string][] = [
+			["F#m(b6)", "F#m(b6)"],
+			["Cm7(b6)", "Cm7(b6)"],
+			["C(b6,9)", "C(b6,9)"],
+			["C6(b6)", "C(b6)"],
+			["Cadd13", "C(13)"],
+			["CΔ9", "Cmaj9"],
+		];
+		const r = exportMusicXml(`key: C\n| ${cases.map(([s]) => s).join(" ")} |\n`);
+		if (!r.ok) throw new Error("export failed");
+		const stripped = r.xml.replace(/(<kind) text="[^"]*"/g, "$1");
+		expect(stripped).not.toContain("<kind text=");
+		const doc = parseXml(stripped);
+		const slots = (doc ? children(doc, "part") : []).flatMap((p) =>
+			children(p, "measure").flatMap((m) =>
+				children(m, "harmony").map((h) => readHarmony(h, CONCERT).slot),
+			),
+		);
+		expect(slots).toEqual(cases.map(([, back]) => back));
+		for (const [symbol, back] of cases) {
+			const a = parseChord(symbol);
+			const b = parseChord(back);
+			if (!a.ok || !b.ok) throw new Error(`${symbol} or ${back} does not parse`);
+			const notes = (v: typeof a.value) =>
+				v.intervals
+					.map((i) => `${i.alter}:${i.degree}`)
+					.sort()
+					.join(" ");
+			expect(`${symbol} ${notes(b.value)}`).toBe(`${symbol} ${notes(a.value)}`);
+		}
 	});
 
 	test("a transposing part reads back at concert pitch", () => {

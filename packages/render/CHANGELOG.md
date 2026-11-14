@@ -6,6 +6,13 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- **A chart with a flat sixth, an `add` before any tone or `Δ9` draws and
+  is spoken**: `F#m(b6)` is set `F♯m(♭6)` and read "F sharp minor flat
+  six", `Cadd13` is set `C(13)` and `CΔ9` is set `Cmaj9`, each with its
+  guitar diagram when `chordDiagrams` is on.
+
 ## [0.20.0] - 2026-11-13
 
 ### Added

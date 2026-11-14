@@ -6,11 +6,12 @@
  * text, so a long symbol costs its length.
  */
 import type { Diagnostic } from "./types.js";
+import { TONES } from "./vocabulary.js";
 
 /** The shape of one parenthesis item; the tokenizer judges what it names. */
-const ITEM = /^(?:add\d+|(?:omit\s*|no)\d+|[b#]?\d+)$/;
-/** Where an item run together with the one before it starts. */
-const ITEM_START = /(?=add|omit|no|[b#])/;
+const ITEM = /^(?:add[b#]?\d+|(?:omit\s*|no)\d+|[b#]?\d+)$/;
+/** Where an item run together with the one before it starts: never between `add` and its tone's accidental. */
+const ITEM_START = /(?=add|omit|no|(?<!add)[b#])/;
 /** A slash bass at the end of the text after the root. */
 const BASS = /\/[A-G][#b]?$/;
 /** Where the chord's name ends: its first parenthesis or slash bass. */
@@ -101,45 +102,61 @@ export function stackedWarning(
 	return { message: `${symbol}: ${why.join("; ")}`, token: symbol, suggestion };
 }
 
-/** An altered fifth straight after the root (and `m`), with no extension: `F#b5(omit3)`. */
-const ALTERED_FIFTH = /^([A-G][#b]?)(m?)([b#]5)(?:\(([^()]*)\))?(\/[A-G][#b]?)?$/;
-/** A root whose accidental a following `5` could be read with: `Gb5`, `G#5`. */
-const SWALLOWED = /^([A-G])([#b])5(?:\(([^()]*)\))?(\/[A-G][#b]?)?$/;
+/** The altered tones, which may follow an extension with no parenthesis (grammar 3). */
+export const ALTERATIONS = TONES.filter((t) => /^[b#]/.test(t)).join("|");
+const GROUP_AND_BASS = String.raw`(?:\(([^()]*)\))?(\/[A-G][#b]?)?$`;
+/** An alteration straight after the root (and its quality or sus), with no extension: `F#b5(omit3)`, `Cmb6`. */
+const ALTERED = new RegExp(
+	`^([A-G][#b]?)(m|dim|aug|5|sus2|sus4)?(${ALTERATIONS})${GROUP_AND_BASS}`,
+);
+/** A root whose accidental a following number could be read with: `Gb5`, `G#5`, `Ab6`. */
+const SWALLOWED = new RegExp(`^([A-G])(${ALTERATIONS})${GROUP_AND_BASS}`);
+/** What a root's accidental and the number after it always are (grammar 3). */
+const CHORD_KIND: Record<string, string> = {
+	"5": "power",
+	"6": "sixth",
+	"9": "ninth",
+	"11": "eleventh",
+	"13": "thirteenth",
+};
 
 /**
  * The error for a symbol that can't be read, with a suggestion when it
- * writes an altered fifth before the parenthesis on a chord with no
- * extension (grammar 3 keeps `Ab5` the A♭ power chord). `reads` says
- * whether a suggestion reads. Where the root's own accidental could be the
- * fifth's (`Gb5(omit3)`), the message says it is ambiguous, with no
- * suggestion; only when that fifth reading would itself read.
+ * writes an alteration (an altered fifth, `b6`, `b9`, …) before the
+ * parenthesis on a chord with no extension (grammar 3 keeps `Ab5` the A♭
+ * power chord and `Cb6` the C♭ sixth chord). `reads` says whether a
+ * symbol reads, `offers` whether it reads as a suggestion may (its root and
+ * bass as written). Where the root's own accidental could be the
+ * alteration's (`Gb5(omit3)`), the message says it is ambiguous, with no
+ * suggestion; only when that reading would itself read.
  */
-export function alteredFifth(
+export function bareAlteration(
 	symbol: string,
 	text: string,
 	error: Diagnostic,
 	reads: (symbol: string) => boolean,
+	offers: (suggestion: string) => boolean,
 ): Diagnostic {
 	const s = SWALLOWED.exec(text);
 	if (s) {
-		const [, letter = "", accidental = "", inner, bass = ""] = s;
+		const [, letter = "", alteration = "", inner, bass = ""] = s;
 		const items = inner?.trim() ? `,${inner}` : "";
-		const fifth = letter + separate(`(${accidental}5${items})${bass}`).text;
-		if (!reads(fifth)) return error;
-		const power = `${letter}${accidental}5`;
+		const altered = letter + separate(`(${alteration}${items})${bass}`).text;
+		if (!reads(altered)) return error;
+		const [accidental, n] = [alteration.slice(0, 1), alteration.slice(1)];
 		return {
 			...error,
-			message: `${error.message}; ambiguous: ${power} is always the ${letter}${accidental} power chord (grammar 3); a ${letter} chord with a ${accidental}5 writes it in the parentheses`,
+			message: `${error.message}; ambiguous: ${letter}${alteration} is always the ${letter}${accidental} ${CHORD_KIND[n]} chord (grammar 3); a ${letter} chord with a ${alteration} writes it in the parentheses`,
 		};
 	}
-	const m = ALTERED_FIFTH.exec(text);
+	const m = ALTERED.exec(text);
 	if (!m) return error;
-	const [, root = "", minor = "", fifth = "", inner, bass = ""] = m;
+	const [, root = "", quality = "", alteration = "", inner, bass = ""] = m;
 	const items = inner?.trim() ? `,${inner}` : "";
-	const suggestion = root + separate(`${minor}(${fifth}${items})${bass}`).text;
-	if (!reads(suggestion)) return error;
+	const suggestion = root + separate(`${quality}(${alteration}${items})${bass}`).text;
+	if (!offers(suggestion)) return error;
 	return {
-		message: `${symbol}: an altered 5th goes in the parentheses unless it follows an extension (grammar 3)`,
+		message: `${symbol}: an altered ${alteration.slice(1)}th goes in the parentheses unless it follows an extension (grammar 3)`,
 		token: symbol,
 		suggestion,
 	};

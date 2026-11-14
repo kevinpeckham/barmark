@@ -31,7 +31,7 @@ describe("barmark check", () => {
 		const io = folder({ "bad.chart.md": PROBLEMS });
 		expect(await check(["--format", "github", "bad.chart.md"], io)).toBe(1);
 		expect(io.out()).toBe(
-			`::warning file=bad.chart.md,line=3::${warning.message}\n::error file=bad.chart.md,line=5::${error.message}\n`,
+			`::warning file=bad.chart.md,line=3::${warning.message} (write ${warning.suggestion})\n::error file=bad.chart.md,line=5::${error.message}\n`,
 		);
 	});
 	test("--format github escapes %, CR and LF in messages", async () => {
@@ -47,12 +47,92 @@ describe("barmark check", () => {
 			{
 				file: "bad.chart.md",
 				diagnostics: [
-					{ line: 3, severity: "warning", message: warning.message },
+					{
+						line: 3,
+						severity: "warning",
+						message: warning.message,
+						suggestion: warning.suggestion,
+					},
 					{ line: 5, severity: "error", message: error.message },
 				],
 			},
 			{ file: "ok.chart.md", diagnostics: [] },
 		]);
+	});
+	describe("a problem's suggestion", () => {
+		const SUGGESTING = "| C(b2) | Cadd9b13 |\n| D6(omit5add9) |\n";
+		test("a message that already says what to write does not say it twice", async () => {
+			const io = folder({ "d.chart.md": "| C | G | DS. al Coda |\n" });
+			expect(await check(["d.chart.md"], io)).toBe(1);
+			const line = io.out().split("\n")[0] ?? "";
+			expect(line).toEndWith("not a direction; write D.S. al Coda");
+			// A message that names only part of the symbol still gets the whole one.
+			const part = folder({ "m.chart.md": "| CM7 |\n" });
+			await check(["m.chart.md"], part);
+			expect(part.out().split("\n")[0]).toEndWith("write maj (write Cmaj7)");
+		});
+		test("text: the line ends with (write <suggestion>), for errors and warnings", async () => {
+			const io = folder({ "s.chart.md": SUGGESTING });
+			expect(await check(["s.chart.md"], io)).toBe(1);
+			expect(io.out()).toBe(
+				[
+					's.chart.md:1: error: C(b2): "b2" is not a tone a parenthesis can add (write C(b9))',
+					's.chart.md:1: error: Cadd9b13: the "b" after add9 would join the root C; the items go in one parenthesis (write C(9,b13))',
+					"s.chart.md:2: warning: D6(omit5add9): items in a parenthesis are separated by commas (write D6(omit5,add9))",
+					"1 file, 2 errors, 1 warning",
+					"",
+				].join("\n"),
+			);
+		});
+		test("github: the annotation's message carries the same sentence, escaped as data", async () => {
+			const io = folder({ "s.chart.md": SUGGESTING });
+			await check(["--format", "github", "s.chart.md"], io);
+			expect(io.out().split("\n")[0]).toBe(
+				'::error file=s.chart.md,line=1::C(b2): "b2" is not a tone a parenthesis can add (write C(b9))',
+			);
+			expect(io.out()).toContain("(write C(9,b13))\n::warning");
+			const { githubLine } = await import("../src/report.js");
+			expect(
+				githubLine("a.chart.md", {
+					line: 1,
+					severity: "error",
+					message: "50%",
+					token: "",
+					suggestion: "C(9%,b13)\n",
+				}),
+			).toBe("::error file=a.chart.md,line=1::50%25 (write C(9%25,b13)%0A)");
+		});
+		test("json: a suggestion field beside message, absent when there is none", async () => {
+			const io = folder({ "s.chart.md": `${SUGGESTING}| Q |\n` });
+			await check(["--format", "json", "s.chart.md"], io);
+			const [file] = JSON.parse(io.out());
+			expect(file.diagnostics[0]).toEqual({
+				line: 1,
+				severity: "error",
+				message: 'C(b2): "b2" is not a tone a parenthesis can add',
+				suggestion: "C(b9)",
+			});
+			expect(file.diagnostics[3]).toEqual({
+				line: 3,
+				severity: "error",
+				message: "Q: a chord starts with a root A–G",
+			});
+			expect("suggestion" in file.diagnostics[3]).toBe(false);
+		});
+		test("a problem with no suggestion prints exactly what it printed before", async () => {
+			const chart = "| Q |\n| C7(7) |\n";
+			const io = folder({ "n.chart.md": chart });
+			await check(["n.chart.md"], io);
+			// byte for byte what the base printed for this chart
+			expect(io.out()).toBe(
+				"n.chart.md:1: error: Q: a chord starts with a root A–G\nn.chart.md:2: warning: C7(7) already contains 7\n1 file, 1 error, 1 warning\n",
+			);
+			const github = folder({ "n.chart.md": chart });
+			await check(["--format", "github", "n.chart.md"], github);
+			expect(github.out()).toBe(
+				"::error file=n.chart.md,line=1::Q: a chord starts with a root A–G\n::warning file=n.chart.md,line=2::C7(7) already contains 7\n",
+			);
+		});
 	});
 	test("an unknown --format is a usage error", async () => {
 		const io = folder({ "ok.chart.md": "| D |\n" });

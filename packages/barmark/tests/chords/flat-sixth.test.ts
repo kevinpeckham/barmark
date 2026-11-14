@@ -1,0 +1,615 @@
+/**
+ * The flat sixth, `add` before any tone, and `Δ9` (Kevin, 2026-11-13 and
+ * 2026-11-14; design `docs/superpowers/specs/2026-11-14-flat-sixth-design.md`).
+ * A user wrote `F#m(♭6)`, `F#maddb6` and `F#maddb13`: all three now read,
+ * and what is still refused says what to write instead.
+ */
+import { describe, expect, test } from "bun:test";
+import { growth, TIMING_TIMEOUT } from "../../../../test-support/growth.js";
+import type { Key } from "../../src/chart/types.js";
+import { harteToBarmark, toHarte } from "../../src/chords/harte.js";
+import { nameNotes } from "../../src/chords/name.js";
+import { parseChord } from "../../src/chords/parse.js";
+import { printSuffix } from "../../src/chords/print.js";
+import { enumerateSuffixes, replacesOwnSixth, type Suffix } from "../../src/chords/suffixes.js";
+
+const ok = (symbol: string) => {
+	const r = parseChord(symbol);
+	if (!r.ok) throw new Error(r.error.message);
+	return r;
+};
+const fails = (symbol: string) => {
+	const r = parseChord(symbol);
+	if (r.ok) throw new Error(`${symbol} reads as ${r.value.canonical}`);
+	return r.error;
+};
+/** The pitches a Harte label converts back to, as a set. */
+const harteBack = (harte: string) => {
+	const back = harteToBarmark(harte);
+	if (!back) throw new Error(`${harte} does not convert`);
+	return [...ok(back).value.pitches].sort();
+};
+
+/** Input, canonical, pitches (the parser's spelling and order), Harte label or null for a round trip. */
+const READS: [string, string, string, string | null][] = [
+	["F#m(b6)", "F#m(b6)", "F# A C# D", "F#:min(b6)"],
+	["F#m(♭6)", "F#m(b6)", "F# A C# D", "F#:min(b6)"],
+	["F#maddb6", "F#m(b6)", "F# A C# D", "F#:min(b6)"],
+	["F#m(addb6)", "F#m(b6)", "F# A C# D", "F#:min(b6)"],
+	["F#maddb13", "F#m(b13)", "F# A C# D", "F#:min(b13)"],
+	["F#m(addb13)", "F#m(b13)", "F# A C# D", "F#:min(b13)"],
+	["F#m7b6", "F#m7(b6)", "F# A C# D E", "F#:min7(b6)"],
+	["F#m7b13", "F#m7(b13)", "F# A C# E D", "F#:min7(b13)"],
+	["C(b6)", "C(b6)", "C E G Ab", "C:maj(b6)"],
+	["C6(b6)", "C6(b6)", "C E G Ab", null],
+	["C13(b6)", "C13(b6)", "C E G Ab Bb D A", null],
+	["C(9,b6)", "C(b6,9)", "C E G Ab D", "C:maj(b6,9)"],
+	["C(b6,#5)", "C(#5,b6)", "C E G# Ab", null],
+	["Abaddb6", "Ab(b6)", "Ab C Eb Fb", null],
+	["Cb6", "Cb6", "Cb Eb Gb Ab", "Cb:maj6"],
+	["Cadd13", "C(13)", "C E G A", "C:maj6"],
+	["C(add13)", "C(13)", "C E G A", "C:maj6"],
+	["Cadd#11", "C(#11)", "C E G F#", "C:maj(#11)"],
+	["C(add#11)", "C(#11)", "C E G F#", "C:maj(#11)"],
+	["Caddb9", "C(b9)", "C E G Db", "C:maj(b9)"],
+	["Cadd6", "C(6)", "C E G A", "C:maj6"],
+	["Cadd7", "C(7)", "C E G Bb", "C:7"],
+	["Am(b9,add13)", "Am(b9,13)", "A C E Bb F#", null],
+	["Cm7add13", "Cm7(13)", "C Eb G Bb A", null],
+	["Bbadd#11", "Bb(#11)", "Bb D F E", null],
+	["CΔ9", "Cmaj9", "C E G B D", "C:maj9"],
+	// Harte's maj13 has an 11 that barmark's maj13 does not: the parser's own label, as for Cmaj13.
+	["CΔ13", "Cmaj13", "C E G B D A", "C:maj9(13)"],
+	["DΔ9/F#", "Dmaj9/F#", "D F# A C# E", "D:maj9/3"],
+	["CΔ9(#11)", "Cmaj9(#11)", "C E G B D F#", null],
+	["CΔ9#11", "Cmaj9(#11)", "C E G B D F#", null],
+	["CΔ", "Cmaj7", "C E G B", "C:maj7"],
+	["CΔ7", "Cmaj7", "C E G B", "C:maj7"],
+];
+
+describe("what reads", () => {
+	test.each(READS)("%s reads as %s", (input, canonical, pitches, harte) => {
+		const r = ok(input);
+		expect(r.value.canonical).toBe(canonical);
+		expect(r.value.pitches.join(" ")).toBe(pitches);
+		expect(r.warnings).toEqual([]);
+		if (harte) expect(r.value.harte).toBe(harte);
+		expect(harteBack(r.value.harte)).toEqual([...r.value.pitches].sort());
+		// The canonical form reads as itself.
+		expect(ok(canonical).value.canonical).toBe(canonical);
+	});
+	test("DΔ9/F# has F# in the bass", () => {
+		expect(ok("DΔ9/F#").value.bass).toBe("F#");
+	});
+});
+
+describe("warnings", () => {
+	test("b6 and b13 are the same note: the second already there", () => {
+		const r = ok("C(b6,b13)");
+		expect(r.value.pitches).toEqual(["C", "E", "G", "Ab"]);
+		expect(r.warnings).toHaveLength(1);
+		expect(r.warnings[0]?.message).toContain("already contains");
+	});
+	const stackedMessage = (() => {
+		const r = ok("D6(omit5add9)");
+		return r.warnings[0]?.message.replace("D6(omit5add9): ", "") ?? "";
+	})();
+	test.each([
+		["D6(omit5addb6)", "D6(b6,no5)"],
+		["C(omit5add13)", "C(13,no5)"],
+	])("%s reads as %s with the stacked-spelling warning", (input, canonical) => {
+		const r = ok(input);
+		expect(r.value.canonical).toBe(canonical);
+		expect(r.warnings).toHaveLength(1);
+		expect(r.warnings[0]?.message).toBe(`${input}: ${stackedMessage}`);
+		const suggestion = r.warnings[0]?.suggestion ?? "";
+		expect(ok(suggestion).value.canonical).toBe(canonical);
+	});
+});
+
+describe("refused, with a suggestion only when it reads", () => {
+	const REFUSED: [string, string, string | undefined][] = [
+		["F#m(b2)", '"b2" is not a tone a parenthesis can add', "F#m(b9)"],
+		["C(#2)", '"#2" is not a tone', "C(#9)"],
+		["C(#4)", '"#4" is not a tone', "C(#11)"],
+		["C(b7)", '"b7" is not a tone', "C(7)"],
+		["C7(b2,#4)", '"b2" is not a tone', "C7(b9,#11)"],
+		["C(b2,x)", "is not a tone", undefined],
+		["Cmb6", "an altered 6th goes in the parentheses", "Cm(b6)"],
+		["Cmb13", "an altered 13th goes in the parentheses", "Cm(b13)"],
+		["Cmb9", "an altered 9th goes in the parentheses", "Cm(b9)"],
+		["CΔ11", 'cannot read "11"', undefined],
+		["Abmb6", "an altered 6th goes in the parentheses", "Abm(b6)"],
+		["Cm#11", "an altered 11th goes in the parentheses", "Cm(#11)"],
+		// Review Focus 4: each suggests a symbol that reads.
+		["C5(b2)", '"b2" is not a tone', "C5(b9)"],
+		["C6(b7)", '"b7" is not a tone', "C6(7)"],
+		["Cdim(#4)", '"#4" is not a tone', "Cdim(#11)"],
+		["F#m(♭2)", '"b2" is not a tone', "F#m(b9)"],
+	];
+	test.each(REFUSED)("%s", (input, message, suggestion) => {
+		const e = fails(input);
+		expect(e.message).toContain(message);
+		expect(e.suggestion).toBe(suggestion);
+		if (suggestion) expect(parseChord(suggestion).ok).toBe(true);
+	});
+	test("an alteration after a bare quality: the altered fifth's message, unchanged for b5", () => {
+		expect(fails("Cmb6").message).toBe(
+			"Cmb6: an altered 6th goes in the parentheses unless it follows an extension (grammar 3)",
+		);
+		expect(fails("Cmb5").message).toBe(
+			"Cmb5: an altered 5th goes in the parentheses unless it follows an extension (grammar 3)",
+		);
+		expect(fails("Cmb5").suggestion).toBe("Cm(b5)");
+	});
+	test("a flat root that could be the alteration's flat: no suggestion", () => {
+		// `Cb6`, `Ab9`, `Bb13` read as chords on flat roots; failing, they never become C(b6,…).
+		for (const symbol of ["Cb6(no5,x)", "Ab9(x)", "Bb13(no7)"])
+			expect(fails(symbol).suggestion).toBeUndefined();
+		expect(ok("Ab9").value.root).toBe("Ab");
+		expect(ok("Bb13").value.root).toBe("Bb");
+	});
+});
+
+describe("add beside its neighbours (Review Focus 2): as add9 does in each place", () => {
+	// Base commit a23242b: Cadd9 C(9), Cadd2 C(2), Cadd4 C(4), Cadd11 C(11),
+	// Csus4add9 Csus4(9), Cm7add11 Cm7(11), Cadd9add11 C(9,11), Cadd9(b9)
+	// C(b9,9), Cm7(add11)add9 Cm7(9,11).
+	test.each([
+		["Cadd9", "C(9)"],
+		["Cadd2", "C(2)"],
+		["Cadd4", "C(4)"],
+		["Cadd11", "C(11)"],
+		["Csus4add9", "Csus4(9)"],
+		["Csus4add13", "Csus4(13)"],
+		["Cm7add11", "Cm7(11)"],
+		["Cadd9add11", "C(9,11)"],
+		["Cadd9add13", "C(9,13)"],
+		["Cadd9(b9)", "C(b9,9)"],
+		["Cadd13(b9)", "C(b9,13)"],
+		["Cm7(add11)add9", "Cm7(9,11)"],
+		["Cm7(add13)add9", "Cm7(9,13)"],
+	])("%s reads as %s", (input, canonical) => {
+		expect(ok(input).value.canonical).toBe(canonical);
+	});
+	// The existing forms, at base: `cannot read "add"`, `"add5"`, `"add3"`,
+	// `"add14"`, `"x(9)"`, and `"add" is not a tone a parenthesis can add`.
+	test.each([
+		["Cadd", 'Cadd: cannot read "add"'],
+		["Cadd5", 'Cadd5: cannot read "add5"'],
+		["Cadd3", 'Cadd3: cannot read "add3"'],
+		["Cadd14", 'Cadd14: cannot read "add14"'],
+		["Cadd9x", 'Cadd9x: cannot read "x(9)"'],
+		["C(add)", 'C(add): "add" is not a tone a parenthesis can add'],
+	])("%s is still refused, as before, with no suggestion", (input, message) => {
+		const e = fails(input);
+		expect(e.message).toBe(message);
+		expect(e.suggestion).toBeUndefined();
+	});
+	test("Caddb2: add is stripped first, then b2 is refused, suggesting C(b9)", () => {
+		const e = fails("Caddb2");
+		expect(e.message).toContain('"b2" is not a tone a parenthesis can add');
+		expect(e.suggestion).toBe("C(b9)");
+	});
+});
+
+describe("a root's own accidental (Review Focus 1)", () => {
+	test.each(["Ab6", "Bb6", "Eb6", "Gb6", "Db6", "Cb6"])("%s is a sixth chord", (symbol) => {
+		const r = ok(symbol);
+		expect(r.value.canonical).toBe(symbol);
+		expect(r.value.root).toBe(symbol.slice(0, 2));
+		expect(r.value.harte).toBe(`${symbol.slice(0, 2)}:maj6`);
+	});
+	test.each([
+		["Cbadd9", "Cb(9)"],
+		["Abaddb6", "Ab(b6)"],
+		["Bbadd#11", "Bb(#11)"],
+	])("%s reads with the root's flat", (symbol, canonical) => {
+		expect(ok(symbol).value.canonical).toBe(canonical);
+	});
+});
+
+describe("Harte labels in", () => {
+	test.each([
+		["C:min(b6)", "Cm(b6)"],
+		["C:min(b13)", "Cm(b13)"],
+		["C:maj(b6)", "C(b6)"],
+		["C:min7(b6)", "Cm7(b6)"],
+	])("%s is %s", (label, symbol) => {
+		expect(harteToBarmark(label)).toBe(symbol);
+	});
+});
+
+describe("a long run-together parenthesis reads in linear time (Review Focus 3)", () => {
+	const shapes: [string, (n: number) => string][] = [
+		["addb6", (n) => `C(${"addb6".repeat(n)})`],
+		["add#11", (n) => `C(${"add#11".repeat(n)})`],
+		["b6", (n) => `C(${"b6".repeat(n)})`],
+	];
+	for (const [name, shape] of shapes)
+		test(
+			`${name} 5,000 times takes far less than a hundred times 500`,
+			() => {
+				const [small, large] = [shape(500), shape(5_000)];
+				expect(parseChord(large).ok).toBe(true);
+				expect(
+					growth(
+						() => parseChord(small),
+						() => parseChord(large),
+						{ runs: 5, balance: 10, repeat: 2 },
+					),
+				).toBeLessThan(30);
+			},
+			TIMING_TIMEOUT,
+		);
+});
+
+describe("names from notes are unchanged (Review Focus 5)", () => {
+	const keys: (Key | null)[] = [
+		null,
+		...["C", "G", "D", "A", "E", "B", "F#", "C#", "F", "Bb", "Eb", "Ab", "Db", "Gb", "Cb"].map(
+			(tonic): Key => ({ tonic, mode: "major" }),
+		),
+	];
+	const sets: number[][] = [];
+	const grow = (set: number[]) => {
+		if (set.length >= 3) sets.push(set);
+		if (set.length === 4) return;
+		for (let pc = (set.at(-1) ?? -1) + 1; pc < 12; pc++) grow([...set, pc]);
+	};
+	grow([]);
+	test("every three- and four-note set, on each of its notes, in 16 keys: the base commit's names", () => {
+		const hash = new Bun.CryptoHasher("sha256");
+		let count = 0;
+		for (const key of keys)
+			for (const pcs of sets)
+				for (const bass of pcs) {
+					hash.update(`${nameNotes(pcs, bass, key) ?? "-"}\n`);
+					count++;
+				}
+		expect(count).toBe(42_240);
+		// The same loop run at the base commit, a23242b, before `b6` was a tone.
+		expect(hash.digest("hex")).toBe(
+			"62b60ad77bad092159d5c797cde9ff9db9976ce5bcd1733f4374eb5343c2592f",
+		);
+	}, 60_000);
+});
+
+describe("a new bare add tone is not followed by a digit", () => {
+	// Each message as the base commit, a23242b, gives it.
+	test.each([
+		"Cadd69",
+		"Cadd67",
+		"Cadd613",
+		"Cadd79",
+		"Cadd713",
+		"Cadd1311",
+		"Caddb69",
+		"Caddb139",
+	])("%s is refused, as before b6 and the new add tones", (symbol) => {
+		const e = fails(symbol);
+		expect(e.message).toBe(`${symbol}: cannot read "${symbol.slice(1)}"`);
+		expect(e.suggestion).toBeUndefined();
+	});
+	test.each([
+		["Cadd13", "C(13)"],
+		["Cadd13(b9)", "C(b9,13)"],
+		["Cadd13/E", "C(13)/E"],
+		["Cadd13omit3", "C5(13)"],
+		["Cadd6add9", "C(6,9)"],
+		["Caddb6", "C(b6)"],
+	])("%s still reads as %s", (symbol, canonical) => {
+		expect(ok(symbol).value.canonical).toBe(canonical);
+	});
+	test("the four tones that read before keep their reading, digits after included", () => {
+		// Kept as at base, pending the product owner: see the task report.
+		expect(ok("Cadd27").value.canonical).toBe("C7(2)");
+		expect(ok("Cadd911").value.canonical).toBe("C11(9)");
+		expect(ok("Cadd49").value.canonical).toBe("C9(4)");
+		expect(ok("Cadd1113").value.canonical).toBe("C13(11)");
+		expect(ok("Cadd96").value.canonical).toBe("C6(9)");
+	});
+});
+
+describe("a bare add never changes the root", () => {
+	// At base, `Cadd9b13` read as `Cb13(9)`: a C-flat chord.
+	test.each([
+		["Cadd9b13", "C(9,b13)"],
+		["Cadd13b9", "C(b9,13)"],
+		["Cadd9#11", "C(9,#11)"],
+		["Caddb6b9", "C(b6,b9)"],
+		["Cadd6#11", "C(6,#11)"],
+		["Cadd13#11", "C(#11,13)"],
+		["Cadd9b5", "C(b5,9)"],
+		["Cadd9b13/E", "C(9,b13)/E"],
+	])("%s is refused, suggesting %s", (symbol, suggestion) => {
+		const e = fails(symbol);
+		expect(e.message).toContain("would join the root");
+		expect(e.suggestion).toBe(suggestion);
+		expect(ok(suggestion).value.root).toBe("C");
+	});
+	test("no suggestion when the items in one parenthesis would not read", () => {
+		expect(fails("Cadd9b13(x)").suggestion).toBeUndefined();
+	});
+	test.each([
+		["Bbadd9", "Bb(9)", "Bb"],
+		["F#add9", "F#(9)", "F#"],
+		["Abaddb6", "Ab(b6)", "Ab"],
+		["C#add#11", "C#(#11)", "C#"],
+		["C7add9b13", "C7(9,b13)", "C"],
+		["Cadd9(b13)", "C(9,b13)", "C"],
+	])("%s keeps its root: %s", (symbol, canonical, root) => {
+		const r = ok(symbol);
+		expect(r.value.canonical).toBe(canonical);
+		expect(r.value.root).toBe(root);
+	});
+	test("a bare omission never joins the root: it only ends the name", () => {
+		// As at base: an accidental after a bare omit/no is unreadable, never the root's.
+		for (const symbol of ["Comit5b13", "Cno3#11"])
+			expect(fails(symbol).message).toBe(`${symbol}: cannot read "${symbol.slice(1)}"`);
+	});
+});
+
+/** The root and bass a symbol is written with. */
+const written = (symbol: string) => {
+	const root = /^[A-G][#b]?/.exec(symbol)?.[0] ?? "";
+	return { root, bass: /\/([A-G][#b]?)$/.exec(symbol)?.[1] ?? root };
+};
+
+describe("a suggestion never changes the root or the bass", () => {
+	test.each(["Cadd9b13bm7", "Eadd9b13bm7", "Cadd9b13b", "Cadd9b5bm7"])(
+		"%s: no suggestion, since the items in one parenthesis would join the root",
+		(symbol) => {
+			const e = fails(symbol);
+			expect(e.message).toContain("would join the root");
+			expect(e.suggestion).toBeUndefined();
+		},
+	);
+	test("a b7 after a bare add's alterations is its counterpart, the flat seventh", () => {
+		// Since the final wave the counterparts apply here too; at 3690c48 this had no suggestion.
+		expect(fails("Cadd9b13b7").suggestion).toBe("C(7,9,b13)");
+		expect(fails("Eadd9b13b7").suggestion).toBe("E(7,9,b13)");
+	});
+	// One per path that builds a suggestion by rewriting the symbol.
+	test.each([
+		["Cadd9b13/E", "C(9,b13)/E"],
+		["Cmb6/E", "Cm(b6)/E"],
+		["C(b2)/E", "C(b9)/E"],
+		["Bbadd9b13", "Bb(9,b13)"],
+		["Cmadd9b13", "Cm(9,b13)"],
+		["Cdimb9/Gb", "Cdim(b9)/Gb"],
+	])("%s suggests %s, root and bass as written", (symbol, suggestion) => {
+		const e = fails(symbol);
+		expect(e.suggestion).toBe(suggestion);
+		const r = ok(suggestion);
+		expect({ root: r.value.root, bass: r.value.bass }).toEqual(written(symbol));
+	});
+	test("every refusal in this file's tables keeps the root and bass in its suggestion", () => {
+		const symbols = [
+			"F#m(b2)",
+			"C(#2)",
+			"C(#4)",
+			"C(b7)",
+			"C7(b2,#4)",
+			"Cmb6",
+			"Cmb13",
+			"Cmb9",
+			"Abmb6",
+			"Cm#11",
+			"C5(b2)",
+			"C6(b7)",
+			"Cdim(#4)",
+			"Caddb2",
+			"Cadd9b13",
+			"Cadd13b9",
+			"Cadd9#11",
+			"Caddb6b9",
+			"Cadd6#11",
+			"Cadd13#11",
+			"Cadd9b5",
+		];
+		for (const symbol of symbols) {
+			const suggestion = fails(symbol).suggestion;
+			if (!suggestion) throw new Error(`${symbol}: no suggestion`);
+			const r = ok(suggestion);
+			expect([symbol, r.value.root, r.value.bass]).toEqual([
+				symbol,
+				written(symbol).root,
+				written(symbol).bass,
+			]);
+		}
+	});
+});
+
+describe("Bbadd9b13 and Cmadd9b13 are told what their natural-root form is", () => {
+	test.each([
+		["Bbadd9b13", "Bb(9,b13)"],
+		["Cmadd9b13", "Cm(9,b13)"],
+	])(
+		"%s: no reader text in the message, and the items in one parenthesis",
+		(symbol, suggestion) => {
+			const e = fails(symbol);
+			expect(e.message).not.toContain("b13(9)");
+			expect(e.message).toContain("after add9");
+			expect(e.suggestion).toBe(suggestion);
+		},
+	);
+	test("the message names the add the accidental follows", () => {
+		expect(fails("Cadd9b13add11").message).toContain('the "b" after add9 would join the root C');
+	});
+});
+
+describe("an alteration after any quality with no extension suggests the parentheses", () => {
+	test.each([
+		["Cdimb9", "Cdim(b9)"],
+		["Caugb6", "Caug(b6)"],
+		["C5b6", "C5(b6)"],
+		["Csus4b9", "Csus4(b9)"],
+		["Csus2b6", "Csus2(b6)"],
+	])("%s suggests %s", (symbol, suggestion) => {
+		const e = fails(symbol);
+		expect(e.message).toContain("goes in the parentheses unless it follows an extension");
+		expect(e.suggestion).toBe(suggestion);
+	});
+	test("after an extension it still reads", () => {
+		expect(ok("Cdim7b9").value.canonical).toBe("Cdim7(b9)");
+	});
+});
+
+/** A symbol's Harte label converted back, or null when it does not read. */
+const harteRoundTrip = (symbol: string) => {
+	const r = parseChord(symbol);
+	return r.ok ? harteToBarmark(toHarte(r.value)) : null;
+};
+const sortedPitches = (symbol: string) => [...ok(symbol).value.pitches].sort().join();
+/** A 9th, 11th or maj9 chord with an added 13 that came back as the 13th chord of the same notes. */
+const asThirteenth = (symbol: string, back: string, tones: string[]) =>
+	tones.includes("13") &&
+	/13/.test(ok(back).value.parts?.extension ?? "") &&
+	sortedPitches(symbol) === sortedPitches(back);
+/**
+ * `root` with a b6 suffix, and what its Harte label converts back to, when
+ * that is not itself though its b13 twin's is; null otherwise.
+ */
+function harteFailure(root: string, s: Suffix): string | null {
+	const symbol = root + s.suffix;
+	const tones = s.parts.tones.map((t) => (t === "b6" ? "b13" : t));
+	const twin = root + printSuffix({ ...s.parts, tones });
+	const back = harteRoundTrip(symbol);
+	if (back === symbol || harteRoundTrip(twin) !== twin) return null;
+	if (back && asThirteenth(symbol, back, s.parts.tones)) return null;
+	return `${symbol} -> ${back}`;
+}
+
+describe("a Harte flat sixth with another tone keeps its plain spelling", () => {
+	test.each([
+		["C:maj(b6,9)", "C(b6,9)"],
+		["C:min(b6,9)", "Cm(b6,9)"],
+		["C:min7(b6,11)", "Cm7(b6,11)"],
+		["C:maj6(b6)", "C(b6,6)"],
+	])("%s is %s", (label, symbol) => {
+		expect(harteToBarmark(label)).toBe(symbol);
+	});
+	// A suffix whose b6 replaces its own sixth (`6(b6)`) is left out: the plainer
+	// spelling of the same notes is chosen on the way back, by design (`C(b6)`).
+	// The exceptions, each with the reason: a 9th, 11th or maj9 chord with an
+	// added 13 (`C9(b6,13)`) comes back as the 13th chord (`C13(b6)`), the same
+	// notes in fewer tones. Its b13 twin has no such twin, since a b13 replaces the 13.
+	test("every canonical suffix with b6 round-trips through Harte wherever its b13 twin does", () => {
+		const suffixes = [...enumerateSuffixes().values()]
+			.flat()
+			.filter((s) => s.parts.tones.includes("b6") && !replacesOwnSixth(s));
+		expect(suffixes.length).toBeGreaterThan(100);
+		const exceptions = suffixes.flatMap((s) =>
+			["C", "F#", "Bb"].flatMap((root) => {
+				const failure = harteFailure(root, s);
+				return failure ? [failure] : [];
+			}),
+		);
+		expect(exceptions).toEqual([]);
+	});
+});
+
+describe("the refused-tone rewrite reads items, not the text around them", () => {
+	test("spaces around an item are kept", () => {
+		expect(fails("C( b2 , #4 )").suggestion).toBe("C( b9 , #11 )");
+	});
+	test("an item that only looks like a key of the table is not rewritten", () => {
+		expect(fails("C(constructor)").suggestion).toBeUndefined();
+	});
+	test("4,000 spaces in a list: the rewrite adds one read, no more", () => {
+		const spaces = " ".repeat(4_000);
+		const time = (symbol: string) => {
+			const start = performance.now();
+			parseChord(symbol);
+			return performance.now() - start;
+		};
+		time(`C(x,${spaces}x)`);
+		const [plain, refused] = [time(`C(x,${spaces}x)`), time(`C(b2,${spaces}x)`)];
+		// The lookbehind rewrite took about three plain reads (155 ms against 48).
+		expect(refused).toBeLessThan(plain * 2.6 + 5);
+	});
+});
+
+describe("the Harte spelling rule is the flat sixth's only", () => {
+	test.each([
+		["C:7(b9,13)", "C13(b9)"],
+		["C:min7(b9,11,13)", "Cm13(b9)"],
+		["C:sus4(b7,b9,13)", "C13sus4(b9)"],
+		["C:maj7(#9,13)", "Cmaj13(#9)"],
+	])("%s is %s, as at base", (label, symbol) => {
+		expect(harteToBarmark(label)).toBe(symbol);
+	});
+	test.each(["Cm13(b9)", "C13sus4(b9)", "Cmaj13(#9)", "C13(b9)"])(
+		"%s round-trips through its Harte label",
+		(symbol) => {
+			expect(harteToBarmark(toHarte(ok(symbol).value))).toBe(symbol);
+		},
+	);
+	test("every interval set of the suffix table, on C, F# and Bb: the base commit's names", () => {
+		const lines: string[] = [];
+		for (const list of enumerateSuffixes().values()) {
+			// The first spelling without b6: the base table's first spelling of the set.
+			const first = list.find((s) => !s.parts.tones.includes("b6"));
+			if (!first) continue;
+			for (const root of ["C", "F#", "Bb"]) {
+				const r = parseChord(root + first.suffix);
+				if (!r.ok) continue;
+				const label = toHarte(r.value);
+				if (!label.includes("b6")) lines.push(`${label}\t${harteToBarmark(label)}`);
+			}
+		}
+		lines.sort();
+		const hash = new Bun.CryptoHasher("sha256");
+		for (const line of lines) hash.update(`${line}\n`);
+		// The same loop run at 9c6af51 (main before the flat sixth), in a clone.
+		expect(lines.length).toBe(5_892);
+		expect(hash.digest("hex")).toBe(
+			"13be97722436e3fbd116cc4cd91549c0c1d821a68593004dfde8178021e816b7",
+		);
+	}, 60_000);
+});
+
+describe("the final wave's small items", () => {
+	test.each([
+		["Cadd6/9", 'Cadd6/9: cannot read "add6/9"'],
+		["Cadd13/9", 'Cadd13/9: cannot read "add13/9"'],
+		["Caddb6/x", 'Caddb6/x: cannot read "addb6/x"'],
+	])("%s is refused in the writer's own text, as at base", (symbol, message) => {
+		expect(fails(symbol).message).toBe(message);
+	});
+	test("a new add tone before a slash bass still reads", () => {
+		expect(ok("Cadd13/E").value.canonical).toBe("C(13)/E");
+		expect(ok("Caddb6/Ab").value.canonical).toBe("C(b6)/Ab");
+	});
+	test.each([
+		["Cadd9#4", "C(9,#11)"],
+		["Cadd9b2", "C(b9,9)"],
+	])("%s: the root-joining error suggests %s, refused tones replaced", (symbol, suggestion) => {
+		const e = fails(symbol);
+		expect(e.message).toContain("would join the root C");
+		expect(e.suggestion).toBe(suggestion);
+	});
+	test.each([
+		["C-b6", "Cm(b6)"],
+		["Cminb6", "Cm(b6)"],
+		["C+b6", "Caug(b6)"],
+		["Csusb9", "Csus4(b9)"],
+	])("%s, an aliased quality, suggests %s as Cmb6 does", (symbol, suggestion) => {
+		const e = fails(symbol);
+		expect(e.message).toContain("goes in the parentheses unless it follows an extension");
+		expect(e.suggestion).toBe(suggestion);
+	});
+	test("a refused tone in a long list is read once more at most, on the normalised text", () => {
+		const spaces = " ".repeat(10_000);
+		const time = (symbol: string) => {
+			parseChord(symbol);
+			const start = performance.now();
+			parseChord(symbol);
+			return performance.now() - start;
+		};
+		const [plain, refused] = [time(`C(x,${spaces}x)`), time(`C(b2,${spaces}x)`)];
+		// At 3690c48 the refused list took about twice the plain one (608 ms against 298).
+		expect(refused).toBeLessThan(plain * 1.5 + 10);
+	});
+});

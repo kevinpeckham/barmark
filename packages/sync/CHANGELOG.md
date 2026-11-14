@@ -6,6 +6,11 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- **A detection label with `b6` builds `(b6)`**: `C:min(b6)` builds
+  `Cm(b6)`, where it built `Cm(b13)`. `C:min(b13)` still builds `Cm(b13)`.
+
 ## [0.4.1] - 2026-11-10
 
 ### Changed
