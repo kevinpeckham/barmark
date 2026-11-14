@@ -419,16 +419,51 @@ export const ROWS: GuideRow[] = [
 		expect: { bars: 2, chord: { symbol: "C7b9", canonical: "C7(b9)", harte: "C:7(b9)" } },
 	},
 	{
+		id: "flat-sixth",
+		syntax: "F#m(b6)",
+		category: "chords",
+		meaning:
+			"A flat sixth is added with (b6). (b13) is the same note written an octave higher; each prints as it was written.",
+		terms: ["b6", "♭6", "flat six", "flat sixth", "minor sixth", "b13", "flat thirteen", "aeolian"],
+		example: "| F#m(b6) | F#m7b6 | D |",
+		ref: "§3",
+		expect: { bars: 3, chord: { symbol: "F#m(b6)", canonical: "F#m(b6)", harte: "F#:min(b6)" } },
+	},
+	{
+		id: "add-tone",
+		syntax: "Cadd9",
+		category: "chords",
+		meaning:
+			"add before a tone is shorthand for that tone in parentheses: Cadd9 is C(9), Cadd13 is C(13), F#maddb6 is F#m(b6).",
+		terms: ["add", "add9", "add11", "add13", "add6", "addb6", "add#11", "added tone", "added note"],
+		example: "| Cadd9 | Cadd13 | F#maddb6 |",
+		ref: "§3",
+		expect: { bars: 3, chord: { symbol: "Cadd13", canonical: "C(13)", harte: "C:maj6" } },
+	},
+	{
+		id: "refused-tone",
+		syntax: "C(#4)",
+		category: "chords",
+		meaning:
+			"(b2), (#2) and (#4) are not tones a parenthesis adds: write (b9), (#9) and (#11). The error says which.",
+		terms: ["#4", "sharp four", "b2", "flat two", "#2", "sharp two", "lydian", "phrygian"],
+		example: "| C(#4) |",
+		ref: "§3",
+		expect: { diagnostics: ["#4"] },
+	},
+	{
 		id: "chord-aliases",
 		syntax: "CΔ7  C°  Cø  C-7",
 		category: "chords",
 		meaning:
-			"Common shorthand is accepted and printed canonically: Δ for maj7, ° for dim, ø for m7(b5), + for aug, - or min for m, ♯ and ♭ for # and b.",
+			"Common shorthand is accepted and printed canonically: Δ for maj7 (Δ9 and Δ13 for maj9 and maj13), ° for dim, ø for m7(b5), + for aug, - or min for m, ♯ and ♭ for # and b.",
 		terms: [
 			"shorthand",
 			"aliases",
 			"symbols",
 			"Δ",
+			"Δ9",
+			"Δ13",
 			"triangle",
 			"°",
 			"circle",
