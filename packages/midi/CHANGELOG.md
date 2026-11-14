@@ -6,8 +6,12 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.3.4] - 2026-11-14
+
 ### Changed
 
+- **Requires `barmark` 0.24.0 (with `@barmark/sync` 0.4.2)**, whose minor release a caret range
+  would not reach.
 - **A chart with a flat sixth exports**: `Cm(b6)` plays C E♭ G A♭ as
   `Cm(b13)` does. Naming notes on import is unchanged: those notes still
   come back as `Abmaj7/C`.
@@ -191,7 +195,8 @@ package uses [semantic versioning](https://semver.org/).
   bar, shorter than one, from its downbeat). Needs barmark 0.21.0
   (`PlayedBar.time`).
 
-[Unreleased]: https://github.com/kevinpeckham/barmark/compare/midi-v0.3.3...HEAD
+[Unreleased]: https://github.com/kevinpeckham/barmark/compare/midi-v0.3.4...HEAD
+[0.3.4]: https://github.com/kevinpeckham/barmark/compare/midi-v0.3.3...midi-v0.3.4
 [0.3.3]: https://github.com/kevinpeckham/barmark/compare/midi-v0.3.2...midi-v0.3.3
 [0.3.2]: https://github.com/kevinpeckham/barmark/compare/midi-v0.3.1...midi-v0.3.2
 [0.3.1]: https://github.com/kevinpeckham/barmark/compare/midi-v0.3.0...midi-v0.3.1
