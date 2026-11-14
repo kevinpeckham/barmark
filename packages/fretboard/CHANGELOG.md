@@ -6,8 +6,12 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-11-14
+
 ### Changed
 
+- **Requires `barmark` 0.24.0**, whose minor release a caret range
+  would not reach.
 - **A flat sixth gets a shape**: `Cm(b6)` and `Cm(b13)` are the same note
   set and get the same shape, which sounds the flat sixth.
 
@@ -52,5 +56,6 @@ package uses [semantic versioning](https://semver.org/).
 - `shapeFor` and `shapesFor` take no tuning in 0.1: only standard guitar
   exists, and the parameter comes with the first other tuning.
 
-[Unreleased]: https://github.com/kevinpeckham/barmark/compare/fretboard-v0.1.0...HEAD
+[Unreleased]: https://github.com/kevinpeckham/barmark/compare/fretboard-v0.1.1...HEAD
+[0.1.1]: https://github.com/kevinpeckham/barmark/compare/fretboard-v0.1.0...fretboard-v0.1.1
 [0.1.0]: https://github.com/kevinpeckham/barmark/releases/tag/fretboard-v0.1.0

@@ -47,7 +47,7 @@
     },
     "packages/fretboard": {
       "name": "@barmark/fretboard",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "dependencies": {
         "barmark": "workspace:^",
       },
