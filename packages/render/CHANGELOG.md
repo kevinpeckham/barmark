@@ -6,8 +6,12 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.20.1] - 2026-11-14
+
 ### Changed
 
+- **Requires `barmark` 0.24.0 (with `@barmark/fretboard` 0.1.1)**, whose minor release a caret range
+  would not reach.
 - **A chart with a flat sixth, an `add` before any tone or `Δ9` draws and
   is spoken**: `F#m(b6)` is set `F♯m(♭6)` and read "F sharp minor flat
   six", `Cadd13` is set `C(13)` and `CΔ9` is set `Cmaj9`, each with its
@@ -567,7 +571,8 @@ that needs no script or as the `<barmark-chart>` web component. Requires
   zoom without sideways scrolling, the element renders and re-renders, and
   a screen reader hears "bar 9: D". Run them with `bun run test:browser`.
 
-[Unreleased]: https://github.com/kevinpeckham/barmark/compare/render-v0.20.0...HEAD
+[Unreleased]: https://github.com/kevinpeckham/barmark/compare/render-v0.20.1...HEAD
+[0.20.1]: https://github.com/kevinpeckham/barmark/compare/render-v0.20.0...render-v0.20.1
 [0.20.0]: https://github.com/kevinpeckham/barmark/compare/render-v0.19.1...render-v0.20.0
 [0.19.1]: https://github.com/kevinpeckham/barmark/compare/render-v0.19.0...render-v0.19.1
 [0.19.0]: https://github.com/kevinpeckham/barmark/compare/render-v0.18.0...render-v0.19.0
