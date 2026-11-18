@@ -1274,6 +1274,33 @@ and round-trip it through `format`.
 
 ## Tooling
 
+### ChordPro's reference `chordpro` knows a fixed vocabulary, and warns in two formats (2026-11-18, lyricsheet)
+
+- **The symptom.** Measuring which chord spellings the reference knows
+  (`chordpro --reference --strict`, 6.101.0), a first pass counted
+  `C7sus2`, `Cadd2`, `Cm13` and `C/F#` as known, which the design had
+  called gaps. They are not known: the tool prints "Unknown chord" in two
+  forms, `Unknown chord: "C(13)"` (quoted) and `Unknown chord: C/F#`
+  (bare), and the first pass matched only the quoted one. Then the
+  result: of 8,172 suffixes barmark enumerates, the reference knows 54;
+  `C7/F` is unknown while `C7b9/F` is known; `Db/C` is unknown while
+  `Db/D` is known.
+- **The cause.** The reference is not a reader of chord grammar. It
+  lists common chords, each with only the slash basses its list has, and
+  builds a handful of other names (alterations run on after an
+  extension, a few `add` chords), which then take any bass. Its list has
+  slips on `Db`, `A#` and `Gb` triads over a bass. Every name it fails
+  is warned once per use, quoted or not, plus a summary line "No chord
+  diagram defined for …". A `{define}` before the first use quiets both;
+  one after it does not.
+- **The fix.** `@barmark/lyricsheet`'s `spelled` and `isGap`
+  (`packages/lyricsheet/src/export/spell.ts`) are the measurement as
+  rules, checked name for name against the reference over 171,633 root
+  and suffix names and 26,019 slash chords; `scripts/chordpro-check.ts`
+  reads both warning forms and fails when an expected gap does not warn,
+  so the rules go stale loudly. Spec 4.7 was corrected (`add2`, slash
+  chords, the `Fb` and `B#` roots).
+
 ### The registry lists a version before it serves its tarball (2026-11-14, the midi 0.3.4 release)
 
 **Symptom:** `@barmark/midi` 0.3.4 published, and the release's `confirm`

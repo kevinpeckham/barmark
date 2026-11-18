@@ -261,29 +261,68 @@ written order would print verse 2's words nowhere.
 
 **4.7 Chord spelling (design call).** barmark's canonical spellings,
 except where the reference `chordpro` knows the same chord under another
-barmark **alias**. Every spelling below was checked with `chordpro`
-6.101.0 in strict mode on 2026-11-10: the canonical form warns and the
-alias doesn't.
+barmark **alias**. The first tables were checked with `chordpro` 6.101.0
+in strict mode on 2026-11-10; on 2026-11-18 every suffix barmark
+enumerates (8,172), on all 21 root spellings and over every bass, was
+put through the same reference, and the rules below are that
+measurement (`packages/lyricsheet/src/export/spell.ts`; the corrections
+are marked "corrected 2026-11-18").
+
+The rule: what is written must read back in barmark as the same chord
+(same intervals and bass), and, where barmark reads more than one such
+spelling, be the one the reference knows. If it knows none, the
+canonical spelling is written and the chord is a **known gap**.
 
 | barmark canonical | Written as |
 |---|---|
 | an alteration in parentheses after an extension: `7(b9)`, `7(#9)`, `7(#11)`, `7(b13)`, `7(b5)`, `13(b9)`, `7(b9,#11)` | without parentheses: `7b9`, `7#9`, `7#11`, `7b13`, `7b5`, `13b9`, `7b9#11` |
 | `m7(b5)` | `m7b5` (the canonical form reads too; the alias is the usual spelling) |
-| `(9)`, `(2)`, `(4)`, `(11)` on a triad | `add9`, `add2`, `add4`, `add11` |
+| `(9)`, `(4)`, `(11)` on a major triad | `add9`, `add4`, `add11` |
 
-`mmaj7`, `m(maj7)`, `6/9`, `7alt`, `sus2`, `sus4`, `7sus4`, `5`,
-`dim7`, `aug7` and most slash chords are known as written.
+The reference is a fixed vocabulary, not a reader of chord grammar, so
+these hold only where it knows the result (corrected 2026-11-18):
 
-What the reference doesn't know in any spelling is written canonically
-and is a **known gap**:
+- **Alterations run on** only on a dominant `7` (any one of `b5 #5 b9
+  #9 #11 b13`, `b9` with one of `#9 #11 b13`, or `#9#11`), on `9` (`b5`,
+  `#5`, `#11`), on `13` (`b9`, `#9`, `#11`), on `maj7` (`#5`, `#11`), on
+  `maj9` (`#11`) and on `m7` (`b5`). 20 of the 1,377 such suffixes; the
+  rest (`7(b6)`, `9(b13)`, `m7(b9)`, `maj7(b9)`, two alterations on `9`,
+  three anywhere…) are gaps.
+- **One added tone** is written `add` on a major triad (`4`, `9`,
+  `11`), on `7` (`7add11`), on `9` (`9add6`) and on `6` (`6add9`), and
+  `9(11)` is known only as written. 7 of 144; **`(2)` is a gap**:
+  neither `C(2)` nor `Cadd2` is known (the 2026-11-10 table said
+  `add2`), and so is any tone on a minor triad (`Cm(9)`, `Cmadd9`).
+- **No tones:** every bare chord barmark has is known as written
+  (`mmaj7`, `m(maj7)`, `mmaj9`, `6/9`, `7alt`, `sus2`, `sus4`, `7sus4`,
+  `13sus2`, `13sus4`, `5`, `dim7`, `aug7`, `maj9`, `maj13`…) except
+  `7sus2`, `9sus2`, `9sus4`, `augmaj7`, `m6/9` and `m13`.
+- Two or more tones otherwise, an added natural tone with an alteration,
+  an alteration with no extension, and omissions: all gaps (6,618 of the
+  suffixes).
+
+Every other gap follows:
 
 - a tone with no extension (`C(b13)`);
 - `5(7)`;
 - omissions (`(no3)`, `(no5)`);
-- `9sus4` and `7sus2`;
-- the roots `Cb` and `E#`;
-- some slash chords whose bass isn't a chord tone (`C/F#` and `C/Db`
-  warn, though `D/F#`, `C/E` and `C/Bb` don't).
+- `9sus4`, `9sus2`, `7sus2`, `augmaj7`, `m6/9`, `m13`;
+- the roots, and the basses, whose accidental lands on a natural: `Cb`,
+  `Fb`, `B#` and `E#` (corrected 2026-11-18: the reference knows no
+  chord on `Fb` or `B#` either);
+- **most slash chords** (corrected 2026-11-18: not "some"). The
+  reference lists common chords and builds the rest from their names. A
+  built chord (the run-on alterations but `m7b5`, `add4`, `add11`,
+  `7add11`, `9add6`, `13sus2`, `13sus4`, `mmaj9`, `7alt`) takes any bass.
+  A listed chord takes only the basses its list has, counted in
+  semitones above the root: a major triad its 2nd, 3rd, 4th, 5th, flat
+  7th or 7th (`D/F#`, `C/E`, `C/Bb`, `G/B`; not `C/F#`, `C/Db`, `C/A`);
+  a minor triad its minor 3rd or flat 7th; `7` its 3rd; `maj7` its 2nd
+  or 3rd; `m7` its flat 7th; no other listed chord (`sus4`, `6`, `9`,
+  `m7b5`, `dim7`, `add9`…) takes a bass. Its list also slips on nine
+  triads over a bass (`Db/C`, `A#/D`, `A#/A`, `Gb/Bb`, `Gb/A#` and
+  `Gbm/A` are unknown; `Db/D`, `Gbm/Bb` and `Gbm/A#` are known), which
+  the rules follow.
 
 **Amended 2026-11-18 (checked with the same reference).** barmark
 0.24.0's spellings are gaps too, by the first rule above: `Cm(b6)`,
@@ -293,9 +332,12 @@ seventh). The reference does know `Cmb6`, but barmark does not read it
 (an alteration without parentheses needs an extension), so it is not
 written. `Cmaj9`, `Cmaj13`, `Cmmaj7` and `Cmmaj9` are known as written.
 With `diagrams: "guitar"` every chord written gets a `{define}`, which
-names the chord for the reader; the plan checks whether that also quiets
-the reference's "Unknown chord" for a gap chord, and the gap rule
-follows what it finds.
+names the chord for the reader. **Measured 2026-11-18:** a `{define}`
+quiets a gap chord's "Unknown chord" warning and its "No chord diagram
+defined" summary, in lyric lines and in grid cells alike, when it comes
+before the chord's first use; one after the first use does not. So with
+`diagrams: "guitar"` a gap chord that gets a shape is no longer a gap
+for the reference.
 
 Use ASCII `#` and `b` only. Reason: what is read must be the chord we
 meant, both in a ChordPro reader and back in barmark. Section 5 says how
