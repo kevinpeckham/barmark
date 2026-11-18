@@ -19,7 +19,7 @@ export function directive(name: string, value?: string): string {
 }
 
 /** The key as `{key}` writes it: ionian is major and aeolian minor (the same notes); the other modes have none. */
-function keyText(key: Key): string | null {
+export function keyText(key: Key): string | null {
 	if (key.mode === "major" || key.mode === "ionian") return key.tonic;
 	if (key.mode === "minor" || key.mode === "aeolian") return `${key.tonic}m`;
 	return null;

@@ -146,6 +146,12 @@ describe("readCho", () => {
 		expect(performance.now() - again).toBeLessThan(100);
 	});
 
+	test("a space may lead a lyric line only before a `#`, which would start a comment", () => {
+		expect(readCho(" #2 [G]so\n")).toEqual([
+			{ kind: "lyrics", tokens: [{ word: "#2" }, c("G", true, false), { word: "so" }] },
+		]);
+	});
+
 	test("words alone are a lyric line", () => {
 		expect(readCho("la la\n")).toEqual([
 			{ kind: "lyrics", tokens: [{ word: "la" }, { word: "la" }] },

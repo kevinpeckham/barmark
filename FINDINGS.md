@@ -1274,6 +1274,25 @@ and round-trip it through `format`.
 
 ## Tooling
 
+### ChordPro reads `[x]` as a chord in `{comment}`, and escapes only inside a quoted label (2026-11-18, lyricsheet)
+
+- **The symptom.** Writing barmark text lines as `{comment: …}`, a text
+  line holding `[x]` drew `Unknown chord: "x"` from the reference
+  `chordpro` (6.101.0) and printed `x` as a chord over the comment. A
+  heading written `{start_of_verse: label="d\e"}` printed `de`.
+- **The cause.** Measured with the reference on the VM: a comment's value
+  is read as a lyric line, chords and all, while a `{title}` and a
+  `label="…"` keep brackets as text. Inside a quoted label value `\`
+  escapes the next character (`\"`, `\\`); everywhere else (lyrics,
+  comments, titles) a backslash is literal. A lyric line starting with
+  `#` is a comment, and one starting ` #` (a space first) prints as
+  lyrics, the space kept.
+- **The fix.** `@barmark/lyricsheet` writes `[` `]` `{` `}` as `(` `)` in
+  lyrics, words and comments, puts a space before a leading `#`, and
+  reports each changed line in one `text-changed` loss
+  (`packages/lyricsheet/src/export/changes.ts`); a label escapes `\` and
+  `"` with a backslash (`src/export/lyrics.ts`, `startLine`).
+
 ### ChordPro's reference `chordpro` warns "Unknown chord" in two forms that mean different things (2026-11-18, lyricsheet)
 
 - **The symptom.** Measuring which chord spellings the reference knows

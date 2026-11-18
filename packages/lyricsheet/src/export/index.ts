@@ -1,6 +1,10 @@
 import { type ChartDiagnostic, type ChartParse, extractPart, parseChart } from "barmark";
+import { comment } from "./changes.js";
 import { Losses } from "./losses.js";
+import { lyricSection } from "./lyrics.js";
 import { headerLines, headerLosses } from "./meta.js";
+import { layout, type Occurrence, occurrences } from "./plan.js";
+import { sheetOf } from "./sheet.js";
 import type { LyricsheetOptions, LyricsheetResult, Out } from "./types.js";
 
 const refusal = (message: string, token = ""): ChartDiagnostic => ({
@@ -25,6 +29,25 @@ function parsed(chart: string, options: LyricsheetOptions): Parsed {
 		: { ok: true, parse };
 }
 
+/**
+ * The sheet after its header: text lines written before any bar, then
+ * each section occurrence in play order. A sung one is a lyric
+ * environment; one with no words writes nothing yet (grids are the next
+ * task's).
+ */
+function body(chart: string, parse: ChartParse, options: LyricsheetOptions, out: Out): void {
+	const sheet = sheetOf(chart, parse, options, out);
+	const first = sheet.bars[0];
+	if (!first) return;
+	const lay = layout(sheet);
+	out.lines.push(...lay.header.map((text) => comment(text, undefined, out)));
+	const previous: Occurrence[] = [];
+	for (const o of occurrences(sheet)) {
+		if (o.sung) lyricSection(o, out, { previous, layout: lay, first });
+		previous.push(o);
+	}
+}
+
 /** A chart as a ChordPro lyric sheet, and what it could not carry. Never throws. */
 export function exportLyricsheet(chart: string, options: LyricsheetOptions = {}): LyricsheetResult {
 	const p = parsed(chart, options);
@@ -32,6 +55,7 @@ export function exportLyricsheet(chart: string, options: LyricsheetOptions = {})
 	const out: Out = { lines: [], losses: new Losses() };
 	out.lines.push(...headerLines(p.parse, options.title));
 	headerLosses(p.parse, out.losses);
+	body(chart, p.parse, options, out);
 	return {
 		ok: true,
 		text: out.lines.length === 0 ? "" : `${out.lines.join("\n")}\n`,

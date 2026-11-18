@@ -13,7 +13,9 @@
  *   `the [C] river` read apart (spec 4.2). An annotation `[*N.C.]` is a
  *   chord token whose text starts with `*`, as ChordPro writes it. A word
  *   piece straight after a chord that itself follows a word with no space
- *   (`wait[D]ing`) has `joins: true`: it continues that word.
+ *   (`wait[D]ing`) has `joins: true`: it continues that word. A line may
+ *   start with a space only before a `#` (which would otherwise start a
+ *   comment line), as the export writes it.
  * - Between `{start_of_grid…}` and `{end_of_grid}` every line is a grid
  *   line, its cells split on spaces and kept as written (`|:`, `.`, `C~G`).
  */
@@ -42,7 +44,8 @@ function fail(n: number, line: string, why: string): never {
 const spaceAt = (line: string, at: number) => at < 0 || at >= line.length || line[at] === " ";
 
 function lyrics(line: string, n: number): ChoLine {
-	if (/^ | $| {2}/.test(line)) fail(n, line, "a leading, trailing or doubled space");
+	// A leading space only before a `#`, which would otherwise start a comment line.
+	if (/^ (?!#)| $| {2}/.test(line)) fail(n, line, "a leading, trailing or doubled space");
 	const tokens: ChoToken[] = [];
 	/** A word piece came since the last space (chords never end a word). */
 	let inWord = false;

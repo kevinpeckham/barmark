@@ -11,14 +11,18 @@
  *
  * (and once more to a .txt, for a person to read), into a fresh temporary
  * directory, removed after unless --keep. The tool exits 0 even when it
- * warns, so stderr is read against the chart beside the sheet (same name,
- * .chart.md). It may hold "Running in reference mode." and each warning's
- * indented echo of its source line, and:
+ * warns, so stderr is read against the chart beside the sheet, named as
+ * the tests name fixtures (`tests/fixtures.ts`): `name.cho` is
+ * `name.chart.md` exported as is, `name@Label.cho` the same chart's part
+ * `Label`, and a `+guitar` suffix adds diagrams. It may hold "Running in
+ * reference mode." and each warning's indented echo of its source line,
+ * and:
  *
  * - `Unknown chord: "X"` (quoted: the tool's chord parser rejects X) only
  *   for a chord of the chart that `isGap` calls a gap, and every such gap
- *   of the part the export writes MUST draw it, unless the sheet defines
- *   the name before its first use;
+ *   of the part the export writes (the one named, else the first that
+ *   writes chords) MUST draw it, unless the sheet defines the name before
+ *   its first use;
  * - `Unknown chord: X` (bare: X parses, but the tool's built-in table has
  *   no diagram for it) and the "No chord diagram defined for" summary for
  *   any chord of the chart not defined before its first use; neither is
@@ -34,33 +38,39 @@
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { homedir, tmpdir } from "node:os";
-import { basename, join } from "node:path";
+import { basename, dirname, join } from "node:path";
 import { type ChartParse, type ChordRecord, parseChart, type Slot } from "barmark";
 import { headerLines } from "../packages/lyricsheet/src/export/meta.js";
 import { isGap, spelled } from "../packages/lyricsheet/src/export/spell.js";
+import { fixtureOf } from "../packages/lyricsheet/tests/fixtures.js";
 import { type ChoLine, readCho } from "../packages/lyricsheet/tests/read-cho.js";
 
 const PERL5 = join(homedir(), ".local/perl5");
 const TOOL = join(PERL5, "bin/chordpro");
 const FIXTURES = join(import.meta.dir, "../packages/lyricsheet/tests/fixtures");
 
-/** Every chord record a slot holds, a group's members included. */
+/** Every chord symbol a slot holds, a group's members included; a note set is written as text, not a chord. */
 const chordsOf = (slots: Slot[]): ChordRecord[] =>
 	slots
 		.flatMap((s) => (s.kind === "group" ? s.members : [s]))
-		.flatMap((s) => (s.kind === "chord" ? [s.chord] : []));
+		.flatMap((s) => (s.kind === "chord" && s.chord.kind === "chord" ? [s.chord] : []));
 
 /** The chords of part `i` (the top-level slots are the first part's). */
 const partChords = (parse: ChartParse, i: number): ChordRecord[] =>
 	parse.bars.flatMap((bar) => chordsOf(bar.parts?.[i]?.slots ?? (i === 0 ? bar.slots : [])));
 
-/** The chords of the part the export writes by default: the first that writes chord symbols (spec 4.4). */
-function writtenChords(parse: ChartParse): ChordRecord[] {
-	for (let i = 0; i < Math.max(1, parse.parts.length); i++) {
-		const chords = partChords(parse, i);
-		if (chords.length) return chords;
-	}
-	return [];
+/** The chords of the part the export writes: the one named, else the first that writes chord symbols (spec 4.4). */
+function writtenChords(parse: ChartParse, part: string | undefined): ChordRecord[] {
+	const label = part?.toLowerCase();
+	if (label !== undefined)
+		return partChords(
+			parse,
+			parse.parts.findIndex((p) => p.label?.toLowerCase() === label),
+		);
+	const each = Array.from({ length: Math.max(1, parse.parts.length) }, (_, i) =>
+		partChords(parse, i),
+	);
+	return each.find((chords) => chords.length > 0) ?? [];
 }
 
 /** Every chord the chart plays, in every part. */
@@ -109,11 +119,11 @@ const hasKey = (parse: ChartParse) =>
 	headerLines(parse, undefined).some((l) => l.startsWith("{key:"));
 
 /** The warnings a sheet may give, and must, from the chart beside it. */
-function expectedOf(cho: string, chart: string): Expected {
+function expectedOf(cho: string, chart: string, part: string | undefined): Expected {
 	const parse = parseChart(readFileSync(chart, "utf8"));
 	const quiet = definedFirst(readCho(readFileSync(cho, "utf8")));
 	const loud = (chords: ChordRecord[]) => new Set(chords.map(spelled).filter((n) => !quiet.has(n)));
-	const gaps = loud(writtenChords(parse).filter(isGap));
+	const gaps = loud(writtenChords(parse, part).filter(isGap));
 	return { gaps, names: loud(allChords(parse)), noKey: !hasKey(parse) };
 }
 
@@ -184,8 +194,8 @@ function missing(e: Expected, warned: Set<string>): string[] {
 type Checked = { problems: string[]; expected: string[] };
 
 /** Every problem with one sheet whose chart is beside it, and the warnings it expected. */
-function checkWith(cho: string, chart: string, out: string): Checked {
-	const e = expectedOf(cho, chart);
+function checkWith(cho: string, chart: string, part: string | undefined, out: string): Checked {
+	const e = expectedOf(cho, chart, part);
 	const warned = new Set<string>();
 	const found = run(cho, out)
 		.split("\n")
@@ -197,11 +207,17 @@ function checkWith(cho: string, chart: string, out: string): Checked {
 
 /** Every problem with one sheet. */
 function check(cho: string, out: string): Checked {
-	const chart = cho.replace(/\.cho$/, ".chart.md");
+	let made: ReturnType<typeof fixtureOf>;
+	try {
+		made = fixtureOf(basename(cho));
+	} catch (err) {
+		return { problems: [(err as Error).message], expected: [] };
+	}
+	const chart = join(dirname(cho), made.chart);
 	if (!existsSync(chart))
 		return { problems: [`no chart beside it (${basename(chart)})`], expected: [] };
 	try {
-		return checkWith(cho, chart, out);
+		return checkWith(cho, chart, made.options.part, out);
 	} catch (err) {
 		return { problems: [(err as Error).message], expected: [] };
 	}

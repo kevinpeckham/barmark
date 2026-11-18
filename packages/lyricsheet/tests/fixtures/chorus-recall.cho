@@ -1,0 +1,29 @@
+{title: Two Rivers}
+{key: D}
+{time: 4/4}
+
+{start_of_verse: label="Verse"}
+[D]Out a[G]cross the [A]open [D]plain
+{end_of_verse}
+
+{start_of_chorus: label="Chorus"}
+[G]Two rivers [D]run to[A]gether [D]home
+{end_of_chorus}
+
+{start_of_verse: label="Verse"}
+[D]Back a[G]long the [A]empty [D]road
+{end_of_verse}
+
+{chorus}
+
+{start_of_chorus: label="Chorus"}
+[G]Two rivers [D]fall to[A]gether [D]down
+{end_of_chorus}
+
+{start_of_chorus: label="Chorus"}
+[G]Two rivers [D]run to[A]gether
+{end_of_chorus}
+
+{start_of_verse: label="Outro"}
+[G]fade [D]out
+{end_of_verse}
