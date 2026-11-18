@@ -60,6 +60,14 @@
         "barmark": "workspace:^",
       },
     },
+    "packages/lyricsheet": {
+      "name": "@barmark/lyricsheet",
+      "version": "0.0.0",
+      "dependencies": {
+        "@barmark/fretboard": "workspace:^",
+        "barmark": "workspace:^",
+      },
+    },
     "packages/midi": {
       "name": "@barmark/midi",
       "version": "0.3.4",
@@ -118,6 +126,8 @@
     "@barmark/fretboard": ["@barmark/fretboard@workspace:packages/fretboard"],
 
     "@barmark/listen": ["@barmark/listen@workspace:packages/listen"],
+
+    "@barmark/lyricsheet": ["@barmark/lyricsheet@workspace:packages/lyricsheet"],
 
     "@barmark/midi": ["@barmark/midi@workspace:packages/midi"],
 

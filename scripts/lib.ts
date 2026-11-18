@@ -53,6 +53,12 @@ export const PACKAGES = {
 		tagPrefix: "fretboard-v",
 		smoke: "scripts/smoke-fretboard.mjs",
 	},
+	lyricsheet: {
+		dir: join(root, "packages/lyricsheet"),
+		name: "@barmark/lyricsheet",
+		tagPrefix: "lyricsheet-v",
+		smoke: "scripts/smoke-lyricsheet.mjs",
+	},
 	cli: {
 		dir: join(root, "packages/cli"),
 		name: "@barmark/cli",
