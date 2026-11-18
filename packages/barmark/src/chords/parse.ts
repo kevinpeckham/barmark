@@ -173,8 +173,9 @@ function aliased(rest: string): string {
 	return rest;
 }
 
-/** The text a symbol is read from: ♯ and ♭ as # and b (Appendix A.5). */
-const ascii = (symbol: string) => symbol.replace(/♯/g, "#").replace(/♭/g, "b");
+/** The text a symbol is read from: ♯ and ♭ as # and b, ∆ △ ▵ as Δ (Appendix A.5). */
+const ascii = (symbol: string) =>
+	symbol.replace(/♯/g, "#").replace(/♭/g, "b").replace(/[∆△▵]/g, "Δ");
 
 type Normal = { text: string; separated: Separated };
 

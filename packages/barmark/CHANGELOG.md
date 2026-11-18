@@ -9,6 +9,18 @@ Releases follow the process in [RELEASING.md](RELEASING.md).
 
 ## [Unreleased]
 
+### Added
+
+- **More spellings of the major seventh** (Kevin, 2026-11-18): `Maj` and
+  `ma` before 9 and 13 as before 7 (`CMaj9` and `Cma9` are `Cmaj9`,
+  `Cma13` is `Cmaj13`); the delta after `m`, `-` or `min` (`CmΔ`,
+  `C-Δ7` and `CminΔ` are `Cmmaj7`, `CmΔ9` is `Cmmaj9`); and the
+  increment sign `∆` (a Mac's Option-J) and the triangles `△` and `▵` as
+  the delta (`C∆7` is `Cmaj7`, `Cm△9` is `Cmmaj9`), each with whatever may follow its canonical
+  spelling (`CMaj9(#11)`, `CmΔ/Eb`). They print canonically. `Δ11`,
+  `Maj11`, `mΔ13`, `CmMaj7` and `Cmma7` stay errors, and no chord that
+  read before changes.
+
 ## [0.24.0] - 2026-11-14
 
 Grammar changes: the flat sixth, `add` before any tone, and `Δ9`/`Δ13`
