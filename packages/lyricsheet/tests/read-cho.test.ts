@@ -21,6 +21,9 @@ const SHEET = `{title: Down by the River}
 {comment: repeat ad lib.}
 `;
 
+/** A chord token: whether a space (or the line's edge) is before it and after it. */
+const c = (chord: string, before: boolean, after: boolean) => ({ chord, before, after });
+
 describe("readCho", () => {
 	test("reads every line shape this package writes", () => {
 		expect(readCho(SHEET)).toEqual([
@@ -33,23 +36,28 @@ describe("readCho", () => {
 			{
 				kind: "lyrics",
 				tokens: [
-					{ chord: "G" },
+					c("G", true, false),
 					{ word: "Down" },
 					{ word: "by" },
 					{ word: "the" },
-					{ chord: "C" },
+					c("C", true, false),
 					{ word: "river" },
-					{ chord: "G" },
+					c("G", true, false),
 					{ word: "wait" },
-					{ chord: "D" },
+					c("D", false, false),
 					{ word: "ing", joins: true },
-					{ chord: "*N.C." },
+					c("*N.C.", true, true),
 				],
 			},
-			{ kind: "lyrics", tokens: [{ chord: "G" }, { chord: "C" }, { chord: "D" }] },
+			{ kind: "lyrics", tokens: [c("G", true, true), c("C", true, true), c("D", true, true)] },
 			{
 				kind: "lyrics",
-				tokens: [{ chord: "*C E F# B" }, { word: "so" }, { chord: "*@B" }, { word: "long" }],
+				tokens: [
+					c("*C E F# B", true, false),
+					{ word: "so" },
+					c("*@B", true, false),
+					{ word: "long" },
+				],
 			},
 			{ kind: "directive", name: "end_of_verse", value: "" },
 			{ kind: "directive", name: "chorus", value: "" },
@@ -93,13 +101,49 @@ describe("readCho", () => {
 				kind: "lyrics",
 				tokens: [
 					{ word: "wait" },
-					{ chord: "D" },
+					c("D", false, false),
 					{ word: "ing", joins: true },
-					{ chord: "E" },
+					c("E", true, false),
 					{ word: "now" },
 				],
 			},
 		]);
+	});
+
+	test("a chord token tells the spaces on each side apart (spec 4.2)", () => {
+		const tokens = (line: string) => {
+			const [read] = readCho(`${line}\n`);
+			return read?.kind === "lyrics" ? read.tokens : [];
+		};
+		expect(tokens("the[C] river")).toEqual([
+			{ word: "the" },
+			c("C", false, true),
+			{ word: "river" },
+		]);
+		expect(tokens("the [C]river")).toEqual([
+			{ word: "the" },
+			c("C", true, false),
+			{ word: "river" },
+		]);
+		expect(tokens("the [C] river")).toEqual([
+			{ word: "the" },
+			c("C", true, true),
+			{ word: "river" },
+		]);
+		expect(tokens("[C][G]la")).toEqual([c("C", true, false), c("G", false, false), { word: "la" }]);
+		expect(tokens("la [C]")).toEqual([{ word: "la" }, c("C", true, true)]);
+	});
+
+	test("a malformed long line is refused quickly", () => {
+		const line = `${"[C]la ".repeat(833)}la  x\n`;
+		expect(line.length).toBeGreaterThan(5000);
+		const start = performance.now();
+		expect(() => readCho(line)).toThrow();
+		expect(performance.now() - start).toBeLessThan(100);
+		const bracket = `${"a[b".repeat(1700)}\n`;
+		const again = performance.now();
+		expect(() => readCho(bracket)).toThrow();
+		expect(performance.now() - again).toBeLessThan(100);
 	});
 
 	test("words alone are a lyric line", () => {

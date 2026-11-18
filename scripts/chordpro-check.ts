@@ -11,14 +11,22 @@
  *
  * (and once more to a .txt, for a person to read), into a fresh temporary
  * directory, removed after unless --keep. The tool exits 0 even when it
- * warns, so stderr is read: it may hold "Running in reference mode.",
- * each warning's indented echo of its source line, and two warnings only
- * where the chart beside the sheet (same name, .chart.md) expects them:
- * "Unknown chord" (and its "No chord diagram defined for" summary) for a
- * chord of that chart that `isGap` calls a gap, unless the sheet defines
- * it before its first use, and "Song is missing {key} directive" for a
- * chart with no `key:`. Anything else fails, and so does an expected
- * warning that does not come, so the gap rules never go stale.
+ * warns, so stderr is read against the chart beside the sheet (same name,
+ * .chart.md). It may hold "Running in reference mode." and each warning's
+ * indented echo of its source line, and:
+ *
+ * - `Unknown chord: "X"` (quoted: the tool's chord parser rejects X) only
+ *   for a chord of the chart that `isGap` calls a gap, and every such gap
+ *   of the part the export writes MUST draw it, unless the sheet defines
+ *   the name before its first use;
+ * - `Unknown chord: X` (bare: X parses, but the tool's built-in table has
+ *   no diagram for it) and the "No chord diagram defined for" summary for
+ *   any chord of the chart not defined before its first use; neither is
+ *   required;
+ * - "Song is missing {key} directive" exactly when the chart has no key the
+ *   header writes (none, or a church mode), and then it is required.
+ *
+ * Anything else fails, so the gap rules never go stale.
  *
  * Prints one line per sheet; exits 1 on any failure, 2 when the tool is
  * not installed. Writes nothing into the repository.
@@ -28,6 +36,7 @@ import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from "node
 import { homedir, tmpdir } from "node:os";
 import { basename, join } from "node:path";
 import { type ChartParse, type ChordRecord, parseChart, type Slot } from "barmark";
+import { headerLines } from "../packages/lyricsheet/src/export/meta.js";
 import { isGap, spelled } from "../packages/lyricsheet/src/export/spell.js";
 import { type ChoLine, readCho } from "../packages/lyricsheet/tests/read-cho.js";
 
@@ -41,19 +50,24 @@ const chordsOf = (slots: Slot[]): ChordRecord[] =>
 		.flatMap((s) => (s.kind === "group" ? s.members : [s]))
 		.flatMap((s) => (s.kind === "chord" ? [s.chord] : []));
 
-type Slotted = { slots: Slot[]; lines?: { slots: Slot[] }[] };
+/** The chords of part `i` (the top-level slots are the first part's). */
+const partChords = (parse: ChartParse, i: number): ChordRecord[] =>
+	parse.bars.flatMap((bar) => chordsOf(bar.parts?.[i]?.slots ?? (i === 0 ? bar.slots : [])));
 
-/** A bar's or a part's chords, its lines' included. */
-const ownChords = (b: Slotted): ChordRecord[] => [
-	...chordsOf(b.slots),
-	...(b.lines ?? []).flatMap((l) => chordsOf(l.slots)),
-];
+/** The chords of the part the export writes by default: the first that writes chord symbols (spec 4.4). */
+function writtenChords(parse: ChartParse): ChordRecord[] {
+	for (let i = 0; i < Math.max(1, parse.parts.length); i++) {
+		const chords = partChords(parse, i);
+		if (chords.length) return chords;
+	}
+	return [];
+}
 
-/** Every chord the chart plays, in every part and line. */
-const chartChords = (parse: ChartParse): ChordRecord[] =>
+/** Every chord the chart plays, in every part. */
+const allChords = (parse: ChartParse): ChordRecord[] =>
 	parse.bars.flatMap((bar) => [
-		...ownChords(bar),
-		...(bar.parts ?? []).flatMap((p) => (p ? ownChords(p) : [])),
+		...chordsOf(bar.slots),
+		...(bar.parts ?? []).flatMap((p) => chordsOf(p?.slots ?? [])),
 	]);
 
 /** The chord names a line writes: lyric chords that are not annotations, and grid cells. */
@@ -67,30 +81,40 @@ function namesOf(line: ChoLine): string[] {
 const definedBy = (line: ChoLine): string | null =>
 	line.kind === "directive" && line.name === "define" ? (line.value.split(" ")[0] ?? "") : null;
 
-/** The names used before any `{define}` of them: those the reference has no diagram for when it meets them. */
-function usedUndefined(lines: ChoLine[]): Set<string> {
-	const defined = new Set<string>();
-	const used = new Set<string>();
-	for (const line of lines) {
-		defined.add(definedBy(line) ?? "");
-		for (const name of namesOf(line).filter((n) => !defined.has(n))) used.add(name);
-	}
-	return used;
+/** Each name the sheet writes, at the index of the line that first writes it. */
+function firstUses(lines: ChoLine[]): Map<string, number> {
+	const first = new Map<string, number>();
+	lines.forEach((line, i) => {
+		for (const n of namesOf(line).filter((n) => !first.has(n))) first.set(n, i);
+	});
+	return first;
 }
 
-type Expected = { gaps: Set<string>; noKey: boolean };
+/** The names the sheet defines before their first use (or never uses): the reference is quiet about them. */
+function definedFirst(lines: ChoLine[]): Set<string> {
+	const first = firstUses(lines);
+	const before = (name: string, i: number) => (first.get(name) ?? lines.length) > i;
+	return new Set(
+		lines.flatMap((line, i) => {
+			const name = definedBy(line);
+			return name !== null && before(name, i) ? [name] : [];
+		}),
+	);
+}
 
-/** The warnings a sheet may give, from the chart beside it. */
+type Expected = { gaps: Set<string>; names: Set<string>; noKey: boolean };
+
+/** Whether the header writes a `{key}` for the chart (none for a church mode it leaves out). */
+const hasKey = (parse: ChartParse) =>
+	headerLines(parse, undefined).some((l) => l.startsWith("{key:"));
+
+/** The warnings a sheet may give, and must, from the chart beside it. */
 function expectedOf(cho: string, chart: string): Expected {
 	const parse = parseChart(readFileSync(chart, "utf8"));
-	const used = usedUndefined(readCho(readFileSync(cho, "utf8")));
-	const gaps = new Set(
-		chartChords(parse)
-			.filter(isGap)
-			.map(spelled)
-			.filter((n) => used.has(n)),
-	);
-	return { gaps, noKey: !parse.bars[0]?.key };
+	const quiet = definedFirst(readCho(readFileSync(cho, "utf8")));
+	const loud = (chords: ChordRecord[]) => new Set(chords.map(spelled).filter((n) => !quiet.has(n)));
+	const gaps = loud(writtenChords(parse).filter(isGap));
+	return { gaps, names: loud(allChords(parse)), noKey: !hasKey(parse) };
 }
 
 /** The tool's run on one sheet, writing into `out`: its stderr. */
@@ -113,17 +137,24 @@ const LINES: [RegExp, Judge][] = [
 	// The banner, a warning's indented echo of its source line, and the end.
 	[/^(?:Running in reference mode\.|\s.*|)$/, () => null],
 	[
-		/^"[^"]*", line \d+, Unknown chord: "?(.*?)"?$/,
+		// Quoted: the tool's chord parser rejects the name.
+		/^"[^"]*", line \d+, Unknown chord: "(.*)"$/,
 		([, name = ""], e, warned) => {
 			warned.add(name);
-			return e.gaps.has(name) ? null : `unexpected Unknown chord ${name}`;
+			return e.gaps.has(name) ? null : `the parser rejects ${name}`;
 		},
+	],
+	[
+		// Bare: the name parses; the tool's own table has no diagram for it.
+		/^"[^"]*", line \d+, Unknown chord: ([^"].*)$/,
+		([, name = ""], e) =>
+			e.names.has(name) ? null : `no diagram for ${name}, not a chord of the chart`,
 	],
 	[
 		/^"[^"]*": No chord diagram defined for (.*) \(skipped\)$/,
 		([, list = ""], e) => {
-			const stray = summaryNames(list).filter((n) => !e.gaps.has(n));
-			return stray.length ? `no diagram for ${stray.join(", ")}` : null;
+			const stray = summaryNames(list).filter((n) => !e.names.has(n));
+			return stray.length ? `no diagram for ${stray.join(", ")}, not chords of the chart` : null;
 		},
 	],
 	[

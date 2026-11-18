@@ -10,10 +10,14 @@ const chord = (symbol: string): ChordRecord => {
 	return r.value;
 };
 
-/** The spec's 4.7 tables, as measured against the reference on 2026-11-18. */
-describe("spelled: the aliases a ChordPro reader knows", () => {
+/**
+ * Spec 4.7, measured against the reference's chord parser on 2026-11-18:
+ * a gap is a name the parser rejects. A name it parses but has no built-in
+ * diagram for is not a gap.
+ */
+describe("spelled: the aliases the reference's parser accepts", () => {
 	const aliases: [string, string][] = [
-		// An extension's alterations run on, with no parentheses.
+		// An alteration after an extension loses its parentheses.
 		["C7(b9)", "C7b9"],
 		["C7(#9)", "C7#9"],
 		["C7(#11)", "C7#11"],
@@ -26,17 +30,24 @@ describe("spelled: the aliases a ChordPro reader knows", () => {
 		["C9(#11)", "C9#11"],
 		["Cmaj7(#11)", "Cmaj7#11"],
 		["Am7(b5)", "Am7b5"],
-		// One added tone, written `add`.
+		// ... with a ninth's alteration first.
+		["C7(b5,b9)", "C7b9b5"],
+		["C7(#5,#9)", "C7#9#5"],
+		["C7(#5,b9)", "C7b9#5"],
+		// One added tone on a triad, a seventh or a ninth is written `add`.
 		["C(9)", "Cadd9"],
+		["C(2)", "Cadd2"],
 		["C(4)", "Cadd4"],
 		["C(11)", "Cadd11"],
+		["Cm(9)", "Cmadd9"],
 		["C7(11)", "C7add11"],
 		["C9(6)", "C9add6"],
-		["C6(9)", "C6add9"],
-		// On other roots, and over a bass the reference knows.
+		// On other roots, and over a bass.
 		["F#7(b9)", "F#7b9"],
 		["Bb(9)", "Bbadd9"],
 		["C7(b9)/E", "C7b9/E"],
+		["C(9)/E", "Cadd9/E"],
+		["Am7(b5)/Eb", "Am7b5/Eb"],
 	];
 	for (const [canonical, written] of aliases)
 		test(`${canonical} → ${written}`, () => {
@@ -50,8 +61,11 @@ describe("spelled: the aliases a ChordPro reader knows", () => {
 		"Cmmaj7",
 		"Cmmaj9",
 		"C6/9",
+		"C6(9)",
+		"C9(11)",
 		"C7alt",
 		"Csus2",
+		"C7sus2",
 		"C7sus4",
 		"C13sus2",
 		"C5",
@@ -59,14 +73,20 @@ describe("spelled: the aliases a ChordPro reader knows", () => {
 		"Caug7",
 		"Cmaj9",
 		"Cmaj13",
-		"C9(11)",
+		"Cm13",
+		// Everyday slash chords: the parser takes any bass on a name with no parentheses.
 		"D/F#",
 		"C/E",
 		"C/Bb",
-		"Am/C",
+		"C/F#",
+		"C/Db",
+		"C/A",
+		"Em/B",
+		"Am/E",
+		"Dm/A",
+		"G7/D",
+		"Csus4/G",
 		"Cm7/Bb",
-		"Fmaj7/A",
-		"E7/G#",
 	];
 	for (const name of asWritten)
 		test(`${name} is known as written`, () => {
@@ -75,59 +95,49 @@ describe("spelled: the aliases a ChordPro reader knows", () => {
 		});
 });
 
-describe("isGap: what the reference knows in no spelling, written canonically", () => {
+describe("isGap: names the reference's parser rejects in every spelling, written canonically", () => {
 	const gaps = [
-		// spec 4.7's list
+		// a tone the parser takes in no spelling
 		"C(b13)",
 		"C5(7)",
 		"C7(no3)",
 		"C(no5)",
-		"C9sus4",
-		"C7sus2",
-		"Cb",
-		"E#m",
-		"C/F#",
-		"C/Db",
-		// the 2026-11-18 additions
 		"Cm(b6)",
 		"Cm7(b6)",
 		"C(b6)",
 		"C(13)",
-		"C(6)",
 		"C(#11)",
 		"C(b9)",
 		"Cm7(b13)",
-		// measured on 2026-11-18
-		"C(2)",
-		"Cm(9)",
-		"Cm13",
-		"C9sus2",
-		"Caugmaj7",
-		"Cm6/9",
 		"C7(b6)",
 		"Cmaj7(b9)",
+		"C7(#9,b13)",
+		// no renaming across families: the notes of C6, Cmaj7#5 and C9, as written
+		"C(6)",
+		"Caugmaj7",
+		"C7(9)",
+		// bare chords the parser rejects
+		"C9sus4",
+		"C9sus2",
+		"Cm6/9",
+		// a note whose accidental lands on a natural, as root or bass
+		"Cb",
+		"E#m",
 		"Fb",
 		"B#7",
 		"C/Fb",
-		"C7/F",
-		"Csus4/F",
-		"Cm7(b5)/Eb",
+		"C/E#",
 		"Cb7(b9)",
+		// a bass under parentheses or a 6/9
+		"C6(9)/E",
+		"C9(11)/E",
+		"C6/9/E",
 	];
 	for (const name of gaps)
 		test(`${name}`, () => {
 			expect(isGap(chord(name))).toBe(true);
 			expect(spelled(chord(name))).toBe(chord(name).canonical);
 		});
-});
-
-describe("isGap: the reference's own slips over a bass", () => {
-	test("its list misplaces a few slash chords: the rules follow the reference", () => {
-		for (const name of ["Db/C", "Gb/Bb", "Gb/A#", "A#/D", "A#/A", "Gbm/A"])
-			expect([name, isGap(chord(name))]).toEqual([name, true]);
-		for (const name of ["Db/D", "Gbm/Bb", "Gbm/A#"])
-			expect([name, isGap(chord(name))]).toEqual([name, false]);
-	});
 });
 
 describe("nothing written reads back as another chord", () => {

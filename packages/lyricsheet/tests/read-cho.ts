@@ -6,16 +6,20 @@
  *
  * - A directive is `{name}` or `{name: value}`; the value is as written
  *   (`label="Intro" shape="1+4x4+1"`), `""` when there is none.
- * - A lyric line is tokens in order: `{ chord }` for each `[…]`, and
- *   `{ word }` for each run of text between spaces and chords. An
- *   annotation `[*N.C.]` is a chord token whose text starts with `*`, as
- *   ChordPro writes it. A word piece straight after a chord that itself
- *   follows a word with no space (`wait[D]ing`) has `joins: true`: it
- *   continues that word.
+ * - A lyric line is tokens in order: `{ chord, before, after }` for
+ *   each `[…]`, and `{ word }` for each run of text between spaces and
+ *   chords. `before` and `after` say whether a space (or the line's edge)
+ *   is on that side of the chord, so `the[C] river`, `the [C]river` and
+ *   `the [C] river` read apart (spec 4.2). An annotation `[*N.C.]` is a
+ *   chord token whose text starts with `*`, as ChordPro writes it. A word
+ *   piece straight after a chord that itself follows a word with no space
+ *   (`wait[D]ing`) has `joins: true`: it continues that word.
  * - Between `{start_of_grid…}` and `{end_of_grid}` every line is a grid
  *   line, its cells split on spaces and kept as written (`|:`, `.`, `C~G`).
  */
-export type ChoToken = { chord: string } | { word: string; joins?: true };
+export type ChoToken =
+	| { chord: string; before: boolean; after: boolean }
+	| { word: string; joins?: true };
 export type ChoLine =
 	| { kind: "directive"; name: string; value: string }
 	| { kind: "lyrics"; tokens: ChoToken[] }
@@ -23,30 +27,37 @@ export type ChoLine =
 	| { kind: "blank" };
 
 const DIRECTIVE = /^\{([a-z_]+)(?:: ([^{}]+))?\}$/;
-/** A lyric line: chords and words, no braces, and no space but one between two of them. */
-const LYRIC_LINE = /^(?:\[[^[\]]+\]|[^[\]\s{}]+)+(?: (?:\[[^[\]]+\]|[^[\]\s{}]+)+)*$/;
-/** A chord, or a piece of a word between chords. */
-const PIECE = /\[([^[\]]+)\]|([^[\]]+)/g;
+/**
+ * One piece of a lyric line: a chord, a run of word text, a space, or any
+ * other character (which the line may not hold). Each alternative is a
+ * single step, so a malformed line is refused in time linear in its length.
+ */
+const PIECE = /\[([^[\]]+)\]|([^[\]\s{}]+)| |(.)/g;
 
 function fail(n: number, line: string, why: string): never {
 	throw new Error(`line ${n + 1}: ${why}: ${JSON.stringify(line)}`);
 }
 
-/** One run between spaces: its chords, and its word pieces, each after the first joining the word. */
-function run(text: string): ChoToken[] {
-	let inWord = false;
-	return [...text.matchAll(PIECE)].map(([, chord, word = ""]) => {
-		if (chord !== undefined) return { chord };
-		const token: ChoToken = inWord ? { word, joins: true } : { word };
-		inWord = true;
-		return token;
-	});
-}
+/** Whether the character at `at` is a space or past the line's edge. */
+const spaceAt = (line: string, at: number) => at < 0 || at >= line.length || line[at] === " ";
 
 function lyrics(line: string, n: number): ChoLine {
-	if (!LYRIC_LINE.test(line)) fail(n, line, "not a lyric line");
-	// Split on the spaces outside chords: an annotation `[*C E F# B]` holds spaces.
-	return { kind: "lyrics", tokens: line.split(/ (?=[^\]]*(?:\[|$))/).flatMap(run) };
+	if (/^ | $| {2}/.test(line)) fail(n, line, "a leading, trailing or doubled space");
+	const tokens: ChoToken[] = [];
+	/** A word piece came since the last space (chords never end a word). */
+	let inWord = false;
+	for (const m of line.matchAll(PIECE)) {
+		const [text, chord, word, other] = m;
+		if (other !== undefined) fail(n, line, "not a lyric line");
+		if (chord !== undefined) {
+			const before = spaceAt(line, m.index - 1);
+			tokens.push({ chord, before, after: spaceAt(line, m.index + text.length) });
+		} else if (word !== undefined) {
+			tokens.push(inWord ? { word, joins: true } : { word });
+			inWord = true;
+		} else inWord = false;
+	}
+	return { kind: "lyrics", tokens };
 }
 
 function grid(line: string, n: number): ChoLine {
