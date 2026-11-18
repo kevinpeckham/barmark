@@ -135,12 +135,25 @@ const MIN_WIDTH = 320;
 const HIDDEN_DEGREE = '<degree print-object="no">';
 const DEGREE_END = "</degree>";
 
+/** Where `@barmark/musicxml` writes a rhythm staff's slash: the middle line of a five-line staff. */
+const SLASH_AT_MIDDLE =
+	"<unpitched><display-step>B</display-step><display-octave>4</display-octave></unpitched>";
+/** Where Verovio draws a one-line staff's line: a treble staff's bottom line. */
+const SLASH_ON_LINE =
+	"<unpitched><display-step>E</display-step><display-octave>4</display-octave></unpitched>";
+
 /**
  * The MusicXML as Verovio should read it. Verovio 6.4 appends every chord <degree> to the
  * kind text, `print-object="no"` or not, so a degree the text already spells is drawn twice
  * (`D7sus4(7)`); a degree that is not printed is dropped, which changes nothing it draws.
+ * And it draws a one-line staff's line where a treble staff has E4, so a lyric row's
+ * slashes, exported at B4, sat two steps above their line on ledger lines: they move to E4.
  */
 export function forVerovio(xml: string): string {
+	return withoutHiddenDegrees(xml).replaceAll(SLASH_AT_MIDDLE, SLASH_ON_LINE);
+}
+
+function withoutHiddenDegrees(xml: string): string {
 	// One pass with indexOf, never a backtracking regex: an opener with no closer ends the
 	// search, so a hostile file of openers costs linear time, not a rescan per opener.
 	const parts: string[] = [];

@@ -6,6 +6,16 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+
+- **A lyric row's rhythm slashes sit on their line.** A chart with words
+  and no melody engraves the words on a one-line staff of slashes. Each
+  slash was drawn two steps above the line, with ledger lines through it,
+  which read as an unknown symbol. Verovio draws a one-line staff's line
+  where a treble staff has E4, and `@barmark/musicxml` writes the slash at
+  B4: the score now moves it for Verovio. The exported MusicXML is
+  unchanged.
+
 ## [0.6.1] - 2026-11-14
 
 ### Changed
