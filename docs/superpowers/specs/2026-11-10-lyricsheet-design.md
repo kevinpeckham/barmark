@@ -247,7 +247,7 @@ written order would print verse 2's words nowhere.
   reference warns "No margin cell for trailing comment" when an `x2` is
   written in a grid with no right margin. The unnamed section gets no
   label.
-- **Title and credits.** `# Title` maps to `{title}`. `composer:`,
+- **Title and credits.** `# Title` maps to `{title}`; with no title, the `title` option, else `{title: }`, since the reference takes the first lyric line for a missing title (amended 2026-11-18). `composer:`,
   `lyricist:` and `copyright:` map to their own directives. `arranger:`
   maps to `{meta: arranger …}`.
 - **Key, time and tempo.**
@@ -257,6 +257,11 @@ written order would print verse 2's words nowhere.
   - `time:` maps to `{time: 6/8}`, and `tempo:` to `{tempo: 145}`. A chart with no `time:` writes `{time: 4/4}`, the grammar's default and what it plays in (amended 2026-11-18).
   - A change mid-chart is written where it happens, because ChordPro
     applies each key and time "from where it was specified".
+    The reference prints nothing for a mid-song `{key}`, `{time}` or
+    `{tempo}`, so each is also written as a comment a reader sees on the
+    line before it (`{comment: Key: D}`, `{comment: Time: 3/4}`,
+    `{comment: Tempo: 120}`); the header's opening values get none
+    (amended 2026-11-18).
   - A rit., an accel. or a non-straight feel becomes `{comment: …}`.
 - **Text lines** become `{comment: …}`. `part:` lines are dropped.
 

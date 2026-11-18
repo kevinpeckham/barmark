@@ -5,7 +5,8 @@
  * malformed export fails loudly. Test only; not part of the package.
  *
  * - A directive is `{name}` or `{name: value}`; the value is as written
- *   (`label="Intro" shape="1+4x4+1"`), `""` when there is none.
+ *   (`label="Intro" shape="1+4x4+1"`), `""` when there is none or it is
+ *   empty (`{title: }`).
  * - A lyric line is tokens in order: `{ chord, before, after }` for
  *   each `[…]`, and `{ word }` for each run of text between spaces and
  *   chords. `before` and `after` say whether a space (or the line's edge)
@@ -28,7 +29,7 @@ export type ChoLine =
 	| { kind: "grid"; cells: string[] }
 	| { kind: "blank" };
 
-const DIRECTIVE = /^\{([a-z_]+)(?:: ([^{}]+))?\}$/;
+const DIRECTIVE = /^\{([a-z_]+)(?:: ([^{}]*))?\}$/;
 /**
  * One piece of a lyric line: a chord, a run of word text, a space, or any
  * other character (which the line may not hold). Each alternative is a

@@ -72,15 +72,15 @@ function sing(s: State, { syllable }: Sung, last: boolean): void {
 export function lyricLine(pieces: Piece[], moved?: (index: number) => void): string {
 	const starts = new Set(pieces.filter(isSung).map((p) => tick(p.at)));
 	const ordered = inOrder(pieces);
-	const sungLeft = pieces.filter(isSung).length;
+	const sungTotal = pieces.filter(isSung).length;
 	let sung = 0;
 	const s: State = { text: "", inWord: false, pending: [] };
 	for (const { p, i } of ordered) {
 		if (isSung(p)) {
 			sung += 1;
-			sing(s, p, sung === sungLeft);
+			sing(s, p, sung === sungTotal);
 		} else if ("chord" in p) {
-			const later = sung < sungLeft;
+			const later = sung < sungTotal;
 			if (!p.alone && starts.has(tick(p.at))) s.pending.push(p.chord);
 			else if (s.inWord && later) {
 				s.pending.push(p.chord);

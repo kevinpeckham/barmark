@@ -1,5 +1,6 @@
 import type { ChartParse, Key } from "barmark";
 import type { Losses } from "./losses.js";
+import { textChanged, untagged } from "./text.js";
 
 /**
  * A value as one line of plain text: `{`, `}`, every control character (C0,
@@ -28,8 +29,19 @@ export function keyText(key: Key): string | null {
 /** The chart's opening key, when it has one. */
 const openingKey = (parse: ChartParse): Key | null => parse.bars[0]?.key ?? null;
 
-/** What the header leaves out of the key: a church mode (spec 4.6). */
-export function headerLosses(parse: ChartParse, losses: Losses): void {
+/** The title the header writes: the chart's, else the option's, else none (written empty). */
+const titleOf = (parse: ChartParse, title: string | undefined) =>
+	[parse.title, title].find((t) => t != null && clean(t) !== "") ?? "";
+
+/** The header's free text: its title and credits. */
+const headerTexts = (parse: ChartParse, title: string | undefined) => {
+	const { credits: c } = parse;
+	return [titleOf(parse, title), ...c.composer, ...c.lyricist, ...c.arranger, ...c.copyright];
+};
+
+/** What the header leaves out or changes: a church mode in the key (spec 4.6), markup in its text. */
+export function headerLosses(parse: ChartParse, losses: Losses, title?: string): void {
+	if (headerTexts(parse, title).some((t) => untagged(t) !== t)) textChanged(losses);
 	const key = openingKey(parse);
 	const bar = parse.bars[0];
 	if (key && keyText(key) === null)
@@ -40,16 +52,16 @@ export function headerLosses(parse: ChartParse, losses: Losses): void {
 		);
 }
 
-/** Title, credits, then the opening key, time and tempo (spec 4.6); nothing is invented. */
+/** Title (always), credits, then the opening key, time and tempo (spec 4.6); nothing else is invented. */
 export function headerLines(parse: ChartParse, title: string | undefined): string[] {
-	const out: string[] = [];
-	const named = [parse.title, title].find((t) => t != null && clean(t) !== "");
-	if (named != null) out.push(directive("title", named));
+	// Always a title line: with none, the reference takes the first lyric line for the title.
+	const out = [directive("title", untagged(titleOf(parse, title)))];
 	const { credits } = parse;
-	for (const who of credits.composer) out.push(directive("composer", who));
-	for (const who of credits.lyricist) out.push(directive("lyricist", who));
-	for (const who of credits.arranger) out.push(directive("meta", `arranger ${who}`));
-	for (const text of credits.copyright) out.push(directive("copyright", text));
+	const add = (name: string, text: string) => out.push(directive(name, untagged(text)));
+	for (const who of credits.composer) add("composer", who);
+	for (const who of credits.lyricist) add("lyricist", who);
+	for (const who of credits.arranger) add("meta", `arranger ${who}`);
+	for (const text of credits.copyright) add("copyright", text);
 	const first = parse.bars[0];
 	const key = openingKey(parse);
 	const keyed = key && keyText(key);

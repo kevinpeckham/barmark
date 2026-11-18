@@ -34,15 +34,17 @@ describe("the played yardstick (spec 5.2)", () => {
 	});
 
 	for (const [name, text, part] of charts)
-		test(`${name}${part ? ` (${part})` : ""}: chords and words per occurrence, in play order`, () => {
+		test(`${name}${part ? ` (${part})` : ""}: chords and words per occurrence, in one sequence, in play order`, () => {
 			const r = exportLyricsheet(text, part === undefined ? {} : { part });
 			if (!r.ok) throw new Error(JSON.stringify(r.diagnostics));
 			const want = yardstick(text, part);
 			const got = readBack(r.text);
-			expect(got).toEqual(want.map(({ label, chords, words }) => ({ label, chords, words })));
+			expect(got).toEqual(want.map(({ label, tokens }) => ({ label, tokens })));
 			// Every chord written reads back in barmark as the chord the bar attacks.
 			const records = want.flatMap((w) => w.records);
-			const read = got.flatMap((g) => g.chords).map((c) => parseChord(c));
+			const read = got
+				.flatMap((g) => g.tokens)
+				.flatMap((t) => ("chord" in t ? [parseChord(t.chord)] : []));
 			expect(read.length).toBe(records.length);
 			read.forEach((back, i) => {
 				const at = records[i];

@@ -33,10 +33,22 @@ describe("the header", () => {
 		expect(text("key: D\n\n| D |\n").text).toContain("{key: D}\n");
 	});
 
-	test("no title: options.title, else none", () => {
+	test("no title: options.title, else an empty title", () => {
 		expect(text("| C |\n", "Mine").text).toStartWith("{title: Mine}\n");
-		expect(text("| C |\n").text).not.toContain("{title");
+		expect(text("| C |\n").text).toStartWith("{title: }\n");
 		expect(text("# Own\n\n| C |\n", "Mine").text).toStartWith("{title: Own}\n");
+	});
+
+	test("tag-like markup in a title or credit is written with parentheses, as one loss", () => {
+		const r = text("# T <b>x</b>\ncomposer: A <i>B</i>\n\n| C |\n");
+		expect(r.text).toStartWith("{title: T (b)x(/b)}\n{composer: A (i)B(/i)}\n");
+		expect(r.losses.map((l) => l.code)).toEqual(["text-changed"]);
+		expect(text("# a < b -> c\n\n| C |\n").text).toStartWith("{title: a ( b -) c}\n");
+		for (const title of ["a < b", "<3", "->", "x>y", "&amp;"]) {
+			const r = text(`# ${title}\n\n| C |\n`);
+			expect(r.text).toStartWith(`{title: ${title}}\n`);
+			expect(r.losses).toEqual([]);
+		}
 	});
 
 	test("two composers are two lines", () => {
@@ -52,10 +64,11 @@ describe("the header", () => {
 		expect(r.losses[0]?.bar).toBe(1);
 	});
 
-	test("a title that cleans to nothing is no title", () => {
+	// A sheet always has a title line: the reference takes the first line as the title when none is given.
+	test("a title that cleans to nothing gives way to options.title, else an empty title", () => {
 		expect(text("# {}\n\n| C |\n", "Mine").text).toStartWith("{title: Mine}\n");
-		expect(text("# {}\n\n| C |\n").text).not.toContain("{title");
-		expect(text("| C |\n", "{}").text).not.toContain("{title");
+		expect(text("# {}\n\n| C |\n").text).toStartWith("{title: }\n");
+		expect(text("| C |\n", "{}").text).toStartWith("{title: }\n");
 	});
 
 	test("ionian is major and aeolian is minor, with no loss", () => {
@@ -74,7 +87,7 @@ describe("the header", () => {
 	});
 
 	test("no time: writes the grammar's default, 4/4", () => {
-		expect(text("| C |\n").text).toBe("{time: 4/4}\n");
+		expect(text("| C |\n").text).toBe("{title: }\n{time: 4/4}\n");
 	});
 
 	test("no key: no {key}", () => {
@@ -83,7 +96,7 @@ describe("the header", () => {
 
 	test("the opening tempo and time are the first bar's", () => {
 		const r = text("time: 3/4, tempo: 90\n\n| C | G |\n");
-		expect(r.text).toBe("{time: 3/4}\n{tempo: 90}\n");
+		expect(r.text).toBe("{title: }\n{time: 3/4}\n{tempo: 90}\n");
 	});
 });
 

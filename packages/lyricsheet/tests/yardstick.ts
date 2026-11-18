@@ -1,17 +1,20 @@
 /**
  * The played yardstick (spec 5.2), from the chart alone: per sung section
- * occurrence in play order, its label, the chords it attacks and the words
- * it sings; and the same read back from a sheet with `readCho`. Test only.
+ * occurrence in play order, its label and ONE sequence of chord attacks
+ * and sung words in time order (a tie putting the chord first, a word
+ * placed at its first syllable); and the same read back from a sheet with
+ * `readCho`. Test only; it uses nothing in `src/` but `spelled`.
  *
- * The yardstick knows the rules of spec 4.1, 4.4 and 4.5 (an occurrence
- * per pass of a repeat, one per verse where verses are stacked, the
- * harmony of one part and the singer's words), and nothing of how the
- * export writes them.
+ * The yardstick knows the rules of spec 4.1, 4.4 and 4.5 (a new
+ * environment where a repeat sings a different verse on bars it played
+ * before, one per verse where verses are stacked, the harmony of one part
+ * and the singer's words), and nothing of how the export writes them.
  */
 import {
 	type ChartParse,
 	type ChordRecord,
 	extractPart,
+	memberShares,
 	type PlayedBar,
 	parseChart,
 	type Slot,
@@ -19,20 +22,15 @@ import {
 import { spelled } from "../src/export/spell.js";
 import { type ChoLine, readCho } from "./read-cho.js";
 
-export type Sung = { label: string | null; chords: string[]; words: string[] };
+export type Token = { chord: string } | { word: string };
+export type Sung = { label: string | null; tokens: Token[] };
 export type Played = Sung & { records: ChordRecord[] };
-
-/** The chord symbols a bar attacks, in order (note sets are annotations, not chords). */
-const attacks = (slots: Slot[]): ChordRecord[] =>
-	slots
-		.flatMap((s) => (s.kind === "group" ? s.members : [s]))
-		.flatMap((s) => (s.kind === "chord" && s.chord.kind === "chord" ? [s.chord] : []));
 
 /** The first part that writes a chord symbol, by label (spec 4.4), when the chart has several. */
 function defaultPart(parse: ChartParse): string | undefined {
 	if (parse.parts.length < 2) return undefined;
 	const writes = (i: number) =>
-		parse.bars.some((b) => attacks(b.parts?.[i]?.slots ?? []).length > 0);
+		parse.bars.some((b) => timedChords(b.parts?.[i]?.slots ?? [], 1).length > 0);
 	const i = parse.parts.findIndex((_, k) => writes(k));
 	return parse.parts[Math.max(0, i)]?.label;
 }
@@ -43,27 +41,85 @@ function harmonyOf(bar: PlayedBar, first: string | undefined): Slot[] {
 	return bar.lines.find((l) => l.name.toLowerCase() === first.toLowerCase())?.slots ?? [];
 }
 
-/** Brackets and braces as the export writes them in lyrics (the plan's Review Focus 2 rule). */
-const asWritten = (text: string) => text.replace(/[[{]/g, "(").replace(/[\]}]/g, ")");
-
-/** The words a pass sings: each sung syllable's pieces, a continued word joined. */
-function wordsOf(bars: PlayedBar[], verse: number | null): string[] {
-	const words: string[] = [];
-	let joining = false;
-	for (const bar of bars)
-		for (const l of bar.lyrics ?? []) {
-			if (verse !== null && l.verse !== verse) continue;
-			for (const { syllable: s } of l.syllables) {
-				if (s.kind !== "sung") continue;
-				s.parts.forEach((p, i) => {
-					if (joining && i === 0) words[words.length - 1] += asWritten(p);
-					else words.push(asWritten(p));
-				});
-				joining = s.continues;
-			}
-		}
-	return words;
+/** The chord symbols a bar attacks with their onsets in whole notes (note sets are annotations, not chords). */
+function timedChords(slots: Slot[], length: number): { at: number; chord: ChordRecord }[] {
+	const each = length / Math.max(1, slots.length);
+	return slots.flatMap((s, k) => {
+		const members = s.kind === "group" ? s.members : [s];
+		const shares = memberShares(members);
+		let at = k * each;
+		return members.flatMap((m, i) => {
+			const here = at;
+			at += each * (shares[i] ?? 0);
+			return m.kind === "chord" && m.chord.kind === "chord" ? [{ at: here, chord: m.chord }] : [];
+		});
+	});
 }
+
+/** Text as the export writes it in lyrics: brackets and braces as parentheses, a tag's `<…>` as `(…)`. */
+const asWritten = (text: string) =>
+	text
+		.replace(/[[{]/g, "(")
+		.replace(/[\]}]/g, ")")
+		.replace(/<([^<>]*)>/g, "($1)");
+
+type Event = { at: number; chord?: ChordRecord; parts?: string[]; continues?: boolean };
+
+/** An occurrence's chords and sung syllables, timed from its first bar. */
+function eventsOf(bars: PlayedBar[], harmony: (b: PlayedBar) => Slot[]): Event[] {
+	const out: Event[] = [];
+	let offset = 0;
+	for (const bar of bars) {
+		const length = bar.meter.n / bar.meter.d;
+		for (const c of timedChords(harmony(bar), length))
+			out.push({ at: offset + c.at, chord: c.chord });
+		for (const l of bar.lyrics ?? [])
+			for (const { at, syllable: s } of l.syllables)
+				if (s.kind === "sung")
+					out.push({ at: offset + at, parts: s.parts, continues: s.continues });
+		offset += length;
+	}
+	const tick = (e: Event) => Math.round(e.at * 1e9);
+	return out
+		.map((e, i) => ({ e, i }))
+		.sort((a, b) => tick(a.e) - tick(b.e) || (a.e.chord ? 0 : 1) - (b.e.chord ? 0 : 1) || a.i - b.i)
+		.map((x) => x.e);
+}
+
+/** The word tokens' last, which a continued syllable extends. */
+function extendLastWord(tokens: Token[], text: string): void {
+	for (let i = tokens.length - 1; i >= 0; i--) {
+		const t = tokens[i];
+		if (t && "word" in t) {
+			t.word += text;
+			return;
+		}
+	}
+	tokens.push({ word: text });
+}
+
+/** Events as tokens: each chord, each word at its first syllable, a continued word joined. */
+function tokensOf(events: Event[]): { tokens: Token[]; records: ChordRecord[] } {
+	const tokens: Token[] = [];
+	const records: ChordRecord[] = [];
+	let joining = false;
+	for (const e of events) {
+		if (e.chord) {
+			tokens.push({ chord: spelled(e.chord) });
+			records.push(e.chord);
+			continue;
+		}
+		for (const [i, p] of (e.parts ?? []).entries()) {
+			if (joining && i === 0) extendLastWord(tokens, asWritten(p));
+			else tokens.push({ word: asWritten(p) });
+		}
+		joining = !!e.continues;
+	}
+	return { tokens, records };
+}
+
+/** A bar's verses, as a key: which verses it sings. */
+const verseKey = (b: PlayedBar) => (b.lyrics ?? []).map((l) => l.verse).join(",");
 
 /** Bars split into passes where the written number falls back. */
 function passes(bars: PlayedBar[]): PlayedBar[][] {
@@ -74,6 +130,35 @@ function passes(bars: PlayedBar[]): PlayedBar[][] {
 		out.at(-1)?.push(bar);
 	}
 	return out;
+}
+
+/**
+ * A section occurrence's environments: a pass joins the one before unless
+ * it sings a different verse on a bar that one already played.
+ */
+function environments(bars: PlayedBar[]): PlayedBar[][] {
+	const envs: { bars: PlayedBar[]; sang: Map<number, string> }[] = [];
+	for (const pass of passes(bars)) {
+		const env = envs.at(-1);
+		const fits = (e: typeof env) =>
+			e !== undefined && pass.every((b) => (e.sang.get(b.written) ?? verseKey(b)) === verseKey(b));
+		const into = env && fits(env) ? env : { bars: [], sang: new Map<number, string>() };
+		if (into !== env) envs.push(into);
+		for (const b of pass) {
+			into.bars.push(b);
+			into.sang.set(b.written, verseKey(b));
+		}
+	}
+	return envs.map((e) => e.bars);
+}
+
+/** Stacked verses (a bar singing several) are one pass per verse; otherwise the bars as they are. */
+function versesOf(env: PlayedBar[]): PlayedBar[][] {
+	if (!env.some((b) => (b.lyrics?.length ?? 0) > 1)) return [env];
+	const verses = [...new Set(env.flatMap((b) => (b.lyrics ?? []).map((l) => l.verse)))];
+	return verses
+		.sort((a, b) => a - b)
+		.map((v) => env.map((b) => ({ ...b, lyrics: (b.lyrics ?? []).filter((l) => l.verse === v) })));
 }
 
 /** The sections' bars in play order, bars before the first heading unnamed. */
@@ -102,32 +187,21 @@ function singersBars(full: ChartParse): Map<number, PlayedBar> {
 	);
 }
 
-/** A pass's verses as the sheet writes them: each verse alone where verses are stacked, else all as one. */
-function versesOf(pass: PlayedBar[]): (number | null)[] {
-	if (!pass.some((b) => (b.lyrics?.length ?? 0) > 1)) return [null];
-	const verses = new Set(pass.flatMap((b) => (b.lyrics ?? []).map((l) => l.verse)));
-	return [...verses].sort((a, b) => a - b);
-}
-
-/** Per sung occurrence in play order: its label, chords and words (spec 5.2's yardstick). */
+/** Per sung occurrence in play order: its label and its chords and words in time order (spec 5.2). */
 export function yardstick(chart: string, part?: string): Played[] {
 	const full = parseChart(chart);
 	const label = part ?? defaultPart(full);
 	const harmony = (label !== undefined && extractPart(chart, label)) || full;
 	const first = harmony.parts[0]?.lines?.[0];
 	const sung = singersBars(full);
-	const chordsOf = (pass: PlayedBar[]) =>
-		pass.flatMap((b) => attacks(harmonyOf(harmony.bars[b.index - 1] ?? b, first)));
+	const slotsOf = (b: PlayedBar) => harmonyOf(harmony.bars[b.index - 1] ?? b, first);
 	return spans(full).flatMap((span) =>
-		passes(span.bars.map((b) => sung.get(b.index) ?? b)).flatMap((pass) =>
-			versesOf(pass).flatMap((verse): Played[] => {
-				const words = wordsOf(pass, verse);
-				const records = chordsOf(pass);
-				return words.length
-					? [{ label: span.label, chords: records.map(spelled), words, records }]
-					: [];
+		environments(span.bars.map((b) => sung.get(b.index) ?? b))
+			.flatMap(versesOf)
+			.flatMap((bars): Played[] => {
+				const { tokens, records } = tokensOf(eventsOf(bars, slotsOf));
+				return tokens.some((t) => "word" in t) ? [{ label: span.label, tokens, records }] : [];
 			}),
-		),
 	);
 }
 
@@ -148,7 +222,7 @@ const ENV = /^start_of_(verse|chorus|bridge)$/;
 
 function startEnv(r: Reading, name: string, value: string): void {
 	if (r.open) throw new Error(`${name} inside ${r.open.env}`);
-	const sung: Sung = { label: labelOf(value), chords: [], words: [] };
+	const sung: Sung = { label: labelOf(value), tokens: [] };
 	r.open = { env: name.replace("start_of_", ""), sung, carry: false };
 }
 
@@ -184,21 +258,33 @@ export function readBack(text: string): Sung[] {
 	return r.out;
 }
 
-/** A word piece into `sung`: joined to the word before when it continues it. */
-function addWord(sung: Sung, word: string, joins: boolean): void {
-	if (joins) sung.words[sung.words.length - 1] += word;
-	else sung.words.push(word);
+/** A chord read back: annotations (`*…`) are not chords. */
+function readChord(sung: Sung, chord: string): void {
+	if (!chord.startsWith("*")) sung.tokens.push({ chord });
 }
 
-/** One lyric line's chords and words into `sung`; whether its last word runs on to the next line. */
+/** Whether the last word ends `-`, running on to the next line; the hyphen is dropped. */
+function runsOn(sung: Sung): boolean {
+	const end = sung.tokens.findLast((t): t is { word: string } => "word" in t);
+	if (!end?.word.endsWith("-")) return false;
+	end.word = end.word.slice(0, -1);
+	return true;
+}
+
+/**
+ * One lyric line's tokens into `sung`, in order: chords that are not
+ * annotations, and words, a piece that continues a word (`wait[D]ing`, or
+ * the first word after a line that ended `wait-`) joined to the last
+ * word. Returns whether this line's last word runs on to the next line.
+ */
 function readLine(tokens: Tokens, sung: Sung, carry: boolean): boolean {
-	const words = tokens.flatMap((t) => ("word" in t ? [t] : []));
-	sung.chords.push(
-		...tokens.flatMap((t) => ("chord" in t && !t.chord.startsWith("*") ? [t.chord] : [])),
-	);
-	for (const [i, t] of words.entries()) addWord(sung, t.word, !!t.joins || (i === 0 && carry));
-	const last = sung.words.at(-1) ?? "";
-	const runsOn = words.length > 0 && last.endsWith("-");
-	if (runsOn) sung.words[sung.words.length - 1] = last.slice(0, -1);
-	return runsOn || (words.length === 0 && carry);
+	let join = carry;
+	let wrote = false;
+	for (const t of tokens) {
+		if ("chord" in t) readChord(sung, t.chord);
+		else if (t.joins || join) extendLastWord(sung.tokens, t.word);
+		else sung.tokens.push({ word: t.word });
+		if ("word" in t) [join, wrote] = [false, true];
+	}
+	return wrote ? runsOn(sung) : carry;
 }

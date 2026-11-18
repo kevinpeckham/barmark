@@ -13,7 +13,7 @@ type Group = {
 
 const name = (written: number) => (written === 0 ? "the pickup" : String(written));
 
-/** Where a loss is: "bar 5", "the pickup", or "3 bars: 2, 5, 9" (at most ten named). */
+/** Where a loss is, written in parentheses after it: "bar 5", "the pickup", or "3 bars: 2, 5, 9" (at most ten named). */
 function barsText(written: number[]): string {
 	const [only] = written;
 	if (written.length === 1 && only !== undefined) return only === 0 ? "the pickup" : `bar ${only}`;
@@ -44,7 +44,7 @@ export class Losses {
 			const written = [...g.bars.keys()].sort((a, b) => a - b);
 			return {
 				code,
-				message: `${g.message} in ${barsText(written)}`,
+				message: `${g.message} (${barsText(written)})`,
 				bar: first.index,
 				written: first.written,
 			};

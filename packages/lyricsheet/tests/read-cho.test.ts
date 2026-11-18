@@ -146,6 +146,10 @@ describe("readCho", () => {
 		expect(performance.now() - again).toBeLessThan(100);
 	});
 
+	test("an empty value is read as empty", () => {
+		expect(readCho("{title: }\n")).toEqual([{ kind: "directive", name: "title", value: "" }]);
+	});
+
 	test("a space may lead a lyric line only before a `#`, which would start a comment", () => {
 		expect(readCho(" #2 [G]so\n")).toEqual([
 			{ kind: "lyrics", tokens: [{ word: "#2" }, c("G", true, false), { word: "so" }] },

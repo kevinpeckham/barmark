@@ -97,6 +97,46 @@ describe("occurrences", () => {
 		]);
 	});
 
+	test("a repeat that sings the same words again is one occurrence, its bars in played order", () => {
+		const o = plan(
+			"## Chorus\n| G | D |\nlyrics: | Two | run |\n| A | D | x2\nlyrics: | to | home |\n",
+		);
+		expect(o.map(brief)).toEqual([
+			{ name: "Chorus", written: [1, 2, 3, 4, 3, 4], sung: true, replay: false, verse: 1 },
+		]);
+	});
+
+	test("x3 with one row is one occurrence", () => {
+		const o = plan("## Verse\n| C | G | x3\nlyrics: | la | lo |\n");
+		expect(o.map((x) => x.bars.map((b) => b.written))).toEqual([[1, 2, 1, 2, 1, 2]]);
+	});
+
+	test("an inner repeat of the same words does not split its section", () => {
+		const o = plan(
+			"## Verse\n| C |\nlyrics: | a |\n|: G | D :|\nlyrics: | b | c |\n| F |\nlyrics: | d |\n",
+		);
+		expect(o.map((x) => x.bars.map((b) => b.written))).toEqual([[1, 2, 3, 2, 3, 4]]);
+	});
+
+	test("a section with a verse-changing repeat and an inner same-words repeat", () => {
+		const o = plan(
+			"## Verse x2\n| C | G |\nlyrics 1: | a | b |\nlyrics 2: | c | d |\n|: F | E :|\nlyrics: | e | f |\n",
+		);
+		expect(o.map((x) => [x.verse, x.bars.map((b) => b.written)])).toEqual([
+			[1, [1, 2, 3, 4, 3, 4]],
+			[null, [1, 2, 3, 4, 3, 4]],
+		]);
+	});
+
+	test("an occurrence knows its written section and its heading's line", () => {
+		const o = plan("## Chorus\n| C |\nlyrics: | a |\n## chorus\n");
+		expect(o.map((x) => [x.form, x.heading])).toEqual([
+			[0, 1],
+			[0, 4],
+		]);
+		expect(plan("| C |\nlyrics: | a |\n").map((x) => [x.form, x.heading])).toEqual([[null, null]]);
+	});
+
 	test("a section with no words is not sung", () => {
 		const o = plan("## Intro\n| C | G |\n");
 		expect(o.map(brief)).toEqual([

@@ -30,6 +30,7 @@ describe("golden sheets (spec 5.1)", () => {
 		"parts.cho",
 		"parts@Gtr.cho",
 		"stacked.cho",
+		"untitled.cho",
 		"verses.cho",
 	];
 	for (const cho of expected)
@@ -59,6 +60,7 @@ describe("sections (spec 4.1, 4.6)", () => {
 
 	test("bars before the first heading that sing are a verse with no label", () => {
 		expect(lines("| C |\nlyrics: | a |\n")).toEqual([
+			"{title: }",
 			"{time: 4/4}",
 			"",
 			"{start_of_verse}",
@@ -72,6 +74,7 @@ describe("sections (spec 4.1, 4.6)", () => {
 		const r = sheet("key: C\n## A\n| C |\nlyrics: | a |\n## B\n| G |\nlyrics: | b |\n");
 		expect(r.text).toBe(
 			[
+				"{title: }",
 				"{key: C}",
 				"{time: 4/4}",
 				"",
@@ -97,7 +100,7 @@ describe("sections (spec 4.1, 4.6)", () => {
 
 	test("a bar line with no words in a sung section is a chord-only line", () => {
 		const out = lines("## Verse\n| G | C |\nlyrics: | a | b |\n| D | G |\n");
-		expect(out.slice(2, 6)).toEqual([
+		expect(out.slice(3, 7)).toEqual([
 			'{start_of_verse: label="Verse"}',
 			"[G]a [C]b",
 			"[D] [G]",
@@ -128,6 +131,80 @@ describe("repeats and replays (spec 4.5)", () => {
 		expect(out).not.toContain("{chorus}");
 	});
 
+	test("a repeat singing the same words again stays in one environment, then {chorus}", () => {
+		const out = lines(
+			"## Chorus\n| G | D |\nlyrics: | Two | run |\n| A | D | x2\nlyrics: | to | home |\n## Chorus\n",
+		);
+		expect(out.slice(3)).toEqual([
+			'{start_of_chorus: label="Chorus"}',
+			"[G]Two [D]run",
+			"[A]to [D]home",
+			"[A]to [D]home",
+			"{end_of_chorus}",
+			"",
+			"{chorus}",
+			"",
+		]);
+	});
+
+	test("x3 with one row is one environment of three passes", () => {
+		const out = lines("## Verse\n| C | G | x3\nlyrics: | la | lo |\n");
+		expect(out.slice(3)).toEqual([
+			'{start_of_verse: label="Verse"}',
+			"[C]la [G]lo",
+			"[C]la [G]lo",
+			"[C]la [G]lo",
+			"{end_of_verse}",
+			"",
+		]);
+	});
+
+	test("an inner repeat of the same words does not split its verse", () => {
+		const out = lines(
+			"## Verse\n| C |\nlyrics: | a |\n|: G | D :|\nlyrics: | b | c |\n| F |\nlyrics: | d |\n",
+		);
+		expect(out.filter((l) => l.startsWith("{start_of")).length).toBe(1);
+		expect(out).toContain("[F]d");
+	});
+
+	test("a verse-changing repeat around an inner same-words repeat: one environment per verse", () => {
+		const out = lines(
+			"## Verse x2\n| C | G |\nlyrics 1: | a | b |\nlyrics 2: | c | d |\n|: F | E :|\nlyrics: | e | f |\n",
+		);
+		expect(out.slice(3)).toEqual([
+			'{start_of_verse: label="Verse"}',
+			"[C]a [G]b",
+			"[F]e [E]f",
+			"[F]e [E]f",
+			"{end_of_verse}",
+			"",
+			'{start_of_verse: label="Verse"}',
+			"[C]c [G]d",
+			"[F]e [E]f",
+			"[F]e [E]f",
+			"{end_of_verse}",
+			"",
+		]);
+	});
+
+	test("a replay heading in another case is recalled, as the parser matches it", () => {
+		expect(lines("## Chorus\n| C |\nlyrics: | a |\n## chorus\n")).toContain("{chorus}");
+	});
+
+	test("text under a replay heading is written once, outside the environments, where the heading stands", () => {
+		const out = lines(
+			"## Chorus\n| C |\nlyrics: | a |\n## Verse\n| G |\nlyrics: | b |\n## Chorus\nsoftly now\n## Verse\n",
+		);
+		expect(out.filter((l) => l === "{comment: softly now}").length).toBe(1);
+		const at = out.indexOf("{comment: softly now}");
+		expect(out.slice(at - 2, at + 2)).toEqual([
+			"{end_of_verse}",
+			"",
+			"{comment: softly now}",
+			"{chorus}",
+		]);
+	});
+
 	test("a chorus is recalled only when the chorus before it is the one it replays", () => {
 		const out = lines(
 			"## Chorus\n| C |\nlyrics: | a |\n## Chorus 2\n| G |\nlyrics: | b |\n## Chorus\n",
@@ -146,7 +223,7 @@ describe("repeats and replays (spec 4.5)", () => {
 
 	test("an open repeat is written once, then {comment: repeat ad lib.}", () => {
 		const out = lines("## A\n| C | G | x ...\nlyrics: | la | lo |\n");
-		expect(out.slice(2, 6)).toEqual([
+		expect(out.slice(3, 7)).toEqual([
 			'{start_of_verse: label="A"}',
 			"[C]la [G]lo",
 			"{comment: repeat ad lib.}",
@@ -186,17 +263,27 @@ describe("slots and symbols in lyric lines (spec 4.3)", () => {
 	test("each loss of the table once", () => {
 		const got = codes(fixture("marks.chart.md"));
 		const table: LyricsheetLossCode[] = [
-			"stop",
 			"note-sets",
 			"voicing",
 			"marks",
 			"bar-meter",
-			"chord-timing",
 			"fermata",
 			"chord-names",
 		];
 		for (const code of table) expect([code, got.includes(code)]).toEqual([code, true]);
 		expect(new Set(got).size).toBe(got.length);
+	});
+	test("a two-chord bar and a stop are no loss: the sheet keeps order, and *Stop says it", () => {
+		expect(codes("## A\n| C G | C -- |\nlyrics: | a b | c d |\n")).toEqual([]);
+	});
+	test("a pickup is not a one-bar meter", () => {
+		expect(codes("## A\n| [1/4] G | C |\nlyrics: | a | b |\n")).toEqual([]);
+		expect(codes("## A\n| C | [2/4] G |\nlyrics: | a | b |\n")).toEqual(["bar-meter"]);
+	});
+	test("the fermata's loss says what a reader loses", () => {
+		expect(loss("## A\n| C | ... | G |\nlyrics: | a | b |\n", "fermata")?.message).toContain(
+			"not a fermata sign",
+		);
 	});
 	test("a repeated N.C. or stop has no attack of its own", () => {
 		expect(lines("## A\n| N.C. N.C. | N.C. |\nlyrics: | a b | c |\n")).toContain("[*N.C.]a b c");
@@ -223,11 +310,16 @@ describe("slots and symbols in lyric lines (spec 4.3)", () => {
 
 describe("key, time, tempo and feel (spec 4.6)", () => {
 	const out = () => sheetOf("changes.cho");
-	test("a change mid-chart is written where it happens, in play order", () => {
+	test("a change mid-chart is written where it happens, in play order, with a comment a reader sees", () => {
 		const o = out();
 		const at = (l: string) => o.indexOf(l);
 		expect(at("{key: D}")).toBeGreaterThan(at("[C]stay"));
-		expect(at("{time: 3/4}")).toBe(at("{key: D}") + 1);
+		expect(at("{comment: Key: D}")).toBe(at("{key: D}") - 1);
+		expect(at("{comment: Time: 3/4}")).toBe(at("{key: D}") + 1);
+		expect(at("{time: 3/4}")).toBe(at("{key: D}") + 2);
+		expect(at("{comment: Tempo: 120}")).toBe(at("{tempo: 120}") - 1);
+		// The header's opening values have no comment.
+		expect(o.slice(0, at("")).some((l) => l.startsWith("{comment"))).toBe(false);
 		expect(at("{tempo: 120}")).toBeGreaterThan(at("{key: D}"));
 		// The D.S. goes back to the segno: C, 4/4 and 100 again.
 		expect(o.filter((l) => l === "{key: C}").length).toBe(2);
@@ -236,6 +328,13 @@ describe("key, time, tempo and feel (spec 4.6)", () => {
 	test("a rit. and a swing feel are comments", () => {
 		expect(out()).toContain("{comment: rit.}");
 		expect(out()).toContain("{comment: swing}");
+	});
+	test("a new tempo that ends a rit. writes no a tempo; a tempo does", () => {
+		const base = "## A\ntempo: 100\n| C |\nlyrics: | a |\ntempo: rit.\n| C |\nlyrics: | b |\n";
+		const to120 = lines(`${base}tempo: 120\n| C |\nlyrics: | c |\n`);
+		expect(to120).toContain("{tempo: 120}");
+		expect(to120).not.toContain("{comment: a tempo}");
+		expect(lines(`${base}tempo: a tempo\n| C |\nlyrics: | c |\n`)).toContain("{comment: a tempo}");
 	});
 	test("text lines are comments", () => {
 		expect(out()).toContain("{comment: Softly, the second time.}");
@@ -253,7 +352,17 @@ describe("text ChordPro would read as markup (Review Focus 2)", () => {
 	});
 	test("the text-changed loss names each changed line's bar", () => {
 		const l = loss(fixture("marks.chart.md"), "text-changed");
-		expect(l?.message).toContain("3 bars: 1, 5, 9");
+		expect(l?.message).toEndWith("(3 bars: 1, 5, 9)");
+	});
+	test("tag-like markup is written with parentheses in lyrics, text lines and labels", () => {
+		const out = lines("## V <b>x</b>\n| C |\nlyrics: | <b>la</b> |\nsay <i>it</i>\n");
+		expect(out).toContain('{start_of_verse: label="V (b)x(/b)"}');
+		expect(out).toContain("[C](b)la(/b)");
+		expect(out).toContain("{comment: say (i)it(/i)}");
+	});
+	test("a < with a > after it is markup to ChordPro, so both are changed; alone they stay", () => {
+		expect(lines("## A\n| C |\nlyrics: | a |\na < b -> c\n")).toContain("{comment: a ( b -) c}");
+		expect(codes("## A\n| C |\nlyrics: | a |\na < b\n<3\nx>y\n&amp;\n-> next\n")).toEqual([]);
 	});
 	test("plain text changes nothing", () => {
 		expect(codes("## A\n| C |\nlyrics: | (a) |\nNo marks here.\n")).toEqual([]);
@@ -266,7 +375,9 @@ describe("parts (spec 4.4, Review Focus 5)", () => {
 		expect(o).toContain("[C]Sailing [Am]out past [F]the bay [G]home");
 		const r = sheet(fixture("parts.chart.md"));
 		expect(r.losses.map((l) => l.code)).toContain("other-parts");
-		expect(r.losses.map((l) => l.code)).toContain("other-lines");
+		expect(r.losses.find((l) => l.code === "other-lines")?.message).toContain(
+			"only the part's chords and the sung words are written",
+		);
 	});
 	test("with part, that part's harmony and the singer's words", () => {
 		const o = sheetOf("parts@Gtr.cho");
@@ -287,15 +398,16 @@ describe("parts (spec 4.4, Review Focus 5)", () => {
 });
 
 describe("words in some sections and not others (Review Focus 3)", () => {
+	const CGab = [{ chord: "C" }, { word: "a" }, { chord: "G" }, { word: "b" }];
 	test("only the sung occurrences are lyric environments, balanced", () => {
 		const r = sheet(
 			"## Intro\n| C | G |\n## Verse\n| C | G |\nlyrics: | a | b |\n## Outro\n| C |\n",
 		);
-		expect(readBack(r.text)).toEqual([{ label: "Verse", chords: ["C", "G"], words: ["a", "b"] }]);
+		expect(readBack(r.text)).toEqual([{ label: "Verse", tokens: CGab }]);
 	});
 	test("a section sung only on its second pass writes that pass", () => {
 		const r = sheet("## Verse\n|: C | G :|\nlyrics 2: | a | b |\n");
-		expect(readBack(r.text)).toEqual([{ label: "Verse", chords: ["C", "G"], words: ["a", "b"] }]);
+		expect(readBack(r.text)).toEqual([{ label: "Verse", tokens: CGab }]);
 	});
 	test("a chart that ends inside a repeat closes its environment", () => {
 		const r = sheet("## Verse\n| C | G | x ...\nlyrics: | a | b |\n");

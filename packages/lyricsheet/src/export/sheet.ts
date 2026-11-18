@@ -55,7 +55,7 @@ function sheetBar(
 	if (lines.some((l) => !same(l.name, first)))
 		out.losses.add(
 			"other-lines",
-			"only the written part's first line is written; its other lines (a melody, a second hand) are left out, their words sung",
+			"only the part's chords and the sung words are written: its other lines (a melody's notes, a second staff) are not",
 			bar,
 		);
 	const line = lines.find((l) => same(l.name, first));
@@ -69,8 +69,9 @@ export function sheetOf(
 	parse: ChartParse,
 	options: LyricsheetOptions,
 	out: Out,
+	whole?: ChartParse,
 ): ChartParse {
-	const full = options.part === undefined ? parse : parseChart(chart);
+	const full = options.part === undefined ? parse : (whole ?? parseChart(chart));
 	const chosen = options.part === undefined ? defaultPart(full) : undefined;
 	const harmony =
 		chosen?.label !== undefined && full.parts.length > 1

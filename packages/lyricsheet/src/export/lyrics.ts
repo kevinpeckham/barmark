@@ -5,11 +5,12 @@
  * chorus before it sang.
  */
 import { memberShares, type PlayedBar, type SimpleSlot, type Slot, type Syllable } from "barmark";
-import { changeLines, comment, plain, textChanged, unhashed } from "./changes.js";
+import { changeLines, comment } from "./changes.js";
 import { lyricLine, type Piece } from "./merge.js";
 import { directive } from "./meta.js";
 import type { Layout, Occurrence, Run } from "./plan.js";
 import { isGap, spelled } from "./spell.js";
+import { plain, textChanged, unhashed, untagged } from "./text.js";
 import type { Out } from "./types.js";
 
 export type Context = {
@@ -18,23 +19,24 @@ export type Context = {
 	layout: Layout;
 	/** The chart's first played bar, whose key, time and tempo the header wrote. */
 	first: PlayedBar;
+	/** The last chorus the sheet wrote: what `{chorus}` would recall. */
+	chorus: { last: { form: number | null; body: string } | null };
 };
 
 const LOST = {
 	"chord-names":
 		'a chord name ChordPro\'s chord parser does not know is written as barmark spells it: ChordPro readers may show it as text, and diagrams: "guitar" gives it a shape',
-	"chord-timing": "lyric lines keep the order of a bar's chords, not where in the bar each falls",
-	stop: "a stop (--) is written as the text *Stop",
 	"note-sets":
 		"a note set is written as its notes' names, as text and not a chord; its octaves and root mark are lost",
 	voicing: "a voicing is written as its chord's name; its notes are lost",
 	marks: "pushes, accents, hits and pedal marks are not written; the chord is, unmarked",
 	"bar-meter": "lyric lines do not show a bar's own meter",
-	fermata: "a fermata is written as the text *…, with no length",
+	fermata:
+		"a fermata is written as the annotation *… (ChordPro has none): a reader sees an ellipsis over the words, not a fermata sign",
 	"chord-moved":
 		"a chord between two syllables of one word is written before the word's next syllable",
 	"stacked-verses":
-		"verses stacked on bars that play once are written one pass per verse, each with its chords: ChordPro has no stacking",
+		"verses stacked on the same bars (not one verse per pass of a repeat) are written one pass per verse, each with its chords: ChordPro has no stacking",
 } as const;
 
 const lose = (out: Out, code: keyof typeof LOST, bar: PlayedBar) =>
@@ -49,8 +51,9 @@ function envOf(name: string | null): "verse" | "chorus" | "bridge" {
 /** `{start_of_verse: label="…"}`: the heading as written, `\` and `"` escaped as the label's quotes need. */
 function startLine(env: string, name: string | null, out: Out, bar: PlayedBar | undefined): string {
 	if (name === null) return directive(`start_of_${env}`);
-	if (/[{}\p{Cc}\u2028\u2029]/u.test(name)) textChanged(out, bar);
-	return directive(`start_of_${env}`, `label="${name.replace(/[\\"]/g, (c) => `\\${c}`)}"`);
+	const label = untagged(name);
+	if (label !== name || /[{}\p{Cc}\u2028\u2029]/u.test(name)) textChanged(out.losses, bar);
+	return directive(`start_of_${env}`, `label="${label.replace(/[\\"]/g, (c) => `\\${c}`)}"`);
 }
 
 /** Where the line is: the repeated N.C. or stop that has no attack of its own. */
@@ -73,10 +76,9 @@ function chordText(slot: Extract<SimpleSlot, { kind: "chord" }>, bar: PlayedBar,
 }
 
 /** N.C. or a stop, unless the slot before was the same (a repeat has no attack of its own). */
-function restText(kind: "nc" | "silence", st: LineState, bar: PlayedBar, out: Out): string | null {
+function restText(kind: "nc" | "silence", st: LineState): string | null {
 	if (st.last === kind) return null;
 	st.last = kind;
-	if (kind === "silence") lose(out, "stop", bar);
 	return kind === "nc" ? "*N.C." : "*Stop";
 }
 
@@ -84,7 +86,7 @@ function restText(kind: "nc" | "silence", st: LineState, bar: PlayedBar, out: Ou
 function slotText(slot: SimpleSlot, st: LineState, bar: PlayedBar, out: Out): string | null {
 	if (slot.kind === "hold") return null;
 	if ((slot.kind === "nc" || slot.kind === "silence") && slot.push) lose(out, "marks", bar);
-	if (slot.kind === "nc" || slot.kind === "silence") return restText(slot.kind, st, bar, out);
+	if (slot.kind === "nc" || slot.kind === "silence") return restText(slot.kind, st);
 	st.last = null;
 	return slot.kind === "unknown" ? "*?" : chordText(slot, bar, out);
 }
@@ -121,18 +123,16 @@ function harmonyPieces(bar: PlayedBar, offset: number, st: LineState, out: Out):
 			);
 		}
 	};
-	let attacks = 0;
 	bar.slots.forEach((slot, k) => {
 		wordsAt(k);
 		for (const m of membersAt(slot, offset + k * each, each)) {
 			const chord = slotText(m.slot, st, bar, out);
 			if (chord !== null) pieces.push({ at: m.at, chord });
-			attacks += chord === null ? 0 : 1;
 		}
 	});
 	wordsAt(bar.slots.length);
-	if (attacks > 1) lose(out, "chord-timing", bar);
-	if (bar.time) lose(out, "bar-meter", bar);
+	// A pickup's short meter is how a pickup is written, not a bar's own meter.
+	if (bar.time && bar.written !== 0) lose(out, "bar-meter", bar);
 	return { pieces, changed };
 }
 
@@ -194,18 +194,18 @@ function lyricText(bars: PlayedBar[], fermatas: Set<number>, out: Out): string {
 		const bar = owner[i];
 		if (bar) lose(out, "chord-moved", bar);
 	});
-	if (changed || text.startsWith("#")) textChanged(out, bars[0]);
+	if (changed || text.startsWith("#")) textChanged(out.losses, bars[0]);
 	return unhashed(text);
 }
 
-/** An occurrence's bars by written line (or system): consecutive bars written on one line. */
+/** An occurrence's bars by written line (or system), a new line where play goes back (a repeat). */
 function byLine(bars: PlayedBar[]): PlayedBar[][] {
 	const out: PlayedBar[][] = [];
-	let line: number | null = null;
+	let prev: PlayedBar | undefined;
 	for (const bar of bars) {
-		if (bar.line !== line || !out.length) out.push([]);
+		if (!prev || bar.line !== prev.line || bar.written <= prev.written) out.push([]);
 		out.at(-1)?.push(bar);
-		line = bar.line;
+		prev = bar;
 	}
 	return out;
 }
@@ -256,13 +256,10 @@ function bodyOf(o: Occurrence, out: Out, context: Context): string[] {
 	});
 }
 
-/** The last chorus each sheet wrote (its name and the lines inside it): what `{chorus}` would recall. */
-const lastChorus = new WeakMap<Out, { name: string | null; body: string }>();
-
-/** Whether `{chorus}` says the same: a replayed chorus singing what the last chorus written sang, with its chords. */
-function recalls(o: Occurrence, body: string, out: Out): boolean {
-	const before = lastChorus.get(out);
-	return o.replay && before?.name === o.name && before.body === body;
+/** Whether `{chorus}` says the same: a replay of the written chorus last written, singing its lines, with its chords. */
+function recalls(o: Occurrence, body: string, context: Context): boolean {
+	const before = context.chorus.last;
+	return o.replay && o.form !== null && before?.form === o.form && before.body === body;
 }
 
 /** A sung occurrence as a lyric environment, or `{chorus}` (spec 4.1, 4.5, 4.6). */
@@ -271,9 +268,21 @@ export function lyricSection(o: Occurrence, out: Out, context: Context): void {
 	if (o.stacked) for (const bar of o.bars) if (bar.lyrics?.length) lose(out, "stacked-verses", bar);
 	const env = envOf(o.name);
 	const body = lines.join("\n");
-	const recalled = env === "chorus" && recalls(o, body, out);
-	if (env === "chorus") lastChorus.set(out, { name: o.name, body });
+	const recalled = env === "chorus" && recalls(o, body, context);
+	if (env === "chorus") context.chorus.last = { form: o.form, body };
 	if (out.lines.length) out.lines.push("");
+	out.lines.push(...headingTexts(o, context, out));
 	if (recalled) out.lines.push(directive("chorus"));
 	else out.lines.push(startLine(env, o.name, out, o.bars[0]), ...lines, directive(`end_of_${env}`));
+}
+
+/**
+ * The text under a heading with no bar lines of its own (a replay), as
+ * comments before its first occurrence, outside any environment.
+ */
+function headingTexts(o: Occurrence, context: Context, out: Out): string[] {
+	const before = context.previous.at(-1);
+	const first = before?.heading !== o.heading || before?.form !== o.form;
+	const texts = o.heading === null || !first ? [] : (context.layout.headings.get(o.heading) ?? []);
+	return texts.map((t) => comment(t, o.bars[0], out));
 }

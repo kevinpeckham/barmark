@@ -18,18 +18,14 @@ export type LyricsheetLossCode =
 	| "other-parts"
 	/** The written part's lines other than its first (a melody, a second hand): only their words are sung (spec 4.4). */
 	| "other-lines"
-	/** Verses stacked on bars that play once, written as one pass per verse: ChordPro has no stacking (spec 4.5). */
+	/** Verses stacked on the same bars, written as one pass per verse: ChordPro has no stacking (spec 4.5). */
 	| "stacked-verses"
 	/** A chord between two syllables of one word, written before the word's next syllable. */
 	| "chord-moved"
-	/** Lyrics or text holding characters ChordPro reads as markup (`[`, `]`, `{`, `}`, a leading `#`), changed. */
+	/** Text holding characters ChordPro reads as markup (`[`, `]`, `{`, `}`, tag-like `<…>`, a leading `#`), changed. */
 	| "text-changed"
 	/** A chord name ChordPro's chord parser does not know (spec 4.7's gaps), written as barmark spells it. */
 	| "chord-names"
-	/** Where in its bar each chord falls: lyric lines keep the chords' order only (spec 4.3). */
-	| "chord-timing"
-	/** A stop (`--`), written as the text `*Stop` (spec 4.3). */
-	| "stop"
 	/** A note set, written as its notes' names as text: not a chord to readers, octaves and root mark lost (spec 4.3). */
 	| "note-sets"
 	/** A voicing's exact notes: only the chord's name is written (spec 4.3). */

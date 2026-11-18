@@ -23,7 +23,7 @@ describe("Losses", () => {
 			[5, 3],
 		] as const)
 			l.add("key-mode", "m", bar(i, w));
-		expect(l.list()[0]?.message).toBe("m in 3 bars: 1, 2, 3");
+		expect(l.list()[0]?.message).toBe("m (3 bars: 1, 2, 3)");
 	});
 
 	test("out of order adds list ascending and report the lowest bar, with its message", () => {
@@ -32,7 +32,7 @@ describe("Losses", () => {
 		l.add("key-mode", "two", bar(2, 2));
 		l.add("key-mode", "five", bar(5, 5));
 		const [loss] = l.list();
-		expect(loss?.message).toBe("two in 3 bars: 2, 5, 9");
+		expect(loss?.message).toBe("two (3 bars: 2, 5, 9)");
 		expect(loss?.bar).toBe(2);
 		expect(loss?.written).toBe(2);
 	});
@@ -41,7 +41,7 @@ describe("Losses", () => {
 		const l = new Losses();
 		l.add("key-mode", "m", bar(7, 1));
 		l.add("key-mode", "m", bar(3, 1));
-		expect(l.list()[0]).toMatchObject({ bar: 3, written: 1, message: "m in bar 1" });
+		expect(l.list()[0]).toMatchObject({ bar: 3, written: 1, message: "m (bar 1)" });
 	});
 
 	test("one bar, two bars, thirty bars", () => {
@@ -50,9 +50,9 @@ describe("Losses", () => {
 			for (let i = 1; i <= n; i++) l.add("key-mode", "m", bar(i, i));
 			return l.list()[0]?.message;
 		};
-		expect(text(1)).toBe("m in bar 1");
-		expect(text(2)).toBe("m in 2 bars: 1, 2");
-		expect(text(30)).toBe("m in 30 bars: 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, …");
+		expect(text(1)).toBe("m (bar 1)");
+		expect(text(2)).toBe("m (2 bars: 1, 2)");
+		expect(text(30)).toBe("m (30 bars: 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, …)");
 	});
 
 	test("a loss with no bar has no bar", () => {
@@ -66,17 +66,17 @@ describe("Losses", () => {
 		l.add("key-mode", "none");
 		l.add("key-mode", "four", bar(4, 4));
 		l.add("key-mode", "none");
-		expect(l.list()).toEqual([{ code: "key-mode", message: "four in bar 4", bar: 4, written: 4 }]);
+		expect(l.list()).toEqual([{ code: "key-mode", message: "four (bar 4)", bar: 4, written: 4 }]);
 	});
 
 	test("the pickup is named, not numbered", () => {
 		const one = new Losses();
 		one.add("key-mode", "m", bar(1, 0));
-		expect(one.list()[0]?.message).toBe("m in the pickup");
+		expect(one.list()[0]?.message).toBe("m (the pickup)");
 		const two = new Losses();
 		two.add("key-mode", "m", bar(2, 1));
 		two.add("key-mode", "m", bar(1, 0));
-		expect(two.list()[0]?.message).toBe("m in 2 bars: the pickup, 1");
+		expect(two.list()[0]?.message).toBe("m (2 bars: the pickup, 1)");
 		expect(two.list()[0]?.written).toBe(0);
 	});
 });

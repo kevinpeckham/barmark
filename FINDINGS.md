@@ -1290,8 +1290,22 @@ and round-trip it through `format`.
 - **The fix.** `@barmark/lyricsheet` writes `[` `]` `{` `}` as `(` `)` in
   lyrics, words and comments, puts a space before a leading `#`, and
   reports each changed line in one `text-changed` loss
-  (`packages/lyricsheet/src/export/changes.ts`); a label escapes `\` and
+  (`packages/lyricsheet/src/export/text.ts`); a label escapes `\` and
   `"` with a backslash (`src/export/lyrics.ts`, `startLine`).
+
+### ChordPro reads `<` as Pango markup when a `>` follows anywhere after it (2026-11-18, lyricsheet)
+
+- **The symptom.** In lyrics, titles, labels and comments the reference
+  `chordpro` (6.101.0) printed `<b>la</b>` as `la`, and `a < b ->` and
+  `a <3 b>` gave "Markup error / Unclosed markup" with text lost; yet
+  `a < b`, `<3`, `->`, `x>y` and `&amp;` each printed as written.
+- **The cause.** Text is Pango markup: a `<` alone is passed through, but
+  a `<` with a `>` after it opens a tag, whatever lies between.
+- **The fix.** `untagged` in `packages/lyricsheet/src/export/text.ts`
+  writes a `<` that has a `>` after it as `(`, and a `>` that has a `<`
+  before it as `)`, everywhere text is written (one helper), with a
+  `text-changed` loss; a `<` or `>` alone stays. A rule of a `<` followed
+  by a letter, `/` or `!` would leave `a < b ->` broken.
 
 ### ChordPro's reference `chordpro` warns "Unknown chord" in two forms that mean different things (2026-11-18, lyricsheet)
 
