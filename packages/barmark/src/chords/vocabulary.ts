@@ -158,23 +158,27 @@ export function chordIntervals(
 }
 
 /**
- * Appendix A.5, applied in this order after ♯/♭ become #/b. Each pattern
- * reads the text after the root, so a rule can never touch the root's
- * own accidental.
+ * Appendix A.5, applied in this order after ♯/♭ become #/b and the
+ * increment sign and the triangles become Δ. Each pattern reads the text
+ * after the root, so a rule can never touch the root's own accidental.
+ * `ma` is read only at the start, before `min` and `-` become `m`, so it
+ * is never an alias after `m`, `-` or `min` (`Cmma7` stays an error); the
+ * delta is read after, so it follows any of the three. `Maj` after them
+ * (`CmMaj7`) is not an alias: Kevin, 2026-11-09.
  */
 export const ALIASES: [RegExp, string][] = [
-	[/^Δ9/, "maj9"],
-	[/^Δ13/, "maj13"],
-	[/^Δ7?/, "maj7"],
 	[/^ø7?/, "m7(b5)"],
 	[/^°7/, "dim7"],
 	[/^°/, "dim"],
 	[/^\+7/, "aug7"],
 	[/^\+/, "aug"],
 	[/^(minmaj7|m\(maj7\))/, "mmaj7"],
-	[/^(Maj7|ma7)/, "maj7"],
+	[/^(Maj|ma)(?=7|9|13)/, "maj"],
 	[/^min/, "m"],
 	[/^-/, "m"],
+	[/^(m?)Δ9/, "$1maj9"],
+	[/^(m?)Δ13/, "$1maj13"],
+	[/^(m?)Δ7?/, "$1maj7"],
 	[/^maj(?=$|\/)/, ""],
 	[/sus(?![24])/, "sus4"],
 ];

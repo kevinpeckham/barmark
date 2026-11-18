@@ -1319,6 +1319,28 @@ seconds apart, before failing.
 
 **Where it lives:** `.github/workflows/release.yml`, `confirm`.
 
+### A brief asked for a spelling an earlier decision had refused; another package's test caught it (2026-11-18, barmark, the delta spellings)
+
+**Symptom:** the brief for the delta spellings listed `CmMaj7` among the
+new aliases, as "Claude's ruling the same day". With it in,
+`packages/listen/tests/bars.test.ts` failed: "the seven spellings barmark
+does not read".
+
+**Cause:** Kevin had decided on 2026-11-09 that barmark does not read
+`CM7`, `CSus4`, `CmMaj7`, `CmM7`, `C69`, `C(7)sus4` or a Unicode minus
+(the listen design, section 13). The decision lives in listen's design,
+not in the grammar's decisions log, so writing the brief from the grammar
+alone missed it.
+
+**Fix:** the implementer left `mMaj` out and said why; the grammar's log
+now cites that decision beside the delta row. When a brief adds a
+spelling, search every design under `docs/superpowers/specs/` for it, not
+only the grammar.
+
+**Where it lives:** `docs/grammar-v0.1-draft.md` (the decisions log),
+`docs/superpowers/specs/2026-11-09-listen-design.md` section 13,
+`packages/listen/tests/bars.test.ts`.
+
 ### A subagent's "the check is clean" is a claim: read the exit code yourself (2026-11-13, the listen 0.2 build)
 
 - **The symptom.** An implementer reported `bun run check` as showing
