@@ -89,7 +89,7 @@
     },
     "packages/score": {
       "name": "@barmark/score",
-      "version": "0.6.1",
+      "version": "0.6.2",
       "dependencies": {
         "@barmark/musicxml": "workspace:^",
         "@barmark/render": "workspace:^",
