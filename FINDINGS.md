@@ -9,6 +9,32 @@ not here.
 
 ## Testing
 
+### Engravers disagree where a one-line staff's line is (2026-11-18, @barmark/score, @barmark/musicxml)
+
+**Symptom:** on barmark.dev's home page, Amazing Grace's Score view drew
+each slash of the "Lyrics" staff above its line with strokes through it:
+Kevin took them for symbols he did not know. They were ledger lines. It
+had looked that way since lyric rows were added (2026-11-06); every test
+counted notes and verses, and none looked at where a note sat.
+
+**Cause:** `@barmark/musicxml` writes a rhythm staff's slash as an
+unpitched note displayed at B4, "the staff's middle line". A one-line
+staff has no middle line, and MusicXML does not say which pitch its line
+is. Verovio 6.4 draws the line where a treble staff has E4 (line 1), so B4
+is two steps above it; MuseScore 4 draws it where F5 is, so B4 is two
+steps below it. Measured by engraving the same row at B4, E4 and others
+in each.
+
+**Fix:** `@barmark/score`'s `forVerovio` moves the slash to E4, where
+Verovio's line is, and a test engraves a lyric row with real Verovio and
+requires no ledger lines (and shows that the export, read as it is, has
+them). The export itself is unchanged until Dorico is checked: no value
+is right in both Verovio and MuseScore.
+
+**Where it lives:** `packages/score/src/engrave.ts` (`forVerovio`),
+`packages/score/tests/for-verovio.test.ts`; the export's value is
+`SLASH.rhythm` in `packages/musicxml/src/notes.ts`.
+
 ### A bundle-size test whose number depended on how the test was started (2026-11-13, @barmark/render)
 
 - **The symptom.** `packages/render/tests/size.test.ts` measured the element
