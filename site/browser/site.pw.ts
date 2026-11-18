@@ -337,6 +337,27 @@ test.describe("home: the examples", () => {
 		await expect(position(page)).toContainText("Greensleeves");
 	});
 
+	test("Amazing Grace's lyric staff: every slash sits on its line, with no ledger lines", async ({
+		page,
+	}) => {
+		// The words engrave on a one-line staff of slashes. Drawn off that line, each slash
+		// carried ledger lines that read as an unknown symbol (FINDINGS 2026-11-18).
+		await page.goto("/");
+		await pressScore(page);
+		await expect.poll(() => scoreText(page), { timeout: 15_000 }).toContain("Amazing Grace");
+		const drawn = await page.locator("main barmark-score").evaluate((el) => {
+			const svg = el.shadowRoot?.querySelector(".bms-pane svg");
+			return {
+				notes: svg?.querySelectorAll("g.note").length ?? 0,
+				syllables: svg?.querySelectorAll("g.syl").length ?? 0,
+				ledgers: svg?.querySelectorAll("g.ledgerLines path").length ?? -1,
+			};
+		});
+		expect(drawn.notes).toBeGreaterThan(20);
+		expect(drawn.syllables).toBeGreaterThan(20);
+		expect(drawn.ledgers).toBe(0);
+	});
+
 	test("flipping keeps the Score view, and engraves the new example", async ({ page }) => {
 		await page.goto("/");
 		await pressScore(page);
