@@ -52,6 +52,31 @@ describe("the header", () => {
 		expect(r.losses[0]?.bar).toBe(1);
 	});
 
+	test("a title that cleans to nothing is no title", () => {
+		expect(text("# {}\n\n| C |\n", "Mine").text).toStartWith("{title: Mine}\n");
+		expect(text("# {}\n\n| C |\n").text).not.toContain("{title");
+		expect(text("| C |\n", "{}").text).not.toContain("{title");
+	});
+
+	test("ionian is major and aeolian is minor, with no loss", () => {
+		const a = text("key: C ionian\n\n| C |\n");
+		expect(a.text).toContain("{key: C}\n");
+		expect(a.losses).toEqual([]);
+		const b = text("key: A aeolian\n\n| Am |\n");
+		expect(b.text).toContain("{key: Am}\n");
+		expect(b.losses).toEqual([]);
+		expect(text("key: F# ionian\n\n| F# |\n").text).toContain("{key: F#}\n");
+	});
+
+	test("the loss names the mode of the bar it is reported for", () => {
+		const r = text("key: D dorian\n\n| D |\n");
+		expect(r.losses[0]?.message).toContain("dorian");
+	});
+
+	test("no time: writes the grammar's default, 4/4", () => {
+		expect(text("| C |\n").text).toBe("{time: 4/4}\n");
+	});
+
 	test("no key: no {key}", () => {
 		expect(text("| C |\n").text).not.toContain("{key");
 	});
@@ -66,6 +91,13 @@ describe("directive", () => {
 	test("a value cannot end or start a directive", () => {
 		expect(directive("title", "a{b}c\nd\r\ne  f")).toBe("{title: a b c d e f}");
 		expect(directive("title", "}{")).toBe("{title: }");
+	});
+	test("no tab or control character survives; a non-breaking space stays", () => {
+		expect(directive("title", "a\tb\vc\0d\u0085e\u2028f\u2029g\u001fh")).toBe(
+			"{title: a b c d e f g h}",
+		);
+		expect(directive("title", "a\u00a0b")).toBe("{title: a\u00a0b}");
+		expect(directive("title", "\t x \t")).toBe("{title: x}");
 	});
 	test("no value", () => {
 		expect(directive("end_of_verse")).toBe("{end_of_verse}");

@@ -251,9 +251,10 @@ written order would print verse 2's words nowhere.
   `lyricist:` and `copyright:` map to their own directives. `arranger:`
   maps to `{meta: arranger …}`.
 - **Key, time and tempo.**
-  - `key:` maps to `{key: D}` or `{key: Bm}`. A church mode is left out,
-    and that is a loss.
-  - `time:` maps to `{time: 6/8}`, and `tempo:` to `{tempo: 145}`.
+  - `key:` maps to `{key: D}` or `{key: Bm}`. Ionian is written as major and
+    aeolian as minor (the same notes); the other five church modes are left
+    out, and that is a loss (amended 2026-11-18).
+  - `time:` maps to `{time: 6/8}`, and `tempo:` to `{tempo: 145}`. A chart with no `time:` writes `{time: 4/4}`, the grammar's default and what it plays in (amended 2026-11-18).
   - A change mid-chart is written where it happens, because ChordPro
     applies each key and time "from where it was specified".
   - A rit., an accel. or a non-straight feel becomes `{comment: …}`.

@@ -2,7 +2,7 @@ import type { ChartDiagnostic } from "barmark";
 import type { Losses } from "./losses.js";
 
 export type LyricsheetOptions = {
-	/** Write this part's lines (the part's label or name). */
+	/** Write this part's lines: the part's label, as `extractPart` takes it. */
 	part?: string;
 	/** The title, when the chart has none. */
 	title?: string;
@@ -12,7 +12,7 @@ export type LyricsheetOptions = {
 
 /** What the export could not carry. */
 export type LyricsheetLossCode =
-	/** A church mode in `key:`: ChordPro's `{key}` names a major or minor key only. */
+	/** A church mode other than ionian and aeolian in `key:`: ChordPro's `{key}` names a major or minor key only. */
 	"key-mode";
 
 export type LyricsheetLoss = {

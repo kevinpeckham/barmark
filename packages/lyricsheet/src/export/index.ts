@@ -27,19 +27,15 @@ function parsed(chart: string, options: LyricsheetOptions): Parsed {
 
 /** A chart as a ChordPro lyric sheet, and what it could not carry. Never throws. */
 export function exportLyricsheet(chart: string, options: LyricsheetOptions = {}): LyricsheetResult {
-	try {
-		const p = parsed(chart, options);
-		if (!p.ok) return p;
-		const out: Out = { lines: [], losses: new Losses() };
-		out.lines.push(...headerLines(p.parse, options.title));
-		headerLosses(p.parse, out.losses);
-		return {
-			ok: true,
-			text: out.lines.length === 0 ? "" : `${out.lines.join("\n")}\n`,
-			diagnostics: p.parse.diagnostics,
-			losses: out.losses.list(),
-		};
-	} catch (e) {
-		return { ok: false, diagnostics: [refusal(`the export failed: ${(e as Error).message}`)] };
-	}
+	const p = parsed(chart, options);
+	if (!p.ok) return p;
+	const out: Out = { lines: [], losses: new Losses() };
+	out.lines.push(...headerLines(p.parse, options.title));
+	headerLosses(p.parse, out.losses);
+	return {
+		ok: true,
+		text: out.lines.length === 0 ? "" : `${out.lines.join("\n")}\n`,
+		diagnostics: p.parse.diagnostics,
+		losses: out.losses.list(),
+	};
 }

@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { parseChart } from "barmark";
 import { corpus } from "../../musicxml/tests/charts.js";
 import { exportLyricsheet } from "../src/index.js";
 
@@ -21,9 +22,24 @@ describe("exportLyricsheet refusals", () => {
 		expect(r.diagnostics[0]?.message).toBe("the chart has no bars to export");
 	});
 
-	test("never throws", () => {
-		expect(() => exportLyricsheet("")).not.toThrow();
-		expect(() => exportLyricsheet("|".repeat(10000))).not.toThrow();
-		for (const [, text] of corpus()) expect(() => exportLyricsheet(text)).not.toThrow();
+	test("hostile inputs neither throw nor hang", () => {
+		for (const text of [
+			"",
+			"|".repeat(10000),
+			"\0\t{}[]|",
+			"# \u2028\n|: :|\n",
+			"x".repeat(100000),
+		]) {
+			const start = performance.now();
+			expect(() => exportLyricsheet(text)).not.toThrow();
+			expect(performance.now() - start).toBeLessThan(5000);
+		}
+	});
+
+	test("every corpus chart without errors exports", () => {
+		for (const [name, text] of corpus()) {
+			const clean = !parseChart(text).diagnostics.some((d) => d.severity === "error");
+			if (clean) expect([name, exportLyricsheet(text).ok]).toEqual([name, true]);
+		}
 	});
 });

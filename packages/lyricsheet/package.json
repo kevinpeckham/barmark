@@ -24,8 +24,7 @@
 		"chords",
 		"music",
 		"lyrics",
-		"lyric-sheet",
-		"chordpro"
+		"lyric-sheet"
 	],
 	"author": "Kevin Peckham",
 	"license": "MIT",
