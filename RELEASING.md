@@ -1,6 +1,6 @@
 # Releasing
 
-This repository publishes ten npm packages from one Bun workspace, each
+This repository publishes eleven npm packages from one Bun workspace, each
 versioned and released on its own:
 
 | Package | Directory | Release tag |
@@ -13,6 +13,7 @@ versioned and released on its own:
 | `@barmark/midi` | `packages/midi` | `midi-vX.Y.Z` |
 | `@barmark/listen` | `packages/listen` | `listen-vX.Y.Z` |
 | `@barmark/fretboard` | `packages/fretboard` | `fretboard-vX.Y.Z` |
+| `@barmark/lyricsheet` | `packages/lyricsheet` | `lyricsheet-vX.Y.Z` |
 | `@barmark/cli` | `packages/cli` | `cli-vX.Y.Z` |
 | `@barmark/engraver` | `packages/engraver` | `engraver-vX.Y.Z` |
 
@@ -42,7 +43,7 @@ anywhere.
   ruleset's required checks.
 - **Release tags** (ruleset "release tags": `v*`, `barmark-v*`,
   `render-v*`, `musicxml-v*`, `score-v*`, `sync-v*`, `midi-v*`, `listen-v*`,
-  `fretboard-v*`, `cli-v*` and `engraver-v*`): a tag can be created but never moved or deleted, so a
+  `fretboard-v*`, `lyricsheet-v*`, `cli-v*` and `engraver-v*`): a tag can be created but never moved or deleted, so a
   version always names the code that was released.
 - **The `npm` environment** holds the publish job: it needs Kevin's
   approval and runs only for release tags. Each package's npm trusted
@@ -72,7 +73,7 @@ npm.
 
 **A `barmark` minor release needs a release of every package that
 depends on `barmark` with a caret** (`@barmark/render`,
-`@barmark/musicxml`, `@barmark/score`, `@barmark/sync`, `@barmark/midi`, `@barmark/listen` and `@barmark/fretboard`), even with no
+`@barmark/musicxml`, `@barmark/score`, `@barmark/sync`, `@barmark/midi`, `@barmark/listen`, `@barmark/fretboard` and `@barmark/lyricsheet`), even with no
 change of their own. In 0.x a caret range stops at the next minor
 (`^0.7.0` allows 0.7.x, not 0.8.0), so a page or the CLI that installs
 the new `barmark` beside an old dependant gets two copies, and the
@@ -96,6 +97,8 @@ bundle `@barmark/listen`, so a listen release needs no CLI release
 (step 13 does not follow it).
 
 **`@barmark/fretboard`** depends on `barmark` with a caret, so after a `barmark` minor a `fretboard` patch raises the dependency, before render's. `@barmark/render` imports it with a caret and the CLI bundles it through render, so a fretboard release is followed by a CLI release (step 13), and by a render patch first when render's range needs to rise ("Requires `@barmark/fretboard` X.Y.0").
+
+**`@barmark/lyricsheet`** depends on `barmark` and `@barmark/fretboard` with carets, so after a `barmark` or `fretboard` minor a `lyricsheet` patch raises the dependency ("Requires `@barmark/fretboard` X.Y.0"). The CLI pins it exactly and its binaries bundle it, so a lyricsheet release is followed by a CLI release (step 13).
 
 **`@barmark/render`'s size test** (`packages/render/tests/size.test.ts`) holds the element to a gzipped size: a change that grows the element outside chord diagrams (the parser, the grid, a Bun upgrade) re-anchors the test's base in the same pull request (the comment above `BEFORE_DIAGRAMS` says how); growth in the diagrams themselves stays inside Kevin's budget or goes to him.
 
@@ -136,7 +139,7 @@ literal values) and a site bump, and the CLI only if score's code changed.
 
 ## Checks
 
-The same scripts run in three places; `<pkg>` is `barmark`, `render`, `musicxml`, `score`, `sync`, `midi`, `listen`, `fretboard`, `cli` or `engraver`:
+The same scripts run in three places; `<pkg>` is `barmark`, `render`, `musicxml`, `score`, `sync`, `midi`, `listen`, `fretboard`, `lyricsheet`, `cli` or `engraver`:
 
 | Check | Command | Local (Swamp) | CI (every push and PR) | Release workflow |
 |---|---|---|---|---|
@@ -164,7 +167,7 @@ runs, and `verify:package cli` fails on anything else.
 
 ## Steps
 
-`<pkg>` is the package's key (`barmark`, `render`, `musicxml`, `score`, `sync`, `midi`, `listen`, `fretboard`, `cli` or `engraver`) and the tag is
+`<pkg>` is the package's key (`barmark`, `render`, `musicxml`, `score`, `sync`, `midi`, `listen`, `fretboard`, `lyricsheet`, `cli` or `engraver`) and the tag is
 `<pkg>-vX.Y.Z`.
 
 1. **Start a release branch** from an up-to-date `main` with CI green:
@@ -233,7 +236,7 @@ runs, and `verify:package cli` fails on anything else.
     `site/bun.lock`). Until it merges, CI's `site-versions` check is red
     on purpose; it is not required, so other pull requests still merge.
     It checks every barmark package the site installs, dev dependencies
-    too: a `@barmark/musicxml`, `sync`, `midi`, `listen` or `fretboard`
+    too: a `@barmark/musicxml`, `sync`, `midi`, `listen`, `fretboard` or `lyricsheet`
     release needs `bun add --dev --exact`, since Get Started's snippets
     are tested against the installed version while the `npm install` it
     shows gets the latest.
@@ -249,26 +252,28 @@ runs, and `verify:package cli` fails on anything else.
     new Verovio is a week old.
 13. **Release the CLI** (after a `barmark`, `@barmark/render`,
     `@barmark/musicxml`, `@barmark/score`, `@barmark/sync`,
-    `@barmark/midi` or `@barmark/fretboard` release; the CLI bundles
-    `@barmark/sync` through `@barmark/midi`, `@barmark/fretboard` through
-    `@barmark/render`, and Verovio through `@barmark/score`; after a
-    `barmark`, `@barmark/sync` or `@barmark/fretboard` minor, release the
+    `@barmark/midi`, `@barmark/fretboard` or `@barmark/lyricsheet`
+    release; the CLI bundles `@barmark/sync` through `@barmark/midi`,
+    `@barmark/fretboard` through `@barmark/render`, `@barmark/lyricsheet`
+    itself, and Verovio through `@barmark/score`; after a `barmark`,
+    `@barmark/sync` or `@barmark/fretboard` minor, release the
     caret dependants' patches first, as above: after a `sync` minor, a
     `@barmark/midi` patch "Requires `@barmark/sync` X.Y.0"; after a
     `fretboard` minor, a `@barmark/render` patch "Requires
-    `@barmark/fretboard` X.Y.0"):
+    `@barmark/fretboard` X.Y.0", and a `@barmark/lyricsheet` patch the same):
     `@barmark/cli` pins the libraries exactly, so a library release
     reaches CLI users only through a CLI release. On a new branch, bump
     `packages/cli` (a patch, unless the CLI itself changed) with a
     CHANGELOG line "Uses barmark A.B.C, @barmark/render D.E.F,
-    @barmark/musicxml G.H.I, @barmark/score M.N.O and @barmark/midi
-    J.K.L" (naming the ones that changed), and
+    @barmark/musicxml G.H.I, @barmark/score M.N.O, @barmark/midi J.K.L
+    and @barmark/lyricsheet P.Q.R" (naming the ones that changed), and
     release it with steps 1–11 (`pkg=cli`). Release the libraries first:
     the CLI's binaries bundle the libraries' code from the repository, so
     `verify:release cli` (and the release workflow) fail if
     `packages/barmark/src`, `packages/render/src`, `packages/render/fonts`,
     `packages/musicxml/src`, `packages/score/src`, `packages/sync/src`,
-    `packages/midi/src` or `packages/fretboard/src` changed since their
+    `packages/midi/src`, `packages/fretboard/src` or
+    `packages/lyricsheet/src` changed since their
     own tags, or if a library's dependency range at its tag does not
     admit the version bundled beside it (verify:release
     only). Its release workflow also
@@ -311,14 +316,14 @@ manual step before its first release (the same for `@barmark/cli`):
    environment `npm`. Then set publishing access to require two-factor
    authentication and disallow tokens.
 3. **Rulesets** (repository settings → Rules): add the new tag pattern
-   (`cli-v*` for the CLI, `musicxml-v*` for `@barmark/musicxml`, `score-v*` for `@barmark/score`, `listen-v*` for `@barmark/listen`, `fretboard-v*` for `@barmark/fretboard`, `engraver-v*` for `@barmark/engraver`) to
+   (`cli-v*` for the CLI, `musicxml-v*` for `@barmark/musicxml`, `score-v*` for `@barmark/score`, `listen-v*` for `@barmark/listen`, `fretboard-v*` for `@barmark/fretboard`, `lyricsheet-v*` for `@barmark/lyricsheet`, `engraver-v*` for `@barmark/engraver`) to
    "release tags", and the new package job's checks (`package (20, cli)`,
    `package (22, cli)`, `package (24, cli)`; likewise `package (N,
-   musicxml)`, `package (N, listen)` and `package (N, fretboard)`; for the engraver, `engraver` and `package (N, engraver)`)
+   musicxml)`, `package (N, listen)`, `package (N, fretboard)` and `package (N, lyricsheet)`; for the engraver, `engraver` and `package (N, engraver)`)
    to the "main" ruleset's required checks.
 4. **The `npm` environment** (repository settings → Environments →
    npm → Deployment branches and tags): add a tag rule for the same
-   pattern (`cli-v*`, `musicxml-v*`, `score-v*`, `listen-v*`, `fretboard-v*`, `engraver-v*`). Without it the publish job is rejected at once,
+   pattern (`cli-v*`, `musicxml-v*`, `score-v*`, `listen-v*`, `fretboard-v*`, `lyricsheet-v*`, `engraver-v*`). Without it the publish job is rejected at once,
    before any approval is asked for ("Tag … is not allowed to deploy to
    npm due to environment protection rules"), and nothing reaches npm;
    after adding it, rerun the failed jobs (`gh run rerun <id> --failed`).

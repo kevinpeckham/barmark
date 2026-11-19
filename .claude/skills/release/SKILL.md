@@ -1,6 +1,6 @@
 ---
 name: release
-description: Cut a release of barmark, @barmark/render, @barmark/musicxml, @barmark/score, @barmark/sync, @barmark/midi, @barmark/listen, @barmark/fretboard, @barmark/cli or @barmark/engraver - gates via Swamp, bump version, CHANGELOG, commit, tag, push, GitHub release (which publishes to npm)
+description: Cut a release of barmark, @barmark/render, @barmark/musicxml, @barmark/score, @barmark/sync, @barmark/midi, @barmark/listen, @barmark/fretboard, @barmark/lyricsheet, @barmark/cli or @barmark/engraver - gates via Swamp, bump version, CHANGELOG, commit, tag, push, GitHub release (which publishes to npm)
 argument-hint: [package version, e.g. barmark 0.2.0 or render 0.1.0]
 ---
 
@@ -14,7 +14,8 @@ package is `barmark` (`packages/barmark`), `render`
 (`packages/sync`, published as `@barmark/sync`), `midi`
 (`packages/midi`, published as `@barmark/midi`), `listen`
 (`packages/listen`, published as `@barmark/listen`), `fretboard`
-(`packages/fretboard`, published as `@barmark/fretboard`), `cli`
+(`packages/fretboard`, published as `@barmark/fretboard`), `lyricsheet`
+(`packages/lyricsheet`, published as `@barmark/lyricsheet`), `cli`
 (`packages/cli`, published as `@barmark/cli`) or `engraver`
 (`packages/engraver`, published as `@barmark/engraver`); its tag is
 `<pkg>-vX.Y.Z`. If the package or version is missing, read the package's
@@ -23,10 +24,10 @@ for fixes).
 
 Points that are easy to miss:
 
-- After a `barmark`, `render`, `musicxml`, `score`, `sync`, `midi` or
-  `fretboard` release, RELEASING.md steps 13–14 follow (the CLI bundles
-  `sync` through `midi`, `fretboard` through `render`, and `score` with
-  Verovio):
+- After a `barmark`, `render`, `musicxml`, `score`, `sync`, `midi`,
+  `fretboard` or `lyricsheet` release, RELEASING.md steps 13–14 follow
+  (the CLI bundles `sync` through `midi`, `fretboard` through `render`,
+  `lyricsheet` itself, and `score` with Verovio):
   a CLI patch on the new versions, then a PR in `kevinpeckham/songs`
   raising its pinned CLI version. After a `sync` minor, release a `midi`
   patch ("Requires `@barmark/sync` X.Y.0") first, then the CLI, as a
@@ -40,6 +41,10 @@ Points that are easy to miss:
   a `render` patch first when its range must rise, "Requires
   `@barmark/fretboard` X.Y.0"). After a `barmark` minor, release a
   `fretboard` patch raising the dependency before render's.
+- `lyricsheet`: the CLI bundles it, so a lyricsheet release is followed by
+  a CLI release. It depends on `barmark` and `@barmark/fretboard` with
+  carets: after a `barmark` or `fretboard` minor, release a `lyricsheet`
+  patch raising the dependency ("Requires `@barmark/fretboard` X.Y.0").
 - When `@barmark/render` needs unreleased `barmark` changes, release
   `barmark` first: the render release check fails until the `barmark`
   version it depends on is on npm.
