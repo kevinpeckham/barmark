@@ -20,6 +20,7 @@ function versions(): Versions {
 		musicxml: versionAt("@barmark/musicxml"),
 		score: versionAt("@barmark/score"),
 		midi: versionAt("@barmark/midi"),
+		lyricsheet: versionAt("@barmark/lyricsheet"),
 		verovio: versionAt("verovio"),
 	};
 }

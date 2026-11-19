@@ -42,7 +42,7 @@ describe("the built bin under Node", () => {
 		const version = (name: string) =>
 			JSON.parse(readFileSync(join(PACKAGE, "..", name, "package.json"), "utf8")).version;
 		expect(barmark("--version").out).toBe(
-			`@barmark/cli ${version("cli")} (barmark ${version("barmark")}, @barmark/render ${version("render")}, @barmark/musicxml ${version("musicxml")}, @barmark/score ${version("score")}, @barmark/midi ${version("midi")}, verovio ${verovioVersion()})\n`,
+			`@barmark/cli ${version("cli")} (barmark ${version("barmark")}, @barmark/render ${version("render")}, @barmark/musicxml ${version("musicxml")}, @barmark/score ${version("score")}, @barmark/midi ${version("midi")}, @barmark/lyricsheet ${version("lyricsheet")}, verovio ${verovioVersion()})\n`,
 		);
 	});
 	test("export --midi writes the file; import reads one", () => {

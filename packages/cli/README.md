@@ -38,6 +38,7 @@ barmark export --musicxml song.chart.md --out song.musicxml   # for MuseScore, D
 barmark import song.musicxml --out song.chart.md   # or a compressed song.mxl
 barmark export --midi song.chart.md --out song.mid   # for a DAW or a practice player
 barmark import song.mid --out song.chart.md        # chords named from the notes
+barmark export --lyricsheet song.chart.md --out song.cho   # a ChordPro lyric sheet
 barmark check --strict --format github songs   # warnings fail too; PR annotations
 barmark format song.chart.md             # print it in standard form
 barmark format --write songs             # rewrite the files that change
@@ -107,6 +108,25 @@ lyric events into lyric rows. Its messages are listed on stderr as
 names the harmony's tracks by number or name (ignoring case) instead of
 letting the import choose. As for MusicXML, it exits 1 when no chart came
 out.
+
+`export --lyricsheet` writes the chart as a ChordPro lyric sheet, text for
+any app that reads ChordPro (the usual extension is `.cho`), to stdout or
+`--out`. `--part <label>` writes one part's chords with the singer's
+words, and `--diagrams guitar` adds guitar chord diagrams. A chart with no
+title takes its file name. What a lyric sheet can't hold goes to stderr as
+`song.chart.md: warning: message`, each message naming its own bars. A
+chart with errors is not exported.
+
+```sh
+$ barmark export --lyricsheet examples/shenandoah.chart.md
+{title: Shenandoah}
+{key: C}
+{time: 4/4}
+{comment: A simplified arrangement of the traditional song, every note a quarter.}
+
+{start_of_verse: label="Verse"}
+[*N.C.]Oh [C]Shenandoah [C]I long to hear [F]you
+```
 
 ## Exit codes
 

@@ -6,6 +6,15 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- **`export --lyricsheet`** writes the chart as a ChordPro lyric sheet
+  (usually `.cho`), to stdout or `--out`; `--part <label>` writes one
+  part's chords, and `--diagrams guitar` adds guitar chord diagrams. What
+  the sheet can't carry goes to stderr as `song.chart.md: warning:
+  message`, each message naming its own bars. `--version` lists
+  `@barmark/lyricsheet`.
+
 ## [0.13.0] - 2026-11-14
 
 ### Changed

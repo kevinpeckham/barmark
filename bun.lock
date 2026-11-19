@@ -30,6 +30,7 @@
         "barmark": "./dist/cli.js",
       },
       "dependencies": {
+        "@barmark/lyricsheet": "workspace:*",
         "@barmark/midi": "workspace:*",
         "@barmark/musicxml": "workspace:*",
         "@barmark/render": "workspace:*",

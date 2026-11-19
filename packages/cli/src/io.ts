@@ -11,6 +11,7 @@ export type Versions = {
 	musicxml: string;
 	score: string;
 	midi: string;
+	lyricsheet: string;
 	verovio: string;
 };
 

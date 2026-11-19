@@ -41,6 +41,7 @@
 		"@barmark/render": "workspace:*",
 		"@barmark/musicxml": "workspace:*",
 		"@barmark/midi": "workspace:*",
+		"@barmark/lyricsheet": "workspace:*",
 		"@barmark/score": "workspace:*",
 		"verovio": "6.4.1"
 	},
