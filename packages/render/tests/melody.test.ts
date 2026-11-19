@@ -495,7 +495,11 @@ Gtr.Lead | {E4} / / / | {D4} / / / |
 
 ## B
 Gtr.Lead | {E4} / / / | {D4} / / / |
+
+## C
+Gtr | F | G |
 `;
+		// No part sings: the lone bare line in C keeps its system and its label too.
 		expect(off(GTR)).toEqual(dflt(GTR));
 		same(GTR);
 		const BAND = `part: Pno = Piano
@@ -604,6 +608,37 @@ lyrics 1: | la / / / | la |
 `;
 		expect(dflt(t).diagnostics.filter((d) => d.severity === "error")).toEqual([]);
 		expect(off(t)).toEqual(dflt(t));
+	});
+
+	test("a chord name second in a group keeps the line", () => {
+		const t = `part: Pno = Piano
+part: Vox = Voice, instrument: voice
+time: 4/4
+
+Pno | {C3 E3 G3} | {G2 B2 D3} |
+Vox | {E4} / {G4}_Am7 / | {D4} / / / |
+lyrics 1: | la / / / | la |
+`;
+		expect(dflt(t).diagnostics.filter((d) => d.severity === "error")).toEqual([]);
+		expect(off(t)).toEqual(dflt(t));
+	});
+
+	test("a bare line that is the singing line stays a system when it stands alone", () => {
+		// Vox's bare line sings (its first line); Harm does not. Alone in B, the melody keeps its label.
+		const t = `part: Vox = Voice, instrument: voice
+time: 4/4
+
+## A
+Vox | {E4} / {G4} / | {D4} / / / |
+Vox.Harm | {C4} / {E4} / | {B3} / / / |
+lyrics 1: | la / la / | la |
+
+## B
+Vox | {E4} / {G4} / | {D4} / / / |
+lyrics 1: | la / la / | la |
+`;
+		expect(dflt(t).diagnostics.filter((d) => d.severity === "error")).toEqual([]);
+		expect(off(t).blocks[1]).toEqual(dflt(t).blocks[1]);
 	});
 
 	test("part: Vox with melody: false is the default's lone melody; a chord line and a Mel line draw plain rows", () => {
