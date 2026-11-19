@@ -2,6 +2,7 @@ import { type ChartDiagnostic, type ChartParse, extractPart, parseChart } from "
 import { comment } from "./changes.js";
 import { defineLines } from "./defines.js";
 import { gridSection } from "./grid.js";
+import { pushAll } from "./lists.js";
 import { Losses } from "./losses.js";
 import { lyricSection } from "./lyrics.js";
 import { headerLines, headerLosses } from "./meta.js";
@@ -26,12 +27,12 @@ function parsed(chart: string, options: LyricsheetOptions): Parsed {
 	const { part } = options;
 	const whole = parseChart(chart);
 	const parse = part === undefined ? whole : extractPart(chart, part);
-	const refused = (...diagnostics: ChartDiagnostic[]): Parsed => ({ ok: false, diagnostics });
+	const refused = (diagnostics: ChartDiagnostic[]): Parsed => ({ ok: false, diagnostics });
 	if (parse === null)
-		return refused(refusal(`no part labelled ${part}`, part), ...whole.diagnostics);
-	if (parse.diagnostics.some((d) => d.severity === "error")) return refused(...parse.diagnostics);
+		return refused([refusal(`no part labelled ${part}`, part), ...whole.diagnostics]);
+	if (parse.diagnostics.some((d) => d.severity === "error")) return refused(parse.diagnostics);
 	return parse.bars.length === 0
-		? refused(refusal("the chart has no bars to export"), ...parse.diagnostics)
+		? refused([refusal("the chart has no bars to export"), ...parse.diagnostics])
 		: { ok: true, parse, whole };
 }
 
@@ -45,7 +46,10 @@ function body(chart: string, p: Parsed & { ok: true }, options: LyricsheetOption
 	const first = sheet.bars[0];
 	if (!first) return;
 	const lay = layout(sheet);
-	out.lines.push(...lay.header.map((text) => comment(text, undefined, out)));
+	pushAll(
+		out.lines,
+		lay.header.map((text) => comment(text, undefined, out)),
+	);
 	const previous: Occurrence[] = [];
 	const context = {
 		previous,
@@ -68,7 +72,8 @@ function body(chart: string, p: Parsed & { ok: true }, options: LyricsheetOption
 function defined(out: Out, headed: number): void {
 	const lines = defineLines(out.uses ?? [], out);
 	if (lines.length === 0) return;
-	out.lines.splice(headed, 0, "", ...lines, ...(out.lines[headed] === "" ? [] : [""]));
+	const block = ["", ...lines, ...(out.lines[headed] === "" ? [] : [""])];
+	out.lines = [...out.lines.slice(0, headed), ...block, ...out.lines.slice(headed)];
 }
 
 /** A chart as a ChordPro lyric sheet, and what it could not carry. Never throws. */
@@ -80,7 +85,7 @@ export function exportLyricsheet(chart: string, options: LyricsheetOptions = {})
 		losses: new Losses(),
 		...(options.diagrams === "guitar" && { uses: [] }),
 	};
-	out.lines.push(...headerLines(p.parse, options.title));
+	pushAll(out.lines, headerLines(p.parse, options.title));
 	const headed = out.lines.length;
 	headerLosses(p.parse, out.losses, options.title);
 	body(chart, p, options, out);

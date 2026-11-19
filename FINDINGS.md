@@ -489,6 +489,25 @@ showed the rule needed refining.
 
 ## Performance and robustness
 
+### A spread of a large array into a call threw under Node and not under Bun (2026-11-19, @barmark/lyricsheet)
+
+- **The symptom.** `exportLyricsheet` threw `RangeError: Maximum call stack
+  size exceeded` under Node 22 on a chart with some 190,000 distinct chord
+  names and `diagrams: "guitar"` (`out.lines.splice(at, 0, "", ...defines)`),
+  and on 200,000 text lines before the first section (`push(...w.pending)`),
+  though every test passed: they run under Bun.
+- **The cause.** A spread into a call passes every item as an argument, and
+  V8's stack allows about 120,000 of them; Bun's limit is far higher. The
+  same shape was in `Math.max(...x)`, `push(...pass)` for a bar of 200,000
+  slots, and `refused(...diagnostics)` for 200,000 diagnostics.
+- **The fix.** `src/export/lists.ts` (`pushAll`, `maxOf`) and array literals
+  replace every spread of a list a chart can make long (the small ones, at
+  most six strings, say so). `packages/lyricsheet/tests/node.test.ts` builds
+  the package and runs the three shapes in a Node child with the chart piped
+  in; the define case runs with `--stack-size=400`, since only about
+  100,000 names have a shape and the default limit is machine-dependent.
+  "Never throws" needs a test that runs under Node.
+
 ### A scan step bounds no work, and an "ms overshoot" can be a whole bar (2026-11-11, @barmark/listen 0.1.1)
 
 - **The symptom.** Two things the 0.1.0 review found. `COMB_PHASE_STEP_SEC`
@@ -804,6 +823,18 @@ When converting to a format that keeps written order, test the played
 order, not just the written marks.
 
 ## Design
+
+### A shape's `base` is not ChordPro's `base-fret` (2026-11-19, @barmark/lyricsheet)
+
+- **The symptom.** `{define: Cm base-fret 1 frets x 3 5 5 4 3}` made the
+  reference `chordpro` print `Fret position 5 exceeds diagram size 4`.
+- **The cause.** `@barmark/fretboard`'s `Shape.base` is the first fret of a
+  five-fret diagram, and it is 1 for any shape up to the fifth fret; ChordPro's
+  diagram has four frets from `base-fret`, so `f - base + 1` can reach 5.
+- **The fix.** `frets()` in `packages/lyricsheet/src/export/defines.ts` takes
+  its own base: 1 when the highest fret is 4 or less, else the lowest fretted
+  fret (a shape spans at most three), so `Cm` is `base-fret 3 frets x 1 3 3 2 1`.
+  `tests/defines.test.ts` sweeps over a hundred shapes for it.
 
 ### Pulling a bare `add` out of a chord name changed its root (2026-11-14, barmark)
 

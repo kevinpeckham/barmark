@@ -52,7 +52,13 @@ for (const options of [{}, { diagrams: "guitar" }] as LyricsheetOptions[]) {
 				const r = exportLyricsheet(text, options);
 				if (!r.ok) continue;
 				const lines = readCho(r.text);
-				expect([name, / $/m.test(r.text), r.text.endsWith("\n\n")]).toEqual([name, false, false]);
+				const shape = [
+					r.text.includes("\t"),
+					/ $/m.test(r.text),
+					r.text.endsWith("\n"),
+					r.text.endsWith("\n\n"),
+				];
+				expect([name, shape]).toEqual([name, [false, false, true, false]]);
 				const named = lines.flatMap((l) => (l.kind === "directive" ? [l.name] : []));
 				expect([name, named.filter((d) => !DIRECTIVES.has(d))]).toEqual([name, []]);
 				const open = (d: string) => named.filter((n) => n === `start_of_${d}`).length;

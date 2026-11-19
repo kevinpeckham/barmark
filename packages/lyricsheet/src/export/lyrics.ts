@@ -6,6 +6,7 @@
  */
 import { memberShares, type PlayedBar, type SimpleSlot, type Slot, type Syllable } from "barmark";
 import { changeLines, comment } from "./changes.js";
+import { pushAll } from "./lists.js";
 import { lyricLine, type Piece } from "./merge.js";
 import { directive } from "./meta.js";
 import type { Layout, Occurrence, Run } from "./plan.js";
@@ -39,7 +40,7 @@ const LOST = {
 		"verses stacked on the same bars (not one verse per pass of a repeat) are written one pass per verse, each with its chords: ChordPro has no stacking",
 } as const;
 
-export const lose = (out: Out, code: keyof typeof LOST, bar?: PlayedBar) =>
+export const lose = (out: Out, code: keyof typeof LOST, bar: PlayedBar) =>
 	out.losses.add(code, LOST[code], bar);
 
 /** The environment a heading's first word names (spec 4.6): verse, chorus or bridge, any case; else verse. */
@@ -199,8 +200,8 @@ function lyricText(bars: PlayedBar[], fermatas: Set<number>, out: Out): string {
 			...sung.pieces,
 			...fermataAt(bar, bar.index, offset + length, fermatas, out),
 		];
-		pieces.push(...own);
-		owner.push(...own.map(() => bar));
+		pushAll(pieces, own);
+		for (const _ of own) owner.push(bar);
 		changed ||= harmony.changed || sung.changed;
 		offset += length;
 	}
@@ -286,9 +287,13 @@ export function lyricSection(o: Occurrence, out: Out, context: Context): void {
 	const recalled = env === "chorus" && recalls(o, body, context);
 	if (env === "chorus") context.chorus.last = { form: o.form, body };
 	if (out.lines.length) out.lines.push("");
-	out.lines.push(...headingTexts(o, context, out));
+	pushAll(out.lines, headingTexts(o, context, out));
 	if (recalled) out.lines.push(directive("chorus"));
-	else out.lines.push(startLine(env, o.name, out, o.bars[0]), ...lines, directive(`end_of_${env}`));
+	else {
+		out.lines.push(startLine(env, o.name, out, o.bars[0]));
+		pushAll(out.lines, lines);
+		out.lines.push(directive(`end_of_${env}`));
+	}
 }
 
 /**

@@ -1,0 +1,15 @@
+{title: Shapes}
+{composer: Our Band}
+{key: C}
+{time: 4/4}
+{tempo: 90}
+
+{start_of_grid: label="Intro" shape="1+4x4+1"}
+| Am . . . | Cm . . . | F#m7b5 . . . | C(6) . . . |
+| C7alt . . . | Cmaj7 . . . | C7(b9,#9,#11,b13) . . . | *C,E,G . . . |
+{end_of_grid}
+
+{start_of_verse: label="Verse"}
+[G]Hey ho [D/F#]and up [Cmaj7]we go [Dm7]to sea
+[Bb]the wind [G/B]is on [Dm7]our back [C13b9/Eb]home
+{end_of_verse}

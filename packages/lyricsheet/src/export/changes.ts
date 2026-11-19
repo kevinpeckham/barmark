@@ -6,6 +6,7 @@
  * reader sees, on the line before it (spec 4.6, amended 2026-11-18).
  */
 import type { PlayedBar } from "barmark";
+import { pushAll } from "./lists.js";
 import { directive, keyText } from "./meta.js";
 import { plain, textChanged } from "./text.js";
 import type { Out } from "./types.js";
@@ -79,9 +80,9 @@ export function changeLines(
 	const from = prev ? stateOf(prev) : opening(first);
 	const to = stateOf(bar);
 	const lines = keyLines(from, to, bar, out);
-	if (from.time !== to.time) lines.push(...shown("time", "Time", to.time));
+	if (from.time !== to.time) pushAll(lines, shown("time", "Time", to.time));
 	if (to.tempo !== null && from.tempo !== to.tempo)
-		lines.push(...shown("tempo", "Tempo", String(to.tempo)));
+		pushAll(lines, shown("tempo", "Tempo", String(to.tempo)));
 	for (const text of [gradualText(from, to) ?? endText(from, to), feelText(from, to)])
 		if (text !== null) lines.push(directive("comment", text));
 	return lines;

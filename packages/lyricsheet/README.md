@@ -20,6 +20,7 @@ else console.error(r.diagnostics);
 
 ```ts
 function exportLyricsheet(chart: string, options?: LyricsheetOptions): LyricsheetResult;
+const VERSION: string; // the package's version
 
 type LyricsheetOptions = {
 	/** Write this part's lines: the part's label, as `extractPart` takes it. */
@@ -42,7 +43,7 @@ type LyricsheetLoss = {
 };
 ```
 
-`exportLyricsheet` never throws. A chart with an error, an unknown `part` or no bars returns `{ ok: false, diagnostics }` and no text; otherwise `text` is the sheet (one final newline, no tab, no trailing space), `diagnostics` the chart's warnings and `losses` what the sheet could not carry. With no `part`, the part written is the first declared one that writes a chord symbol, with the words the singer sings.
+`exportLyricsheet` never throws, on any chart or under Node or Bun. A chart with an error, an unknown `part` or no bars returns `{ ok: false, diagnostics }` and no text; otherwise `text` is the sheet (one final newline, no tab, no trailing space), `diagnostics` the chart's warnings and `losses` what the sheet could not carry. With no `part`, the part written is the first declared one that writes a chord symbol, with the words the singer sings.
 
 ## An example
 
@@ -122,7 +123,7 @@ A lyric sheet keeps the order of chords and words, not their timing: a chord is 
 
 ## Losses
 
-Each loss is reported once per code, at its lowest bar, naming the bars (`in 3 bars: 2, 5, 9`).
+Each loss is reported once per code, at its lowest bar, naming the bars (`(3 bars: 2, 5, 9)`). `no-shape` and `shell-shape` name no bar: they are about a chord name, wherever it is written.
 
 | Code | What is lost, and why |
 |---|---|
@@ -139,9 +140,8 @@ Each loss is reported once per code, at its lowest bar, naming the bars (`in 3 b
 | `bar-meter` | A one-bar meter: lyric lines do not show a bar's own meter. |
 | `mark-moved` | A rehearsal mark inside a grid line with `x N`, written at the line's start: the count is the whole line's, so the line is not split at the mark. |
 | `fermata` | A fermata, written as the annotation `*…` (ChordPro has none): a reader sees an ellipsis over the words, or in a grid's cell, not a fermata sign. |
-| `no-shape` | With `diagrams: "guitar"`: a chord with no playable guitar shape (a note below the guitar, more tones than strings, a chord no shape in a hand's limits sounds), so no diagram is written for it. Listed by name, ten at most. |
+| `no-shape` | With `diagrams: "guitar"`: a chord with no playable guitar shape (no shape within one hand's limits sounds the chord: a span of at most three frets, four fingers, frets 0 to 15, at least three strings, no muted string inside, the bass the lowest note; see `@barmark/fretboard`'s "The limits"), so no diagram is written for it. Listed by name, ten at most. |
 | `shell-shape` | With `diagrams: "guitar"`: an altered chord (`7alt`) has only a shell for a shape, its root, third and flat seventh: its altered tones are not in the diagram. Listed by name. |
-
 
 ## Known gaps
 
@@ -156,10 +156,10 @@ ChordPro's own chord parser rejects some chord names barmark reads. The export w
 
 ## How it is checked
 
-- Golden files: every fixture chart under `tests/fixtures` has the sheet the export must write for it, byte for byte, with and without diagrams.
+- Golden files: every fixture chart under `tests/fixtures` has the sheet the export must write for it, byte for byte, with diagrams for the four charts that have one (`defines`, `shenandoah`, `morning-song`, `spellings`).
 - A played yardstick: a test-only reader reads each sheet back into the chords and words in play order, and compares them with what the chart plays, so a sheet that lost a chord or a word fails.
 - ChordPro's own tool, on the maintainer's machine only: every golden sheet is run through ChordPro's reference `chordpro` with `--strict` (`bun scripts/chordpro-check.ts`), and the warnings it may give are exactly those the chart's gaps and key predict.
-- Scale tests (a 1,000-bar chart exports in time linear in its length, a 2,000-name define block is not quadratic) and a test that walks the whole corpus.
+- Scale tests (a 1,000-bar chart exports in time linear in its length, the define block's time on 20,000 distinct names against 5,000, and a run of the built package under Node on 140,000 names and 200,000 text lines, which pass under Bun even where Node throws) and a test that walks the whole corpus.
 
 ## License
 

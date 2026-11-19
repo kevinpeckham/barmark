@@ -10,10 +10,7 @@ import type { ChordRecord, PlayedBar } from "barmark";
 import { lose } from "./lyrics.js";
 import { directive } from "./meta.js";
 import { isGap, spelled } from "./spell.js";
-import type { Out } from "./types.js";
-
-/** One chord the body writes, with the voicing written after it and where. */
-export type Use = { chord: ChordRecord; voicing: ChordRecord | null; bar?: PlayedBar };
+import type { Out, Use } from "./types.js";
 
 /** What the body writes for one name: its chord, its voicings and the bars to report losses at. */
 type Entry = {
@@ -37,10 +34,8 @@ function entriesOf(uses: Use[]): Entry[] {
 			entries.set(name, e);
 		}
 		e.voicings.set(u.voicing?.canonical ?? null, u.voicing);
-		if (u.bar) {
-			e.bars.push(u.bar);
-			if (u.voicing) e.voiced.push(u.bar);
-		}
+		e.bars.push(u.bar);
+		if (u.voicing) e.voiced.push(u.bar);
 	}
 	return [...entries.values()];
 }
@@ -69,6 +64,7 @@ function shapeOf(e: Entry): Shown | null {
  */
 function frets(shape: Shape): { base: number; text: string } {
 	const fretted = shape.frets.filter((f) => f > 0);
+	// At most six strings: a spread of this list is small.
 	const base = Math.max(...fretted, 0) <= 4 ? 1 : Math.min(...fretted);
 	const text = shape.frets.map((f) => (f < 0 ? "x" : f === 0 ? "0" : String(f - base + 1)));
 	return { base, text: text.join(" ") };
@@ -80,9 +76,12 @@ function listed(names: string[]): string {
 	return names.length > 10 ? `${shown} and ${names.length - 10} more` : shown;
 }
 
+const NOT_DRAWN =
+	"a voicing is written as its chord's name and its notes are not drawn: the chord's own shape is, when it has one (a name has one shape, and the chart's voicings of it differ, or the voicing does not fit the guitar)";
+
 /** What a name's diagram does not carry: the voicing's notes (unless drawn), and a gap's name (unless defined). */
 function report(e: Entry, got: Shown | null, out: Out): void {
-	if (!got?.voiced) for (const bar of e.voiced) lose(out, "voicing", bar);
+	if (!got?.voiced) for (const bar of e.voiced) out.losses.add("voicing", NOT_DRAWN, bar);
 	if (got === null && isGap(e.chord)) for (const bar of e.bars) lose(out, "chord-names", bar);
 }
 
@@ -98,8 +97,10 @@ export function defineLines(uses: Use[], out: Out): string[] {
 	for (const e of entriesOf(uses)) {
 		const got = shapeOf(e);
 		report(e, got, out);
-		if (got === null) bare.push(e.name);
-		if (got === null) continue;
+		if (got === null) {
+			bare.push(e.name);
+			continue;
+		}
 		if (got.shell) shell.push(e.name);
 		const { base, text } = frets(got.shape);
 		lines.push(directive("define", `${e.name} base-fret ${base} frets ${text}`));

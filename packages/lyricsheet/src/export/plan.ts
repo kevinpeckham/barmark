@@ -6,6 +6,7 @@
  * end of an open repeat) by where it is written.
  */
 import type { ChartEvent, ChartParse, PlayedBar, SectionOccurrence } from "barmark";
+import { pushAll } from "./lists.js";
 
 export type Occurrence = {
 	name: string | null;
@@ -103,7 +104,8 @@ function environments(bars: PlayedBar[]): PlayedBar[][] {
 			sang = new Map();
 		}
 		for (const b of pass) sang.set(b.written, verseKey(b));
-		out.at(-1)?.push(...pass);
+		const last = out.at(-1);
+		if (last) pushAll(last, pass);
 	}
 	return out;
 }
@@ -178,8 +180,7 @@ type Walk = Pick<Layout, "header" | "runs" | "headings"> & {
 function settle(w: Walk): void {
 	if (!w.pending.length) return;
 	if (w.heading !== null && !w.hasRun) w.headings.set(w.heading, w.pending);
-	else if (w.last) w.last.after.push(...w.pending);
-	else w.header.push(...w.pending);
+	else pushAll(w.last ? w.last.after : w.header, w.pending);
 	w.pending = [];
 }
 

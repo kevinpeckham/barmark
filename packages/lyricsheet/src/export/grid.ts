@@ -35,6 +35,7 @@
 import { beatsOf, type PlayedBar } from "barmark";
 import { barCells } from "./cells.js";
 import { changeLines } from "./changes.js";
+import { maxOf, pushAll } from "./lists.js";
 import { byLine, type Context, headingTexts, labelOf, lose, runOf, texts } from "./lyrics.js";
 import { directive } from "./meta.js";
 import type { Occurrence } from "./plan.js";
@@ -185,8 +186,8 @@ function drawRow(row: Row, out: Out, context: GridContext): Drawn {
 	const body = measures.map((m) => m.join(" ")).join(" | ");
 	const text = [left.join(" "), row.open, body, row.close, right.join(" ")].filter((t) => t !== "");
 	const beats = Math.max(
-		...row.bars.map((b) => beatsOf(b.time ?? b.meter)),
-		...measures.map((m) => m.length),
+		maxOf(row.bars.map((b) => beatsOf(b.time ?? b.meter))),
+		maxOf(measures.map((m) => m.length)),
 	);
 	const cells = measures.reduce((n, m) => n + m.length, 0);
 	const written = unjoined(text.join(" "));
@@ -213,7 +214,7 @@ export function gridSection(o: Occurrence, out: Out, context: GridContext): void
 		.filter((row) => row.bars.length)
 		.map((row) => drawRow(row, out, context));
 	if (out.lines.length) out.lines.push("");
-	out.lines.push(...headingTexts(o, context, out));
+	pushAll(out.lines, headingTexts(o, context, out));
 	const label = labelOf(o.name, out, o.bars[0]);
 	if (!drawn.length) return;
 	out.lines.push(startLine(drawn, label));
@@ -223,11 +224,12 @@ export function gridSection(o: Occurrence, out: Out, context: GridContext): void
 		const end = row.bars.at(-1) as PlayedBar;
 		const run = runOf(layout, first);
 		if (g === 0 || runOf(layout, drawn[g - 1]?.row.bars[0]) !== run)
-			out.lines.push(...texts(run, "before", first, out));
-		out.lines.push(...changeLines(prev, first, context.first, out), text);
+			pushAll(out.lines, texts(run, "before", first, out));
+		pushAll(out.lines, changeLines(prev, first, context.first, out));
+		out.lines.push(text);
 		if (layout.openEnds.has(end.index)) out.lines.push(directive("comment", "repeat ad lib."));
 		if (runOf(layout, drawn[g + 1]?.row.bars[0]) !== run)
-			out.lines.push(...texts(run, "after", end, out));
+			pushAll(out.lines, texts(run, "after", end, out));
 		prev = end;
 	});
 	out.lines.push(directive("end_of_grid"));

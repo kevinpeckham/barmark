@@ -5,6 +5,7 @@
  * through, so its grid can keep their repeat signs.
  */
 import type { ChartParse, Line, PlayedBar } from "barmark";
+import { maxOf } from "./lists.js";
 import type { Occurrence } from "./plan.js";
 
 export type BarsLine = Extract<Line, { kind: "bars" }>;
@@ -90,7 +91,7 @@ function* playRepeat(lines: BarsLine[], i: number, k: number): Generator<BarsLin
 		return;
 	}
 	const endings = endingsFrom(lines, k);
-	const passes = Math.max(...endings.flatMap((e) => e[0]?.ending ?? []));
+	const passes = maxOf(endings.flatMap((e) => e[0]?.ending ?? []));
 	const body = lines.slice(i, k);
 	for (let p = 1; p <= passes; p++)
 		yield* play([...body, ...(endings.find((e) => e[0]?.ending?.includes(p)) ?? [])]);

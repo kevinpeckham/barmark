@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { shapeFor } from "@barmark/fretboard";
-import { parseChord } from "barmark";
+import { parseChart, parseChord } from "barmark";
 import { defineLines } from "../src/export/defines.js";
 import { Losses } from "../src/export/losses.js";
 import { exportLyricsheet, type LyricsheetResult } from "../src/index.js";
@@ -9,6 +9,12 @@ const chordOf = (name: string) => {
 	const c = parseChord(name);
 	if (!c.ok) throw new Error(name);
 	return c.value;
+};
+
+const bar = () => {
+	const b = parseChart("| Am |").bars[0];
+	if (!b) throw new Error("no bar");
+	return b;
 };
 
 const sheet = (chart: string, diagrams = true) => {
@@ -171,7 +177,7 @@ describe("shapes that do not stand for the chord", () => {
 describe("defineLines", () => {
 	test("is given the chords as used, and writes each name once", () => {
 		const out = { lines: [], losses: new Losses() };
-		const use = { chord: chordOf("Am"), voicing: null };
+		const use = { chord: chordOf("Am"), voicing: null, bar: bar() };
 		expect(defineLines([use, use, use], out)).toEqual([
 			"{define: Am base-fret 1 frets x 0 2 2 1 0}",
 		]);

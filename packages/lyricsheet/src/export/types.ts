@@ -1,5 +1,4 @@
-import type { ChartDiagnostic } from "barmark";
-import type { Use } from "./defines.js";
+import type { ChartDiagnostic, ChordRecord, PlayedBar } from "barmark";
 import type { Losses } from "./losses.js";
 
 export type LyricsheetOptions = {
@@ -56,6 +55,9 @@ export type LyricsheetLoss = {
 export type LyricsheetResult =
 	| { ok: true; text: string; diagnostics: ChartDiagnostic[]; losses: LyricsheetLoss[] }
 	| { ok: false; diagnostics: ChartDiagnostic[] };
+
+/** One chord the body writes, with the voicing written after it and the bar it is in. */
+export type Use = { chord: ChordRecord; voicing: ChordRecord | null; bar: PlayedBar };
 
 /** What every stage writes into: the lines so far and the losses so far. */
 export type Out = {
