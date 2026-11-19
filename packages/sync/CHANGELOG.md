@@ -6,6 +6,13 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.4.3] - 2026-11-19
+
+### Changed
+
+- **Requires `barmark` 0.25.0**, whose minor release a caret range
+  would not reach.
+
 ## [0.4.2] - 2026-11-14
 
 ### Changed
@@ -103,7 +110,8 @@ exports: `keyFromText`, `conventionalKey`, `printKey`, `spellPitch`).
   times the runs' own confidence; `?` is 0), and the confidences the input
   gave for `key`, `meter`, `tempo` and `sections`. The shape may change.
 
-[Unreleased]: https://github.com/kevinpeckham/barmark/compare/sync-v0.4.2...HEAD
+[Unreleased]: https://github.com/kevinpeckham/barmark/compare/sync-v0.4.3...HEAD
+[0.4.3]: https://github.com/kevinpeckham/barmark/compare/sync-v0.4.2...sync-v0.4.3
 [0.4.2]: https://github.com/kevinpeckham/barmark/compare/sync-v0.4.1...sync-v0.4.2
 [0.4.1]: https://github.com/kevinpeckham/barmark/compare/sync-v0.4.0...sync-v0.4.1
 [0.4.0]: https://github.com/kevinpeckham/barmark/compare/sync-v0.3.0...sync-v0.4.0
