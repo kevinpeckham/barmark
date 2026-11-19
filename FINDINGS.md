@@ -9,6 +9,32 @@ not here.
 
 ## Testing
 
+### Engravers disagree where a one-line staff's line is (2026-11-18, @barmark/score, @barmark/musicxml)
+
+**Symptom:** on barmark.dev's home page, Amazing Grace's Score view drew
+each slash of the "Lyrics" staff above its line with strokes through it:
+Kevin took them for symbols he did not know. They were ledger lines. It
+had looked that way since lyric rows were added (2026-11-06); every test
+counted notes and verses, and none looked at where a note sat.
+
+**Cause:** `@barmark/musicxml` writes a rhythm staff's slash as an
+unpitched note displayed at B4, "the staff's middle line". A one-line
+staff has no middle line, and MusicXML does not say which pitch its line
+is. Verovio 6.4 draws the line where a treble staff has E4 (line 1), so B4
+is two steps above it; MuseScore 4 draws it where F5 is, so B4 is two
+steps below it. Measured by engraving the same row at B4, E4 and others
+in each.
+
+**Fix:** `@barmark/score`'s `forVerovio` moves the slash to E4, where
+Verovio's line is, and a test engraves a lyric row with real Verovio and
+requires no ledger lines (and shows that the export, read as it is, has
+them). The export itself is unchanged until Dorico is checked: no value
+is right in both Verovio and MuseScore.
+
+**Where it lives:** `packages/score/src/engrave.ts` (`forVerovio`),
+`packages/score/tests/for-verovio.test.ts`; the export's value is
+`SLASH.rhythm` in `packages/musicxml/src/notes.ts`.
+
 ### A bundle-size test whose number depended on how the test was started (2026-11-13, @barmark/render)
 
 - **The symptom.** `packages/render/tests/size.test.ts` measured the element
@@ -1446,6 +1472,28 @@ green. The `confirm` job now tries the install up to six times, ten
 seconds apart, before failing.
 
 **Where it lives:** `.github/workflows/release.yml`, `confirm`.
+
+### A brief asked for a spelling an earlier decision had refused; another package's test caught it (2026-11-18, barmark, the delta spellings)
+
+**Symptom:** the brief for the delta spellings listed `CmMaj7` among the
+new aliases, as "Claude's ruling the same day". With it in,
+`packages/listen/tests/bars.test.ts` failed: "the seven spellings barmark
+does not read".
+
+**Cause:** Kevin had decided on 2026-11-09 that barmark does not read
+`CM7`, `CSus4`, `CmMaj7`, `CmM7`, `C69`, `C(7)sus4` or a Unicode minus
+(the listen design, section 13). The decision lives in listen's design,
+not in the grammar's decisions log, so writing the brief from the grammar
+alone missed it.
+
+**Fix:** the implementer left `mMaj` out and said why; the grammar's log
+now cites that decision beside the delta row. When a brief adds a
+spelling, search every design under `docs/superpowers/specs/` for it, not
+only the grammar.
+
+**Where it lives:** `docs/grammar-v0.1-draft.md` (the decisions log),
+`docs/superpowers/specs/2026-11-09-listen-design.md` section 13,
+`packages/listen/tests/bars.test.ts`.
 
 ### A subagent's "the check is clean" is a claim: read the exit code yourself (2026-11-13, the listen 0.2 build)
 

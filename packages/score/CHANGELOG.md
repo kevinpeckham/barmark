@@ -6,6 +6,18 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.6.2] - 2026-11-18
+
+### Fixed
+
+- **A lyric row's rhythm slashes sit on their line.** A chart with words
+  and no melody engraves the words on a one-line staff of slashes. Each
+  slash was drawn two steps above the line, with ledger lines through it,
+  which read as an unknown symbol. Verovio draws a one-line staff's line
+  where a treble staff has E4, and `@barmark/musicxml` writes the slash at
+  B4: the score now moves it for Verovio. The exported MusicXML is
+  unchanged.
+
 ## [0.6.1] - 2026-11-14
 
 ### Changed
@@ -302,7 +314,8 @@ First release.
   needs no config; Vite 7 needs `optimizeDeps.exclude` and
   `worker.format: "es"`.
 
-[Unreleased]: https://github.com/kevinpeckham/barmark/compare/score-v0.6.1...HEAD
+[Unreleased]: https://github.com/kevinpeckham/barmark/compare/score-v0.6.2...HEAD
+[0.6.2]: https://github.com/kevinpeckham/barmark/compare/score-v0.6.1...score-v0.6.2
 [0.6.1]: https://github.com/kevinpeckham/barmark/compare/score-v0.6.0...score-v0.6.1
 [0.6.0]: https://github.com/kevinpeckham/barmark/compare/score-v0.5.0...score-v0.6.0
 [0.5.0]: https://github.com/kevinpeckham/barmark/compare/score-v0.4.0...score-v0.5.0
