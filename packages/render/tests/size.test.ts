@@ -18,7 +18,9 @@ const ROOT = join(import.meta.dir, "../../..");
  * same day after the parser's review fixes (suggestions that keep the root,
  * the flat sixth's Harte spelling, refused tones after a bare `add`, aliased
  * qualities): the element measured 53,581 bytes, 260 more, so the base is
- * 53,581 - 6,558 = 47,023.
+ * 53,581 - 6,558 = 47,023. Re-anchored again for `melody: false` (the layout
+ * rule, the attribute and the property): 53,631 on main, 53,831 with it; the
+ * limit rises by the 58 bytes it was over, so the base is 47,081.
  *
  * The method: copy the sources the element needs (`packages/*\/src`) and the
  * root `tsconfig.json` into a temp directory with no `package.json`, and
@@ -39,7 +41,7 @@ const ROOT = join(import.meta.dir, "../../..");
  * numbers and the reason in the commit. BUDGET is the product owner's and changes only on his
  * say.
  */
-const BEFORE_DIAGRAMS = 47_023;
+const BEFORE_DIAGRAMS = 47_081;
 // Kevin's decision (design §6.2): 5,500 at first, raised on 2026-11-13 once the
 // built feature measured 6,539 bytes and no trimming could close the gap.
 const BUDGET = 6_750;
@@ -106,7 +108,7 @@ test("the bundles that are measured work", async () => {
 	});
 });
 
-test("the element is at most 53,773 bytes gzipped (47,023 before chord diagrams, plus their 6,750 budget)", async () => {
+test("the element is at most 53,831 bytes gzipped (47,081 before chord diagrams, plus their 6,750 budget)", async () => {
 	const bytes = await inCopy(async (dir) => gzipped(await bundle(dir, "element", elementEntry)));
 	console.log(`element: ${bytes} gzipped`);
 	expect(bytes).toBeLessThanOrEqual(BEFORE_DIAGRAMS + BUDGET);

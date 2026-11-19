@@ -79,6 +79,8 @@ export type RenderOptions = {
 	wrap?: boolean;
 	/** Draw only the part with this label (barmark's grammar 7.4): one player's view. */
 	part?: string;
+	/** Leave a singer's melody line out of the grid, its words kept under the chords; `false` is the attribute `melody="off"`. A melody on its own stays. */
+	melody?: boolean;
 	/**
 	 * How a section sizes its columns. `"shared"` (the default): its rows share
 	 * column tracks, so bar lines line up down the section and the widest bar
@@ -129,6 +131,7 @@ function elementAttributes(options: RenderOptions): string {
 		options.rehearsalLetters ? " rehearsal-letters" : "",
 		numeralsOf(options) ? ` numerals="${numeralsOf(options)}"` : "",
 		options.wrap === false ? ' wrap="off"' : "",
+		options.melody === false ? ' melody="off"' : "",
 		options.part ? ` show-part="${escapeHtml(options.part)}"` : "",
 		byRow(options) ? ' columns="row"' : "",
 		diagramAttributes(options),
@@ -168,6 +171,7 @@ function chartHtml(text: string, options: RenderOptions): string {
 	const model = layoutChart(text, {
 		rehearsalLetters: options.rehearsalLetters ?? false,
 		...(options.part && { part: options.part }),
+		...(options.melody === false && { melody: false }),
 		...(options.chordDiagrams === "guitar" && { chordDiagrams: "guitar" as const }),
 	});
 	const barNumbers = options.barNumbers ?? true;

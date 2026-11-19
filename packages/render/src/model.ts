@@ -53,6 +53,8 @@ type Context = {
 	bars: Map<number, DrawnBar[]>;
 	/** The beat a tempo counts at each directive line, by its line number. */
 	beats: Map<number, TempoBeat>;
+	/** Whether a singing line draws in a system that has other lines (`melody: false` leaves it out). */
+	melody: boolean;
 };
 
 /** A played bar as drawn: `perPart` marks a tutti bar its parts play differently. */
@@ -123,6 +125,7 @@ export function layoutChart(text: string, options: LayoutOptions = {}): ChartMod
 		written: new Map(groups.flatMap((g) => (g.heading ? [[g.heading.line, g] as const] : []))),
 		bars: indexByLine(barsByLine(parse)),
 		beats: tempoBeats(parse.lines),
+		melody: options.melody !== false,
 	};
 	const blocks = groups.map((g) => layoutGroup(g, ctx));
 	// A chart that writes its own rehearsal marks keeps them alone: letters beside them would mark each place twice.
@@ -350,7 +353,7 @@ function layoutLines(
 		const laid: Laid =
 			system === null
 				? layoutOne(l, occurrence, previous, ctx)
-				: layoutSystemAt(systemLines(lines, i), occurrence, previous, ctx);
+				: layoutSystemOf(systemLines(lines, i), occurrence, previous, ctx);
 		previous = laid.previous;
 		items.push(...laid.items);
 	}
@@ -360,14 +363,39 @@ function layoutLines(
 /** What laying out a line gives: its items, and the last bar drawn so far, whose meter `%` borrows. */
 type Laid = { items: BlockItem[]; previous: SlotsCell | null };
 
-/** A system, and the words under it that no line in it sings. */
-function layoutSystemAt(
-	lines: SystemLine[],
+/**
+ * A system as drawn: with `melody: false`, a singing line is left out while
+ * any other line stays, and its words draw by beat under the rest. A lone
+ * line of a one-part chart draws as a line outside a system does.
+ */
+function layoutSystemOf(
+	written: SystemLine[],
 	occurrence: SectionOccurrence | undefined,
 	previous: SlotsCell | null,
 	ctx: Context,
 ): Laid {
-	const item = layoutSystem(lines, occurrence, previous, ctx);
+	const lines = ctx.melody ? written : withoutMelody(written, ctx);
+	const [only] = lines;
+	if (only && lines.length === 1 && lines.length < written.length && ctx.parse.parts.length === 1)
+		return layoutOne(only, occurrence, previous, ctx);
+	return layoutSystemAt(lines, written, occurrence, previous, ctx);
+}
+
+/** The system's lines but its singing ones (barmark's grammar 7.7); all of them when every line sings. */
+function withoutMelody(lines: SystemLine[], ctx: Context): SystemLine[] {
+	const kept = lines.filter((l) => l.kind !== "bars" || singerOf(l, ctx.parse) === null);
+	return kept.length ? kept : lines;
+}
+
+/** A system, and the words under it that no line in it sings; `written` is every line the system writes, drawn or not. */
+function layoutSystemAt(
+	lines: SystemLine[],
+	written: SystemLine[],
+	occurrence: SectionOccurrence | undefined,
+	previous: SlotsCell | null,
+	ctx: Context,
+): Laid {
+	const item = layoutSystem(lines, written, occurrence, previous, ctx);
 	const lyrics = lyricRows(lines, occurrence, ctx);
 	// The words go under the system: in its last row that plays.
 	const last = item.rows.findLastIndex((p) => p.row.kind === "row" && !p.row.cells.some(isTacet));
@@ -465,6 +493,7 @@ const labelOf = (l: SystemLine) =>
 /** A row per declared part, or per line it writes, in score order: its own line, its error, or tacet bars. */
 function layoutSystem(
 	lines: SystemLine[],
+	written: SystemLine[],
 	occurrence: SectionOccurrence | undefined,
 	previous: SlotsCell | null,
 	ctx: Context,
@@ -477,6 +506,8 @@ function layoutSystem(
 			: layoutRow(own, playedOn(own.line, occurrence, ctx), previous, ctx);
 	const rows = ctx.parse.parts.flatMap((p) => {
 		const own = ownLines(lines, p);
+		// A part whose every line was left out has no row; one with no line written is tacet.
+		if (!own.length && ownLines(written, p).length) return [];
 		if (!own.length)
 			return [
 				{ label: p.label ?? "", name: p.name, row: tacetRow(reference, lines[0]?.line ?? 0) },
