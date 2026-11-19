@@ -6,6 +6,14 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- **`melody: false`** (attribute `melody="off"`, property `melody`) leaves a
+  voice part's singing line out of the grid, so a lead sheet of chords,
+  melody and words draws as chords and words. The words stay, spaced by
+  beat under the chords; a melody on its own stays; nothing musical
+  changes.
+
 ## [0.20.2] - 2026-11-19
 
 ### Changed
