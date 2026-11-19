@@ -18,3 +18,15 @@ republishing the songs needs Kevin's permission.
 The fixtures' `.expected.json` files describe the same songs (their bars
 and sections) and are covered too. The charts are kept exactly as written,
 so this notice lives here rather than in the files.
+
+# A bass line for another writer's song: all rights reserved
+
+`packages/midi/tests/fixtures/interbellum-bass-09.mid` is a bass line
+arranged and played by Kevin Peckham for a song written by Karl Ward. The
+song is all rights reserved and is used here with permission. Neither the
+file nor its transcription,
+`packages/midi/tests/fixtures/interbellum-bass-09.chart.md`, is covered by
+the MIT licence (`LICENSE`) or the grammar's CC BY 4.0 licence
+(`docs/LICENSE`). They are here so the MIDI import can be tested on a
+played part; a test holds both out of the published npm package, and the
+notice beside them (`interbellum-bass-09.NOTICE.md`) says the same.
