@@ -374,6 +374,7 @@ test.describe("home: the examples", () => {
 			const window = el.closest(".overflow-x-auto") as HTMLElement | null;
 			return {
 				pitches: root?.querySelectorAll(".bm-pitch").length ?? -1,
+				extenders: root?.querySelectorAll(".bm-extender").length ?? -1,
 				syllables: root?.querySelectorAll(".bm-syllable").length ?? 0,
 				text: root?.textContent ?? "",
 				melody: el.getAttribute("melody"),
@@ -415,16 +416,20 @@ test.describe("home: the examples", () => {
 	test("Amazing Grace's grid fits the window at 1280, with no sideways scroll", async ({
 		page,
 	}) => {
-		// Known to fail: without the melody row the grid is 627px in a 602px window. The
-		// melismas (`ing_/`) space their bars by eighth notes; without them it fits exactly.
-		// Kept as a failing expectation, not loosened, until that is settled.
-		test.fail();
+		// With the melody left out, a melisma's held place (`ing_/`) draws as `ing` does: no
+		// eighth-note steps and no extender, so the grid is as narrow as plain lyric rows.
 		await page.goto("/");
 		await flip(page, "Next", "Amazing Grace");
 		await expect.poll(() => chartText(page)).toContain("Amazing Grace");
 		const grid = await drawnGrid(page);
 		expect(grid.pitches).toBe(0);
+		expect(grid.extenders).toBe(0);
 		expect(grid.scrollWidth).toBeLessThanOrEqual(grid.clientWidth);
+		// The score still draws the melismas: the tune's notes and both verses' syllables.
+		await pressScore(page);
+		const score = await drawnScore(page);
+		expect(score.notes).toBe(35);
+		expect(score.syllables).toBeGreaterThanOrEqual(56);
 	});
 
 	test("a lyric row with no melody: every slash sits on its line, with no ledger lines", async ({
