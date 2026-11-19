@@ -52,6 +52,15 @@ describe("exportLyricsheet refusals", () => {
 		]);
 	});
 
+	test("with a part, a problem the whole chart reports twice on one line is still reported twice", () => {
+		const chart = "part: Vox = Voice\npart: Gtr = Guitar\n\nGtr | C | G |\nVox | H7 H7 | G |\n";
+		const whole = exportLyricsheet(chart);
+		const part = exportLyricsheet(chart, { part: "Gtr" });
+		const onFive = (r: typeof whole) => r.diagnostics.filter((d) => d.line === 5).length;
+		expect(onFive(whole)).toBe(2);
+		expect(onFive(part)).toBe(2);
+	});
+
 	test("a chart with no bars is refused", () => {
 		const r = exportLyricsheet("# Only a title\n");
 		expect(r.ok).toBe(false);

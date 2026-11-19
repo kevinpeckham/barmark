@@ -24,17 +24,16 @@ type Parsed =
 	| { ok: false; diagnostics: ChartDiagnostic[] };
 
 /**
- * The whole chart's diagnostics and a part's, each once, in line order: the
+ * The whole chart's diagnostics and what a part's add, in line order: the
  * sheet takes the singer's words from the whole chart (sheet.ts), so a
  * problem there is the sheet's too.
  */
 function merged(whole: ChartDiagnostic[], part: ChartDiagnostic[]): ChartDiagnostic[] {
-	const once = new Map<string, ChartDiagnostic>();
-	for (const d of [...whole, ...part]) {
-		const key = JSON.stringify([d.line, d.severity, d.message, d.token]);
-		if (!once.has(key)) once.set(key, d);
-	}
-	return [...once.values()].sort((a, b) => a.line - b.line);
+	const key = (d: ChartDiagnostic) => JSON.stringify([d.line, d.severity, d.message, d.token]);
+	// All of the whole chart's, even two alike on one line; of the part's, only what the whole lacks.
+	const seen = new Set(whole.map(key));
+	const added = part.filter((d) => !seen.has(key(d)));
+	return [...whole, ...added].sort((a, b) => a.line - b.line);
 }
 
 /** Why there is nothing to export, or the parse to export (the part asked for, when one is). */

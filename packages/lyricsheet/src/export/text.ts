@@ -33,11 +33,14 @@ export function untagged(text: string): string {
 }
 
 /**
- * Every control character (C0, DEL and C1: tab, CR, VT, NUL, NEL) and
- * U+2028/2029 as a space: a reader may end a line at any of them
- * (ChordPro ends one at CR), and the output rules forbid them.
+ * Every control character (C0, DEL and C1: tab, CR, VT, NUL, NEL),
+ * U+2028/2029 and every noncharacter (U+FDD0, U+FFFF) as a space: a reader
+ * may end a line at a control character (ChordPro ends one at CR), and a
+ * noncharacter fails ChordPro's strict UTF-8 decode, after which it reads
+ * the whole sheet as Latin-1. The output rules forbid them all.
  */
-export const spaced = (text: string) => text.replace(/[\p{Cc}\u2028\u2029]/gu, " ");
+export const spaced = (text: string) =>
+	text.replace(/[\p{Cc}\p{Noncharacter_Code_Point}\u2028\u2029]/gu, " ");
 
 /** Text in a lyric line or a comment as ChordPro shows it unchanged: no brackets, braces or tags, no control character. */
 export const plain = (text: string) =>

@@ -196,6 +196,30 @@ describe("control characters never reach a sheet", () => {
 	});
 });
 
+/**
+ * A noncharacter (U+FDD0, U+FFFE, U+FFFF and their kin) makes ChordPro's
+ * strict UTF-8 decode fail, and it then reads the WHOLE sheet as Latin-1
+ * (measured 2026-11-19: `Café` printed as `CafÃ©`).
+ */
+describe("noncharacters never reach a sheet", () => {
+	const NONCHARACTERS = ["\ufdd0", "\ufdef", "\ufffe", "\uffff", "\u{1fffe}", "\u{10ffff}"];
+	const places: [string, (c: string) => string][] = [
+		["the title", (c) => `# Caf\u00e9${c}\n| C |\n`],
+		["a lyric syllable", (c) => `# Mine\n| C |\nlyrics: | a${c}b |\n`],
+		["a margin word in a grid", (c) => `# Mine\n| "a${c}b" C | G |\n`],
+		["a text line", (c) => `# Mine\n| C |\nlyrics: | la |\nsay${c}it\n`],
+	];
+	for (const [place, make] of places)
+		test(place, () => {
+			for (const c of NONCHARACTERS) {
+				const r = exportLyricsheet(make(c));
+				if (!r.ok) throw new Error(`refused: U+${c.codePointAt(0)?.toString(16)}`);
+				expect(r.text).not.toMatch(/\p{Noncharacter_Code_Point}/u);
+				expect(r.losses.map((l) => l.code)).toContain("text-changed");
+			}
+		});
+});
+
 /** A seeded mutation of the fixture charts with hostile text: no sheet holds a control character, an escape or `%{`. */
 describe("a fuzz of hostile text", () => {
 	const seeds = readdirSync(FIXTURES)

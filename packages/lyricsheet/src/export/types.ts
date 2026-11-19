@@ -22,7 +22,7 @@ export type LyricsheetLossCode =
 	| "stacked-verses"
 	/** A chord between two syllables of one word, written before the word's next syllable. */
 	| "chord-moved"
-	/** Text holding characters ChordPro reads as markup (`[`, `]`, `{`, `}`, tag-like `<…>`, a leading `#`, a tab, a line-ending backslash, a label's backslash-n, margin words like a count), changed. */
+	/** Text holding characters ChordPro reads as markup (`[`, `]`, `{`, `}`, tag-like `<…>`, a leading `#`, a control character or a noncharacter, a line-ending backslash, a backslash before `u`, a label's backslash-n, margin words like a count), changed. */
 	| "text-changed"
 	/** A chord name ChordPro's chord parser does not know (spec 4.7's gaps), written as barmark spells it. */
 	| "chord-names"
