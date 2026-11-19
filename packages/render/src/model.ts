@@ -17,6 +17,7 @@ import {
 	parseChart,
 	printedAsWritten,
 	type SectionOccurrence,
+	type Slot,
 	unreadSlots,
 } from "barmark";
 import { chartDiagrams } from "./diagrams.js";
@@ -364,9 +365,10 @@ function layoutLines(
 type Laid = { items: BlockItem[]; previous: SlotsCell | null };
 
 /**
- * A system as drawn: with `melody: false`, a singing line is left out while
- * any other line stays, and its words draw by beat under the rest. A lone
- * line of a one-part chart draws as a line outside a system does.
+ * A system as drawn: with `melody: false`, its melody lines are left out when
+ * a line that does not sing still draws its bars, and their words draw by
+ * beat under the rest. In a one-part chart, a lone line that does not sing
+ * draws as a line outside a system does.
  */
 function layoutSystemOf(
 	written: SystemLine[],
@@ -374,9 +376,10 @@ function layoutSystemOf(
 	previous: SlotsCell | null,
 	ctx: Context,
 ): Laid {
-	const lines = ctx.melody ? written : withoutMelody(written, ctx);
+	if (ctx.melody) return layoutSystemAt(written, written, occurrence, previous, ctx);
+	const lines = withoutMelody(written, ctx);
 	const [only] = lines;
-	if (only && lines.length === 1 && lines.length < written.length && ctx.parse.parts.length === 1)
+	if (only && lines.length === 1 && ctx.parse.parts.length === 1 && !sings(only, ctx))
 		return layoutOne(only, occurrence, previous, ctx);
 	return layoutSystemAt(lines, written, occurrence, previous, ctx);
 }
@@ -384,16 +387,29 @@ function layoutSystemOf(
 /** A line with a problem the grid draws where it is written: as written, or on its unreadable slots. */
 const flawed = (l: SystemLine, ctx: Context) => ctx.errors.has(l.line) || ctx.unread.has(l.line);
 
+const sings = (l: SystemLine, ctx: Context) => l.kind === "bars" && singerOf(l, ctx.parse) !== null;
+
+const membersOf = (s: Slot) => (s.kind === "group" ? s.members : [s]);
+
+/** Whether a line names a chord anywhere: a note set, a hold or a rest does not. */
+const namesChord = (l: BarsLine) =>
+	l.cells.some(
+		(c) =>
+			c.kind === "slots" &&
+			c.slots.flatMap(membersOf).some((m) => m.kind === "chord" && m.chord.kind === "chord"),
+	);
+
 /**
- * The system's lines but its singing ones (barmark's grammar 7.7); all of
- * them when every line sings. A singing line with a problem stays, so the
- * grid still shows where the problem is.
+ * The system's lines but its melody lines (barmark's grammar 7.7): a singing
+ * line with no problem drawn in place and no chord name. They go only when a
+ * line that does not sing still draws its bars; else all the lines stay.
  */
 function withoutMelody(lines: SystemLine[], ctx: Context): SystemLine[] {
-	const kept = lines.filter(
-		(l) => l.kind !== "bars" || flawed(l, ctx) || singerOf(l, ctx.parse) === null,
-	);
-	return kept.length ? kept : lines;
+	const draws = (l: SystemLine) => l.kind === "bars" && !ctx.errors.has(l.line);
+	if (!lines.some((l) => !sings(l, ctx) && draws(l))) return lines;
+	const melody = (l: SystemLine) =>
+		l.kind === "bars" && sings(l, ctx) && !flawed(l, ctx) && !namesChord(l);
+	return lines.filter((l) => !melody(l));
 }
 
 /** A system, and the words under it that no line in it sings; `written` is every line the system writes, drawn or not. */

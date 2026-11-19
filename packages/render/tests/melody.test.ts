@@ -206,3 +206,263 @@ describe("melody true is today's output", () => {
 		}
 	});
 });
+
+const dflt = (t: string) => layoutChart(t);
+const off = (t: string) => layoutChart(t, OFF);
+const chartTag = (html: string) => /<div class="bm-chart"[^>]*>/.exec(html)?.[0] ?? "";
+
+describe("melody: false: fix round 1", () => {
+	test("several singing lines with one flawed: the default model", () => {
+		const SATB = `part: S = Soprano, instrument: voice
+part: A = Alto, instrument: voice
+time: 4/4
+
+S | {E9}:la / {G4}:la / | {D4}:la / / / |
+A | {C4}:lo / {E4}:lo / | {B3}:lo / / / |
+`;
+		expect(off(SATB)).toEqual(dflt(SATB));
+		const SHORT = SATB.replace(
+			"S | {E9}:la / {G4}:la / | {D4}:la / / / |",
+			"S | {E4}:la / {G4}:la / |",
+		);
+		expect(off(SHORT)).toEqual(dflt(SHORT));
+	});
+
+	test("every line sings: the default model", () => {
+		const CHOIR = `part: S = Soprano, instrument: voice
+part: A = Alto, instrument: voice
+time: 4/4
+
+S | {E4}:la / {G4}:la / | {D4}:la / / / |
+A | {C4}:lo / {E4}:lo / | {B3}:lo / / / |
+`;
+		expect(off(CHOIR)).toEqual(dflt(CHOIR));
+	});
+
+	test("a melody line alone in a one-row system: the default model", () => {
+		const ONLY = `part: Vox = Voice, instrument: voice
+time: 4/4
+
+Vox.Mel | {E4} / {G4} / | {D4} / / / |
+lyrics 1: | la / la / | la |
+`;
+		// The part's lines are "" and Mel, and the second section writes only Mel: a one-row system.
+		const SYS = `part: Vox = Voice, instrument: voice
+time: 4/4
+
+## A
+Vox | C | G |
+Vox.Mel | {E4} / {G4} / | {D4} / / / |
+
+## B
+Vox.Mel | {E4} / {G4} / | {D4} / / / |
+lyrics 1: | la / la / | la |
+`;
+		expect(off(ONLY)).toEqual(dflt(ONLY));
+		expect(dflt(SYS).blocks[1]?.items[0]?.kind).toBe("system");
+		expect(off(SYS).blocks[1]).toEqual(dflt(SYS).blocks[1]);
+	});
+
+	test("when the only other line is an error the block is the default's", () => {
+		const ONE = `part: Vox = Voice, instrument: voice
+time: 4/4
+
+Vox | Cmaj7 % | G |
+Vox.Mel | {E4} / {G4} / | {D4} / / / |
+lyrics 1: | la / la / | la |
+`;
+		const TWO = `part: Gtr = Guitar
+part: Vox = Voice, instrument: voice
+time: 4/4
+
+Gtr | C % | G |
+Vox | {E4} / {G4} / | {D4} / / / |
+lyrics 1: | la / la / | la |
+`;
+		for (const t of [ONE, TWO]) expect(off(t).blocks).toEqual(dflt(t).blocks);
+	});
+
+	const INTRO = `# Amazing Grace
+part: Vox = Voice, instrument: voice
+key: G, time: 3/4, tempo: 80
+
+## Intro
+Vox       | G | D |
+
+## Verse
+Vox       | [1/4] D    | G                | G / G7      |
+Vox.Mel   | [1/4] {D4} | {G4} / {B4}_{G4} | {B4} / {A4} |
+lyrics 1: | A-         | maz- / ing_/     | grace / how |
+`;
+	const PLAIN_INTRO = `# Amazing Grace
+key: G, time: 3/4, tempo: 80
+
+## Intro
+| G | D |
+
+## Verse
+| [1/4] D    | G                | G / G7      |
+lyrics 1: | A-         | maz- / ing_/     | grace / how |
+`;
+
+	test("a lead sheet with a chords-only intro draws plain rows throughout", () => {
+		const m = off(INTRO);
+		for (const b of m.blocks) for (const i of b.items) expect(i.kind).toBe("row");
+	});
+
+	test("the chart's opening tag is the plain chart's", () => {
+		expect(chartTag(renderChartUnwrapped(INTRO, OFF))).toBe(
+			chartTag(renderChartUnwrapped(PLAIN_INTRO)),
+		);
+		expect(chartTag(renderChartUnwrapped(LEAD, OFF))).not.toContain("data-parts");
+	});
+
+	test("a band chart keeps labels only for rows that draw", () => {
+		const BAND = `part: Gtr = Guitar
+part: Vox = Voice, instrument: voice
+time: 4/4
+
+Gtr | C | G |
+Vox.Mel | {E4} / {G4} / | {D4} / / / |
+`;
+		const tag = chartTag(renderChartUnwrapped(BAND, OFF));
+		expect(tag).toContain("--bm-label-chars:3");
+	});
+
+	test("a singing line that writes chord names stays, and so do the diagrams", () => {
+		const CHORDS = `part: Pno = Piano
+part: Vox = Voice, instrument: voice
+time: 4/4
+
+Pno | {C3 E3 G3} | {G2 B2 D3} |
+Vox | {E4} / Am7 / | D7 / {D4} / |
+lyrics 1: | la / / / | / / lo / |
+`;
+		expect(off(CHORDS)).toEqual(dflt(CHORDS));
+		const g = { chordDiagrams: "guitar" as const };
+		expect(layoutChart(CHORDS, { ...g, melody: false }).diagrams).toEqual(
+			layoutChart(CHORDS, g).diagrams,
+		);
+		expect(layoutChart(CHORDS, g).diagrams.length).toBe(4);
+	});
+
+	test("a chord name in a group counts", () => {
+		const GROUP = `part: Pno = Piano
+part: Vox = Voice, instrument: voice
+time: 4/4
+
+Pno | {C3 E3 G3} | {G2 B2 D3} |
+Vox | {E4} / [Am7 D7] / | {D4} / / / |
+lyrics 1: | la / / / | la |
+`;
+		expect(off(GROUP)).toEqual(dflt(GROUP));
+	});
+
+	test("a lead sheet with repeats and endings matches its plain twin in bar numbers, marks and endings", () => {
+		const L = `part: Vox = Voice, instrument: voice
+time: 4/4
+
+Vox       |: C | G |
+Vox.Mel   |: {E4} / {G4} / | {D4} / / / |
+lyrics 1: | la / la / | la |
+Vox       |1 C :|
+Vox.Mel   |1 {E4} / / / :|
+lyrics 1: | la |
+Vox       |2 F |
+Vox.Mel   |2 {F4} / / / |
+lyrics 1: | la |
+`;
+		const P = `time: 4/4
+
+|: C | G |
+lyrics 1: | la / la / | la |
+|1 C :|
+lyrics 1: | la |
+|2 F |
+lyrics 1: | la |
+`;
+		const mark = (r: RowItem) => ({
+			barNumber: r.barNumber,
+			opens: r.opens,
+			closes: r.closes,
+			repeat: r.repeat,
+			ending: r.ending,
+		});
+		const a = off(L);
+		expect(a.diagnostics).toEqual(dflt(L).diagnostics);
+		expect(rowsOf(a).map(mark)).toEqual(rowsOf(layoutChart(P)).map(mark));
+	});
+
+	test("the words sit on the beats they are sung on", () => {
+		const T = `part: Gtr = Guitar
+part: Vox = Voice, instrument: voice
+time: 4/4
+
+Gtr       | C | G |
+Vox       | {E4} / {G4} / | {D4} / / / |
+lyrics 1: | la / la / | la |
+`;
+		const row = systemsOf(off(T))[0]?.rows[0]?.row as RowItem;
+		const words = row.lyrics?.[0]?.cells.map((bar) =>
+			bar.map((place) => place.map((s) => (s.kind === "sung" ? s.parts.join("") : s.kind))),
+		);
+		// Two places in the first bar (la on each beat that starts a note), one in the second.
+		expect(words).toEqual([[["la"], ["la"]], [["la"]]]);
+	});
+
+	test("a part with no line written in a system keeps its tacet row", () => {
+		const T = `part: Gtr = Guitar
+part: Vox = Voice, instrument: voice
+part: Bs = Bass
+time: 4/4
+
+Gtr       | C | G |
+Vox       | {E4} / {G4} / | {D4} / / / |
+lyrics 1: | la / la / | la |
+`;
+		const rows = systemsOf(off(T))[0]?.rows ?? [];
+		expect(rows.map((p) => p.label)).toEqual(["Gtr", "Bs"]);
+		const bass = rows[1]?.row as RowItem | undefined;
+		expect(bass?.cells.every((c) => c.kind !== "slots" || c.tacet)).toBe(true);
+	});
+
+	test("diagnostics and diagrams are the default's", () => {
+		const g = { chordDiagrams: "guitar" as const };
+		const dir = join(import.meta.dir, "../../../examples");
+		const texts = [
+			LEAD,
+			...readdirSync(dir)
+				.filter((f) => f.endsWith(".chart.md"))
+				.map((f) => readFileSync(join(dir, f), "utf8")),
+		];
+		for (const t of texts) {
+			const a = layoutChart(t, { ...g, melody: false });
+			const b = layoutChart(t, g);
+			expect(a.diagnostics).toEqual(b.diagnostics);
+			expect(a.diagrams).toEqual(b.diagrams);
+		}
+	});
+
+	test("part: draws one part with melody: false", () => {
+		const T = `part: Gtr = Guitar
+part: Vox = Voice, instrument: voice
+time: 4/4
+
+Gtr       | C | G |
+Vox       | {E4} / {G4} / | {D4} / / / |
+lyrics 1: | la / la / | la |
+`;
+		const m = layoutChart(T, { part: "Vox", melody: false });
+		expect(m.diagnostics).toEqual(layoutChart(T, { part: "Vox" }).diagnostics);
+		expect(JSON.stringify(m.blocks)).toContain("la");
+	});
+
+	test("a replay of a lead-sheet section draws plain rows", () => {
+		const R = `${LEAD}
+## Verse
+`;
+		const m = off(R);
+		expect(m.blocks.length).toBe(2);
+		for (const b of m.blocks) for (const i of b.items) expect(i.kind).toBe("row");
+	});
+});

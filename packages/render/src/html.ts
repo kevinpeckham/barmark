@@ -79,7 +79,12 @@ export type RenderOptions = {
 	wrap?: boolean;
 	/** Draw only the part with this label (barmark's grammar 7.4): one player's view. */
 	part?: string;
-	/** Leave a singer's melody line out of the grid, its words kept under the chords; `false` is the attribute `melody="off"`. A melody on its own stays. */
+	/**
+	 * Draw a singer's melody line in the grid (the default). With `false`
+	 * (the attribute `melody="off"`) it is left out beside a line that draws
+	 * its bars, its words kept under the chords. A melody on its own stays, and
+	 * so does a singing line with a problem or with chord names.
+	 */
 	melody?: boolean;
 	/**
 	 * How a section sizes its columns. `"shared"` (the default): its rows share
@@ -175,15 +180,13 @@ function chartHtml(text: string, options: RenderOptions): string {
 		...(options.chordDiagrams === "guitar" && { chordDiagrams: "guitar" as const }),
 	});
 	const barNumbers = options.barNumbers ?? true;
-	const parts = labelled(model);
+	const { parts, widest } = gutterOf(model, options);
 	const settings: Settings = {
 		barNumbers,
 		gutter: barNumbers || parts,
 		numerals: numeralsOf(options),
 		rows: byRow(options),
 	};
-	// Every section's left column is as wide as the longest part label, so tutti rows line up with systems.
-	const widest = Math.max(0, ...model.parts.flatMap(rowLabelsOf).map((l) => l.length));
 	const gutter = parts ? ` data-parts style="--bm-label-chars:${widest}"` : "";
 	return `<div class="bm-chart" data-theme="${themeOf(options)}"${gutter}${layoutAttributes(options, settings)}>${headerHtml(model)}${diagramsHtml(model.diagrams, settings.numerals, handOf(options))}${model.blocks.map((b) => blockHtml(b, settings)).join("")}${copyrightHtml(model)}${options.diagnostics ? diagnosticsHtml(model) : ""}</div>`;
 }
@@ -195,6 +198,23 @@ const layoutAttributes = (options: RenderOptions, settings: Settings) =>
 /** Whether systems have labelled rows: several parts, or one part writing lines (barmark's grammar 7.6). */
 const labelled = (model: ChartModel) =>
 	model.parts.length > 1 || model.parts.some((p) => (p.lines?.length ?? 0) > 0);
+
+/**
+ * Whether rows are labelled, and how wide the longest label is: every
+ * section's left column is as wide, so tutti rows line up with systems.
+ * Without the melody, only the labels the systems draw count.
+ */
+function gutterOf(model: ChartModel, options: RenderOptions) {
+	const labels = options.melody === false ? drawnLabels(model) : model.parts.flatMap(rowLabelsOf);
+	const parts = options.melody === false ? labels.length > 0 : labelled(model);
+	return { parts, widest: Math.max(0, ...labels.map((l) => l.length)) };
+}
+
+/** The labels of the system rows the blocks draw. */
+const drawnLabels = (model: ChartModel) =>
+	model.blocks.flatMap((b) =>
+		b.items.flatMap((i) => (i.kind === "system" ? i.rows.map((r) => r.label) : [])),
+	);
 
 /** A part's row labels: its own, and one per line it writes (barmark's grammar 7.6). */
 const rowLabelsOf = (p: ChartModel["parts"][number]) => [
