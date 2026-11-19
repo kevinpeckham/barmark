@@ -33,6 +33,7 @@ These settle what the spec leaves open; each is the plan's call, recorded so a r
 5. **The chart's last beat has no end point** for 4.2's rounding (there is no next beat to move to), and the grid is made long enough that every attack's beat exists: the line's last tick is `max(start + ppq / 32 + 1, end - ppq / 4)` over its notes.
 6. **The fallback runs the import again** with `notes: false` and a fresh report, with `notes-fallback` as its first diagnostic. Nothing of the failed line reading is reported.
 7. **The placeholder harmony** is one run of `C` from the grid's start to its end. Sync raises no chord diagnostic for it (checked 2026-11-19), so "sync's diagnostics about the placeholder are not reported" needs no filter beyond a test.
+9. **A beat has two clocks** (added after Task 3's review). `gridOf` can cut a bar at a time signature and write it in a meter rounded to sixteenths, so the bar's span in the file and its length in the chart differ. Attacks are assigned and fitted by the file's ticks (`Beat.start`); a point's time is the chart's (`Beat.at`, `pointTick`), which is what `perform` plays and the self-check compares. Task 4 finds the beat a note-off falls in by `start` and measures silences by `pointTick`.
 8. **Existing import tests** whose file is one line keep testing what they test: they pass `notes: false` (they are tests of the chord reading's stages). The new reading has its own tests.
 
 ## Review Focus
@@ -108,13 +109,13 @@ Inputs the spec implies and a person will meet; each has its test in the task na
 **Interfaces:**
 - Consumes: `Attack` (Task 1); `Grid` (`grid.ts`: `{ ppq; bars: { start; meter }[]; end; pickup }`); barmark's `beatsOf(meter)`.
 - Produces:
-  - `export type Beat = { bar: number; start: number; length: number; dotted: boolean }` (`bar` is the index in `grid.bars`; ticks; `dotted` when the meter's beat is three of its units, as `beatsOf` counts 6/8, 9/8 and 12/8).
+  - `export type Beat = { bar: number; start: number; at: number; length: number; dotted: boolean }` (`bar` is the index in `grid.bars`; ticks; `start` is in the file, `at` on the chart's clock: the meter lengths of the bars before, so the two differ only after a bar cut by a time signature and written in a rounded meter (ruling 9); `dotted` when the meter's beat is three of its units, as `beatsOf` counts 6/8, 9/8 and 12/8).
   - `export function beatsOfGrid(grid: Grid): Beat[]` (each bar's length over `beatsOf(meter)`, in order).
   - `export function divisionsFor(length: number, ppq: number): number[]` (those of 1, 2, 3, 4, 6 with `length / n >= ppq / 8`; always at least `[1]`).
   - `export type Struck<A extends Attack = Attack> = { beat: number; point: number; attacks: A[] }` (every input attack that landed on the point, in input order).
   - `export type Quantized<A extends Attack = Attack> = { beats: Beat[]; parts: number[]; struck: Struck<A>[]; rounded: number[]; joined: number }` (`parts[b]` is beat `b`'s division; `struck` in time order, one per point; `rounded` the indices of bars with a rounded beat, ascending, each once; `joined` the attacks that landed on a point another already held).
   - `export function quantize<A extends Attack>(attacks: A[], grid: Grid): Quantized<A>`
-  - `export const pointTick = (q: Pick<Quantized, "beats" | "parts">, beat: number, point: number): number` (`start + point * length / parts`).
+  - `export const pointTick = (q: Pick<Quantized, "beats" | "parts">, beat: number, point: number): number` (`at + point * length / parts`: the chart's clock).
 
 **The algorithm** (4.2, with rulings 1 and 5), beats in order:
 1. An attack belongs to beat `b` when `start_b - ppq / 32 <= tick < start_(b+1) - ppq / 32` (the last beat takes everything from its own bound on).
@@ -154,7 +155,7 @@ Inputs the spec implies and a person will meet; each has its test in the task na
 
 **The rule** (section 5, rulings 3 and 4). For each `Struck`, in order:
 1. Its raw end is the latest `end` of its attacks, at most `grid.end`.
-2. Its end point: the raw end falls in beat `e` (`start_e <= raw < start_(e+1)`; `grid.end` is the end of the last beat); it moves to the nearest of that beat's points `k = 0..parts[e]` (`k = parts[e]` is the beat's end), a tie to the larger `k`.
+2. Its end point: the raw end falls in beat `e`, by the file's ticks (`beats[e].start <= raw < beats[e+1].start`; `grid.end` is the end of the last beat); it moves to the nearest of that beat's points `k = 0..parts[e]` (`k = parts[e]` is the beat's end), measured from `beats[e].start` in steps of `length / parts[e]` (a raw end past the last point is at the beat's end), a tie to the larger `k`.
 3. The end is at least the point after the attack's, and at most the next `Struck`'s point (the chart's end after the last).
 4. The silence is from the end point to the next `Struck`'s point (or the chart's end), in ticks by `pointTick`. The beat it is measured by is the beat of the last point before the end.
 5. Silence shorter than that beat's `length`: every point from the attack to the next `Struck` is `hold`. Otherwise: `hold` up to the end, then `rest` (`first` on the first) to the next `Struck`.
