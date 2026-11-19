@@ -6,6 +6,11 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- The package's npm keywords include `chordpro`, so a search for the format
+  finds it.
+
 ## [0.1.0] - 2026-11-19
 
 ### Added
