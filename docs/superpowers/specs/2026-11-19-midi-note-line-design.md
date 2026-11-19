@@ -1,12 +1,14 @@
 # @barmark/midi 0.4: a single line imports as its notes: design
 
-**Status:** draft for Kevin's review, 2026-11-19. The direction is
+**Status:** approved by Kevin, 2026-11-19 ("The MIDI note-line design
+is approved, proceed with the plan"). The plan is
+`docs/superpowers/plans/2026-11-19-midi-note-line.md`. The direction is
 Kevin's (2026-11-12: a bass line imported from MIDI lost the difference
 between a held note and a re-struck one; 2026-11-19: "A reads correctly",
 section 5, and "proceed with the design"). My own choices are marked
 **(design call)**. A fresh reviewer read it as its builder would, and
 its four questions are answered in the text (6.3, 5, 4.2 and 3). No
-grammar change. Nothing here is code yet.
+grammar change.
 
 It extends `2026-11-08-midi-design.md` ("the MIDI design" below; section
 numbers with "MIDI" in front point there). That design's non-goals named
