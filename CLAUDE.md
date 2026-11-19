@@ -328,8 +328,9 @@ cd site && bun run dev|build|check|test|test:browser   # barmark.dev
   package is tagged on its own: `barmark-vX.Y.Z`, `render-vX.Y.Z`,
   `musicxml-vX.Y.Z`, `score-vX.Y.Z`, `sync-vX.Y.Z`, `midi-vX.Y.Z`, `listen-vX.Y.Z`, `fretboard-vX.Y.Z`, `lyricsheet-vX.Y.Z`, `cli-vX.Y.Z`, `engraver-vX.Y.Z`. A library release is followed by a CLI release and a
   bump in `kevinpeckham/songs` (RELEASING.md steps 13–14), a `sync`,
-  `midi`, `score` or `fretboard` release included (the CLI bundles `sync`
-  through `midi`, `fretboard` through `render`, and `score` with Verovio). After
+  `midi`, `score`, `fretboard` or `lyricsheet` release included (the CLI
+  bundles `sync` through `midi`, `fretboard` through `render` and
+  `lyricsheet`, and `score` with Verovio). After
   a `sync` minor, a `midi` patch ("Requires `@barmark/sync` X.Y.0") comes
   first, then the CLI, as a `barmark` minor's caret dependants do.
   `score` depends on `barmark`, `@barmark/render` and `@barmark/musicxml`
@@ -338,15 +339,18 @@ cd site && bun run dev|build|check|test|test:browser   # barmark.dev
   `listen` is not bundled by the CLI: a listen release needs no CLI
   release, and after a `sync` or `barmark` minor, a `listen` patch
   raises the dependency.
-  `@barmark/render` imports `fretboard` with a caret and the CLI bundles
-  it through render: a fretboard release is followed by a CLI release (and
-  a render patch first when render's range must rise), and after a
-  `barmark` minor a `fretboard` patch raises the dependency before
-  render's.
+  `@barmark/render` and `@barmark/lyricsheet` import `fretboard` with a
+  caret and the CLI bundles it through both: a fretboard release is
+  followed by a CLI release (and first a render patch and a lyricsheet
+  patch when their ranges must rise), and after a `barmark` minor a
+  `fretboard` patch raises the dependency before render's and
+  lyricsheet's.
   `lyricsheet` depends on `barmark` and `@barmark/fretboard` with carets
   and the CLI bundles it: a lyricsheet release is followed by a CLI
   release, and after a `barmark` or `fretboard` minor a `lyricsheet`
-  patch raises the dependency.
+  patch raises the dependency. `musicxml`, `midi` and `lyricsheet` have a
+  `src/version.ts` that a version bump changes too (a test holds it to
+  `package.json`).
   An engraver version bump runs `bun run compile --update` and commits
   `info.ts`. A Verovio upgrade is one joint PR (`versions.env`, `info.ts`,
   score's `verovio` pin, stock constants and `ENGRAVER_*` literals), then

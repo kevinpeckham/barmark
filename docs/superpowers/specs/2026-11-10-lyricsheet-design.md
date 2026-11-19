@@ -90,8 +90,10 @@ packages/lyricsheet/            @barmark/lyricsheet
   - No export, type or option says "chordpro".
 - **CLI.** `export.ts` gains `--lyricsheet`, which writes to stdout or
   `--out` and takes `--part` and `--diagrams guitar` (amended
-  2026-11-18). Losses print as MIDI's do
-  (`file: bar N: warning: …`). `barmark import` is unchanged in phase 1.
+  2026-11-18). Losses print as `file: warning: <message>`, one line
+  each (amended 2026-11-19: not MIDI's `file: bar N: warning: …`, since a
+  loss's message already names its bars, `(3 bars: 2, 5, 9)`).
+  `barmark import` is unchanged in phase 1.
   `@barmark/cli` pins the new package exactly, and its binaries bundle
   it.
 - **Repository work in the building PR:**

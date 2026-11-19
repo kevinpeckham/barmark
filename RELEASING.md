@@ -96,7 +96,7 @@ the dependency ("Requires `@barmark/sync` X.Y.0"). The CLI does not
 bundle `@barmark/listen`, so a listen release needs no CLI release
 (step 13 does not follow it).
 
-**`@barmark/fretboard`** depends on `barmark` with a caret, so after a `barmark` minor a `fretboard` patch raises the dependency, before render's. `@barmark/render` imports it with a caret and the CLI bundles it through render, so a fretboard release is followed by a CLI release (step 13), and by a render patch first when render's range needs to rise ("Requires `@barmark/fretboard` X.Y.0").
+**`@barmark/fretboard`** depends on `barmark` with a caret, so after a `barmark` minor a `fretboard` patch raises the dependency, before render's and lyricsheet's. `@barmark/render` and `@barmark/lyricsheet` import it with a caret and the CLI bundles it through both, so a fretboard release is followed by a CLI release (step 13), and first by a render patch and a lyricsheet patch when their ranges need to rise ("Requires `@barmark/fretboard` X.Y.0").
 
 **`@barmark/lyricsheet`** depends on `barmark` and `@barmark/fretboard` with carets, so after a `barmark` or `fretboard` minor a `lyricsheet` patch raises the dependency ("Requires `@barmark/fretboard` X.Y.0"). The CLI pins it exactly and its binaries bundle it, so a lyricsheet release is followed by a CLI release (step 13).
 
@@ -177,9 +177,10 @@ runs, and `verify:package cli` fails on anything else.
    Bun does not update a workspace package's version in the lockfile, and
    `bun pm pack` reads it from there when it turns `workspace:^` into a
    range; `verify:package` fails if the two disagree. For
-   `@barmark/musicxml` and `@barmark/midi`, also `packages/<pkg>/src/version.ts`:
-   the export names it in each file (musicxml in its `<encoding>`), and a
-   test checks it. For `@barmark/engraver`, run `cd packages/engraver &&
+   `@barmark/musicxml`, `@barmark/midi` and `@barmark/lyricsheet`, also
+   `packages/<pkg>/src/version.ts`: each exports it as `VERSION` (musicxml
+   also names it in each file's `<encoding>`), and a test checks it
+   against `package.json`. For `@barmark/engraver`, run `cd packages/engraver &&
    bun run compile --update` after the bump: the banner names the version,
    so this rebuilds and re-anchors `src/info.ts`, which the bump commits.
    Then run the equivalence gate (`bun run build && bun
@@ -236,10 +237,12 @@ runs, and `verify:package cli` fails on anything else.
     `site/bun.lock`). Until it merges, CI's `site-versions` check is red
     on purpose; it is not required, so other pull requests still merge.
     It checks every barmark package the site installs, dev dependencies
-    too: a `@barmark/musicxml`, `sync`, `midi`, `listen`, `fretboard` or `lyricsheet`
+    too: a `@barmark/musicxml`, `sync`, `midi`, `listen` or `fretboard`
     release needs `bun add --dev --exact`, since Get Started's snippets
     are tested against the installed version while the `npm install` it
-    shows gets the latest.
+    shows gets the latest. The site does not install `@barmark/lyricsheet`,
+    so a lyricsheet release skips this step (its CLI release, step 13,
+    still bumps the site's `@barmark/cli`).
     After a `barmark` bump, check `site/bun.lock` holds one barmark:
     `grep '/barmark": \["barmark@' site/bun.lock` prints nothing, or
     delete the nested entries it finds and `bun install` again (FINDINGS).
@@ -254,8 +257,8 @@ runs, and `verify:package cli` fails on anything else.
     `@barmark/musicxml`, `@barmark/score`, `@barmark/sync`,
     `@barmark/midi`, `@barmark/fretboard` or `@barmark/lyricsheet`
     release; the CLI bundles `@barmark/sync` through `@barmark/midi`,
-    `@barmark/fretboard` through `@barmark/render`, `@barmark/lyricsheet`
-    itself, and Verovio through `@barmark/score`; after a `barmark`,
+    `@barmark/fretboard` through `@barmark/render` and
+    `@barmark/lyricsheet`, `@barmark/lyricsheet` itself, and Verovio through `@barmark/score`; after a `barmark`,
     `@barmark/sync` or `@barmark/fretboard` minor, release the
     caret dependants' patches first, as above: after a `sync` minor, a
     `@barmark/midi` patch "Requires `@barmark/sync` X.Y.0"; after a
