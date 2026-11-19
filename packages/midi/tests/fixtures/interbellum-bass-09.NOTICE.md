@@ -1,0 +1,1 @@
+`interbellum-bass-09.mid` is a bass line arranged and played by Kevin Peckham for a song written by Karl Ward. The song is all rights reserved and is used here with permission. Neither the file nor its transcription, `interbellum-bass-09.chart.md`, is covered by this repository's MIT licence.

@@ -30,10 +30,14 @@ const CODES: Record<(typeof MIDI_FIXTURES)[number], MidiImportCode[]> = {
 };
 
 describe("MuseScore's files", () => {
-	test("the fixtures are exactly the listed ones", () => {
+	// The played bass line (import-line-real.test.ts) is a line, not one of MuseScore's chord files.
+	test("the fixtures are exactly the listed ones and the bass line", () => {
 		const dir = new URL("fixtures/", import.meta.url);
 		const files = readdirSync(dir).filter((f) => f.endsWith(".mid") || f.endsWith(".chart.md"));
-		const want = MIDI_FIXTURES.flatMap((name) => [`${name}.chart.md`, `${name}.mid`]);
+		const want = [...MIDI_FIXTURES, "interbellum-bass-09"].flatMap((name) => [
+			`${name}.chart.md`,
+			`${name}.mid`,
+		]);
 		expect(files.sort()).toEqual(want.sort());
 	});
 
