@@ -12,8 +12,7 @@ package uses [semantic versioning](https://semver.org/).
   attack with its pitch and octave, holds and rests, on a grid as fine as
   sixteenths and triplets, where it came back as chords with the octaves
   and the re-struck notes lost. `notes: false` reads chords from it, as
-  before. Every other file imports as it did. This is why the release is
-  a minor.
+  before. Every other file imports as it did.
 
 ### Added
 

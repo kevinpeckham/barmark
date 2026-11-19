@@ -240,7 +240,11 @@ octaves. The line comes back as written.
   the smallest that holds its attacks within a 128th note; an attack
   that fits none moves to the nearest point (`rhythm-rounded`).
 - **Pairing.** In a line, a note-off ends the oldest sounding note of its
-  pitch, so overlapping notes of one pitch keep their own lengths.
+  pitch, so overlapping notes of one pitch keep their own lengths (the
+  chord reading lets a re-strike end the note before it). A stuck or
+  doubled note-on would then ring under everything after it, so when the
+  notes paired this way are not one line, the chord reading's pairing is
+  tried before the file is read as chords.
 - **`notes: false`** reads chords from any file, as before 0.4. Anything
   that stops the line reading (an error such as `too-large`, no pitch
   left that a chart can write, a line that does not play back as read)
