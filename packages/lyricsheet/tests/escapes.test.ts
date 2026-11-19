@@ -197,6 +197,37 @@ describe("control characters never reach a sheet", () => {
 });
 
 /**
+ * A tag made of pieces: each piece is harmless alone (`<b` has no `>`), and
+ * the written line joins them into markup ChordPro reads (`<b>loud</b>`
+ * prints bold with the tags gone; a malformed one, `<spansize='40'>`, is a
+ * markup error and no PDF at all: measured 2026-11-19).
+ */
+describe("angle brackets never join into a tag on a written line", () => {
+	const TAG = /<[^\n]*>/;
+	const cases: [string, string][] = [
+		["two syllables of one word", "# Mine\n| C | G |\nlyrics: | <b- >loud </b- >soft | la |\n"],
+		["two words", "# Mine\n| C | G |\nlyrics: | <b size='40' >loud | la |\n"],
+		["a bar's words and a syllable", '# Mine\n| "<b" C | G |\nlyrics: | >loud | la |\n'],
+		["two bars' margin words in a grid", '# Mine\n| "<b" C | ">" G |\n'],
+		["a chord between the pieces", "# Mine\n| C G | G |\nlyrics: | <b- >loud | la |\n"],
+	];
+	for (const [name, chart] of cases)
+		test(name, () => {
+			const r = exportLyricsheet(chart);
+			if (!r.ok) throw new Error(JSON.stringify(r.diagnostics));
+			expect(r.text).not.toMatch(TAG);
+			expect(r.losses.map((l) => l.code)).toContain("text-changed");
+		});
+
+	test("a lone < or > stays, with no loss", () => {
+		const r = exportLyricsheet("# Mine\n| C | G |\nlyrics: | 3 > 2 | a < b |\n");
+		if (!r.ok) throw new Error("refused");
+		expect(r.text).toContain("[C]3 > 2 [G]a < b");
+		expect(r.losses.map((l) => l.code)).not.toContain("text-changed");
+	});
+});
+
+/**
  * A noncharacter (U+FDD0, U+FFFE, U+FFFF and their kin) makes ChordPro's
  * strict UTF-8 decode fail, and it then reads the WHOLE sheet as Latin-1
  * (measured 2026-11-19: `Café` printed as `CafÃ©`).

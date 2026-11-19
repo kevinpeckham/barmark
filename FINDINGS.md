@@ -9,6 +9,25 @@ not here.
 
 ## Testing
 
+### Text cleaned piece by piece can still make markup when the pieces are joined (2026-11-19, @barmark/lyricsheet)
+
+**Symptom:** the lyric `<b- >loud </b- >soft` wrote the line
+`[C]<b>loud </b>soft`: ChordPro prints "loud" bold with the tags gone, and
+a malformed tag (`<spansize='40'>`) is a markup error and no PDF at all.
+No loss was reported. Vercel's review of the pull request found it; two
+Fable reviews and a 1,500-chart fuzz had not.
+
+**Cause:** every syllable, word and margin text went through `untagged`
+alone, where `<b` has no `>` after it and so is left as it is. The tag
+exists only on the joined line. The fuzz inserted `<` and `>` nowhere.
+
+**Fix:** `untagged` also runs on every whole line where the lines are
+joined, beside the escape pass. A rule about what a reader sees belongs
+where the text is what the reader gets.
+
+**Where it lives:** `packages/lyricsheet/src/export/index.ts` (`joined`),
+`packages/lyricsheet/tests/escapes.test.ts`.
+
 ### A reader's preprocessing is part of the format: ChordPro unescapes every line first (2026-11-19, @barmark/lyricsheet)
 
 **Symptom:** the final review of `@barmark/lyricsheet` wrote a chart whose

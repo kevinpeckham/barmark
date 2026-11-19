@@ -65,8 +65,9 @@ describe("one long line", () => {
 				best(() => exportLyricsheet(short)),
 				1,
 			);
-		// Linear is 8; filtering the line's cells for every `%` measured 20 to 22.
-		expect(ratio).toBeLessThan(14);
+		// Linear is 8; filtering the line's cells for every `%` measured 20 to 22. The limit was
+		// 14 until a run beside another full suite measured 14.1 (2026-11-19).
+		expect(ratio).toBeLessThan(17);
 		// Measured 1.1 to 1.3 times the parse; the quadratic one 4.6 to 5.3.
 		expect(best(() => exportLyricsheet(long))).toBeLessThan(3 * best(() => parseChart(long)));
 	}, 60_000);

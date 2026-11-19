@@ -8,7 +8,7 @@ import { lyricSection } from "./lyrics.js";
 import { headerLines, headerLosses } from "./meta.js";
 import { layout, type Occurrence, occurrences } from "./plan.js";
 import { sheetOf } from "./sheet.js";
-import { textChanged, unescapable } from "./text.js";
+import { textChanged, unescapable, untagged } from "./text.js";
 import type { LyricsheetOptions, LyricsheetResult, Out } from "./types.js";
 import { writtenOf } from "./written.js";
 
@@ -93,12 +93,15 @@ function defined(out: Out, headed: number): void {
 }
 
 /**
- * The sheet's text: every line through `unescapable`, here where the lines
- * are joined so no line can miss it, one final newline.
+ * The sheet's text: every line through `untagged` and `unescapable`, here
+ * where the lines are joined so no line can miss them, one final newline.
+ * Each piece of a line was already untagged alone; two pieces can still
+ * make a tag between them (`<b` and `>loud`), which only the whole line
+ * shows. Nothing this package writes holds an angle bracket of its own.
  */
 function joined(out: Out): string {
 	if (out.lines.length === 0) return "";
-	const lines = out.lines.map(unescapable);
+	const lines = out.lines.map((line) => unescapable(untagged(line)));
 	if (lines.some((line, i) => line !== out.lines[i])) textChanged(out.losses);
 	return `${lines.join("\n")}\n`;
 }
