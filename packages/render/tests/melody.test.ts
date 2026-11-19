@@ -66,12 +66,12 @@ describe("melody: false on a lead sheet", () => {
 			expect(r.lyrics?.map((v) => v.verse)).toEqual([1, 2].slice(0, r.lyrics?.length));
 		}
 		expect(rows[0]?.lyrics?.map((v) => v.verse)).toEqual([1, 2]);
-		// The melody's `{B4}_{G4}` splits the third beat, so the beat grid has six places: maz- on the first beat, ing on the third.
+		// The melisma's held place takes no step: three steps, maz- on the first, ing on the third.
 		const bar2 = rows[0]?.lyrics?.[0]?.cells[1];
-		expect(bar2).toHaveLength(6);
+		expect(bar2).toHaveLength(3);
 		expect(bar2?.[0]?.[0]).toMatchObject({ kind: "sung", parts: ["maz"] });
 		expect(bar2?.[1]).toEqual([]);
-		expect(bar2?.[4]?.[0]).toMatchObject({ kind: "sung", parts: ["ing"] });
+		expect(bar2?.[2]?.[0]).toMatchObject({ kind: "sung", parts: ["ing"] });
 	});
 
 	test("the markup has no pitch and keeps the words and every chord", () => {
@@ -654,5 +654,84 @@ lyrics 1: | la / la / | la |
 		const L = layoutChart(LEAD, { part: "Vox", melody: false });
 		expect(items(L).every((i) => i.kind === "row")).toBe(true);
 		expect(rowsOf(L)[0]?.lyrics?.length).toBe(2);
+	});
+});
+
+describe("melody: false: a melisma's held place is not drawn", () => {
+	const MEL = `# Amazing Grace
+part: Vox = Voice, instrument: voice
+key: G, time: 3/4, tempo: 80
+
+## Verse
+Vox       | [1/4] D    | G                | G / G7      |
+Vox.Mel   | [1/4] {D4} | {G4} / {B4}_{G4} | {B4} / {A4} |
+lyrics 1: | A-         | maz- / ing_/     | grace / how |
+
+Vox       | G / /       | D                |
+Vox.Mel   | {B4} / {D5} | {B4}_{G4} / /    |
+lyrics 1: | I / once    | was_/ /          |
+`;
+	const TWIN = `# Amazing Grace
+key: G, time: 3/4, tempo: 80
+
+## Verse
+| [1/4] D    | G                | G / G7      |
+lyrics 1: | A-         | maz- / ing   | grace / how |
+
+| G / /       | D                |
+lyrics 1: | I / once    | was / /          |
+`;
+	const verseCells = (m: ChartModel) => rowsOf(m).map((r) => r.lyrics?.map((v) => v.cells));
+
+	test("the lyric rows equal the plain twin's, place for place, with no held place", () => {
+		const a = verseCells(off(MEL));
+		expect(a).toEqual(verseCells(layoutChart(TWIN)));
+		expect(JSON.stringify(a)).not.toContain("held");
+		expect(JSON.stringify(verseCells(dflt(MEL)))).toBeDefined();
+	});
+
+	test("no extender is drawn with the melody out; the default still draws them", () => {
+		const ext = (h: string) => doc(h).querySelectorAll(".bm-extender").length;
+		expect(ext(renderChartUnwrapped(MEL, OFF))).toBe(0);
+		expect(ext(renderChartUnwrapped(MEL))).toBeGreaterThan(0);
+	});
+
+	test("words on no melody are the default's (the parser gives them no held place: it holds only under notes)", () => {
+		const T = "time: 4/4\n\n| C | G |\nlyrics: | maz- / ing_/ | la |\n";
+		expect(off(T)).toEqual(dflt(T));
+		expect(renderChartUnwrapped(T, OFF)).toBe(renderChartUnwrapped(T));
+	});
+
+	test("a system whose melody stays keeps its held places, beside one that lost its melody", () => {
+		const T = `part: Gtr = Guitar
+part: Vox = Voice, instrument: voice
+time: 4/4
+
+## A
+Gtr | C | G |
+Vox | {C4} / {D4}_{D4} / | {D4} / / / |
+lyrics 1: | la / ti_/ / | la |
+
+## B
+Vox | {C4} / {D4}_{D4} / | {D4} / / / |
+lyrics 1: | la / ti_/ / | la |
+`;
+		const m = off(T);
+		expect(m.blocks[1]).toEqual(dflt(T).blocks[1]);
+		expect(JSON.stringify(m.blocks[1])).toContain("held");
+		expect(JSON.stringify(m.blocks[0])).not.toContain("held");
+	});
+
+	test("a bar of only a held syllable draws as an empty bar of one step", () => {
+		const T = `part: V = Voice, instrument: voice
+time: 4/4
+
+V | C | G | C |
+V.Mel | {C4} / {D4}_{D4} / | {D4} / / / | {E4} / / / |
+lyrics 1: | la / ti_/ / | / | la |
+`;
+		const row = rowsOf(off(T))[0];
+		expect(row?.lyrics?.[0]?.cells[1]).toEqual([[]]);
+		expect(JSON.stringify(row?.lyrics)).not.toContain("held");
 	});
 });

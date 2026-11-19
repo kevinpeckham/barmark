@@ -172,10 +172,11 @@ function stepsFor(fractions: number[]): number {
 	return MAX_STEPS;
 }
 
-/** A verse's syllables in a bar on its beats: equal steps, each syllable at its onset's. */
-function onBeats(landing: Landing, key: string, verse: number): Syllable[][] {
+/** A verse's syllables in a bar on its beats: equal steps, each syllable at its onset's; with `bare`, a held place is not one. */
+function onBeats(landing: Landing, key: string, verse: number, bare: boolean): Syllable[][] {
 	if (!landing) return [];
-	const sung = verseIn(landing, key, verse);
+	const heard = verseIn(landing, key, verse);
+	const sung = bare ? heard.filter((s) => s.syllable.kind !== "held") : heard;
 	const length = barLength(landing.bar.meter);
 	const steps = stepsFor(sung.map((s) => s.at / length));
 	const out: Syllable[][] = Array.from({ length: steps }, () => []);
@@ -184,10 +185,18 @@ function onBeats(landing: Landing, key: string, verse: number): Syllable[][] {
 	return out;
 }
 
-/** The verses no row sings under its slots: the chart's words, or a singer's with no melody here, by beat. */
-export function rowVerses(lands: Landing[], sung: Set<string>): Verse[] {
+/**
+ * The verses no row sings under its slots: the chart's words, or a singer's
+ * with no melody here, by beat. A singer in `leftOut` had its melody left
+ * out of the system (`melody: false`): its melisma's held places take no step.
+ */
+export function rowVerses(
+	lands: Landing[],
+	sung: Set<string>,
+	leftOut = new Set<string>(),
+): Verse[] {
 	return versesOf(lands, (k) => !sung.has(k)).map(([key, verse]) => ({
 		verse,
-		cells: lands.map((l) => onBeats(l, key, verse)),
+		cells: lands.map((l) => onBeats(l, key, verse, leftOut.has(key))),
 	}));
 }

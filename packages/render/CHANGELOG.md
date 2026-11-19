@@ -6,6 +6,12 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- **With `melody: false`, a melisma's held place is not drawn**: the words
+  of a left-out melody take the space they would with no melody written,
+  so `maz- / ing_/` draws as `maz- / ing`, with no extender.
+
 ## [0.21.0] - 2026-11-19
 
 ### Added
