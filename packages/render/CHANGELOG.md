@@ -6,6 +6,8 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.21.0] - 2026-11-19
+
 ### Added
 
 - **`melody: false`** (attribute `melody="off"`, property `melody`) leaves a
@@ -589,7 +591,8 @@ that needs no script or as the `<barmark-chart>` web component. Requires
   zoom without sideways scrolling, the element renders and re-renders, and
   a screen reader hears "bar 9: D". Run them with `bun run test:browser`.
 
-[Unreleased]: https://github.com/kevinpeckham/barmark/compare/render-v0.20.2...HEAD
+[Unreleased]: https://github.com/kevinpeckham/barmark/compare/render-v0.21.0...HEAD
+[0.21.0]: https://github.com/kevinpeckham/barmark/compare/render-v0.20.2...render-v0.21.0
 [0.20.2]: https://github.com/kevinpeckham/barmark/compare/render-v0.20.1...render-v0.20.2
 [0.20.1]: https://github.com/kevinpeckham/barmark/compare/render-v0.20.0...render-v0.20.1
 [0.20.0]: https://github.com/kevinpeckham/barmark/compare/render-v0.19.1...render-v0.20.0

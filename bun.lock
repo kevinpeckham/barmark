@@ -90,7 +90,7 @@
     },
     "packages/render": {
       "name": "@barmark/render",
-      "version": "0.20.2",
+      "version": "0.21.0",
       "dependencies": {
         "@barmark/fretboard": "workspace:^",
         "barmark": "workspace:^",
