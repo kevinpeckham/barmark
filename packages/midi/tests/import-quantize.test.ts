@@ -286,6 +286,20 @@ describe("a beat's two clocks: a cut bar", () => {
 	/** Bars 0: 4/4, 1920: 5/16 (a 650-tick span written 600), 2570: 3/4. */
 	const gap = () => cutGrid(2570, 4000);
 
+	test("the chart's clock stays behind the file's in every bar after the cut, not only the next", () => {
+		const grid = cutGrid(2570, 5000);
+		expect(grid.bars.map((b) => b.start)).toEqual([0, 1920, 2570, 4010]);
+		const firsts = grid.bars.map((_, bar) => beatsOfGrid(grid).find((b) => b.bar === bar));
+		expect(firsts.map((b) => [b?.start, b?.at])).toEqual([
+			[0, 0],
+			[1920, 1920],
+			[2570, 2520],
+			[4010, 3960],
+		]);
+		const q = quantize(attacksAt(4010), grid);
+		expect(pointTick(q, q.struck[0]?.beat ?? 0, 0)).toBe(3960);
+	});
+
 	test("the grid is as the test reads it", () => {
 		const grid = gap();
 		expect(grid.bars.map((b) => [b.start, b.meter.n, b.meter.d])).toEqual([
