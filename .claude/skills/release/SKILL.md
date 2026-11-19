@@ -46,8 +46,7 @@ Points that are easy to miss:
   a CLI release. It depends on `barmark` and `@barmark/fretboard` with
   carets: after a `barmark` or `fretboard` minor, release a `lyricsheet`
   patch raising the dependency ("Requires `@barmark/fretboard` X.Y.0").
-  The site does not install it, so a lyricsheet release needs no site
-  bump of its own (step 12), only the CLI's.
+  The site installs it for Get Started's snippet, so step 12 bumps it.
 - When `@barmark/render` needs unreleased `barmark` changes, release
   `barmark` first: the render release check fails until the `barmark`
   version it depends on is on npm.

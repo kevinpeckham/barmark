@@ -237,12 +237,10 @@ runs, and `verify:package cli` fails on anything else.
     `site/bun.lock`). Until it merges, CI's `site-versions` check is red
     on purpose; it is not required, so other pull requests still merge.
     It checks every barmark package the site installs, dev dependencies
-    too: a `@barmark/musicxml`, `sync`, `midi`, `listen` or `fretboard`
-    release needs `bun add --dev --exact`, since Get Started's snippets
-    are tested against the installed version while the `npm install` it
-    shows gets the latest. The site does not install `@barmark/lyricsheet`,
-    so a lyricsheet release skips this step (its CLI release, step 13,
-    still bumps the site's `@barmark/cli`).
+    too: a `@barmark/musicxml`, `sync`, `midi`, `listen`, `fretboard` or
+    `lyricsheet` release needs `bun add --dev --exact`, since Get
+    Started's snippets are tested against the installed version while the
+    `npm install` it shows gets the latest.
     After a `barmark` bump, check `site/bun.lock` holds one barmark:
     `grep '/barmark": \["barmark@' site/bun.lock` prints nothing, or
     delete the nested entries it finds and `bun install` again (FINDINGS).

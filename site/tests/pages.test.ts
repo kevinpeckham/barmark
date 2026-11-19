@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { shapeFor, shapeText } from "@barmark/fretboard";
 import { alignChart, chartFromBeats, chartFromRecording } from "@barmark/listen";
+import { exportLyricsheet } from "@barmark/lyricsheet";
 import { exportMidi, importMidi } from "@barmark/midi";
 import { perform, secondsAt } from "@barmark/midi/perform";
 import { exportMusicXml, importMusicXml } from "@barmark/musicxml";
@@ -17,6 +18,8 @@ import { FILES, LINKS } from "../src/lib/site.ts";
 import {
 	BINARIES,
 	CLI_CI,
+	LYRICSHEET_CHART,
+	LYRICSHEET_SAMPLE,
 	PACKAGES,
 	SAMPLE_CHART,
 	SYNC_DETECTIONS,
@@ -25,6 +28,7 @@ import {
 	USE_FRETBOARD,
 	USE_LISTEN,
 	USE_LISTEN_BEATS,
+	USE_LYRICSHEET,
 	USE_MIDI,
 	USE_MUSICXML,
 	USE_PERFORM,
@@ -290,6 +294,43 @@ describe("the fretboard code Get Started shows", () => {
 	});
 });
 
+describe("the lyricsheet code Get Started shows", () => {
+	test("writes the sheet the page shows, with no losses", () => {
+		const result = exportLyricsheet(LYRICSHEET_CHART, { diagrams: "guitar" });
+		if (!result.ok) throw new Error("the sample chart is refused");
+		expect(result.text).toBe(LYRICSHEET_SAMPLE);
+		expect(result.losses).toEqual([]);
+		expect(LYRICSHEET_SAMPLE.split("\n").length).toBeLessThanOrEqual(14);
+		for (const line of [
+			'import { exportLyricsheet } from "@barmark/lyricsheet";',
+			'exportLyricsheet(text, { diagrams: "guitar" })',
+			"result.ok",
+			"result.text",
+			"result.losses",
+		])
+			expect(USE_LYRICSHEET).toContain(line);
+	});
+	test("the packages table says it writes ChordPro, and links its step and README", () => {
+		const row = PACKAGES.find((p) => p.name === "@barmark/lyricsheet");
+		expect(row?.step).toBe("#lyricsheet");
+		expect(row?.readme).toBe(LINKS.lyricsheetReadme);
+		expect(row?.does).toContain("ChordPro");
+	});
+	test("the step names the CLI command and the version that has it, and says ChordPro is separate", () => {
+		const doc = page("get-started.html");
+		const step = text(doc.querySelector("#lyricsheet")?.parentElement) ?? "";
+		expect(step).toContain("barmark export --lyricsheet song.chart.md --out song.cho");
+		expect(step).toContain("0.14.0");
+		expect(step).toContain("separate project");
+		const hrefs = [
+			...(doc.querySelector("#lyricsheet")?.parentElement?.querySelectorAll("a") ?? []),
+		];
+		expect(hrefs.map((a) => a.getAttribute("href"))).toContain(LINKS.lyricsheetReadme);
+		const intro = text(doc.querySelector("main h1")?.nextElementSibling) ?? "";
+		expect(intro).toContain("@barmark/lyricsheet writes a chart as a ChordPro lyric sheet");
+	});
+});
+
 describe("the score code Get Started shows", () => {
 	test("renderScoreHtml draws the grid and the switch, as the page says, with the font", () => {
 		const html = renderScoreHtml(SAMPLE_CHART, {
@@ -474,6 +515,7 @@ describe("Get Started, prerendered", () => {
 			"9. Sync a chart with a recording",
 			"10. Or start from the recording",
 			"11. Find guitar chord shapes",
+			"12. Write a lyric sheet",
 		]);
 		const page = text(doc().querySelector("main")) ?? "";
 		for (const line of [
@@ -485,6 +527,12 @@ describe("Get Started, prerendered", () => {
 			"npm install @barmark/midi",
 			"npm install @barmark/listen",
 			"npm install @barmark/fretboard",
+			"npm install @barmark/lyricsheet",
+			"exportLyricsheet(",
+			"export --lyricsheet",
+			"lyrics: | Down / by the | riv- er | wait- ing | / |",
+			"[G]Down by the [Cm]river [G]waiting [D]",
+			"each with a code, most with the bars it happened in",
 			'chord-diagrams="guitar"',
 			"shapeFor(",
 			"exportMidi(",
@@ -525,7 +573,7 @@ describe("Get Started, prerendered", () => {
 		);
 		const rows = [...doc().querySelectorAll("#packages ~ table tbody tr")];
 		const names = rows.map((row) => text(row.querySelector("th a")));
-		expect(names).toHaveLength(10);
+		expect(names).toHaveLength(11);
 		for (const name of ours) expect(names).toContain(name);
 		expect(names).toContain("@barmark/engraver"); // loaded from a CDN, never installed
 		const ids = new Set([...doc().querySelectorAll("main [id]")].map((el) => el.id));
@@ -584,9 +632,9 @@ describe("the FAQ, prerendered", () => {
 		const contents = [...doc().querySelectorAll("main nav a")].map((a) => a.getAttribute("href"));
 		expect(contents).toEqual(ids.map((id) => `#${id}`));
 	});
-	test("names the ten packages, and answers how to check charts without code", () => {
+	test("names the eleven packages, and answers how to check charts without code", () => {
 		const what = text(doc().querySelector("#what")?.parentElement) ?? "";
-		expect(what).toContain("ten npm packages");
+		expect(what).toContain("eleven npm packages");
 		for (const name of [
 			"barmark",
 			"@barmark/render",
@@ -597,6 +645,7 @@ describe("the FAQ, prerendered", () => {
 			"@barmark/sync",
 			"@barmark/listen",
 			"@barmark/fretboard",
+			"@barmark/lyricsheet",
 			"@barmark/cli",
 		])
 			expect(what).toContain(name);

@@ -84,6 +84,13 @@ export const PACKAGES: {
 		step: "#fretboard",
 		readme: LINKS.fretboardReadme,
 	},
+	{
+		name: "@barmark/lyricsheet",
+		does: "Writes a chart as a ChordPro lyric sheet: chords over the words, with the title, key, time and tempo, and guitar chord diagrams if you ask. It says what ChordPro could not carry.",
+		when: "A singer's sheet for any app that reads ChordPro, to show, print or transpose.",
+		step: "#lyricsheet",
+		readme: LINKS.lyricsheetReadme,
+	},
 ];
 
 export const SAMPLE_CHART = `# Example Song
@@ -356,3 +363,37 @@ if (chord.ok) {
 		result.reason; // "single-note" or "not-playable": no shape to show
 	}
 }`;
+
+export const INSTALL_LYRICSHEET = "npm install @barmark/lyricsheet";
+
+export const LYRICSHEET_CHART = `# Ferry Lights
+key: G, time: 4/4
+
+## Verse
+| G | Cm | G | D |
+lyrics: | Down / by the | riv- er | wait- ing | / |
+`;
+
+export const USE_LYRICSHEET = `import { exportLyricsheet } from "@barmark/lyricsheet";
+
+const result = exportLyricsheet(text, { diagrams: "guitar" });
+if (result.ok) {
+	result.text; // the ChordPro sheet, ready to save as song.cho
+	result.losses; // what ChordPro could not carry, each with a code: [] here
+} else {
+	result.diagnostics; // why not: the chart's errors, each with its line number
+}`;
+
+/** What exportLyricsheet writes for LYRICSHEET_CHART with diagrams: "guitar". */
+export const LYRICSHEET_SAMPLE = `{title: Ferry Lights}
+{key: G}
+{time: 4/4}
+
+{define: G base-fret 1 frets 3 2 0 0 0 3}
+{define: Cm base-fret 3 frets x 1 3 3 2 1}
+{define: D base-fret 1 frets x x 0 2 3 2}
+
+{start_of_verse: label="Verse"}
+[G]Down by the [Cm]river [G]waiting [D]
+{end_of_verse}
+`;
