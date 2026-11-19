@@ -19,8 +19,15 @@ const DIVISIONS = [1, 2, 3, 4, 6];
 const ROUND_PLAIN = 4;
 const ROUND_DOTTED = 6;
 
-/** A beat in ticks; `bar` is its index in `grid.bars`; `dotted` when the meter's beat is three of its units. */
-export type Beat = { bar: number; start: number; length: number; dotted: boolean };
+/**
+ * A beat in ticks; `bar` is its index in `grid.bars`; `dotted` when the
+ * meter's beat is three of its units. A beat has two clocks: `start` is
+ * where it begins in the file (where its attacks are read), `at` where it
+ * begins in the chart, the meters of the bars before it summed (as
+ * `perform` plays them). They differ after a bar cut at a time signature
+ * whose meter, rounded to sixteenths, is not its span in the file.
+ */
+export type Beat = { bar: number; start: number; at: number; length: number; dotted: boolean };
 
 /** Every input attack that landed on one point of one beat, in input order. */
 export type Struck<A extends Attack = Attack> = { beat: number; point: number; attacks: A[] };
@@ -39,14 +46,17 @@ export type Quantized<A extends Attack = Attack> = {
 	joined: number;
 };
 
-/** Each bar's length over `beatsOf(meter)`, in order. */
+/** Each bar's length over `beatsOf(meter)`, in order, from the bar's start in the file and on the chart's clock. */
 export function beatsOfGrid(grid: Grid): Beat[] {
 	const beats: Beat[] = [];
+	let clock = 0;
 	grid.bars.forEach(({ start, meter }, bar) => {
 		const count = beatsOf(meter);
 		const length = (meter.n * 4 * grid.ppq) / meter.d / count;
 		const dotted = count !== meter.n;
-		for (let i = 0; i < count; i++) beats.push({ bar, start: start + i * length, length, dotted });
+		for (let i = 0; i < count; i++)
+			beats.push({ bar, start: start + i * length, at: clock + i * length, length, dotted });
+		clock += count * length;
 	});
 	return beats;
 }
@@ -57,7 +67,11 @@ export function divisionsFor(length: number, ppq: number): number[] {
 	return fine.length > 0 ? fine : [1];
 }
 
-/** A point's tick: `start + point * length / parts`. */
+/**
+ * A point's tick on the chart's clock: `at + point * length / parts`. A
+ * later stage finds the beat a time in the file falls in by `start`, and
+ * measures by this.
+ */
 export const pointTick = (
 	q: Pick<Quantized, "beats" | "parts">,
 	beat: number,
@@ -65,7 +79,7 @@ export const pointTick = (
 ): number => {
 	const b = q.beats[beat];
 	if (b === undefined) return 0;
-	return b.start + (point * b.length) / (q.parts[beat] ?? 1);
+	return b.at + (point * b.length) / (q.parts[beat] ?? 1);
 };
 
 /** Attacks at one time in a beat: a carried group sits at the beat's start. */
