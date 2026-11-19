@@ -104,7 +104,11 @@ new note: in a legato line where a pitch is struck again a few ticks
 before its last note-off (a DAW's legato edit, audio-to-MIDI), every
 later note of the run came out a few ticks long, was left out as short,
 and the chart showed a rest where the bass played. The chord reading
-keeps MIDI 5.2's pairing, so no chord chart changes.
+keeps MIDI 5.2's pairing, so no chord chart changes. Under the new
+pairing one stuck or doubled note-on leaves its pitch ringing under
+everything after it, so when the notes paired this way are not one line
+the test is tried again on MIDI 5.2's notes, and the line is read from
+those.
 
 1. **Short notes** are set aside first (4.1).
 2. The notes, by start, are grouped into **attacks**: a note joins the
@@ -290,8 +294,9 @@ others (sections, changes, the pickup) are, as today.
 
 ### 6.3 Lyrics
 
-Lyric events become lyric rows exactly as today (MIDI 5.8), under the
-line's bars. Nothing about them changes in this design, which leaves
+Lyric events become lyric rows as today (MIDI 5.8), under the line's
+bars; whether a syllable's place is held or silent is judged on the
+line's own notes, so a row agrees with the bars above it. Nothing about them changes in this design, which leaves
 two limits a reader should know **(design call:** both need a `part:`
 line, which is the wider design's):
 
