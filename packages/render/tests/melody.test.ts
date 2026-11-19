@@ -687,7 +687,31 @@ lyrics 1: | I / once    | was / /          |
 		const a = verseCells(off(MEL));
 		expect(a).toEqual(verseCells(layoutChart(TWIN)));
 		expect(JSON.stringify(a)).not.toContain("held");
-		expect(JSON.stringify(verseCells(dflt(MEL)))).toBeDefined();
+	});
+
+	test("a verse that only holds through a system draws no line there, as its plain twin has none", () => {
+		const system = (mel: string, rows: string) => `Vox | F | C |\n${mel}${rows}`;
+		const held = `part: Vox = Voice, instrument: voice
+time: 4/4
+
+Vox | C | G |
+Vox.Mel | {C4} / {D4} / | {E4} / {F4} / |
+lyrics 1: | la / ti / | / / do / |
+lyrics 2: | so / / / | / / / / |
+${system("Vox.Mel | {F4} / / / | {E4} / / / |\n", "lyrics 1: | mi | re |\nlyrics 2: | / | / |\n")}`;
+		const twin = `time: 4/4
+
+| C | G |
+lyrics 1: | la / ti / | / / do / |
+lyrics 2: | so / / / | / / / / |
+| F | C |
+lyrics 1: | mi | re |
+lyrics 2: | / | / |
+`;
+		expect(dflt(held).diagnostics).toEqual([]);
+		expect(verseCells(off(held))).toEqual(verseCells(layoutChart(twin)));
+		// The second system sings verse 1 only: one line, so no verse numbers.
+		expect(rowsOf(off(held))[1]?.lyrics?.map((v) => v.verse)).toEqual([1]);
 	});
 
 	test("no extender is drawn with the melody out; the default still draws them", () => {

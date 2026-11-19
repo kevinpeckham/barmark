@@ -195,8 +195,14 @@ export function rowVerses(
 	sung: Set<string>,
 	leftOut = new Set<string>(),
 ): Verse[] {
-	return versesOf(lands, (k) => !sung.has(k)).map(([key, verse]) => ({
-		verse,
-		cells: lands.map((l) => onBeats(l, key, verse, leftOut.has(key))),
-	}));
+	return versesOf(lands, (k) => !sung.has(k))
+		.filter(([key, verse]) => !leftOut.has(key) || sounds(lands, key, verse))
+		.map(([key, verse]) => ({
+			verse,
+			cells: lands.map((l) => onBeats(l, key, verse, leftOut.has(key))),
+		}));
 }
+
+/** Whether a verse has a syllable that is not held somewhere in the row: one that only holds draws nothing bare. */
+const sounds = (lands: Landing[], key: string, verse: number) =>
+	lands.some((l) => verseIn(l, key, verse).some((s) => s.syllable.kind !== "held"));
