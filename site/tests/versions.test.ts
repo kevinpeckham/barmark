@@ -50,6 +50,7 @@ describe("the libraries Get Started documents", () => {
 		["@barmark/midi", "midi-v"],
 		["@barmark/listen", "listen-v"],
 		["@barmark/fretboard", "fretboard-v"],
+		["@barmark/lyricsheet", "lyricsheet-v"],
 	])("%s is checked against its %s tags", (name, prefix) => {
 		expect(behind({ [name]: "0.1.0" }, [`${prefix}0.2.0`])).toEqual([`${name} 0.1.0 < 0.2.0`]);
 	});

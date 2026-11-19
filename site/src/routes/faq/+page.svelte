@@ -103,7 +103,7 @@ onMount(() => {
 					which bars, in which sections, in what key, meter and tempo, and in what order the song plays.
 				</p>
 				<p>
-					It is also ten npm packages: <code class={code}>barmark</code> reads and writes charts,
+					It is also eleven npm packages: <code class={code}>barmark</code> reads and writes charts,
 					<code class={code}>@barmark/render</code> draws them as a clean bar grid on any web page,
 					<code class={code}>@barmark/score</code> shows the same chart as a full score beside the grid,
 					<code class={code}>@barmark/engraver</code> is a smaller build of the Verovio that engraves it,
@@ -113,7 +113,8 @@ onMount(() => {
 					says when each bar plays, <code class={code}>@barmark/listen</code> finds the bars in a
 					recording itself or reads them from a beat tracker's beats,
 					<code class={code}>@barmark/fretboard</code> finds the guitar chord shapes the renderer draws,
-					and <code class={code}>@barmark/cli</code> does the rest from the terminal.
+					<code class={code}>@barmark/lyricsheet</code> writes a chart as a ChordPro lyric sheet, and
+					<code class={code}>@barmark/cli</code> does the rest from the terminal.
 				</p>
 			</section>
 

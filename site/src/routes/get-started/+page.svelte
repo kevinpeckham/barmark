@@ -7,6 +7,7 @@ import {
 	CLI_CI,
 	INSTALL_FRETBOARD,
 	INSTALL_LISTEN,
+	INSTALL_LYRICSHEET,
 	INSTALL_MIDI,
 	INSTALL_MUSICXML,
 	INSTALL_PARSER,
@@ -14,6 +15,7 @@ import {
 	INSTALL_SCORE,
 	INSTALL_SYNC,
 	LIVE_EDITOR,
+	LYRICSHEET_SAMPLE,
 	PACKAGES,
 	SAMPLE_CHART,
 	USE_BINARY,
@@ -22,6 +24,7 @@ import {
 	USE_FRETBOARD,
 	USE_LISTEN,
 	USE_LISTEN_BEATS,
+	USE_LYRICSHEET,
 	USE_MIDI,
 	USE_MUSICXML,
 	USE_PARSER,
@@ -35,7 +38,7 @@ import {
 } from "#lib/start.js";
 
 const description =
-	"Write a Barmark chart, read it with the parser, draw it with @barmark/render or the <barmark-chart> web component, show it as a full score with @barmark/score, convert it to and from MusicXML with @barmark/musicxml and MIDI with @barmark/midi, check charts from the terminal with @barmark/cli, line a chart up with a recording with @barmark/sync and @barmark/listen, and find guitar chord shapes with @barmark/fretboard.";
+	"Write a Barmark chart, read it with the parser, draw it with @barmark/render or the <barmark-chart> web component, show it as a full score with @barmark/score, convert it to and from MusicXML with @barmark/musicxml and MIDI with @barmark/midi, check charts from the terminal with @barmark/cli, line a chart up with a recording with @barmark/sync and @barmark/listen, find guitar chord shapes with @barmark/fretboard, and write a chart as a lyric sheet with @barmark/lyricsheet.";
 const step = "font-serif text-xl text-ink";
 const link = "underline decoration-accent/60 underline-offset-3 hover-text-accent";
 const code = "font-mono text-accent";
@@ -63,7 +66,8 @@ const cell = "px-3 py-3 align-top lt-sm:(block px-0 py-1)";
 			<code class={code}>@barmark/musicxml</code> and <code class={code}>@barmark/midi</code> convert charts
 			to and from MusicXML and MIDI, <code class={code}>@barmark/sync</code> and
 			<code class={code}>@barmark/listen</code> line a chart up with a recording,
-			<code class={code}>@barmark/fretboard</code> finds guitar chord shapes, and
+			<code class={code}>@barmark/fretboard</code> finds guitar chord shapes,
+			<code class={code}>@barmark/lyricsheet</code> writes a chart as a ChordPro lyric sheet, and
 			<code class={code}>@barmark/cli</code> puts them in the terminal, for checking charts without
 			writing any code. The libraries are ESM, with TypeScript types, and run in Node 20 or later, Bun
 			and the browser; the score's element runs in the browser, and its
@@ -400,6 +404,34 @@ const cell = "px-3 py-3 align-top lt-sm:(block px-0 py-1)";
 		<p class="text-sm opacity-80">
 			What a shape holds, how an altered chord becomes a shell and what it cannot find are in the
 			<a href={LINKS.fretboardReadme} class={link}>fretboard package's README</a>.
+		</p>
+	</section>
+	<section class="flex flex-col gap-4 min-w-0">
+		<h2 id="lyricsheet" class="{step} scroll-mt-6">12. Write a lyric sheet</h2>
+		<p class="max-w-prose opacity-80">
+			<code class={code}>@barmark/lyricsheet</code> writes a chart as a singer's lyric sheet: the chords
+			over the words, with the title, key, time and tempo, in the text format
+			<a href="https://www.chordpro.org" class={link}>ChordPro</a> reads, so any app that reads ChordPro
+			can show, print or transpose it. ChordPro is a separate project: this package only writes text for
+			it. With <code class={code}>diagrams: "guitar"</code> it adds a guitar shape for every chord, from
+			<code class={code}>@barmark/fretboard</code>. It never throws.
+		</p>
+		<Code title="Terminal" code={INSTALL_LYRICSHEET} />
+		<Code title="lyricsheet.ts" code={USE_LYRICSHEET} />
+		<p class="max-w-prose opacity-80">
+			For a verse of four bars with the words written under them, with diagrams on, it writes this:
+		</p>
+		<Code title="Ferry Lights" code={LYRICSHEET_SAMPLE} />
+		<p class="max-w-prose opacity-80">
+			A lyric sheet keeps the order of the chords and words, not their timing. What ChordPro cannot hold,
+			such as a church mode or a part other than the one written, comes back in
+			<code class={code}>losses</code>, never silently dropped. From a terminal,
+			<code class={code}>barmark export --lyricsheet song.chart.md --out song.cho</code> does the same,
+			with <code class={code}>@barmark/cli</code> 0.14.0 or later.
+		</p>
+		<p class="text-sm opacity-80">
+			Every loss, the grid sections for bars with no words and the guitar diagram rules are in the
+			<a href={LINKS.lyricsheetReadme} class={link}>lyricsheet package's README</a>.
 		</p>
 	</section>
 </main>
