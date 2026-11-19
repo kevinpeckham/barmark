@@ -96,7 +96,15 @@ The test runs on the **pitched notes**: every note outside channel 10
 on the tracks `options.tracks` names, or on every track when it names
 none. It runs before MIDI 5.2's choice of harmony streams, which the
 line reading does not use. Notes are paired as MIDI 5.2 pairs them, the
-sustain pedal included.
+sustain pedal included, but for one thing **(design call, made while
+building, 2026-11-19):** a note-off ends the oldest sounding note of its
+pitch, and a second note-on does not end the first. MIDI 5.2 lets a
+re-strike end the note before it, so the note-off that follows ends the
+new note: in a legato line where a pitch is struck again a few ticks
+before its last note-off (a DAW's legato edit, audio-to-MIDI), every
+later note of the run came out a few ticks long, was left out as short,
+and the chart showed a rest where the bass played. The chord reading
+keeps MIDI 5.2's pairing, so no chord chart changes.
 
 1. **Short notes** are set aside first (4.1).
 2. The notes, by start, are grouped into **attacks**: a note joins the
@@ -401,7 +409,8 @@ committed as a fixture, credited as section 9 says ("arranged and
 played is correct").
 
 **Design calls** (mine; each is marked where it is made): a pedalled
-line reads as harmony (3); the short-note exception (4.1); `--` for a
+line reads as harmony (3); a line's notes are paired first in, first
+out (3); the short-note exception (4.1); `--` for a
 line's rest, and an end never dividing a beat (5); dotted figures
 (6.1); sync unchanged, the cells replaced after it builds (6.2); lyric
 rows left as they are, not sung on the notes (6.3); the self-check and

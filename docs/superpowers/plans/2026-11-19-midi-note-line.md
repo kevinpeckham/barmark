@@ -34,6 +34,8 @@ These settle what the spec leaves open; each is the plan's call, recorded so a r
 6. **The fallback runs the import again** with `notes: false` and a fresh report, with `notes-fallback` as its first diagnostic. Nothing of the failed line reading is reported.
 7. **The placeholder harmony** is one run of `C` from the grid's start to its end. Sync raises no chord diagnostic for it (checked 2026-11-19), so "sync's diagnostics about the placeholder are not reported" needs no filter beyond a test.
 9. **A beat has two clocks** (added after Task 3's review). `gridOf` can cut a bar at a time signature and write it in a meter rounded to sixteenths, so the bar's span in the file and its length in the chart differ. Attacks are assigned and fitted by the file's ticks (`Beat.start`); a point's time is the chart's (`Beat.at`, `pointTick`), which is what `perform` plays and the self-check compares. Task 4 finds the beat a note-off falls in by `start` and measures silences by `pointTick`.
+10. **A line's notes are paired first in, first out** (added after Task 6's review; spec 3 now says so). The chord reading keeps MIDI 5.2's pairing.
+11. **Anything that stops the line reading falls back**: an error it raises (`too-large`), a throw, or no pitch left in range; the chord reading then reports its own errors.
 8. **Existing import tests** whose file is one line keep testing what they test: they pass `notes: false` (they are tests of the chord reading's stages). The new reading has its own tests.
 
 ## Review Focus
