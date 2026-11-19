@@ -1,0 +1,242 @@
+/**
+ * A file that is one line of notes, as that line (the note-line design,
+ * 4 to 6.4): the grid and directives as the chord reading makes them,
+ * the line's pitches named, put on the grid, held or rested, and written
+ * one text a bar. Sync builds the chart around them from one placeholder
+ * run of `C`; each bar's cell is then replaced with the line's, found
+ * through the parse, and lyric rows go on as the chord reading's do. The
+ * self-check plays the chart with `perform`: it must parse and sound the
+ * line's attacks, the same pitches at the same times, or the caller reads
+ * the file as chords instead (null).
+ */
+import { type Meter, type PlayedBar, parseChart, printChart } from "barmark";
+import { perform } from "../perform/index.js";
+import type { Smf } from "../smf/types.js";
+import type { Attack } from "./attacks.js";
+import { built, detectionsOf, failed, writable } from "./build.js";
+import { barTexts, withSimile } from "./cells.js";
+import { directivesOf } from "./directives.js";
+import { statesOf } from "./ends.js";
+import { type Grid, gridOf } from "./grid.js";
+import { lastLyric, withLyrics } from "./lyrics.js";
+import { sectionsOf, titleOf } from "./markers.js";
+import type { Note } from "./notes.js";
+import { type Named, named } from "./pitch.js";
+import { pointTick, type Quantized, quantize } from "./quantize.js";
+import { andList, type Report } from "./report.js";
+import type { MidiImportOptions } from "./types.js";
+
+/** The line as `lineOf` gives it. */
+export type Line = { attacks: Attack[]; notes: Note[]; short: number };
+
+/** Rewrites the finished chart before the self-check plays it: a test seam. */
+export type LineSeam = (chart: string) => string;
+
+/** The most bars `rhythm-rounded` names before it counts the rest. */
+const NAMED_BARS = 8;
+/** A note counts for the grid's end from a quarter over this after its start (a 128th, ruling 5). */
+const TOLERANCE = 32;
+/** ...and up to its end less a quarter over this (a sixteenth), so a legato release adds no bar. */
+const RELEASE = 4;
+/** Times in quarters agree within this. */
+const EPSILON = 1e-6;
+
+const plural = (count: number, one: string, many: string) => `${count} ${count === 1 ? one : many}`;
+
+/** The 1-based tick past which the grid must run: every note's beat exists (ruling 5), and every lyric's. */
+function lastTick(line: Line, smf: Smf, options: MidiImportOptions): number {
+	const lyric = options.lyrics === false ? -1 : lastLyric(smf);
+	const { ppq } = smf;
+	return line.notes.reduce(
+		(end, n) => Math.max(end, n.start + ppq / TOLERANCE + 1, n.end - ppq / RELEASE),
+		lyric + 1,
+	);
+}
+
+/** One `rhythm-rounded` for the file: its first bar, up to eight bars by written number, and the attacks joined. */
+function reportRounded(q: Quantized<Named>, grid: Grid, report: Report): void {
+	const [first] = q.rounded;
+	if (first === undefined) return;
+	const offset = grid.pickup ? 0 : 1;
+	const numbers = q.rounded.map((b) => String(b + offset));
+	const more = numbers.length - NAMED_BARS;
+	const bars =
+		more > 0 ? `${numbers.slice(0, NAMED_BARS).join(", ")} and ${more} more` : andList(numbers);
+	const joined =
+		q.joined > 0
+			? `; ${plural(q.joined, "attack was", "attacks were")} joined to another on one point`
+			: "";
+	report.add(
+		"rhythm-rounded",
+		"warning",
+		`an attack fit no division of its beat and was moved to the nearest point, in ${numbers.length === 1 ? "bar" : "bars"} ${bars}${joined}`,
+		{ bar: first + 1 },
+	);
+}
+
+/** The opening info: the line, and the short notes left out. */
+function reportLine(line: Line, report: Report): void {
+	report.add(
+		"notes-line",
+		"info",
+		"the notes are one line and are written as notes; notes: false reads chords from them",
+	);
+	if (line.short > 0)
+		report.add(
+			"notes-short",
+			"info",
+			`${plural(line.short, "note", "notes")} shorter than a 64th note left out`,
+		);
+}
+
+/** A bar's leading `[n/d]`, kept when its cell is replaced. */
+const BAR_METER = /^\s*(\[\d+\/\d+\])/;
+
+const sameMeter = (a: Meter | undefined, b: Meter | undefined) =>
+	a !== undefined && b !== undefined && a.n === b.n && a.d === b.d;
+
+/** A bar line: its source line (0-based), the index of its first played bar, and its cells as split at `|`. */
+type Row = { at: number; first: number; cells: string[] };
+
+/** The bar lines, each with its cells, in order; null when a line's cells do not number its bars. */
+function rowsOf(lines: string[], bars: PlayedBar[]): Row[] | null {
+	const rows: Row[] = [];
+	bars.forEach((bar, i) => {
+		const last = rows.at(-1);
+		if (last?.at === bar.line - 1) last.cells.push("");
+		else rows.push({ at: bar.line - 1, first: i, cells: [""] });
+	});
+	for (const row of rows) {
+		const parts = (lines[row.at] ?? "").split("|");
+		const count = row.cells.length;
+		if (parts.length !== count + 2 || parts[0]?.trim() !== "" || parts.at(-1)?.trim() !== "")
+			return null;
+		row.cells = parts.slice(1, -1);
+	}
+	return rows;
+}
+
+/** Only blank lines between two source lines. */
+const adjacent = (lines: string[], from: number, to: number) =>
+	lines.slice(from + 1, to).every((l) => l.trim() === "");
+
+/**
+ * Each bar's cell replaced by its text (spec 6.2), a leading `[n/d]`
+ * kept, `%` for a repeat when `simile` (6.1). Null when sync's bars are
+ * not the grid's one for one.
+ */
+function withCells(chart: string, texts: string[], simile: boolean): string | null {
+	const { bars } = parseChart(chart);
+	if (bars.length !== texts.length) return null;
+	const lines = chart.split("\n");
+	const rows = rowsOf(lines, bars);
+	if (rows === null) return null;
+	const meters = rows.flatMap((row) => row.cells.map((cell) => BAR_METER.exec(cell)?.[1] ?? null));
+	const same = (i: number) => {
+		const [bar, before] = [bars[i], bars[i - 1]];
+		return (
+			meters[i] === null &&
+			sameMeter(bar?.meter, before?.meter) &&
+			adjacent(lines, (before?.line ?? 0) - 1, (bar?.line ?? 0) - 1)
+		);
+	};
+	const written = simile ? withSimile(texts, same) : texts;
+	for (const row of rows) {
+		const cells = row.cells.map((_, k) => {
+			const i = row.first + k;
+			const meter = meters[i];
+			return meter ? `${meter} ${written[i]}` : written[i];
+		});
+		lines[row.at] = `| ${cells.join(" | ")} |`;
+	}
+	return printChart(lines.join("\n"));
+}
+
+/** `[quarters, pitch]` pairs sorted by time, then pitch. */
+const sorted = (pairs: [number, number][]) => pairs.sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+
+/** The line's attacks as the chart must sound them: each struck point's pitches at its time on the chart's clock. */
+function struckPairs(q: Quantized<Named>, ppq: number): [number, number][] {
+	return sorted(
+		q.struck.flatMap((s) => {
+			const at = pointTick(q, s.beat, s.point) / ppq;
+			const pitches = new Set(s.attacks.flatMap((a) => a.pitches));
+			return [...pitches].map((p): [number, number] => [at, p]);
+		}),
+	);
+}
+
+/** The self-check (6.4): the chart parses with no error and its performance sounds exactly the struck points. */
+function soundsAsStruck(chart: string, q: Quantized<Named>, ppq: number): boolean {
+	try {
+		const parse = parseChart(chart);
+		if (parse.diagnostics.some((d) => d.severity === "error")) return false;
+		const heard = sorted(
+			perform(parse).tracks.flatMap((t) =>
+				t.notes.map((n): [number, number] => [n.at.n / n.at.d, n.pitch]),
+			),
+		);
+		const wanted = struckPairs(q, ppq);
+		return (
+			heard.length === wanted.length &&
+			heard.every(([at, p], i) => {
+				const [w, wp] = wanted[i] ?? [Number.NaN, -1];
+				return p === wp && Math.abs(at - w) < EPSILON;
+			})
+		);
+	} catch {
+		return false;
+	}
+}
+
+/** The line on the grid, as one text a bar; reports `pitch-range` and `rhythm-rounded`. */
+function lineTexts(
+	line: Line,
+	grid: Grid,
+	keys: Parameters<typeof named>[1],
+	report: Report,
+): { texts: string[]; q: Quantized<Named> } {
+	const { attacks, outOfRange } = named(line.attacks, keys);
+	if (outOfRange > 0)
+		report.add(
+			"pitch-range",
+			"warning",
+			`${plural(outOfRange, "pitch", "pitches")} outside C0 to B8 left out: a chart cannot write them`,
+		);
+	const q = quantize(attacks, grid);
+	reportRounded(q, grid, report);
+	return { texts: barTexts(statesOf(q, grid), q), q };
+}
+
+/**
+ * The chart of a line (the note-line design, 6), "" once an error is
+ * reported, or null when its cells cannot be placed or it fails the
+ * self-check: the caller then reads the file as chords. It reports only
+ * into `report`. `seam` rewrites the chart before the check (tests).
+ */
+export function lineChart(
+	line: Line,
+	smf: Smf,
+	names: (string | null)[],
+	allNotes: Note[],
+	options: MidiImportOptions,
+	report: Report,
+	seam: LineSeam = (chart) => chart,
+): string | null {
+	reportLine(line, report);
+	const read = gridOf(smf, lastTick(line, smf, options), report);
+	if (failed(report)) return "";
+	const grid = writable(read, report);
+	const directives = directivesOf(smf, grid, line.notes, report);
+	const { texts, q } = lineTexts(line, grid, directives.keys, report);
+	const placeholder = [{ start: grid.bars[0]?.start ?? 0, end: grid.end, symbol: "C" }];
+	const sections = sectionsOf(smf, grid, report);
+	const input = detectionsOf(grid, placeholder, directives, sections, titleOf(smf, names));
+	const chart = built(input, grid, options, report);
+	if (failed(report)) return "";
+	const cells = withCells(chart, texts, options.simile !== false);
+	if (cells === null) return null;
+	const rows = options.lyrics === false ? cells : withLyrics(cells, smf, grid, allNotes, report);
+	const out = seam(rows);
+	return soundsAsStruck(out, q, smf.ppq) ? out : null;
+}
