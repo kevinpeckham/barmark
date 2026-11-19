@@ -6,6 +6,12 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- **`melody="off"`** is observed and reaches the grid, as in
+  `@barmark/render`: the grid leaves a singer's melody line out and keeps
+  its words. The score view still engraves the melody.
+
 ## [0.6.3] - 2026-11-19
 
 ### Changed

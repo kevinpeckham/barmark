@@ -70,3 +70,11 @@ describe("which source a chart draws", () => {
 		expect(chartSource({ text: null, src: "", script: false })).toBe("none");
 	});
 });
+
+describe("melody attribute", () => {
+	test("melody=off gives melody: false; any other value or none leaves it unset", () => {
+		expect(optionsFromAttributes(el({ melody: "off" })).melody).toBe(false);
+		expect("melody" in optionsFromAttributes(el({ melody: "on" }))).toBe(false);
+		expect("melody" in optionsFromAttributes(el({}))).toBe(false);
+	});
+});

@@ -23,6 +23,13 @@ export type LayoutOptions = {
 	 */
 	rehearsalLetters?: boolean;
 	part?: string;
+	/**
+	 * Draw a singer's melody line in the grid (the default, `true`). With
+	 * `false` it is left out of a system that has another line which draws its
+	 * bars, and its words draw by beat under the chords. A melody on its own
+	 * stays; so does a singing line with a problem or with chord names.
+	 */
+	melody?: boolean;
 	/** Give the model a diagram entry for each chord, as a guitar plays it; off when absent. */
 	chordDiagrams?: "guitar";
 };

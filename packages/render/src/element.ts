@@ -34,6 +34,8 @@ export function optionsFromAttributes(el: Attributes): RenderOptions {
 		barNumbers: el.getAttribute("bar-numbers") !== "off",
 		rehearsalLetters: el.hasAttribute("rehearsal-letters"),
 		wrap: el.getAttribute("wrap") !== "off",
+		// Only "off" hides the melody; anything else, or none, leaves it unset.
+		...(el.getAttribute("melody") === "off" ? { melody: false } : {}),
 		...(numerals ? { numerals } : {}),
 		...(part ? { part } : {}),
 		...(diagrams ? { chordDiagrams: "guitar" as const } : {}),
@@ -87,6 +89,7 @@ function defineElement(): void {
 			"rehearsal-letters",
 			"numerals",
 			"wrap",
+			"melody",
 			"show-part",
 			"columns",
 			"chord-diagrams",
@@ -150,6 +153,13 @@ function defineElement(): void {
 		set wrap(v: boolean) {
 			if (v) this.removeAttribute("wrap");
 			else this.setAttribute("wrap", "off");
+		}
+		get melody() {
+			return optionsFromAttributes(this).melody ?? true;
+		}
+		set melody(v: boolean) {
+			if (v) this.removeAttribute("melody");
+			else this.setAttribute("melody", "off");
 		}
 		get rehearsalLetters() {
 			return this.hasAttribute("rehearsal-letters");
