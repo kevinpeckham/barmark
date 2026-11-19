@@ -151,7 +151,7 @@ describe("barTexts: dotted figures", () => {
 	test("A A h h", () =>
 		expect(bar([0, 120, "C3"], [120, 480, "D3"], [480, 1920, "E3"])).toBe("{C3}_{D3}. {E3} / /"));
 	test("A h h r is not dotted", () => {
-		// No reading of a file puts a rest inside a beat of four parts, so the states are made by hand.
+		// No reading of a file gives attack, hold, hold, rest (four parts need an attack on an odd point), so the states are made by hand.
 		const struck: Struck<Named> = { beat: 0, point: 0, attacks: attacksOf([[0, 1, "C3"]]) };
 		const states: State<Named>[][] = [
 			[
@@ -216,11 +216,40 @@ describe("withSimile", () => {
 		expect(withSimile(["{C3}", "{C3}", "{C3}"], yes)).toEqual(["{C3}", "%", "%"]));
 });
 
+describe("what only one side of a rule would let through", () => {
+	const yes = () => true;
+	test("noteSet: two joined attacks of two pitches give both", () => {
+		const struck: Struck<Named> = {
+			beat: 0,
+			point: 0,
+			attacks: attacksOf([
+				[0, 1, "E3"],
+				[3, 4, "C3"],
+			]),
+		};
+		expect(noteSet(struck)).toBe("{C3 E3}");
+	});
+	test("withSimile: bars that differ stay", () => {
+		expect(withSimile(["{C3}", "{D3}"], yes)).toEqual(["{C3}", "{D3}"]);
+		expect(withSimile(["{C3}", "{D3}", "{C3}"], yes)).toEqual(["{C3}", "{D3}", "{C3}"]);
+	});
+	test("withSimile: same is asked about the bar itself", () =>
+		expect(withSimile(["{C3}", "{C3}", "{C3}"], (i) => i !== 1)).toEqual(["{C3}", "{C3}", "%"]));
+	test("a held beat with an attack on its last sixteenth is not dotted", () =>
+		expect(bar([0, 840, "C3"], [840, 1920, "D3"])).toBe("{C3} /_/_/_{D3} / /"));
+	test("six parts reading attack, four holds, attack are not dotted", () =>
+		expect(bar([0, 400, "C3"], [400, 480, "D3"], [480, 1920, "E3"])).toBe(
+			"{C3}_/_/_/_/_{D3} {E3} / /",
+		));
+});
+
 describe("barTexts: scale", () => {
 	const load = (bars: number) => {
 		const grid = gridOf(bars);
 		const notes: Note[] = [];
-		for (let i = 0; i < bars; i++) notes.push([i * 1920, i * 1920 + 960, "C3"]);
+		// Sixteenths, so every beat is a group.
+		for (let i = 0; i < bars; i++)
+			for (let t = 0; t < 1920; t += 120) notes.push([i * 1920 + t, i * 1920 + t + 120, "C3"]);
 		const q = quantize(attacksOf(notes), grid);
 		return { q, states: statesOf(q, grid) };
 	};
