@@ -4,9 +4,10 @@
  * the harmony; make the bar grid and the key, meter and tempo; name a chord
  * per segment; take the markers as sections and the title; then hand it
  * all to sync's `chartFromDetections`, which writes the chart; then add
- * the lyrics as lyric rows. A line that fails its self-check is read
+ * the lyrics as lyric rows. Anything that stops the line (an error it
+ * raises, a throw, no pitch in range, a failed self-check) reads the file
  * again as chords, on a fresh report that opens with `notes-fallback`.
- * Any error stops it with an empty chart. It never throws: a throw from a bug comes
+ * Any other error stops it with an empty chart. It never throws: a throw from a bug comes
  * back as an error diagnostic too.
  */
 import { readSmfInto } from "../smf/read.js";
@@ -14,7 +15,7 @@ import type { Smf } from "../smf/types.js";
 import { lineOf } from "./attacks.js";
 import { built, detectionsOf, failed, writable } from "./build.js";
 import { directivesOf } from "./directives.js";
-import { gridOf } from "./grid.js";
+import { gridOf, lastHeard } from "./grid.js";
 import { type LineSeam, lineChart } from "./line.js";
 import { lastLyric, withLyrics } from "./lyrics.js";
 import { sectionsOf, titleOf } from "./markers.js";
@@ -37,14 +38,6 @@ function optionsOf(o: unknown): MidiImportOptions {
 	if (typeof notes === "boolean") out.notes = notes;
 	return out;
 }
-
-/**
- * Where a note counts for the grid's end: its end, less the 16th a
- * legato release may ring past a bar line (so it adds no bar of N.C.);
- * a note struck in a bar always keeps it.
- */
-const lastHeard = (n: { start: number; end: number }, ppq: number) =>
-	Math.max(n.start + 1, n.end - ppq / 4);
 
 /** The chord reading's chart from the harmony notes, or "" once an error is reported. */
 function chordChart(
@@ -89,6 +82,21 @@ function chartOf(
 	return chordChart(smf, names, notes, harmony, options, report);
 }
 
+/** `chartOf`, a throw counting as null (read chords) unless chords were asked for: the chord reading then reports its own. */
+function firstReading(
+	bytes: Uint8Array,
+	options: MidiImportOptions,
+	report: Report,
+	seam?: LineSeam,
+): string | null {
+	if (options.notes === false) return chartOf(bytes, options, report, seam);
+	try {
+		return chartOf(bytes, options, report, seam);
+	} catch {
+		return null;
+	}
+}
+
 /** The import, its report its own: a line that asks for chords is read again with `notes: false` after `notes-fallback`. */
 function imported(
 	bytes: Uint8Array,
@@ -96,13 +104,13 @@ function imported(
 	seam?: LineSeam,
 ): MidiImportResult {
 	const report = createReport();
-	const text = chartOf(bytes, options, report, seam);
+	const text = firstReading(bytes, options, report, seam);
 	if (text !== null) return { text, diagnostics: report.list };
 	const again = createReport();
 	again.add(
 		"notes-fallback",
 		"warning",
-		"the notes read as one line failed the import's check, so chords are read from them instead",
+		"the notes are one line but the line could not be written, so chords are read from them instead",
 	);
 	return {
 		text: chartOf(bytes, { ...options, notes: false }, again) ?? "",
@@ -130,7 +138,12 @@ export function importWith(
 	}
 }
 
-/** A chord chart from a Standard MIDI File (format 0 or 1), with its diagnostics. */
+/**
+ * A chart from a Standard MIDI File (format 0 or 1), with its
+ * diagnostics: a file whose notes are one line is written as that line,
+ * its notes with their octaves and rhythm (`notes: false` reads chords
+ * from it instead); any other file as chords.
+ */
 export function importMidi(bytes: Uint8Array, options?: MidiImportOptions): MidiImportResult {
 	return importWith(bytes, options);
 }

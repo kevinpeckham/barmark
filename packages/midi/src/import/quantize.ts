@@ -10,7 +10,7 @@ import type { Attack } from "./attacks.js";
 import type { Grid } from "./grid.js";
 
 /** The tolerance is a quarter over this (a 128th note). */
-const TOLERANCE = 32;
+export const TOLERANCE = 32;
 /** A part is never shorter than a quarter over this (a 32nd note). */
 const FINEST = 8;
 /** The divisions a beat may take, coarsest first. */

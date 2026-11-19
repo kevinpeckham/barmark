@@ -46,7 +46,12 @@ export type MidiImportDiagnostic = {
 };
 
 export type MidiImportOptions = {
-	/** The tracks that carry the harmony: 1-based numbers or track names (any case). Default: chosen (5.2). */
+	/**
+	 * The tracks read: 1-based numbers or track names (any case). They are
+	 * what the line test reads, and when the notes are not one line, the
+	 * tracks that carry the harmony. Default: every track for the line test,
+	 * and the harmony chosen (5.2).
+	 */
 	tracks?: (number | string)[];
 	/** Read lyric events into lyric rows (default true). */
 	lyrics?: boolean;

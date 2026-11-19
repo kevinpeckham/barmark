@@ -17,12 +17,12 @@ import { built, detectionsOf, failed, writable } from "./build.js";
 import { barTexts, withSimile } from "./cells.js";
 import { directivesOf } from "./directives.js";
 import { statesOf } from "./ends.js";
-import { type Grid, gridOf } from "./grid.js";
+import { type Grid, gridOf, lastHeard } from "./grid.js";
 import { lastLyric, withLyrics } from "./lyrics.js";
 import { sectionsOf, titleOf } from "./markers.js";
 import type { Note } from "./notes.js";
 import { type Named, named } from "./pitch.js";
-import { pointTick, type Quantized, quantize } from "./quantize.js";
+import { pointTick, type Quantized, quantize, TOLERANCE } from "./quantize.js";
 import { andList, type Report } from "./report.js";
 import type { MidiImportOptions } from "./types.js";
 
@@ -34,21 +34,21 @@ export type LineSeam = (chart: string) => string;
 
 /** The most bars `rhythm-rounded` names before it counts the rest. */
 const NAMED_BARS = 8;
-/** A note counts for the grid's end from a quarter over this after its start (a 128th, ruling 5). */
-const TOLERANCE = 32;
-/** ...and up to its end less a quarter over this (a sixteenth), so a legato release adds no bar. */
-const RELEASE = 4;
 /** Times in quarters agree within this. */
 const EPSILON = 1e-6;
 
 const plural = (count: number, one: string, many: string) => `${count} ${count === 1 ? one : many}`;
 
-/** The 1-based tick past which the grid must run: every note's beat exists (ruling 5), and every lyric's. */
+/**
+ * The grid's exclusive end (as `gridOf` takes it): past every note's
+ * attack and a 128th after it, so the beat an early attack belongs to
+ * exists (ruling 5), and past every lyric.
+ */
 function lastTick(line: Line, smf: Smf, options: MidiImportOptions): number {
 	const lyric = options.lyrics === false ? -1 : lastLyric(smf);
 	const { ppq } = smf;
 	return line.notes.reduce(
-		(end, n) => Math.max(end, n.start + ppq / TOLERANCE + 1, n.end - ppq / RELEASE),
+		(end, n) => Math.max(end, lastHeard(n, ppq, Math.floor(n.start + ppq / TOLERANCE) + 1)),
 		lyric + 1,
 	);
 }
@@ -189,30 +189,32 @@ function soundsAsStruck(chart: string, q: Quantized<Named>, ppq: number): boolea
 	}
 }
 
-/** The line on the grid, as one text a bar; reports `pitch-range` and `rhythm-rounded`. */
+/** The line on the grid, as one text a bar; reports `pitch-range` and `rhythm-rounded`. Null when no pitch can be written. */
 function lineTexts(
 	line: Line,
 	grid: Grid,
 	keys: Parameters<typeof named>[1],
 	report: Report,
-): { texts: string[]; q: Quantized<Named> } {
+): { texts: string[]; q: Quantized<Named> } | null {
 	const { attacks, outOfRange } = named(line.attacks, keys);
 	if (outOfRange > 0)
 		report.add(
 			"pitch-range",
 			"warning",
-			`${plural(outOfRange, "pitch", "pitches")} outside C0 to B8 left out: a chart cannot write them`,
+			`${plural(outOfRange, "pitch", "pitches")} outside C0 to B8 left out: a chart cannot write ${outOfRange === 1 ? "it" : "them"}`,
 		);
+	if (attacks.length === 0) return null;
 	const q = quantize(attacks, grid);
 	reportRounded(q, grid, report);
 	return { texts: barTexts(statesOf(q, grid), q), q };
 }
 
 /**
- * The chart of a line (the note-line design, 6), "" once an error is
- * reported, or null when its cells cannot be placed or it fails the
- * self-check: the caller then reads the file as chords. It reports only
- * into `report`. `seam` rewrites the chart before the check (tests).
+ * The chart of a line (the note-line design, 6), or null when anything
+ * stops it (ruling 11): an error reported, no pitch in range, cells that
+ * cannot be placed, or a failed self-check; the caller then reads the
+ * file as chords. It reports only into `report`. `seam` rewrites the
+ * chart before the check (tests).
  */
 export function lineChart(
 	line: Line,
@@ -225,15 +227,17 @@ export function lineChart(
 ): string | null {
 	reportLine(line, report);
 	const read = gridOf(smf, lastTick(line, smf, options), report);
-	if (failed(report)) return "";
+	if (failed(report)) return null;
 	const grid = writable(read, report);
 	const directives = directivesOf(smf, grid, line.notes, report);
-	const { texts, q } = lineTexts(line, grid, directives.keys, report);
+	const written = lineTexts(line, grid, directives.keys, report);
+	if (written === null) return null;
+	const { texts, q } = written;
 	const placeholder = [{ start: grid.bars[0]?.start ?? 0, end: grid.end, symbol: "C" }];
 	const sections = sectionsOf(smf, grid, report);
 	const input = detectionsOf(grid, placeholder, directives, sections, titleOf(smf, names));
 	const chart = built(input, grid, options, report);
-	if (failed(report)) return "";
+	if (failed(report)) return null;
 	const cells = withCells(chart, texts, options.simile !== false);
 	if (cells === null) return null;
 	const rows = options.lyrics === false ? cells : withLyrics(cells, smf, grid, allNotes, report);

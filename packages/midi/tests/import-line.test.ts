@@ -227,6 +227,20 @@ describe("rhythm-rounded", () => {
 		const r = importMidi(file([...notes, ...run([48, 50, 52, 53, 55, 57, 59, 60], BAR, Q)]));
 		const d = r.diagnostics.find((x) => x.code === "rhythm-rounded");
 		expect(d?.message).toContain("1 attack was joined");
+		expect(barLines(r.text)[0]).toStartWith("| {C4} /_{D4 E4}_/_/ {F4} {G4} |");
+	});
+	test("the same pitch twice on one point is one note, once", () => {
+		const notes = [n(60, 0, Q), n(62, Q + 100, 60), n(62, Q + 175, Q - 175)];
+		const r = importMidi(
+			file([...notes, ...run([65, 67, 48, 50, 52, 53, 55, 57, 59, 60], 2 * Q, Q)]),
+		);
+		expect(codes(r)).toEqual(["notes-line", "rhythm-rounded"]);
+		expect(barLines(r.text)[0]).toStartWith("| {C4} /_{D4}_/_/ {F4} {G4} |");
+	});
+	test("exactly eight bars are all named, with no count after", () => {
+		const notes = Array.from({ length: 8 }, (_, b) => roughBar(b)).flat();
+		const d = importMidi(file(notes)).diagnostics.find((x) => x.code === "rhythm-rounded");
+		expect(d?.message).toEndWith("bars 1, 2, 3, 4, 5, 6, 7 and 8");
 	});
 });
 
@@ -291,7 +305,7 @@ describe("simile", () => {
 		expect(r.text).not.toContain("%");
 		expect(barLines(r.text)).toEqual(["| {C4} {D4} {E4} {F4} |", "| {C4} {D4} {E4} {F4} |"]);
 	});
-	test("never % across a meter change", () => {
+	test("never % across a meter change: the time: line between stops it", () => {
 		const meta = [at(0, { time: [3, 4] }), at(3 * Q, { time: [6, 8] })];
 		const r = importMidi(file([n(60, 0, 3 * Q), n(60, 3 * Q, 3 * Q)], meta));
 		expect(r.text).not.toContain("%");
@@ -307,8 +321,10 @@ describe("short notes", () => {
 		const d = r.diagnostics.find((x) => x.code === "notes-short");
 		expect(d?.severity).toBe("info");
 		expect(d?.message).toContain("2 notes");
-		expect(r.text).not.toContain("{D#3}");
-		expect(r.text).not.toContain("{B3}");
+		expect(barLines(r.text)).toEqual([
+			"| {C3} {C#3} {D3} -- | {E3} {F3} {F#3} {G3} | {Ab3} {A3} {Bb3} -- | {C4} {C#4} {D4} {Eb4} |",
+			"| {E4} {F4} {F#4} {G4} |",
+		]);
 	});
 	test("when 6 of 20 are that short, all are read", () => {
 		const r = importMidi(file(twenty([1, 3, 5, 7, 9, 11])));
@@ -335,32 +351,41 @@ describe("lyrics", () => {
 });
 
 describe("small files", () => {
-	const cases: [string, Uint8Array][] = [
-		["one long note", file([n(60, 0, 5 * BAR)])],
-		["one short note", file([n(60, 0, 10)])],
-		["two notes at one tick", file([n(60, 0, Q), n(64, 0, Q)])],
-		[
-			"a note with no note-off",
-			smf({
-				format: 0,
-				tracks: [
-					track([at(0, { tempo: 120 }), at(0, { on: [0, 60, 80] }), at(Q, { on: [0, 62, 80] })]),
-				],
-			}),
-		],
-	];
-	for (const [name, bytes] of cases)
-		test(`${name}: a chart that parses`, () => {
-			const r = importMidi(bytes);
-			expect(parses(r.text)).toBe(true);
+	test("one long note: a line, held", () => {
+		expect(barLines(importMidi(file([n(60, 0, 5 * BAR)])).text)).toEqual([
+			"| {C4} | / | / | / |",
+			"| / |",
+		]);
+	});
+	test("one short note: a line, then rests", () => {
+		expect(barLines(importMidi(file([n(60, 0, 10)])).text)).toEqual(["| {C4} -- -- -- |"]);
+	});
+	test("two notes at one tick are not a line: the chord reading, no diagnostics", () => {
+		const r = importMidi(file([n(60, 0, Q), n(64, 0, Q)]));
+		expect(barLines(r.text)).toEqual(["| {C E} N.C. / / |"]);
+		expect(r.diagnostics).toEqual([]);
+	});
+	test("a note with no note-off: a line of its first note", () => {
+		// The reader drops the second note: with nothing after it, it ends where it starts (zero length), as it always has.
+		const bytes = smf({
+			format: 0,
+			tracks: [
+				track([at(0, { tempo: 120 }), at(0, { on: [0, 60, 80] }), at(Q, { on: [0, 62, 80] })]),
+			],
 		});
+		const r = importMidi(bytes);
+		expect(barLines(r.text)).toEqual(["| {C4} -- -- -- |"]);
+		expect(parses(r.text)).toBe(true);
+	});
 });
 
 describe("tracks", () => {
 	test("tracks: [4] on band.mid is that track's line as notes; with notes: false, chords", () => {
 		const line = importMidi(fixtureBytes("band"), { tracks: [4] });
 		expect(codes(line)).toContain("notes-line");
-		expect(line.text).toMatch(/\{[A-G][#b]?\d\}/);
+		expect(line.text).toBe(
+			"key: G, time: 4/4, tempo: 96\n| {G1} | {C2} | {G1} | {D2} |\n| {B1} | {C2} | {E2} | {D2} |\n",
+		);
 		expect(importMidi(fixtureBytes("band"), { tracks: [4], notes: false }).text).toBe(
 			"key: G, time: 4/4, tempo: 96\n| {G} | {C} | {G} | {D} |\n| {B} | {C} | {E} | {D} |\n",
 		);
@@ -397,5 +422,110 @@ describe("options", () => {
 		const bytes = specFile();
 		expect(importMidi(bytes, { notes: "no" } as never)).toEqual(importMidi(bytes));
 		expect(importMidi(bytes, { notes: 0 } as never)).toEqual(importMidi(bytes));
+	});
+});
+
+describe("the grid's end", () => {
+	test("a short last note 10 ticks early: its bar exists, the line rests after it", () => {
+		const r = importMidi(file([n(60, 0, BAR - 20), n(62, BAR - 10, 60)]));
+		expect(barLines(r.text)).toEqual(["| {C4} | {D4} -- -- -- |"]);
+	});
+	test("a legato release past the last bar line adds no bar", () => {
+		const r = importMidi(file([...run([60, 62, 64], 0, Q), n(65, 3 * Q, Q + 100)]));
+		expect(barLines(r.text)).toEqual(["| {C4} {D4} {E4} {F4} |"]);
+	});
+	test("at a fractional tolerance (ppq 7) a 1-tick last note adds no bar", () => {
+		const notes = [...run([60, 62, 64], 0, 7), n(65, 27, 1)];
+		expect(barLines(importMidi(file(notes, [], { ppq: 7 })).text)).toEqual([
+			"| {C4} {D4} {E4} /_/_/_/_/_{F4} |",
+		]);
+	});
+	const words = ["one ", "two ", "three ", "four "];
+	const late = [...words.map((w, i) => at(i * Q, { lyric: w })), at(3 * BAR, { lyric: "late" })];
+	test("the grid runs to the last lyric", () => {
+		const r = importMidi(file(run([60, 62, 64, 65], 0, Q), [], { extra: late }));
+		const lines = r.text.split("\n");
+		expect(barLines(r.text)).toEqual(["| {C4} {D4} {E4} {F4} | -- | -- | -- |"]);
+		expect(lines.find((l) => l.startsWith("lyrics"))?.replace(/\s+/g, " ")).toMatch(/\| late \|$/);
+	});
+	test("lyrics: false: the grid ends with the notes and no row is written", () => {
+		const r = importMidi(file(run([60, 62, 64, 65], 0, Q), [], { extra: late }), { lyrics: false });
+		expect(r.text).toBe("time: 4/4, tempo: 120\n| {C4} {D4} {E4} {F4} |\n");
+	});
+});
+
+describe("the chart around the line", () => {
+	test("a bar after a pickup is never % of it (another meter)", () => {
+		const meta = [at(0, { time: [1, 4] }), at(Q, { time: [4, 4] })];
+		const r = importMidi(file([n(55, 0, Q), n(55, Q, BAR)], meta));
+		expect(barLines(r.text)).toEqual(["| [1/4] {G3} | {G3} |"]);
+	});
+	test("key-doubtful is judged on the line's notes", () => {
+		const inKey = run([60, 62, 64, 65, 67, 69, 71, 72], 0, Q, { track: 2 });
+		const outOfKey = run([61, 63, 66, 68, 70, 61, 63, 66], 0, Q, { track: 3 });
+		const r = importMidi(file([...inKey, ...outOfKey], [at(0, { key: [0, 0] })]), { tracks: [2] });
+		expect(r.text).toStartWith("key: C,");
+		expect(codes(r)).not.toContain("key-doubtful");
+	});
+	test("the title is the chord reading's", () => {
+		const r = importMidi(file(run([60, 62, 64, 65], 0, Q), [at(0, { name: "My Song" })]));
+		expect(r.text.split("\n")[0]).toBe("# My Song");
+		expect(codes(r)).toEqual(["notes-line"]);
+	});
+});
+
+describe("what falls back", () => {
+	/** The chord reading's result with notes-fallback first. */
+	const fellBack = (r: MidiImportResult, bytes: Uint8Array, options = {}) => {
+		const chords = importMidi(bytes, { ...options, notes: false });
+		expect(r.diagnostics[0]).toMatchObject({ code: "notes-fallback", severity: "warning" });
+		expect(r.text).toBe(chords.text);
+		expect(r.diagnostics.slice(1)).toEqual(chords.diagnostics);
+	};
+	test("an error in the line reading (too-large) falls back to chords", () => {
+		const notes = Array.from({ length: 10_000 }, (_, i) => n(60 + (i % 5), i * BAR, Q));
+		notes.push(n(72, 10_000 * BAR - 10, 40));
+		const bytes = file(notes);
+		const r = importMidi(bytes);
+		fellBack(r, bytes);
+		expect(r.text).not.toBe("");
+	}, 60_000);
+	test("a meter time: cannot write falls back (sync drops it)", () => {
+		const bytes = file(
+			run(
+				Array.from({ length: 16 }, (_, i) => 60 + (i % 8)),
+				0,
+				Q,
+			),
+			[at(0, { time: [33, 8] })],
+		);
+		fellBack(importMidi(bytes), bytes);
+	});
+	test("a line with no pitch in range falls back", () => {
+		const bytes = file(run([0, 2, 4, 5, 7, 9, 11, 0], 0, Q));
+		fellBack(importMidi(bytes), bytes);
+	});
+	test("one pitch out of range is said in the singular", () => {
+		const r = importMidi(file(run([60, 5, 62, 64], 0, Q)));
+		expect(r.diagnostics.find((d) => d.code === "pitch-range")?.message).toBe(
+			"1 pitch outside C0 to B8 left out: a chart cannot write it",
+		);
+	});
+	test("the self-check compares times: an attack moved", () => {
+		const r = importWith(specFile(), {}, (c) => c.replace("| {A1} {A1} |", "| {A1} / / {A1} |"));
+		fellBack(r, specFile());
+	});
+	test("the self-check compares the count: an attack removed", () => {
+		const r = importWith(specFile(), {}, (c) => c.replace("| {A1} {A1} |", "| {A1} / |"));
+		fellBack(r, specFile());
+	});
+	test("the self-check compares the count: the last attack removed (the rest a prefix)", () => {
+		const r = importWith(specFile(), {}, (c) => c.replace("/ {B1} |", "/ / |"));
+		fellBack(r, specFile());
+	});
+	test("the fallback keeps the other options", () => {
+		const r = importWith(specFile(), { barsPerLine: 1 }, (c) => c.replace("{A1}", "{B1}"));
+		fellBack(r, specFile(), { barsPerLine: 1 });
+		expect(barLines(r.text)).toHaveLength(4);
 	});
 });
