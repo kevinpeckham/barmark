@@ -5,14 +5,14 @@
     "": {
       "name": "barmark-site",
       "dependencies": {
-        "@barmark/render": "0.21.0",
+        "@barmark/render": "0.21.1",
         "@barmark/score": "0.7.0",
         "@vercel/analytics": "2.0.1",
         "@vercel/speed-insights": "2.0.0",
         "barmark": "0.25.0",
       },
       "devDependencies": {
-        "@barmark/cli": "0.14.0",
+        "@barmark/cli": "0.14.1",
         "@barmark/fretboard": "0.1.2",
         "@barmark/listen": "0.2.2",
         "@barmark/lyricsheet": "0.1.1",
@@ -46,7 +46,7 @@
 
     "@antfu/install-pkg": ["@antfu/install-pkg@2.1.0", "", { "dependencies": { "package-manager-detector": "^1.8.0", "tinyexec": "^1.3.1" } }, "sha512-sdg9NxU3zR4Mnawfbc/x6GB5Wf17WYud5qOuEuxXjaKpYpMkISSJEjItGebXJ2bQ4DIcly4NYH23mtkGJjvKUw=="],
 
-    "@barmark/cli": ["@barmark/cli@0.14.0", "", { "dependencies": { "@barmark/lyricsheet": "0.1.0", "@barmark/midi": "0.3.5", "@barmark/musicxml": "0.9.3", "@barmark/render": "0.20.2", "@barmark/score": "0.6.3", "barmark": "0.25.0", "verovio": "6.4.1" }, "bin": { "barmark": "dist/cli.js" } }, "sha512-YHZ4VSqzJut5fRP03+dR99BjQHHqiD5MuG2ducCB1pSVWLaFAAuSfl5Aw2pHQRk+ek677jySaQtv2WwkwE8Gng=="],
+    "@barmark/cli": ["@barmark/cli@0.14.1", "", { "dependencies": { "@barmark/lyricsheet": "0.1.1", "@barmark/midi": "0.3.5", "@barmark/musicxml": "0.9.3", "@barmark/render": "0.21.0", "@barmark/score": "0.7.0", "barmark": "0.25.0", "verovio": "6.4.1" }, "bin": { "barmark": "dist/cli.js" } }, "sha512-GOVUUyFGPvLD6ytt+nGqP8TAQrrvBKt1yAF6I+UKWPL16kau7UtR49zQTNsQa9QYgmA3xss3QyJAtiLkLStrIQ=="],
 
     "@barmark/fretboard": ["@barmark/fretboard@0.1.2", "", { "dependencies": { "barmark": "^0.25.0" } }, "sha512-JVyaEutnsLvhO+X2Gk4UuZNhPtZOA9NY82V4LiavPYqG4NYA2pA1/Y4P9MCxs3NRdRNfFgKb/H2t0KCdwsiXdw=="],
 
@@ -58,7 +58,7 @@
 
     "@barmark/musicxml": ["@barmark/musicxml@0.9.3", "", { "dependencies": { "barmark": "^0.25.0", "fast-xml-parser": "5.12.0" } }, "sha512-9AVqocMYyd7ipxUL8mc8C5GqvctqLIsztsi7tpVVuYN0q/WKEbBhH734I5WvMAc1QXYxPICPESKPvAwz4Q/aLg=="],
 
-    "@barmark/render": ["@barmark/render@0.21.0", "", { "dependencies": { "@barmark/fretboard": "^0.1.2", "barmark": "^0.25.0" } }, "sha512-5vh+32VncPdAJwrxX10C7KUls6+mJ7XZsLlD13+1+scw53oMfNQLr1zfPe5thUR3XI50QWZCByxwyBZMHGz0FQ=="],
+    "@barmark/render": ["@barmark/render@0.21.1", "", { "dependencies": { "@barmark/fretboard": "^0.1.2", "barmark": "^0.25.0" } }, "sha512-DsW7QfpKqIaubOgCLowWWEz6EA4SkwwK2S+r2WXiSphyX7FTbCmOjqd6OfK5Pqov+PuBjioIJ7uAVm/2LmxzFQ=="],
 
     "@barmark/score": ["@barmark/score@0.7.0", "", { "dependencies": { "@barmark/musicxml": "^0.9.3", "@barmark/render": "^0.21.0", "barmark": "^0.25.0", "verovio": "6.4.1" } }, "sha512-9HPB3VNUIynrkcwyaHeSZ7jd+olFrO+nqDiAWBVEGgoIssv8g1ZqABl8w0FWmiH+PZ+BiWnWlEADjmFGUGZzNg=="],
 
@@ -512,11 +512,7 @@
 
     "zimmerframe": ["zimmerframe@1.1.5", "", {}, "sha512-msJxIvYDYcoNL+PJsu+7qmpDWsYmAxTY+2TNYXXF0hzBzBk0BMecOqDOG/EckUoKCuKwObfbugIl8QpqHDXeFA=="],
 
-    "@barmark/cli/@barmark/lyricsheet": ["@barmark/lyricsheet@0.1.0", "", { "dependencies": { "@barmark/fretboard": "^0.1.2", "barmark": "^0.25.0" } }, "sha512-78Uvj4rQenEdAwMhgxLxV8NtN8IDHgpfbL/XCNRuGvtp1QrIvKcDxsEl1rhjGCxPorMC2iPRJyqXKXjKWw4tOA=="],
-
-    "@barmark/cli/@barmark/render": ["@barmark/render@0.20.2", "", { "dependencies": { "@barmark/fretboard": "^0.1.2", "barmark": "^0.25.0" } }, "sha512-2ijpOThDowhuj3XM9dwaQjypJoxv6Dlv3ODVCvhb9BzO6Vi8LaxGbyFXB4OHothTcdpimqXyomvWFqosiOenGQ=="],
-
-    "@barmark/cli/@barmark/score": ["@barmark/score@0.6.3", "", { "dependencies": { "@barmark/musicxml": "^0.9.3", "@barmark/render": "^0.20.2", "barmark": "^0.25.0", "verovio": "6.4.1" } }, "sha512-KT8k49uvH2Adg898fj5NoLbHxyz+SWkKfZ8PgXLUd0bXs22T71UkS+KaDGZl5GgnfcHLHdBrcrqGPv1mzVJqGg=="],
+    "@barmark/cli/@barmark/render": ["@barmark/render@0.21.0", "", { "dependencies": { "@barmark/fretboard": "^0.1.2", "barmark": "^0.25.0" } }, "sha512-5vh+32VncPdAJwrxX10C7KUls6+mJ7XZsLlD13+1+scw53oMfNQLr1zfPe5thUR3XI50QWZCByxwyBZMHGz0FQ=="],
 
     "@types/node/undici-types": ["undici-types@8.9.0", "", {}, "sha512-KTDyRTYX8sWmKXAikPHHSyc63CRPETMctyjKFupcC6OBLXT3xsN0e9aF7m+mIXutFWpUXuedtowG7iLOzp0kQg=="],
 
