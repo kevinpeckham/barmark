@@ -6,6 +6,8 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.14.0] - 2026-11-19
+
 ### Added
 
 - **`export --lyricsheet`** writes the chart as a ChordPro lyric sheet
@@ -14,6 +16,18 @@ package uses [semantic versioning](https://semver.org/).
   the sheet can't carry goes to stderr as `song.chart.md: warning:
   message`, each message naming its own bars. `--version` lists
   `@barmark/lyricsheet`.
+
+### Changed
+
+- **`check`, `format`, `render` and the exports read more spellings of
+  the major seventh** (`CMaj9`, `Cma13`, `CmΔ7`, `C∆7`, `Cm△9`), as
+  `barmark` now reads them; they print canonically.
+- **`render --score`: a lyric row's rhythm slashes sit on their line**,
+  with no ledger lines through them.
+- **Uses** barmark 0.25.0, @barmark/render 0.20.2, @barmark/musicxml
+  0.9.3, @barmark/score 0.6.3, @barmark/midi 0.3.5 and
+  @barmark/lyricsheet 0.1.0 (and through them @barmark/fretboard 0.1.2
+  and @barmark/sync 0.4.3).
 
 ## [0.13.0] - 2026-11-14
 
@@ -420,7 +434,8 @@ The first release of the `barmark` command. Uses `barmark` 0.8.0 and
 - **The `barmark` command:** `check`, `format`, `render` and `transpose`
   for `.chart.md` files, on npm and as standalone binaries.
 
-[Unreleased]: https://github.com/kevinpeckham/barmark/compare/cli-v0.13.0...HEAD
+[Unreleased]: https://github.com/kevinpeckham/barmark/compare/cli-v0.14.0...HEAD
+[0.14.0]: https://github.com/kevinpeckham/barmark/compare/cli-v0.13.0...cli-v0.14.0
 [0.13.0]: https://github.com/kevinpeckham/barmark/compare/cli-v0.12.0...cli-v0.13.0
 [0.12.0]: https://github.com/kevinpeckham/barmark/compare/cli-v0.11.3...cli-v0.12.0
 [0.11.3]: https://github.com/kevinpeckham/barmark/compare/cli-v0.11.2...cli-v0.11.3
