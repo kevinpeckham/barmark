@@ -28,6 +28,11 @@ export type MidiImportCode =
 	| "marker-dropped"
 	| "lyrics-other-tracks"
 	| "lyrics-verses-uncertain"
+	| "notes-line"
+	| "notes-short"
+	| "rhythm-rounded"
+	| "pitch-range"
+	| "notes-fallback"
 	| BuildCode;
 
 export type MidiImportDiagnostic = {
@@ -48,6 +53,8 @@ export type MidiImportOptions = {
 	/** As sync's BuildOptions. */
 	simile?: boolean;
 	barsPerLine?: number;
+	/** Write a file that is one line of notes as its notes (default true); false: read chords from it, as before 0.4. */
+	notes?: boolean;
 };
 
 export type MidiImportResult = { text: string; diagnostics: MidiImportDiagnostic[] };
