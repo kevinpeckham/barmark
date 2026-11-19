@@ -6,12 +6,12 @@
  */
 import { memberShares, type PlayedBar, type SimpleSlot, type Slot, type Syllable } from "barmark";
 import { changeLines, comment } from "./changes.js";
-import { pushAll } from "./lists.js";
+import { groupBy, pushAll } from "./lists.js";
 import { lyricLine, type Piece } from "./merge.js";
 import { directive } from "./meta.js";
 import type { Layout, Occurrence, Run } from "./plan.js";
 import { isGap, spelled } from "./spell.js";
-import { labelValue, plain, textChanged, unhashed, unjoined, untagged } from "./text.js";
+import { labelValue, plain, spaced, textChanged, unhashed, unjoined, untagged } from "./text.js";
 import type { Out } from "./types.js";
 
 export type Context = {
@@ -53,7 +53,8 @@ function envOf(name: string | null): "verse" | "chorus" | "bridge" {
 export function labelOf(name: string | null, out: Out, bar: PlayedBar | undefined): string | null {
 	if (name === null) return null;
 	const label = untagged(name);
-	if (label !== name || /[{}\p{Cc}\u2028\u2029]|\\n/u.test(name)) textChanged(out.losses, bar);
+	if (label !== name || /[{}]|\\n/.test(name) || spaced(name) !== name)
+		textChanged(out.losses, bar);
 	return `label="${labelValue(label)}"`;
 }
 
@@ -127,9 +128,10 @@ function harmonyPieces(bar: PlayedBar, offset: number, st: LineState, out: Out):
 	const each = length / Math.max(1, bar.slots.length);
 	const pieces: Piece[] = bar.rehearsal ? [{ at: offset, chord: `*@${bar.rehearsal}` }] : [];
 	let changed = false;
+	// The bar's words by slot, once: a scan of every word for each slot is quadratic in a long bar.
+	const words = groupBy(bar.words ?? [], (w) => w.at);
 	const wordsAt = (k: number) => {
-		for (const w of bar.words ?? []) {
-			if (w.at !== k) continue;
+		for (const w of words.get(k) ?? []) {
 			const text = plain(w.text);
 			changed ||= text !== w.text;
 			const at = offset + k * each;

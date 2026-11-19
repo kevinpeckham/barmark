@@ -5,8 +5,8 @@
  * one pass each; and what sits between the bars (text lines, fermatas, the
  * end of an open repeat) by where it is written.
  */
-import type { ChartEvent, ChartParse, PlayedBar, SectionOccurrence } from "barmark";
-import { pushAll } from "./lists.js";
+import type { ChartEvent, ChartParse, PlayedBar, PlayedLyrics, SectionOccurrence } from "barmark";
+import { groupBy, pushAll } from "./lists.js";
 
 export type Occurrence = {
 	name: string | null;
@@ -113,11 +113,18 @@ function environments(bars: PlayedBar[]): PlayedBar[][] {
 const sings = (bar: PlayedBar) =>
 	bar.lyrics?.some((l) => l.syllables.some((s) => s.syllable.kind === "sung")) ?? false;
 
-/** A bar with only verse `verse`'s words, or none. */
-function withVerse(bar: PlayedBar, verse: number): PlayedBar {
+/** A bar's words by verse, found once: a filter of its lyrics for each verse is quadratic in the verses stacked. */
+type Verses = { rest: Omit<PlayedBar, "lyrics">; byVerse: Map<number, PlayedLyrics[]> };
+
+const versesOf = (bar: PlayedBar): Verses => {
 	const { lyrics, ...rest } = bar;
-	const kept = (lyrics ?? []).filter((l) => l.verse === verse);
-	return kept.length ? { ...rest, lyrics: kept } : rest;
+	return { rest, byVerse: groupBy(lyrics ?? [], (l) => l.verse) };
+};
+
+/** A bar with only verse `verse`'s words, or none. */
+function withVerse({ rest, byVerse }: Verses, verse: number): PlayedBar {
+	const kept = byVerse.get(verse);
+	return kept ? { ...rest, lyrics: kept } : rest;
 }
 
 /** One environment's bars as occurrences: themselves, or with verses stacked, one per verse in verse order. */
@@ -131,8 +138,9 @@ function ofEnvironment(span: Span, bars: PlayedBar[]): Occurrence[] {
 		return [{ ...base, bars, sung: bars.some(sings), verse }];
 	}
 	// A stacked verse that sings no syllable (`lyrics 2: | -- |`) writes nothing.
+	const indexed = bars.map(versesOf);
 	const sung = verses
-		.map((verse) => ({ verse, own: bars.map((b) => withVerse(b, verse)) }))
+		.map((verse) => ({ verse, own: indexed.map((b) => withVerse(b, verse)) }))
 		.filter((v) => v.own.some(sings));
 	if (!sung.length) return [{ ...base, bars, sung: false, verse: null }];
 	const stacked = sung.length > 1 ? { stacked: true as const } : {};

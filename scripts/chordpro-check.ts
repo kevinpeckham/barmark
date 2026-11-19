@@ -33,6 +33,12 @@
  *
  * Anything else fails, so the gap rules never go stale.
  *
+ * For a sheet named in `PRINTED`, what the tool printed is read back with
+ * `pdftotext` (poppler-utils) and must start with the chart's own title
+ * and show each of its literal texts: the `injection` fixture's escapes
+ * (`\u007b…`) print as written, so no directive, chord or bar was read
+ * from them.
+ *
  * Prints one line per sheet; exits 1 on any failure, 2 when the tool is
  * not installed. Writes nothing into the repository.
  */
@@ -141,6 +147,46 @@ function run(cho: string, out: string): string {
 /** The names in a summary: `"A", "B" and "C"`. */
 const summaryNames = (list: string) => [...list.matchAll(/"([^"]*)"/g)].map((m) => m[1] ?? "");
 
+/** The written texts to show in what the tool printed: escapes the tool would otherwise unescape. */
+const B = "\\";
+const U = `${B}u`;
+const PRINTED: Record<string, { title: string; literal: string[] }> = {
+	injection: {
+		title: "Mine",
+		literal: [
+			`A note ${U}(7b)title:Yours${U}(7d)`,
+			`Verse ${B}U007Btitle:Yours${B}U007D`,
+			`see${B}U005BF#${B}U005D`,
+			`la${U}005bF#${U}005dla`,
+			`${U}007btitle:Yours${U}007d`,
+			`${U}0023gone too${B}${U}005bF#${B}${U}005d`,
+			`Play ${U}007btitle:Yours${U}007d here`,
+			`${U}005d${U}005bF#`,
+			`%${U}007btitle${U}007d 100%`,
+		],
+	},
+};
+
+/** The text of a PDF the tool printed, word joiners (drawn as nothing) dropped; throws when pdftotext fails. */
+function pdfText(pdf: string): string {
+	const r = spawnSync("pdftotext", ["-enc", "UTF-8", pdf, "-"], { encoding: "utf8" });
+	if (r.status !== 0) throw new Error(`pdftotext failed on ${pdf}: ${r.stderr}`);
+	return r.stdout.replaceAll("\u2060", "");
+}
+
+/** What is wrong with what the tool printed for a sheet named in `PRINTED`. */
+function printed(name: string, out: string): string[] {
+	const want = PRINTED[name];
+	if (!want) return [];
+	const text = pdfText(join(out, `${name}.pdf`));
+	const first = text.trimStart().split("\n")[0];
+	const title = first === want.title ? [] : [`printed the title ${first}, not ${want.title}`];
+	return [
+		...title,
+		...want.literal.filter((l) => !text.includes(l)).map((l) => `did not print ${l}`),
+	];
+}
+
 type Judge = (m: RegExpExecArray, e: Expected, warned: Set<string>) => string | null;
 
 /** Each stderr line the tool may print, and what is wrong with it given what is expected (null: nothing). */
@@ -203,7 +249,8 @@ function checkWith(cho: string, chart: string, part: string | undefined, out: st
 		.map((l) => judge(l, e, warned))
 		.filter((p): p is string => p !== null);
 	const expected = [...e.gaps, ...(e.noKey ? ["no key"] : [])];
-	return { problems: [...found, ...missing(e, warned)], expected };
+	const shown = printed(basename(cho, ".cho"), out);
+	return { problems: [...found, ...missing(e, warned), ...shown], expected };
 }
 
 /** Every problem with one sheet. */

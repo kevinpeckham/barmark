@@ -467,15 +467,17 @@ function runsOn(sung: Sung): boolean {
  * One lyric line's tokens into `sung`, in order: chords that are not
  * annotations, and words, a piece that continues a word (`wait[D]ing`, or
  * the first word after a line that ended `wait-`) joined to the last
- * word. Returns whether this line's last word runs on to the next line.
+ * word. A word joiner (U+2060) is drawn as nothing, so it is dropped.
+ * Returns whether this line's last word runs on to the next line.
  */
 function readLine(tokens: Tokens, sung: Sung, carry: boolean): boolean {
 	let join = carry;
 	let wrote = false;
 	for (const t of tokens) {
+		const word = "word" in t ? t.word.replace(/\u2060/g, "") : "";
 		if ("chord" in t) readChord(sung, t.chord);
-		else if (t.joins || join) extendLastWord(sung.tokens, t.word);
-		else sung.tokens.push({ word: t.word });
+		else if (t.joins || join) extendLastWord(sung.tokens, word);
+		else sung.tokens.push({ word });
 		if ("word" in t) [join, wrote] = [false, true];
 	}
 	return wrote ? runsOn(sung) : carry;

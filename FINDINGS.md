@@ -9,6 +9,50 @@ not here.
 
 ## Testing
 
+### A reader's preprocessing is part of the format: ChordPro unescapes every line first (2026-11-19, @barmark/lyricsheet)
+
+**Symptom:** the final review of `@barmark/lyricsheet` wrote a chart whose
+lyric held the characters `\u007btitle:Yours\u007d`. The sheet was
+written as the chart had it, and ChordPro's reference tool printed "Title:
+Yours": the lyric had become a `{title}` directive and vanished. The same
+way `la\u005bF#\u005dla` put a chord over a word, `\u007c` added a grid
+bar, and any directive could be injected, with no loss reported. Separately,
+a carriage return in a bar's words ended the line there, and the rest
+(`#b[C]these words…`) was read as a comment, its chords and words lost.
+Four rounds of review had closed brackets, braces, `#`, `<…>`, a final
+backslash, tabs and a label's backslash-n, every one found by reading
+ChordPro's grammar.
+
+**Cause:** ChordPro does things to a line before it parses it, and the
+grammar does not say so. `ChordPro/Song.pm` joins a line ending in `\`
+to the next, then unescapes `\uXXXX`, a surrogate pair and `\u{…}`
+(either case, and even after another backslash: `\\u007b` reads `\{`),
+then turns tabs into spaces, all on every line, lyrics, directives and
+grids alike; File::LoadLines has already split the file at CR as well as
+LF. Only then does it look for `#`, `{…}` and `[…]`, and substitute
+`%{…}` in lyrics, grids and directive values. We had read the parser, not
+the reader.
+
+**Fix:** the export puts a word joiner (U+2060, drawn as nothing) after
+every backslash before a `u`, in one pass over every written line where
+the lines are joined (`unescapable`, called from `joined` in
+`export/index.ts`), and writes every control character and U+2028/2029 as
+a space (`spaced`, shared by lyrics, words, comments and directive values);
+each change is a `text-changed` loss. `%{…}` cannot reach a reader: every
+`}` in chart text is written otherwise. The tests' reader unescapes each
+line as the reference does before reading it, so the yardstick sees what a
+reader sees; a test spells a directive, a chord and a bar with escapes at
+every place chart text reaches the sheet; and the `injection` golden goes
+through the reference tool, whose printed text (`pdftotext`) must hold the
+escapes as written under the chart's own title. Before writing for a
+reader, list what it does to a line before it parses it, from its source.
+
+**Where it lives:** `packages/lyricsheet/src/export/text.ts` (`spaced`,
+`unescapable`), `export/index.ts` (`joined`),
+`packages/lyricsheet/tests/escapes.test.ts`, `tests/read-cho.ts`
+(`unescaped`), `tests/fixtures/injection.chart.md`, and
+`scripts/chordpro-check.ts` (`PRINTED`).
+
 ### Engravers disagree where a one-line staff's line is (2026-11-18, @barmark/score, @barmark/musicxml)
 
 **Symptom:** on barmark.dev's home page, Amazing Grace's Score view drew

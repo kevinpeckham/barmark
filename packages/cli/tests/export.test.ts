@@ -170,6 +170,15 @@ describe("barmark export --lyricsheet", () => {
 		expect(io.out()).toBe("");
 		expect(readFileSync(join(io.dir, "s.cho"), "utf8")).toBe(sheet(SONG, { title: "s" }));
 	});
+	test("- reads the chart from stdin, untitled when it has no title", async () => {
+		const io = folder({}, { stdin: "| G | C |\n" });
+		expect(await exportCommand(["--lyricsheet", "-"], io)).toBe(0);
+		expect(io.out()).toBe(sheet("| G | C |\n"));
+		expect(io.out()).toStartWith("{title: }\n");
+		const song = folder({}, { stdin: SONG });
+		expect(await exportCommand(["--lyricsheet", "-", "--part", "Pno"], song)).toBe(0);
+		expect(song.out()).toBe(sheet(SONG, { part: "Pno" }));
+	});
 	test("--part passes through", async () => {
 		const io = folder({ "s.chart.md": SONG });
 		expect(await exportCommand(["--lyricsheet", "s.chart.md", "--part", "Pno"], io)).toBe(0);

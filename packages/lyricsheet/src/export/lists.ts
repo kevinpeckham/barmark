@@ -17,3 +17,15 @@ export function maxOf(values: Iterable<number>): number {
 	for (const v of values) if (v > max) max = v;
 	return max;
 }
+
+/** The items by key, each key's in their order (`Map.groupBy`, which Node 20 lacks). */
+export function groupBy<T, K>(items: readonly T[], key: (item: T) => K): Map<K, T[]> {
+	const out = new Map<K, T[]>();
+	for (const item of items) {
+		const k = key(item);
+		const list = out.get(k);
+		if (list) list.push(item);
+		else out.set(k, [item]);
+	}
+	return out;
+}

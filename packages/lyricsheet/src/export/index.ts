@@ -8,6 +8,7 @@ import { lyricSection } from "./lyrics.js";
 import { headerLines, headerLosses } from "./meta.js";
 import { layout, type Occurrence, occurrences } from "./plan.js";
 import { sheetOf } from "./sheet.js";
+import { textChanged, unescapable } from "./text.js";
 import type { LyricsheetOptions, LyricsheetResult, Out } from "./types.js";
 import { writtenOf } from "./written.js";
 
@@ -19,8 +20,22 @@ const refusal = (message: string, token = ""): ChartDiagnostic => ({
 });
 
 type Parsed =
-	| { ok: true; parse: ChartParse; whole: ChartParse }
+	| { ok: true; parse: ChartParse; whole: ChartParse; diagnostics: ChartDiagnostic[] }
 	| { ok: false; diagnostics: ChartDiagnostic[] };
+
+/**
+ * The whole chart's diagnostics and a part's, each once, in line order: the
+ * sheet takes the singer's words from the whole chart (sheet.ts), so a
+ * problem there is the sheet's too.
+ */
+function merged(whole: ChartDiagnostic[], part: ChartDiagnostic[]): ChartDiagnostic[] {
+	const once = new Map<string, ChartDiagnostic>();
+	for (const d of [...whole, ...part]) {
+		const key = JSON.stringify([d.line, d.severity, d.message, d.token]);
+		if (!once.has(key)) once.set(key, d);
+	}
+	return [...once.values()].sort((a, b) => a.line - b.line);
+}
 
 /** Why there is nothing to export, or the parse to export (the part asked for, when one is). */
 function parsed(chart: string, options: LyricsheetOptions): Parsed {
@@ -30,10 +45,12 @@ function parsed(chart: string, options: LyricsheetOptions): Parsed {
 	const refused = (diagnostics: ChartDiagnostic[]): Parsed => ({ ok: false, diagnostics });
 	if (parse === null)
 		return refused([refusal(`no part labelled ${part}`, part), ...whole.diagnostics]);
-	if (parse.diagnostics.some((d) => d.severity === "error")) return refused(parse.diagnostics);
+	const diagnostics =
+		parse === whole ? whole.diagnostics : merged(whole.diagnostics, parse.diagnostics);
+	if (diagnostics.some((d) => d.severity === "error")) return refused(diagnostics);
 	return parse.bars.length === 0
-		? refused([refusal("the chart has no bars to export"), ...parse.diagnostics])
-		: { ok: true, parse, whole };
+		? refused([refusal("the chart has no bars to export"), ...diagnostics])
+		: { ok: true, parse, whole, diagnostics };
 }
 
 /**
@@ -76,6 +93,17 @@ function defined(out: Out, headed: number): void {
 	out.lines = [...out.lines.slice(0, headed), ...block, ...out.lines.slice(headed)];
 }
 
+/**
+ * The sheet's text: every line through `unescapable`, here where the lines
+ * are joined so no line can miss it, one final newline.
+ */
+function joined(out: Out): string {
+	if (out.lines.length === 0) return "";
+	const lines = out.lines.map(unescapable);
+	if (lines.some((line, i) => line !== out.lines[i])) textChanged(out.losses);
+	return `${lines.join("\n")}\n`;
+}
+
 /** A chart as a ChordPro lyric sheet, and what it could not carry. Never throws. */
 export function exportLyricsheet(chart: string, options: LyricsheetOptions = {}): LyricsheetResult {
 	const p = parsed(chart, options);
@@ -90,10 +118,6 @@ export function exportLyricsheet(chart: string, options: LyricsheetOptions = {})
 	headerLosses(p.parse, out.losses, options.title);
 	body(chart, p, options, out);
 	if (out.uses) defined(out, headed);
-	return {
-		ok: true,
-		text: out.lines.length === 0 ? "" : `${out.lines.join("\n")}\n`,
-		diagnostics: p.parse.diagnostics,
-		losses: out.losses.list(),
-	};
+	const text = joined(out);
+	return { ok: true, text, diagnostics: p.diagnostics, losses: out.losses.list() };
 }

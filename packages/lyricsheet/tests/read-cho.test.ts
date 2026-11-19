@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { gridParts, readCho } from "./read-cho.js";
+import { gridParts, readCho, unescaped } from "./read-cho.js";
 
 /** Typed by hand: every construct this package writes, so the tests' instrument is tested on its own. */
 const SHEET = `{title: Down by the River}
@@ -184,11 +184,45 @@ describe("readCho", () => {
 		["a blank line in a grid", "{start_of_grid}\n\n{end_of_grid}\n"],
 		["a lyric line ending in a backslash", "[C]la\\\nnext\n"],
 		["a grid line ending in a backslash", "{start_of_grid}\n| C . . . | a\\\n{end_of_grid}\n"],
+		["a vertical tab", "Down\vby\n"],
+		["a NUL", "Down\0by\n"],
+		["a next line (U+0085)", "Down\u0085by\n"],
+		["a line separator (U+2028)", "Down\u2028by\n"],
+		["a paragraph separator (U+2029)", "Down\u2029by\n"],
+		["an escaped brace in a lyric line", "Down \\u007bby\\u007d\n"],
 	];
 	for (const [why, text] of refused)
 		test(`throws on ${why}`, () => {
 			expect(() => readCho(text)).toThrow();
 		});
+});
+
+describe("unescaped: a line as the reference reads it, escapes first", () => {
+	const B = "\\";
+	test("\\uXXXX, \\u{…} and a surrogate pair, either case", () => {
+		expect(unescaped(`${B}u007btitle: X${B}u007D`)).toBe("{title: X}");
+		expect(unescaped(`${B}U007B ${B}u{7b} ${B}U{7D} ${B}ud83c${B}uDFB8`)).toBe("{ { } \u{1f3b8}");
+	});
+	test("a backslash before the escape does not stop it", () => {
+		expect(unescaped(`${B}${B}u005bC${B}${B}u005d`)).toBe(`${B}[C${B}]`);
+	});
+	test("each pass runs once: an escape that makes an escape stays", () => {
+		expect(unescaped(`${B}u005cu007b`)).toBe(`${B}u007b`);
+	});
+	test("a word joiner after the backslash is no escape", () => {
+		expect(unescaped(`${B}\u2060u007b`)).toBe(`${B}\u2060u007b`);
+	});
+	test("so an escaped directive, chord or bar is read as one", () => {
+		expect(readCho(`${B}u007btitle: X${B}u007d\n`)).toEqual([
+			{ kind: "directive", name: "title", value: "X" },
+		]);
+		expect(readCho(`la${B}u005bF#${B}u005dla\n`)).toEqual([
+			{
+				kind: "lyrics",
+				tokens: [{ word: "la" }, c("F#", false, false), { word: "la", joins: true }],
+			},
+		]);
+	});
 });
 
 describe("gridParts: a grid line's margins and measures", () => {

@@ -14,6 +14,44 @@ describe("exportLyricsheet refusals", () => {
 		expect(r.diagnostics[0]?.message).toBe("no part labelled Nope");
 	});
 
+	/** A singer and a guitar; `mel` is the singer's second bar of melody, `end` what ends the second system's Vox and Gtr lines. */
+	const singer = (mel: string, end = " |") =>
+		[
+			"# Singer",
+			"part: Vox = Voice, instrument: voice",
+			"part: Gtr = Guitar",
+			"key: C",
+			"",
+			"## Verse",
+			"Vox     | C                   | Am                 |",
+			`Vox.Mel | {E4}:Sail- {G4}:ing | ${mel} |`,
+			"Gtr     | C G                 | Am7                |",
+			`Vox     | F          | G${end}`,
+			"Vox.Mel | {F4}:to    | {G4}:sea  |",
+			`Gtr     | F          | G${end}`,
+			"",
+		].join("\n");
+
+	test("with a part, an error in the singer's line refuses, with the whole chart's diagnostics", () => {
+		const chart = singer("{A4}:out {H5}:past");
+		const whole = exportLyricsheet(chart);
+		const part = exportLyricsheet(chart, { part: "Gtr" });
+		expect(whole.ok).toBe(false);
+		expect(part.ok).toBe(false);
+		expect(part.diagnostics).toEqual(whole.diagnostics);
+		expect(part.diagnostics.map((d) => [d.line, d.severity])).toEqual([[8, "error"]]);
+	});
+
+	test("with a part, the whole chart's warnings come with the sheet, each once, in line order", () => {
+		const r = exportLyricsheet(singer("{A4}:out {C5}:past", ""), { part: "Gtr" });
+		expect(r.ok).toBe(true);
+		expect(r.ok && r.text).toContain("past");
+		expect(r.diagnostics.map((d) => [d.line, d.severity, d.message])).toEqual([
+			[10, "warning", "missing trailing |"],
+			[12, "warning", "missing trailing |"],
+		]);
+	});
+
 	test("a chart with no bars is refused", () => {
 		const r = exportLyricsheet("# Only a title\n");
 		expect(r.ok).toBe(false);

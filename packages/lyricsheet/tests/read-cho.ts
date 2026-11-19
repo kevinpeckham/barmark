@@ -19,6 +19,8 @@
  *   comment line), as the export writes it.
  * - Between `{start_of_grid…}` and `{end_of_grid}` every line is a grid
  *   line, its cells split on spaces and kept as written (`|:`, `.`, `C~G`).
+ * - Each line is first unescaped as the reference unescapes every line
+ *   before it reads it (`unescaped`), so the tests see what a reader sees.
  */
 export type ChoToken =
 	| { chord: string; before: boolean; after: boolean }
@@ -127,10 +129,36 @@ export function gridParts(cells: string[]): GridParts {
 	};
 }
 
+/** A `\u` escape's code point as the character, or the escape itself past the last code point. */
+const char = (written: string, hex: string) => {
+	const code = Number.parseInt(hex, 16);
+	return code > 0x10ffff ? written : String.fromCodePoint(code);
+};
+
+/**
+ * A line as the reference reads it (ChordPro/Song.pm, measured 2026-11-19):
+ * before anything else, on every line (lyrics, directives, grids), a
+ * surrogate pair `\uD83D\uDE00`, then `\uXXXX`, then `\u{…}` become the
+ * character, `u` and the digits in either case; a backslash before the
+ * escape (`\\u007b`) does not stop it. Each pass runs once over the line.
+ */
+export function unescaped(line: string): string {
+	return line
+		.replace(/\\u(d[89ab][0-9a-f]{2})\\u(d[c-f][0-9a-f]{2})/gi, (_, hi: string, lo: string) =>
+			String.fromCodePoint(
+				0x10000 + (Number.parseInt(hi, 16) - 0xd800) * 0x400 + (Number.parseInt(lo, 16) - 0xdc00),
+			),
+		)
+		.replace(/\\u([0-9a-f]{4})/gi, char)
+		.replace(/\\u\{([0-9a-f]+)\}/gi, char);
+}
+
 /** Throws on what no line of a sheet may hold, whatever its kind. */
 function checkWhole(text: string): void {
 	if (!text.endsWith("\n")) throw new Error("no final newline");
 	if (/[\r\t]/.test(text)) throw new Error("a carriage return or a tab");
+	// A control character other than LF, or a character some readers end a line at.
+	if (/[^\P{Cc}\n]|[\u2028\u2029]/u.test(text)) throw new Error("a control character");
 	// ChordPro joins a line ending in `\` to the next (measured 2026-11-19).
 	if (/\\\n/.test(text)) throw new Error("a line ending in a backslash");
 }
@@ -139,7 +167,7 @@ export function readCho(text: string): ChoLine[] {
 	checkWhole(text);
 	const out: ChoLine[] = [];
 	let inGrid = false;
-	const lines = text.slice(0, -1).split("\n");
+	const lines = text.slice(0, -1).split("\n").map(unescaped);
 	for (const [n, line] of lines.entries()) {
 		if (line.startsWith("{")) {
 			const [read, grid] = directive(line, n, inGrid);

@@ -11,7 +11,11 @@
  *   `&amp;`);
  * - in lyrics, words and comments, which ChordPro reads as lyric lines:
  *   `[` `]` `{` `}` are written `(` `)` `(` `)`, and a `#` that would start
- *   a line gets a space before it.
+ *   a line gets a space before it;
+ * - everywhere, a control character (a carriage return ends a line to
+ *   ChordPro) is a space, and on every written line a backslash before a
+ *   `u` gets a word joiner after it: ChordPro unescapes `\uXXXX` and
+ *   `\u{…}` on every line before it reads it (`unescapable`).
  */
 import type { PlayedBar } from "barmark";
 import type { Losses } from "./losses.js";
@@ -28,9 +32,27 @@ export function untagged(text: string): string {
 	});
 }
 
-/** Text in a lyric line or a comment as ChordPro shows it unchanged: no brackets, braces or tags, a tab a space. */
+/**
+ * Every control character (C0, DEL and C1: tab, CR, VT, NUL, NEL) and
+ * U+2028/2029 as a space: a reader may end a line at any of them
+ * (ChordPro ends one at CR), and the output rules forbid them.
+ */
+export const spaced = (text: string) => text.replace(/[\p{Cc}\u2028\u2029]/gu, " ");
+
+/** Text in a lyric line or a comment as ChordPro shows it unchanged: no brackets, braces or tags, no control character. */
 export const plain = (text: string) =>
-	untagged(text).replace(/[[{]/g, "(").replace(/[\]}]/g, ")").replace(/\t/g, " ");
+	spaced(untagged(text).replace(/[[{]/g, "(").replace(/[\]}]/g, ")"));
+
+/**
+ * A written line with no escape ChordPro would unescape: it reads
+ * `\uXXXX`, `\u{…}` and a surrogate pair, `u` in either case, as the
+ * character, on every line before anything else, even after another
+ * backslash (measured 2026-11-19: `\\u007b` is read `\{`). So a word
+ * joiner (U+2060, drawn as nothing) goes after every backslash before a
+ * `u`, as `labelValue` does before an `n`; it never makes or moves a
+ * final backslash.
+ */
+export const unescapable = (line: string) => line.replace(/\\(?=u)/gi, "\\\u2060");
 
 /** A lyric line as written: a `#` that would start it (a comment to ChordPro) gets a space before it. */
 export const unhashed = (line: string) => (line.startsWith("#") ? ` ${line}` : line);
@@ -52,7 +74,7 @@ export const labelValue = (text: string) =>
 	text.replace(/\\(?=n)/g, "\\⁠").replace(/[\\"]/g, (c) => `\\${c}`);
 
 const TEXT_CHANGED =
-	"text holding characters ChordPro reads as markup is changed: brackets, braces and tag-like <…> become parentheses, a tab a space, a # starting a lyric line gets a space before it, a backslash ending a line becomes /, a word joiner keeps a label's backslash-n on one line, and words in a grid's margin that read as a count are quoted";
+	"text holding characters ChordPro reads as markup is changed: brackets, braces and tag-like <…> become parentheses (braces in a title or credit spaces), a tab or other control character a space, a # starting a lyric line gets a space before it, a backslash ending a line becomes /, a word joiner keeps a label's backslash-n on one line and a backslash-u from reading as an escape, and words in a grid's margin that read as a count are quoted";
 
 /** One `text-changed` loss for a line written differently from its text. */
 export function textChanged(losses: Losses, bar?: PlayedBar): void {

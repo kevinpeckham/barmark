@@ -1,6 +1,6 @@
 import type { ChartParse, Key } from "barmark";
 import type { Losses } from "./losses.js";
-import { textChanged, untagged } from "./text.js";
+import { spaced, textChanged, untagged } from "./text.js";
 
 /**
  * A value as one line of plain text: `{`, `}`, every control character (C0,
@@ -8,11 +8,7 @@ import { textChanged, untagged } from "./text.js";
  * of spaces collapse and the ends are trimmed. A non-breaking space and the
  * other Unicode spaces stay: the output rules forbid tabs and controls only.
  */
-const clean = (value: string) =>
-	value
-		.replace(/[{}\p{Cc}\u2028\u2029]/gu, " ")
-		.replace(/ {2,}/g, " ")
-		.trim();
+const clean = (value: string) => spaced(value.replace(/[{}]/g, " ")).replace(/ {2,}/g, " ").trim();
 
 /** The one place a directive line is built: `{name: value}`, or `{name}` with no value. */
 export function directive(name: string, value?: string): string {
@@ -39,9 +35,12 @@ const headerTexts = (parse: ChartParse, title: string | undefined) => {
 	return [titleOf(parse, title), ...c.composer, ...c.lyricist, ...c.arranger, ...c.copyright];
 };
 
+/** Whether a header text is written otherwise: tag-like markup, braces or a control character. */
+const changed = (t: string) => untagged(t) !== t || /[{}]/.test(t) || spaced(t) !== t;
+
 /** What the header leaves out or changes: a church mode in the key (spec 4.6), markup in its text. */
 export function headerLosses(parse: ChartParse, losses: Losses, title?: string): void {
-	if (headerTexts(parse, title).some((t) => untagged(t) !== t)) textChanged(losses);
+	if (headerTexts(parse, title).some(changed)) textChanged(losses);
 	const key = openingKey(parse);
 	const bar = parse.bars[0];
 	if (key && keyText(key) === null)

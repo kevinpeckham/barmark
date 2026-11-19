@@ -53,6 +53,18 @@ describe("the header", () => {
 		}
 	});
 
+	test("braces in a title, a credit or the title option are spaces, as one loss", () => {
+		for (const [chart, title] of [
+			["# My {Song}\n\n| C |\n", undefined],
+			["# T\ncomposer: A {B}\n\n| C |\n", undefined],
+			["| C |\n", "My {Song}"],
+		] as [string, string | undefined][]) {
+			const r = text(chart, title);
+			expect(r.text).not.toMatch(/^\{\w+: [^\n]*[{}][^\n]*\}$/m);
+			expect([chart, r.losses.map((l) => l.code)]).toEqual([chart, ["text-changed"]]);
+		}
+	});
+
 	test("two composers are two lines", () => {
 		const r = text("# T\ncomposer: A\ncomposer: B\n\n| C |\n");
 		expect(r.text).toContain("{composer: A}\n{composer: B}\n");
