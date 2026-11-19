@@ -6,6 +6,13 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.20.2] - 2026-11-19
+
+### Changed
+
+- **Requires `barmark` 0.25.0**, whose minor release a caret range
+  would not reach.
+
 ## [0.20.1] - 2026-11-14
 
 ### Changed
@@ -571,7 +578,8 @@ that needs no script or as the `<barmark-chart>` web component. Requires
   zoom without sideways scrolling, the element renders and re-renders, and
   a screen reader hears "bar 9: D". Run them with `bun run test:browser`.
 
-[Unreleased]: https://github.com/kevinpeckham/barmark/compare/render-v0.20.1...HEAD
+[Unreleased]: https://github.com/kevinpeckham/barmark/compare/render-v0.20.2...HEAD
+[0.20.2]: https://github.com/kevinpeckham/barmark/compare/render-v0.20.1...render-v0.20.2
 [0.20.1]: https://github.com/kevinpeckham/barmark/compare/render-v0.20.0...render-v0.20.1
 [0.20.0]: https://github.com/kevinpeckham/barmark/compare/render-v0.19.1...render-v0.20.0
 [0.19.1]: https://github.com/kevinpeckham/barmark/compare/render-v0.19.0...render-v0.19.1
