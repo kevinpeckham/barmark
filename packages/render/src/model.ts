@@ -58,6 +58,8 @@ type Context = {
 	melody: boolean;
 	/** Set when `melody: false` left a line out or drew a system as a plain row. */
 	changed: boolean;
+	/** Whether each singing line asked about is all melody, by its line number. */
+	melodies: Map<number, boolean>;
 };
 
 /** Models `melody: false` changed the drawing of: the markup sizes its label gutter from the rows drawn only for these. */
@@ -134,6 +136,7 @@ export function layoutChart(text: string, options: LayoutOptions = {}): ChartMod
 		beats: tempoBeats(parse.lines),
 		melody: options.melody !== false,
 		changed: false,
+		melodies: new Map(),
 	};
 	const blocks = groups.map((g) => layoutGroup(g, ctx));
 	// A chart that writes its own rehearsal marks keeps them alone: letters beside them would mark each place twice.
@@ -417,10 +420,27 @@ const melodic = (s: Slot) =>
 			m.kind === "hold" || m.kind === "silence" || (m.kind === "chord" && m.chord.kind === "notes"),
 	);
 
-/** Whether every slot of the line, as written and as its bars play, is melodic: a chord name, `N.C.`, `?` or a `%` copying one is not. */
-const melodyOnly = (l: BarsLine, ctx: Context) =>
-	l.cells.every((c) => c.kind !== "slots" || c.slots.every(melodic)) &&
-	barsOn(l.line, ctx).every((b) => b.slots.every(melodic));
+/**
+ * Whether every slot of the line, as written and as its bars play, is
+ * melodic: a chord name, `N.C.`, `?` or a `%` copying one is not. Read once
+ * a line, and each bar's slots once however often it plays: a section's
+ * every replay asks.
+ */
+function melodyOnly(l: BarsLine, ctx: Context): boolean {
+	const known = ctx.melodies.get(l.line);
+	if (known !== undefined) return known;
+	const read = new Set<Slot[]>();
+	const melodicAll = (slots: Slot[]) => {
+		if (read.has(slots)) return true;
+		read.add(slots);
+		return slots.every(melodic);
+	};
+	const only =
+		l.cells.every((c) => c.kind !== "slots" || melodicAll(c.slots)) &&
+		barsOn(l.line, ctx).every((b) => melodicAll(b.slots));
+	ctx.melodies.set(l.line, only);
+	return only;
+}
 
 /**
  * The system's lines but its melody lines (barmark's grammar 7.7): a singing

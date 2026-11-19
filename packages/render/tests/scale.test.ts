@@ -49,3 +49,16 @@ for (const [shape, chart] of Object.entries(played))
 		},
 		TIMING_TIMEOUT,
 	);
+
+/** A lead-sheet section of one long melody bar, replayed `n` times; with the melody off each replay draws one chord bar. */
+const replayed = (n: number) =>
+	`part: V = Voice, instrument: voice\ntime: 4/4\n\n## A\nV | C |\nV.Mel | ${"{C4} ".repeat(n)}|\n\n${"## A\n\n".repeat(n)}`;
+
+test(
+	"melody off: a long melody replayed many times is read once, not once a replay",
+	() => {
+		const off = (text: string) => () => layoutChart(text, { melody: false });
+		expect(growth(off(replayed(200)), off(replayed(2000)), { balance: 10 })).toBeLessThan(20);
+	},
+	TIMING_TIMEOUT,
+);
