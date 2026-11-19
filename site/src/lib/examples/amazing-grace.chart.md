@@ -13,10 +13,10 @@ Vox       | G                | Em            | D          | D7       |
 Vox.Mel   | {G4} / {B4}_{G4} | {B4} / {A4}   | {D5}       | / / {B4} |
 lyrics 1: | saved / a_/      | wretch / like | me / /     | / / I    |
 lyrics 2: | grace / my_/     | fears / re-   | lieved / / | / / how  |
-Vox       | G                | G / G7      | C           | G           |
-Vox.Mel   | {D5} / {B4}_{D5} | {B4} / {A4} | {G4} / {E4} | {D4} / {D4} |
-lyrics 1: | once / was_/     | lost / but  | now / am    | found / was |
-lyrics 2: | pre- / cious_/   | did / that  | grace / ap- | pear / the  |
+Vox       | G                | G / G7      | C                | G           |
+Vox.Mel   | {D5} / {D5}_{B4} | {G4} / {D4} | {E4} / {G4}_{E4} | {D4} / {D4} |
+lyrics 1: | once / was_/     | lost / but  | now / am_/       | found / was |
+lyrics 2: | pre- / cious_/   | did / that  | grace / ap-_/    | pear / the  |
 Vox       | Em               | D7          | G      | / |
 Vox.Mel   | {G4} / {B4}_{G4} | {B4} / {A4} | {G4}   | / |
 lyrics 1: | blind / but_/    | now / I     | see    | / |

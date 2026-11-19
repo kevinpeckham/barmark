@@ -1196,34 +1196,39 @@
 					"length": "2/1"
 				},
 				{
-					"pitch": 71,
+					"pitch": 74,
 					"at": "27/1",
 					"length": "1/2"
 				},
 				{
-					"pitch": 74,
+					"pitch": 71,
 					"at": "55/2",
 					"length": "1/2"
 				},
 				{
-					"pitch": 71,
+					"pitch": 67,
 					"at": "28/1",
 					"length": "2/1"
 				},
 				{
-					"pitch": 69,
+					"pitch": 62,
 					"at": "30/1",
 					"length": "1/1"
 				},
 				{
-					"pitch": 67,
+					"pitch": 64,
 					"at": "31/1",
 					"length": "2/1"
 				},
 				{
-					"pitch": 64,
+					"pitch": 67,
 					"at": "33/1",
-					"length": "1/1"
+					"length": "1/2"
+				},
+				{
+					"pitch": 64,
+					"at": "67/2",
+					"length": "1/2"
 				},
 				{
 					"pitch": 62,

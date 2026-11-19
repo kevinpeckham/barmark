@@ -107,9 +107,9 @@ describe("between them they show", () => {
 			"B4:2 A4:1", // wretch like
 			"D5:5", // me, held into the next bar
 			"B4:1", // I
-			"D5:2 B4:0.5 D5:0.5", // once was
-			"B4:2 A4:1", // lost but
-			"G4:2 E4:1", // now am
+			"D5:2 D5:0.5 B4:0.5", // once was
+			"G4:2 D4:1", // lost but
+			"E4:2 G4:0.5 E4:0.5", // now am
 			"D4:2 D4:1", // found was
 			"G4:2 B4:0.5 G4:0.5", // blind but
 			"B4:2 A4:1", // now I

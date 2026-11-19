@@ -356,8 +356,8 @@ test.describe("home: the examples", () => {
 		await pressScore(page);
 		await expect.poll(() => scoreText(page), { timeout: 15_000 }).toContain("Amazing Grace");
 		const drawn = await drawnScore(page);
-		// New Britain's 32 notes, "me" and "see" each tied into the bar after: 34 noteheads.
-		expect(drawn.notes).toBe(34);
+		// New Britain's 33 notes, "me" and "see" each tied into the bar after: 35 noteheads.
+		expect(drawn.notes).toBe(35);
 		// 28 syllables a verse, sung on the notes (a word split by a system break draws twice).
 		expect(drawn.syllables).toBeGreaterThanOrEqual(56);
 		expect(drawn.syllableText.slice(0, 4)).toEqual(["A", "'Twas", "maz", "grace"]);
