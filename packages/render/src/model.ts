@@ -394,7 +394,7 @@ function layoutSystemOf(
 	const [only] = lines;
 	if (only && lines.length === 1 && loneBare(only, ctx)) {
 		ctx.changed = true;
-		return layoutOne(only, occurrence, previous, ctx);
+		return layoutOne(only, occurrence, previous, ctx, leftOutSingers(written, lines, ctx));
 	}
 	return layoutSystemAt(lines, written, occurrence, previous, ctx);
 }
@@ -405,6 +405,17 @@ const loneBare = (l: SystemLine, ctx: Context) =>
 	ctx.parse.parts[0]?.sings !== undefined &&
 	l.lineName === undefined &&
 	!sings(l, ctx);
+
+/** The parts whose singing line the system's `written` lines lost to `drawn`: their words draw bare of melisma. */
+function leftOutSingers(written: SystemLine[], drawn: SystemLine[], ctx: Context): Set<string> {
+	if (written.length === drawn.length) return new Set();
+	const kept = new Set<SystemLine>(drawn);
+	return new Set(
+		written.flatMap((l) =>
+			l.kind === "bars" && !kept.has(l) ? (singerOf(l, ctx.parse) ?? []) : [],
+		),
+	);
+}
 
 /** A line with a problem the grid draws where it is written: as written, or on its unreadable slots. */
 const flawed = (l: SystemLine, ctx: Context) => ctx.errors.has(l.line) || ctx.unread.has(l.line);
@@ -465,7 +476,7 @@ function layoutSystemAt(
 	ctx: Context,
 ): Laid {
 	const item = layoutSystem(lines, written, occurrence, previous, ctx);
-	const lyrics = lyricRows(lines, occurrence, ctx);
+	const lyrics = lyricRows(lines, occurrence, ctx, leftOutSingers(written, lines, ctx));
 	// The words go under the system: in its last row that plays.
 	const last = item.rows.findLastIndex((p) => p.row.kind === "row" && !p.row.cells.some(isTacet));
 	const rows = item.rows.map((p, i) =>
@@ -480,12 +491,13 @@ function layoutOne(
 	occurrence: SectionOccurrence | undefined,
 	previous: SlotsCell | null,
 	ctx: Context,
+	leftOut = new Set<string>(),
 ): Laid {
 	if (ctx.errors.has(l.line)) return { items: [errorItem(l.line, ctx)], previous };
 	const item = layoutLine(l, occurrence, previous, ctx);
 	if (!item) return { items: [], previous };
 	if (item.kind !== "row" || l.kind !== "bars") return { items: [item], previous };
-	const lyrics = lyricRows([l], occurrence, ctx);
+	const lyrics = lyricRows([l], occurrence, ctx, leftOut);
 	const row = lyrics.length ? { ...item, lyrics } : item;
 	return { items: [row], previous: lastSlots(item.cells) ?? previous };
 }
@@ -510,13 +522,14 @@ function lyricRows(
 	lines: SystemLine[],
 	occurrence: SectionOccurrence | undefined,
 	ctx: Context,
+	leftOut: Set<string>,
 ): Verse[] {
 	const drawn = lines.filter((l): l is BarsLine => l.kind === "bars" && !ctx.errors.has(l.line));
 	const ref = drawn[0];
 	if (!ref) return [];
 	const sung = new Set(drawn.flatMap((l) => singerOf(l, ctx.parse) ?? []));
 	const lands = landingsOn(ref, playedOn(ref.line, occurrence, ctx), ctx);
-	return rowVerses(lands, sung);
+	return rowVerses(lands, sung, leftOut);
 }
 
 type SystemLine = Extract<Line, { kind: "bars" | "invalid" }>;

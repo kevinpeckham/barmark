@@ -62,3 +62,16 @@ test(
 	},
 	TIMING_TIMEOUT,
 );
+
+/** One chord bar over a melody bar of `n` melismas (`la_/`): with the melody off, the words draw by beat, held places dropped. */
+const melismas = (n: number) =>
+	`part: V = Voice, instrument: voice\ntime: 4/4\n\nV | C |\nV.Mel | ${"{C4}_{C4} ".repeat(n)}|\nlyrics 1: | ${"la_/ ".repeat(n)}|\n`;
+
+test(
+	"melody off: a long row of melismas under a left-out melody lays out in linear time",
+	() => {
+		const off = (text: string) => () => layoutChart(text, { melody: false });
+		expect(growth(off(melismas(100)), off(melismas(1000)), { balance: 10 })).toBeLessThan(20);
+	},
+	TIMING_TIMEOUT,
+);
