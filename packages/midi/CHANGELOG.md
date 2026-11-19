@@ -6,6 +6,13 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.3.5] - 2026-11-19
+
+### Changed
+
+- **Requires `barmark` 0.25.0**, whose minor release a caret range
+  would not reach.
+
 ## [0.3.4] - 2026-11-14
 
 ### Changed
@@ -195,7 +202,8 @@ package uses [semantic versioning](https://semver.org/).
   bar, shorter than one, from its downbeat). Needs barmark 0.21.0
   (`PlayedBar.time`).
 
-[Unreleased]: https://github.com/kevinpeckham/barmark/compare/midi-v0.3.4...HEAD
+[Unreleased]: https://github.com/kevinpeckham/barmark/compare/midi-v0.3.5...HEAD
+[0.3.5]: https://github.com/kevinpeckham/barmark/compare/midi-v0.3.4...midi-v0.3.5
 [0.3.4]: https://github.com/kevinpeckham/barmark/compare/midi-v0.3.3...midi-v0.3.4
 [0.3.3]: https://github.com/kevinpeckham/barmark/compare/midi-v0.3.2...midi-v0.3.3
 [0.3.2]: https://github.com/kevinpeckham/barmark/compare/midi-v0.3.1...midi-v0.3.2
