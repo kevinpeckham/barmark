@@ -22,14 +22,18 @@ unpitched note displayed at B4, "the staff's middle line". A one-line
 staff has no middle line, and MusicXML does not say which pitch its line
 is. Verovio 6.4 draws the line where a treble staff has E4 (line 1), so B4
 is two steps above it; MuseScore 4 draws it where F5 is, so B4 is two
-steps below it. Measured by engraving the same row at B4, E4 and others
-in each.
+steps below it; Dorico Elements 6.2 draws it where B4 is, so the slash
+sits on the line there. Measured by engraving the same row at B4, E4 and
+F5 in each (Dorico on 2026-11-19, through the Mac bench). Three
+engravers, three lines.
 
 **Fix:** `@barmark/score`'s `forVerovio` moves the slash to E4, where
 Verovio's line is, and a test engraves a lyric row with real Verovio and
 requires no ledger lines (and shows that the export, read as it is, has
-them). The export itself is unchanged until Dorico is checked: no value
-is right in both Verovio and MuseScore.
+them). The export stays at B4: it is right in Dorico, it is the middle
+line the file's five-line reading implies, and no value is right in two
+of the three. In MuseScore a lyric row's slashes therefore hang two steps
+below their line; the MusicXML README says so.
 
 **Where it lives:** `packages/score/src/engrave.ts` (`forVerovio`),
 `packages/score/tests/for-verovio.test.ts`; the export's value is
