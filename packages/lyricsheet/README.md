@@ -125,7 +125,7 @@ A lyric sheet keeps the order of chords and words, not their timing: a chord is 
 
 ## Losses
 
-Each loss is reported once per code, at its lowest bar, naming the bars (`(3 bars: 2, 5, 9)`). `no-shape` and `shell-shape` name no bar: they are about a chord name, wherever it is written.
+Each loss is reported once per code, at its lowest bar, naming the bars (`(3 bars: 2, 5, 9)`). Some name no bar: `no-shape` and `shell-shape` are about a chord name, wherever it is written; `other-parts` is about the whole chart; and `text-changed` names none when the text is the header's (a title, a credit) or the change is a backslash before a `u`.
 
 | Code | What is lost, and why |
 |---|---|
