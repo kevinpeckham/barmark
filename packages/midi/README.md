@@ -148,7 +148,8 @@ if (text === "") console.error(diagnostics);
 
 `importMidi` reads a format 0 or 1 file and writes a chord chart with
 `@barmark/sync`'s builder: canonical, in play order (no repeats), four
-bars a line. It never throws; `text` is `""` exactly when a diagnostic
+bars a line (a file that is one line of notes is written as those
+notes, below). It never throws; `text` is `""` exactly when a diagnostic
 is an error, and otherwise parses with no errors.
 
 ### What is read
@@ -209,7 +210,54 @@ is an error, and otherwise parses with no errors.
   a hymn with a pickup and two verses, a band, a comping guitar, a waltz,
   a pedalled piano and a band with bass and drums.
 
+### A single line of notes
+
+A file that is one line of notes, a bass line or a melody, imports as
+that line: every attack with its pitch and octave, holds and rests, on a
+grid as fine as sixteenths and triplets. Written as a chart, and what
+the chord reading made of it before 0.4:
+
+```
+written:   | {E1} | {E1} {E1} {E1} {E1} | {A1} {A1} | {G1} {G1}_{G1} / {B1} |
+chords:    | {E}  | /                   | {A}       | {G} / / {B}           |
+```
+
+The chord reading turned four quarter notes into a hold and dropped the
+octaves. The line comes back as written.
+
+- **When a file is one line.** Once notes shorter than a 64th note are
+  set aside, at most one attack in ten has two or more different
+  pitches, and at most one in ten is struck while an earlier note has
+  more than a sixteenth left to ring. Tracks and channels do not matter:
+  a bass part cut into regions, one per track, is one line. A line
+  played with the sustain pedal down has notes ringing under each other,
+  so it reads as harmony.
+- **Holds and rests.** A note rings to the next attack (`/`) unless a
+  beat or more is silent before it; that silence is a rest, `--` (never
+  `N.C.`).
+- **Played files.** An attack up to a 128th note early belongs to the
+  beat it is early for. A beat is divided into 1, 2, 3, 4 or 6 parts,
+  the smallest that holds its attacks within a 128th note; an attack
+  that fits none moves to the nearest point (`rhythm-rounded`).
+- **Pairing.** In a line, a note-off ends the oldest sounding note of its
+  pitch, so overlapping notes of one pitch keep their own lengths.
+- **`notes: false`** reads chords from any file, as before 0.4. Anything
+  that stops the line reading (an error such as `too-large`, no pitch
+  left that a chart can write, a line that does not play back as read)
+  falls back to the chord reading with a `notes-fallback` warning.
+- **`tracks`** also says which tracks the line is read from, so
+  `tracks: [4]` reads one track of a band's file as a line.
+
+Lyric rows go on as for any file, and have two limits for a melody. The
+words are not on the notes: with no `part:` declared nobody is the
+singer, so a converter engraves the words apart from the line. And a
+row keeps its own grid, so a syllable whose note was played a few ticks
+before a bar line can sit a bar away from that note.
+
 ### What isn't read
+
+These limits describe the chord reading, which every file but a single
+line gets.
 
 1. **Repeats, endings and jumps.** MIDI has none: the chart is the
    file's play order written out (a bar repeated exactly comes back as
@@ -243,13 +291,16 @@ is an error, and otherwise parses with no errors.
 
 ### Options
 
+- `notes`: write a file that is one line of notes as its notes (default
+  true); `false` reads chords from it.
 - `tracks`: the tracks to read the chords from, by 1-based number or
   track name (any case, every track of that name), in place of the
   default choice. Every pitched note on them counts, single-note lines
   included (channel 10, the drums, is still left out), so naming a
   MuseScore part's track reads its slash notes too and adds B to every
   chord: leave `tracks` out for MuseScore's files.
-  An entry naming no track is a `track-unknown` warning; when none
+  They are also the tracks the single-line test reads, in place of every
+  track. An entry naming no track is a `track-unknown` warning; when none
   match, the default choice is used.
 - `lyrics`: read lyrics (default true).
 - `simile`: write a bar that repeats the one before as `%` (default
@@ -277,11 +328,16 @@ is reported once, with a count and its first bars.
 | `meta-invalid` | warning | a tempo, time or key signature barmark can't use, ignored |
 | `meter-mid-bar` | warning | a time signature inside a bar |
 | `key-doubtful` | warning | a key signature the notes don't fit, left out |
-| `harmony-from-melody` | warning | every line is a single line; all are read |
+| `harmony-from-melody` | warning | every line is a single line; all are read (the chord reading only) |
 | `track-unknown` | warning | a `tracks` entry naming no track |
 | `chord-unnamed` | warning | `?` written for notes with no name |
 | `lyrics-dropped` | warning | a verse that didn't read back as placed, or past 100 verses at a tick or 20,000 rows |
 | `lyrics-verses-uncertain` | warning | the number of lyrics at a tick varies, so verses may be mixed |
+| `rhythm-rounded` | warning | a line's attack fit no division of its beat and moved to the nearest point; names up to eight bars and counts attacks joined to another |
+| `pitch-range` | warning | a line's pitches below C0 or above B8 left out, with their count |
+| `notes-fallback` | warning | the line could not be written, so chords were read instead |
+| `notes-line` | info | the notes are one line and are written as notes |
+| `notes-short` | info | a line's notes shorter than a 64th note left out, with their count (none are left out when more than a quarter of the notes are that short) |
 | `unknown-chunk` | info | a chunk other than `MTrk`, skipped |
 | `drums-left-out` | info | channel 10's notes |
 | `melody-left-out` | info | the single-note lines left out of the harmony |

@@ -6,6 +6,22 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- **A file that is one line of notes now imports as its notes**: every
+  attack with its pitch and octave, holds and rests, on a grid as fine as
+  sixteenths and triplets, where it came back as chords with the octaves
+  and the re-struck notes lost. `notes: false` reads chords from it, as
+  before. Every other file imports as it did. This is why the release is
+  a minor.
+
+### Added
+
+- **The `notes` option** (default true), and the diagnostics `notes-line`
+  and `notes-short` (info) and `rhythm-rounded`, `pitch-range` and
+  `notes-fallback` (warning).
+- **`tracks` also chooses the tracks a line is read from.**
+
 ## [0.3.5] - 2026-11-19
 
 ### Changed

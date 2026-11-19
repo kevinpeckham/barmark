@@ -60,11 +60,14 @@ and a few labelled events. So:
   export writes play order, import writes play order out (as sync does).
 - **Melody and parts on import** (v1). Import writes one chord line for
   the whole file (open question 2). A lead sheet's melody, a bass line as
-  note sets, one part per track: a later design.
+  note sets, one part per track: a later design. (A file that is one line
+  of notes, a bass line as note sets: done in
+  `2026-11-19-midi-note-line-design.md`.)
 - **Sub-beat rhythm on import** (v1). Chords land on beats (sync's slot
   rule): a push comes back on the beat it pushed into; eighth-note
   changes come back as the chord holding most of the beat (open question
-  3).
+  3). (Done for a file that is one line of notes, in
+  `2026-11-19-midi-note-line-design.md`.)
 - **Rhythm figures on import**: accents and hits (velocity), pushes,
   pedal, swing, `--` (a MIDI file can't tell the band stopped from the
   chord instruments stopping, so silence imports as `N.C.`, grammar 2.3).
