@@ -4,7 +4,9 @@
 Kevin's (2026-11-12: a bass line imported from MIDI lost the difference
 between a held note and a re-struck one; 2026-11-19: "A reads correctly",
 section 5, and "proceed with the design"). My own choices are marked
-**(design call)**. No grammar change. Nothing here is code yet.
+**(design call)**. A fresh reviewer read it as its builder would, and
+its four questions are answered in the text (6.3, 5, 4.2 and 3). No
+grammar change. Nothing here is code yet.
 
 It extends `2026-11-08-midi-design.md` ("the MIDI design" below; section
 numbers with "MIDI" in front point there). That design's non-goals named
@@ -96,8 +98,9 @@ sustain pedal included.
 
 1. **Short notes** are set aside first (4.1).
 2. The notes, by start, are grouped into **attacks**: a note joins the
-   attack before it when it starts within a 32nd note of that attack's
-   first note; otherwise it starts a new attack.
+   attack before it when it starts less than a 32nd note after that
+   attack's first note; otherwise it starts a new attack. (Exactly a
+   32nd later is a new attack, so 32nd notes stay apart.)
 3. The notes are **one line** when both hold:
    - at most one attack in ten has two or more different pitches;
    - at most one attack in ten starts while a note of an earlier attack
@@ -152,15 +155,25 @@ quarter).
   beat belongs to that beat, at its start. The same holds at a bar
   line.
 - **A beat's division.** Each beat is divided into 1, 2, 3, 4 or 6
-  equal parts. An attack **fits** a division when it lies within a
-  128th note of one of its points. The beat takes the smallest division
-  that every attack in it fits with no two attacks at one point.
+  equal parts, never into parts shorter than a 32nd note: a quarter or
+  a dotted quarter may take any of the five, an eighth (3/8, 5/8, 7/8)
+  1 to 4, a sixteenth 1 or 2. An attack **fits** a division when it
+  lies within a 128th note of one of its points. The beat takes the
+  smallest division that every attack in it fits with no two attacks at
+  one point.
 - **Rounded.** When no division holds a beat's attacks, the beat takes
-  4 parts, or 6 where the beat is a dotted note (6/8, 9/8, 12/8), and
-  each attack moves to its nearest point. Attacks that land on one
-  point become one attack with every pitch of both. The bar is named in
-  `rhythm-rounded` (warning): one diagnostic for the file, naming up to
-  eight bars, then a count.
+  4 parts, or 6 where the beat is a dotted note (6/8, 9/8, 12/8), or
+  the finest division it may take when that is coarser; and each attack
+  moves to its nearest point. **The beat's end is a point too:** an
+  attack nearer the next beat than any point inside its own moves
+  there, and is then the next beat's attack at its start (every
+  division has that point, so the next beat's division is not changed
+  by it). A tie between two points goes to the earlier. Attacks that
+  land on one point become one attack with every pitch of both; two of
+  the same pitch become one note, which is a played attack lost. The
+  bar is named in `rhythm-rounded` (warning): one diagnostic for the
+  file, naming up to eight bars, then a count of bars, and saying how
+  many attacks were joined to another.
 
 The tolerance is small on purpose: the points of 3 and of 4 parts lie a
 twelfth of a beat apart, so anything looser could take a triplet for
@@ -198,8 +211,16 @@ B (not chosen): every silent sixteenth is a rest
 The rule:
 
 - A note's **end** is the latest note-off of its attack, moved to the
-  nearest point of the division of the beat it falls in, and at least
-  one point after the attack.
+  nearest point of the division of the beat it falls in (the beat's
+  end is a point), and at least one point after the attack. A tie
+  between two points goes to the later: the note rings.
+- **An end never divides a beat.** A beat's division comes from its
+  attacks alone (4.2), so a rest starts on a beat, or on a point the
+  attacks in that beat already made. An eighth note followed by a beat
+  and a half of silence, `| {C3}_-- -- {D3} {E3} |`, is read as a
+  quarter and a beat of rest, `| {C3} -- {D3} {E3} |` **(design call:**
+  it keeps the chart plain, in the spirit of reading A: the attacks are
+  exact and the ends are approximate).
 - The **silence** after it runs from that end to the next attack, or to
   the end of the chart after the last attack.
 - When the silence is **shorter than one beat** of the bar the note
@@ -259,9 +280,20 @@ others (sections, changes, the pickup) are, as today.
 
 ### 6.3 Lyrics
 
-Lyric events become lyric rows as today (MIDI 5.8), under the line's
-bars. A melody with its words is the plain case of this design: the
-notes on the bar line, the syllables in rows below.
+Lyric events become lyric rows exactly as today (MIDI 5.8), under the
+line's bars. Nothing about them changes in this design, which leaves
+two limits a reader should know **(design call:** both need a `part:`
+line, which is the wider design's):
+
+- **The words are not on the notes.** With no part declared nobody is
+  the singer (grammar 7.7), so the rows are words over the band, and a
+  converter engraves them apart from the line. Making the melody the
+  singer's needs `part: Voice, instrument: voice`.
+- **A row keeps its own grid.** `lyrics.ts` places syllables from the
+  file's ticks on one even grid a bar, without 4.2's early-attack rule
+  or its per-beat divisions. A syllable whose note was played a few
+  ticks before a bar line can sit a bar away from that note. With no
+  singer that raises no warning.
 
 ### 6.4 The self-check
 
@@ -329,12 +361,19 @@ Test first, per rule, in `packages/midi/tests/`.
 - **The round trip:** for charts of one note line on the grids of 4.2
   (written by a generator, as `property.test.ts` does), `exportMidi`
   then `importMidi` gives a chart whose performance has the same
-  attacks; where no rest is shorter than a beat, the same lengths too.
-- **A real file:** Kevin's, as a fixture with its expected chart, if he
-  agrees to its being committed (section 11); otherwise a file built in
-  the test with the same traits (regions on several tracks, played
-  timing, short notes, three closing chords).
-- **Lyrics:** a melody with lyric events keeps its rows.
+  attacks; and the same lengths too, where every rest is a beat or
+  longer and starts on a beat or on a point an attack in its beat
+  makes (section 5). The generator keeps to divisions a beat may take
+  (4.2).
+- **A real file:** `interbellum-bass-09.mid` as a fixture with its
+  expected chart (Kevin agreed on 2026-11-19, section 11). A notice
+  beside the two files says: the bass line was arranged and played by
+  Kevin Peckham for a song written by Karl Ward; the song is all rights
+  reserved and used with permission; neither the file nor its
+  transcription is covered by the repository's MIT licence. A test
+  holds that neither file is in what `npm pack` would publish.
+- **Lyrics:** a melody with lyric events keeps its rows, as today's
+  import writes them.
 - **Scale and safety:** a 1,000-bar line imports in linear time (as
   `import-scale.test.ts` times, relatively); the bounds of MIDI 5.1
   hold; `smf-fuzz` still never throws.
@@ -354,27 +393,24 @@ Test first, per rule, in `packages/midi/tests/`.
 
 ## 11. Decisions
 
-**Kevin's, made:** the direction; reading A (section 5); short notes
-left out and counted (2026-11-19).
-
-**Kevin's, open:**
-
-1. May `interbellum-bass-09.mid` (8 KB) be committed as a test
-   fixture? Recommendation: yes if it is yours to publish; it is the
-   file the feature was shaped on.
+**Kevin's, made (2026-11-19):** the direction; reading A (section 5);
+short notes left out and counted; `interbellum-bass-09.mid` may be
+committed as a fixture, credited as section 9 says ("arranged and
+played is correct").
 
 **Design calls** (mine; each is marked where it is made): a pedalled
 line reads as harmony (3); the short-note exception (4.1); `--` for a
-line's rest (5); dotted figures (6.1); sync unchanged, the cells
-replaced after it builds (6.2); the self-check and its fallback (6.4);
-the option `notes` and the flag `--chords` (7).
+line's rest, and an end never dividing a beat (5); dotted figures
+(6.1); sync unchanged, the cells replaced after it builds (6.2); lyric
+rows left as they are, not sung on the notes (6.3); the self-check and
+its fallback (6.4); the option `notes` and the flag `--chords` (7).
 
 ## 12. Left to the builder
 
 The module layout inside `src/import/` (one module per stage, as the
 package has it), the wording of each diagnostic, how the bars' cells
 are found in sync's chart, and the constants' names. The numbers in
-this document (a 64th note, a 32nd note for an attack, a 128th note of
-tolerance, one in ten, a quarter of the notes, one beat of silence,
-divisions 1, 2, 3, 4 and 6, eight bars named) are the design's and are
-used as written.
+this document (a 64th note, a 32nd note for an attack and for the
+shortest part, a 128th note of tolerance, one in ten, a quarter of the
+notes, one beat of silence, divisions 1, 2, 3, 4 and 6, eight bars
+named) are the design's and are used as written.
