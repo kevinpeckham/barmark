@@ -376,12 +376,12 @@ lyrics: | Down / by the | riv- er | wait- ing | / |
 
 export const USE_LYRICSHEET = `import { exportLyricsheet } from "@barmark/lyricsheet";
 
-const result = exportLyricsheet(chart, { diagrams: "guitar" });
+const result = exportLyricsheet(text, { diagrams: "guitar" });
 if (result.ok) {
 	result.text; // the ChordPro sheet, ready to save as song.cho
 	result.losses; // what ChordPro could not carry, each with a code: [] here
 } else {
-	result.diagnostics; // the chart's errors, each with its line number
+	result.diagnostics; // why not: the chart's errors, each with its line number
 }`;
 
 /** What exportLyricsheet writes for LYRICSHEET_CHART with diagrams: "guitar". */

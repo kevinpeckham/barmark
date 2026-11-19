@@ -303,7 +303,7 @@ describe("the lyricsheet code Get Started shows", () => {
 		expect(LYRICSHEET_SAMPLE.split("\n").length).toBeLessThanOrEqual(14);
 		for (const line of [
 			'import { exportLyricsheet } from "@barmark/lyricsheet";',
-			'exportLyricsheet(chart, { diagrams: "guitar" })',
+			'exportLyricsheet(text, { diagrams: "guitar" })',
 			"result.ok",
 			"result.text",
 			"result.losses",
@@ -530,6 +530,9 @@ describe("Get Started, prerendered", () => {
 			"npm install @barmark/lyricsheet",
 			"exportLyricsheet(",
 			"export --lyricsheet",
+			"lyrics: | Down / by the | riv- er | wait- ing | / |",
+			"[G]Down by the [Cm]river [G]waiting [D]",
+			"each with a code, most with the bars it happened in",
 			'chord-diagrams="guitar"',
 			"shapeFor(",
 			"exportMidi(",

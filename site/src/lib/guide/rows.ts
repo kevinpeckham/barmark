@@ -456,7 +456,7 @@ export const ROWS: GuideRow[] = [
 		syntax: "CΔ7  C°  Cø  C-7",
 		category: "chords",
 		meaning:
-			"Common shorthand is accepted and printed canonically: Δ for maj7 (Δ9 and Δ13 for maj9 and maj13), ° for dim, ø for m7(b5), + for aug, - or min for m, ♯ and ♭ for # and b. Maj and ma also work before 9 and 13, the delta works after m (CmΔ7 is Cmmaj7), and ∆ (a Mac's Option-J), △ and ▵ all read as Δ.",
+			"Common shorthand is accepted and printed canonically: Δ for maj7 (Δ9 and Δ13 for maj9 and maj13), ° for dim, ø for m7(b5), + for aug, - or min for m, ♯ and ♭ for # and b. Maj and ma stand for maj before 7, 9 and 13; Δ, Δ7 and Δ9 work after m (CmΔ7 is Cmmaj7); and ∆ (a Mac's Option-J), △ and ▵ all read as Δ.",
 		terms: [
 			"shorthand",
 			"aliases",

@@ -27,6 +27,7 @@ export const LINKS = {
 	listenReadme: "https://github.com/kevinpeckham/barmark/tree/main/packages/listen#readme",
 	engraverReadme: "https://github.com/kevinpeckham/barmark/tree/main/packages/engraver#readme",
 	fretboardReadme: "https://github.com/kevinpeckham/barmark/tree/main/packages/fretboard#readme",
+	chordpro: "https://www.chordpro.org",
 	lyricsheetReadme: "https://github.com/kevinpeckham/barmark/tree/main/packages/lyricsheet#readme",
 	cliReleases: "https://github.com/kevinpeckham/barmark/releases?q=cli-v",
 	songs: "https://github.com/kevinpeckham/songs",

@@ -27,6 +27,7 @@
 		"@barmark/cli": "0.13.0",
 		"@barmark/fretboard": "0.1.2",
 		"@barmark/listen": "0.2.2",
+		"@barmark/lyricsheet": "0.1.0",
 		"@barmark/midi": "0.3.5",
 		"@barmark/musicxml": "0.9.3",
 		"@barmark/sync": "0.4.3",

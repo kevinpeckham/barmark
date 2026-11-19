@@ -15,6 +15,7 @@ import {
 	INSTALL_SCORE,
 	INSTALL_SYNC,
 	LIVE_EDITOR,
+	LYRICSHEET_CHART,
 	LYRICSHEET_SAMPLE,
 	PACKAGES,
 	SAMPLE_CHART,
@@ -411,7 +412,7 @@ const cell = "px-3 py-3 align-top lt-sm:(block px-0 py-1)";
 		<p class="max-w-prose opacity-80">
 			<code class={code}>@barmark/lyricsheet</code> writes a chart as a singer's lyric sheet: the chords
 			over the words, with the title, key, time and tempo, in the text format
-			<a href="https://www.chordpro.org" class={link}>ChordPro</a> reads, so any app that reads ChordPro
+			<a href={LINKS.chordpro} class={link}>ChordPro</a> reads, so any app that reads ChordPro
 			can show, print or transpose it. ChordPro is a separate project: this package only writes text for
 			it. With <code class={code}>diagrams: "guitar"</code> it adds a guitar shape for every chord, from
 			<code class={code}>@barmark/fretboard</code>. It never throws.
@@ -419,13 +420,17 @@ const cell = "px-3 py-3 align-top lt-sm:(block px-0 py-1)";
 		<Code title="Terminal" code={INSTALL_LYRICSHEET} />
 		<Code title="lyricsheet.ts" code={USE_LYRICSHEET} />
 		<p class="max-w-prose opacity-80">
-			For a verse of four bars with the words written under them, with diagrams on, it writes this:
+			It takes the chart's text, not the parsed chart. For this verse, with the words written under
+			its four bars:
 		</p>
-		<Code title="Ferry Lights" code={LYRICSHEET_SAMPLE} />
+		<Code title="ferry-lights.chart.md" code={LYRICSHEET_CHART} />
+		<p class="max-w-prose opacity-80">it writes this, with diagrams on:</p>
+		<Code title="ferry-lights.cho" code={LYRICSHEET_SAMPLE} />
 		<p class="max-w-prose opacity-80">
 			A lyric sheet keeps the order of the chords and words, not their timing. What ChordPro cannot hold,
 			such as a church mode or a part other than the one written, comes back in
-			<code class={code}>losses</code>, never silently dropped. From a terminal,
+			<code class={code}>losses</code>, each with a code, most with the bars it happened in. From a
+			terminal,
 			<code class={code}>barmark export --lyricsheet song.chart.md --out song.cho</code> does the same,
 			with <code class={code}>@barmark/cli</code> 0.14.0 or later.
 		</p>
