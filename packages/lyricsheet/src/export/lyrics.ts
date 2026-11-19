@@ -25,7 +25,7 @@ export type Context = {
 
 const LOST = {
 	"chord-names":
-		'a chord name ChordPro\'s chord parser does not know is written as barmark spells it: ChordPro readers may show it as text, and diagrams: "guitar" gives it a shape',
+		'a chord name ChordPro\'s chord parser does not know is written as barmark spells it: ChordPro readers may show it as text (diagrams: "guitar" defines a shape for one that has a shape, which they then draw)',
 	"note-sets":
 		"a note set is written as its notes' names, as text and not a chord; its octaves and root mark are lost",
 	voicing: "a voicing is written as its chord's name; its notes are lost",
@@ -39,7 +39,7 @@ const LOST = {
 		"verses stacked on the same bars (not one verse per pass of a repeat) are written one pass per verse, each with its chords: ChordPro has no stacking",
 } as const;
 
-export const lose = (out: Out, code: keyof typeof LOST, bar: PlayedBar) =>
+export const lose = (out: Out, code: keyof typeof LOST, bar?: PlayedBar) =>
 	out.losses.add(code, LOST[code], bar);
 
 /** The environment a heading's first word names (spec 4.6): verse, chorus or bridge, any case; else verse. */
@@ -76,8 +76,12 @@ function chordText(slot: Extract<SimpleSlot, { kind: "chord" }>, bar: PlayedBar,
 		lose(out, "note-sets", bar);
 		return `*${noteNames(slot.chord.pitches)}`;
 	}
-	if (slot.voicing) lose(out, "voicing", bar);
-	if (isGap(slot.chord)) lose(out, "chord-names", bar);
+	// With diagrams, the shapes decide which of these losses stand (defines.ts).
+	if (out.uses) out.uses.push({ chord: slot.chord, voicing: slot.voicing ?? null, bar });
+	else {
+		if (slot.voicing) lose(out, "voicing", bar);
+		if (isGap(slot.chord)) lose(out, "chord-names", bar);
+	}
 	return spelled(slot.chord);
 }
 

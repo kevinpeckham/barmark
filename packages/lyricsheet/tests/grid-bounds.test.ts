@@ -71,3 +71,35 @@ describe("one long line", () => {
 		expect(best(() => exportLyricsheet(long))).toBeLessThan(3 * best(() => parseChart(long)));
 	}, 60_000);
 });
+
+describe("the define block", () => {
+	const SUFFIXES = ["", "m", "7", "m7", "maj7", "9", "13", "sus4", "dim", "aug", "6", "m6", "sus2"];
+	const NOTES = ["C", "C#", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"];
+	/** A chart of `n` distinct slash chords (never fewer than n names), three to a bar. */
+	function names(n: number): string {
+		const all: string[] = [];
+		for (const s of SUFFIXES)
+			for (const r of NOTES) for (const b of NOTES) if (r !== b) all.push(`${r}${s}/${b}`);
+		const bars = all.slice(0, n).map((c) => ` ${c} `);
+		return `## A\n|${bars.join("|")}|\n`;
+	}
+	test("2,000 distinct chord names with diagrams: time near proportional, not quadratic", () => {
+		const options = { diagrams: "guitar" as const };
+		exportLyricsheet(names(200), options);
+		const [short, long] = [names(500), names(2000)];
+		const result = exportLyricsheet(long, options);
+		expect(result.ok).toBe(true);
+		if (result.ok)
+			expect(
+				result.text.split("\n").filter((l) => l.startsWith("{define:")).length,
+			).toBeGreaterThan(1000);
+		const ratio =
+			best(() => exportLyricsheet(long, options)) /
+			Math.max(
+				best(() => exportLyricsheet(short, options)),
+				1,
+			);
+		// Linear is 4; a define block that searched its own lines for each name would be well past 10.
+		expect(ratio).toBeLessThan(8);
+	}, 60_000);
+});

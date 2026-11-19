@@ -17,7 +17,5 @@
 	"ignorePatterns": ["extensions/**", ".swamp/**", "site/**"],
 	// Complexity as it stood at 0.1.0 (FINDINGS.md). A new finding, or a file that gets worse, fails.
 	"audit": { "healthBaseline": ".fallow-health-baseline.json" },
-	// @barmark/lyricsheet declares @barmark/fretboard for the chord diagrams still to come; drop this when one imports it.
-	"ignoreDependencies": ["@barmark/fretboard"],
 	"rules": {}
 }

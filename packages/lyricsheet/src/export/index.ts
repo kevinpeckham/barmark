@@ -1,5 +1,6 @@
 import { type ChartDiagnostic, type ChartParse, extractPart, parseChart } from "barmark";
 import { comment } from "./changes.js";
+import { defineLines } from "./defines.js";
 import { gridSection } from "./grid.js";
 import { Losses } from "./losses.js";
 import { lyricSection } from "./lyrics.js";
@@ -60,14 +61,30 @@ function body(chart: string, p: Parsed & { ok: true }, options: LyricsheetOption
 	}
 }
 
+/**
+ * The define block after the header (`headed` lines), a blank line on each
+ * side, before whatever the body wrote first; none when no chord has a shape.
+ */
+function defined(out: Out, headed: number): void {
+	const lines = defineLines(out.uses ?? [], out);
+	if (lines.length === 0) return;
+	out.lines.splice(headed, 0, "", ...lines, ...(out.lines[headed] === "" ? [] : [""]));
+}
+
 /** A chart as a ChordPro lyric sheet, and what it could not carry. Never throws. */
 export function exportLyricsheet(chart: string, options: LyricsheetOptions = {}): LyricsheetResult {
 	const p = parsed(chart, options);
 	if (!p.ok) return p;
-	const out: Out = { lines: [], losses: new Losses() };
+	const out: Out = {
+		lines: [],
+		losses: new Losses(),
+		...(options.diagrams === "guitar" && { uses: [] }),
+	};
 	out.lines.push(...headerLines(p.parse, options.title));
+	const headed = out.lines.length;
 	headerLosses(p.parse, out.losses, options.title);
 	body(chart, p, options, out);
+	if (out.uses) defined(out, headed);
 	return {
 		ok: true,
 		text: out.lines.length === 0 ? "" : `${out.lines.join("\n")}\n`,

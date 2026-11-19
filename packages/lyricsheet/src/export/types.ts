@@ -1,4 +1,5 @@
 import type { ChartDiagnostic } from "barmark";
+import type { Use } from "./defines.js";
 import type { Losses } from "./losses.js";
 
 export type LyricsheetOptions = {
@@ -37,7 +38,11 @@ export type LyricsheetLossCode =
 	/** A fermata, written as the text `*…`: its hold has no length (spec 4.3). */
 	| "fermata"
 	/** A rehearsal mark inside a grid line with `x N`, written at the line's start: the count is the whole line's. */
-	| "mark-moved";
+	| "mark-moved"
+	/** A chord with no playable guitar shape, so no diagram is written for it (`diagrams: "guitar"`). */
+	| "no-shape"
+	/** An altered chord's diagram is a shell: its altered tones are not in the shape (`diagrams: "guitar"`). */
+	| "shell-shape";
 
 export type LyricsheetLoss = {
 	code: LyricsheetLossCode;
@@ -53,4 +58,9 @@ export type LyricsheetResult =
 	| { ok: false; diagnostics: ChartDiagnostic[] };
 
 /** What every stage writes into: the lines so far and the losses so far. */
-export type Out = { lines: string[]; losses: Losses };
+export type Out = {
+	lines: string[];
+	losses: Losses;
+	/** With diagrams: every chord the body writes, in order (set only then). */
+	uses?: Use[];
+};
