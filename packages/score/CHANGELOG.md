@@ -6,11 +6,18 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-11-19
+
 ### Added
 
 - **`melody="off"`** is observed and reaches the grid, as in
   `@barmark/render`: the grid leaves a singer's melody line out and keeps
   its words. The score view still engraves the melody.
+
+### Changed
+
+- **Requires `@barmark/render` 0.21.0**, whose minor release a caret range
+  would not reach.
 
 ## [0.6.3] - 2026-11-19
 
@@ -327,7 +334,8 @@ First release.
   needs no config; Vite 7 needs `optimizeDeps.exclude` and
   `worker.format: "es"`.
 
-[Unreleased]: https://github.com/kevinpeckham/barmark/compare/score-v0.6.3...HEAD
+[Unreleased]: https://github.com/kevinpeckham/barmark/compare/score-v0.7.0...HEAD
+[0.7.0]: https://github.com/kevinpeckham/barmark/compare/score-v0.6.3...score-v0.7.0
 [0.6.3]: https://github.com/kevinpeckham/barmark/compare/score-v0.6.2...score-v0.6.3
 [0.6.2]: https://github.com/kevinpeckham/barmark/compare/score-v0.6.1...score-v0.6.2
 [0.6.1]: https://github.com/kevinpeckham/barmark/compare/score-v0.6.0...score-v0.6.1
