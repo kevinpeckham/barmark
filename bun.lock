@@ -63,7 +63,7 @@
     },
     "packages/lyricsheet": {
       "name": "@barmark/lyricsheet",
-      "version": "0.0.0",
+      "version": "0.1.0",
       "dependencies": {
         "@barmark/fretboard": "workspace:^",
         "barmark": "workspace:^",
