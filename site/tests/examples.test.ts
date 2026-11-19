@@ -19,10 +19,10 @@ const official = (e: (typeof EXAMPLES)[number]) =>
 	Bun.file(join(import.meta.dir, "../../examples", exampleFile(e))).text();
 
 describe("the home page's examples", () => {
-	test("are five, Amazing Grace first: the default", () => {
+	test("are five, Greensleeves first: the default", () => {
 		expect(EXAMPLES.map((e) => e.title)).toEqual([
-			"Amazing Grace",
 			"Greensleeves",
+			"Amazing Grace",
 			"Blues in F",
 			"When the Saints Go Marching In",
 			"Peaceful Dreams",
