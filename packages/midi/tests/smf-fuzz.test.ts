@@ -222,6 +222,22 @@ const LINES: Uint8Array[] = [
 			]).flat(),
 		],
 	}),
+	// a small division, where a 128th note is a fraction of a tick (Review Focus 2)
+	...[24, 7].map((ppq) =>
+		smf({
+			ppq,
+			tracks: [
+				[
+					{ dt: 0, tempo: 90 },
+					{ dt: 0, time: [4, 4] },
+				],
+				Array.from({ length: 40 }, (_, i): Event[] => [
+					{ dt: i % 6 === 5 ? ppq : 0, on: [0, 36 + (i % 7), 80] },
+					{ dt: i % 3 === 0 ? ppq : Math.max(1, ppq >> 2), off: [0, 36 + (i % 7)] },
+				]).flat(),
+			],
+		}),
+	),
 ];
 
 test("the line bases are read as lines", () => {

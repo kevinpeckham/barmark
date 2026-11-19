@@ -134,7 +134,8 @@ function lineFile(bars: number): Uint8Array {
 test(
 	"a line of 1,000 bars imports as a line in linear time: 1,000 bars within its factor of 250",
 	() => {
-		// the line reading costs about three times the chord reading, so the pair is 250 and 1,000 bars
+		// This guards the glue in line.ts (each stage has its own scale test). The line reading costs about
+		// twice the chord reading here (0.92 against 0.50 ms a bar), so the pair is 250 and 1,000 bars.
 		const small = lineFile(250);
 		const large = lineFile(1000);
 		const r = importMidi(large);

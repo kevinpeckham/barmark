@@ -1,6 +1,8 @@
 /** A played bass line (note-line design, sections 5 and 9): `interbellum-bass-09.mid` imports as the line it is, and is never published. */
 import { describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
+import { existsSync } from "node:fs";
 import { parseChart, printChart } from "barmark";
 import { attacksOf, lineOf } from "../src/import/attacks.js";
 import { notesOf } from "../src/import/notes.js";
@@ -69,7 +71,10 @@ describe("interbellum-bass-09.mid", () => {
 		expect(line.attacks).toHaveLength(465);
 		expect(attacksOf(line.notes, 480)).toHaveLength(465);
 		// rounding put no two attacks on one point, so the chart sounds as many attack times as the line has
-		// attacks and as many notes as it has notes (the 4 more notes than attacks are double stops)
+		// attacks and as many notes as it has notes. The 4 more notes than attacks are three closing chords,
+		// one of three pitches and two of two. One of the 469 kept notes is a 15-tick C4 (track 9, tick
+		// 119545) that the sustain pedal holds for 735 ticks, so the count depends on the pedal (spec 3
+		// pairs "the sustain pedal included").
 		const sounded = attackTimes(r.text);
 		expect(sounded.notes).toBe(469);
 		expect(sounded.attacks).toHaveLength(465);
@@ -103,6 +108,11 @@ describe("interbellum-bass-09.mid", () => {
 
 	test("notes: false reads only what main reads: chords, no notes-line", () => {
 		const chords = importMidi(fixtureBytes(NAME), { notes: false });
+		// The digest is `main`'s output for this file (606 characters), taken from a checkout of main before the line reading.
+		expect(chords.text).toHaveLength(606);
+		expect(createHash("sha256").update(chords.text).digest("hex")).toBe(
+			"02d4d21b277201a8263acc32912ccd9c0301d5d23305aa13da435f231bfc10ab",
+		);
 		const codes = chords.diagnostics.map((d) => d.code);
 		expect(codes).not.toContain("notes-line");
 		expect(codes).not.toContain("rhythm-rounded");
@@ -112,16 +122,35 @@ describe("interbellum-bass-09.mid", () => {
 });
 
 describe("the package's tarball", () => {
+	const cwd = new URL("../", import.meta.url);
+	const check = (paths: string[]) => {
+		expect(paths).toContain("package.json");
+		expect(paths.filter((p) => p.includes("interbellum"))).toEqual([]);
+		expect(paths.filter((p) => p.startsWith("tests/"))).toEqual([]);
+	};
+
 	test("npm pack lists nothing under tests/ and nothing of the real file", () => {
 		const packed = spawnSync("npm", ["pack", "--dry-run", "--json", "--ignore-scripts"], {
-			cwd: new URL("../", import.meta.url),
+			cwd,
 			encoding: "utf8",
 		});
 		expect(packed.status).toBe(0);
 		const [info] = JSON.parse(packed.stdout) as { files: { path: string }[] }[];
-		const paths = (info?.files ?? []).map((f) => f.path);
-		expect(paths).toContain("package.json");
-		expect(paths.filter((p) => p.includes("interbellum"))).toEqual([]);
-		expect(paths.filter((p) => p.startsWith("tests/"))).toEqual([]);
+		check((info?.files ?? []).map((f) => f.path));
+	});
+
+	// the release packs with `bun pm pack` (release.yml, scripts/verify-package.ts)
+	test("bun pm pack lists nothing under tests/ and nothing of the real file", () => {
+		const packed = spawnSync("bun", ["pm", "pack", "--dry-run", "--ignore-scripts"], {
+			cwd,
+			encoding: "utf8",
+		});
+		expect(packed.status).toBe(0);
+		check([...packed.stdout.matchAll(/^packed \S+ (.+)$/gm)].map((m) => m[1] as string));
+	});
+
+	test("the file, its chart and its notice sit side by side", () => {
+		for (const ext of [".mid", ".chart.md", ".NOTICE.md"])
+			expect(existsSync(new URL(`fixtures/${NAME}${ext}`, import.meta.url))).toBe(true);
 	});
 });
