@@ -37,6 +37,25 @@ describe("renderScoreHtml", () => {
 		expect(inner.querySelector(".bms-score")).toBeNull();
 	});
 
+	test("melody: false is on the element, and the grid has no melody row", () => {
+		const song = `part: Vox = Voice, instrument: voice
+time: 4/4
+
+Vox       | C | G |
+Vox.Mel   | {E4} / {G4} / | {D4} / / / |
+lyrics 1: | la / la / | la |
+`;
+		const on = parse(renderScoreHtml(song));
+		expect(on.host.hasAttribute("melody")).toBe(false);
+		expect(on.inner.querySelectorAll(".bm-pitch").length).toBeGreaterThan(0);
+		const off = parse(renderScoreHtml(song, { melody: false }));
+		expect(off.host.getAttribute("melody")).toBe("off");
+		expect(off.inner.querySelectorAll(".bm-pitch")).toHaveLength(0);
+		expect(off.inner.querySelectorAll(".bm-syllable").length).toBeGreaterThan(0);
+		// The script child carries the chart's text whole: the score view still engraves the melody.
+		expect(decodeCarried(off.script?.textContent ?? "")).toBe(song);
+	});
+
 	test("the grid takes render's rehearsal letters: none beside the chart's own marks", () => {
 		const own = "## Verse\n| @A | D |\n## Chorus\n| @B | G |";
 		const plain = "## Verse\n| D |\n## Chorus\n| G |";
