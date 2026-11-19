@@ -28,7 +28,7 @@ import { creditsText } from "./credits.js";
 import { diagramSvg } from "./diagram.js";
 import { escapeHtml } from "./escape.js";
 import { fontFaceCss } from "./font.js";
-import { isTacet as isTacetCell, layoutChart } from "./model.js";
+import { isTacet as isTacetCell, layoutChart, meloffChanged } from "./model.js";
 import {
 	barLabel,
 	speakBar,
@@ -202,11 +202,12 @@ const labelled = (model: ChartModel) =>
 /**
  * Whether rows are labelled, and how wide the longest label is: every
  * section's left column is as wide, so tutti rows line up with systems.
- * Without the melody, only the labels the systems draw count.
+ * Where `melody: false` changed the drawing, only the labels the systems draw count.
  */
 function gutterOf(model: ChartModel, options: RenderOptions) {
-	const labels = options.melody === false ? drawnLabels(model) : model.parts.flatMap(rowLabelsOf);
-	const parts = options.melody === false ? labels.length > 0 : labelled(model);
+	const drawn = options.melody === false && meloffChanged(model);
+	const labels = drawn ? drawnLabels(model) : model.parts.flatMap(rowLabelsOf);
+	const parts = drawn ? labels.length > 0 : labelled(model);
 	return { parts, widest: Math.max(0, ...labels.map((l) => l.length)) };
 }
 

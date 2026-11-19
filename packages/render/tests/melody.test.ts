@@ -466,3 +466,158 @@ lyrics 1: | la / la / | la |
 		for (const b of m.blocks) for (const i of b.items) expect(i.kind).toBe("row");
 	});
 });
+
+const same = (t: string) => expect(renderChartUnwrapped(t, OFF)).toBe(renderChartUnwrapped(t));
+
+describe("melody: false: fix round 2", () => {
+	const PNO = `part: Pno = Piano
+time: 4/4
+
+## A
+Pno.RH | {C5} / / / | {B4} / / / |
+Pno.LH | {C3} / / / | {G2} / / / |
+
+## B
+Pno.LH | {C3} / / / | {G2} / / / |
+
+## C
+Pno.RH | {E5} / / / | {D5} / / / |
+`;
+	test("a chart with no melody keeps its labelled lone lines, byte for byte", () => {
+		expect(off(PNO)).toEqual(dflt(PNO));
+		same(PNO);
+		const GTR = `part: Gtr = Guitar
+time: 4/4
+
+## A
+Gtr | C | G |
+Gtr.Lead | {E4} / / / | {D4} / / / |
+
+## B
+Gtr.Lead | {E4} / / / | {D4} / / / |
+`;
+		expect(off(GTR)).toEqual(dflt(GTR));
+		same(GTR);
+		const BAND = `part: Pno = Piano
+part: Bs = Bass
+time: 4/4
+
+Pno.RH | {C5} / / / | {B4} / / / |
+Pno.LH | {C3} / / / | {G2} / / / |
+Bs | C | G |
+`;
+		expect(layoutChart(BAND, { part: "Pno", melody: false })).toEqual(
+			layoutChart(BAND, { part: "Pno" }),
+		);
+	});
+
+	test("a lead sheet's lone Vox.Harm keeps its label; the lone bare Vox collapses", () => {
+		const T = `part: Vox = Voice, instrument: voice
+time: 4/4
+
+## A
+Vox | C | G |
+Vox.Mel | {E4} / {G4} / | {D4} / / / |
+
+## B
+Vox.Harm | {C4} / / / | {B3} / / / |
+
+## C
+Vox | G | D |
+`;
+		const m = off(T);
+		expect(m.blocks[1]?.items[0]?.kind).toBe("system");
+		expect(m.blocks[1]).toEqual(dflt(T).blocks[1]);
+		expect(m.blocks[2]?.items[0]?.kind).toBe("row");
+	});
+
+	test("charts with only tutti lines keep the default's gutter", () => {
+		for (const decl of [
+			"part: Gtr = Guitar\npart: Bs = Bass",
+			"part: Gtr = Guitar\npart: Vox = Voice, instrument: voice",
+		]) {
+			const t = `${decl}\ntime: 4/4\n\n| C | G |\n`;
+			expect(off(t)).toEqual(dflt(t));
+			expect(chartTag(renderChartUnwrapped(t, OFF))).toContain("data-parts");
+			same(t);
+		}
+	});
+
+	test("whenever the option changes nothing in the model, the markup is the default's", () => {
+		const dir = join(import.meta.dir, "../../../examples");
+		const texts = [
+			LEAD,
+			PNO,
+			...readdirSync(dir)
+				.filter((f) => f.endsWith(".chart.md"))
+				.map((f) => readFileSync(join(dir, f), "utf8")),
+		];
+		for (const t of texts) if (JSON.stringify(off(t)) === JSON.stringify(dflt(t))) same(t);
+	});
+
+	const MIXED_NOTES = `part: Pno = Piano
+part: Vox = Voice, instrument: voice
+time: 4/4
+
+Pno | {C3 E3 G3} | {G2 B2 D3} |
+Vox | {E4} / / / | Am7 |
+lyrics 1: | la | / |
+Pno | {C3 E3 G3} | {G2 B2 D3} |
+Vox | % | {D4} / / / |
+lyrics 1: | / | la |
+`;
+	test("a % that copies a chord bar makes its line not a melody line", () => {
+		expect(off(MIXED_NOTES)).toEqual(dflt(MIXED_NOTES));
+	});
+
+	test("N.C., a bar of N.C. and ? keep a singing line; rests and a hold bar do not", () => {
+		const base = (vox: string) => `part: Pno = Piano
+part: Vox = Voice, instrument: voice
+time: 4/4
+
+Pno | {C3 E3 G3} | {G2 B2 D3} |
+Vox | ${vox} |
+lyrics 1: | la | la |
+`;
+		for (const v of [
+			"{E4} / N.C. / | {D4} / / /",
+			"{E4} / / / | N.C.",
+			"{E4} / ? / | {D4} / / /",
+		]) {
+			const t = base(v);
+			expect(off(t)).toEqual(dflt(t));
+		}
+		for (const v of ["{E4} / / / | /", "{E4} / -- / | {D4} / / /"]) {
+			const t = base(v);
+			expect(systemsOf(off(t))[0]?.rows.map((p) => p.label)).toEqual(["Pno"]);
+		}
+	});
+
+	test("a chord name inside a group keeps the line", () => {
+		const t = `part: Pno = Piano
+part: Vox = Voice, instrument: voice
+time: 4/4
+
+Pno | {C3 E3 G3} | {G2 B2 D3} |
+Vox | {E4} / Am7_D7 / | {D4} / / / |
+lyrics 1: | la / / / | la |
+`;
+		expect(dflt(t).diagnostics.filter((d) => d.severity === "error")).toEqual([]);
+		expect(off(t)).toEqual(dflt(t));
+	});
+
+	test("part: Vox with melody: false is the default's lone melody; a chord line and a Mel line draw plain rows", () => {
+		const T = `part: Gtr = Guitar
+part: Vox = Voice, instrument: voice
+time: 4/4
+
+Gtr       | C | G |
+Vox       | {E4} / {G4} / | {D4} / / / |
+lyrics 1: | la / la / | la |
+`;
+		expect(layoutChart(T, { part: "Vox", melody: false })).toEqual(layoutChart(T, { part: "Vox" }));
+		const L = layoutChart(LEAD, { part: "Vox", melody: false });
+		expect(items(L).every((i) => i.kind === "row")).toBe(true);
+		expect(rowsOf(L)[0]?.lyrics?.length).toBe(2);
+	});
+});

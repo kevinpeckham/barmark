@@ -56,7 +56,13 @@ type Context = {
 	beats: Map<number, TempoBeat>;
 	/** Whether a singing line draws in a system that has other lines (`melody: false` leaves it out). */
 	melody: boolean;
+	/** Set when `melody: false` left a line out or drew a system as a plain row. */
+	changed: boolean;
 };
+
+/** Models `melody: false` changed the drawing of: the markup sizes its label gutter from the rows drawn only for these. */
+const meloffModels = new WeakSet<ChartModel>();
+export const meloffChanged = (model: ChartModel) => meloffModels.has(model);
 
 /** A played bar as drawn: `perPart` marks a tutti bar its parts play differently. */
 type DrawnBar = PlayedBar & { perPart?: true };
@@ -127,12 +133,13 @@ export function layoutChart(text: string, options: LayoutOptions = {}): ChartMod
 		bars: indexByLine(barsByLine(parse)),
 		beats: tempoBeats(parse.lines),
 		melody: options.melody !== false,
+		changed: false,
 	};
 	const blocks = groups.map((g) => layoutGroup(g, ctx));
 	// A chart that writes its own rehearsal marks keeps them alone: letters beside them would mark each place twice.
 	if (options.rehearsalLetters && !parse.bars.some((b) => b.rehearsal !== undefined))
 		letterBlocks(blocks);
-	return {
+	const model: ChartModel = {
 		title: parse.title,
 		part: parse.part,
 		parts: parse.parts,
@@ -143,6 +150,8 @@ export function layoutChart(text: string, options: LayoutOptions = {}): ChartMod
 		diagnostics: parse.diagnostics,
 		diagrams: options.chordDiagrams === "guitar" ? chartDiagrams(blocks, parse) : [],
 	};
+	if (ctx.changed) meloffModels.add(model);
+	return model;
 }
 
 /** The beat the header's tempo counts: its directives' (they share the next bar line), or the default. */
@@ -367,8 +376,8 @@ type Laid = { items: BlockItem[]; previous: SlotsCell | null };
 /**
  * A system as drawn: with `melody: false`, its melody lines are left out when
  * a line that does not sing still draws its bars, and their words draw by
- * beat under the rest. In a one-part chart, a lone line that does not sing
- * draws as a line outside a system does.
+ * beat under the rest. In a chart of one singing part, the part's lone bare
+ * line draws as a line outside a system does.
  */
 function layoutSystemOf(
 	written: SystemLine[],
@@ -378,11 +387,21 @@ function layoutSystemOf(
 ): Laid {
 	if (ctx.melody) return layoutSystemAt(written, written, occurrence, previous, ctx);
 	const lines = withoutMelody(written, ctx);
+	if (lines.length < written.length) ctx.changed = true;
 	const [only] = lines;
-	if (only && lines.length === 1 && ctx.parse.parts.length === 1 && !sings(only, ctx))
+	if (only && lines.length === 1 && loneBare(only, ctx)) {
+		ctx.changed = true;
 		return layoutOne(only, occurrence, previous, ctx);
+	}
 	return layoutSystemAt(lines, written, occurrence, previous, ctx);
 }
+
+/** Whether the line is the bare line of a chart's only part, which has a singing line, and does not sing itself. */
+const loneBare = (l: SystemLine, ctx: Context) =>
+	ctx.parse.parts.length === 1 &&
+	ctx.parse.parts[0]?.sings !== undefined &&
+	l.lineName === undefined &&
+	!sings(l, ctx);
 
 /** A line with a problem the grid draws where it is written: as written, or on its unreadable slots. */
 const flawed = (l: SystemLine, ctx: Context) => ctx.errors.has(l.line) || ctx.unread.has(l.line);
@@ -391,24 +410,29 @@ const sings = (l: SystemLine, ctx: Context) => l.kind === "bars" && singerOf(l, 
 
 const membersOf = (s: Slot) => (s.kind === "group" ? s.members : [s]);
 
-/** Whether a line names a chord anywhere: a note set, a hold or a rest does not. */
-const namesChord = (l: BarsLine) =>
-	l.cells.some(
-		(c) =>
-			c.kind === "slots" &&
-			c.slots.flatMap(membersOf).some((m) => m.kind === "chord" && m.chord.kind === "chord"),
+/** A slot a melody is made of: a hold, a rest, or a note set. */
+const melodic = (s: Slot) =>
+	membersOf(s).every(
+		(m) =>
+			m.kind === "hold" || m.kind === "silence" || (m.kind === "chord" && m.chord.kind === "notes"),
 	);
+
+/** Whether every slot of the line, as written and as its bars play, is melodic: a chord name, `N.C.`, `?` or a `%` copying one is not. */
+const melodyOnly = (l: BarsLine, ctx: Context) =>
+	l.cells.every((c) => c.kind !== "slots" || c.slots.every(melodic)) &&
+	barsOn(l.line, ctx).every((b) => b.slots.every(melodic));
 
 /**
  * The system's lines but its melody lines (barmark's grammar 7.7): a singing
- * line with no problem drawn in place and no chord name. They go only when a
- * line that does not sing still draws its bars; else all the lines stay.
+ * line with no problem drawn in place whose slots are all notes, holds or
+ * rests. They go only when a line that does not sing still draws its bars;
+ * else all the lines stay.
  */
 function withoutMelody(lines: SystemLine[], ctx: Context): SystemLine[] {
 	const draws = (l: SystemLine) => l.kind === "bars" && !ctx.errors.has(l.line);
 	if (!lines.some((l) => !sings(l, ctx) && draws(l))) return lines;
 	const melody = (l: SystemLine) =>
-		l.kind === "bars" && sings(l, ctx) && !flawed(l, ctx) && !namesChord(l);
+		l.kind === "bars" && sings(l, ctx) && !flawed(l, ctx) && melodyOnly(l, ctx);
 	return lines.filter((l) => !melody(l));
 }
 
