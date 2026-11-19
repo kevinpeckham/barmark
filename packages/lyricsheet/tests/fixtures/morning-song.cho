@@ -1,0 +1,16 @@
+{title: Morning Song}
+{key: G}
+{time: 4/4}
+
+{start_of_grid: label="Intro" shape="1+4x4+1"}
+| G . . . | C . . . | G . . . | D . . . |
+{end_of_grid}
+
+{start_of_grid: label="Verse" shape="1+4x4+1"}
+| G . . . | C . . . | G . . . | D . . . |
+| G . . . | C . . . | D . . . | G . . . |
+{end_of_grid}
+
+{start_of_grid: label="Chorus" shape="1+4x4+1"}
+|: C . . . | G . . . | D . . . | G . . . :|
+{end_of_grid}

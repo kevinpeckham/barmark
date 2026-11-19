@@ -1,0 +1,42 @@
+{title: Weather Vane}
+{key: C}
+{time: 4/4}
+{tempo: 100}
+
+{start_of_verse: label="Verse"}
+{comment: swing}
+[C]wind from the [F]west to[G]day and [C]stay
+{comment: Softly, the second time.}
+{comment: Key: D}
+{key: D}
+{comment: Time: 3/4}
+{time: 3/4}
+[D]turn and [G]turn a[A]gain
+{comment: Tempo: 120}
+{tempo: 120}
+[D]spin
+{end_of_verse}
+
+{start_of_verse: label="Verse"}
+{comment: Key: C}
+{key: C}
+{comment: Time: 4/4}
+{time: 4/4}
+{comment: Tempo: 100}
+{tempo: 100}
+[C]wind from the [F]west to[G]day and [C]stay
+{comment: Softly, the second time.}
+{comment: Key: D}
+{key: D}
+{comment: Time: 3/4}
+{time: 3/4}
+[D]turn and [G]turn a-
+{end_of_verse}
+
+{start_of_verse: label="Coda"}
+{comment: Tempo: 120}
+{tempo: 120}
+[C]home [G]now
+{comment: rit.}
+[C]rest
+{end_of_verse}

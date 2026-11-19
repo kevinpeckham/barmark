@@ -1,0 +1,31 @@
+{title: Ferry Lights}
+{composer: Our Band}
+{key: G}
+{time: 4/4}
+{tempo: 96}
+
+{start_of_verse}
+[G]Hey ho [D]
+{end_of_verse}
+
+{start_of_verse: label="Verse 1"}
+[G]Down by the [C]river [G]waiting [D]
+[Em]lanterns [C]glow and [G]wait[D]ing [G]home
+{end_of_verse}
+
+{start_of_verse: label="Verse 1"}
+[G]Up on the [C]hillside [G]standing [D]
+[Em]cold wind [C]blow and [G]turn[D]ing [G]home
+{end_of_verse}
+
+{start_of_verse: label="Pre-Chorus"}
+[C]Oh [D] now
+{end_of_verse}
+
+{start_of_chorus: label="Chorus"}
+[G]Ferry [C]lights a[D]cross the [G]water
+{end_of_chorus}
+
+{start_of_bridge: label="Bridge"}
+[Em]slowly [C] [G]turn it [D]round
+{end_of_bridge}

@@ -77,6 +77,10 @@ export const CONTENTS: Record<PackageKey, { required: string[]; allowed: RegExp 
 		required: ["LICENSE", "dist/index.js", "dist/index.d.ts"],
 		allowed: /^(LICENSE|dist\/.+\.(js|d\.ts))$/,
 	},
+	lyricsheet: {
+		required: ["LICENSE", "dist/index.js", "dist/index.d.ts"],
+		allowed: /^(LICENSE|dist\/.+\.(js|d\.ts))$/,
+	},
 	cli: {
 		required: ["LICENSE", "dist/cli.js", "dist/main.js"],
 		allowed: /^(LICENSE|dist\/.+\.(js|d\.ts))$/,

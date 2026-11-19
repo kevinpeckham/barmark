@@ -1,0 +1,41 @@
+{title: Example Song}
+{key: D}
+{time: 4/4}
+{tempo: 145}
+
+{start_of_grid: label="Intro" shape="1+4x4+1"}
+| *D . . . | . . . . | . . . . | . . . . |
+{end_of_grid}
+
+{start_of_grid: label="Verse" shape="1+4x4+1"}
+|: D . . . | A . . . | Bm . . . | G . . . :|
+| Em . . . | . . . . | A . . . | A7 . . . |
+{end_of_grid}
+
+{start_of_grid: label="Chorus" shape="1+4x4+1"}
+| G . D . | A . . . | Bm . . A | G . . . |
+| G . . . | A . . . | D . . .~G | . . . . |
+{end_of_grid}
+
+{start_of_grid: label="Verse" shape="1+4x4+1"}
+|: D . . . | A . . . | Bm . . . | G . . . :|
+| Em . . . | . . . . | A . . . | A7 . . . |
+{end_of_grid}
+
+{start_of_grid: label="Chorus" shape="1+4x4+1"}
+| G . D . | A . . . | Bm . . A | G . . . |
+| G . . . | A . . . | D . . .~G | . . . . |
+| G . D . | A . . . | Bm . . A | G . . . |
+| G . . . | A . . . | D . . .~G | . . . . |
+{end_of_grid}
+
+{start_of_grid: label="Bridge" shape="1+4x4+1"}
+{comment: swing}
+| Em7 . . . | A7b9 . . . | Dmaj7 . . . | Bm7 . . . |
+| G *Stop . . | G *Stop . . | N.C. . . . | *? . . . |
+{end_of_grid}
+
+{start_of_grid: label="Outro" shape="1+4x4+1"}
+{comment: straight}
+| D . . . | A . . . | D . | *… |
+{end_of_grid}

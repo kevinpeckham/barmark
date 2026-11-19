@@ -1,0 +1,70 @@
+{title: Peaceful Dreams}
+{composer: Kevin Peckham}
+{lyricist: Kevin Peckham}
+{copyright: © Kevin Peckham, all rights reserved.}
+{key: D}
+{time: 4/4}
+{tempo: 145}
+
+{start_of_grid: label="Intro" shape="1+4x4+1"}
+| D7sus4 . . . | % . . . | % . . . | % . . . | x2
+| C5 . . . | % . . . | G5(7) . . . | % . . . |
+| D7sus4 . . . | % . . . | % . . . | % . . . | x2
+{end_of_grid}
+
+{start_of_grid: label="Verse" shape="1+4x4+1"}
+| D5 . . . | % . . . | A5 . . . | % . . . |
+| G5(7) . . . | % . . . | D5 . . . | % . . . |
+| A5 . . . | B5(7) . . . | G5(7) . . . | % . . . |
+| G5(7) . . . | % . . . | D5 . . . | % . . . |
+| A5 . . . | G5(7) . . . | D5 . . . | % . . . |
+{end_of_grid}
+
+{start_of_grid: label="Chorus" shape="1+4x4+1"}
+| G5(7) . . . | % . . . | D5 . . . | % . . . |
+| C5 . . . | G5(7) . . . | D7sus4 . . . | % . . . |
+{end_of_grid}
+
+{start_of_grid: label="Verse" shape="1+4x4+1"}
+| D5 . . . | % . . . | A5 . . . | % . . . |
+| G5(7) . . . | % . . . | D5 . . . | % . . . |
+| A5 . . . | B5(7) . . . | G5(7) . . . | % . . . |
+| G5(7) . . . | % . . . | D5 . . . | % . . . |
+| A5 . . . | G5(7) . . . | D5 . . . | % . . . |
+{end_of_grid}
+
+{start_of_grid: label="Chorus" shape="1+4x4+1"}
+| G5(7) . . . | % . . . | D5 . . . | % . . . |
+| C5 . . . | G5(7) . . . | D7sus4 . . . | % . . . |
+{end_of_grid}
+
+{start_of_grid: label="Bridge" shape="1+4x4+1"}
+| Bm7 . . . | % . . . | Em7 . . . | % . . . |
+| G7 . . . | % . . . | A7sus4 . . . | % . . . |
+{end_of_grid}
+
+{start_of_grid: label="Verse (Triads)" shape="1+4x4+1"}
+| D . . . | % . . . | A . . . | % . . . |
+| G . . . | % . . . | D . . . | % . . . |
+| A . . . | Bm . . . | G . . . | % . . . |
+| G . . . | % . . . | D . . . | % . . . |
+| A . . . | Gm . . . | D . . . | % . . . |
+{end_of_grid}
+
+{start_of_grid: label="Verse" shape="1+4x4+1"}
+| D5 . . . | % . . . | A5 . . . | % . . . |
+| G5(7) . . . | % . . . | D5 . . . | % . . . |
+| A5 . . . | B5(7) . . . | G5(7) . . . | % . . . |
+| G5(7) . . . | % . . . | D5 . . . | % . . . |
+| A5 . . . | G5(7) . . . | D5 . . . | % . . . |
+{end_of_grid}
+
+{start_of_grid: label="Interlude" shape="1+4x4+1"}
+| D7sus4 . . . | % . . . | % . . . | % . . . |
+| D7sus4 . . . | % . . . | % . . . | % . . . |
+{end_of_grid}
+
+{start_of_grid: label="Outro" shape="1+4x4+1"}
+| D5 . . . | % . . . | % . . . | % . . . | x5
+| D5 . . . | *… |
+{end_of_grid}

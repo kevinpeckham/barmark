@@ -1,0 +1,29 @@
+{title: Grid Meters}
+{key: D}
+{time: 3/4}
+
+{start_of_grid: label="Waltz" shape="1+5x3+1"}
+| A | D . . | G . . | D . . | A . . |
+| G . . | D . . | A . . | D . . |
+{end_of_grid}
+
+{start_of_grid: label="Jig" shape="1+4x2+1"}
+{comment: Time: 6/8}
+{time: 6/8}
+| D G | D . | A~A~A G~G~G | D . |
+{end_of_grid}
+
+{start_of_grid: label="Slow" shape="1+2x4+1"}
+{comment: Time: 12/8}
+{time: 12/8}
+{comment: swing}
+| C F G C | C . . . |
+{end_of_grid}
+
+{start_of_grid: label="Odd" shape="1+6x4+1"}
+{comment: Time: 4/4}
+{time: 4/4}
+{comment: straight}
+| C . . . | G . | C . . . | F . . . . |
+| C . . . | G . . . | C . . . | G . . . | C . . . | G . . . |
+{end_of_grid}

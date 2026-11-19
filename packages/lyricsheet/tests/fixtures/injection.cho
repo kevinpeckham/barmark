@@ -1,0 +1,18 @@
+{title: Mine}
+{composer: A. Writer \⁠u007bsubtitle:Yours\⁠u007d}
+{key: C}
+{time: 4/4}
+{comment: ### A note \⁠u(7b)title:Yours\⁠u(7d)}
+
+{start_of_verse: label="Verse \\⁠U007Btitle:Yours\\⁠U007D"}
+[C]la\⁠u005bF#\⁠u005dla [G]see\⁠U005BF#\⁠U005D
+\⁠u007btitle:Yours\⁠u007d
+[C]\⁠u0023gone [G]too\\⁠u005bF#\\⁠u005d
+{comment: Play \⁠u007btitle:Yours\⁠u007d here}
+[*\⁠u005d\⁠u005bF#][C]words [G]stay
+[C]%\⁠u007btitle\⁠u007d [G]100%
+{end_of_verse}
+
+{start_of_grid: label="Outro" shape="1+2x4+1"}
+| C . . . | G . . . | \⁠u007c D . . . \⁠u007c
+{end_of_grid}

@@ -4,7 +4,7 @@ export const HELP = `Usage: barmark <command> [options]
 
 Commands:
   check <paths…>       Report each chart's errors and warnings
-  export <file>        Write a chart as MusicXML or MIDI (--musicxml, --midi)
+  export <file>        Write a chart as MusicXML, MIDI or a lyric sheet (--musicxml, --midi, --lyricsheet)
   format <paths…>      Print or rewrite charts in standard form
   import <file>        Read a MusicXML score or a MIDI file as a chart
   part <label> <file>  Print one part of a chart of several
@@ -31,18 +31,22 @@ inside them; - reads stdin.
                            github: annotations on a pull request
                            json: an array of { file, diagnostics }
 `,
-	export: `Usage: barmark export (--musicxml | --midi) <file> [options]
+	export: `Usage: barmark export (--musicxml | --midi | --lyricsheet) <file> [options]
 
 The chart as MusicXML 4.0, for MuseScore, Dorico, Sibelius or Finale: one
 part per declared part, playing in the chart's order. Or as a MIDI file
 of its play order, for a DAW or a practice player; what MIDI can't hold
-goes to stderr as file: bar N: warning: message. A chart with errors is
-not exported; problems go to stderr.
+goes to stderr as file: bar N: warning: message. Or as a lyric sheet, a
+text file in ChordPro's format (usually .cho) for any app that reads
+it; what it can't hold goes to stderr as file: warning: message. A chart
+with errors is not exported; problems go to stderr.
 
   --musicxml               Export MusicXML
   --midi                   Export a Standard MIDI File (needs --out)
   --out <file>             Write to a file instead of stdout
+  --lyricsheet             Export a ChordPro lyric sheet
   --part <label>           Export only this part
+  --diagrams guitar        With --lyricsheet: add guitar chord diagrams
 `,
 	format: `Usage: barmark format <paths…> [options]
 

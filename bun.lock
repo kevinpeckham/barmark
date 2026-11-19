@@ -30,6 +30,7 @@
         "barmark": "./dist/cli.js",
       },
       "dependencies": {
+        "@barmark/lyricsheet": "workspace:*",
         "@barmark/midi": "workspace:*",
         "@barmark/musicxml": "workspace:*",
         "@barmark/render": "workspace:*",
@@ -57,6 +58,14 @@
       "version": "0.2.1",
       "dependencies": {
         "@barmark/sync": "workspace:^",
+        "barmark": "workspace:^",
+      },
+    },
+    "packages/lyricsheet": {
+      "name": "@barmark/lyricsheet",
+      "version": "0.0.0",
+      "dependencies": {
+        "@barmark/fretboard": "workspace:^",
         "barmark": "workspace:^",
       },
     },
@@ -118,6 +127,8 @@
     "@barmark/fretboard": ["@barmark/fretboard@workspace:packages/fretboard"],
 
     "@barmark/listen": ["@barmark/listen@workspace:packages/listen"],
+
+    "@barmark/lyricsheet": ["@barmark/lyricsheet@workspace:packages/lyricsheet"],
 
     "@barmark/midi": ["@barmark/midi@workspace:packages/midi"],
 

@@ -1,0 +1,20 @@
+{title: Grid Cells}
+{key: G}
+{time: 4/4}
+
+{start_of_grid: label="Intro" shape="1+4x4+1"}
+| G . C / | Am7 . D7 . | % . . . | G~D . Em C |
+@A | G . . . | N.C. . *Stop . | *? . . . | *G,B,D . . . | riff
+| Cmaj7 . . . | D / G / | F#m(b6) . . . | D . | *… |
+{comment: Then the band comes in.}
+{end_of_grid}
+
+{start_of_grid: label="Groove" shape="1+4x4+1"}
+| G~G G~G G~G G~G | C . . .~D | G~D~Em . . . | % . . . |
+{end_of_grid}
+
+{start_of_grid: label="Cue\\⁠n" shape="1+2x4+1"}
+| G . . . | "x3"
+@B | C . . . | D . . . | go/
+@C | G . . . | C . . . | x2
+{end_of_grid}

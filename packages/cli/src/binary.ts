@@ -7,6 +7,7 @@
 // in, it would be parsed at every start.
 import verovioModule from "verovio/wasm" with { type: "file" };
 import barmark from "../../barmark/package.json" with { type: "json" };
+import lyricsheet from "../../lyricsheet/package.json" with { type: "json" };
 import midi from "../../midi/package.json" with { type: "json" };
 import musicxml from "../../musicxml/package.json" with { type: "json" };
 import fontPath from "../../render/fonts/Edwin-Roman.otf" with { type: "file" };
@@ -30,6 +31,7 @@ const io = {
 		musicxml: musicxml.version,
 		score: score.version,
 		midi: midi.version,
+		lyricsheet: lyricsheet.version,
 		// Exact by policy (verify:release checks it against @barmark/score); its own package.json is outside verovio's exports.
 		verovio: cli.dependencies.verovio,
 	},

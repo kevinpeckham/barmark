@@ -1,0 +1,11 @@
+{title: Harbour Song}
+{key: C}
+{time: 4/4}
+
+{start_of_verse: label="Verse"}
+[C]Sailing [Am]out past [F]the bay [G]home
+{end_of_verse}
+
+{start_of_bridge: label="Bridge"}
+[Dm]ever [G]more
+{end_of_bridge}

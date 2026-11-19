@@ -34,10 +34,14 @@ key: D, time: 4/4, tempo: 145
   it builds a chart from a chord detector's output (bar grid, chord runs,
   key, meter, sections) and a timing map that says when each played bar
   starts, with a checker and the lookups a player needs.
+- **[`@barmark/lyricsheet`](packages/lyricsheet/)** exports a chart as a
+  ChordPro lyric sheet (chords above the sung words, grids for sections
+  with no words, guitar chord diagrams on request), listing what the
+  sheet can't carry.
 - **[`@barmark/cli`](packages/cli/)**: the `barmark` command, to check,
   format, render (as the bar grid or, with Verovio built in, a full
   score) and transpose `.chart.md` files, and to `import` a
-  MusicXML or MIDI file or `export --musicxml`/`--midi` a chart, in a
+  MusicXML or MIDI file or `export --musicxml`/`--midi`/`--lyricsheet` a chart, in a
   terminal or in CI.
 - **[barmark.dev](https://www.barmark.dev)** ([site/](site/)): try it live, and
   the syntax guide.

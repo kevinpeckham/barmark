@@ -1,0 +1,16 @@
+{title: Shenandoah}
+{key: C}
+{time: 4/4}
+
+{define: C base-fret 1 frets x 3 2 0 1 0}
+{define: F base-fret 1 frets 1 3 3 2 1 1}
+
+{comment: A simplified arrangement of the traditional song, every note a quarter.}
+
+{start_of_verse: label="Verse"}
+[*N.C.]Oh [C]Shenandoah [C]I long to hear [F]you
+{end_of_verse}
+
+{start_of_verse: label="Verse"}
+[*N.C.]'Tis [C]seven long years [C]since last I saw [F]you
+{end_of_verse}

@@ -9,6 +9,69 @@ not here.
 
 ## Testing
 
+### Text cleaned piece by piece can still make markup when the pieces are joined (2026-11-19, @barmark/lyricsheet)
+
+**Symptom:** the lyric `<b- >loud </b- >soft` wrote the line
+`[C]<b>loud </b>soft`: ChordPro prints "loud" bold with the tags gone, and
+a malformed tag (`<spansize='40'>`) is a markup error and no PDF at all.
+No loss was reported. Vercel's review of the pull request found it; two
+Fable reviews and a 1,500-chart fuzz had not.
+
+**Cause:** every syllable, word and margin text went through `untagged`
+alone, where `<b` has no `>` after it and so is left as it is. The tag
+exists only on the joined line. The fuzz inserted `<` and `>` nowhere.
+
+**Fix:** `untagged` also runs on every whole line where the lines are
+joined, beside the escape pass. A rule about what a reader sees belongs
+where the text is what the reader gets.
+
+**Where it lives:** `packages/lyricsheet/src/export/index.ts` (`joined`),
+`packages/lyricsheet/tests/escapes.test.ts`.
+
+### A reader's preprocessing is part of the format: ChordPro unescapes every line first (2026-11-19, @barmark/lyricsheet)
+
+**Symptom:** the final review of `@barmark/lyricsheet` wrote a chart whose
+lyric held the characters `\u007btitle:Yours\u007d`. The sheet was
+written as the chart had it, and ChordPro's reference tool printed "Title:
+Yours": the lyric had become a `{title}` directive and vanished. The same
+way `la\u005bF#\u005dla` put a chord over a word, `\u007c` added a grid
+bar, and any directive could be injected, with no loss reported. Separately,
+a carriage return in a bar's words ended the line there, and the rest
+(`#b[C]these words…`) was read as a comment, its chords and words lost.
+Four rounds of review had closed brackets, braces, `#`, `<…>`, a final
+backslash, tabs and a label's backslash-n, every one found by reading
+ChordPro's grammar.
+
+**Cause:** ChordPro does things to a line before it parses it, and the
+grammar does not say so. `ChordPro/Song.pm` joins a line ending in `\`
+to the next, then unescapes `\uXXXX`, a surrogate pair and `\u{…}`
+(either case, and even after another backslash: `\\u007b` reads `\{`),
+then turns tabs into spaces, all on every line, lyrics, directives and
+grids alike; File::LoadLines has already split the file at CR as well as
+LF. Only then does it look for `#`, `{…}` and `[…]`, and substitute
+`%{…}` in lyrics, grids and directive values. We had read the parser, not
+the reader.
+
+**Fix:** the export puts a word joiner (U+2060, drawn as nothing) after
+every backslash before a `u`, in one pass over every written line where
+the lines are joined (`unescapable`, called from `joined` in
+`export/index.ts`), and writes every control character and U+2028/2029 as
+a space (`spaced`, shared by lyrics, words, comments and directive values);
+each change is a `text-changed` loss. `%{…}` cannot reach a reader: every
+`}` in chart text is written otherwise. The tests' reader unescapes each
+line as the reference does before reading it, so the yardstick sees what a
+reader sees; a test spells a directive, a chord and a bar with escapes at
+every place chart text reaches the sheet; and the `injection` golden goes
+through the reference tool, whose printed text (`pdftotext`) must hold the
+escapes as written under the chart's own title. Before writing for a
+reader, list what it does to a line before it parses it, from its source.
+
+**Where it lives:** `packages/lyricsheet/src/export/text.ts` (`spaced`,
+`unescapable`), `export/index.ts` (`joined`),
+`packages/lyricsheet/tests/escapes.test.ts`, `tests/read-cho.ts`
+(`unescaped`), `tests/fixtures/injection.chart.md`, and
+`scripts/chordpro-check.ts` (`PRINTED`).
+
 ### Engravers disagree where a one-line staff's line is (2026-11-18, @barmark/score, @barmark/musicxml)
 
 **Symptom:** on barmark.dev's home page, Amazing Grace's Score view drew
@@ -519,6 +582,25 @@ showed the rule needed refining.
 
 ## Performance and robustness
 
+### A spread of a large array into a call threw under Node and not under Bun (2026-11-19, @barmark/lyricsheet)
+
+- **The symptom.** `exportLyricsheet` threw `RangeError: Maximum call stack
+  size exceeded` under Node 22 on a chart with some 190,000 distinct chord
+  names and `diagrams: "guitar"` (`out.lines.splice(at, 0, "", ...defines)`),
+  and on 200,000 text lines before the first section (`push(...w.pending)`),
+  though every test passed: they run under Bun.
+- **The cause.** A spread into a call passes every item as an argument, and
+  V8's stack allows about 120,000 of them; Bun's limit is far higher. The
+  same shape was in `Math.max(...x)`, `push(...pass)` for a bar of 200,000
+  slots, and `refused(...diagnostics)` for 200,000 diagnostics.
+- **The fix.** `src/export/lists.ts` (`pushAll`, `maxOf`) and array literals
+  replace every spread of a list a chart can make long (the small ones, at
+  most six strings, say so). `packages/lyricsheet/tests/node.test.ts` builds
+  the package and runs the three shapes in a Node child with the chart piped
+  in; the define case runs with `--stack-size=400`, since only about
+  100,000 names have a shape and the default limit is machine-dependent.
+  "Never throws" needs a test that runs under Node.
+
 ### A scan step bounds no work, and an "ms overshoot" can be a whole bar (2026-11-11, @barmark/listen 0.1.1)
 
 - **The symptom.** Two things the 0.1.0 review found. `COMB_PHASE_STEP_SEC`
@@ -834,6 +916,18 @@ When converting to a format that keeps written order, test the played
 order, not just the written marks.
 
 ## Design
+
+### A shape's `base` is not ChordPro's `base-fret` (2026-11-19, @barmark/lyricsheet)
+
+- **The symptom.** `{define: Cm base-fret 1 frets x 3 5 5 4 3}` made the
+  reference `chordpro` print `Fret position 5 exceeds diagram size 4`.
+- **The cause.** `@barmark/fretboard`'s `Shape.base` is the first fret of a
+  five-fret diagram, and it is 1 for any shape up to the fifth fret; ChordPro's
+  diagram has four frets from `base-fret`, so `f - base + 1` can reach 5.
+- **The fix.** `frets()` in `packages/lyricsheet/src/export/defines.ts` takes
+  its own base: 1 when the highest fret is 4 or less, else the lowest fretted
+  fret (a shape spans at most three), so `Cm` is `base-fret 3 frets x 1 3 3 2 1`.
+  `tests/defines.test.ts` sweeps over a hundred shapes for it.
 
 ### Pulling a bare `add` out of a chord name changed its root (2026-11-14, barmark)
 
@@ -1303,6 +1397,129 @@ when two rules each define "first", test a chart that tells them apart,
 and round-trip it through `format`.
 
 ## Tooling
+
+### ChordPro reads `[x]` as a chord in `{comment}`, and escapes only inside a quoted label (2026-11-18, lyricsheet)
+
+- **The symptom.** Writing barmark text lines as `{comment: …}`, a text
+  line holding `[x]` drew `Unknown chord: "x"` from the reference
+  `chordpro` (6.101.0) and printed `x` as a chord over the comment. A
+  heading written `{start_of_verse: label="d\e"}` printed `de`.
+- **The cause.** Measured with the reference on the VM: a comment's value
+  is read as a lyric line, chords and all, while a `{title}` and a
+  `label="…"` keep brackets as text. Inside a quoted label value `\`
+  escapes the next character (`\"`, `\\`); everywhere else (lyrics,
+  comments, titles) a backslash is literal. A lyric line starting with
+  `#` is a comment, and one starting ` #` (a space first) prints as
+  lyrics, the space kept.
+- **The fix.** `@barmark/lyricsheet` writes `[` `]` `{` `}` as `(` `)` in
+  lyrics, words and comments, puts a space before a leading `#`, and
+  reports each changed line in one `text-changed` loss
+  (`packages/lyricsheet/src/export/text.ts`); a label escapes `\` and
+  `"` with a backslash (`src/export/lyrics.ts`, `startLine`).
+
+### ChordPro reads `<` as Pango markup when a `>` follows anywhere after it (2026-11-18, lyricsheet)
+
+- **The symptom.** In lyrics, titles, labels and comments the reference
+  `chordpro` (6.101.0) printed `<b>la</b>` as `la`, and `a < b ->` and
+  `a <3 b>` gave "Markup error / Unclosed markup" with text lost; yet
+  `a < b`, `<3`, `->`, `x>y` and `&amp;` each printed as written.
+- **The cause.** Text is Pango markup: a `<` alone is passed through, but
+  a `<` with a `>` after it opens a tag, whatever lies between.
+- **The fix.** `untagged` in `packages/lyricsheet/src/export/text.ts`
+  writes a `<` that has a `>` after it as `(`, and a `>` that has a `<`
+  before it as `)`, everywhere text is written (one helper), with a
+  `text-changed` loss; a `<` or `>` alone stays. A rule of a `<` followed
+  by a letter, `/` or `!` would leave `a < b ->` broken.
+
+### ChordPro's reference `chordpro` warns "Unknown chord" in two forms that mean different things (2026-11-18, lyricsheet)
+
+- **The symptom.** Measuring which chord spellings the reference knows
+  (`chordpro --reference --strict`, 6.101.0), everyday chords such as
+  `Em/B`, `C/A` and `G7/D` drew "Unknown chord", and a first set of
+  spelling rules called them gaps. The tool prints the warning in two
+  forms: `Unknown chord: "C(13)"` (quoted) and `Unknown chord: Em/B`
+  (bare).
+- **The cause.** Read in the installed `ChordPro/Song.pm`: the quoted
+  form (`Song.pm:2900`) is the tool's chord parser rejecting the name;
+  the bare form (`Song.pm:1013`) is a name that parsed but has no diagram
+  in the tool's built-in guitar table. Either way the chord prints and
+  transposes. The warning comes once per name per song, plus a summary
+  line "No chord diagram defined for …"; a `{define}` before the name's
+  first use quiets both, one after it does not. Rules built on both forms
+  encode which names that table holds, the part of the tool likeliest to
+  change between releases.
+- **The fix.** A gap is a name the parser rejects, nothing else.
+  `@barmark/lyricsheet`'s `spelled` and `isGap`
+  (`packages/lyricsheet/src/export/spell.ts`) follow the parser only,
+  checked name for name against it over 171,780 root and suffix names and
+  29,547 slash chords; `scripts/chordpro-check.ts` requires the quoted
+  warning for each gap, allows the bare one for any chord of the chart,
+  and fails when an expected gap does not warn. Spec 4.7 says the rules.
+
+### `C~G~/` in a grid cell crashes ChordPro's PDF writer (2026-11-19, lyricsheet)
+
+- **The symptom.** A grid cell `C~G~/` (two chords sharing a beat, then
+  "the same again") made the reference `chordpro` (6.101.0) exit 255
+  writing the PDF, with no output file: `Can't locate object method
+  "info" via package "/"` at `ChordPro/Output/PDF/Grid.pm` line 193. The
+  same sheet to `.txt` (which draws no grid) was fine.
+- **The cause.** The parser (`Song.pm`, `decompose_grid`) accepts `/`
+  inside a `~` cell, but the PDF writer handles `/` only as a cell of its
+  own and treats this one as a chord object.
+- **The fix.** `@barmark/lyricsheet` writes `/` only as a cell's only
+  attack, and a repeated name inside a shared cell again by name
+  (`packages/lyricsheet/src/export/cells.ts`, `cellOf`); grid fixtures are
+  checked by rendering the PDF, never only the `.txt`.
+
+### A no-break space splits a ChordPro grid cell (2026-11-19, lyricsheet)
+
+- **The symptom.** A note set written as one annotation cell with a
+  no-break space between its notes (`*C E G`) was drawn by the reference
+  as several cells, and the line warned "Too few cells for grid content".
+- **The cause.** The tool splits a grid line into cells on whitespace,
+  and U+00A0 counts as whitespace to it (measured: `| *C\u00A0E . . . |`
+  warns, `| *C,E . . . |` does not).
+- **The fix.** A grid cell's notes are joined by commas (`*C,E,G`), with
+  the `note-sets` loss saying so (`packages/lyricsheet/src/export/cells.ts`,
+  `cellText`).
+
+### A line ending in a backslash joins the next in ChordPro, and a label splits at backslash-n (2026-11-19, lyricsheet)
+
+- **The symptom.** A sung word `lo\` exported as `[G]lo\` printed run into
+  the next lyric line; a grid line ending in words `a\` swallowed the next
+  grid line and warned "Too few cells for grid content"; a heading
+  `A\nB` printed as a label of two lines.
+- **The cause.** Measured with the reference (6.101.0): any line ending
+  in `\` is joined to the next, `\\` there too (one backslash dropped),
+  and `\ ` keeps the line but leaves a trailing space. A quoted label
+  value is unescaped (`\n` a newline, `\\` a backslash, `\"` a quote, any
+  other `\x` an `x`), and the label is then split at a newline and at a
+  literal backslash-n left in it (`Output/PDF/Song.pm`).
+- **The fix.** `unjoined` writes a final `\` as `/` on every lyric and
+  grid line, and `labelValue` puts a word joiner (U+2060, drawn as
+  nothing) between a backslash and an `n` in a label, each with a
+  `text-changed` loss (`packages/lyricsheet/src/export/text.ts`); the
+  tests' reader refuses a line ending in a backslash.
+
+### A section first reached after a jump is not capped by the parser (2026-11-19, lyricsheet)
+
+- **The symptom.** `## Coda` holding `| Coda | F | x 999999999`, reached by
+  `D.C. al Coda`, made `exportLyricsheet` run out of memory; `x 30000000`
+  aborted the process, and a repeat `x 2000` of lines `x 2000` took 0.7 s.
+  The parse itself was quick.
+- **The cause.** barmark plays a section reached after a jump once, its
+  counts unplayed, so the parse stays small. The lyric sheet's grid code
+  expanded the section's written counts again, in full, to ask whether an
+  occurrence played them straight through, and did so for every
+  occurrence of the section (quadratic for `|: C :| x4000` sung on every
+  other pass).
+- **The fix.** The written lines' play is a generator, compared bar by
+  bar with what the occurrence played, and stopped at the first
+  difference or the first bar past its end, so no grid builds more than
+  the parse played (`packages/lyricsheet/src/export/written.ts`,
+  `fullPlay` and `playsAs`); `tests/grid-bounds.test.ts` holds each such
+  chart to a small multiple of `parseChart`'s time. Any second expansion
+  of a chart's counts must bound itself by what the parse played.
 
 ### The registry lists a version before it serves its tarball (2026-11-14, the midi 0.3.4 release)
 

@@ -223,10 +223,29 @@ Fallow, CI, Swamp), the grammar, `examples/`, the scripts and FINDINGS.md.
     in CI
   - `scripts/smoke-fretboard.mjs`: the package smoke check, run by
     `verify:package` and the release's confirm job
+- `packages/lyricsheet/`: `@barmark/lyricsheet`, a chart as a ChordPro lyric
+  sheet (`exportLyricsheet`: text, diagnostics and losses); depends on
+  `barmark` and `@barmark/fretboard`
+  - `src/export/`: one module per stage: `index.ts`, `sheet.ts` (the part
+    and the singer's words), `plan.ts` (occurrences and layout), `merge.ts`
+    and `lyrics.ts` (sung sections, chords before their syllables),
+    `grid.ts`, `cells.ts` and `written.ts` (sections with no words as
+    grids, a cell per beat), `changes.ts` (key, time and tempo changes),
+    `spell.ts` (chord spellings and the gaps ChordPro's parser has),
+    `defines.ts` (guitar shapes as `{define}`), `text.ts` (text ChordPro
+    would read as markup), `meta.ts` (the header), `losses.ts` (what the
+    sheet could not carry)
+  - `tests/`: `bun test`; goldens in `tests/fixtures/` named `name.cho`,
+    `name@Label.cho` (a part) and `name+guitar.cho` (with diagrams), the
+    played yardstick (`yardstick.ts`), and `read-cho.ts`
+  - `bun scripts/chordpro-check.ts [--keep] [file.cho…]`: the goldens
+    through ChordPro's own Perl tool, VM only, never in CI; ChordPro's
+    files are never copied in
 - `packages/cli/`: `@barmark/cli`, the `barmark` command (`check`,
   `format`, `part`, `render` (`--score`: the full score, Verovio
   in-process, `src/score.ts`; `--diagrams guitar [--left-handed]`),
-  `transpose`, `export`, `import`; MusicXML and MIDI), a thin layer
+  `transpose`, `export`, `import`; MusicXML and MIDI; `export
+  --lyricsheet [--diagrams guitar]`), a thin layer
   over the libraries, pinned to them exactly
   (`verovio` too); `licenses/` holds Verovio's LGPL and GPL, which the
   release attaches beside the binaries
@@ -271,7 +290,7 @@ Fallow, CI, Swamp), the grammar, `examples/`, the scripts and FINDINGS.md.
   `bun test` skips it (`bunfig.toml`), Fallow ignores it
 - `docs/superpowers/`: designs (`specs/`) and implementation plans (`plans/`)
 - `scripts/verify-package.ts`, `scripts/verify-release.ts`: release checks
-  shared by CI and Swamp; both take the package (`barmark`, `render`, `musicxml`, `score`, `sync`, `midi`, `listen`, `fretboard`, `cli` or `engraver`)
+  shared by CI and Swamp; both take the package (`barmark`, `render`, `musicxml`, `score`, `sync`, `midi`, `listen`, `fretboard`, `lyricsheet`, `cli` or `engraver`)
 
 ## Commands
 
@@ -307,10 +326,11 @@ cd site && bun run dev|build|check|test|test:browser   # barmark.dev
   or other AI attribution trailer.
 - Releases follow `RELEASING.md` (the `/release` skill walks it). Each
   package is tagged on its own: `barmark-vX.Y.Z`, `render-vX.Y.Z`,
-  `musicxml-vX.Y.Z`, `score-vX.Y.Z`, `sync-vX.Y.Z`, `midi-vX.Y.Z`, `listen-vX.Y.Z`, `fretboard-vX.Y.Z`, `cli-vX.Y.Z`, `engraver-vX.Y.Z`. A library release is followed by a CLI release and a
+  `musicxml-vX.Y.Z`, `score-vX.Y.Z`, `sync-vX.Y.Z`, `midi-vX.Y.Z`, `listen-vX.Y.Z`, `fretboard-vX.Y.Z`, `lyricsheet-vX.Y.Z`, `cli-vX.Y.Z`, `engraver-vX.Y.Z`. A library release is followed by a CLI release and a
   bump in `kevinpeckham/songs` (RELEASING.md steps 13–14), a `sync`,
-  `midi`, `score` or `fretboard` release included (the CLI bundles `sync`
-  through `midi`, `fretboard` through `render`, and `score` with Verovio). After
+  `midi`, `score`, `fretboard` or `lyricsheet` release included (the CLI
+  bundles `sync` through `midi`, `fretboard` through `render` and
+  `lyricsheet`, and `score` with Verovio). After
   a `sync` minor, a `midi` patch ("Requires `@barmark/sync` X.Y.0") comes
   first, then the CLI, as a `barmark` minor's caret dependants do.
   `score` depends on `barmark`, `@barmark/render` and `@barmark/musicxml`
@@ -319,11 +339,18 @@ cd site && bun run dev|build|check|test|test:browser   # barmark.dev
   `listen` is not bundled by the CLI: a listen release needs no CLI
   release, and after a `sync` or `barmark` minor, a `listen` patch
   raises the dependency.
-  `@barmark/render` imports `fretboard` with a caret and the CLI bundles
-  it through render: a fretboard release is followed by a CLI release (and
-  a render patch first when render's range must rise), and after a
-  `barmark` minor a `fretboard` patch raises the dependency before
-  render's.
+  `@barmark/render` and `@barmark/lyricsheet` import `fretboard` with a
+  caret and the CLI bundles it through both: a fretboard release is
+  followed by a CLI release (and first a render patch and a lyricsheet
+  patch when their ranges must rise), and after a `barmark` minor a
+  `fretboard` patch raises the dependency before render's and
+  lyricsheet's.
+  `lyricsheet` depends on `barmark` and `@barmark/fretboard` with carets
+  and the CLI bundles it: a lyricsheet release is followed by a CLI
+  release, and after a `barmark` or `fretboard` minor a `lyricsheet`
+  patch raises the dependency. `musicxml`, `midi` and `lyricsheet` have a
+  `src/version.ts` that a version bump changes too (a test holds it to
+  `package.json`).
   An engraver version bump runs `bun run compile --update` and commits
   `info.ts`. A Verovio upgrade is one joint PR (`versions.env`, `info.ts`,
   score's `verovio` pin, stock constants and `ENGRAVER_*` literals), then

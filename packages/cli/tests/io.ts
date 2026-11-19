@@ -25,6 +25,7 @@ export function fakeIo(
 			musicxml: "7.7.7",
 			score: "5.5.5",
 			midi: "6.6.6",
+			lyricsheet: "3.3.3",
 			verovio: "4.4.4",
 		},
 		...rest,

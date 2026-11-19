@@ -1,0 +1,27 @@
+{title: Shapes}
+{composer: Our Band}
+{key: C}
+{time: 4/4}
+{tempo: 90}
+
+{define: Am base-fret 1 frets x 0 2 2 1 0}
+{define: Cm base-fret 3 frets x 1 3 3 2 1}
+{define: F#m7b5 base-fret 1 frets 2 3 2 2 x x}
+{define: C(6) base-fret 1 frets x 3 2 2 1 0}
+{define: C7alt base-fret 1 frets x 3 2 3 x x}
+{define: Cmaj7 base-fret 1 frets x x 2 0 0 x}
+{define: G base-fret 1 frets 3 2 0 0 0 3}
+{define: D/F# base-fret 1 frets 2 0 0 2 3 2}
+{define: Dm7 base-fret 1 frets x x 0 2 1 1}
+{define: Bb base-fret 1 frets x 1 3 3 3 1}
+{define: G/B base-fret 1 frets x 2 0 0 0 3}
+
+{start_of_grid: label="Intro" shape="1+4x4+1"}
+| Am . . . | Cm . . . | F#m7b5 . . . | C(6) . . . |
+| C7alt . . . | Cmaj7 . . . | C7(b9,#9,#11,b13) . . . | *C,E,G . . . |
+{end_of_grid}
+
+{start_of_verse: label="Verse"}
+[G]Hey ho [D/F#]and up [Cmaj7]we go [Dm7]to sea
+[Bb]the wind [G/B]is on [Dm7]our back [C13b9/Eb]home
+{end_of_verse}

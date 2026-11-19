@@ -1,0 +1,38 @@
+{title: Grid Repeats}
+{key: D}
+{time: 4/4}
+
+{start_of_grid: label="Intro" shape="1+2x4+1"}
+|: D . . . | G . . . :| x3
+| A . . . | G . . . | x2
+{end_of_grid}
+
+{start_of_grid: label="Verse" shape="1+4x4+1"}
+|: D . . . | A . . . | Bm . . . | G . . . |
+|1 Em . . . | A . . . :|
+|2 Em . . . | A . . . | D . . . | % . . . |
+{end_of_grid}
+
+{start_of_grid: label="Vamp" shape="1+2x4+1"}
+| D . . . | A . . . |
+{comment: repeat ad lib.}
+{comment: Cue the band, then go on.}
+| G . . . | A . . . |
+{end_of_grid}
+
+{start_of_grid: label="Intro" shape="1+2x4+1"}
+| D . . . | G . . . |
+| D . . . | G . . . |
+| D . . . | G . . . |
+| A . . . | G . . . |
+| A . . . |
+{end_of_grid}
+
+{start_of_grid: label="Coda" shape="1+2x4+1"}
+| D . . . | G . . . |
+| A . . . |
+| D . . . | G . . . |
+| A . . . |
+| D . . . | G . . . |
+| D . . . |
+{end_of_grid}

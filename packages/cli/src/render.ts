@@ -14,7 +14,7 @@ import { DEFAULT_WIDTH, MAX_WIDTH, MIN_WIDTH, scoreBody } from "./score.js";
 const THEMES = ["auto", "light", "dark"] as const;
 const NUMERALS = ["nashville", "roman"] as const;
 const COLUMNS = ["shared", "row"] as const;
-const DIAGRAMS = ["guitar"] as const;
+export const DIAGRAMS = ["guitar"] as const;
 
 const escapeHtml = (text: string) =>
 	text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");

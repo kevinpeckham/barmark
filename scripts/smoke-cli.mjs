@@ -1,7 +1,8 @@
 /**
  * Run the barmark command as Node sees it: --version names the CLI and
  * its libraries, check reads a real chart cleanly, render embeds the font,
- * and render --score engraves the score with Verovio.
+ * render --score engraves the score with Verovio, and export --lyricsheet
+ * writes the chart's lyric sheet.
  * Plain Node, so it runs against the local build (scripts/verify-package.ts)
  * and against the copy installed from npm (.github/workflows/release.yml,
  * confirm).
@@ -30,13 +31,16 @@ const check = barmark("check", chart).status;
 const render = barmark("render", chart).stdout.includes("data:font/otf;base64,");
 const scored = barmark("render", "--score", chart);
 const score = scored.status === 0 && scored.stdout.includes('role="img"');
-const result = { version, check, render, score };
+const sheet = barmark("export", "--lyricsheet", chart);
+const lyricsheet = sheet.status === 0 && sheet.stdout.startsWith("{title: ");
+const result = { version, check, render, score, lyricsheet };
 console.log(JSON.stringify(result));
 const ok =
-	/^@barmark\/cli \d+\.\d+\.\d+ \(barmark \d+\.\d+\.\d+, @barmark\/render \d+\.\d+\.\d+, @barmark\/musicxml \d+\.\d+\.\d+, @barmark\/score \d+\.\d+\.\d+, @barmark\/midi \d+\.\d+\.\d+, verovio \d+\.\d+\.\d+\)$/.test(
+	/^@barmark\/cli \d+\.\d+\.\d+ \(barmark \d+\.\d+\.\d+, @barmark\/render \d+\.\d+\.\d+, @barmark\/musicxml \d+\.\d+\.\d+, @barmark\/score \d+\.\d+\.\d+, @barmark\/midi \d+\.\d+\.\d+, @barmark\/lyricsheet \d+\.\d+\.\d+, verovio \d+\.\d+\.\d+\)$/.test(
 		version,
 	) &&
 	check === 0 &&
 	render &&
-	score;
+	score &&
+	lyricsheet;
 process.exit(ok ? 0 : 1);

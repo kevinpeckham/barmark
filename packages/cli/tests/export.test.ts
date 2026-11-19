@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { exportLyricsheet } from "@barmark/lyricsheet";
 import { exportMidi } from "@barmark/midi";
 import { exportMusicXml } from "@barmark/musicxml";
 import { parseChart } from "barmark";
@@ -60,7 +61,7 @@ describe("barmark export", () => {
 	test("export without --musicxml is a usage error", async () => {
 		const io = folder({ "s.chart.md": SONG });
 		expect(await main(["export", "s.chart.md"], io)).toBe(2);
-		expect(io.err()).toBe("barmark: give a format: --musicxml or --midi\n");
+		expect(io.err()).toBe("barmark: give a format: --musicxml, --midi or --lyricsheet\n");
 	});
 	test("help lists export", () => {
 		expect(HELP).toContain("export <file>");
@@ -109,7 +110,7 @@ describe("barmark export --midi", () => {
 		expect(await main(["export", "--midi", "--musicxml", "s.chart.md", "--out", "s.mid"], io)).toBe(
 			2,
 		);
-		expect(io.err()).toBe("barmark: give one format: --musicxml or --midi\n");
+		expect(io.err()).toBe("barmark: give one format: --musicxml, --midi or --lyricsheet\n");
 		expect(existsSync(join(io.dir, "s.mid"))).toBe(false);
 	});
 	test("a chart with errors writes nothing", async () => {
@@ -147,5 +148,94 @@ describe("barmark export --midi", () => {
 		const loss = { code: "channels-shared" as const, message: "shared" };
 		expect(lossLine("f.chart.md", { ...loss, bar: 3 })).toBe("f.chart.md: bar 3: warning: shared");
 		expect(lossLine("f.chart.md", loss)).toBe("f.chart.md: warning: shared");
+	});
+});
+
+const sheet = (text: string, options = {}) => {
+	const r = exportLyricsheet(text, options);
+	if (!r.ok) throw new Error("not ok");
+	return r.text;
+};
+
+describe("barmark export --lyricsheet", () => {
+	test("prints the lyric sheet, titled with the file name", async () => {
+		const io = folder({ "untitled.chart.md": "| G | C |\n" });
+		expect(await exportCommand(["--lyricsheet", "untitled.chart.md"], io)).toBe(0);
+		expect(io.out()).toBe(sheet("| G | C |\n", { title: "untitled" }));
+		expect(io.err()).toBe("");
+	});
+	test("--out writes the file", async () => {
+		const io = folder({ "s.chart.md": SONG });
+		expect(await exportCommand(["--lyricsheet", "s.chart.md", "--out", "s.cho"], io)).toBe(0);
+		expect(io.out()).toBe("");
+		expect(readFileSync(join(io.dir, "s.cho"), "utf8")).toBe(sheet(SONG, { title: "s" }));
+	});
+	test("- reads the chart from stdin, untitled when it has no title", async () => {
+		const io = folder({}, { stdin: "| G | C |\n" });
+		expect(await exportCommand(["--lyricsheet", "-"], io)).toBe(0);
+		expect(io.out()).toBe(sheet("| G | C |\n"));
+		expect(io.out()).toStartWith("{title: }\n");
+		const song = folder({}, { stdin: SONG });
+		expect(await exportCommand(["--lyricsheet", "-", "--part", "Pno"], song)).toBe(0);
+		expect(song.out()).toBe(sheet(SONG, { part: "Pno" }));
+	});
+	test("--part passes through", async () => {
+		const io = folder({ "s.chart.md": SONG });
+		expect(await exportCommand(["--lyricsheet", "s.chart.md", "--part", "Pno"], io)).toBe(0);
+		expect(io.out()).toBe(sheet(SONG, { part: "Pno", title: "s" }));
+		expect(io.out()).not.toBe(sheet(SONG, { title: "s" }));
+	});
+	test("--diagrams guitar passes through", async () => {
+		const io = folder({ "s.chart.md": SONG });
+		expect(await exportCommand(["--lyricsheet", "s.chart.md", "--diagrams", "guitar"], io)).toBe(0);
+		expect(io.out()).toBe(sheet(SONG, { title: "s", diagrams: "guitar" }));
+		expect(io.out()).toContain("{define:");
+	});
+	test("--diagrams ukulele is a usage error", async () => {
+		const io = folder({ "s.chart.md": SONG });
+		expect(await main(["export", "--lyricsheet", "s.chart.md", "--diagrams", "ukulele"], io)).toBe(
+			2,
+		);
+		expect(io.err()).toBe('barmark: --diagrams must be guitar, not "ukulele"\n');
+	});
+	test("--diagrams goes with --lyricsheet", async () => {
+		for (const format of ["--musicxml", "--midi"]) {
+			const io = folder({ "s.chart.md": SONG });
+			expect(
+				await main(["export", format, "s.chart.md", "--diagrams", "guitar", "--out", "x"], io),
+			).toBe(2);
+			expect(io.err()).toBe("barmark: --diagrams goes with --lyricsheet\n");
+		}
+	});
+	test("--lyricsheet with another format is a usage error", async () => {
+		const io = folder({ "s.chart.md": SONG });
+		expect(await main(["export", "--lyricsheet", "--midi", "s.chart.md", "--out", "x"], io)).toBe(
+			2,
+		);
+		expect(io.err()).toBe("barmark: give one format: --musicxml, --midi or --lyricsheet\n");
+	});
+	test("losses go to stderr as file: warning: message, the bar already in the message", async () => {
+		const chart = "| C(b9) | Cmaj7 |\n";
+		const io = folder({ "o.chart.md": chart });
+		expect(await exportCommand(["--lyricsheet", "o.chart.md"], io)).toBe(0);
+		const r = exportLyricsheet(chart, { title: "o" });
+		if (!r.ok) throw new Error("not ok");
+		expect(r.losses.length).toBeGreaterThan(0);
+		expect(io.err()).toBe(`${r.losses.map((l) => `o.chart.md: warning: ${l.message}\n`).join("")}`);
+		expect(io.err()).not.toContain("bar 1: warning");
+		expect(io.out()).toBe(r.text);
+	});
+	test("a chart with errors prints its problems and writes nothing", async () => {
+		const io = folder({ "p.chart.md": PROBLEMS });
+		expect(await exportCommand(["--lyricsheet", "p.chart.md", "--out", "p.cho"], io)).toBe(1);
+		for (const d of parseChart(PROBLEMS).diagnostics)
+			expect(io.err()).toContain(textLine("p.chart.md", d));
+		expect(io.err()).toContain("p.cho not written: the chart has errors");
+		expect(existsSync(join(io.dir, "p.cho"))).toBe(false);
+	});
+	test("help lists it", () => {
+		expect(HELP).toContain("--lyricsheet");
+		expect(COMMAND_HELP.export).toContain("--lyricsheet");
+		expect(COMMAND_HELP.export).toContain("--diagrams guitar");
 	});
 });

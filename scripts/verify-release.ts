@@ -93,6 +93,7 @@ const RELEASED_CODE = {
 	score: ["src"],
 	sync: ["src"],
 	midi: ["src"],
+	lyricsheet: ["src"],
 	fretboard: ["src"],
 } as const;
 if (pkg.key === "cli")
