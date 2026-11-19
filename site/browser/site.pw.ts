@@ -33,13 +33,13 @@ const scoreChords = (page: Page) =>
 		].map((g) => g.textContent?.replace(/\s+/g, "") ?? ""),
 	);
 
-/** The chord names the grid draws, in order. */
+/** The chord names the grid draws, in order: not a melody's pitch names (`.bm-pitch`). */
 const gridChords = (page: Page) =>
 	page.evaluate(() =>
 		[
 			...(document
 				.querySelector("main :is(barmark-chart, barmark-score)")
-				?.shadowRoot?.querySelectorAll(".bm-chord") ?? []),
+				?.shadowRoot?.querySelectorAll(".bm-chord:not(.bm-pitch)") ?? []),
 		].map((c) => c.textContent ?? ""),
 	);
 
@@ -114,6 +114,18 @@ const settledElement = async (page: Page) => {
 	await page.waitForTimeout(500);
 };
 
+/** The home page's example control, and the title and place it shows. */
+const examples = (page: Page) => page.getByRole("group", { name: "Examples" });
+const position = (page: Page) => examples(page).getByRole("status");
+/** Presses Next (or Previous) and waits for the chart to show `title`; repeated until the page's script has run. */
+const flip = (page: Page, to: "Next" | "Previous", title: string) =>
+	expect(async () => {
+		await examples(page)
+			.getByRole("button", { name: `${to} example` })
+			.click();
+		await expect(position(page)).toContainText(title, { timeout: 1_000 });
+	}).toPass({ timeout: 15_000 });
+
 /** Presses Score in the first chart's switch, repeated until the element has upgraded and shows it. */
 const pressScore = (page: Page, scope = "main") =>
 	expect(async () => {
@@ -170,7 +182,7 @@ test.describe("home: the live editor", () => {
 		const errors = watchErrors(page);
 		await page.goto("/");
 		await page.getByRole("textbox", { name: "Barmark source of the chart" }).fill("");
-		await expect.poll(() => chartText(page)).not.toContain("Amazing Grace");
+		await expect.poll(() => chartText(page)).not.toContain("Greensleeves");
 		expect(errors).toEqual([]);
 	});
 
@@ -258,7 +270,8 @@ test.describe("home: the live editor", () => {
 		const source = page.getByRole("textbox", { name: "Barmark source of the chart" });
 		await source.press("ControlOrMeta+End");
 		await source.pressSequentially("\n| Bm7 |");
-		await expect.poll(() => chartText(page)).toContain("vi");
+		// Bm7 in Greensleeves' A minor is ii7, the chart's only "ii".
+		await expect.poll(() => chartText(page)).toContain("ii");
 		expect(await numerals()).toEqual(["roman"]);
 		await spelling.getByRole("radio", { name: "Names" }).check();
 		await expect.poll(numerals).toEqual([]);
@@ -271,23 +284,13 @@ test.describe("home: the live editor", () => {
 		const source = page.getByRole("textbox", { name: "Barmark source of the chart" });
 		await source.fill("| D |");
 		await page.getByRole("button", { name: "Reset" }).click();
-		await expect(source).toHaveValue(/# Amazing Grace/);
-		await expect.poll(() => chartText(page)).toContain("Amazing Grace");
+		await expect(source).toHaveValue(/# Greensleeves/);
+		await expect.poll(() => chartText(page)).toContain("Greensleeves");
 	});
 });
 
 test.describe("home: the examples", () => {
 	const source = (page: Page) => page.getByRole("textbox", { name: "Barmark source of the chart" });
-	const examples = (page: Page) => page.getByRole("group", { name: "Examples" });
-	const position = (page: Page) => examples(page).getByRole("status");
-	/** Presses Next (or Previous) and waits for the chart to show `title`; repeated until the page's script has run. */
-	const flip = (page: Page, to: "Next" | "Previous", title: string) =>
-		expect(async () => {
-			await examples(page)
-				.getByRole("button", { name: `${to} example` })
-				.click();
-			await expect(position(page)).toContainText(title, { timeout: 1_000 });
-		}).toPass({ timeout: 15_000 });
 	const titles = EXAMPLES.map((e) => e.title);
 	const n = titles.length;
 	let errors: string[] = [];
@@ -300,7 +303,7 @@ test.describe("home: the examples", () => {
 
 	test("Next and Previous flip through every example, round and back", async ({ page }) => {
 		await page.goto("/");
-		await expect(position(page)).toHaveText(`Amazing Grace 1 of ${n}`);
+		await expect(position(page)).toHaveText(`Greensleeves 1 of ${n}`);
 		for (const [i, title] of titles.entries()) {
 			if (i > 0) await flip(page, "Next", title);
 			await expect(position(page)).toHaveText(`${title} ${i + 1} of ${n}`);
@@ -308,7 +311,7 @@ test.describe("home: the examples", () => {
 			await expect.poll(() => chartText(page)).toContain(title);
 		}
 		// Past the last comes the first; before the first, the last.
-		await flip(page, "Next", "Amazing Grace");
+		await flip(page, "Next", "Greensleeves");
 		await flip(page, "Previous", titles[n - 1] ?? "");
 		await flip(page, "Previous", titles[n - 2] ?? "");
 		await expect.poll(() => chartText(page)).toContain(titles[n - 2] ?? "");
@@ -320,41 +323,141 @@ test.describe("home: the examples", () => {
 		await expect(async () => {
 			await next.focus();
 			await page.keyboard.press("Enter");
-			await expect(position(page)).toContainText("Greensleeves", { timeout: 1_000 });
+			await expect(position(page)).toContainText("Amazing Grace", { timeout: 1_000 });
 		}).toPass({ timeout: 15_000 });
 		await page.keyboard.press("Shift+Tab");
 		await expect(examples(page).getByRole("button", { name: "Previous example" })).toBeFocused();
 		await page.keyboard.press("Space");
-		await expect(position(page)).toContainText("Amazing Grace");
+		await expect(position(page)).toContainText("Greensleeves");
 	});
 
 	test("arrow keys in the source move its caret, never the example", async ({ page }) => {
 		await page.goto("/");
-		await flip(page, "Next", "Greensleeves");
+		await flip(page, "Next", "Amazing Grace");
 		await source(page).focus();
 		await page.keyboard.press("ArrowRight");
 		await page.keyboard.press("ArrowLeft");
-		await expect(position(page)).toContainText("Greensleeves");
+		await expect(position(page)).toContainText("Amazing Grace");
 	});
 
-	test("Amazing Grace's lyric staff: every slash sits on its line, with no ledger lines", async ({
-		page,
-	}) => {
-		// The words engrave on a one-line staff of slashes. Drawn off that line, each slash
-		// carried ledger lines that read as an unknown symbol (FINDINGS 2026-11-18).
-		await page.goto("/");
-		await pressScore(page);
-		await expect.poll(() => scoreText(page), { timeout: 15_000 }).toContain("Amazing Grace");
-		const drawn = await page.locator("main barmark-score").evaluate((el) => {
+	/** What the score's SVG draws: notes, syllables, ledger lines and slashes. */
+	const drawnScore = (page: Page) =>
+		page.locator("main barmark-score").evaluate((el) => {
 			const svg = el.shadowRoot?.querySelector(".bms-pane svg");
 			return {
 				notes: svg?.querySelectorAll("g.note").length ?? 0,
 				syllables: svg?.querySelectorAll("g.syl").length ?? 0,
 				ledgers: svg?.querySelectorAll("g.ledgerLines path").length ?? -1,
+				syllableText: [...(svg?.querySelectorAll("g.syl") ?? [])].map((s) => s.textContent?.trim()),
 			};
 		});
-		expect(drawn.notes).toBeGreaterThan(20);
-		expect(drawn.syllables).toBeGreaterThan(20);
+
+	test("Amazing Grace's score: the tune's notes, both verses' words under them", async ({
+		page,
+	}) => {
+		await page.goto("/");
+		await flip(page, "Next", "Amazing Grace");
+		await pressScore(page);
+		await expect.poll(() => scoreText(page), { timeout: 15_000 }).toContain("Amazing Grace");
+		const drawn = await drawnScore(page);
+		// New Britain's 33 notes, "me" and "see" each tied into the bar after: 35 noteheads.
+		expect(drawn.notes).toBe(35);
+		// 28 syllables a verse, sung on the notes (a word split by a system break draws twice).
+		expect(drawn.syllables).toBeGreaterThanOrEqual(56);
+		expect(drawn.syllableText.slice(0, 4)).toEqual(["A", "'Twas", "maz", "grace"]);
+	});
+
+	/** What the home page's grid draws of a lead sheet, and whether its window scrolls sideways. */
+	const drawnGrid = (page: Page) =>
+		page.locator("main barmark-score").evaluate((el) => {
+			const root = el.shadowRoot;
+			const window = el.closest(".overflow-x-auto") as HTMLElement | null;
+			return {
+				pitches: root?.querySelectorAll(".bm-pitch").length ?? -1,
+				extenders: root?.querySelectorAll(".bm-extender").length ?? -1,
+				syllables: root?.querySelectorAll(".bm-syllable").length ?? 0,
+				text: root?.textContent ?? "",
+				melody: el.getAttribute("melody"),
+				scrollWidth: window?.scrollWidth ?? -1,
+				clientWidth: window?.clientWidth ?? -1,
+			};
+		});
+
+	test("Amazing Grace's grid leaves its melody to the score, after edits and view switches too", async ({
+		page,
+	}) => {
+		await page.goto("/");
+		await flip(page, "Next", "Amazing Grace");
+		await expect.poll(() => chartText(page)).toContain("Amazing Grace");
+		const grid = await drawnGrid(page);
+		expect(grid.melody).toBe("off");
+		expect(grid.pitches).toBe(0);
+		expect(grid.text).not.toContain("Vox");
+		// Both verses, 28 syllables each, under the chords.
+		expect(grid.syllables).toBe(56);
+		for (const w of ["maz", "grace", "wretch", "blind", "taught", "fears", "first"])
+			expect(grid.text).toContain(w);
+		// An edit re-renders from the text: the melody stays out.
+		const source = page.getByRole("textbox", { name: "Barmark source of the chart" });
+		await source.press("ControlOrMeta+End");
+		await source.pressSequentially("\n| C |");
+		await expect.poll(() => chartText(page)).toContain("bar 17");
+		expect((await drawnGrid(page)).pitches).toBe(0);
+		// The score still engraves the tune, and the grid comes back without it.
+		await pressScore(page);
+		const score = await drawnScore(page);
+		expect(score.notes).toBeGreaterThanOrEqual(35);
+		expect(score.syllables).toBeGreaterThanOrEqual(56);
+		await page.locator("main barmark-score").getByRole("radio", { name: "Grid" }).click();
+		await expect.poll(async () => (await drawnGrid(page)).syllables).toBe(56);
+		expect((await drawnGrid(page)).pitches).toBe(0);
+	});
+
+	test("Amazing Grace's grid fits the window at 1280, with no sideways scroll", async ({
+		page,
+	}) => {
+		// With the melody left out, a melisma's held place (`ing_/`) draws as `ing` does: no
+		// eighth-note steps and no extender, so the grid is as narrow as plain lyric rows.
+		await page.goto("/");
+		await flip(page, "Next", "Amazing Grace");
+		await expect.poll(() => chartText(page)).toContain("Amazing Grace");
+		const grid = await drawnGrid(page);
+		expect(grid.pitches).toBe(0);
+		expect(grid.extenders).toBe(0);
+		expect(grid.scrollWidth).toBeLessThanOrEqual(grid.clientWidth);
+		// The score still draws the melismas: the tune's notes and both verses' syllables.
+		await pressScore(page);
+		const score = await drawnScore(page);
+		expect(score.notes).toBe(35);
+		expect(score.syllables).toBeGreaterThanOrEqual(56);
+	});
+
+	test("a lyric row with no melody: every slash sits on its line, with no ledger lines", async ({
+		page,
+	}) => {
+		// The words engrave on a one-line staff of slashes. Drawn off that line, each slash
+		// carried ledger lines that read as an unknown symbol (FINDINGS 2026-11-18). Amazing
+		// Grace, which showed it, now has its melody, so the guard types its rows without it.
+		await page.goto("/");
+		await page
+			.getByRole("textbox", { name: "Barmark source of the chart" })
+			.fill(
+				[
+					"# Lyrics, no melody",
+					"key: G, time: 3/4",
+					"          | [1/4] D | G            | G / G7      | C           | G            |",
+					"lyrics 1: | A-      | maz- / ing   | grace / how | sweet / the | sound / that |",
+					"lyrics 2: | 'Twas   | grace / that | taught / my | heart / to  | fear / and   |",
+					"",
+				].join("\n"),
+			);
+		await expect.poll(() => chartText(page)).toContain("Lyrics, no melody");
+		await pressScore(page);
+		await expect.poll(() => scoreText(page), { timeout: 15_000 }).toContain("Lyrics, no melody");
+		const drawn = await drawnScore(page);
+		// The chords' slashes and the words' slashes, a slash for each of the 18 syllables.
+		expect(drawn.notes).toBeGreaterThan(18);
+		expect(drawn.syllables).toBe(18);
 		expect(drawn.ledgers).toBe(0);
 	});
 
@@ -370,13 +473,16 @@ test.describe("home: the examples", () => {
 		expect(chords.slice(0, 2)).toEqual(["D7sus4", "D7sus4"]);
 		expect(chords).toContain("G5(7)");
 		expect(chords.filter((c) => c.includes("no3"))).toEqual([]);
+		await flip(page, "Next", "Greensleeves");
+		await expect.poll(() => scoreText(page), { timeout: 15_000 }).toContain("Greensleeves");
+		await expect(score.getByRole("radio", { name: "Score" })).toBeChecked();
 		await flip(page, "Next", "Amazing Grace");
 		await expect.poll(() => scoreText(page), { timeout: 15_000 }).toContain("Amazing Grace");
 		await expect(score.getByRole("radio", { name: "Score" })).toBeChecked();
 		await score.getByRole("radio", { name: "Grid" }).click();
-		await flip(page, "Next", "Greensleeves");
+		await flip(page, "Next", "Blues in F");
 		await expect(score.getByRole("radio", { name: "Grid" })).toBeChecked();
-		await expect.poll(() => chartText(page)).toContain("Greensleeves");
+		await expect.poll(() => chartText(page)).toContain("Blues in F");
 	});
 
 	test("flipping keeps the chord spelling, and draws the new example in its own key", async ({
@@ -384,16 +490,16 @@ test.describe("home: the examples", () => {
 	}) => {
 		await page.goto("/");
 		const key = page.getByRole("button", { name: /^Key: / });
-		await expect(key).toHaveAccessibleName("Key: G");
+		await expect(key).toHaveAccessibleName("Key: Am");
 		await expect(async () => {
 			await key.click();
-			await page.getByRole("menuitemradio", { name: "A", exact: true }).click({ timeout: 1_000 });
-			await expect(key).toHaveAccessibleName("Key: A", { timeout: 1_000 });
+			await page.getByRole("menuitemradio", { name: "Bm", exact: true }).click({ timeout: 1_000 });
+			await expect(key).toHaveAccessibleName("Key: Bm", { timeout: 1_000 });
 		}).toPass({ timeout: 15_000 });
 		const spelling = page.getByRole("radiogroup", { name: "Chord spelling" });
 		await spelling.getByRole("radio", { name: "Roman" }).check();
-		await flip(page, "Next", "Greensleeves");
-		await expect(key).toHaveAccessibleName("Key: Am");
+		await flip(page, "Next", "Amazing Grace");
+		await expect(key).toHaveAccessibleName("Key: G");
 		await expect(spelling.getByRole("radio", { name: "Roman" })).toBeChecked();
 	});
 
@@ -407,36 +513,38 @@ test.describe("home: the examples", () => {
 			await expect(toggle).toHaveAttribute("aria-pressed", "true", { timeout: 1_000 });
 		}).toPass({ timeout: 15_000 });
 		await expect.poll(() => diagramLabels(page)).not.toBeNull();
-		await flip(page, "Next", "Greensleeves");
-		await expect(toggle).toHaveAttribute("aria-pressed", "true");
-		await expect.poll(() => chartText(page)).toContain("Greensleeves");
 		await expect.poll(async () => (await diagramLabels(page))?.[0]).toMatch(/^A minor: /);
+		await flip(page, "Next", "Amazing Grace");
+		await expect(toggle).toHaveAttribute("aria-pressed", "true");
+		await expect.poll(() => chartText(page)).toContain("Amazing Grace");
+		// Amazing Grace opens on its pickup, D.
+		await expect.poll(async () => (await diagramLabels(page))?.[0]).toMatch(/^D: /);
 	});
 
 	test("Reset restores the example on show, not the default", async ({ page }) => {
 		await page.goto("/");
-		await flip(page, "Next", "Greensleeves");
+		await flip(page, "Next", "Amazing Grace");
 		await source(page).fill("| D |");
 		await page.getByRole("button", { name: "Reset" }).click();
-		await expect(source(page)).toHaveValue(/^# Greensleeves\n/);
-		await expect(position(page)).toContainText("Greensleeves");
+		await expect(source(page)).toHaveValue(/^# Amazing Grace\n/);
+		await expect(position(page)).toContainText("Amazing Grace");
 	});
 
 	test("an edit stays with its example across flips, until Reset", async ({ page }) => {
 		await page.goto("/");
-		await flip(page, "Next", "Greensleeves");
-		await source(page).fill("# Greensleeves, edited\n| Am |");
+		await flip(page, "Next", "Amazing Grace");
+		await source(page).fill("# Amazing Grace, edited\n| G |");
 		await flip(page, "Next", "Blues in F");
 		await expect(source(page)).toHaveValue(/^# Blues in F\n/);
-		await flip(page, "Previous", "Greensleeves");
-		await expect(source(page)).toHaveValue("# Greensleeves, edited\n| Am |");
-		await expect.poll(() => chartText(page)).toContain("Greensleeves, edited");
+		await flip(page, "Previous", "Amazing Grace");
+		await expect(source(page)).toHaveValue("# Amazing Grace, edited\n| G |");
+		await expect.poll(() => chartText(page)).toContain("Amazing Grace, edited");
 		await page.getByRole("button", { name: "Reset" }).click();
-		await expect(source(page)).toHaveValue(/^# Greensleeves\ncomposer/);
+		await expect(source(page)).toHaveValue(/^# Amazing Grace\ncomposer/);
 		// Reset forgets the edit: flipping away and back shows the original.
 		await flip(page, "Next", "Blues in F");
-		await flip(page, "Previous", "Greensleeves");
-		await expect(source(page)).toHaveValue(/^# Greensleeves\ncomposer/);
+		await flip(page, "Previous", "Amazing Grace");
+		await expect(source(page)).toHaveValue(/^# Amazing Grace\ncomposer/);
 	});
 
 	test.describe("on a phone", () => {
@@ -490,6 +598,7 @@ test.describe("home: guitar diagrams", () => {
 		page,
 	}) => {
 		await page.goto("/");
+		await flip(page, "Next", "Amazing Grace");
 		await expect(toggle(page)).toHaveAttribute("aria-pressed", "false");
 		expect(await diagramLabels(page)).toBeNull();
 		const chords = new Set(await gridChords(page));
@@ -959,7 +1068,7 @@ test.describe("navigating inside the site", () => {
 		await page.goto("/syntax");
 		await page.getByRole("link", { name: "barmark", exact: true }).click();
 		await expect(page).toHaveURL(/\/$/);
-		await expect.poll(() => chartText(page)).toContain("Amazing Grace");
+		await expect.poll(() => chartText(page)).toContain("Greensleeves");
 	});
 });
 
@@ -1088,7 +1197,7 @@ test.describe("without JavaScript", () => {
 
 	test("the home page shows the rendered demo", async ({ page }) => {
 		await page.goto("/");
-		expect(await chartText(page)).toContain("Amazing Grace");
+		expect(await chartText(page)).toContain("Greensleeves");
 	});
 
 	test("the guide shows every row, whatever the link says", async ({ page }) => {
@@ -1307,6 +1416,21 @@ test.describe("the score", () => {
 		expect(errors).toEqual([]);
 	});
 
+	test("the guide's lead sheet keeps its melody row in the grid", async ({ page }) => {
+		await page.goto("/syntax");
+		const score = page.getByRole("region", { name: "A lead sheet, as a grid or a score" });
+		await score.locator("barmark-score").scrollIntoViewIfNeeded();
+		const grid = await score.locator("barmark-score").evaluate((el) => ({
+			melody: el.getAttribute("melody"),
+			pitches: el.shadowRoot?.querySelectorAll(".bm-pitch").length ?? -1,
+			text: el.shadowRoot?.textContent ?? "",
+		}));
+		expect(grid.melody).toBeNull();
+		// Its seven melody notes, G B C E D A G, each a pitch name under the chords.
+		expect(grid.pitches).toBe(7);
+		expect(grid.text).toContain("Vox.Mel");
+	});
+
 	test("the home page starts loading Verovio from jsDelivr when a reader reaches for Score", async ({
 		page,
 	}) => {
@@ -1355,13 +1479,13 @@ test.describe("the score", () => {
 			ENGRAVER_WASM,
 		]);
 		expect(warnings.filter((w) => w.includes("Verovio"))).toEqual([]);
-		expect(await scoreText(page)).toContain("Amazing Grace");
+		expect(await scoreText(page)).toContain("Greensleeves");
 		const score = page.locator("main barmark-score");
 		await expect(score.getByRole("radio", { name: "Score" })).toBeChecked();
-		await expect(score.getByRole("img", { name: "Amazing Grace" })).toBeVisible();
+		await expect(score.getByRole("img", { name: "Greensleeves" })).toBeVisible();
 		// Chord symbols as the chart spells them.
 		const chords = await scoreChords(page);
-		expect(chords.slice(0, 4)).toEqual(["D", "G", "G", "G7"]);
+		expect(chords.slice(0, 4)).toEqual(["Am", "G", "F", "E"]);
 	});
 
 	test("a score loads the lite build, with no fallback warning", async ({ page }) => {
@@ -1384,7 +1508,7 @@ test.describe("the score", () => {
 		await page.goto("/");
 		await pressScore(page);
 		await expect(
-			page.locator("main barmark-score").getByRole("img", { name: "Amazing Grace" }),
+			page.locator("main barmark-score").getByRole("img", { name: "Greensleeves" }),
 		).toBeVisible();
 		expect(warnings.filter((w) => w.includes("was not used"))).toEqual([]);
 		const wasm = fetched.find((f) => f.url === ENGRAVER_WASM);
@@ -1521,7 +1645,7 @@ test.describe("the score without JavaScript", () => {
 		const score = page.locator("main barmark-score");
 		await expect(score.getByRole("radio", { name: "Grid" })).toBeChecked();
 		await expect(score.getByRole("radio", { name: "Score" })).not.toBeChecked();
-		expect(await chartText(page)).toContain("Amazing Grace");
+		expect(await chartText(page)).toContain("Greensleeves");
 	});
 });
 
@@ -1547,7 +1671,7 @@ test.describe("the key", () => {
 		page,
 	}) => {
 		await page.goto("/");
-		await expect(keyButton(page)).toHaveAccessibleName("Key: G");
+		await expect(keyButton(page)).toHaveAccessibleName("Key: Am");
 		await source(page).fill("key: G\n| G | C |");
 		await expect(keyButton(page)).toHaveAccessibleName("Key: G");
 		await open(page);

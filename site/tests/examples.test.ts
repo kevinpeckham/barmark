@@ -1,5 +1,6 @@
 import { beforeAll, describe, expect, test } from "bun:test";
 import { join } from "node:path";
+import { perform } from "@barmark/midi/perform";
 import { engraveChart } from "@barmark/score";
 import { parseChart, printChart } from "barmark";
 import { VerovioToolkit } from "verovio/esm";
@@ -18,10 +19,10 @@ const official = (e: (typeof EXAMPLES)[number]) =>
 	Bun.file(join(import.meta.dir, "../../examples", exampleFile(e))).text();
 
 describe("the home page's examples", () => {
-	test("are five, Amazing Grace first: the default", () => {
+	test("are five, Greensleeves first: the default", () => {
 		expect(EXAMPLES.map((e) => e.title)).toEqual([
-			"Amazing Grace",
 			"Greensleeves",
+			"Amazing Grace",
 			"Blues in F",
 			"When the Saints Go Marching In",
 			"Peaceful Dreams",
@@ -87,6 +88,48 @@ describe("between them they show", () => {
 		expect(text).toContain("lyrics 1:");
 		expect(text).toContain("lyrics 2:");
 		expect(byId("amazing-grace").title).toBe("Amazing Grace");
+	});
+
+	test("Amazing Grace: a lead sheet, its words sung on the tune New Britain", () => {
+		const text = source("amazing-grace");
+		expect(text).toContain("part: Vox = Voice, instrument: voice");
+		const sung = perform(byId("amazing-grace")).tracks.find((t) => t.line === "Mel");
+		if (!sung) throw new Error("no melody line");
+		// New Britain in G, 3/4, bar by bar as pitch:quarters: a quarter-note pickup, then
+		// sixteen bars. "me" and "see" are tied over the bar after them.
+		const tune = [
+			"D4:1", // A-
+			"G4:2 B4:0.5 G4:0.5", // maz- ing
+			"B4:2 A4:1", // grace how
+			"G4:2 E4:1", // sweet the
+			"D4:2 D4:1", // sound that
+			"G4:2 B4:0.5 G4:0.5", // saved a
+			"B4:2 A4:1", // wretch like
+			"D5:5", // me, held into the next bar
+			"B4:1", // I
+			"D5:2 D5:0.5 B4:0.5", // once was
+			"G4:2 D4:1", // lost but
+			"E4:2 G4:0.5 E4:0.5", // now am
+			"D4:2 D4:1", // found was
+			"G4:2 B4:0.5 G4:0.5", // blind but
+			"B4:2 A4:1", // now I
+			"G4:6", // see, held through the last bar
+		].flatMap((bar) => bar.split(" "));
+		const MIDI: Record<string, number> = { D4: 62, E4: 64, G4: 67, A4: 69, B4: 71, D5: 74 };
+		const played = sung.notes.map((n) => {
+			const name = Object.keys(MIDI).find((k) => MIDI[k] === n.pitch) ?? String(n.pitch);
+			return `${name}:${n.length.n / n.length.d}`;
+		});
+		expect(played).toEqual(tune);
+		// Every pitch in G major pentatonic.
+		for (const n of sung.notes) expect([0, 2, 4, 7, 9]).toContain((n.pitch - 67 + 120) % 12);
+		// Both verses: every syllable starts on a note of the tune.
+		const onsets = new Set(sung.notes.map((n) => n.at.n / n.at.d));
+		for (const verse of [1, 2]) {
+			const words = sung.lyrics.filter((l) => l.verse === verse);
+			expect(words).toHaveLength(28);
+			for (const w of words) expect([w.text, onsets.has(w.at.n / w.at.d)]).toEqual([w.text, true]);
+		}
 	});
 
 	test("Greensleeves: 6/8, minor, slash bass, a section played twice", () => {

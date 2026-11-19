@@ -17,17 +17,17 @@
 		"test:browser": "playwright test -c browser"
 	},
 	"dependencies": {
-		"@barmark/render": "0.20.2",
-		"@barmark/score": "0.6.3",
+		"@barmark/render": "0.21.1",
+		"@barmark/score": "0.7.0",
 		"@vercel/analytics": "2.0.1",
 		"@vercel/speed-insights": "2.0.0",
 		"barmark": "0.25.0"
 	},
 	"devDependencies": {
-		"@barmark/cli": "0.14.0",
+		"@barmark/cli": "0.14.1",
 		"@barmark/fretboard": "0.1.2",
 		"@barmark/listen": "0.2.2",
-		"@barmark/lyricsheet": "0.1.0",
+		"@barmark/lyricsheet": "0.1.1",
 		"@barmark/midi": "0.3.5",
 		"@barmark/musicxml": "0.9.3",
 		"@barmark/sync": "0.4.3",

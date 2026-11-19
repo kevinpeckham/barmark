@@ -17,7 +17,7 @@ const charts = import.meta.glob<string>("../lib/examples/*.chart.md", {
 });
 const chartOf = (example: Example) => charts[`../lib/examples/${exampleFile(example)}`] ?? "";
 
-/** The example on show; the first, Amazing Grace, is the one prerendered. */
+/** The example on show; the first, Greensleeves, is the one prerendered. */
 let index = $state(0);
 const example: Example = $derived(EXAMPLES[index] ?? EXAMPLES[0]);
 const original = $derived(chartOf(example));
@@ -163,6 +163,7 @@ const description =
 					{semitones}
 					numerals={spelling === "names" ? null : spelling}
 					{diagrams}
+					melody={false}
 					label="The chart, rendered"
 					onviewchange={(v) => (view = v)}
 				/>

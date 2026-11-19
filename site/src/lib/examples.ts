@@ -1,21 +1,23 @@
 /**
  * The home page's example charts, in the order a reader flips through them.
- * The first is the default, the one the page prerenders. Each chart is
+ * The first is the default, the one the page prerenders: Greensleeves, the
+ * simplest to read; Amazing Grace, a lead sheet with its melody and two
+ * verses, comes next to show more. Each chart is
  * `src/lib/examples/<id>.chart.md`, the same text as the repository's
  * `examples/<id>.chart.md` (tests/examples.test.ts holds them equal).
  */
 export const EXAMPLES = [
 	{
-		id: "amazing-grace",
-		title: "Amazing Grace",
-		credit:
-			"“Amazing Grace”: words by John Newton (1779), sung to the traditional American tune New Britain; both are in the public domain. The chart is Barmark's own.",
-	},
-	{
 		id: "greensleeves",
 		title: "Greensleeves",
 		credit:
 			"“Greensleeves”: a traditional English tune of the 16th century, in the public domain. The chart is Barmark's own.",
+	},
+	{
+		id: "amazing-grace",
+		title: "Amazing Grace",
+		credit:
+			"“Amazing Grace”: words by John Newton (1779), sung to the traditional American tune New Britain; both are in the public domain. The chart is Barmark's own.",
 	},
 	{
 		id: "blues-in-f",

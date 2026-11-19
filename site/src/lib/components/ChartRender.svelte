@@ -17,6 +17,7 @@ let {
 	barNumbers = true,
 	numerals = null,
 	diagrams = false,
+	melody = true,
 	score = false,
 	preload = "none",
 	semitones = 0,
@@ -32,6 +33,12 @@ let {
 	 * one for each distinct chord; false: none.
 	 */
 	diagrams?: boolean;
+	/**
+	 * A lead sheet's melody line in the grid; false leaves it out (its words stay,
+	 * under the chords), and a score still engraves it. Read once: the prerendered
+	 * element carries `melody="off"`, which it keeps through every re-render.
+	 */
+	melody?: boolean;
 	/** A <barmark-score>, with its Grid / Score switch, rather than a <barmark-chart>. Read once. */
 	score?: boolean;
 	/** A score's: when it starts loading Verovio, ahead of the reader's first press. Read once. */
@@ -61,7 +68,7 @@ let rendered = untrack(() => text);
 let moved = untrack(() => semitones);
 const initial = (asScore ? scoreHtml : chartHtml)(
 	transposed(rendered, moved),
-	untrack(() => ({ barNumbers, preload, chordDiagrams: diagrams })),
+	untrack(() => ({ barNumbers, preload, chordDiagrams: diagrams, melody })),
 );
 let host: HTMLDivElement;
 
