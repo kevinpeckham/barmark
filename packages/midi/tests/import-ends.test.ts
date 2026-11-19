@@ -135,23 +135,30 @@ describe("statesOf: the beat a silence is measured by", () => {
 	});
 });
 
+/** A time signature event. */
+const time = (tick: number, n: number, d: number): SmfEvent => ({
+	tick,
+	kind: "meta",
+	type: 0x58,
+	data: new Uint8Array([n, Math.log2(d), 24, 8]),
+});
+
+/** A real grid: `first` (4/4) from 0, `meter` from `tick`, up to the bar holding `last`. */
+const cut = (
+	tick: number,
+	meter: [number, number],
+	last: number,
+	first: [number, number] = [4, 4],
+): Grid => {
+	const smf: Smf = { format: 1, ppq: PPQ, tracks: [[time(0, ...first), time(tick, ...meter)]] };
+	return gridFromFile(smf, last, createReport());
+};
+
 describe("statesOf: a beat's two clocks", () => {
-	const time = (tick: number, n: number, d: number): SmfEvent => ({
-		tick,
-		kind: "meta",
-		type: 0x58,
-		data: new Uint8Array([n, Math.log2(d), 24, 8]),
-	});
 	/** Bars 0: 4/4, 1920: 5/16 (a 650-tick span written 600), 2570: 3/4. */
-	const gap = (): Grid => {
-		const smf: Smf = { format: 1, ppq: PPQ, tracks: [[time(0, 4, 4), time(2570, 3, 4)]] };
-		return gridFromFile(smf, 4000, createReport());
-	};
+	const gap = (): Grid => cut(2570, [3, 4], 4000);
 	/** The same, a bar longer: 4010: 3/4. */
-	const longer = (): Grid => {
-		const smf: Smf = { format: 1, ppq: PPQ, tracks: [[time(0, 4, 4), time(2570, 3, 4)]] };
-		return gridFromFile(smf, 4500, createReport());
-	};
+	const longer = (): Grid => cut(2570, [3, 4], 4500);
 
 	test("a note-off in the gap past the 5/16 bar's meter is that bar's last beat's end", () => {
 		// The note-off at 2560 is in beat 8 by the file's ticks (2400 to 2570),
@@ -191,6 +198,74 @@ describe("statesOf: a beat's two clocks", () => {
 	});
 });
 
+describe("statesOf: a silence of exactly one beat between triplet points", () => {
+	test("ppq 1024: the first beat reads as every other beat does", () => {
+		const grid = gridOfMeters([{ n: 4, d: 4 }], 1024);
+		expect(read(notes([0, 341], [341, 469], [1707, 2048]), grid)).toBe("A_A_R r_r_A R r");
+	});
+	test("ppq 1024: the same figure a beat later", () => {
+		const grid = gridOfMeters([{ n: 4, d: 4 }], 1024);
+		expect(read(notes([1024, 1365], [1365, 1493], [2731, 3072]), grid)).toBe("R A_A_R r_r_A R");
+	});
+});
+
+describe("statesOf: the silence and the chart's end are on the chart's clock", () => {
+	test("a bar of 590 ticks written 5/16: 120 on the chart is a beat of rest (110 in the file)", () => {
+		expect(read(notes([1920, 2400], [2510, 3950]), cut(2510, [3, 4], 4000))).toBe(
+			"R r r r | A h h h R | A h h | R r r",
+		);
+	});
+	test("a bar of 170 ticks written 1/16: 440 on the chart is held (490 in the file)", () => {
+		expect(read(notes([0, 1920], [2410, 3530]), cut(2090, [3, 4], 3500))).toBe(
+			"A h h h | h | h_h_A h h",
+		);
+	});
+	test("the last note's silence runs to the chart's end on the chart's clock", () => {
+		expect(read(notes([2510, 3470]), cut(2510, [3, 4], 3000))).toBe("R r r r | r r r r r | A h R");
+	});
+});
+
+describe("statesOf: the beat a note-off falls in is found in the file", () => {
+	test("after a bar of 10 ticks written 1/16, a note-off at 2250 is in the beat from 2170", () => {
+		expect(read(notes([1930, 2250], [2410, 2770]), cut(1930, [7, 16], 2500))).toBe(
+			"R r r r | r | A h h R A h h",
+		);
+	});
+	test("a note-off exactly on a bar line cut short is the next bar's downbeat", () => {
+		expect(read(notes([0, 1930], [2410, 3370]), cut(1930, [3, 4], 3000))).toBe(
+			"A h h h | h | R A h",
+		);
+	});
+});
+
+describe("statesOf: the latest note-off of a point's attacks", () => {
+	test("two attacks joined on one point, the first the longer", () => {
+		expect(read(notes([0, 1920], [10, 200]), gridOf(1))).toBe("A h h h");
+	});
+	test("two attacks joined on one point, the second the longer", () => {
+		expect(read(notes([0, 200], [10, 1920]), gridOf(1))).toBe("A h h h");
+	});
+});
+
+describe("statesOf: the measuring beat is where the note ends, not where it was struck", () => {
+	test("struck in 4/4, ending in 3/8: 240 of silence is a 3/8 beat, a rest", () => {
+		const grid = gridOfMeters([
+			{ n: 4, d: 4 },
+			{ n: 3, d: 8 },
+			{ n: 3, d: 8 },
+		]);
+		expect(read(notes([1440, 2160], [2400, 3360]), grid)).toBe("R r r A | h R A | h h h");
+	});
+});
+
+describe("statesOf: a note-off at or past the grid's end is the chart's end", () => {
+	test("a last bar cut short, written 1/16 over 10 ticks: the note rings through it", () => {
+		expect(read(notes([1560, 1805]), cut(1690, [4, 4], 1685, [7, 16]))).toBe(
+			"R r r r r r r | r r r r r r A | h",
+		);
+	});
+});
+
 /** `bars` bars of 4/4, two notes a bar, one long and one short. */
 function load(bars: number): { attacks: Attack[]; grid: Grid } {
 	const attacks = Array.from({ length: bars * 2 }, (_, i) => ({
@@ -211,18 +286,18 @@ describe("statesOf: scale", () => {
 		expect(states.flat().filter((s) => s.kind === "attack").length).toBe(200_000);
 	});
 	test(
-		"twice the bars and attacks take about twice the time",
+		"four times the bars and attacks take about four times the time",
 		() => {
-			const small = load(50_000);
+			const small = load(25_000);
 			const large = load(100_000);
 			const qs = quantize(small.attacks, small.grid);
 			const ql = quantize(large.attacks, large.grid);
 			const ratio = growth(
 				() => statesOf(qs, small.grid),
 				() => statesOf(ql, large.grid),
-				{ balance: 2 },
+				{ balance: 4 },
 			);
-			expect(ratio).toBeLessThan(3);
+			expect(ratio).toBeLessThan(8);
 		},
 		TIMING_TIMEOUT,
 	);

@@ -3,11 +3,12 @@
  * next attack unless a beat or more is silent. One state per point of
  * every beat: an attack, a hold, or a rest. One walk over the struck
  * points; a note-off's beat is found by a binary search on the file's
- * ticks, and every silence is measured on the chart's clock.
+ * ticks, and every silence is measured on the chart's clock, in twelfths
+ * of a tick: every division divides 12, so the measure is exact.
  */
 import type { Attack } from "./attacks.js";
 import type { Grid } from "./grid.js";
-import { type Beat, pointTick, type Quantized, type Struck } from "./quantize.js";
+import type { Beat, Quantized, Struck } from "./quantize.js";
 
 /** A point's state; `first` when a rest starts on it. */
 export type State<A extends Attack = Attack> =
@@ -30,11 +31,16 @@ function after(q: Quantized, { beat, point }: Pos): Pos {
 const earlier = (a: Pos, b: Pos): boolean =>
 	a.beat < b.beat || (a.beat === b.beat && a.point < b.point);
 
-/** A point's tick on the chart's clock; the chart's end is the last beat's `at + length`. */
-function tickOf(q: Quantized, pos: Pos): number {
-	if (pos.beat < q.beats.length) return pointTick(q, pos.beat, pos.point);
+/**
+ * A point's time on the chart's clock in twelfths of a tick, exact where
+ * `pointTick`'s division by 3 or 6 is not; the chart's end is the last
+ * beat's `at + length`.
+ */
+function twelfths(q: Quantized, pos: Pos): number {
+	const b = q.beats[pos.beat];
+	if (b !== undefined) return 12 * b.at + pos.point * b.length * (12 / (q.parts[pos.beat] ?? 1));
 	const last = q.beats.at(-1);
-	return last === undefined ? 0 : last.at + last.length;
+	return last === undefined ? 0 : 12 * (last.at + last.length);
 }
 
 /** The last beat starting at or before `tick` in the file (0 when none does). */
@@ -48,8 +54,12 @@ function beatAt(beats: Beat[], tick: number): number {
 	return lo;
 }
 
-/** A raw end moved to the nearest point of the beat it falls in (its end a point), a tie to the later. */
-function endPoint(q: Quantized, raw: number): Pos {
+/**
+ * A raw end moved to the nearest point of the beat it falls in (its end a
+ * point), a tie to the later; at or past the grid's end, the chart's end.
+ */
+function endPoint(q: Quantized, raw: number, grid: Grid): Pos {
+	if (raw >= grid.end) return { beat: q.beats.length, point: 0 };
 	const e = beatAt(q.beats, raw);
 	const beat = q.beats[e] as Beat;
 	const n = q.parts[e] ?? 1;
@@ -59,12 +69,9 @@ function endPoint(q: Quantized, raw: number): Pos {
 
 /** A struck point's end: its latest note-off, at least the point after it, at most `next`. */
 function endOf<A extends Attack>(q: Quantized<A>, s: Struck<A>, next: Pos, grid: Grid): Pos {
-	const raw = Math.min(
-		grid.end,
-		s.attacks.reduce((latest, a) => Math.max(latest, a.end), Number.NEGATIVE_INFINITY),
-	);
+	const raw = s.attacks.reduce((latest, a) => Math.max(latest, a.end), Number.NEGATIVE_INFINITY);
 	const least = after(q, s);
-	const end = endPoint(q, raw);
+	const end = endPoint(q, raw, grid);
 	if (earlier(end, least)) return least;
 	return earlier(next, end) ? next : end;
 }
@@ -100,8 +107,8 @@ function sound<A extends Attack>(
 	if (row !== undefined) row[s.point] = { kind: "attack", struck: s };
 	const end = endOf(q, s, next, grid);
 	const measure = end.point > 0 ? end.beat : end.beat - 1;
-	const silence = tickOf(q, next) - tickOf(q, end);
-	if (silence < (q.beats[measure]?.length ?? 0)) {
+	const silence = twelfths(q, next) - twelfths(q, end);
+	if (silence < 12 * (q.beats[measure]?.length ?? 0)) {
 		fill(states, q, after(q, s), next, hold);
 		return;
 	}
