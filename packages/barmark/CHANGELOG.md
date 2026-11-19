@@ -9,6 +9,11 @@ Releases follow the process in [RELEASING.md](RELEASING.md).
 
 ## [Unreleased]
 
+## [0.25.0] - 2026-11-19
+
+Grammar changes: more spellings of the major seventh (Kevin, 2026-11-18).
+No chord that read before changes meaning.
+
 ### Added
 
 - **More spellings of the major seventh** (Kevin, 2026-11-18, with
@@ -924,7 +929,8 @@ The first working release: the reference parser and printer for the
 
 - **A placeholder package that holds the `barmark` name** while the spec and parser are written.
 
-[Unreleased]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.24.0...HEAD
+[Unreleased]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.25.0...HEAD
+[0.25.0]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.24.0...barmark-v0.25.0
 [0.24.0]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.23.1...barmark-v0.24.0
 [0.23.1]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.23.0...barmark-v0.23.1
 [0.23.0]: https://github.com/kevinpeckham/barmark/compare/barmark-v0.22.0...barmark-v0.23.0
