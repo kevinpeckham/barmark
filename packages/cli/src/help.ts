@@ -88,14 +88,18 @@ The grid only:
 A MusicXML score (.musicxml, .xml or compressed .mxl; from MuseScore, Dorico, Sibelius, Finale…) as a chart.
 Chord symbols become chords; what the chart can't carry over goes to
 stderr as file: measure N (Part): message. A MIDI file (.mid or .midi)
-too: chords named from its notes, lyrics as lyric rows; its messages as
-file: bar N (track T): message. Exits 0 when a chart came out, even with
+too: chords named from its notes (a file that is one line of notes, a
+bass line or a melody, is written as those notes), lyrics as lyric rows;
+its messages as file: bar N (track T): message. Exits 0 when a chart came out, even with
 warnings; 1 when none did or the file is bad. Does not read stdin.
 
   --out <file>             Write to a file instead of stdout
   --part <name>            MusicXML: import one part alone, its notes as note sets
-  --tracks <list>          MIDI: the tracks that carry the harmony, by number
-                           or name, comma-separated (default: chosen)
+  --tracks <list>          MIDI: the tracks that carry the harmony, or that a
+                           line of notes is read from, by number or name,
+                           comma-separated (default: chosen)
+  --chords                 MIDI: read chords from a file that is one line of
+                           notes, instead of writing its notes
 `,
 	part: `Usage: barmark part <label> <file> [options]
 
