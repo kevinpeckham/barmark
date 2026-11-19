@@ -367,6 +367,66 @@ test.describe("home: the examples", () => {
 		expect(drawn.syllableText.slice(0, 4)).toEqual(["A", "'Twas", "maz", "grace"]);
 	});
 
+	/** What the home page's grid draws of a lead sheet, and whether its window scrolls sideways. */
+	const drawnGrid = (page: Page) =>
+		page.locator("main barmark-score").evaluate((el) => {
+			const root = el.shadowRoot;
+			const window = el.closest(".overflow-x-auto") as HTMLElement | null;
+			return {
+				pitches: root?.querySelectorAll(".bm-pitch").length ?? -1,
+				syllables: root?.querySelectorAll(".bm-syllable").length ?? 0,
+				text: root?.textContent ?? "",
+				melody: el.getAttribute("melody"),
+				scrollWidth: window?.scrollWidth ?? -1,
+				clientWidth: window?.clientWidth ?? -1,
+			};
+		});
+
+	test("Amazing Grace's grid leaves its melody to the score, after edits and view switches too", async ({
+		page,
+	}) => {
+		await page.goto("/");
+		await flip(page, "Next", "Amazing Grace");
+		await expect.poll(() => chartText(page)).toContain("Amazing Grace");
+		const grid = await drawnGrid(page);
+		expect(grid.melody).toBe("off");
+		expect(grid.pitches).toBe(0);
+		expect(grid.text).not.toContain("Vox");
+		// Both verses, 28 syllables each, under the chords.
+		expect(grid.syllables).toBe(56);
+		for (const w of ["maz", "grace", "wretch", "blind", "taught", "fears", "first"])
+			expect(grid.text).toContain(w);
+		// An edit re-renders from the text: the melody stays out.
+		const source = page.getByRole("textbox", { name: "Barmark source of the chart" });
+		await source.press("ControlOrMeta+End");
+		await source.pressSequentially("\n| C |");
+		await expect.poll(() => chartText(page)).toContain("bar 17");
+		expect((await drawnGrid(page)).pitches).toBe(0);
+		// The score still engraves the tune, and the grid comes back without it.
+		await pressScore(page);
+		const score = await drawnScore(page);
+		expect(score.notes).toBeGreaterThanOrEqual(35);
+		expect(score.syllables).toBeGreaterThanOrEqual(56);
+		await page.locator("main barmark-score").getByRole("radio", { name: "Grid" }).click();
+		await expect.poll(async () => (await drawnGrid(page)).syllables).toBe(56);
+		expect((await drawnGrid(page)).pitches).toBe(0);
+	});
+
+	test("Amazing Grace's grid fits the window at 1280, with no sideways scroll", async ({
+		page,
+	}) => {
+		// Known to fail: without the melody row the grid is 627px in a 602px window. The
+		// melismas (`ing_/`) space their bars by eighth notes; without them it fits exactly.
+		// Kept as a failing expectation, not loosened, until that is settled.
+		test.fail();
+		await page.goto("/");
+		await flip(page, "Next", "Amazing Grace");
+		await expect.poll(() => chartText(page)).toContain("Amazing Grace");
+		const grid = await drawnGrid(page);
+		expect(grid.pitches).toBe(0);
+		expect(grid.scrollWidth).toBeLessThanOrEqual(grid.clientWidth);
+	});
+
 	test("a lyric row with no melody: every slash sits on its line, with no ledger lines", async ({
 		page,
 	}) => {
@@ -1349,6 +1409,21 @@ test.describe("the score", () => {
 	});
 	test.afterEach(() => {
 		expect(errors).toEqual([]);
+	});
+
+	test("the guide's lead sheet keeps its melody row in the grid", async ({ page }) => {
+		await page.goto("/syntax");
+		const score = page.getByRole("region", { name: "A lead sheet, as a grid or a score" });
+		await score.locator("barmark-score").scrollIntoViewIfNeeded();
+		const grid = await score.locator("barmark-score").evaluate((el) => ({
+			melody: el.getAttribute("melody"),
+			pitches: el.shadowRoot?.querySelectorAll(".bm-pitch").length ?? -1,
+			text: el.shadowRoot?.textContent ?? "",
+		}));
+		expect(grid.melody).toBeNull();
+		// Its seven melody notes, G B C E D A G, each a pitch name under the chords.
+		expect(grid.pitches).toBe(7);
+		expect(grid.text).toContain("Vox.Mel");
 	});
 
 	test("the home page starts loading Verovio from jsDelivr when a reader reaches for Score", async ({

@@ -163,6 +163,7 @@ const description =
 					{semitones}
 					numerals={spelling === "names" ? null : spelling}
 					{diagrams}
+					melody={false}
 					label="The chart, rendered"
 					onviewchange={(v) => (view = v)}
 				/>

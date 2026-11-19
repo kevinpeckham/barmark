@@ -55,6 +55,9 @@ describe("the home page, prerendered", () => {
 		expect(score?.querySelector('script[type="text/barmark"]')?.textContent).toBe(demo);
 		expect(doc.querySelector("main barmark-chart")).toBeNull();
 	});
+	test("the render window leaves a lead sheet's melody out of the grid, for the score to show", () => {
+		expect(doc.querySelector("main barmark-score")?.getAttribute("melody")).toBe("off");
+	});
 	test("the score preloads the lighter Verovio on intent, from jsDelivr, checked", () => {
 		const score = doc.querySelector("main barmark-score");
 		expect(score?.getAttribute("preload")).toBe("intent");
