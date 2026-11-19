@@ -63,6 +63,24 @@ function chordChart(
 	return options.lyrics === false ? chart : withLyrics(chart, smf, grid, notes, report);
 }
 
+/**
+ * The line test on the notes paired first in, first out (spec 3), and
+ * those notes; null when they are not one line. Its pairing and choice of
+ * tracks report into a scratch report: the file's `notesOf` and
+ * `selectedNotes` have reported the same already (their bounds, drums and
+ * unknown tracks), so nothing is said twice.
+ */
+function lineReading(
+	smf: Smf,
+	names: (string | null)[],
+	options: MidiImportOptions,
+): { line: NonNullable<ReturnType<typeof lineOf>>; notes: Note[] } | null {
+	const scratch = createReport();
+	const notes = notesOf(smf, scratch, { overlaps: "keep" });
+	const line = lineOf(selectedNotes(notes, names, options, scratch).pitched, smf.ppq);
+	return line === null ? null : { line, notes };
+}
+
 /** The chart, "" once an error is reported, or null when the line reading asks to read chords instead. */
 function chartOf(
 	bytes: Uint8Array,
@@ -75,8 +93,8 @@ function chartOf(
 	const notes = notesOf(smf, report);
 	if (failed(report)) return "";
 	const selected = selectedNotes(notes, names, options, report);
-	const line = options.notes === false ? null : lineOf(selected.pitched, smf.ppq);
-	if (line !== null) return lineChart(line, smf, names, notes, options, report, seam);
+	const line = options.notes === false ? null : lineReading(smf, names, options);
+	if (line !== null) return lineChart(line.line, smf, names, line.notes, options, report, seam);
 	const harmony = harmonyOf(selected, names, report);
 	if (failed(report)) return "";
 	return chordChart(smf, names, notes, harmony, options, report);

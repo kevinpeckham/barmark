@@ -529,3 +529,70 @@ describe("what falls back", () => {
 		expect(barLines(r.text)).toHaveLength(4);
 	});
 });
+
+/** A line of `pitches`, `step` ticks apart, each note-off `overlap` ticks after the next note-on. */
+function legato(pitches: number[], step: number, overlap: number): Uint8Array {
+	const events = pitches.flatMap((p, i) => [
+		at(i * step, { on: [0, p, 80] }),
+		at((i + 1) * step + overlap, { off: [0, p] }),
+	]);
+	return smf({ format: 1, ppq: PPQ, tracks: [track([at(0, { tempo: 120 })]), track(events)] });
+}
+
+/** `count` pitches walking a scale, the pitch before repeated at each index in `repeats`. */
+function walk(count: number, repeats: number[]): number[] {
+	const scale = [36, 38, 40, 41, 43, 45, 47, 48];
+	const out: number[] = [];
+	for (let i = 0; i < count; i++)
+		out.push(repeats.includes(i) ? (out[i - 1] as number) : (scale[i % scale.length] as number));
+	return out;
+}
+
+const attacksIn = (text: string) => (text.match(/\{/g) ?? []).length;
+
+describe("a line's overlapping notes of one pitch keep their lengths", () => {
+	test("E, A, A, F, each released 5 ticks after the next is struck", () => {
+		const r = importMidi(legato([40, 45, 45, 41], Q, 5));
+		expect(barLines(r.text)).toEqual(["| {E2} {A2} {A2} {F2} |"]);
+		expect(codes(r)).toEqual(["notes-line"]);
+	});
+	const cases: [string, number, number[]][] = [
+		["64 eighths, 8 repeats", Q / 2, [5, 13, 21, 29, 37, 45, 53, 61]],
+		["64 quarters, 13 repeats", Q, [3, 8, 13, 18, 23, 28, 33, 38, 43, 48, 53, 58, 63]],
+		["64 quarters, 15 repeats", Q, [3, 7, 11, 15, 19, 23, 27, 31, 35, 39, 43, 47, 51, 55, 59]],
+	];
+	for (const [name, step, repeats] of cases)
+		test(`${name}: every attack written, none left out as short`, () => {
+			const r = importMidi(legato(walk(64, repeats), step, 5), { simile: false });
+			expect(codes(r)).toEqual(["notes-line"]);
+			expect(attacksIn(r.text)).toBe(64);
+		});
+	test("a line with no overlaps imports as before", () => {
+		expect(importMidi(specFile()).text).toBe(
+			"time: 4/4, tempo: 120\n| {E1} | {E1} {E1} {E1} {E1} | {A1} {A1} | {G1} {G1}_{G1} / {B1} |\n",
+		);
+		const groups = [
+			...run([60, 62, 64, 65], 0, Q / 4),
+			...run([67, 69], Q, Q / 2),
+			...run([71, 72, 74], 2 * Q, Q / 3),
+			n(76, 3 * Q, Q),
+		];
+		expect(barLines(importMidi(file(groups)).text)).toEqual([
+			"| {C4}_{D4}_{E4}_{F4} {G4}_{A4} {B4}_{C5}_{D5} {E5} |",
+		]);
+		const rests = [...run([60, 62, 64], Q, Q), n(65, 2 * BAR, BAR)];
+		expect(barLines(importMidi(file(rests)).text)).toEqual(["| -- {C4} {D4} {E4} | -- | {F4} |"]);
+	});
+	test("a chord file re-striking 5 ticks early imports as before", () => {
+		const chords = [0, 1, 2, 3, 4, 5, 6, 7].flatMap((i) =>
+			(i < 4 ? [60, 64, 67] : [62, 65, 69]).map((p) => n(p, i * Q, Q + 5)),
+		);
+		const bytes = file(chords);
+		const r = importMidi(bytes);
+		expect(r).toEqual({
+			text: "time: 4/4, tempo: 120\n| C N.C. / / | Dm N.C. / / |\n",
+			diagnostics: [],
+		});
+		expect(r).toEqual(importMidi(bytes, { notes: false }));
+	});
+});
