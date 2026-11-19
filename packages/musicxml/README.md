@@ -106,7 +106,10 @@ part, "Chart"), at concert pitch except where an instrument transposes:
   on its written-out measures. A lyric row with no melody under it is a
   part of its own, "Lyrics": a silent one-line staff of slash notes at
   the syllables' onsets, marked `<?barmark lyrics?>` in its first
-  measure.
+  measure. MusicXML doesn't say which pitch a one-line staff's line is,
+  and engravers differ: the slashes are written at B4, which is on the
+  line in Dorico and two steps below it in MuseScore 4 (Verovio's line
+  is lower still; `@barmark/score` moves the slashes onto it).
 - **Text:** section headings, rehearsal marks, words on bars, and every
   text line (free-text lyrics, `###` notes) as words, so nothing written is lost.
   In a score of several parts, the description (the text before the
