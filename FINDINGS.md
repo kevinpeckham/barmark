@@ -3185,3 +3185,25 @@ those never reached, or reached in a repeat with passes enough for their verse (
 - **The fix.** Edit through the REST API instead:
   `gh api -X PATCH repos/kevinpeckham/barmark/pulls/N -F body=@file`
   (`-F` reads the file; `-f` would send the text "@file"), or upgrade `gh`.
+
+### A question asked once a replay read every play of the line each time (2026-11-19, render)
+
+- **The symptom.** With `melody: false`, a lead-sheet section of one long
+  melody bar replayed 1,000 times took 42 seconds to lay out; the default
+  took a tenth of a second. Three review rounds had passed the option,
+  each comparing models and markup over a corpus of charts; none timed it.
+  Vercel's security review of pull request #341 found it.
+- **The cause.** `layoutLines` runs once for every occurrence of a section.
+  The new test for a melody line (`melodyOnly`) read the line's written
+  cells and `barsOn(line)`, which holds every play of the line, so each of
+  `n` replays read `n` plays of `n` slots: `n` cubed, for output of `n`
+  short rows.
+- **The fix.** The answer is kept by line number for the layout
+  (`Context.melodies`), and a bar's slots are read once however often it
+  plays (the parser shares one array between plays, as `verses.ts` already
+  relied on). `scale.test.ts` holds it: ten times the slots and replays in
+  at most twenty times the time.
+- **The rule.** Anything reached from `layoutLines` runs once a replay.
+  Whatever it reads from `ctx.bars` it must read once a line, and a new
+  option gets a test in `scale.test.ts` in the same change, not after a
+  reviewer asks.
