@@ -6,6 +6,8 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-11-19
+
 ### Changed
 
 - The package's npm keywords include `chordpro`, so a search for the format
@@ -80,5 +82,6 @@ package uses [semantic versioning](https://semver.org/).
   quadratic fails, the large shapes also under Node; and every chart of
   the corpus, with and without diagrams.
 
-[Unreleased]: https://github.com/kevinpeckham/barmark/compare/lyricsheet-v0.1.0...HEAD
+[Unreleased]: https://github.com/kevinpeckham/barmark/compare/lyricsheet-v0.1.1...HEAD
+[0.1.1]: https://github.com/kevinpeckham/barmark/compare/lyricsheet-v0.1.0...lyricsheet-v0.1.1
 [0.1.0]: https://github.com/kevinpeckham/barmark/releases/tag/lyricsheet-v0.1.0
