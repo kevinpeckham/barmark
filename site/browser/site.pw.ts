@@ -33,13 +33,13 @@ const scoreChords = (page: Page) =>
 		].map((g) => g.textContent?.replace(/\s+/g, "") ?? ""),
 	);
 
-/** The chord names the grid draws, in order. */
+/** The chord names the grid draws, in order: not a melody's pitch names (`.bm-pitch`). */
 const gridChords = (page: Page) =>
 	page.evaluate(() =>
 		[
 			...(document
 				.querySelector("main :is(barmark-chart, barmark-score)")
-				?.shadowRoot?.querySelectorAll(".bm-chord") ?? []),
+				?.shadowRoot?.querySelectorAll(".bm-chord:not(.bm-pitch)") ?? []),
 		].map((c) => c.textContent ?? ""),
 	);
 
