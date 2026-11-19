@@ -26,7 +26,8 @@ export type LayoutOptions = {
 	/**
 	 * Leave a singer's melody line out of the grid (default `true`): in a system
 	 * with any other line, a voice part's singing line does not draw and its
-	 * words draw by beat under the chords. A melody on its own stays.
+	 * words draw by beat under the chords. A melody on its own stays, and so
+	 * does a melody line with an error.
 	 */
 	melody?: boolean;
 	/** Give the model a diagram entry for each chord, as a guitar plays it; off when absent. */

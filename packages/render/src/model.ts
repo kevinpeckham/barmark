@@ -381,9 +381,18 @@ function layoutSystemOf(
 	return layoutSystemAt(lines, written, occurrence, previous, ctx);
 }
 
-/** The system's lines but its singing ones (barmark's grammar 7.7); all of them when every line sings. */
+/** A line with a problem the grid draws where it is written: as written, or on its unreadable slots. */
+const flawed = (l: SystemLine, ctx: Context) => ctx.errors.has(l.line) || ctx.unread.has(l.line);
+
+/**
+ * The system's lines but its singing ones (barmark's grammar 7.7); all of
+ * them when every line sings. A singing line with a problem stays, so the
+ * grid still shows where the problem is.
+ */
 function withoutMelody(lines: SystemLine[], ctx: Context): SystemLine[] {
-	const kept = lines.filter((l) => l.kind !== "bars" || singerOf(l, ctx.parse) === null);
+	const kept = lines.filter(
+		(l) => l.kind !== "bars" || flawed(l, ctx) || singerOf(l, ctx.parse) === null,
+	);
 	return kept.length ? kept : lines;
 }
 

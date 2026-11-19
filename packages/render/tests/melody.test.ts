@@ -169,6 +169,26 @@ lyrics 1: | la / la / | la |
 		expect(m.blocks[1]).toEqual(dflt.blocks[1]);
 		expect(JSON.stringify(m.blocks[1])).toContain('"sings":true');
 	});
+
+	const HEAD = "part: Vox = Voice, instrument: voice\nkey: G, time: 3/4\n\n";
+
+	test("a melody line with an error stays, so the grid shows where it is", () => {
+		// The melody writes one bar under two: the line draws as written, with its message.
+		const SHORT = `${HEAD}Vox     | G | C |\nVox.Mel | {G4} / {B4} |\n`;
+		const m = layoutChart(SHORT, OFF);
+		expect(m.blocks[0]).toEqual(layoutChart(SHORT).blocks[0]);
+		expect(systemsOf(m)[0]?.rows.map((r) => `${r.label}:${r.row.kind}`)).toEqual([
+			"Vox:row",
+			"Vox.Mel:error",
+		]);
+	});
+
+	test("a melody line with a slot the grid cannot read stays, its message in place", () => {
+		const UNREAD = `${HEAD}Vox     | G | C |\nVox.Mel | {G9} / {B4} | {C5} |\n`;
+		const m = layoutChart(UNREAD, OFF);
+		expect(m.blocks[0]).toEqual(layoutChart(UNREAD).blocks[0]);
+		expect(renderChart(UNREAD, OFF)).toContain("octaves run 0–8");
+	});
 });
 
 describe("melody true is today's output", () => {
