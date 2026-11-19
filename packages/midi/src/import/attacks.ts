@@ -9,7 +9,7 @@ import type { Note } from "./notes.js";
 const SHORT = 16;
 /** An attack's window is a quarter over this (a 32nd). */
 const WINDOW = 8;
-/** A note ringing longer than a quarter over this after an attack starts is struck under (a sixteenth). */
+/** An attack is struck under a note that rings longer than a quarter over this after it starts (a sixteenth). */
 const STRUCK = 4;
 /** The line test's two shares are at most one in this many attacks. */
 const SHARE = 10;

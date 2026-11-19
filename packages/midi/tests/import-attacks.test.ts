@@ -90,6 +90,16 @@ describe("isLine", () => {
 	test("no attacks is not a line", () => {
 		expect(isLine([], PPQ)).toBe(false);
 	});
+	test("a long note under nine short ones is not a line: any earlier attack's note counts", () => {
+		const a = single(10);
+		a[0] = { tick: 0, end: 4800, pitches: [36] };
+		expect(isLine(a, PPQ)).toBe(false);
+	});
+	test("1 double stop in 9 is more than one in ten", () => {
+		const a = single(9);
+		a[4] = { tick: 4 * 480, end: 5 * 480, pitches: [60, 64] };
+		expect(isLine(a, PPQ)).toBe(false);
+	});
 });
 
 describe("lineOf", () => {
@@ -105,6 +115,13 @@ describe("lineOf", () => {
 		expect(r?.attacks.map((a) => a.tick)).toEqual([0, 480, 960, 1440]);
 		expect(r?.notes).toHaveLength(4);
 		expect(r?.short).toBe(0);
+	});
+	test("short notes are set aside before the test", () => {
+		const line = Array.from({ length: 10 }, (_, i) => note(40 + i, i * 480, (i + 1) * 480));
+		const r = lineOf([...line, note(70, 0, 10), note(71, 480, 490)], PPQ);
+		expect(r?.short).toBe(2);
+		expect(r?.notes).toEqual(line);
+		expect(r?.attacks.every((a) => a.pitches.length === 1)).toBe(true);
 	});
 	test("chords are not a line", () => {
 		const notes = [note(60, 0, 480), note(64, 0, 480), note(60, 480, 960), note(64, 480, 960)];
