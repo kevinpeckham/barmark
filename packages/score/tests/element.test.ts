@@ -369,6 +369,32 @@ describe("<barmark-score>", () => {
 		expect(strip()).toBeNull();
 	});
 
+	test("melody is observed; the grid leaves the melody out, the engraving is the same", async () => {
+		const ctor = window.customElements.get("barmark-score") as unknown as {
+			observedAttributes: string[];
+		};
+		expect(ctor.observedAttributes).toContain("melody");
+		const song = `part: Vox = Voice, instrument: voice
+time: 4/4
+
+Vox       | C | G |
+Vox.Mel   | {E4} / {G4} / | {D4} / / / |
+lyrics 1: | la / la / | la |
+`;
+		const el = await make({ view: "score" }, song);
+		calls[0]?.resolve({ id: 1, ok: true, svg: svg("first"), pages: 1 });
+		await flush();
+		const { grid } = parts(el);
+		expect(grid.querySelectorAll(".bm-pitch").length).toBeGreaterThan(0);
+		el.setAttribute("melody", "off");
+		await flush();
+		expect(grid.querySelectorAll(".bm-pitch").length).toBe(0);
+		expect(grid.querySelectorAll(".bm-syllable").length).toBeGreaterThan(0);
+		// The score view engraves the chart's text, melody and all: no new request, the same text.
+		expect(calls).toHaveLength(1);
+		expect(calls[0]?.text).toBe(song);
+	});
+
 	test("the score view ignores chord-diagrams and diagram-hand: no strip, no new engraving", async () => {
 		const el = await make({ view: "score" });
 		calls[0]?.resolve({ id: 1, ok: true, svg: svg("first"), pages: 1 });
