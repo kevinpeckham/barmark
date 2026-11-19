@@ -596,3 +596,98 @@ describe("a line's overlapping notes of one pitch keep their lengths", () => {
 		expect(r).toEqual(importMidi(bytes, { notes: false }));
 	});
 });
+
+/** A one-track file of events at absolute ticks (note-offs first at one tick), at `ppq`. */
+const events = (list: At[], ppq = PPQ) =>
+	smf({ format: 1, ppq, tracks: [track([at(0, { tempo: 120 })]), track(list)] });
+
+describe("a line is tried on both pairings", () => {
+	/** 64 quarters, E2 on every fourth up to the 60th (15 of them), the rest a walk; each 460 ticks long. */
+	const SCALE = [36, 38, 41, 43, 45, 47, 48];
+	const pitches = Array.from({ length: 64 }, (_, i) =>
+		i % 4 === 0 && i < 60 ? 40 : (SCALE[i % 7] as number),
+	);
+	function stuck({ missing = -1, doubled = -1 }): Uint8Array {
+		return events(
+			pitches.flatMap((p, i) => [
+				at(i * Q, { on: [0, p, 80] }),
+				...(i === doubled ? [at(i * Q, { on: [0, p, 80] })] : []),
+				...(i === missing ? [] : [at(i * Q + 460, { off: [0, p] })]),
+			]),
+		);
+	}
+	// What f9346eb (the line on MIDI 5.2's pairing) gave for both files, `simile: false`.
+	const WALK =
+		"time: 4/4, tempo: 120\n" +
+		"| {E2} {D2} {F2} {G2} | {E2} {B2} {C3} {C2} | {E2} {F2} {G2} {A2} | {E2} {C3} {C2} {D2} |\n" +
+		"| {E2} {G2} {A2} {B2} | {E2} {C2} {D2} {F2} | {E2} {A2} {B2} {C3} | {E2} {D2} {F2} {G2} |\n" +
+		"| {E2} {B2} {C3} {C2} | {E2} {F2} {G2} {A2} | {E2} {C3} {C2} {D2} | {E2} {G2} {A2} {B2} |\n" +
+		"| {E2} {C2} {D2} {F2} | {E2} {A2} {B2} {C3} | {E2} {D2} {F2} {G2} | {A2} {B2} {C3} {C2} |\n";
+	test("the first E2's note-off missing: still the line, every attack", () => {
+		const r = importMidi(stuck({ missing: 0 }), { simile: false });
+		expect(r).toEqual({
+			text: WALK,
+			diagnostics: [expect.objectContaining({ code: "notes-line" })],
+		});
+	});
+	test("the first E2's note-on doubled with one note-off: still the line", () => {
+		const r = importMidi(stuck({ doubled: 0 }), { simile: false });
+		expect(r).toEqual({
+			text: WALK,
+			diagnostics: [expect.objectContaining({ code: "notes-line" })],
+		});
+	});
+	test("one pitch overlapping itself by more than a sixteenth (ppq 960): still the line", () => {
+		const list = [
+			...[60, 62, 64].flatMap((p, i) => [
+				at(i * 960, { on: [0, p, 80] }),
+				at(i * 960 + 900, { off: [0, p] }),
+			]),
+			at(2880, { on: [0, 65, 80] }),
+			at(3840, { on: [0, 65, 80] }),
+			at(4160, { off: [0, 65] }),
+			at(4560, { off: [0, 65] }),
+		];
+		const r = importMidi(events(list, 960));
+		expect(r.text).toBe("time: 4/4, tempo: 120\n| {C4} {D4} {E4} {F4} | {F4} -- -- -- |\n");
+		expect(codes(r)).toEqual(["notes-line"]);
+	});
+	test("a file that is a line under neither pairing is read as chords, as before", () => {
+		const chords = [0, 1, 2, 3].flatMap((i) => [60, 64, 67].map((p) => n(p, i * Q, Q)));
+		const bytes = file(chords);
+		expect(importMidi(bytes)).toEqual({ text: "time: 4/4, tempo: 120\n| C |\n", diagnostics: [] });
+		expect(importMidi(bytes)).toEqual(importMidi(bytes, { notes: false }));
+	});
+});
+
+describe("the line's own notes", () => {
+	test("a throw inside the line reading falls back to chords", () => {
+		const r = importWith(specFile(), {}, () => {
+			throw new Error("x");
+		});
+		const chords = importMidi(specFile(), { notes: false });
+		expect(r.diagnostics[0]).toMatchObject({ code: "notes-fallback", severity: "warning" });
+		expect(r.text).toBe(chords.text);
+		expect(r.diagnostics.slice(1)).toEqual(chords.diagnostics);
+	});
+	test("the lyric rows sound under the line's notes (first in, first out)", () => {
+		const list = [
+			at(0, { on: [0, 40, 80] }),
+			at(0, { lyric: "one " }),
+			at(Q, { on: [0, 45, 80] }),
+			at(Q, { lyric: "two " }),
+			at(Q + 5, { off: [0, 40] }),
+			at(2 * Q, { on: [0, 45, 80] }),
+			at(2 * Q + 5, { off: [0, 45] }),
+			at(4 * Q, { off: [0, 45] }),
+			at(4 * Q, { on: [0, 41, 80] }),
+			at(4 * Q, { lyric: "three " }),
+			at(8 * Q, { off: [0, 41] }),
+		];
+		const lines = importMidi(events(list))
+			.text.split("\n")
+			.map((l) => l.replace(/\s+/g, " ").trim());
+		expect(lines).toContain("| {E2} {A2} {A2} / | {F2} |");
+		expect(lines).toContain("lyrics: | one two / / | three |");
+	});
+});

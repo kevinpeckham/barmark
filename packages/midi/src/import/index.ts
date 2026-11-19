@@ -63,22 +63,30 @@ function chordChart(
 	return options.lyrics === false ? chart : withLyrics(chart, smf, grid, notes, report);
 }
 
+type LineRead = { line: NonNullable<ReturnType<typeof lineOf>>; notes: Note[] };
+
 /**
- * The line test on the notes paired first in, first out (spec 3), and
- * those notes; null when they are not one line. Its pairing and choice of
- * tracks report into a scratch report: the file's `notesOf` and
- * `selectedNotes` have reported the same already (their bounds, drums and
- * unknown tracks), so nothing is said twice.
+ * The line test (spec 3): on the notes paired first in, first out; when
+ * they are not one line, on MIDI 5.2's (`notes`, already paired and
+ * selected), so a stuck or doubled note-on, which first in, first out
+ * never recovers from, does not cost the line. The line and the notes it
+ * was read from, or null when neither is one line. The second pairing and
+ * its choice of tracks report into a scratch report: the file's `notesOf`
+ * and `selectedNotes` have reported the same already (their bounds, drums
+ * and unknown tracks), so nothing is said twice.
  */
 function lineReading(
 	smf: Smf,
 	names: (string | null)[],
 	options: MidiImportOptions,
-): { line: NonNullable<ReturnType<typeof lineOf>>; notes: Note[] } | null {
+	classic: { notes: Note[]; pitched: Note[] },
+): LineRead | null {
 	const scratch = createReport();
-	const notes = notesOf(smf, scratch, { overlaps: "keep" });
-	const line = lineOf(selectedNotes(notes, names, options, scratch).pitched, smf.ppq);
-	return line === null ? null : { line, notes };
+	const kept = notesOf(smf, scratch, { overlaps: "keep" });
+	const first = lineOf(selectedNotes(kept, names, options, scratch).pitched, smf.ppq);
+	if (first !== null) return { line: first, notes: kept };
+	const second = lineOf(classic.pitched, smf.ppq);
+	return second === null ? null : { line: second, notes: classic.notes };
 }
 
 /** The chart, "" once an error is reported, or null when the line reading asks to read chords instead. */
@@ -93,7 +101,10 @@ function chartOf(
 	const notes = notesOf(smf, report);
 	if (failed(report)) return "";
 	const selected = selectedNotes(notes, names, options, report);
-	const line = options.notes === false ? null : lineReading(smf, names, options);
+	const line =
+		options.notes === false
+			? null
+			: lineReading(smf, names, options, { notes, pitched: selected.pitched });
 	if (line !== null) return lineChart(line.line, smf, names, line.notes, options, report, seam);
 	const harmony = harmonyOf(selected, names, report);
 	if (failed(report)) return "";
