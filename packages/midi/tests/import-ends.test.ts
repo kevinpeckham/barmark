@@ -264,6 +264,21 @@ describe("statesOf: a note-off at or past the grid's end is the chart's end", ()
 			"R r r r r r r | r r r r r r A | h",
 		);
 	});
+	test("the same, the note-off exactly on the grid's end", () => {
+		expect(read(notes([1560, 1690]), cut(1690, [4, 4], 1685, [7, 16]))).toBe(
+			"R r r r r r r | r r r r r r A | h",
+		);
+	});
+});
+
+describe("statesOf: an end inside a beat is measured by that beat, not the beat before", () => {
+	test("3/8 then 4/4: 240 of silence after an end inside a 480 beat is held", () => {
+		const grid = gridOfMeters([
+			{ n: 3, d: 8 },
+			{ n: 4, d: 4 },
+		]);
+		expect(read(notes([720, 840], [840, 960], [1200, 2640]), grid)).toBe("R r r | A_A_h_h A h h");
+	});
 });
 
 /** `bars` bars of 4/4, two notes a bar, one long and one short. */
