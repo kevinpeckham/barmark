@@ -20,12 +20,10 @@
 | C F G C | C . . . |
 {end_of_grid}
 
-{start_of_grid: label="Odd" shape="1+4x5+1"}
+{start_of_grid: label="Odd" shape="1+6x4+1"}
 {comment: Time: 4/4}
 {time: 4/4}
 {comment: straight}
 | C . . . | G . | C . . . | F . . . . |
-{end_of_grid}
-{start_of_grid: shape="1+6x4+1"}
 | C . . . | G . . . | C . . . | G . . . | C . . . | G . . . |
 {end_of_grid}

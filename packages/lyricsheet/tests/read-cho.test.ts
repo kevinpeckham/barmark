@@ -182,6 +182,8 @@ describe("readCho", () => {
 		["a grid inside a grid", "{start_of_grid}\n{start_of_grid}\n{end_of_grid}\n"],
 		["an end with no grid", "{end_of_grid}\n"],
 		["a blank line in a grid", "{start_of_grid}\n\n{end_of_grid}\n"],
+		["a lyric line ending in a backslash", "[C]la\\\nnext\n"],
+		["a grid line ending in a backslash", "{start_of_grid}\n| C . . . | a\\\n{end_of_grid}\n"],
 	];
 	for (const [why, text] of refused)
 		test(`throws on ${why}`, () => {

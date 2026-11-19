@@ -15,9 +15,7 @@
 
 {start_of_grid: label="Vamp" shape="1+2x4+1"}
 | D . . . | A . . . |
-{end_of_grid}
 {comment: repeat ad lib.}
-{start_of_grid: shape="1+2x4+1"}
 {comment: Cue the band, then go on.}
 | G . . . | A . . . |
 {end_of_grid}

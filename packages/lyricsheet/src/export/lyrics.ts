@@ -10,7 +10,7 @@ import { lyricLine, type Piece } from "./merge.js";
 import { directive } from "./meta.js";
 import type { Layout, Occurrence, Run } from "./plan.js";
 import { isGap, spelled } from "./spell.js";
-import { plain, textChanged, unhashed, untagged } from "./text.js";
+import { labelValue, plain, textChanged, unhashed, unjoined, untagged } from "./text.js";
 import type { Out } from "./types.js";
 
 export type Context = {
@@ -48,12 +48,12 @@ function envOf(name: string | null): "verse" | "chorus" | "bridge" {
 	return word === "chorus" || word === "bridge" ? word : "verse";
 }
 
-/** `label="…"`: the heading as written, `\` and `"` escaped as the label's quotes need; null for none. */
+/** `label="…"`: the heading as written, quoted as the label's value needs (`labelValue`); null for none. */
 export function labelOf(name: string | null, out: Out, bar: PlayedBar | undefined): string | null {
 	if (name === null) return null;
 	const label = untagged(name);
-	if (label !== name || /[{}\p{Cc}\u2028\u2029]/u.test(name)) textChanged(out.losses, bar);
-	return `label="${label.replace(/[\\"]/g, (c) => `\\${c}`)}"`;
+	if (label !== name || /[{}\p{Cc}\u2028\u2029]|\\n/u.test(name)) textChanged(out.losses, bar);
+	return `label="${labelValue(label)}"`;
 }
 
 /** `{start_of_verse: label="…"}`, or with no label for the unnamed section. */
@@ -204,8 +204,9 @@ function lyricText(bars: PlayedBar[], fermatas: Set<number>, out: Out): string {
 		const bar = owner[i];
 		if (bar) lose(out, "chord-moved", bar);
 	});
-	if (changed || text.startsWith("#")) textChanged(out.losses, bars[0]);
-	return unhashed(text);
+	const written = unjoined(unhashed(text));
+	if (changed || written !== text) textChanged(out.losses, bars[0]);
+	return written;
 }
 
 /** An occurrence's bars by written line (or system), a new line where play goes back (a repeat). */

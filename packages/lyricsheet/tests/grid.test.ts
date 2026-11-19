@@ -1,10 +1,8 @@
 import { describe, expect, test } from "bun:test";
-import { existsSync } from "node:fs";
-import { join } from "node:path";
 import { exportLyricsheet, type LyricsheetLossCode, type LyricsheetOptions } from "../src/index.js";
-import { FIXTURES } from "./fixtures.js";
+import { fixtures } from "./fixtures.js";
 import { readCho } from "./read-cho.js";
-import { readBack } from "./yardstick.js";
+import { readBack, yardstick } from "./yardstick.js";
 
 function sheet(chart: string, options: LyricsheetOptions = {}) {
 	const r = exportLyricsheet(chart, options);
@@ -143,11 +141,22 @@ describe("the grid's shape (spec 4.6, Review Focus 4)", () => {
 		);
 	});
 
-	test("a later line with more cells than the shape opens a new grid, unlabelled, with its own shape", () => {
-		expect(body("## A\n| C | G |\n| C | G | C | G |\n")).toEqual([
-			...grid("A", "1+2x4+1", "| C . . . | G . . . |"),
-			...grid(null, "1+4x4+1", "| C . . . | G . . . | C . . . | G . . . |"),
-		]);
+	test("the shape is the widest row's, so a later, longer line stays in the one grid", () => {
+		expect(body("## A\n| C | G |\n| C | G | C | G |\n")).toEqual(
+			grid("A", "1+4x4+1", "| C . . . | G . . . |", "| C . . . | G . . . | C . . . | G . . . |"),
+		);
+	});
+
+	test("the widest row by cells, wherever it is: a row of three 5/4 bars after three 4/4", () => {
+		expect(body("## A\n| C | G | C |\n| [5/4] C | [5/4] D | [5/4] E |\n| C |\n")).toEqual(
+			grid(
+				"A",
+				"1+3x5+1",
+				"| C . . . | G . . . | C . . . |",
+				"| C . . . . | D . . . . | E . . . . |",
+				"| C . . . |",
+			),
+		);
 	});
 });
 
@@ -237,19 +246,22 @@ describe("repeats in a grid (spec 4.5)", () => {
 		]);
 	});
 
-	test("an open repeat is written once, then {comment: repeat ad lib.} after the grid", () => {
-		expect(body("## A\n| C | G | x ...\n")).toEqual([
-			...grid("A", "1+2x4+1", "| C . . . | G . . . |"),
-			"{comment: repeat ad lib.}",
-		]);
+	test("an open repeat is written once, then {comment: repeat ad lib.} as its grid's next line", () => {
+		expect(body("## A\n| C | G | x ...\n")).toEqual(
+			grid("A", "1+2x4+1", "| C . . . | G . . . |", "{comment: repeat ad lib.}"),
+		);
 	});
 
-	test("an open repeat inside a section closes the grid there and opens another after the comment", () => {
-		expect(body("## A\n| C | G | x ...\n| F |\n")).toEqual([
-			...grid("A", "1+2x4+1", "| C . . . | G . . . |"),
-			"{comment: repeat ad lib.}",
-			...grid(null, "1+2x4+1", "| F . . . |"),
-		]);
+	test("an open repeat inside a section keeps the one grid: the comment between its lines", () => {
+		expect(body("## A\n| C | G | x ...\n| F |\n")).toEqual(
+			grid("A", "1+2x4+1", "| C . . . | G . . . |", "{comment: repeat ad lib.}", "| F . . . |"),
+		);
+	});
+
+	test("a |: :| is never split across grids, an open repeat inside it included", () => {
+		expect(body("## A\n|: C | G | x ...\n| D :|\n")).toEqual(
+			grid("A", "1+2x4+1", "|: C . . . | G . . . |", "{comment: repeat ad lib.}", "| D . . . :|"),
+		);
 	});
 });
 
@@ -305,8 +317,16 @@ describe("words in some sections and not others (Review Focus 3)", () => {
 		expect(r.text.match(/\{start_of_grid/g)?.length).toBe(2);
 		expect(r.text).not.toContain("{start_of_verse");
 		expect(readBack(r.text)).toEqual([
-			{ label: "Intro", bars: [["C"]] },
-			{ label: "Verse", bars: [["G"], ["D"], ["G"], ["D"]] },
+			{ label: "Intro", bars: [{ beats: 4, attacks: [{ beat: 0, chord: "C" }] }] },
+			{
+				label: "Verse",
+				bars: [
+					{ beats: 4, attacks: [{ beat: 0, chord: "G" }] },
+					{ beats: 4, attacks: [{ beat: 0, chord: "D" }] },
+					{ beats: 4, attacks: [{ beat: 0, chord: "G" }] },
+					{ beats: 4, attacks: [{ beat: 0, chord: "D" }] },
+				],
+			},
 		]);
 	});
 
@@ -321,17 +341,145 @@ describe("words in some sections and not others (Review Focus 3)", () => {
 	});
 });
 
+describe("no written line ends in a backslash; no tab is written (ChordPro joins and the output rules)", () => {
+	// Measured 2026-11-19 with chordpro 6.101.0: a line ending `\` is joined to
+	// the next, `\\` at the end too (one backslash dropped), and `\ ` keeps the
+	// line but leaves a trailing space. So a final `\` is written `/`.
+	test("a lyric line whose last syllable ends in `\\` ends in `/`, with its loss", () => {
+		const chart = "## A\n| C | G |\nlyrics: | la | lo\\ |\n";
+		expect(body(chart)).toEqual(['{start_of_verse: label="A"}', "[C]la [G]lo/", "{end_of_verse}"]);
+		expect(codes(chart)).toEqual(["text-changed"]);
+	});
+
+	test("a grid line whose margin words end in `\\` ends in `/`, with its loss", () => {
+		const chart = '## A\n| C "a\\\\" |\n';
+		expect(body(chart)).toEqual(grid("A", "1+1x4+1", "| C . . . | a\\/"));
+		expect(codes(chart)).toEqual(["text-changed"]);
+	});
+
+	test("a backslash not at a line's end stays", () => {
+		expect(body('## A\n| C "a\\b" |\n')).toEqual(grid("A", "1+1x4+1", "| C . . . | a\\b"));
+	});
+
+	test("a tab in words is written as a space, with its loss", () => {
+		const chart = '## A\n| C "a\tb" | G |\nlyrics: | la | lo |\n';
+		expect(body(chart)).toEqual([
+			'{start_of_verse: label="A"}',
+			"[C]la [*a b] [G]lo",
+			"{end_of_verse}",
+		]);
+		expect(codes(chart)).toEqual(["text-changed"]);
+	});
+
+	// Measured: a quoted label value reads `\n` as a newline, `\\` as `\` and
+	// `\"` as `"`, then the label is split into lines at a newline and at a
+	// literal backslash-n left in it. A word joiner (U+2060, drawn as nothing)
+	// between the backslash and the n keeps the heading's characters on one line.
+	test("a heading holding backslash-n is one label line, drawn as written", () => {
+		const chart = "## A\\nB\n| C |\n";
+		expect(body(chart)[0]).toBe('{start_of_grid: label="A\\\\⁠nB" shape="1+1x4+1"}');
+		expect(codes(chart)).toEqual(["text-changed"]);
+		expect(sheet("## A\\nB\n| C |\nlyrics: | la |\n").text).toContain(
+			'{start_of_verse: label="A\\\\⁠nB"}',
+		);
+	});
+});
+
+describe("a rehearsal mark starts its own row", () => {
+	test("as written: the line is split at the mark, its repeat signs kept at each end", () => {
+		const chart = "## A\n|: C | @B | G | D :|\n";
+		expect(body(chart)).toEqual(grid("A", "1+2x4+1", "|: C . . . |", "@B | G . . . | D . . . :|"));
+		expect(readBack(sheet(chart).text)).toEqual(yardstick(chart).map(({ records: _, ...r }) => r));
+		expect(codes(chart)).toEqual([]);
+	});
+
+	test("as written with x N: the line is kept whole, the mark at its start, with its loss", () => {
+		const chart = "## A\n| C | @B | G | x2\n";
+		expect(body(chart)).toEqual(grid("A", "1+2x4+1", "@B | C . . . | G . . . | x2"));
+		expect(readBack(sheet(chart).text)).toEqual(yardstick(chart).map(({ records: _, ...r }) => r));
+		expect(codes(chart)).toEqual(["mark-moved"]);
+	});
+
+	test("as played: the row is split at the mark", () => {
+		const chart = "## A x2\n| C | @B | G | D |\n";
+		expect(body(chart)).toEqual(
+			grid(
+				"A",
+				"1+2x4+1",
+				"| C . . . |",
+				"@B | G . . . | D . . . |",
+				"| C . . . |",
+				"@B | G . . . | D . . . |",
+			),
+		);
+		expect(readBack(sheet(chart).text)).toEqual(yardstick(chart).map(({ records: _, ...r }) => r));
+	});
+});
+
+describe("margin words that read as a count", () => {
+	test("are written in double quotes; the line's own count stays bare", () => {
+		for (const words of ["x3", "x 3", "X3", "play x3"]) {
+			const chart = `## A\n| C "${words}" | G | x2\n`;
+			expect(body(chart)).toEqual(grid("A", "1+2x4+1", `| C . . . | G . . . | "${words}" x2`));
+			expect(readBack(sheet(chart).text)).toEqual(
+				yardstick(chart).map(({ records: _, ...r }) => r),
+			);
+		}
+	});
+
+	test("alone on a line with no count, still quoted, and read back as words", () => {
+		const chart = '## A\n| C "x3" | G |\n';
+		expect(body(chart)).toEqual(grid("A", "1+2x4+1", '| C . . . | G . . . | "x3"'));
+		expect(readBack(sheet(chart).text)).toEqual(yardstick(chart).map(({ records: _, ...r }) => r));
+	});
+});
+
+describe("`%` only where it plays the bar before it in the grid", () => {
+	test("not after a time: change between the two bars", () => {
+		expect(body("## A\n| C / G / |\ntime: 2/4\n| % |\n")).toEqual(
+			grid("A", "1+1x4+1", "| C . G . |", "{comment: Time: 2/4}", "{time: 2/4}", "| C G |"),
+		);
+	});
+
+	test("not after a fermata measure", () => {
+		expect(body("## A\n| C / G / | ... | % |\n")).toEqual(
+			grid("A", "1+3x4+1", "| C . G . | *… | C . G . |"),
+		);
+	});
+
+	test("not at the start of a new line", () => {
+		expect(body("## A\n| C / G / |\n| % |\n")).toEqual(
+			grid("A", "1+1x4+1", "| C . G . |", "| C . G . |"),
+		);
+	});
+
+	test("not at the start of a row split at a rehearsal mark", () => {
+		expect(body("## A\n| C / G / | @B | % |\n")).toEqual(
+			grid("A", "1+1x4+1", "| C . G . |", "@B | C . G . |"),
+		);
+	});
+});
+
+describe("stacked verses", () => {
+	test("a stacked verse with no sung syllable writes nothing", () => {
+		const chart = "## A\n| C | G |\nlyrics 1: | a | b |\nlyrics 2: | -- | -- |\n";
+		expect(body(chart)).toEqual(['{start_of_verse: label="A"}', "[C]a [G]b", "{end_of_verse}"]);
+		expect(readBack(sheet(chart).text)).toEqual(yardstick(chart).map(({ records: _, ...r }) => r));
+	});
+});
+
 describe("golden grids", () => {
-	for (const cho of [
-		"grid-cells.cho",
-		"grid-repeats.cho",
-		"grid-meters.cho",
-		"peaceful-dreams.cho",
-		"at-a-glance.cho",
-	])
-		test(`${cho} exists`, () => {
-			expect(existsSync(join(FIXTURES, cho))).toBe(true);
-		});
+	test("each grid golden is in the fixtures the byte-for-byte loop compares", () => {
+		const names = fixtures().map((f) => f.cho);
+		for (const cho of [
+			"grid-cells.cho",
+			"grid-repeats.cho",
+			"grid-meters.cho",
+			"peaceful-dreams.cho",
+			"at-a-glance.cho",
+		])
+			expect(names).toContain(cho);
+	});
 });
 
 describe("losses in grids", () => {

@@ -13,6 +13,7 @@
  * and the singer's words), and nothing of how the export writes them.
  */
 import {
+	beatsOf,
 	type ChartParse,
 	type ChordRecord,
 	extractPart,
@@ -26,8 +27,12 @@ import { type ChoLine, type GridParts, gridParts, readCho } from "./read-cho.js"
 
 export type Token = { chord: string } | { word: string };
 export type Sung = { label: string | null; tokens: Token[] };
-/** An occurrence with no words: the chord names each bar attacks, in play order. */
-export type Grid = { label: string | null; bars: string[][] };
+/** A chord a grid bar attacks, and the beat (its cell, from 0) it attacks in. */
+export type Attack = { beat: number; chord: string };
+/** A bar of a grid: its beats (cells) and its chord attacks in order. */
+export type GridBar = { beats: number; attacks: Attack[] };
+/** An occurrence with no words: each bar it plays, in play order. */
+export type Grid = { label: string | null; bars: GridBar[] };
 export type Read = Sung | Grid;
 export type Played = Read & { records: ChordRecord[] };
 
@@ -157,10 +162,20 @@ function environments(bars: PlayedBar[]): PlayedBar[][] {
 	return envs.map((e) => e.bars);
 }
 
-/** Stacked verses (a bar singing several) are one pass per verse; otherwise the bars as they are. */
+/** Whether verse `v` sings a syllable on any of the bars. */
+const singsVerse = (bars: PlayedBar[], v: number) =>
+	bars.some((b) =>
+		(b.lyrics ?? []).some(
+			(l) => l.verse === v && l.syllables.some((s) => s.syllable.kind === "sung"),
+		),
+	);
+
+/** Stacked verses (a bar singing several) are one pass per verse that sings; otherwise the bars as they are. */
 function versesOf(env: PlayedBar[]): PlayedBar[][] {
 	if (!env.some((b) => (b.lyrics?.length ?? 0) > 1)) return [env];
-	const verses = [...new Set(env.flatMap((b) => (b.lyrics ?? []).map((l) => l.verse)))];
+	const all = [...new Set(env.flatMap((b) => (b.lyrics ?? []).map((l) => l.verse)))];
+	const verses = all.filter((v) => singsVerse(env, v));
+	if (!verses.length) return [env];
 	return verses
 		.sort((a, b) => a - b)
 		.map((v) => env.map((b) => ({ ...b, lyrics: (b.lyrics ?? []).filter((l) => l.verse === v) })));
@@ -192,14 +207,26 @@ function singersBars(full: ChartParse): Map<number, PlayedBar> {
 	);
 }
 
-/** An occurrence with no words: each bar's chord attacks (spec 4.1's grid). */
+/** A bar's beats as a grid counts them, and its chords with the beat each attacks in. */
+function gridBar(bar: PlayedBar, slots: Slot[]): { bar: GridBar; records: ChordRecord[] } {
+	const length = bar.meter.n / bar.meter.d;
+	const beats = beatsOf(bar.meter);
+	const timed = timedChords(slots, length);
+	const attacks = timed.map((c) => ({
+		beat: Math.floor((c.at / length) * beats + 1e-9),
+		chord: spelled(c.chord),
+	}));
+	return { bar: { beats, attacks }, records: timed.map((c) => c.chord) };
+}
+
+/** An occurrence with no words: each bar's beats and chord attacks (spec 4.1's grid). */
 function gridOf(
 	label: string | null,
 	bars: PlayedBar[],
 	slotsOf: (b: PlayedBar) => Slot[],
 ): Played {
-	const each = bars.map((b) => timedChords(slotsOf(b), b.meter.n / b.meter.d).map((c) => c.chord));
-	return { label, bars: each.map((cs) => cs.map(spelled)), records: each.flat() };
+	const each = bars.map((b) => gridBar(b, slotsOf(b)));
+	return { label, bars: each.map((e) => e.bar), records: each.flatMap((e) => e.records) };
 }
 
 /** Per occurrence in play order: its label and its chords and words in time order, or its bars' chords (spec 5.2). */
@@ -222,10 +249,13 @@ export function yardstick(chart: string, part?: string): Played[] {
 	);
 }
 
-/** A label's text, unquoted and unescaped: `label="Verse \"1\""` gives `Verse "1"`. */
+/**
+ * A label's text as drawn, unquoted and unescaped: `label="Verse \"1\""`
+ * gives `Verse "1"`; a word joiner (U+2060) is drawn as nothing.
+ */
 function labelOf(value: string): string | null {
 	const m = /^label="((?:[^"\\]|\\.)*)"$/.exec(value);
-	return m ? (m[1] ?? "").replace(/\\(.)/g, "$1") : null;
+	return m ? (m[1] ?? "").replace(/\\(.)/g, "$1").replace(/\u2060/g, "") : null;
 }
 
 type Tokens = Extract<ChoLine, { kind: "lyrics" }>["tokens"];
@@ -310,28 +340,29 @@ export function readBack(text: string): Read[] {
 	return r.out.map((o) => ("lines" in o ? { label: o.label, bars: gridBars(o.lines) } : o));
 }
 
-/** A grid line read: its bar symbols at each end, its `x N`, and each bar's chord attacks (fermata measures left out). */
-type GridLine = { open: string; close: string; repeat: number | null; bars: string[][] };
+/** A grid line read: its bar symbols at each end, its `x N`, and each bar (fermata measures left out). */
+type GridLine = { open: string; close: string; repeat: number | null; bars: GridBar[] };
 
-/** A measure's attacks: `%` the bar before's, `/` the last name again, `.` nothing, `C~G` each in turn. */
-function attacksOf(cells: string[], before: string[] | undefined): string[] {
+/** A measure's attacks by cell: `%` the bar before's, `/` the last name again, `.` nothing, `C~G` each in turn. */
+function attacksOf(cells: string[], before: Attack[] | undefined): Attack[] {
 	if (cells[0] === "%") {
 		if (!before || cells.slice(1).some((c) => c !== ".")) throw new Error(`a bad %: ${cells}`);
 		return before;
 	}
-	const out: string[] = [];
-	for (const cell of cells) {
-		if (cell === "/") out.push(out.at(-1) ?? "/");
-		else out.push(...cell.split("~").filter((p) => p !== "."));
+	const out: Attack[] = [];
+	for (const [beat, cell] of cells.entries()) {
+		const names =
+			cell === "/" ? [out.at(-1)?.chord ?? "/"] : cell.split("~").filter((p) => p !== ".");
+		out.push(...names.map((chord) => ({ beat, chord })));
 	}
-	if (out.includes("/")) throw new Error(`a / with no name before it: ${cells}`);
+	if (out.some((a) => a.chord === "/")) throw new Error(`a / with no name before it: ${cells}`);
 	return out;
 }
 
 /** A fermata is a measure of its own, `*…`: not a bar. */
 const isFermata = (cells: string[]) => cells.length === 1 && cells[0] === "*…";
 
-/** The `x N` that ends a line's right margin, or null. */
+/** The `x N` that ends a line's right margin, or null; words that read as a count are written quoted (`"x3"`). */
 function timesOf(right: string): number | null {
 	const n = /(?:^| )x(\d+)$/.exec(right)?.[1];
 	return n === undefined ? null : Number(n);
@@ -339,13 +370,14 @@ function timesOf(right: string): number | null {
 
 /** The grid's lines with each bar's chords, `%` and `/` resolved in written order. */
 function gridLines(lines: GridParts[]): GridLine[] {
-	let before: string[] | undefined;
+	let before: Attack[] | undefined;
 	return lines.map((l) => {
-		const bars: string[][] = [];
+		const bars: GridBar[] = [];
 		for (const m of l.measures.filter((m) => !isFermata(m.cells))) {
 			before = attacksOf(m.cells, before);
 			// Annotations (`*…`) and N.C. are not chords.
-			bars.push(before.filter((a) => !a.startsWith("*") && a !== "N.C."));
+			const attacks = before.filter((a) => !a.chord.startsWith("*") && a.chord !== "N.C.");
+			bars.push({ beats: m.cells.length, attacks });
 		}
 		const open = l.measures[0]?.before ?? "|";
 		return { open, close: l.measures.at(-1)?.after ?? "|", repeat: timesOf(l.right), bars };
@@ -373,7 +405,7 @@ function endingsFrom(lines: GridLine[], from: number): { pass: number; lines: Gr
 }
 
 /** Plays lines into `out`, each its own `x N` times but `closer`, whose count is its repeat's. */
-function play(block: GridLine[], out: string[][], closer?: GridLine): void {
+function play(block: GridLine[], out: GridBar[], closer?: GridLine): void {
 	for (const l of block)
 		for (let k = 0; k < (l === closer ? 1 : (l.repeat ?? 1)); k++) out.push(...l.bars);
 }
@@ -386,7 +418,7 @@ function repeatEnd(lines: GridLine[], i: number): number {
 }
 
 /** A repeat opened at line `i` into `out`: twice or `x N` times, or once per ending's pass; the line after it. */
-function playRepeat(lines: GridLine[], i: number, out: string[][]): number {
+function playRepeat(lines: GridLine[], i: number, out: GridBar[]): number {
 	const k = repeatEnd(lines, i);
 	const end = lines[k] as GridLine;
 	if (!isVolta(end)) {
@@ -403,9 +435,9 @@ function playRepeat(lines: GridLine[], i: number, out: string[][]): number {
 }
 
 /** The bars a grid plays, in order: `|: :|` twice or `x N` times, endings by pass, a line's own `x N`. */
-function gridBars(all: GridParts[]): string[][] {
+function gridBars(all: GridParts[]): GridBar[] {
 	const lines = gridLines(all);
-	const out: string[][] = [];
+	const out: GridBar[] = [];
 	let i = 0;
 	while (i < lines.length) {
 		const line = lines[i] as GridLine;

@@ -9,3 +9,7 @@ Then the band comes in.
 
 ## Groove
 | G G G G G G G G | C / / /_D | G_D_Em / / / | % |
+
+## Cue\n
+| G "x3" | @B | C | D "go\" |
+| G | @C | C | x2

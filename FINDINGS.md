@@ -1332,6 +1332,71 @@ and round-trip it through `format`.
   warning for each gap, allows the bare one for any chord of the chart,
   and fails when an expected gap does not warn. Spec 4.7 says the rules.
 
+### `C~G~/` in a grid cell crashes ChordPro's PDF writer (2026-11-19, lyricsheet)
+
+- **The symptom.** A grid cell `C~G~/` (two chords sharing a beat, then
+  "the same again") made the reference `chordpro` (6.101.0) exit 255
+  writing the PDF, with no output file: `Can't locate object method
+  "info" via package "/"` at `ChordPro/Output/PDF/Grid.pm` line 193. The
+  same sheet to `.txt` (which draws no grid) was fine.
+- **The cause.** The parser (`Song.pm`, `decompose_grid`) accepts `/`
+  inside a `~` cell, but the PDF writer handles `/` only as a cell of its
+  own and treats this one as a chord object.
+- **The fix.** `@barmark/lyricsheet` writes `/` only as a cell's only
+  attack, and a repeated name inside a shared cell again by name
+  (`packages/lyricsheet/src/export/cells.ts`, `cellOf`); grid fixtures are
+  checked by rendering the PDF, never only the `.txt`.
+
+### A no-break space splits a ChordPro grid cell (2026-11-19, lyricsheet)
+
+- **The symptom.** A note set written as one annotation cell with a
+  no-break space between its notes (`*C E G`) was drawn by the reference
+  as several cells, and the line warned "Too few cells for grid content".
+- **The cause.** The tool splits a grid line into cells on whitespace,
+  and U+00A0 counts as whitespace to it (measured: `| *C\u00A0E . . . |`
+  warns, `| *C,E . . . |` does not).
+- **The fix.** A grid cell's notes are joined by commas (`*C,E,G`), with
+  the `note-sets` loss saying so (`packages/lyricsheet/src/export/cells.ts`,
+  `cellText`).
+
+### A line ending in a backslash joins the next in ChordPro, and a label splits at backslash-n (2026-11-19, lyricsheet)
+
+- **The symptom.** A sung word `lo\` exported as `[G]lo\` printed run into
+  the next lyric line; a grid line ending in words `a\` swallowed the next
+  grid line and warned "Too few cells for grid content"; a heading
+  `A\nB` printed as a label of two lines.
+- **The cause.** Measured with the reference (6.101.0): any line ending
+  in `\` is joined to the next, `\\` there too (one backslash dropped),
+  and `\ ` keeps the line but leaves a trailing space. A quoted label
+  value is unescaped (`\n` a newline, `\\` a backslash, `\"` a quote, any
+  other `\x` an `x`), and the label is then split at a newline and at a
+  literal backslash-n left in it (`Output/PDF/Song.pm`).
+- **The fix.** `unjoined` writes a final `\` as `/` on every lyric and
+  grid line, and `labelValue` puts a word joiner (U+2060, drawn as
+  nothing) between a backslash and an `n` in a label, each with a
+  `text-changed` loss (`packages/lyricsheet/src/export/text.ts`); the
+  tests' reader refuses a line ending in a backslash.
+
+### A section first reached after a jump is not capped by the parser (2026-11-19, lyricsheet)
+
+- **The symptom.** `## Coda` holding `| Coda | F | x 999999999`, reached by
+  `D.C. al Coda`, made `exportLyricsheet` run out of memory; `x 30000000`
+  aborted the process, and a repeat `x 2000` of lines `x 2000` took 0.7 s.
+  The parse itself was quick.
+- **The cause.** barmark plays a section reached after a jump once, its
+  counts unplayed, so the parse stays small. The lyric sheet's grid code
+  expanded the section's written counts again, in full, to ask whether an
+  occurrence played them straight through, and did so for every
+  occurrence of the section (quadratic for `|: C :| x4000` sung on every
+  other pass).
+- **The fix.** The written lines' play is a generator, compared bar by
+  bar with what the occurrence played, and stopped at the first
+  difference or the first bar past its end, so no grid builds more than
+  the parse played (`packages/lyricsheet/src/export/written.ts`,
+  `fullPlay` and `playsAs`); `tests/grid-bounds.test.ts` holds each such
+  chart to a small multiple of `parseChart`'s time. Any second expansion
+  of a chart's counts must bound itself by what the parse played.
+
 ### The registry lists a version before it serves its tarball (2026-11-14, the midi 0.3.4 release)
 
 **Symptom:** `@barmark/midi` 0.3.4 published, and the release's `confirm`

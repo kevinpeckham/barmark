@@ -127,9 +127,16 @@ export function gridParts(cells: string[]): GridParts {
 	};
 }
 
-export function readCho(text: string): ChoLine[] {
+/** Throws on what no line of a sheet may hold, whatever its kind. */
+function checkWhole(text: string): void {
 	if (!text.endsWith("\n")) throw new Error("no final newline");
 	if (/[\r\t]/.test(text)) throw new Error("a carriage return or a tab");
+	// ChordPro joins a line ending in `\` to the next (measured 2026-11-19).
+	if (/\\\n/.test(text)) throw new Error("a line ending in a backslash");
+}
+
+export function readCho(text: string): ChoLine[] {
+	checkWhole(text);
 	const out: ChoLine[] = [];
 	let inGrid = false;
 	const lines = text.slice(0, -1).split("\n");

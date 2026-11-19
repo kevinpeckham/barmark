@@ -128,10 +128,13 @@ function ofEnvironment(span: Span, bars: PlayedBar[]): Occurrence[] {
 		const verse = verses.length === 1 ? (verses[0] ?? null) : null;
 		return [{ ...base, bars, sung: bars.some(sings), verse }];
 	}
-	return verses.map((verse) => {
-		const own = bars.map((b) => withVerse(b, verse));
-		return { ...base, bars: own, sung: own.some(sings), verse, stacked: true as const };
-	});
+	// A stacked verse that sings no syllable (`lyrics 2: | -- |`) writes nothing.
+	const sung = verses
+		.map((verse) => ({ verse, own: bars.map((b) => withVerse(b, verse)) }))
+		.filter((v) => v.own.some(sings));
+	if (!sung.length) return [{ ...base, bars, sung: false, verse: null }];
+	const stacked = sung.length > 1 ? { stacked: true as const } : {};
+	return sung.map(({ verse, own }) => ({ ...base, bars: own, sung: true, verse, ...stacked }));
 }
 
 /** The played bars as section occurrences in play order; bars before the first heading are one unnamed occurrence. */

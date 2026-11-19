@@ -399,20 +399,22 @@ describe("parts (spec 4.4, Review Focus 5)", () => {
 
 describe("words in some sections and not others (Review Focus 3)", () => {
 	const CGab = [{ chord: "C" }, { word: "a" }, { chord: "G" }, { word: "b" }];
+	/** A 4/4 grid bar attacking one chord on its first beat. */
+	const bar = (chord: string) => ({ beats: 4, attacks: [{ beat: 0, chord }] });
 	test("only the sung occurrences are lyric environments, balanced", () => {
 		const r = sheet(
 			"## Intro\n| C | G |\n## Verse\n| C | G |\nlyrics: | a | b |\n## Outro\n| C |\n",
 		);
 		expect(readBack(r.text)).toEqual([
-			{ label: "Intro", bars: [["C"], ["G"]] },
+			{ label: "Intro", bars: [bar("C"), bar("G")] },
 			{ label: "Verse", tokens: CGab },
-			{ label: "Outro", bars: [["C"]] },
+			{ label: "Outro", bars: [bar("C")] },
 		]);
 	});
 	test("a section sung only on its second pass writes that pass, its first a grid", () => {
 		const r = sheet("## Verse\n|: C | G :|\nlyrics 2: | a | b |\n");
 		expect(readBack(r.text)).toEqual([
-			{ label: "Verse", bars: [["C"], ["G"]] },
+			{ label: "Verse", bars: [bar("C"), bar("G")] },
 			{ label: "Verse", tokens: CGab },
 		]);
 	});

@@ -22,7 +22,7 @@ export type LyricsheetLossCode =
 	| "stacked-verses"
 	/** A chord between two syllables of one word, written before the word's next syllable. */
 	| "chord-moved"
-	/** Text holding characters ChordPro reads as markup (`[`, `]`, `{`, `}`, tag-like `<…>`, a leading `#`), changed. */
+	/** Text holding characters ChordPro reads as markup (`[`, `]`, `{`, `}`, tag-like `<…>`, a leading `#`, a tab, a line-ending backslash, a label's backslash-n, margin words like a count), changed. */
 	| "text-changed"
 	/** A chord name ChordPro's chord parser does not know (spec 4.7's gaps), written as barmark spells it. */
 	| "chord-names"
@@ -35,7 +35,9 @@ export type LyricsheetLossCode =
 	/** A one-bar meter in lyric lines, which do not show a bar's own meter; a grid does, by its cells (spec 4.3). */
 	| "bar-meter"
 	/** A fermata, written as the text `*…`: its hold has no length (spec 4.3). */
-	| "fermata";
+	| "fermata"
+	/** A rehearsal mark inside a grid line with `x N`, written at the line's start: the count is the whole line's. */
+	| "mark-moved";
 
 export type LyricsheetLoss = {
 	code: LyricsheetLossCode;

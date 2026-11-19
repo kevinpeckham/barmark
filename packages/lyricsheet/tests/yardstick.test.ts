@@ -25,7 +25,9 @@ function cleanCharts(): [string, string, string | undefined][] {
 
 /** The chord names an occurrence writes, in order. */
 const chordsOf = (r: Read) =>
-	"tokens" in r ? r.tokens.flatMap((t) => ("chord" in t ? [t.chord] : [])) : r.bars.flat();
+	"tokens" in r
+		? r.tokens.flatMap((t) => ("chord" in t ? [t.chord] : []))
+		: r.bars.flatMap((b) => b.attacks.map((a) => a.chord));
 
 describe("the played yardstick (spec 5.2)", () => {
 	const charts = cleanCharts();
