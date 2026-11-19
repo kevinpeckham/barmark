@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { readCho } from "./read-cho.js";
+import { gridParts, readCho } from "./read-cho.js";
 
 /** Typed by hand: every construct this package writes, so the tests' instrument is tested on its own. */
 const SHEET = `{title: Down by the River}
@@ -186,5 +186,42 @@ describe("readCho", () => {
 	for (const [why, text] of refused)
 		test(`throws on ${why}`, () => {
 			expect(() => readCho(text)).toThrow();
+		});
+});
+
+describe("gridParts: a grid line's margins and measures", () => {
+	const cells = (line: string) => line.split(" ");
+	test("left margin, measures with the bar symbols around them, right margin", () => {
+		expect(gridParts(cells("@B |: C . G/B . | % . . . :| solo x3"))).toEqual({
+			left: "@B",
+			measures: [
+				{ cells: ["C", ".", "G/B", "."], before: "|:", after: "|" },
+				{ cells: ["%", ".", ".", "."], before: "|", after: ":|" },
+			],
+			right: "solo x3",
+		});
+	});
+	test("a volta, shared cells, annotations and a fermata measure", () => {
+		expect(gridParts(cells("|1 N.C. *Stop *? .~G | C~D~E *C,E,G | *… |"))).toEqual({
+			left: "",
+			measures: [
+				{ cells: ["N.C.", "*Stop", "*?", ".~G"], before: "|1", after: "|" },
+				{ cells: ["C~D~E", "*C,E,G"], before: "|", after: "|" },
+				{ cells: ["*…"], before: "|", after: "|" },
+			],
+			right: "",
+		});
+	});
+	const refused: [string, string][] = [
+		["no bar symbol", "C . . ."],
+		["one bar symbol", "| C . . ."],
+		["an empty measure", "| C | | D |"],
+		["a % that is not first", "| C % |"],
+		["a / inside a shared cell", "| C~/ |"],
+		["a cell that is no chord", "| x . |"],
+	];
+	for (const [why, line] of refused)
+		test(`throws on ${why}`, () => {
+			expect(() => gridParts(cells(line))).toThrow();
 		});
 });

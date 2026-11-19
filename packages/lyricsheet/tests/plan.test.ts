@@ -135,6 +135,9 @@ describe("occurrences", () => {
 			[0, 4],
 		]);
 		expect(plan("| C |\nlyrics: | a |\n").map((x) => [x.form, x.heading])).toEqual([[null, null]]);
+		// Where its bars are written: the written section's heading, for a replay too.
+		expect(o.map((x) => x.source)).toEqual([1, 1]);
+		expect(plan("| C |\n").map((x) => x.source)).toEqual([null]);
 	});
 
 	test("a section with no words is not sung", () => {

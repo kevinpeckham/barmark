@@ -20,11 +20,15 @@ export type Occurrence = {
 	form: number | null;
 	/** The line of the heading it is played under (a replay's own heading); null before the first heading. */
 	heading: number | null;
+	/** The line of the heading its bars are written under (a replay's written section's); null before the first heading. */
+	source: number | null;
 	/** One pass of verses stacked on the same bars (spec 4.5): its bars hold that verse only. */
 	stacked?: true;
 };
 
-type Span = Pick<Occurrence, "name" | "replay" | "form" | "heading"> & { bars: PlayedBar[] };
+type Span = Pick<Occurrence, "name" | "replay" | "form" | "heading" | "source"> & {
+	bars: PlayedBar[];
+};
 type Played = SectionOccurrence & { firstBar: number; lastBar: number };
 
 const played = (s: SectionOccurrence): s is Played => s.firstBar !== null && s.lastBar !== null;
@@ -40,13 +44,17 @@ function advance(sections: Played[], s: number, index: number): number {
 const within = (section: Played | undefined, index: number) =>
 	section && index >= section.firstBar ? section : null;
 
-const spanOf = (section: Played | null): Span => ({
-	name: section?.name ?? null,
-	replay: (section?.replayOf ?? null) !== null,
-	form: section?.form ?? null,
-	heading: section?.line ?? null,
-	bars: [],
-});
+const spanOf = (section: Played | null): Span =>
+	section === null
+		? { name: null, replay: false, form: null, heading: null, source: null, bars: [] }
+		: {
+				name: section.name,
+				replay: section.replayOf !== null,
+				form: section.form,
+				heading: section.line,
+				source: section.replayOf ?? section.line,
+				bars: [],
+			};
 
 /** The bars of each section occurrence in play order; bars before the first heading are one unnamed span. */
 function spans(parse: ChartParse): Span[] {

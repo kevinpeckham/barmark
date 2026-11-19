@@ -7,13 +7,15 @@ const text = (chart: string, title?: string) => {
 	if (!r.ok) throw new Error(JSON.stringify(r.diagnostics));
 	return r;
 };
+/** The header: the sheet up to the blank line before its first section. */
+const header = (r: { text: string }) => r.text.slice(0, r.text.indexOf("\n\n") + 1);
 
 describe("the header", () => {
 	test("title, credits, key, time and tempo", () => {
 		const r = text(
 			"# Down by the River\ncomposer: A. Writer\nlyricist: B. Poet\narranger: C. Hand\ncopyright: 2026 Us\nkey: Bm, time: 6/8, tempo: 145\n\n| Bm | G |\n",
 		);
-		expect(r.text).toBe(
+		expect(header(r)).toBe(
 			[
 				"{title: Down by the River}",
 				"{composer: A. Writer}",
@@ -87,7 +89,7 @@ describe("the header", () => {
 	});
 
 	test("no time: writes the grammar's default, 4/4", () => {
-		expect(text("| C |\n").text).toBe("{title: }\n{time: 4/4}\n");
+		expect(header(text("| C |\n"))).toBe("{title: }\n{time: 4/4}\n");
 	});
 
 	test("no key: no {key}", () => {
@@ -96,7 +98,7 @@ describe("the header", () => {
 
 	test("the opening tempo and time are the first bar's", () => {
 		const r = text("time: 3/4, tempo: 90\n\n| C | G |\n");
-		expect(r.text).toBe("{title: }\n{time: 3/4}\n{tempo: 90}\n");
+		expect(header(r)).toBe("{title: }\n{time: 3/4}\n{tempo: 90}\n");
 	});
 });
 

@@ -81,6 +81,52 @@ function directive(line: string, n: number, inGrid: boolean): [ChoLine, boolean]
 	return [{ kind: "directive", name, value }, inGrid && name !== "end_of_grid"];
 }
 
+/** A measure of a grid line: its cells, and the bar symbols before and after it. */
+export type GridMeasure = { cells: string[]; before: string; after: string };
+/** A grid line read: left-margin text, its measures, right-margin text ("" when none). */
+export type GridParts = { left: string; measures: GridMeasure[]; right: string };
+
+/** ChordPro's bar symbols: `|`, `||`, `|:`, `:|`, `:|:`, `|.`, and a volta `|2` or `:|2`. */
+const BAR = /^(?:\|\||\|:|:\|:|:\||\|\.|:?\|\d+|\|)$/;
+/** A cell: a chord name, an annotation `*…`, `N.C.`, `.`, `/`, or chords sharing it with `~`. */
+const NAME = /^(?:[A-G]\S*|\*\S+|N\.C\.)$/;
+const isCell = (cell: string, first: boolean) =>
+	cell === "." ||
+	cell === "/" ||
+	(cell === "%" && first) ||
+	(!BAR.test(cell) &&
+		cell.split("~").every((p, _, all) => NAME.test(p) || (all.length > 1 && p === ".")));
+
+/**
+ * A grid line's cells as this package writes them: text before the first
+ * bar symbol is the left margin, text after the last the right margin, and
+ * every measure between holds at least one cell, `%` only first. Throws on
+ * anything else.
+ */
+export function gridParts(cells: string[]): GridParts {
+	const first = cells.findIndex((c) => BAR.test(c));
+	const last = cells.findLastIndex((c) => BAR.test(c));
+	if (first < 0 || first === last) throw new Error(`not a grid line: ${cells.join(" ")}`);
+	const measures: GridMeasure[] = [];
+	let open: GridMeasure | null = null;
+	for (const cell of cells.slice(first, last + 1)) {
+		if (BAR.test(cell)) {
+			if (open) {
+				if (!open.cells.length) throw new Error(`an empty measure: ${cells.join(" ")}`);
+				open.after = cell;
+				measures.push(open);
+			}
+			open = { cells: [], before: cell, after: "" };
+		} else if (open && isCell(cell, open.cells.length === 0)) open.cells.push(cell);
+		else throw new Error(`not a grid cell: ${cell}`);
+	}
+	return {
+		left: cells.slice(0, first).join(" "),
+		measures,
+		right: cells.slice(last + 1).join(" "),
+	};
+}
+
 export function readCho(text: string): ChoLine[] {
 	if (!text.endsWith("\n")) throw new Error("no final newline");
 	if (/[\r\t]/.test(text)) throw new Error("a carriage return or a tab");

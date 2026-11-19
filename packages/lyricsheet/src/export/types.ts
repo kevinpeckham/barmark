@@ -26,13 +26,13 @@ export type LyricsheetLossCode =
 	| "text-changed"
 	/** A chord name ChordPro's chord parser does not know (spec 4.7's gaps), written as barmark spells it. */
 	| "chord-names"
-	/** A note set, written as its notes' names as text: not a chord to readers, octaves and root mark lost (spec 4.3). */
+	/** A note set, written as its notes' names as text (in a grid, joined by commas): not a chord to readers, octaves and root mark lost (spec 4.3). */
 	| "note-sets"
 	/** A voicing's exact notes: only the chord's name is written (spec 4.3). */
 	| "voicing"
 	/** Pushes, accents, hits and pedal marks: the chord is written unmarked (spec 4.3). */
 	| "marks"
-	/** A one-bar meter: lyric lines do not show a bar's own meter (spec 4.3). */
+	/** A one-bar meter in lyric lines, which do not show a bar's own meter; a grid does, by its cells (spec 4.3). */
 	| "bar-meter"
 	/** A fermata, written as the text `*…`: its hold has no length (spec 4.3). */
 	| "fermata";

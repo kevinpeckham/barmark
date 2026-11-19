@@ -11,10 +11,11 @@
  *
  * (and once more to a .txt, for a person to read), into a fresh temporary
  * directory, removed after unless --keep. The tool exits 0 even when it
- * warns, so stderr is read against the chart beside the sheet, named as
- * the tests name fixtures (`tests/fixtures.ts`): `name.cho` is
- * `name.chart.md` exported as is, `name@Label.cho` the same chart's part
- * `Label`, and a `+guitar` suffix adds diagrams. It may hold "Running in
+ * warns, so stderr is read against the sheet's chart, named as the tests
+ * name fixtures (`tests/fixtures.ts`): `name.cho` is `name.chart.md`
+ * exported as is, `name@Label.cho` the same chart's part `Label`, and a
+ * `+guitar` suffix adds diagrams; the chart is beside the sheet, else in
+ * `examples/`, and `at-a-glance` is the grammar's "At a glance". It may hold "Running in
  * reference mode." and each warning's indented echo of its source line,
  * and:
  *
@@ -42,7 +43,7 @@ import { basename, dirname, join } from "node:path";
 import { type ChartParse, type ChordRecord, parseChart, type Slot } from "barmark";
 import { headerLines } from "../packages/lyricsheet/src/export/meta.js";
 import { isGap, spelled } from "../packages/lyricsheet/src/export/spell.js";
-import { fixtureOf } from "../packages/lyricsheet/tests/fixtures.js";
+import { chartOf, fixtureOf } from "../packages/lyricsheet/tests/fixtures.js";
 import { type ChoLine, readCho } from "../packages/lyricsheet/tests/read-cho.js";
 
 const PERL5 = join(homedir(), ".local/perl5");
@@ -118,9 +119,9 @@ type Expected = { gaps: Set<string>; names: Set<string>; noKey: boolean };
 const hasKey = (parse: ChartParse) =>
 	headerLines(parse, undefined).some((l) => l.startsWith("{key:"));
 
-/** The warnings a sheet may give, and must, from the chart beside it. */
+/** The warnings a sheet may give, and must, from its chart's text. */
 function expectedOf(cho: string, chart: string, part: string | undefined): Expected {
-	const parse = parseChart(readFileSync(chart, "utf8"));
+	const parse = parseChart(chart);
 	const quiet = definedFirst(readCho(readFileSync(cho, "utf8")));
 	const loud = (chords: ChordRecord[]) => new Set(chords.map(spelled).filter((n) => !quiet.has(n)));
 	const gaps = loud(writtenChords(parse, part).filter(isGap));
@@ -193,7 +194,7 @@ function missing(e: Expected, warned: Set<string>): string[] {
 
 type Checked = { problems: string[]; expected: string[] };
 
-/** Every problem with one sheet whose chart is beside it, and the warnings it expected. */
+/** Every problem with one sheet, given its chart's text, and the warnings it expected. */
 function checkWith(cho: string, chart: string, part: string | undefined, out: string): Checked {
 	const e = expectedOf(cho, chart, part);
 	const warned = new Set<string>();
@@ -213,11 +214,8 @@ function check(cho: string, out: string): Checked {
 	} catch (err) {
 		return { problems: [(err as Error).message], expected: [] };
 	}
-	const chart = join(dirname(cho), made.chart);
-	if (!existsSync(chart))
-		return { problems: [`no chart beside it (${basename(chart)})`], expected: [] };
 	try {
-		return checkWith(cho, chart, made.options.part, out);
+		return checkWith(cho, chartOf(made, dirname(cho)), made.options.part, out);
 	} catch (err) {
 		return { problems: [(err as Error).message], expected: [] };
 	}

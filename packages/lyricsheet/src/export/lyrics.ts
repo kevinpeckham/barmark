@@ -32,14 +32,14 @@ const LOST = {
 	marks: "pushes, accents, hits and pedal marks are not written; the chord is, unmarked",
 	"bar-meter": "lyric lines do not show a bar's own meter",
 	fermata:
-		"a fermata is written as the annotation *… (ChordPro has none): a reader sees an ellipsis over the words, not a fermata sign",
+		"a fermata is written as the annotation *… (ChordPro has none): a reader sees an ellipsis over the words or in a grid's cell, not a fermata sign",
 	"chord-moved":
 		"a chord between two syllables of one word is written before the word's next syllable",
 	"stacked-verses":
 		"verses stacked on the same bars (not one verse per pass of a repeat) are written one pass per verse, each with its chords: ChordPro has no stacking",
 } as const;
 
-const lose = (out: Out, code: keyof typeof LOST, bar: PlayedBar) =>
+export const lose = (out: Out, code: keyof typeof LOST, bar: PlayedBar) =>
 	out.losses.add(code, LOST[code], bar);
 
 /** The environment a heading's first word names (spec 4.6): verse, chorus or bridge, any case; else verse. */
@@ -48,16 +48,22 @@ function envOf(name: string | null): "verse" | "chorus" | "bridge" {
 	return word === "chorus" || word === "bridge" ? word : "verse";
 }
 
-/** `{start_of_verse: label="…"}`: the heading as written, `\` and `"` escaped as the label's quotes need. */
-function startLine(env: string, name: string | null, out: Out, bar: PlayedBar | undefined): string {
-	if (name === null) return directive(`start_of_${env}`);
+/** `label="…"`: the heading as written, `\` and `"` escaped as the label's quotes need; null for none. */
+export function labelOf(name: string | null, out: Out, bar: PlayedBar | undefined): string | null {
+	if (name === null) return null;
 	const label = untagged(name);
 	if (label !== name || /[{}\p{Cc}\u2028\u2029]/u.test(name)) textChanged(out.losses, bar);
-	return directive(`start_of_${env}`, `label="${label.replace(/[\\"]/g, (c) => `\\${c}`)}"`);
+	return `label="${label.replace(/[\\"]/g, (c) => `\\${c}`)}"`;
+}
+
+/** `{start_of_verse: label="…"}`, or with no label for the unnamed section. */
+function startLine(env: string, name: string | null, out: Out, bar: PlayedBar | undefined): string {
+	const label = labelOf(name, out, bar);
+	return label === null ? directive(`start_of_${env}`) : directive(`start_of_${env}`, label);
 }
 
 /** Where the line is: the repeated N.C. or stop that has no attack of its own. */
-type LineState = { last: "nc" | "silence" | null };
+export type LineState = { last: "nc" | "silence" | null };
 
 /** A note set's notes as text, octaves and root mark left out, each once. */
 const noteNames = (pitches: string[]) =>
@@ -83,7 +89,7 @@ function restText(kind: "nc" | "silence", st: LineState): string | null {
 }
 
 /** What a slot writes in a lyric line (spec 4.3), or null for none (a hold, a repeated N.C.). */
-function slotText(slot: SimpleSlot, st: LineState, bar: PlayedBar, out: Out): string | null {
+export function slotText(slot: SimpleSlot, st: LineState, bar: PlayedBar, out: Out): string | null {
 	if (slot.kind === "hold") return null;
 	if ((slot.kind === "nc" || slot.kind === "silence") && slot.push) lose(out, "marks", bar);
 	if (slot.kind === "nc" || slot.kind === "silence") return restText(slot.kind, st);
@@ -95,7 +101,11 @@ function slotText(slot: SimpleSlot, st: LineState, bar: PlayedBar, out: Out): st
 type BarPieces = { pieces: Piece[]; changed: boolean };
 
 /** Each simple slot of a top-level slot with its onset, as `slotTimes` in barmark times them. */
-function membersAt(slot: Slot, at: number, each: number): { slot: SimpleSlot; at: number }[] {
+export function membersAt(
+	slot: Slot,
+	at: number,
+	each: number,
+): { slot: SimpleSlot; at: number }[] {
 	const members = slot.kind === "group" ? slot.members : [slot];
 	const shares = memberShares(members);
 	let t = at;
@@ -199,7 +209,7 @@ function lyricText(bars: PlayedBar[], fermatas: Set<number>, out: Out): string {
 }
 
 /** An occurrence's bars by written line (or system), a new line where play goes back (a repeat). */
-function byLine(bars: PlayedBar[]): PlayedBar[][] {
+export function byLine(bars: PlayedBar[]): PlayedBar[][] {
 	const out: PlayedBar[][] = [];
 	let prev: PlayedBar | undefined;
 	for (const bar of bars) {
@@ -211,14 +221,14 @@ function byLine(bars: PlayedBar[]): PlayedBar[][] {
 }
 
 /** The run of bar lines a bar is written in. */
-const runOf = (layout: Layout, bar: PlayedBar | undefined): Run | undefined =>
+export const runOf = (layout: Layout, bar: PlayedBar | undefined): Run | undefined =>
 	bar && layout.runs.get(bar.line);
 
 /** Where a written line is played: the bar before it, the bar after it, and whether it opens the occurrence. */
 type Around = { prev: PlayedBar | undefined; next: PlayedBar | undefined; opens: boolean };
 
 /** A run's text lines on one side of it, as comments. */
-const texts = (run: Run | undefined, side: keyof Run, bar: PlayedBar, out: Out) =>
+export const texts = (run: Run | undefined, side: keyof Run, bar: PlayedBar, out: Out) =>
 	(run?.[side] ?? []).map((t) => comment(t, bar, out));
 
 /** The lyric line, and the end of an open repeat after it. */
@@ -280,7 +290,7 @@ export function lyricSection(o: Occurrence, out: Out, context: Context): void {
  * The text under a heading with no bar lines of its own (a replay), as
  * comments before its first occurrence, outside any environment.
  */
-function headingTexts(o: Occurrence, context: Context, out: Out): string[] {
+export function headingTexts(o: Occurrence, context: Context, out: Out): string[] {
 	const before = context.previous.at(-1);
 	const first = before?.heading !== o.heading || before?.form !== o.form;
 	const texts = o.heading === null || !first ? [] : (context.layout.headings.get(o.heading) ?? []);

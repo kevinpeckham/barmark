@@ -2,7 +2,8 @@ import { describe, expect, test } from "bun:test";
 import { type ChordRecord, parseChart, parseChord } from "barmark";
 import { enumerateSuffixes } from "../../barmark/src/chords/suffixes.js";
 import { isGap, spelled } from "../src/export/spell.js";
-import { readCho } from "./read-cho.js";
+import { chartOf, exported, fixtureOf } from "./fixtures.js";
+import { gridParts, readCho } from "./read-cho.js";
 
 const chord = (symbol: string): ChordRecord => {
 	const r = parseChord(symbol);
@@ -163,37 +164,21 @@ describe("nothing written reads back as another chord", () => {
 		});
 });
 
+/** A measure's cells with each `/` (the name again) as the name it repeats. */
+function named(cells: string[]): string[] {
+	const out: string[] = [];
+	for (const c of cells) out.push(c === "/" ? (out.at(-1) ?? c) : c);
+	return out;
+}
+
 describe("the spellings fixture", () => {
-	const dir = `${import.meta.dir}/fixtures`;
-	test("spellings.cho is the chart's grids, each chord as spelled() writes it", async () => {
-		const chart = await Bun.file(`${dir}/spellings.chart.md`).text();
-		const cho = await Bun.file(`${dir}/spellings.cho`).text();
-		expect(cho).toBe(spellingsSheet(chart));
-		expect(() => readCho(cho)).not.toThrow();
+	test("spellings.cho is the chart's export: every chord in a grid cell as spelled() writes it", () => {
+		const cells = readCho(exported(fixtureOf("spellings.cho"))).flatMap((l) =>
+			l.kind === "grid" ? gridParts(l.cells).measures.flatMap((m) => named(m.cells)) : [],
+		);
+		const chords = parseChart(chartOf({ chart: "spellings.chart.md" })).bars.flatMap((b) =>
+			b.slots.flatMap((s) => (s.kind === "chord" && s.chord.kind === "chord" ? [s.chord] : [])),
+		);
+		expect(cells.filter((c) => c !== ".")).toEqual(chords.map(spelled));
 	});
 });
-
-/**
- * The fixture's text until the export writes grids (Task 4): the header,
- * then one grid per section, a bar's four slots as four cells, a margin
- * cell each side. Built from parseChart and spelled() alone.
- */
-function spellingsSheet(chart: string): string {
-	const parse = parseChart(chart);
-	const out = ["{title: Spellings}", "{key: C}", "{time: 4/4}"];
-	let section: string | null | undefined;
-	let line = -1;
-	for (const bar of parse.bars) {
-		if (bar.section !== section) {
-			if (section !== undefined) out.push("{end_of_grid}");
-			out.push("", `{start_of_grid: label="${bar.section}" shape="1+4x4+1"}`);
-			section = bar.section;
-		}
-		const cells = bar.slots.map((s) => (s.kind === "chord" ? spelled(s.chord) : "?"));
-		if (bar.line === line) out[out.length - 1] += ` ${cells.join(" ")} |`;
-		else out.push(`| ${cells.join(" ")} |`);
-		line = bar.line;
-	}
-	out.push("{end_of_grid}");
-	return `${out.join("\n")}\n`;
-}

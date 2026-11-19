@@ -1,11 +1,13 @@
 import { type ChartDiagnostic, type ChartParse, extractPart, parseChart } from "barmark";
 import { comment } from "./changes.js";
+import { gridSection } from "./grid.js";
 import { Losses } from "./losses.js";
 import { lyricSection } from "./lyrics.js";
 import { headerLines, headerLosses } from "./meta.js";
 import { layout, type Occurrence, occurrences } from "./plan.js";
 import { sheetOf } from "./sheet.js";
 import type { LyricsheetOptions, LyricsheetResult, Out } from "./types.js";
+import { writtenOf } from "./written.js";
 
 const refusal = (message: string, token = ""): ChartDiagnostic => ({
 	line: 0,
@@ -35,8 +37,7 @@ function parsed(chart: string, options: LyricsheetOptions): Parsed {
 /**
  * The sheet after its header: text lines written before any bar, then
  * each section occurrence in play order. A sung one is a lyric
- * environment; one with no words writes nothing yet (grids are the next
- * task's).
+ * environment; one with no words a grid.
  */
 function body(chart: string, p: Parsed & { ok: true }, options: LyricsheetOptions, out: Out): void {
 	const sheet = sheetOf(chart, p.parse, options, out, p.whole);
@@ -45,9 +46,16 @@ function body(chart: string, p: Parsed & { ok: true }, options: LyricsheetOption
 	const lay = layout(sheet);
 	out.lines.push(...lay.header.map((text) => comment(text, undefined, out)));
 	const previous: Occurrence[] = [];
-	const context = { previous, layout: lay, first, chorus: { last: null } };
+	const context = {
+		previous,
+		layout: lay,
+		first,
+		chorus: { last: null },
+		written: writtenOf(sheet),
+	};
 	for (const o of occurrences(sheet)) {
 		if (o.sung) lyricSection(o, out, context);
+		else gridSection(o, out, context);
 		previous.push(o);
 	}
 }

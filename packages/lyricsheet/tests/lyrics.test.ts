@@ -403,11 +403,18 @@ describe("words in some sections and not others (Review Focus 3)", () => {
 		const r = sheet(
 			"## Intro\n| C | G |\n## Verse\n| C | G |\nlyrics: | a | b |\n## Outro\n| C |\n",
 		);
-		expect(readBack(r.text)).toEqual([{ label: "Verse", tokens: CGab }]);
+		expect(readBack(r.text)).toEqual([
+			{ label: "Intro", bars: [["C"], ["G"]] },
+			{ label: "Verse", tokens: CGab },
+			{ label: "Outro", bars: [["C"]] },
+		]);
 	});
-	test("a section sung only on its second pass writes that pass", () => {
+	test("a section sung only on its second pass writes that pass, its first a grid", () => {
 		const r = sheet("## Verse\n|: C | G :|\nlyrics 2: | a | b |\n");
-		expect(readBack(r.text)).toEqual([{ label: "Verse", tokens: CGab }]);
+		expect(readBack(r.text)).toEqual([
+			{ label: "Verse", bars: [["C"], ["G"]] },
+			{ label: "Verse", tokens: CGab },
+		]);
 	});
 	test("a chart that ends inside a repeat closes its environment", () => {
 		const r = sheet("## Verse\n| C | G | x ...\nlyrics: | a | b |\n");

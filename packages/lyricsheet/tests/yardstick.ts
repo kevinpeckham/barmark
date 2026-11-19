@@ -1,9 +1,11 @@
 /**
- * The played yardstick (spec 5.2), from the chart alone: per sung section
- * occurrence in play order, its label and ONE sequence of chord attacks
- * and sung words in time order (a tie putting the chord first, a word
- * placed at its first syllable); and the same read back from a sheet with
- * `readCho`. Test only; it uses nothing in `src/` but `spelled`.
+ * The played yardstick (spec 5.2), from the chart alone: per section
+ * occurrence in play order, its label and, when it sings, ONE sequence of
+ * chord attacks and sung words in time order (a tie putting the chord
+ * first, a word placed at its first syllable), else the chord attacks of
+ * each bar it plays; and the same read back from a sheet with `readCho`,
+ * a grid's `%`, `/`, `.`, repeats and endings played out. Test only; it
+ * uses nothing in `src/` but `spelled`.
  *
  * The yardstick knows the rules of spec 4.1, 4.4 and 4.5 (a new
  * environment where a repeat sings a different verse on bars it played
@@ -20,11 +22,14 @@ import {
 	type Slot,
 } from "barmark";
 import { spelled } from "../src/export/spell.js";
-import { type ChoLine, readCho } from "./read-cho.js";
+import { type ChoLine, type GridParts, gridParts, readCho } from "./read-cho.js";
 
 export type Token = { chord: string } | { word: string };
 export type Sung = { label: string | null; tokens: Token[] };
-export type Played = Sung & { records: ChordRecord[] };
+/** An occurrence with no words: the chord names each bar attacks, in play order. */
+export type Grid = { label: string | null; bars: string[][] };
+export type Read = Sung | Grid;
+export type Played = Read & { records: ChordRecord[] };
 
 /** The first part that writes a chord symbol, by label (spec 4.4), when the chart has several. */
 function defaultPart(parse: ChartParse): string | undefined {
@@ -187,7 +192,17 @@ function singersBars(full: ChartParse): Map<number, PlayedBar> {
 	);
 }
 
-/** Per sung occurrence in play order: its label and its chords and words in time order (spec 5.2). */
+/** An occurrence with no words: each bar's chord attacks (spec 4.1's grid). */
+function gridOf(
+	label: string | null,
+	bars: PlayedBar[],
+	slotsOf: (b: PlayedBar) => Slot[],
+): Played {
+	const each = bars.map((b) => timedChords(slotsOf(b), b.meter.n / b.meter.d).map((c) => c.chord));
+	return { label, bars: each.map((cs) => cs.map(spelled)), records: each.flat() };
+}
+
+/** Per occurrence in play order: its label and its chords and words in time order, or its bars' chords (spec 5.2). */
 export function yardstick(chart: string, part?: string): Played[] {
 	const full = parseChart(chart);
 	const label = part ?? defaultPart(full);
@@ -198,9 +213,11 @@ export function yardstick(chart: string, part?: string): Played[] {
 	return spans(full).flatMap((span) =>
 		environments(span.bars.map((b) => sung.get(b.index) ?? b))
 			.flatMap(versesOf)
-			.flatMap((bars): Played[] => {
+			.map((bars): Played => {
 				const { tokens, records } = tokensOf(eventsOf(bars, slotsOf));
-				return tokens.some((t) => "word" in t) ? [{ label: span.label, tokens, records }] : [];
+				return tokens.some((t) => "word" in t)
+					? { label: span.label, tokens, records }
+					: gridOf(span.label, bars, slotsOf);
 			}),
 	);
 }
@@ -212,10 +229,15 @@ function labelOf(value: string): string | null {
 }
 
 type Tokens = Extract<ChoLine, { kind: "lyrics" }>["tokens"];
+/** A grid occurrence being read: its lines, over every grid it is written in. */
+type GridRead = { label: string | null; lines: GridParts[] };
 type Reading = {
-	out: Sung[];
+	out: (Sung | GridRead)[];
 	open: { env: string; sung: Sung; carry: boolean } | null;
 	lastChorus: Sung | null;
+	/** The grid being read; `after` is the last one ended, until a blank line or an environment. */
+	grid: GridRead | null;
+	after: GridRead | null;
 };
 
 const ENV = /^start_of_(verse|chorus|bridge)$/;
@@ -224,6 +246,7 @@ function startEnv(r: Reading, name: string, value: string): void {
 	if (r.open) throw new Error(`${name} inside ${r.open.env}`);
 	const sung: Sung = { label: labelOf(value), tokens: [] };
 	r.open = { env: name.replace("start_of_", ""), sung, carry: false };
+	r.after = null;
 }
 
 function endEnv(r: Reading, name: string): void {
@@ -237,6 +260,32 @@ function endEnv(r: Reading, name: string): void {
 function recall(r: Reading): void {
 	if (!r.lastChorus || r.open) throw new Error("{chorus} with no chorus to recall");
 	r.out.push(r.lastChorus);
+	r.after = null;
+}
+
+/**
+ * A grid starts an occurrence, or continues the one whose grid ended just
+ * before it with no blank line between (the export reopens a grid inside
+ * one occurrence for a longer line or after an open repeat's comment).
+ */
+function startGrid(r: Reading, value: string): void {
+	if (r.open) throw new Error(`a grid inside ${r.open.env}`);
+	if (r.after) {
+		if (/label=/.test(value)) throw new Error("a grid continued with a label");
+		r.grid = r.after;
+		return;
+	}
+	r.grid = { label: labelOf(/^(label="(?:[^"\\]|\\.)*")?/.exec(value)?.[1] ?? ""), lines: [] };
+	r.out.push(r.grid);
+}
+
+/** A directive line into the reading. */
+function readDirective(r: Reading, name: string, value: string): void {
+	if (ENV.test(name)) startEnv(r, name, value);
+	else if (name === "start_of_grid") startGrid(r, value);
+	else if (name === "end_of_grid") [r.after, r.grid] = [r.grid, null];
+	else if (name.startsWith("end_of_")) endEnv(r, name);
+	else if (name === "chorus") recall(r);
 }
 
 /** One line of the sheet into the reading. */
@@ -244,18 +293,129 @@ function readOne(r: Reading, line: ChoLine): void {
 	if (line.kind === "lyrics") {
 		if (!r.open) throw new Error("a lyric line outside an environment");
 		r.open.carry = readLine(line.tokens, r.open.sung, r.open.carry);
-	} else if (line.kind !== "directive") return;
-	else if (ENV.test(line.name)) startEnv(r, line.name, line.value);
-	else if (line.name.startsWith("end_of_")) endEnv(r, line.name);
-	else if (line.name === "chorus") recall(r);
+	} else if (line.kind === "grid") r.grid?.lines.push(gridParts(line.cells));
+	else if (line.kind === "blank") r.after = null;
+	else readDirective(r, line.name, line.value);
 }
 
-/** Each lyric environment of a sheet in order, `{chorus}` recalling the last chorus; throws when unbalanced. */
-export function readBack(text: string): Sung[] {
-	const r: Reading = { out: [], open: null, lastChorus: null };
+/**
+ * Each occurrence of a sheet in order: a lyric environment, `{chorus}`
+ * recalling the last chorus, or a grid read out to its bars' chords;
+ * throws when unbalanced.
+ */
+export function readBack(text: string): Read[] {
+	const r: Reading = { out: [], open: null, lastChorus: null, grid: null, after: null };
 	for (const line of readCho(text)) readOne(r, line);
 	if (r.open) throw new Error(`${r.open.env} never ended`);
-	return r.out;
+	return r.out.map((o) => ("lines" in o ? { label: o.label, bars: gridBars(o.lines) } : o));
+}
+
+/** A grid line read: its bar symbols at each end, its `x N`, and each bar's chord attacks (fermata measures left out). */
+type GridLine = { open: string; close: string; repeat: number | null; bars: string[][] };
+
+/** A measure's attacks: `%` the bar before's, `/` the last name again, `.` nothing, `C~G` each in turn. */
+function attacksOf(cells: string[], before: string[] | undefined): string[] {
+	if (cells[0] === "%") {
+		if (!before || cells.slice(1).some((c) => c !== ".")) throw new Error(`a bad %: ${cells}`);
+		return before;
+	}
+	const out: string[] = [];
+	for (const cell of cells) {
+		if (cell === "/") out.push(out.at(-1) ?? "/");
+		else out.push(...cell.split("~").filter((p) => p !== "."));
+	}
+	if (out.includes("/")) throw new Error(`a / with no name before it: ${cells}`);
+	return out;
+}
+
+/** A fermata is a measure of its own, `*…`: not a bar. */
+const isFermata = (cells: string[]) => cells.length === 1 && cells[0] === "*…";
+
+/** The `x N` that ends a line's right margin, or null. */
+function timesOf(right: string): number | null {
+	const n = /(?:^| )x(\d+)$/.exec(right)?.[1];
+	return n === undefined ? null : Number(n);
+}
+
+/** The grid's lines with each bar's chords, `%` and `/` resolved in written order. */
+function gridLines(lines: GridParts[]): GridLine[] {
+	let before: string[] | undefined;
+	return lines.map((l) => {
+		const bars: string[][] = [];
+		for (const m of l.measures.filter((m) => !isFermata(m.cells))) {
+			before = attacksOf(m.cells, before);
+			// Annotations (`*…`) and N.C. are not chords.
+			bars.push(before.filter((a) => !a.startsWith("*") && a !== "N.C."));
+		}
+		const open = l.measures[0]?.before ?? "|";
+		return { open, close: l.measures.at(-1)?.after ?? "|", repeat: timesOf(l.right), bars };
+	});
+}
+
+const isVolta = (l: GridLine | undefined) => l !== undefined && /^\|\d+$/.test(l.open);
+const closes = (l: GridLine | undefined) => l?.close === ":|";
+
+/** The lines of each ending from `from`: a volta's line, and the plain lines up to its `:|` when it has one. */
+function endingsFrom(lines: GridLine[], from: number): { pass: number; lines: GridLine[] }[] {
+	const out: { pass: number; lines: GridLine[] }[] = [];
+	let j = from;
+	while (isVolta(lines[j])) {
+		let end = j;
+		if (!closes(lines[j])) {
+			let m = j + 1;
+			while (lines[m]?.open === "|" && !closes(lines[m])) m++;
+			if (lines[m]?.open === "|" && closes(lines[m])) end = m;
+		}
+		out.push({ pass: Number(lines[j]?.open.slice(1)), lines: lines.slice(j, end + 1) });
+		j = end + 1;
+	}
+	return out;
+}
+
+/** Plays lines into `out`, each its own `x N` times but `closer`, whose count is its repeat's. */
+function play(block: GridLine[], out: string[][], closer?: GridLine): void {
+	for (const l of block)
+		for (let k = 0; k < (l === closer ? 1 : (l.repeat ?? 1)); k++) out.push(...l.bars);
+}
+
+/** Where the repeat opened at line `i` ends: its `:|`, or the first ending. */
+function repeatEnd(lines: GridLine[], i: number): number {
+	for (let k = i; k < lines.length; k++)
+		if (closes(lines[k]) || (k > i && isVolta(lines[k]))) return k;
+	throw new Error("a |: with no :|");
+}
+
+/** A repeat opened at line `i` into `out`: twice or `x N` times, or once per ending's pass; the line after it. */
+function playRepeat(lines: GridLine[], i: number, out: string[][]): number {
+	const k = repeatEnd(lines, i);
+	const end = lines[k] as GridLine;
+	if (!isVolta(end)) {
+		for (let p = 0; p < (end.repeat ?? 2); p++) play(lines.slice(i, k + 1), out, end);
+		return k + 1;
+	}
+	const endings = endingsFrom(lines, k);
+	const passes = Math.max(...endings.map((e) => e.pass));
+	for (let p = 1; p <= passes; p++) {
+		play(lines.slice(i, k), out);
+		play(endings.find((e) => e.pass === p)?.lines ?? [], out);
+	}
+	return k + endings.reduce((n, e) => n + e.lines.length, 0);
+}
+
+/** The bars a grid plays, in order: `|: :|` twice or `x N` times, endings by pass, a line's own `x N`. */
+function gridBars(all: GridParts[]): string[][] {
+	const lines = gridLines(all);
+	const out: string[][] = [];
+	let i = 0;
+	while (i < lines.length) {
+		const line = lines[i] as GridLine;
+		if (line.open === "|:") i = playRepeat(lines, i, out);
+		else {
+			play([line], out);
+			i++;
+		}
+	}
+	return out;
 }
 
 /** A chord read back: annotations (`*…`) are not chords. */
