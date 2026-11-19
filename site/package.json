@@ -24,7 +24,7 @@
 		"barmark": "0.25.0"
 	},
 	"devDependencies": {
-		"@barmark/cli": "0.13.0",
+		"@barmark/cli": "0.14.0",
 		"@barmark/fretboard": "0.1.2",
 		"@barmark/listen": "0.2.2",
 		"@barmark/lyricsheet": "0.1.0",
