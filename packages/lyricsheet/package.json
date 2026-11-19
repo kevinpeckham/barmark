@@ -1,6 +1,6 @@
 {
 	"name": "@barmark/lyricsheet",
-	"version": "0.1.0",
+	"version": "0.1.1",
 	"description": "Export a barmark chart as a ChordPro lyric sheet, and say what it could not carry.",
 	"type": "module",
 	"sideEffects": false,
