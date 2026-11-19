@@ -337,24 +337,58 @@ test.describe("home: the examples", () => {
 		await expect(position(page)).toContainText("Greensleeves");
 	});
 
-	test("Amazing Grace's lyric staff: every slash sits on its line, with no ledger lines", async ({
-		page,
-	}) => {
-		// The words engrave on a one-line staff of slashes. Drawn off that line, each slash
-		// carried ledger lines that read as an unknown symbol (FINDINGS 2026-11-18).
-		await page.goto("/");
-		await pressScore(page);
-		await expect.poll(() => scoreText(page), { timeout: 15_000 }).toContain("Amazing Grace");
-		const drawn = await page.locator("main barmark-score").evaluate((el) => {
+	/** What the score's SVG draws: notes, syllables, ledger lines and slashes. */
+	const drawnScore = (page: Page) =>
+		page.locator("main barmark-score").evaluate((el) => {
 			const svg = el.shadowRoot?.querySelector(".bms-pane svg");
 			return {
 				notes: svg?.querySelectorAll("g.note").length ?? 0,
 				syllables: svg?.querySelectorAll("g.syl").length ?? 0,
 				ledgers: svg?.querySelectorAll("g.ledgerLines path").length ?? -1,
+				syllableText: [...(svg?.querySelectorAll("g.syl") ?? [])].map((s) => s.textContent?.trim()),
 			};
 		});
-		expect(drawn.notes).toBeGreaterThan(20);
-		expect(drawn.syllables).toBeGreaterThan(20);
+
+	test("Amazing Grace's score: the tune's notes, both verses' words under them", async ({
+		page,
+	}) => {
+		await page.goto("/");
+		await pressScore(page);
+		await expect.poll(() => scoreText(page), { timeout: 15_000 }).toContain("Amazing Grace");
+		const drawn = await drawnScore(page);
+		// New Britain's 32 notes, "me" and "see" each tied into the bar after: 34 noteheads.
+		expect(drawn.notes).toBe(34);
+		// 28 syllables a verse, sung on the notes (a word split by a system break draws twice).
+		expect(drawn.syllables).toBeGreaterThanOrEqual(56);
+		expect(drawn.syllableText.slice(0, 4)).toEqual(["A", "'Twas", "maz", "grace"]);
+	});
+
+	test("a lyric row with no melody: every slash sits on its line, with no ledger lines", async ({
+		page,
+	}) => {
+		// The words engrave on a one-line staff of slashes. Drawn off that line, each slash
+		// carried ledger lines that read as an unknown symbol (FINDINGS 2026-11-18). Amazing
+		// Grace, which showed it, now has its melody, so the guard types its rows without it.
+		await page.goto("/");
+		await page
+			.getByRole("textbox", { name: "Barmark source of the chart" })
+			.fill(
+				[
+					"# Lyrics, no melody",
+					"key: G, time: 3/4",
+					"          | [1/4] D | G            | G / G7      | C           | G            |",
+					"lyrics 1: | A-      | maz- / ing   | grace / how | sweet / the | sound / that |",
+					"lyrics 2: | 'Twas   | grace / that | taught / my | heart / to  | fear / and   |",
+					"",
+				].join("\n"),
+			);
+		await expect.poll(() => chartText(page)).toContain("Lyrics, no melody");
+		await pressScore(page);
+		await expect.poll(() => scoreText(page), { timeout: 15_000 }).toContain("Lyrics, no melody");
+		const drawn = await drawnScore(page);
+		// The chords' slashes and the words' slashes, a slash for each of the 18 syllables.
+		expect(drawn.notes).toBeGreaterThan(18);
+		expect(drawn.syllables).toBe(18);
 		expect(drawn.ledgers).toBe(0);
 	});
 
