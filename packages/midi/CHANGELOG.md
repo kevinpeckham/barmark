@@ -6,6 +6,8 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-11-20
+
 ### Changed
 
 - **A file that is one line of notes now imports as its notes**: every
@@ -219,7 +221,8 @@ package uses [semantic versioning](https://semver.org/).
   bar, shorter than one, from its downbeat). Needs barmark 0.21.0
   (`PlayedBar.time`).
 
-[Unreleased]: https://github.com/kevinpeckham/barmark/compare/midi-v0.3.5...HEAD
+[Unreleased]: https://github.com/kevinpeckham/barmark/compare/midi-v0.4.0...HEAD
+[0.4.0]: https://github.com/kevinpeckham/barmark/compare/midi-v0.3.5...midi-v0.4.0
 [0.3.5]: https://github.com/kevinpeckham/barmark/compare/midi-v0.3.4...midi-v0.3.5
 [0.3.4]: https://github.com/kevinpeckham/barmark/compare/midi-v0.3.3...midi-v0.3.4
 [0.3.3]: https://github.com/kevinpeckham/barmark/compare/midi-v0.3.2...midi-v0.3.3
