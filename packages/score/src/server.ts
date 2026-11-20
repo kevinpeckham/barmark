@@ -9,7 +9,7 @@ import {
 import { carry, scoreShell } from "./shell.js";
 import { type ScoreView, switchHtml, viewOf } from "./switch.js";
 
-export type ScoreOptions = RenderOptions & { view?: ScoreView };
+export type ScoreOptions = RenderOptions & { view?: ScoreView; switch?: boolean };
 
 export { decodeCarried } from "./shell.js";
 export { switchHtml };
@@ -24,13 +24,15 @@ function gridAttributes(options: Omit<RenderOptions, "fontUrl">): string {
  * `<barmark-score>` drawn on the server: the grid, the Grid / Score switch and
  * the chart text, so the grid shows before any script runs. The switch checks
  * Grid, since the grid is what shows; `view: "score"` is kept as the element's
- * attribute, and the element switches to the score once it loads.
+ * attribute, and the element switches to the score once it loads. With
+ * `switch: false` the element carries `switch="off"` and leaves its own switch
+ * out; the markup inside is the same.
  */
 export function renderScoreHtml(text: string, options: ScoreOptions = {}): string {
-	const { view: asked, fontUrl, ...gridOptions } = options;
+	const { view: asked, switch: drawn, fontUrl, ...gridOptions } = options;
 	const view = viewOf(asked);
 	const font = fontUrl ? `<style>${fontFaceCss(fontUrl)}</style>` : "";
 	const grid = renderChartUnwrapped(text, gridOptions);
-	const attrs = `${gridAttributes(gridOptions)}${view === "score" ? ' view="score"' : ""}`;
+	const attrs = `${gridAttributes(gridOptions)}${view === "score" ? ' view="score"' : ""}${drawn === false ? ' switch="off"' : ""}`;
 	return `${font}<barmark-score${attrs}><template shadowrootmode="open">${scoreShell(grid, "grid")}</template><script type="text/barmark">${carry(text)}</script></barmark-score>`;
 }

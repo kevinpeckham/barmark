@@ -37,6 +37,34 @@ describe("renderScoreHtml", () => {
 		expect(inner.querySelector(".bms-score")).toBeNull();
 	});
 
+	test('switch: false writes switch="off" on the element only', () => {
+		const html = renderScoreHtml(chart, { switch: false });
+		expect(html).toMatch(/^<barmark-score[^>]* switch="off">/);
+		expect(html.split("<template")[1]).not.toContain("<barmark-score");
+		const { host, inner } = parse(html);
+		expect(host.getAttribute("switch")).toBe("off");
+		expect(inner.querySelector("[switch]")).toBeNull();
+		const plain = parse(renderScoreHtml(chart));
+		expect(inner.body.innerHTML).toBe(plain.inner.body.innerHTML);
+	});
+
+	test("switch: true, or no option, is the default markup exactly", () => {
+		const plain = renderScoreHtml(chart);
+		expect(renderScoreHtml(chart, { switch: true })).toBe(plain);
+		expect(parse(plain).host.hasAttribute("switch")).toBe(false);
+	});
+
+	test("switch: false with view and a grid option carries all three, and the grid is untouched", () => {
+		const html = renderScoreHtml(chart, { switch: false, view: "score", barNumbers: false });
+		const { host } = parse(html);
+		expect(attrsOf(host)).toEqual({
+			...attrsOf(parse(renderScoreHtml(chart, { view: "score", barNumbers: false })).host),
+			switch: "off",
+		});
+		expect(host.getAttribute("view")).toBe("score");
+		expect(host.getAttribute("bar-numbers")).toBe("off");
+	});
+
 	test("melody: false is on the element, and the grid has no melody row", () => {
 		const song = `part: Vox = Voice, instrument: voice
 time: 4/4

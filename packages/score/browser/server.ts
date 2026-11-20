@@ -111,6 +111,7 @@ const ALLOWED = new Set([
 	"chart",
 	"integrity",
 	"preload",
+	"switch",
 	"lite",
 	"wasmintegrity",
 ]);
@@ -135,6 +136,7 @@ const CHECKS: [(p: URLSearchParams) => boolean, (p: URLSearchParams) => string][
 	],
 	[(p) => !(p.has("lite") && p.has("wasmintegrity")), () => "lite sets its own wasm digest"],
 	[(p) => !(p.has("lite") && p.has("engine")), () => "lite and engine are both a verovio-url"],
+	[(p) => !p.has("switch") || p.get("switch") === "off", () => "unknown switch"],
 	[(p) => !p.has("preload") || PRELOADS.has(p.get("preload") ?? ""), () => "unknown preload"],
 	[(p) => inRange(Number(p.get("count") ?? "1")), () => `count must be 1 to ${MAX_COUNT}`],
 ];
@@ -159,12 +161,13 @@ function liteAttrs(name: string): string {
 	);
 }
 
-/** The element's attributes: `theme` and `preload` as given, the named engine's verovio-url and the named digest, or a lite copy's. */
+/** The element's attributes: `theme`, `preload` and `switch` as given, the named engine's verovio-url and the named digest, or a lite copy's. */
 const attrsOf = (p: URLSearchParams) => {
 	const q = (key: string) => p.get(key) ?? "";
 	return (
 		attr("theme", p.get("theme")) +
 		attr("preload", p.get("preload")) +
+		attr("switch", p.get("switch")) +
 		attr("verovio-url", ENGINES[q("engine")]) +
 		attr("verovio-integrity", DIGESTS[q("integrity")]) +
 		attr("verovio-wasm-integrity", WASM_DIGESTS[q("wasmintegrity")]) +

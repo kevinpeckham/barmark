@@ -493,3 +493,43 @@ test("stock Verovio with a wasm digest loads cleanly: it never asks for a .wasm"
 	expect(seen.urls.some((u) => u.endsWith(".wasm"))).toBe(false);
 	await expect(el.locator(".bms-note")).toHaveCount(0);
 });
+
+test('switch="off": no switch to see or tab to; script drives the view', async ({ page }) => {
+	await page.goto("/score?switch=off&engine=local");
+	const el = page.locator("barmark-score");
+	await expect(el.locator(".bms-grid .bm-chart")).toBeVisible();
+	await expect(el.locator(".bms-switch")).toBeHidden();
+	await expect(el.getByRole("radio", { name: "Score" })).toBeHidden();
+
+	// Tab reaches nothing inside the element.
+	await page.keyboard.press("Tab");
+	expect(await page.evaluate(() => document.activeElement?.tagName)).toBe("BODY");
+
+	await page.evaluate(() => {
+		const w = window as unknown as { views: string[] };
+		w.views = [];
+		document
+			.querySelector("barmark-score")
+			?.addEventListener("viewchange", (e) =>
+				w.views.push((e as CustomEvent<{ view: string }>).detail.view),
+			);
+		(document.querySelector("barmark-score") as HTMLElement & { view: string }).view = "score";
+	});
+	await expect(scoreSvg(el)).toBeVisible({ timeout: 20_000 });
+	await expect(el.locator(".bms-switch")).toBeHidden();
+
+	await page.evaluate(() => {
+		(document.querySelector("barmark-score") as HTMLElement & { view: string }).view = "grid";
+	});
+	await expect(el.locator(".bms-grid .bm-chart")).toBeVisible();
+	await expect(scoreSvg(el)).toBeHidden();
+	expect(await page.evaluate(() => (window as unknown as { views: string[] }).views)).toEqual([
+		"score",
+		"grid",
+	]);
+});
+
+test("without switch=off the switch is visible", async ({ page }) => {
+	await page.goto("/score");
+	await expect(page.locator("barmark-score .bms-switch")).toBeVisible();
+});

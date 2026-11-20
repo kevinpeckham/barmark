@@ -48,6 +48,7 @@ technology the score is one image named for the chart's title, or "Score".
 |---|---|
 | `src`, `theme`, `bar-numbers`, `rehearsal-letters`, `numerals`, `wrap`, `show-part`, `columns`, `melody`, `chord-diagrams`, `diagram-hand` | the grid's own, as in [`@barmark/render`](../render/README.md#options-and-attributes). The score view ignores `chord-diagrams` and `diagram-hand`: only the grid shows the guitar chord strip. It ignores `melody` too: `melody="off"` leaves a singer's melody line out of the grid (its words stay under the chords), and the score still engraves it |
 | `view` (`view`) | `"grid"` (default) or `"score"`; the view being shown. Set before the chart arrives, `"score"` waits for it |
+| `switch` | `"off"` leaves the element's Grid / Score switch out, for a page with controls of its own: set `view` from them, and listen for `viewchange` (and `scoreerror`, after which the element shows the grid again). Anything else draws the switch |
 | `verovio-url` | where to load Verovio from (below) |
 | `verovio-integrity` | the SRI digest (`sha384-…`) the `verovio-url` copy must have; on a mismatch the package's own copy loads (below) |
 | `verovio-wasm-integrity` | the SRI digest of the `.wasm` beside a `verovio-url` that loads one, such as `@barmark/engraver` (below) |
@@ -252,6 +253,9 @@ one load every element on the page uses, and asking twice does nothing.
   When the reader has asked to save data, or is on a 2G connection
   (`navigator.connection`), it waits for intent instead.
 
+With `switch="off"` there is no switch for `"intent"` to watch, so use
+`"idle"`, or set `preload="idle"` when your own control is reached.
+
 ### When the score can't be drawn
 
 If Verovio fails to load, or rejects the MusicXML, or the chart will not
@@ -288,7 +292,9 @@ import { renderScoreHtml } from "@barmark/score/server";
 const html = renderScoreHtml(chartText, { fontUrl: "/fonts/Edwin-Roman.otf" });
 ```
 
-`renderScoreHtml` takes `@barmark/render`'s options plus `view`. It never
+`renderScoreHtml` takes `@barmark/render`'s options plus `view`, and
+`switch: false`, which writes `switch="off"` on the element so it leaves
+its own Grid / Score switch out. It never
 loads Verovio: it draws the bar grid and the Grid / Score switch in a
 declarative shadow root, so the chart shows before any script runs. The
 score is engraved once `<barmark-score>` upgrades in the browser, taking

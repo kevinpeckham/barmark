@@ -6,6 +6,12 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- **`switch="off"`** leaves the element's Grid / Score switch out, for a
+  page that draws its own controls and sets `view` from them
+  (`renderScoreHtml(text, { switch: false })` writes it on the server).
+
 ## [0.7.0] - 2026-11-19
 
 ### Added
