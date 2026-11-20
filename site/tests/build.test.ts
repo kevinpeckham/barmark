@@ -15,7 +15,7 @@ describe("the site builds", () => {
 		expect(pkg.dependencies).toEqual({
 			barmark: "0.25.0",
 			"@barmark/render": "0.21.1",
-			"@barmark/score": "0.7.0",
+			"@barmark/score": "0.8.0",
 			"@vercel/analytics": "2.0.1",
 			"@vercel/speed-insights": "2.0.0",
 		});

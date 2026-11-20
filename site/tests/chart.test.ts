@@ -95,6 +95,9 @@ describe("chartHtml", () => {
 		expect(light).toMatch(/<barmark-score[^>]* theme="light"/);
 		expect(light).toMatch(/<barmark-score[^>]* view="score"/);
 		expect(scoreHtml(demo)).not.toMatch(/<barmark-score[^>]* view=/);
+		// A page that draws its own Grid / Score switch turns the element's off.
+		expect(scoreHtml(demo, { ownSwitch: false })).toMatch(/<barmark-score[^>]* switch="off"/);
+		expect(scoreHtml(demo)).not.toMatch(/<barmark-score[^>]* switch=/);
 		expect(scoreHtml(demo)).toMatch(/<barmark-score[^>]* theme="dark"/);
 	});
 	test("a chart can open with its guitar diagrams, one for each distinct chord; without the flag it has none", () => {

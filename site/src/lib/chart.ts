@@ -67,13 +67,24 @@ function engineAttributes(preload: Preload): string {
  * The chart as `<barmark-score>` markup: the same grid, with the Grid / Score
  * switch, and the chart's text carried for the score. Verovio is never
  * imported here; the element engraves once a reader picks Score, or once it
- * loads when `view` is `"score"` (the grid is what the markup shows).
+ * loads when `view` is `"score"` (the grid is what the markup shows). With
+ * `ownSwitch: false` the element leaves its switch out (`switch="off"`): the
+ * page draws its own and sets the element's `view`.
  */
 export function scoreHtml(
 	text: string,
-	{ preload = "none", view = "grid", ...look }: Look & { preload?: Preload; view?: View } = {},
+	{
+		preload = "none",
+		view = "grid",
+		ownSwitch = true,
+		...look
+	}: Look & { preload?: Preload; view?: View; ownSwitch?: boolean } = {},
 ): string {
-	const opts = { ...chosen(look), ...(view === "score" ? { view } : {}) };
+	const opts = {
+		...chosen(look),
+		...(view === "score" ? { view } : {}),
+		...(ownSwitch ? {} : { switch: false }),
+	};
 	let html: string;
 	try {
 		html = renderScoreHtml(text, opts);

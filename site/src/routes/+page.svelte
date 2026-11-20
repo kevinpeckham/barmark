@@ -213,6 +213,7 @@ const description =
 						{diagrams}
 						melody={false}
 						theme="light"
+						ownSwitch={false}
 						label="The chart, rendered"
 						{view}
 						onviewchange={(v) => {

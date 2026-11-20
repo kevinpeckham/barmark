@@ -85,7 +85,15 @@ let rendered = untrack(() => text);
 let moved = untrack(() => semitones);
 const initial = (asScore ? scoreHtml : chartHtml)(
 	transposed(rendered, moved),
-	untrack(() => ({ barNumbers, preload, chordDiagrams: diagrams, melody, view, theme })),
+	untrack(() => ({
+		barNumbers,
+		preload,
+		chordDiagrams: diagrams,
+		melody,
+		view,
+		theme,
+		ownSwitch,
+	})),
 );
 const look = untrack(() => (theme === "light" ? "barmark-look-light" : "barmark-look"));
 let host: HTMLDivElement;
