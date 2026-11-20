@@ -3,8 +3,9 @@
  * next attack unless a beat or more is silent. One state per point of
  * every beat: an attack, a hold, or a rest. One walk over the struck
  * points; a note-off's beat is found by a binary search on the file's
- * ticks, and every silence is measured on the chart's clock, in twelfths
- * of a tick: every division divides 12, so the measure is exact.
+ * ticks, and every silence is measured on the chart's clock, in 24ths of
+ * a tick: every division (1, 2, 3, 4, 6 and 8) divides 24, so the measure
+ * is exact.
  */
 import type { Attack } from "./attacks.js";
 import type { Grid } from "./grid.js";
@@ -31,16 +32,20 @@ function after(q: Quantized, { beat, point }: Pos): Pos {
 const earlier = (a: Pos, b: Pos): boolean =>
 	a.beat < b.beat || (a.beat === b.beat && a.point < b.point);
 
+/** The least number every division divides. */
+const UNIT = 24;
+
 /**
- * A point's time on the chart's clock in twelfths of a tick, exact where
+ * A point's time on the chart's clock in 24ths of a tick, exact where
  * `pointTick`'s division by 3 or 6 is not; the chart's end is the last
  * beat's `at + length`.
  */
-function twelfths(q: Quantized, pos: Pos): number {
+function exact(q: Quantized, pos: Pos): number {
 	const b = q.beats[pos.beat];
-	if (b !== undefined) return 12 * b.at + pos.point * b.length * (12 / (q.parts[pos.beat] ?? 1));
+	if (b !== undefined)
+		return UNIT * b.at + pos.point * b.length * (UNIT / (q.parts[pos.beat] ?? 1));
 	const last = q.beats.at(-1);
-	return last === undefined ? 0 : 12 * (last.at + last.length);
+	return last === undefined ? 0 : UNIT * (last.at + last.length);
 }
 
 /** The last beat starting at or before `tick` in the file (0 when none does). */
@@ -107,8 +112,8 @@ function sound<A extends Attack>(
 	if (row !== undefined) row[s.point] = { kind: "attack", struck: s };
 	const end = endOf(q, s, next, grid);
 	const measure = end.point > 0 ? end.beat : end.beat - 1;
-	const silence = twelfths(q, next) - twelfths(q, end);
-	if (silence < 12 * (q.beats[measure]?.length ?? 0)) {
+	const silence = exact(q, next) - exact(q, end);
+	if (silence < UNIT * (q.beats[measure]?.length ?? 0)) {
 		fill(states, q, after(q, s), next, hold);
 		return;
 	}

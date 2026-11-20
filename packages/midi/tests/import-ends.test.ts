@@ -317,3 +317,15 @@ describe("statesOf: scale", () => {
 		TIMING_TIMEOUT,
 	);
 });
+
+describe("statesOf: a half-note beat of eight parts", () => {
+	const CUT = { n: 2, d: 2 };
+	test("a beat of silence after a sixteenth is a rest", () => {
+		const line = notes([0, 120], [120, 240], [1200, 1320], [1320, 1920]);
+		expect(read(line, gridOf(1, CUT))).toBe("A_A_R_r_r_r_r_r r_r_A_A_h_h_h_h");
+	});
+	test("a sixteenth less than a beat is held", () => {
+		const line = notes([0, 120], [120, 360], [1200, 1320], [1320, 1920]);
+		expect(read(line, gridOf(1, CUT))).toBe("A_A_h_h_h_h_h_h h_h_A_A_h_h_h_h");
+	});
+});

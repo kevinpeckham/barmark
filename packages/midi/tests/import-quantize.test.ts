@@ -60,17 +60,66 @@ describe("beatsOfGrid", () => {
 });
 
 describe("divisionsFor", () => {
-	test("a quarter and a dotted quarter take all five", () => {
-		expect(divisionsFor(480, 480)).toEqual([1, 2, 3, 4, 6]);
-		expect(divisionsFor(720, 480)).toEqual([1, 2, 3, 4, 6]);
+	test("a quarter and a dotted quarter take the first five", () => {
+		expect(divisionsFor(480, 480, false)).toEqual([1, 2, 3, 4, 6]);
+		expect(divisionsFor(720, 480, true)).toEqual([1, 2, 3, 4, 6]);
 	});
 	test("an eighth takes 1 to 4, a sixteenth 1 or 2, a 32nd only 1", () => {
-		expect(divisionsFor(240, 480)).toEqual([1, 2, 3, 4]);
-		expect(divisionsFor(120, 480)).toEqual([1, 2]);
-		expect(divisionsFor(60, 480)).toEqual([1]);
+		expect(divisionsFor(240, 480, false)).toEqual([1, 2, 3, 4]);
+		expect(divisionsFor(120, 480, false)).toEqual([1, 2]);
+		expect(divisionsFor(60, 480, false)).toEqual([1]);
 	});
 	test("always at least one part", () => {
-		expect(divisionsFor(1, 480)).toEqual([1]);
+		expect(divisionsFor(1, 480, false)).toEqual([1]);
+	});
+	test("a half-note beat, or a longer plain one, takes 8 too (Kevin, 2026-11-20)", () => {
+		expect(divisionsFor(960, 480, false)).toEqual([1, 2, 3, 4, 6, 8]);
+		expect(divisionsFor(1920, 480, false)).toEqual([1, 2, 3, 4, 6, 8]);
+		expect(divisionsFor(48, 24, false)).toEqual([1, 2, 3, 4, 6, 8]);
+	});
+	test("a dotted beat never takes 8, however long (no meter has one that long: a guard)", () => {
+		expect(divisionsFor(1440, 480, true)).toEqual([1, 2, 3, 4, 6]);
+	});
+	test("a plain beat just under a half note does not", () => {
+		expect(divisionsFor(959, 480, false)).toEqual([1, 2, 3, 4, 6]);
+	});
+});
+
+describe("quantize: a half-note beat", () => {
+	const CUT = { n: 2, d: 2 };
+	test("sixteenths in 2/2 are eight parts of the beat, none rounded or joined", () => {
+		const ticks = [0, 120, 240, 360, 480, 600, 720, 840, 960];
+		const q = quantize(attacksAt(...ticks), gridOf(1, CUT));
+		expect(q.parts).toEqual([8, 1]);
+		expect(q.struck.map((s) => [s.beat, s.point])).toEqual([
+			...ticks.slice(0, 8).map((_, k) => [0, k]),
+			[1, 0],
+		]);
+		expect([q.rounded, q.joined]).toEqual([[], 0]);
+	});
+	test("eighths in 2/2 are still four parts: the smallest division that fits", () => {
+		expect(quantize(attacksAt(0, 240, 480, 720), gridOf(1, CUT)).parts).toEqual([4, 1]);
+	});
+	test("a beat that fits nothing rounds to its eight parts, so a sixteenth apart stays apart", () => {
+		// 150 is 30 from the sixteenth at 120, and 10 from a sextuplet at 160 that 240 is not on
+		const q = quantize(attacksAt(0, 150, 240), gridOf(1, CUT));
+		expect(q.parts).toEqual([8, 1]);
+		expect(q.struck.map((s) => [s.beat, s.point])).toEqual([
+			[0, 0],
+			[0, 1],
+			[0, 2],
+		]);
+		expect([q.rounded, q.joined]).toEqual([[0], 0]);
+	});
+	test("a rounded beat is reduced: its attacks on eighths are four parts", () => {
+		// 270 is 30 from the eighth at 240, too far to fit; it and 500 round to the eighths at 240 and 480
+		const q = quantize(attacksAt(0, 270, 500), gridOf(1, CUT));
+		expect(q.parts).toEqual([4, 1]);
+		expect(q.rounded).toEqual([0]);
+	});
+	test("3/2 has three such beats", () => {
+		const q = quantize(attacksAt(960, 1080, 1200, 1320), gridOf(1, { n: 3, d: 2 }));
+		expect(q.parts).toEqual([1, 8, 1]);
 	});
 });
 

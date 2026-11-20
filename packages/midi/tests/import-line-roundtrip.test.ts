@@ -10,9 +10,10 @@ type Rand = () => number;
 const int = (r: Rand, n: number) => Math.floor(r() * n);
 const pick = <T>(r: Rand, xs: T[]): T => xs[int(r, xs.length)] as T;
 
-/** The divisions a quarter or a dotted quarter may take, and an eighth (spec 4.2). */
+/** The divisions a quarter or a dotted quarter may take, an eighth, and a half note (spec 4.2). */
 const DIVISIONS = [1, 2, 3, 4, 6];
 const EIGHTHS = [1, 2, 3, 4];
+const HALVES = [1, 2, 3, 4, 6, 8];
 /** Meters with their beat in quarters and the divisions a beat may take; no x/16 (see `strictly`). */
 const METERS = [
 	{ time: "4/4", beats: 4, quarters: 1, divs: DIVISIONS },
@@ -24,6 +25,8 @@ const METERS = [
 	{ time: "3/8", beats: 3, quarters: 0.5, divs: EIGHTHS },
 	{ time: "5/8", beats: 5, quarters: 0.5, divs: EIGHTHS },
 	{ time: "7/8", beats: 7, quarters: 0.5, divs: EIGHTHS },
+	{ time: "2/2", beats: 2, quarters: 2, divs: HALVES },
+	{ time: "3/2", beats: 3, quarters: 2, divs: HALVES },
 ];
 type Meter = (typeof METERS)[number];
 const NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
@@ -83,15 +86,18 @@ function points(r: Rand, bars: number, meter: Meter, restHold: number): Point[] 
 	return out;
 }
 
-/** The smallest division of `DIVISIONS` with a point at every offset `k / d` given. */
-function minimal(offsets: [number, number][]): number {
-	return DIVISIONS.find((v) => offsets.every(([k, d]) => (k * v) % d === 0)) as number;
+/** The smallest of a meter's divisions with a point at every offset `k / d` given. */
+function minimal(offsets: [number, number][], meter: Meter): number {
+	return meter.divs.find((v) => offsets.every(([k, d]) => (k * v) % d === 0)) as number;
 }
 
 /** Whether a rest at `p` starts where the spec reads it: on a beat, or on a point the beat's attacks make. */
-function startsOnPoint(ps: Point[], p: Point): boolean {
+function startsOnPoint(ps: Point[], p: Point, meter: Meter): boolean {
 	const attacks = ps.filter((q) => q.beat === p.beat && q.kind === "N");
-	const v = minimal(attacks.map((q): [number, number] => [q.k, q.d]));
+	const v = minimal(
+		attacks.map((q): [number, number] => [q.k, q.d]),
+		meter,
+	);
 	return p.k === 0 || (p.k * v) % p.d === 0;
 }
 
@@ -123,7 +129,7 @@ function strictly(ps: Point[], meter: Meter): void {
 		const next = ps[j + 1];
 		const stop = next === undefined ? Math.ceil(at(p) / bar - 1e-9) * bar : at(next);
 		const long = stop - at(p) >= meter.quarters - 1e-9;
-		if (!long || !startsOnPoint(ps, p)) for (const q of ps.slice(i, j + 1)) q.kind = "H";
+		if (!long || !startsOnPoint(ps, p, meter)) for (const q of ps.slice(i, j + 1)) q.kind = "H";
 	}
 }
 
@@ -188,6 +194,10 @@ function classesOf(g: ReturnType<typeof generated>, back: string): string[] {
 			"four-part beat",
 			notes.some((p) => p.d === 4),
 		),
+		...on(
+			"eight-part beat",
+			notes.some((p) => p.d === 8),
+		),
 		...on("dotted figure", /\}\._\{|\}_\{[^}]+\}\./.test(back)),
 		...on("rest inside a beat", /_--|--_/.test(text)),
 		...on("whole bar of rest", /\| (-- ?)+\|/.test(text)),
@@ -247,6 +257,7 @@ const FLOORS: Record<string, number> = {
 	"triplet beat": 100,
 	"six-part beat": 100,
 	"four-part beat": 100,
+	"eight-part beat": 20,
 	"dotted figure": 5,
 	"rest inside a beat": 20,
 	"whole bar of rest": 5,

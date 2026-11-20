@@ -1,9 +1,10 @@
 /**
  * The grid inside a beat (spec 4.2): each beat is divided into 1, 2, 3, 4
- * or 6 parts, the smallest that holds its attacks within a 128th note; a
- * beat no division holds is rounded, its attacks moved to the nearest
- * point (the beat's end among them), and then reduced (ruling 1). One
- * walk over the attacks, in order, beside the beats.
+ * or 6 parts (a half-note beat, or a longer plain one, into 8 too), the
+ * smallest that holds its attacks within a 128th note; a beat no division
+ * holds is rounded, its attacks moved to the nearest point (the beat's end
+ * among them), and then reduced (ruling 1). One walk over the attacks, in
+ * order, beside the beats.
  */
 import { beatsOf } from "barmark";
 import type { Attack } from "./attacks.js";
@@ -15,9 +16,13 @@ export const TOLERANCE = 32;
 const FINEST = 8;
 /** The divisions a beat may take, coarsest first. */
 const DIVISIONS = [1, 2, 3, 4, 6];
-/** A rounded beat's parts: a plain beat's, and a dotted beat's. */
+/** A plain beat this many quarters long or longer (a half note) takes `LONG` parts too: its sixteenths (Kevin, 2026-11-20). */
+const LONG_BEAT = 2;
+const LONG = 8;
+/** A rounded beat's parts: a plain beat's, a dotted beat's, and a plain beat's of a half note or longer. */
 const ROUND_PLAIN = 4;
 const ROUND_DOTTED = 6;
+const ROUND_LONG = LONG;
 
 /**
  * A beat in ticks; `bar` is its index in `grid.bars`; `dotted` when the
@@ -61,9 +66,14 @@ export function beatsOfGrid(grid: Grid): Beat[] {
 	return beats;
 }
 
-/** The divisions whose parts are no shorter than a 32nd note; always at least `[1]`. */
-export function divisionsFor(length: number, ppq: number): number[] {
+/** Whether a beat takes `LONG` parts: plain, and a half note or longer. */
+const isLong = (length: number, ppq: number, dotted: boolean) =>
+	!dotted && length >= LONG_BEAT * ppq;
+
+/** The divisions whose parts are no shorter than a 32nd note, and 8 for a plain beat of a half note or longer; always at least `[1]`. */
+export function divisionsFor(length: number, ppq: number, dotted: boolean): number[] {
 	const fine = DIVISIONS.filter((n) => length / n >= ppq / FINEST);
+	if (isLong(length, ppq, dotted)) fine.push(LONG);
 	return fine.length > 0 ? fine : [1];
 }
 
@@ -130,9 +140,10 @@ function fitBeat<A>(
 	return null;
 }
 
-/** A rounded beat's parts: 4, or 6 when dotted, or the finest allowed when that is coarser. */
+/** A rounded beat's parts: 4, or 6 when dotted, or 8 when it may take 8, or the finest allowed when that is coarser. */
 function roundingParts(beat: Beat, divisions: number[]): number {
 	const finest = divisions[divisions.length - 1] ?? 1;
+	if (finest === LONG) return ROUND_LONG;
 	return Math.min(beat.dotted ? ROUND_DOTTED : ROUND_PLAIN, finest);
 }
 
@@ -179,7 +190,7 @@ function roundBeat<A>(
 /** One beat's reading: the smallest division that fits, else rounded. */
 function readBeat<A>(items: Item<A>[], beat: Beat, ppq: number, final: boolean): Reading<A> {
 	if (items.length === 0) return { parts: 1, placed: [], carry: [], rounded: false };
-	const divisions = divisionsFor(beat.length, ppq);
+	const divisions = divisionsFor(beat.length, ppq, beat.dotted);
 	return (
 		fitBeat(items, beat, divisions, ppq / TOLERANCE) ?? roundBeat(items, beat, divisions, final)
 	);
