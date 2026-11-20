@@ -254,7 +254,9 @@ one load every element on the page uses, and asking twice does nothing.
   (`navigator.connection`), it waits for intent instead.
 
 With `switch="off"` there is no switch for `"intent"` to watch, so use
-`"idle"`, or set `preload="idle"` when your own control is reached.
+`"idle"`, or set `preload="idle"` when your own control is reached. Where
+the reader has asked to save data, or is on a 2G connection, neither
+loads early: Verovio then loads on the first switch to the score.
 
 ### When the score can't be drawn
 
@@ -283,6 +285,18 @@ change enables it, a score that fails again fires again. A score an
 element no longer wants (its chart or width changed) is dropped, not
 failed, and fires nothing: it is cut off after three seconds if the worker
 is already engraving it.
+
+With `switch="off"` the note still shows, alone above the grid, and the
+page's own Score control has to follow the element. After `scoreerror`,
+setting `view` to `"score"` is put back to `"grid"` with no event, until
+the chart or a `verovio-*` attribute changes (which enables Score again,
+also with no event). So disable your Score control on `scoreerror`, or
+read `view` back after setting it.
+
+Set `view` from script only once the element is defined: a property set
+on the element before its module has loaded is lost. Before that, set the
+attribute (`setAttribute("view", "score")`, which the element reads as it
+loads), or wait for `customElements.whenDefined("barmark-score")`.
 
 ## On the server
 
