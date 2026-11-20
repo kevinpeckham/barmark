@@ -163,7 +163,7 @@ function chosenTracks(
 		for (const track of tracks) chosen.add(track);
 		return tracks.length === 0;
 	});
-	const fallback = chosen.size === 0 ? "; the tracks are chosen as usual" : "";
+	const fallback = chosen.size === 0 ? "; the harmony is chosen as usual" : "";
 	if (unknown.length > 0)
 		report.add(
 			"track-unknown",

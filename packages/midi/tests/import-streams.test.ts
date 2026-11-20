@@ -596,7 +596,8 @@ describe("harmonyNotes", () => {
 			expect(tracksOf(unknown.harmony)).toEqual([2, 3]);
 			const d = unknown.report.list.find((x) => x.code === "track-unknown");
 			expect(d?.severity).toBe("warning");
-			expect(d?.message).toBe('no track is "nope", 4 and 0; the tracks are chosen as usual');
+			// As on main, word for word: a file that is not one line reports nothing differently.
+			expect(d?.message).toBe('no track is "nope", 4 and 0; the harmony is chosen as usual');
 			expect(unknown.report.list.filter((x) => x.code === "track-unknown")).toHaveLength(1);
 			expect(unknown.report.list.some((x) => x.code === "melody-left-out")).toBe(true);
 			const some = harmonyFrom(file(), { tracks: ["nope", 1] });

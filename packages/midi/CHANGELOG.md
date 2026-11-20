@@ -13,8 +13,6 @@ package uses [semantic versioning](https://semver.org/).
   sixteenths and triplets, where it came back as chords with the octaves
   and the re-struck notes lost. `notes: false` reads chords from it, as
   before. Every other file imports as it did.
-- **`track-unknown` says "the tracks are chosen as usual"** where it said
-  "the harmony", since the tracks may then be read as a line.
 
 ### Added
 
