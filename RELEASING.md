@@ -244,6 +244,13 @@ runs, and `verify:package cli` fails on anything else.
     After a `barmark` bump, check `site/bun.lock` holds one barmark:
     `grep '/barmark": \["barmark@' site/bun.lock` prints nothing, or
     delete the nested entries it finds and `bun install` again (FINDINGS).
+    The same after any other bump, for the package raised:
+    `grep -E '"@barmark/[a-z]+/@barmark/' site/bun.lock` shows every
+    package of ours nested under another. The only entries that belong
+    there are under `@barmark/cli`, which pins its libraries exactly and
+    so keeps its own copies until its next release; one under
+    `@barmark/score` (its `@barmark/render`, say) is a stale copy the
+    page would draw with: delete it and `bun install` again.
     `site/bunfig.toml` exempts our own packages from Bun's seven-day
     install cooldown, not their dependencies: if the release raised a
     third-party pin (Verovio, say) to a version under a week old,
