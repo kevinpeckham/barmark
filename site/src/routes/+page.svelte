@@ -72,103 +72,126 @@ const description =
 	<meta property="og:description" content={description} />
 </svelte:head>
 
-<main class="home-page-x-padding py-10 lg:py-14 flex flex-col gap-8 min-w-0">
-	<div>
+<main class="page-x-padding grid grid-cols-1 gap-16 main-y-padding w-full overflow-x-clip">
+
+	<!-- page top -->
+	<section class="w-full">
 		<h1 class="marketing-headline text-ink">{HEADLINE}</h1>
-		<p class="max-w-prose opacity-80">
+
+		<p class="max-w-prose opacity-80 mb-6">
 			{TAGLINE_BEFORE}<a
 				href={LINKS.stemShovel}
 				class="underline decoration-accent/60 underline-offset-3 hover-text-accent">{TAGLINE_LINK}</a
 			>{TAGLINE_AFTER}
 			{VALUE}
 		</p>
-	</div>
 
-	<div class="flex flex-wrap items-center gap-3">
-		<Button href="/syntax" variant="accent">Read the syntax</Button>
-		<Button href={LINKS.github}>
-			<span class="i-ph-github-logo" aria-hidden="true"></span>GitHub
-		</Button>
-		<Button href={LINKS.npm}><code class="font-sans">npm i barmark</code></Button>
-		<Button href={LINKS.article}>Why we built it</Button>
-	</div>
-
-	<div role="group" aria-label="Examples" class="flex flex-wrap items-center gap-x-3 gap-y-2 -mb-4">
-		<div class="flex gap-2">
-			<button type="button" class="button text-xs" aria-label="Previous example" onclick={() => flip(-1)}>
-				<span class="i-ph-caret-left" aria-hidden="true"></span>Previous
-			</button>
-			<button type="button" class="button text-xs" aria-label="Next example" onclick={() => flip(1)}>
-				Next<span class="i-ph-caret-right" aria-hidden="true"></span>
-			</button>
+		<div class="flex flex-wrap items-center gap-3">
+			<Button href="/syntax" variant="accent">Read the syntax</Button>
+			<Button href={LINKS.github}>
+				<span class="i-ph-github-logo" aria-hidden="true"></span>GitHub
+			</Button>
+			<Button href={LINKS.npm}><code class="font-sans">npm i barmark</code></Button>
+			<Button href={LINKS.article}>Why we built it</Button>
 		</div>
-		<p role="status" class="text-sm min-w-0">
-			<span class="font-semibold">{example.title}</span>
-			<span class="opacity-70">{index + 1} of {EXAMPLES.length}</span>
-		</p>
-	</div>
 
-	<div class="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)] gap-4">
-		<Window title="Source · edit me">
-			<div class="flex flex-col h-full">
-				<SourceEditor bind:value={text} label="Barmark source of the chart" />
-				<div class="flex justify-end border-t border-line px-3 py-2">
-					<button
-						type="button"
-						class="button text-xs"
-						disabled={text === original}
-						onclick={reset}
-					>
-						<span class="i-ph-arrow-counter-clockwise" aria-hidden="true"></span>Reset
+	</section>
+
+	<!-- examples -->
+	<section class="grid grid-cols-1 w-full">
+
+		<!-- example section heading -->
+		<h2 class="marketing-section-heading">Examples</h2>
+
+		<!-- example navigation -->
+		<div role="group" aria-label="Examples" class="grid grid-cols-1 lg-grid-cols-2">
+
+			<!-- col 1 -->
+			<div class="flex items-center justify-start gap-6 mb-5 w-full">
+
+				<div role="status" class="flex gap-6 items-center">
+					<h3 class="text-18px font-semibold">"{example.title}"</h3>
+					<span class="opacity-70">{index + 1} of {EXAMPLES.length}</span>
+				</div>
+
+				<div class="flex gap-4 text-.85rem">
+					<button type="button" class="button" aria-label="Previous example" onclick={() => flip(-1)}>
+						<span class="i-ph-caret-left" aria-hidden="true"></span>
+					</button>
+					<button type="button" class="button" aria-label="Next example" onclick={() => flip(1)}>
+						<span class="i-ph-caret-right" aria-hidden="true"></span>
 					</button>
 				</div>
 			</div>
-		</Window>
-		<Window title="Rendered · @barmark/score">
-			{#snippet controls()}
-				<div class="ml-auto flex flex-wrap items-center gap-2">
-					<KeyMenu {key} bind:semitones />
-					<div
-						role="radiogroup"
-						aria-label="Chord spelling"
-						title={view === "score" ? "Chord spelling is the grid's: switch to Grid to use it" : undefined}
-						class="inline-flex flex-wrap rounded-md border border-white/45 text-xs overflow-hidden {view === 'score' ? 'opacity-40' : ''}"
-					>
-						{#each SPELLINGS as s (s.id)}
-							<!-- The group clips an outside ring, so the ring is inset: accent on the dark items, dark on the accent-filled one. -->
-							<label
-								title={s.title}
-								class="relative px-2.5 py-1 cursor-pointer opacity-80 hover-opacity-100 has-[:checked]:(bg-accent text-on-accent opacity-100) has-[:focus-visible]:(outline-2 outline-accent -outline-offset-2) [&:has(:checked:focus-visible)]:outline-on-accent"
-							>
-								<input
-									type="radio"
-									name="spelling"
-									value={s.id}
-									bind:group={spelling}
-									disabled={view === "score"}
-									class="absolute inset-0 m-0 opacity-0 cursor-pointer disabled:cursor-not-allowed"
-								/>{s.label}
-							</label>
-						{/each}
+		</div>
+
+		<!-- edit and render panels -->
+		<div class="gap-8 grid grid-cols-1 min-h-600px xl-grid-cols-2 w-full">
+			<Window title="Source · edit me">
+				<div class="flex flex-col h-full bg-white/8">
+					<SourceEditor bind:value={text} label="Barmark source of the chart" />
+					<div class="flex justify-end border-t border-line px-3 py-2">
+						<button
+							type="button"
+							class="button text-xs"
+							disabled={text === original}
+							onclick={reset}
+						>
+							<span class="i-ph-arrow-counter-clockwise" aria-hidden="true"></span>Reset
+						</button>
 					</div>
-					<DiagramSwitch bind:on={diagrams} disabled={view === "score"} />
 				</div>
-			{/snippet}
-			<!-- Four ordinary bars' width (the renderer's 24em step) and the padding: narrower, the window scrolls. -->
-			<div class="p-4 min-w-[26rem]">
-				<ChartRender
-					{text}
-					score
-					preload="intent"
-					{semitones}
-					numerals={spelling === "names" ? null : spelling}
-					{diagrams}
-					melody={false}
-					label="The chart, rendered"
-					onviewchange={(v) => (view = v)}
-				/>
-			</div>
-		</Window>
-	</div>
-	<p data-credit class="text-xs opacity-60">{example.credit}</p>
+			</Window>
+
+			<Window title="Rendered · @barmark/score">
+				{#snippet controls()}
+					<div class="ml-auto flex flex-wrap items-center gap-2">
+						<KeyMenu {key} bind:semitones />
+						<div
+							role="radiogroup"
+							aria-label="Chord spelling"
+							title={view === "score" ? "Chord spelling is the grid's: switch to Grid to use it" : undefined}
+							class="inline-flex flex-wrap rounded-md border border-white/45 text-xs overflow-hidden {view === 'score' ? 'opacity-40' : ''}"
+						>
+							{#each SPELLINGS as s (s.id)}
+								<!-- The group clips an outside ring, so the ring is inset: accent on the dark items, dark on the accent-filled one. -->
+								<label
+									title={s.title}
+									class="relative px-2.5 py-1 cursor-pointer opacity-80 hover-opacity-100 has-[:checked]:(bg-accent text-on-accent opacity-100) has-[:focus-visible]:(outline-2 outline-accent -outline-offset-2) [&:has(:checked:focus-visible)]:outline-on-accent"
+								>
+									<input
+										type="radio"
+										name="spelling"
+										value={s.id}
+										bind:group={spelling}
+										disabled={view === "score"}
+										class="absolute inset-0 m-0 opacity-0 cursor-pointer disabled:cursor-not-allowed"
+									/>{s.label}
+								</label>
+							{/each}
+						</div>
+						<DiagramSwitch bind:on={diagrams} disabled={view === "score"} />
+					</div>
+				{/snippet}
+				<!-- Four ordinary bars' width (the renderer's 24em step) and the padding: narrower, the window scrolls. -->
+				<div class="p-4 min-w-[26rem] bg-white/95">
+					<ChartRender
+						{text}
+						score
+						preload="intent"
+						{semitones}
+						numerals={spelling === "names" ? null : spelling}
+						{diagrams}
+						melody={false}
+						label="The chart, rendered"
+						onviewchange={(v) => (view = v)}
+					/>
+				</div>
+			</Window>
+
+			<p data-credit class="text-xs opacity-60">{example.credit}</p>
+		</div>
+
+
+	</section>
 </main>

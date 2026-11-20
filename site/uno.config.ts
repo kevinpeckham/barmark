@@ -72,11 +72,16 @@ export default defineConfig({
 		[
 			"barmark-look",
 			[
-				"[--barmark-size:15.5px] [--barmark-paper:oklch(96.89%_0.01_251.56/0.12)]",
-				"[--barmark-ink:#fff] [--barmark-note:#ece8e0] [--barmark-accent:#e8a56a]",
-				"[--barmark-muted:oklch(98.51%_0_0/0.8)] [--barmark-rule:oklch(98.51%_0_0/0.8)]",
-				"[--barmark-directive:oklch(98.51%_0_0/0.8)]",
-				'[--barmark-text-font:"Noto_Serif",Georgia,serif] [--barmark-label-font:"Noto_Sans",system-ui,sans-serif]',
+				"[--barmark-size:15.5px]",
+				"[--barmark-paper:transparent]",
+				"[--barmark-ink:oklch(13.96%_0.05_262.12)]",
+				"[--barmark-note:oklch(13.96%_0.05_262.12_/_1)]",
+				"[--barmark-accent:oklch(13.96%_0.05_262.12_/_0.9)]",
+				"[--barmark-muted:oklch(13.96%_0.05_262.12_/_0.75)]",
+				"[--barmark-rule:oklch(13.96%_0.05_262.12_/_1)]",
+				"[--barmark-directive:oklch(13.96%_0.05_262.12_/_0.75)]",
+				'[--barmark-text-font:Noto_Serif",Georgia,serif]',
+			 	'[--barmark-label-font:"Noto_Sans",system-ui,sans-serif]',
 			].join(" "),
 		],
 		["home-page-x-padding", "px-4 sm:px-6 md:px-7 lg:px-8 xl:px-24 2xl:px-48"],
@@ -104,5 +109,11 @@ export default defineConfig({
 			"flex flex-wrap items-center justify-between gap-x-4 gap-y-2 px-3.5 py-2.5 border-b border-line",
 		],
 		["window-label", "text-xs uppercase tracking-wider opacity-60"],
+		[
+			"main-y-padding",
+			"pt-10 pb-14 lg:(pt-12 pb-16) xl:(pt-14 pb-20) 2xl:(pt-16 pb-22)",
+		],
+		["marketing-section-heading", "font-mono uppercase text-accent text-0.85em leading-tight mb-5"],
+		["page-x-padding", "px-4 sm:px-6 md:px-7 lg:px-8 xl:px-16 2xl:px-24"],
 	],
 });

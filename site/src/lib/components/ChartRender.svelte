@@ -21,6 +21,7 @@ let {
 	score = false,
 	preload = "none",
 	semitones = 0,
+	theme = "light",
 	onviewchange,
 }: {
 	text: string;
@@ -45,6 +46,8 @@ let {
 	preload?: Preload;
 	/** Draw the chart this many semitones from its own key; the text itself never changes. */
 	semitones?: number;
+	/** Theme */
+	theme?: string;
 	/** The reader switched a score between Grid and Score. */
 	onviewchange?: (view: View) => void;
 } = $props();
@@ -73,6 +76,8 @@ const initial = (asScore ? scoreHtml : chartHtml)(
 let host: HTMLDivElement;
 
 const chart = () => host.querySelector(tag) as ChartElement;
+
+
 const draw = () => {
 	chart().text = transposed(rendered, moved);
 };
@@ -91,6 +96,7 @@ onMount(() => {
 // order: so whichever runs last applies the option as it is NOW, never as it was
 // when its change was made (a stale value could otherwise win).
 let spelled = untrack(() => numerals);
+
 $effect(() => {
 	if (numerals === spelled) return;
 	spelled = numerals;
@@ -107,6 +113,7 @@ $effect(() => {
 });
 
 let shown = untrack(() => diagrams);
+
 $effect(() => {
 	if (diagrams === shown) return;
 	shown = diagrams;
@@ -120,6 +127,7 @@ $effect(() => {
 		draw();
 	});
 });
+
 
 $effect(() => {
 	const next = text;
