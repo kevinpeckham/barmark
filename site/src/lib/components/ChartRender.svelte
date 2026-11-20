@@ -1,14 +1,15 @@
 <script lang="ts">
 import { onMount, untrack } from "svelte";
-import { chartHtml, type Preload, scoreHtml } from "#lib/chart.js";
+import { chartHtml, type Preload, scoreHtml, type View } from "#lib/chart.js";
 import { transposed } from "#lib/key.js";
 
 type Numerals = "nashville" | "roman";
-type View = "grid" | "score";
 type ChartElement = HTMLElement & {
 	text: string | null;
 	numerals?: Numerals | null;
 	chordDiagrams?: "guitar" | null;
+	/** A <barmark-score>'s. */
+	view?: View;
 };
 
 let {
@@ -22,6 +23,7 @@ let {
 	preload = "none",
 	semitones = 0,
 	theme = "light",
+	view = "grid",
 	onviewchange,
 }: {
 	text: string;
@@ -48,7 +50,9 @@ let {
 	semitones?: number;
 	/** Theme */
 	theme?: string;
-	/** The reader switched a score between Grid and Score. */
+	/** A score's view. The page sets it; the element says what it shows through `onviewchange`. */
+	view?: View;
+	/** A score now shows this view: the reader switched it, or the score could not be drawn and the grid is back. */
 	onviewchange?: (view: View) => void;
 } = $props();
 
@@ -71,12 +75,11 @@ let rendered = untrack(() => text);
 let moved = untrack(() => semitones);
 const initial = (asScore ? scoreHtml : chartHtml)(
 	transposed(rendered, moved),
-	untrack(() => ({ barNumbers, preload, chordDiagrams: diagrams, melody })),
+	untrack(() => ({ barNumbers, preload, chordDiagrams: diagrams, melody, view })),
 );
 let host: HTMLDivElement;
 
 const chart = () => host.querySelector(tag) as ChartElement;
-
 
 const draw = () => {
 	chart().text = transposed(rendered, moved);
@@ -128,6 +131,19 @@ $effect(() => {
 	});
 });
 
+// The view, as the options above: the element shows what the page asks for now.
+// It may refuse (a score that could not be drawn shows the grid again, and says
+// so with no event when asked once more), so the page is told what it shows.
+let viewed = untrack(() => view);
+$effect(() => {
+	if (!asScore || view === viewed) return;
+	viewed = view;
+	void load().then(() => {
+		const el = chart();
+		el.view = view;
+		if (el.view !== view) onviewchange?.(el.view ?? "grid");
+	});
+});
 
 $effect(() => {
 	const next = text;

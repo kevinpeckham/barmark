@@ -56,7 +56,7 @@ const cell = "px-3 py-3 align-top lt-sm:(block px-0 py-1)";
 	<meta property="og:description" content={description} />
 </svelte:head>
 
-<main class="home-page-x-padding py-10 flex flex-col gap-10 min-w-0">
+<main class="page-x-padding py-10 flex flex-col gap-10 min-w-0">
 	<div>
 		<h1 class="marketing-headline text-ink">Get started</h1>
 		<p class="max-w-prose opacity-80">

@@ -6,7 +6,7 @@ import { parseChart, printChart } from "barmark";
 import { VerovioToolkit } from "verovio/esm";
 import createVerovioModule from "verovio/wasm";
 import { chartHtml, scoreHtml } from "../src/lib/chart.ts";
-import { EXAMPLES, exampleFile, flipped } from "../src/lib/examples.ts";
+import { EXAMPLES, exampleFile, flipped, viewOf } from "../src/lib/examples.ts";
 
 /** Each example's text, as the home page imports it. */
 const texts = await Promise.all(
@@ -19,6 +19,15 @@ const official = (e: (typeof EXAMPLES)[number]) =>
 	Bun.file(join(import.meta.dir, "../../examples", exampleFile(e))).text();
 
 describe("the home page's examples", () => {
+	test("each opens in its own view: Amazing Grace in the score, where its melody is, the rest in the grid", () => {
+		expect(EXAMPLES.map((e) => [e.id, viewOf(e)])).toEqual([
+			["greensleeves", "grid"],
+			["amazing-grace", "score"],
+			["blues-in-f", "grid"],
+			["when-the-saints", "grid"],
+			["peaceful-dreams", "grid"],
+		]);
+	});
 	test("are five, Greensleeves first: the default", () => {
 		expect(EXAMPLES.map((e) => e.title)).toEqual([
 			"Greensleeves",

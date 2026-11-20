@@ -69,7 +69,7 @@ onMount(() => {
 	<h2 {id} class={question}>{QUESTIONS.find(([key]) => key === id)?.[1]}</h2>
 {/snippet}
 
-<main class="home-page-x-padding py-10 flex flex-col gap-6 min-w-0">
+<main class="page-x-padding py-10 flex flex-col gap-6 min-w-0">
 	<h1 class="marketing-headline text-ink">Frequently asked questions</h1>
 
 	<!-- Wide: the questions in a column that stays in view beside the answers (short enough to stay put

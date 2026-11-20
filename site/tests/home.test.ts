@@ -133,7 +133,7 @@ describe("the examples", () => {
 		expect(buttons.map((b) => b.getAttribute("type"))).toEqual(["button", "button"]);
 		const status = group()?.querySelector('[role="status"]');
 		expect(status?.textContent?.replace(/\s+/g, " ").trim()).toBe(
-			`Greensleeves ${1} of ${EXAMPLES.length}`,
+			`"Greensleeves" ${1} of ${EXAMPLES.length}`,
 		);
 	});
 	test("the default is Greensleeves, credited as public domain", () => {

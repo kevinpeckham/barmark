@@ -37,6 +37,9 @@ export function chartHtml(text: string, look: Look = {}): string {
 	}
 }
 
+/** A `<barmark-score>`'s two views. */
+export type View = "grid" | "score";
+
 /** When `<barmark-score>` starts loading Verovio: on its first switch, on intent, or once the page is idle. */
 export type Preload = "none" | "intent" | "idle";
 
@@ -54,13 +57,14 @@ function engineAttributes(preload: Preload): string {
 /**
  * The chart as `<barmark-score>` markup: the same grid, with the Grid / Score
  * switch, and the chart's text carried for the score. Verovio is never
- * imported here; the element engraves once a reader picks Score.
+ * imported here; the element engraves once a reader picks Score, or once it
+ * loads when `view` is `"score"` (the grid is what the markup shows).
  */
 export function scoreHtml(
 	text: string,
-	{ preload = "none", ...look }: Look & { preload?: Preload } = {},
+	{ preload = "none", view = "grid", ...look }: Look & { preload?: Preload; view?: View } = {},
 ): string {
-	const opts = chosen(look);
+	const opts = { ...chosen(look), ...(view === "score" ? { view } : {}) };
 	let html: string;
 	try {
 		html = renderScoreHtml(text, opts);

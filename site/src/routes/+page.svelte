@@ -5,7 +5,7 @@ import DiagramSwitch from "#lib/components/DiagramSwitch.svelte";
 import KeyMenu from "#lib/components/KeyMenu.svelte";
 import SourceEditor from "#lib/components/SourceEditor.svelte";
 import Window from "#lib/components/Window.svelte";
-import { EXAMPLES, type Example, exampleFile, flipped } from "#lib/examples.js";
+import { EXAMPLES, type Example, exampleFile, flipped, viewOf } from "#lib/examples.js";
 import { chartKey } from "#lib/key.js";
 import { HEADLINE, LINKS, TAGLINE_AFTER, TAGLINE_BEFORE, TAGLINE_LINK, VALUE } from "#lib/site.js";
 
@@ -28,7 +28,9 @@ const edits = new Map<Example["id"], string>();
 
 /**
  * Shows the next (1) or previous (-1) example, as the reader last left it,
- * in its own key; the view, the chord spelling and the guitar diagrams stay.
+ * in its own key; the chord spelling and the guitar diagrams stay, and so
+ * does the view once the reader has picked one (until then each example
+ * opens in its own: `viewOf`).
  */
 function flip(step: number) {
 	if (text === original) edits.delete(example.id);
@@ -56,8 +58,10 @@ let semitones = $state(0);
 const key = $derived(chartKey(text));
 /** The grid's guitar chord diagrams: a viewing choice like the key, off on the prerendered page, not kept. */
 let diagrams = $state(false);
-/** The score has no chord spelling or diagrams: they are the grid's. */
-let view: "grid" | "score" = $state("grid");
+/** The view the reader picked, Grid or Score; null until they pick one. */
+let picked: "grid" | "score" | null = $state(null);
+/** The view on show: the reader's pick, else the example's own. The score has no chord spelling or diagrams: they are the grid's. */
+const view = $derived(picked ?? viewOf(example));
 const description =
 	"Barmark is a markdown-inspired plain-text notation for chord charts. Edit a chart and watch it render, as a bar grid or a full score.";
 </script>
@@ -184,7 +188,11 @@ const description =
 						{diagrams}
 						melody={false}
 						label="The chart, rendered"
-						onviewchange={(v) => (view = v)}
+						{view}
+						onviewchange={(v) => {
+							// The element shows a view the page did not ask for: the reader switched it.
+							if (v !== view) picked = v;
+						}}
 					/>
 				</div>
 			</Window>
