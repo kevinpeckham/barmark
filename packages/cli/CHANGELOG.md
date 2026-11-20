@@ -13,7 +13,6 @@ package uses [semantic versioning](https://semver.org/).
 - **Uses** @barmark/score 0.8.0. `render --score` draws as before: the
   element's new `switch="off"` is for web pages, and is not a flag here.
 
-
 ## [0.15.0] - 2026-11-20
 
 ### Added
