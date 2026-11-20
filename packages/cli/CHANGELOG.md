@@ -6,6 +6,13 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.15.1] - 2026-11-20
+
+### Changed
+
+- **Uses** @barmark/score 0.8.0. `render --score` draws as before: the
+  element's new `switch="off"` is for web pages, and is not a flag here.
+
 ## [0.15.0] - 2026-11-20
 
 ### Added
@@ -461,7 +468,8 @@ The first release of the `barmark` command. Uses `barmark` 0.8.0 and
 - **The `barmark` command:** `check`, `format`, `render` and `transpose`
   for `.chart.md` files, on npm and as standalone binaries.
 
-[Unreleased]: https://github.com/kevinpeckham/barmark/compare/cli-v0.15.0...HEAD
+[Unreleased]: https://github.com/kevinpeckham/barmark/compare/cli-v0.15.1...HEAD
+[0.15.1]: https://github.com/kevinpeckham/barmark/compare/cli-v0.15.0...cli-v0.15.1
 [0.15.0]: https://github.com/kevinpeckham/barmark/compare/cli-v0.14.1...cli-v0.15.0
 [0.14.1]: https://github.com/kevinpeckham/barmark/compare/cli-v0.14.0...cli-v0.14.1
 [0.14.0]: https://github.com/kevinpeckham/barmark/compare/cli-v0.13.0...cli-v0.14.0
