@@ -3315,3 +3315,20 @@ those never reached, or reached in a repeat with passes enough for their verse (
   states its own bound in the units it expands, and checks it before it
   allocates. The reviewers' scale runs grew notes and bars; none grew a
   bar's meter.
+
+### npm listed a version five minutes before it served the tarball (2026-11-20, release)
+
+- **The symptom.** The `midi-v0.4.0` release run published, and its
+  `confirm` job failed: `npm install @barmark/midi@0.4.0` got a 404 for
+  `midi-0.4.0.tgz` six times over 70 seconds. `npm view` already showed
+  0.4.0 as `latest`, and npm's status page said all systems operational.
+- **The cause.** The registry's metadata and its tarballs are served
+  apart. The tarball answered 404 from the publish at 13:42:19 UTC until
+  about 13:47; usually the gap is seconds, which is what `confirm`'s six
+  tries allow for.
+- **The fix.** Nothing was wrong with the package. Once
+  `curl -sI https://registry.npmjs.org/@barmark/midi/-/midi-0.4.0.tgz`
+  answered 200, `gh run rerun <run> --failed` ran `confirm` again and it
+  passed; `publish` had succeeded and is not run again. A failed `confirm`
+  means a broken package (RELEASING.md) only when the install reached the
+  package: read its log for a 404 on the tarball first.
