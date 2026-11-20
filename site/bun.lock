@@ -12,7 +12,7 @@
         "barmark": "0.25.0",
       },
       "devDependencies": {
-        "@barmark/cli": "0.15.0",
+        "@barmark/cli": "0.15.1",
         "@barmark/fretboard": "0.1.2",
         "@barmark/listen": "0.2.2",
         "@barmark/lyricsheet": "0.1.1",
@@ -46,7 +46,7 @@
 
     "@antfu/install-pkg": ["@antfu/install-pkg@2.1.0", "", { "dependencies": { "package-manager-detector": "^1.8.0", "tinyexec": "^1.3.1" } }, "sha512-sdg9NxU3zR4Mnawfbc/x6GB5Wf17WYud5qOuEuxXjaKpYpMkISSJEjItGebXJ2bQ4DIcly4NYH23mtkGJjvKUw=="],
 
-    "@barmark/cli": ["@barmark/cli@0.15.0", "", { "dependencies": { "@barmark/lyricsheet": "0.1.1", "@barmark/midi": "0.4.0", "@barmark/musicxml": "0.9.3", "@barmark/render": "0.21.1", "@barmark/score": "0.7.0", "barmark": "0.25.0", "verovio": "6.4.1" }, "bin": { "barmark": "dist/cli.js" } }, "sha512-KmGphPCtlptv7Q4PETtyjhAXeFj3oSuzhZveuS63aBAD9yCPa3WrGEzoRau9MUZPWaKbUZonogEqb0VhkOhuRQ=="],
+    "@barmark/cli": ["@barmark/cli@0.15.1", "", { "dependencies": { "@barmark/lyricsheet": "0.1.1", "@barmark/midi": "0.4.0", "@barmark/musicxml": "0.9.3", "@barmark/render": "0.21.1", "@barmark/score": "0.8.0", "barmark": "0.25.0", "verovio": "6.4.1" }, "bin": { "barmark": "dist/cli.js" } }, "sha512-4MArllnI5w/MzThO2npuNG+gG4zuQm6JgT/Gs/EqT92TAvpislVHuvs/rdsTSSwYpp4uWIshpbpf2ub6v8SDuw=="],
 
     "@barmark/fretboard": ["@barmark/fretboard@0.1.2", "", { "dependencies": { "barmark": "^0.25.0" } }, "sha512-JVyaEutnsLvhO+X2Gk4UuZNhPtZOA9NY82V4LiavPYqG4NYA2pA1/Y4P9MCxs3NRdRNfFgKb/H2t0KCdwsiXdw=="],
 
@@ -511,8 +511,6 @@
     "yallist": ["yallist@5.0.0", "", {}, "sha512-YgvUTfwqyc7UXVMrB+SImsVYSmTS8X/tSrtdNZMImM+n7+QTriRXyXim0mBrTXNeqzVF0KWGgHPeiyViFFrNDw=="],
 
     "zimmerframe": ["zimmerframe@1.1.5", "", {}, "sha512-msJxIvYDYcoNL+PJsu+7qmpDWsYmAxTY+2TNYXXF0hzBzBk0BMecOqDOG/EckUoKCuKwObfbugIl8QpqHDXeFA=="],
-
-    "@barmark/cli/@barmark/score": ["@barmark/score@0.7.0", "", { "dependencies": { "@barmark/musicxml": "^0.9.3", "@barmark/render": "^0.21.0", "barmark": "^0.25.0", "verovio": "6.4.1" } }, "sha512-9HPB3VNUIynrkcwyaHeSZ7jd+olFrO+nqDiAWBVEGgoIssv8g1ZqABl8w0FWmiH+PZ+BiWnWlEADjmFGUGZzNg=="],
 
     "@types/node/undici-types": ["undici-types@8.9.0", "", {}, "sha512-KTDyRTYX8sWmKXAikPHHSyc63CRPETMctyjKFupcC6OBLXT3xsN0e9aF7m+mIXutFWpUXuedtowG7iLOzp0kQg=="],
 
