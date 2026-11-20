@@ -646,6 +646,31 @@ describe("<barmark-score> loading", () => {
 		}
 	});
 
+	test('switch="off" leaves the switch in the shadow root, the view logic and the note working', async () => {
+		const warn = spyOn(console, "warn").mockImplementation(() => {});
+		try {
+			const el = await make({ switch: "off" });
+			expect(parts(el).root.querySelector(".bms-switch")).not.toBeNull();
+			expect(parts(el).radios).toHaveLength(2);
+			const events: string[] = [];
+			el.addEventListener("viewchange", (e) =>
+				events.push((e as CustomEvent<{ view: string }>).detail.view),
+			);
+			el.view = "score";
+			await flush();
+			expect(events).toEqual(["score"]);
+			calls[0]?.reject(new Error("The score engine failed"));
+			await flush();
+			expect(parts(el).note?.textContent).toBe("The score couldn't be drawn");
+			expect(events).toEqual(["score", "grid"]);
+			el.view = "grid";
+			await flush();
+			expect(el.view).toBe("grid");
+		} finally {
+			warn.mockRestore();
+		}
+	});
+
 	test("the bar honours reduced motion", () => {
 		const styles = parts(served.host as HTMLElement).root.querySelector("style")?.textContent ?? "";
 		expect(styles).toContain("prefers-reduced-motion");
