@@ -153,7 +153,8 @@ Fallow, CI, Swamp), the grammar, `examples/`, the scripts and FINDINGS.md.
     `index.ts` tries the line on both pairings and falls back to chords
     when the line reading cannot finish
   - `tests/notes-node.test.ts` times the pairing under Node (V8's
-    `Array.shift` is linear where Bun's is not)
+    `Array.shift` takes time linear in the array's length, Bun's constant,
+    so `bun test` alone cannot see a queue drained with it)
   - `tests/`: `bun test`; every file is read back with `midi-file`
     (a devDependency, pinned exactly), an independent parser, and
     `helpers/player.ts` hears it beat by beat against the chart;

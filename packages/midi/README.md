@@ -262,7 +262,8 @@ The line reading has limits of its own:
   `rhythm-rounded` names the bars.
 - **A grace note joins its main note** as a double stop.
 - **A file is one line only if few attacks overlap.** A short line with
-  one overlap, or with a note-on never released, reads as chords.
+  one overlap, or a line with a note-on that is never released and whose
+  pitch is not struck again, reads as chords.
 
 Lyric rows go on as for any file, and have two limits for a melody. The
 words are not on the notes: with no `part:` declared nobody is the

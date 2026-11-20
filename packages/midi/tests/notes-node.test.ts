@@ -4,7 +4,9 @@
  * timing cannot see it). `notes.ts` imports nothing at run time, so it is
  * transpiled alone (no build) into a temp folder and timed by a small
  * script run with `node`: n note-ons of one pitch, then n note-offs,
- * paired first in, first out, at n and 4n.
+ * paired first in, first out, at n and 8n. The gap is wide on purpose: a
+ * loaded machine stretched linear runs of 4x the notes to 10x the time,
+ * which a quadratic run's best nearly touched.
  */
 import { afterAll, expect, test } from "bun:test";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
@@ -36,17 +38,17 @@ function time(n) {
 	return { ms: best, count };
 }
 time(20_000);
-console.log(JSON.stringify([time(50_000), time(200_000)]));
+console.log(JSON.stringify([time(50_000), time(400_000)]));
 `;
 
-test("first-in-first-out pairing grows linearly under Node: 4x the notes, well under 16x the time", () => {
+test("first-in-first-out pairing grows linearly under Node: 8x the notes, well under 64x the time", () => {
 	const source = readFileSync(new URL("../src/import/notes.ts", import.meta.url), "utf8");
 	writeFileSync(join(dir, "notes.mjs"), new Bun.Transpiler({ loader: "ts" }).transformSync(source));
 	writeFileSync(join(dir, "driver.mjs"), DRIVER);
 	const run = Bun.spawnSync(["node", join(dir, "driver.mjs")]);
 	expect(run.stderr.toString()).toBe("");
 	const [small, large] = JSON.parse(run.stdout.toString()) as { ms: number; count: number }[];
-	expect([small?.count, large?.count]).toEqual([50_000, 200_000]);
-	// Linear is about 4x; quadratic about 16x.
-	expect((large?.ms ?? 0) / (small?.ms ?? 1)).toBeLessThan(8);
+	expect([small?.count, large?.count]).toEqual([50_000, 400_000]);
+	// Linear is about 8x; quadratic about 64x.
+	expect((large?.ms ?? 0) / (small?.ms ?? 1)).toBeLessThan(24);
 }, 120_000);
