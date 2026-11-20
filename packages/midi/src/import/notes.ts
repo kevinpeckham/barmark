@@ -10,6 +10,17 @@
  * taken in one pass over the tracks merged by tick, then track, then file
  * order, except that at one tick a note-off comes before a re-strike of
  * its pitch.
+ *
+ * A line's notes are paired first in, first out (the note-line design,
+ * section 3; `overlaps: "keep"`): a note-on does not end a note of its
+ * pitch still sounding, and a note-off ends the oldest. Everything else is
+ * as above; a note the pedal holds still ends when its pitch is struck
+ * again.
+ *
+ * A line is read by its keys (Kevin, 2026-11-20; `pedal: false`):
+ * controller 64 is not read, so every note ends at its note-off. Nothing
+ * is then held, so a note-on written before a note-off of its pitch at one
+ * tick moves after it only when the pitch is sounding by its key.
  */
 import type { Smf, SmfEvent } from "../smf/types.js";
 import type { Report } from "./report.js";
@@ -25,20 +36,43 @@ const SUSTAIN = 64;
 /** An event and its 1-based track. */
 type Placed = { track: number; e: SmfEvent };
 
+/** How a note-on of a pitch already sounding pairs: it ends that note (MIDI 5.2), or both are kept, first in, first out. */
+export type Overlaps = "end" | "keep";
+
 /**
- * The notes so far: per channel, the start of each note sounding and of
- * each held by the pedal, by `voiceKey`; the pedal per channel; each
- * track's last tick.
+ * The notes so far: per channel, the starts of the notes sounding and of
+ * those held by the pedal, by `voiceKey`, oldest first (one at most while
+ * `overlaps` is "end"); the pedal per channel; each track's last tick;
+ * `pedals` false when the pedal is not read.
  */
 type Pairing = {
 	out: Note[];
-	sounding: Map<number, number>[];
-	held: Map<number, number>[];
+	sounding: Map<number, Queue>[];
+	held: Map<number, Queue>[];
 	pedal: boolean[];
 	last: number[];
+	overlaps: Overlaps;
+	pedals: boolean;
 };
 
-const channels = () => Array.from({ length: 16 }, () => new Map<number, number>());
+/**
+ * A key's starts, oldest first, from `head`: a note-off moves the head
+ * rather than shifting the array, which V8 does in time linear in its
+ * length (FINDINGS: quadratic under Node, unseen under Bun).
+ */
+type Queue = { starts: number[]; head: number };
+
+const channels = () => Array.from({ length: 16 }, () => new Map<number, Queue>());
+
+/** The starts still queued. */
+const queued = (queue: Queue | undefined) => queue?.starts.slice(queue.head) ?? [];
+
+/** Adds a start to a key's queue. */
+function push(map: Map<number, Queue> | undefined, key: number, start: number) {
+	const queue = map?.get(key);
+	if (queue) queue.starts.push(start);
+	else map?.set(key, { starts: [start], head: 0 });
+}
 
 /** A track's pitch, as a key in one channel's maps. */
 const voiceKey = (track: number, pitch: number) => track * 128 + pitch;
@@ -48,21 +82,40 @@ function end(p: Pairing, channel: number, key: number, start: number, tick: numb
 		p.out.push({ track: Math.floor(key / 128), channel, pitch: key % 128, start, end: tick });
 }
 
-/** Ends what still sounds of a track's pitch (struck again, or at the end), from both maps. */
-function endVoice(p: Pairing, channel: number, key: number, tick: number) {
-	for (const map of [p.sounding[channel], p.held[channel]]) {
-		const start = map?.get(key);
-		if (start === undefined) continue;
-		end(p, channel, key, start, tick);
+/** Ends every note of a key in these maps. */
+function endIn(
+	p: Pairing,
+	maps: (Map<number, Queue> | undefined)[],
+	channel: number,
+	key: number,
+	tick: number,
+) {
+	for (const map of maps) {
+		for (const start of queued(map?.get(key))) end(p, channel, key, start, tick);
 		map?.delete(key);
 	}
 }
 
+/** Ends what still sounds of a track's pitch (struck again, or at the end), from both maps. */
+function endVoice(p: Pairing, channel: number, key: number, tick: number) {
+	endIn(p, [p.sounding[channel], p.held[channel]], channel, key, tick);
+}
+
+/** A note-on: it ends what sounds of its pitch (with overlaps kept, only what the pedal holds) and starts a note. */
+function strike(p: Pairing, channel: number, key: number, tick: number) {
+	if (p.overlaps === "keep") endIn(p, [p.held[channel]], channel, key, tick);
+	else endVoice(p, channel, key, tick);
+	push(p.sounding[channel], key, tick);
+}
+
+/** A note-off ends the oldest note sounding of its pitch, or hands it to the pedal. */
 function release(p: Pairing, channel: number, key: number, tick: number) {
-	const start = p.sounding[channel]?.get(key);
-	if (start === undefined) return;
-	p.sounding[channel]?.delete(key);
-	if (p.pedal[channel]) p.held[channel]?.set(key, start);
+	const queue = p.sounding[channel]?.get(key);
+	const start = queue?.starts[queue.head];
+	if (queue === undefined || start === undefined) return;
+	queue.head++;
+	if (queue.head === queue.starts.length) p.sounding[channel]?.delete(key);
+	if (p.pedal[channel]) push(p.held[channel], key, start);
 	else end(p, channel, key, start, tick);
 }
 
@@ -71,17 +124,16 @@ function sustain(p: Pairing, channel: number, down: boolean, tick: number) {
 	p.pedal[channel] = down;
 	if (down) return;
 	const held = p.held[channel];
-	for (const [key, start] of held ?? []) end(p, channel, key, start, tick);
+	for (const [key, queue] of held ?? [])
+		for (const start of queued(queue)) end(p, channel, key, start, tick);
 	held?.clear();
 }
 
 function step(p: Pairing, { track, e }: Placed) {
 	if (e.kind === "on") {
-		const key = voiceKey(track, e.pitch);
-		endVoice(p, e.channel, key, e.tick);
-		p.sounding[e.channel]?.set(key, e.tick);
+		strike(p, e.channel, voiceKey(track, e.pitch), e.tick);
 	} else if (e.kind === "off") release(p, e.channel, voiceKey(track, e.pitch), e.tick);
-	else if (e.kind === "control" && e.control === SUSTAIN)
+	else if (p.pedals && e.kind === "control" && e.control === SUSTAIN)
 		sustain(p, e.channel, e.value >= 64, e.tick);
 }
 
@@ -158,11 +210,28 @@ function endAll(p: Pairing) {
 const byStart = (a: Note, b: Note) =>
 	a.start - b.start || a.track - b.track || a.channel - b.channel || a.pitch - b.pitch;
 
-/** Every note of the file, by start, then track, channel and pitch; none past `MAX_NOTES` (`too-large`). */
-export function notesOf(smf: Smf, report: Report): Note[] {
+/**
+ * Every note of the file, by start, then track, channel and pitch; none
+ * past `MAX_NOTES` (`too-large`). `overlaps: "keep"` pairs first in, first
+ * out (a line's pairing); the default is MIDI 5.2's. `pedal: false` leaves
+ * the sustain pedal unread (a line's notes, as long as their keys).
+ */
+export function notesOf(
+	smf: Smf,
+	report: Report,
+	{ overlaps = "end", pedal = true }: { overlaps?: Overlaps; pedal?: boolean } = {},
+): Note[] {
 	const notes: Note[] = [];
 	const last = [0, ...smf.tracks.map((events) => events[events.length - 1]?.tick ?? 0)];
-	const p: Pairing = { out: notes, sounding: channels(), held: channels(), pedal: [], last };
+	const p: Pairing = {
+		out: notes,
+		sounding: channels(),
+		held: channels(),
+		pedal: [],
+		last,
+		overlaps,
+		pedals: pedal,
+	};
 	for (const tick of ticksOf(merged(smf))) stepTick(p, tick);
 	endAll(p);
 	if (notes.length > MAX_NOTES) {

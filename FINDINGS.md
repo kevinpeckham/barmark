@@ -582,6 +582,27 @@ showed the rule needed refining.
 
 ## Performance and robustness
 
+### A queue drained with `Array.shift` was quadratic under Node and linear under Bun (2026-11-20, @barmark/midi)
+
+- **The symptom.** The final review of the note-line import timed a
+  5.9 MB file (1,200,000 note-ons of one pitch at tick 0, then 750,000
+  note-offs, inside every bound) under Node 22: `importMidi` took 87 s
+  (the review measured 98 s), where `notes: false` took 2.3 s. Every
+  test passed: they run under Bun, and the scale tests time Bun.
+- **The cause.** A line's notes are paired first in, first out, each
+  pitch a queue of starts, and a note-off took the oldest with
+  `queue.shift()`. V8 moves every element on `shift` of a large array, so
+  draining a queue of n costs n²/2; Bun's `shift` is constant time.
+- **The fix.** Each queue keeps a head index; a note-off reads
+  `starts[head++]`, and whatever walks a queue starts from the head. The
+  file now imports in 2.7 s under Node. `tests/notes-node.test.ts`
+  transpiles `notes.ts` alone (it imports nothing at run time, so no
+  build) and times n and 4n note-ons then note-offs under `node`: about
+  4x after the fix, 13x before; the test holds it under 8x. A timing that
+  only runs under Bun cannot see a V8 cost.
+- **Where it lives.** `packages/midi/src/import/notes.ts` (`Queue`,
+  `release`), `packages/midi/tests/notes-node.test.ts`.
+
 ### A spread of a large array into a call threw under Node and not under Bun (2026-11-19, @barmark/lyricsheet)
 
 - **The symptom.** `exportLyricsheet` threw `RangeError: Maximum call stack
@@ -916,6 +937,65 @@ When converting to a format that keeps written order, test the played
 order, not just the written marks.
 
 ## Design
+
+### First-in-first-out pairing never heals from one unmatched note-on, so a line is tried on both pairings (2026-11-19, @barmark/midi)
+
+- **The symptom.** After a line's notes were paired first in, first out
+  (so a pitch struck again a few ticks before its previous note-off keeps
+  both lengths), a line of 64 quarters whose first E2 had no note-off, or
+  a doubled note-on with one note-off, imported as chords with
+  `harmony-from-melody`, silently; the commit before had read it as the
+  line.
+- **The cause.** Under first in, first out, the unmatched note-on is
+  always the oldest of its pitch: each later note-off of that pitch ends
+  the note before, so every later note of the pitch rings to the next
+  one's off, under everything between, and the line test fails on
+  "struck under a ringing note". MIDI 5.2's pairing (a re-strike ends the
+  note before) heals at the next strike.
+- **The fix.** The line test runs on the first-in-first-out notes and,
+  when they are not one line, on MIDI 5.2's; the line is read from the
+  pairing that passed (and its lyric rows get those notes). Only when
+  neither is a line does the chord reading run. The second pairing
+  reports into a scratch report, so nothing is said twice.
+- **Where it lives.** `packages/midi/src/import/index.ts`
+  (`lineReading`), `packages/midi/tests/import-line.test.ts` ("a line is
+  tried on both pairings").
+
+### A bar cut by a time signature is written in a rounded meter, so a beat keeps two clocks (2026-11-19, @barmark/midi)
+
+- **The symptom.** In review, a line in a file with a time signature off
+  the sixteenth grid put the points after the cut where the chart does
+  not play them: the self-check's times and the silences measured
+  disagreed with `perform`.
+- **The cause.** `gridOf` cuts a bar at a time signature inside it and
+  writes the cut bar in a meter rounded to sixteenths (`cutMeter`), so
+  the bar's span in the file and its length in the chart differ, and
+  every later bar starts at a different tick on the two clocks.
+- **The fix.** A beat keeps both: `start`, where it begins in the file,
+  which places and fits the attacks, and `at`, where it begins in the
+  chart (the meters before it summed), which `pointTick` uses and
+  `perform` plays. Stretching the bar instead would misread played
+  sixteenths.
+- **Where it lives.** `packages/midi/src/import/quantize.ts` (`Beat.at`,
+  `pointTick`), `packages/midi/tests/import-quantize.test.ts`.
+
+### Silences compared after dividing by 3 came out an ulp under a beat (2026-11-19, @barmark/midi)
+
+- **The symptom.** A one-beat silence between triplet points was
+  sometimes held instead of rested: at ppq 1024 (and 100) in 4/4, the
+  figure on 0–341, 341–469 and 1707–2048 read `A_A_h h_h_A R r` where the
+  rule gives `A_A_R r_r_A R r`; the same figure a beat later read right.
+- **The cause.** A point's time is `at + point * length / parts`, and a
+  division by 3 or 6 is inexact in floating point, so the difference of
+  two third-points could fall an ulp short of one beat, and
+  `silence < length` held.
+- **The fix.** Silences are measured in twelfths of a tick:
+  every division (1, 2, 3, 4, 6) divides 12, so
+  `12 * at + point * length * (12 / parts)` is exact, and the test is
+  `silence < 12 * length`. Compare without dividing when the divisors are
+  known.
+- **Where it lives.** `packages/midi/src/import/ends.ts` (`twelfths`),
+  `packages/midi/tests/import-ends.test.ts`.
 
 ### A shape's `base` is not ChordPro's `base-fret` (2026-11-19, @barmark/lyricsheet)
 
@@ -3214,3 +3294,24 @@ those never reached, or reached in a repeat with passes enough for their verse (
   Whatever it reads from `ctx.bars` it must read once a line, and a new
   option gets a test in `scale.test.ts` in the same change, not after a
   reviewer asks.
+
+### A bar cut by a time signature can have thousands of beats (2026-11-20, midi)
+
+- **The symptom.** A file under 100 KB (one held note; a 255/2 time
+  signature every 2,039 ticks at 4 ticks a quarter) made the line reading
+  build 20 million beat objects, inside every bound the import states.
+  Vercel's security review of pull request #348 found it; the chord
+  reading never counts beats, so `main` was not affected.
+- **The cause.** `gridOf` cuts a bar at a time signature inside it and
+  gives it a meter in sixteenths (`cutMeter`), here 2039/16. `quantize`
+  makes a beat for each, and `statesOf` an array for each beat. The bar
+  limit (10,000) bounds bars, not beats.
+- **The fix.** Before any beat is counted, `line.ts` (`writes`) asks
+  whether a chart can write every bar's meter (1 to 32 over 2, 4, 8 or
+  16, `parseMeter`). If not, the line reading stops and the file is read
+  as chords: sync would have left such a meter out, so the line could not
+  have been written in it anyway. That also bounds the beats at 32 a bar.
+- **The rule.** A new stage that expands the grid (beats, points, cells)
+  states its own bound in the units it expands, and checks it before it
+  allocates. The reviewers' scale runs grew notes and bars; none grew a
+  bar's meter.

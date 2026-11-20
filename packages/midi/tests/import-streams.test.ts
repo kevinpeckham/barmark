@@ -214,6 +214,27 @@ describe("notesOf", () => {
 		]);
 	});
 
+	test("with pedal: false a note ends at its note-off, whatever the pedal holds", () => {
+		const file = read([
+			[
+				{ dt: 0, control: [0, 64, 127] },
+				...track(chords(0, [C_E_G], 480)),
+				{ dt: 480, on: [0, 64, 80] },
+				{ dt: 480, off: [0, 64] },
+				{ dt: 480, control: [0, 64, 0] },
+				{ dt: 0, on: [0, 72, 80] },
+				{ dt: 240, off: [0, 72] },
+			],
+		]);
+		for (const overlaps of ["end", "keep"] as const)
+			expect(notesOf(file.smf, createReport(), { overlaps, pedal: false })).toEqual([
+				note(1, 60, 0, 480),
+				note(1, 64, 0, 480),
+				note(1, 67, 0, 480),
+				note(1, 64, 960, 1440),
+				note(1, 72, 1920, 2160),
+			]);
+	});
 	test("the pedal is down at 64 and above, on its own channel", () => {
 		const { notes } = notesFrom([
 			[
@@ -308,6 +329,87 @@ describe("notesOf", () => {
 		expect(notesOf(events(500_001), over)).toEqual([]);
 		expect(codes(over)).toEqual([["error", "too-large", undefined]]);
 		expect(over.list[0]?.message).toContain("500,000 notes");
+	});
+});
+
+describe("notesOf, overlaps kept (a line's pairing: first in, first out)", () => {
+	/** One track's events (dt as written) paired both ways. */
+	function both(events: Event[]) {
+		const file = read([events]).smf;
+		const report = createReport();
+		const kept = notesOf(file, report, { overlaps: "keep" });
+		return { kept, classic: notesOf(file, createReport()), report };
+	}
+	test("on 0, on 480, off 485, off 965: the oldest ends first", () => {
+		const r = both([
+			{ dt: 0, on: [0, 40, 80] },
+			{ dt: 480, on: [0, 40, 80] },
+			{ dt: 5, off: [0, 40] },
+			{ dt: 480, off: [0, 40] },
+		]);
+		expect(r.kept).toEqual([note(1, 40, 0, 485), note(1, 40, 480, 965)]);
+		expect(r.classic).toEqual([note(1, 40, 0, 480), note(1, 40, 480, 485)]);
+		expect(r.report.list).toEqual([]);
+	});
+	test("an on and an off at one tick: zero length, dropped", () => {
+		const r = both([
+			{ dt: 0, on: [0, 60, 80] },
+			{ dt: 0, off: [0, 60] },
+			{ dt: 480, on: [0, 62, 80] },
+			{ dt: 480, off: [0, 62] },
+		]);
+		expect(r.kept).toEqual([note(1, 62, 480, 960)]);
+	});
+	test("three notes of a pitch overlapping each end in turn", () => {
+		const r = both([
+			{ dt: 0, on: [0, 60, 80] },
+			{ dt: 100, on: [0, 60, 80] },
+			{ dt: 100, on: [0, 60, 80] },
+			{ dt: 100, off: [0, 60] },
+			{ dt: 100, off: [0, 60] },
+			{ dt: 100, off: [0, 60] },
+		]);
+		expect(r.kept).toEqual([note(1, 60, 0, 300), note(1, 60, 100, 400), note(1, 60, 200, 500)]);
+	});
+	test("a missing note-off: still sounding at the track's last event", () => {
+		const r = both([
+			{ dt: 0, on: [0, 60, 80] },
+			{ dt: 480, on: [0, 60, 80] },
+			{ dt: 480, off: [0, 60] },
+			{ dt: 520, text: "end" },
+		]);
+		expect(r.kept).toEqual([note(1, 60, 0, 960), note(1, 60, 480, 1480)]);
+	});
+	test("a note-off with nothing sounding is ignored", () => {
+		const r = both([
+			{ dt: 0, off: [0, 60] },
+			{ dt: 100, on: [0, 60, 80] },
+			{ dt: 100, off: [0, 60] },
+			{ dt: 100, off: [0, 60] },
+		]);
+		expect(r.kept).toEqual([note(1, 60, 100, 200)]);
+	});
+	test("the pedal: a note it holds ends when the pitch is struck again; overlapping notes it holds both ring to the lift", () => {
+		const restrike = both([
+			{ dt: 0, control: [0, 64, 127] },
+			{ dt: 0, on: [0, 60, 80] },
+			{ dt: 240, off: [0, 60] },
+			{ dt: 240, on: [0, 60, 80] },
+			{ dt: 240, off: [0, 60] },
+			{ dt: 240, control: [0, 64, 0] },
+		]);
+		expect(restrike.kept).toEqual([note(1, 60, 0, 480), note(1, 60, 480, 960)]);
+		expect(restrike.kept).toEqual(restrike.classic);
+		const overlapping = both([
+			{ dt: 0, control: [0, 64, 127] },
+			{ dt: 0, on: [0, 60, 80] },
+			{ dt: 100, on: [0, 60, 80] },
+			{ dt: 100, off: [0, 60] },
+			{ dt: 100, off: [0, 60] },
+			{ dt: 100, control: [0, 64, 0] },
+		]);
+		expect(overlapping.kept).toEqual([note(1, 60, 0, 400), note(1, 60, 100, 400)]);
+		expect(overlapping.classic).toEqual([note(1, 60, 0, 100), note(1, 60, 100, 400)]);
 	});
 });
 
@@ -515,7 +617,8 @@ describe("harmonyNotes", () => {
 			expect(tracksOf(unknown.harmony)).toEqual([2, 3]);
 			const d = unknown.report.list.find((x) => x.code === "track-unknown");
 			expect(d?.severity).toBe("warning");
-			expect(d?.message).toContain('"nope", 4 and 0');
+			// As on main, word for word: a file that is not one line reports nothing differently.
+			expect(d?.message).toBe('no track is "nope", 4 and 0; the harmony is chosen as usual');
 			expect(unknown.report.list.filter((x) => x.code === "track-unknown")).toHaveLength(1);
 			expect(unknown.report.list.some((x) => x.code === "melody-left-out")).toBe(true);
 			const some = harmonyFrom(file(), { tracks: ["nope", 1] });

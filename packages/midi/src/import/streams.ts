@@ -173,13 +173,13 @@ function chosenTracks(
 	return chosen.size === 0 ? null : chosen;
 }
 
-/** The notes the chords are read from. None is an error, `no-notes`. */
-export function harmonyNotes(
+/** The pitched notes (outside channel 10) on the chosen tracks, or on all; `chosen` is null when no track is chosen. Reports `drums-left-out` and `track-unknown`. */
+export function selectedNotes(
 	notes: Note[],
 	names: (string | null)[],
 	options: Pick<MidiImportOptions, "tracks">,
 	report: Report,
-): Note[] {
+): { pitched: Note[]; chosen: Set<number> | null } {
 	const drums = notes.filter((n) => n.channel === DRUMS);
 	if (drums.length > 0) {
 		const tracks = [...new Set(drums.map((n) => n.track))].map(String);
@@ -190,12 +190,19 @@ export function harmonyNotes(
 			{ track: oneTrack(drums) },
 		);
 	}
-	const pitched = notes.filter((n) => n.channel !== DRUMS);
+	const all = notes.filter((n) => n.channel !== DRUMS);
 	const chosen = chosenTracks(options.tracks ?? [], names, report);
-	const harmony =
-		chosen === null
-			? chosenByDefault(pitched, names, report)
-			: pitched.filter((n) => chosen.has(n.track));
+	return { pitched: chosen === null ? all : all.filter((n) => chosen.has(n.track)), chosen };
+}
+
+/** The notes the chords are read from: the default choice, or the chosen tracks' notes. None is an error, `no-notes`. */
+export function harmonyOf(
+	selected: { pitched: Note[]; chosen: Set<number> | null },
+	names: (string | null)[],
+	report: Report,
+): Note[] {
+	const { pitched, chosen } = selected;
+	const harmony = chosen === null ? chosenByDefault(pitched, names, report) : pitched;
 	if (harmony.length === 0)
 		report.add(
 			"no-notes",
@@ -205,4 +212,14 @@ export function harmonyNotes(
 				: "the tracks options.tracks chose have no notes to read chords from",
 		);
 	return harmony;
+}
+
+/** The notes the chords are read from, the two in order. */
+export function harmonyNotes(
+	notes: Note[],
+	names: (string | null)[],
+	options: Pick<MidiImportOptions, "tracks">,
+	report: Report,
+): Note[] {
+	return harmonyOf(selectedNotes(notes, names, options, report), names, report);
 }

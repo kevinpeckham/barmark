@@ -876,6 +876,14 @@ export function chordRuns(harmony: Note[], grid: Grid, keys: KeyAt[], report: Re
 	return merged(namedRuns(segments, keys, grid, report));
 }
 
+/** Each key as `key:` will read it (sync's `conventionalKey`), null where its name is no key. */
+export function spelledKeys(keys: KeyAt[]): (Key | null)[] {
+	return keys.map((k) => {
+		const key = keyFromText(k.name);
+		return key && conventionalKey(key);
+	});
+}
+
 /** What naming needs: the keys, spelled; the names given so far; where to report. */
 type Naming = { keys: KeyAt[]; spelled: (Key | null)[]; names: Names; grid: Grid; report: Report };
 
@@ -890,10 +898,7 @@ function chordRunsOf(s: Segment, k: number, n: Naming): ChordRun[] {
 
 /** Each segment's runs: `N.C.`, or its chord named under each key in force over it. */
 function namedRuns(segments: Segment[], keys: KeyAt[], grid: Grid, report: Report): ChordRun[] {
-	const spelled = keys.map((k) => {
-		const key = keyFromText(k.name);
-		return key && conventionalKey(key);
-	});
+	const spelled = spelledKeys(keys);
 	const naming: Naming = {
 		keys,
 		spelled,

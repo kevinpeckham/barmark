@@ -6,6 +6,20 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- **`import --chords`** reads chords from a MIDI file that is one line of
+  notes, as `import` did before (`notes: false` in `@barmark/midi`). With
+  a MusicXML score it is a usage error, as `--tracks` is. `--tracks` also
+  chooses the tracks a line is read from.
+
+### Changed
+
+- **`import` of a MIDI file that is one line of notes (a bass line, a
+  melody) writes its notes**, with their octaves, holds and rests, not
+  chords named from them. `--chords` is the way back, and its message
+  (`notes-line`) says so.
+
 ## [0.14.1] - 2026-11-19
 
 ### Changed

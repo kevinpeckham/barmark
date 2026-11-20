@@ -38,6 +38,7 @@ barmark export --musicxml song.chart.md --out song.musicxml   # for MuseScore, D
 barmark import song.musicxml --out song.chart.md   # or a compressed song.mxl
 barmark export --midi song.chart.md --out song.mid   # for a DAW or a practice player
 barmark import song.mid --out song.chart.md        # chords named from the notes
+barmark import bass.mid --chords                   # chords from a one-line file, not its notes
 barmark export --lyricsheet song.chart.md --out song.cho   # a ChordPro lyric sheet
 barmark check --strict --format github songs   # warnings fail too; PR annotations
 barmark format song.chart.md             # print it in standard form
@@ -106,7 +107,12 @@ chord from the notes of the tracks that carry the harmony and turning
 lyric events into lyric rows. Its messages are listed on stderr as
 `song.mid: bar 12 (track 2): warning: message`. `--tracks 2,Piano`
 names the harmony's tracks by number or name (ignoring case) instead of
-letting the import choose. As for MusicXML, it exits 1 when no chart came
+letting the import choose. A file that is one line of notes (a bass line,
+a melody) is written as those notes, with their octaves and rhythm,
+whichever tracks they are on; `--tracks` then says which tracks the line
+is read from, and `--chords` reads chords from the file instead, as
+`import` did before. `--chords` with a MusicXML score is a usage error,
+as `--tracks` is. As for MusicXML, it exits 1 when no chart came
 out.
 
 `export --lyricsheet` writes the chart as a ChordPro lyric sheet, text for

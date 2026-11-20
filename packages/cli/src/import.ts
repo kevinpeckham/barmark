@@ -68,9 +68,23 @@ function midiImport(
 	bytes: Buffer,
 	path: string,
 	tracks: (number | string)[] | undefined,
+	chords: boolean,
 ): Imported {
-	const result = importMidi(new Uint8Array(bytes), tracks === undefined ? {} : { tracks });
-	return { text: result.text, lines: result.diagnostics.map((d) => midiLine(path, d)) };
+	const result = importMidi(new Uint8Array(bytes), {
+		...(tracks === undefined ? {} : { tracks }),
+		...(chords ? { notes: false } : {}),
+	});
+	return {
+		text: result.text,
+		lines: result.diagnostics.map((d) => midiLine(path, forTheCli(d))),
+	};
+}
+
+/** The library's `notes-line` names its option; the CLI's reader needs the flag. */
+function forTheCli(d: MidiImportDiagnostic): MidiImportDiagnostic {
+	return d.code === "notes-line"
+		? { ...d, message: d.message.replace("notes: false reads chords", "--chords reads chords") }
+		: d;
 }
 
 async function scoreImport(
@@ -94,6 +108,7 @@ async function scoreImport(
 export async function importCommand(args: string[], io: Io): Promise<number> {
 	const { values, positionals } = parseFlags(joinNegative(args, "--tracks"), {
 		out: { type: "string" },
+		chords: { type: "boolean" },
 		part: { type: "string" },
 		tracks: { type: "string" },
 	});
@@ -105,10 +120,12 @@ export async function importCommand(args: string[], io: Io): Promise<number> {
 		throw new UsageError("--part is for MusicXML; a MIDI file takes --tracks");
 	if (!midi && values.tracks !== undefined)
 		throw new UsageError("--tracks is for MIDI; a MusicXML score takes --part");
+	if (!midi && values.chords)
+		throw new UsageError("--chords is for MIDI; a MusicXML score takes --part");
 	const tracks = values.tracks === undefined ? undefined : tracksOf(values.tracks);
 	const bytes = readBytes(path, io);
 	const { text, lines } = midi
-		? midiImport(bytes, path, tracks)
+		? midiImport(bytes, path, tracks, values.chords === true)
 		: await scoreImport(bytes, path, values.part);
 	for (const l of lines) io.stderr(`${l}\n`);
 	// As export does: no file written from an import that gave nothing.

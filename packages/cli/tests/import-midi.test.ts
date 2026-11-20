@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { importMidi } from "@barmark/midi";
+import { exportMidi, importMidi } from "@barmark/midi";
 import { COMMAND_HELP } from "../src/help.js";
 import { importCommand, midiLine, tracksOf } from "../src/import.js";
 import { main } from "../src/main.js";
@@ -10,6 +10,13 @@ import { folder, ROOT } from "./charts.js";
 const MIDI = join(ROOT, "packages/midi/tests/fixtures");
 const LEAD_SHEET = new Uint8Array(readFileSync(join(MIDI, "lead-sheet.mid")));
 const LEAD_CHART = readFileSync(join(MIDI, "lead-sheet.chart.md"), "utf8");
+
+/** One line of notes (the note-line design, 1): a bass line, written as a chart and played as a file. */
+const LINE_CHART =
+	"key: C\ntime: 4/4\n\n| {E1} | {E1} {E1} {E1} {E1} | {A1} / {A1} / | {G1} {G1}_{G1} / {B1} |\n";
+const exported = exportMidi(LINE_CHART);
+if (!exported.ok) throw new Error("the line chart did not export");
+const LINE = exported.bytes;
 
 /** A temp folder holding these files as bytes. */
 function withFiles(files: Record<string, Uint8Array | string>) {
@@ -111,8 +118,40 @@ describe("barmark import of a MIDI file", () => {
 		expect(await main(["import", "s.musicxml", "--tracks", "1"], xml)).toBe(2);
 		expect(xml.err()).toBe("barmark: --tracks is for MIDI; a MusicXML score takes --part\n");
 	});
+	test("a file that is one line of notes imports as its notes", async () => {
+		const io = withFiles({ "line.mid": LINE });
+		expect(await importCommand(["line.mid"], io)).toBe(0);
+		expect(io.out()).toBe(importMidi(LINE).text);
+		expect(io.out()).toContain("{E1}");
+		expect(io.err()).toContain("info: the notes are one line");
+		expect(io.err()).toContain(
+			"line.mid: info: the notes are one line and are written as notes; --chords reads chords from them\n",
+		);
+		expect(io.err()).not.toContain("notes: false");
+	});
+	test("--chords reads chords from a line of notes", async () => {
+		const io = withFiles({ "line.mid": LINE });
+		expect(await importCommand(["line.mid", "--chords"], io)).toBe(0);
+		expect(io.out()).toBe(importMidi(LINE, { notes: false }).text);
+		expect(io.out()).not.toBe(importMidi(LINE).text);
+		expect(io.out()).not.toContain("{E1}");
+	});
+	test("--chords is for MIDI", async () => {
+		const xml = withFiles({ "s.musicxml": "<score-partwise/>" });
+		expect(await main(["import", "s.musicxml", "--chords"], xml)).toBe(2);
+		expect(xml.err()).toBe("barmark: --chords is for MIDI; a MusicXML score takes --part\n");
+	});
+	test("help's MIDI paragraph wraps as its neighbours do", () => {
+		expect(COMMAND_HELP.import).toContain(
+			"bass line or a melody, is written as those notes), lyrics as lyric rows;\n" +
+				"its messages as file: bar N (track T): message. Exits 0 when a chart\n" +
+				"came out, even with warnings; 1 when none did or the file is bad. Does\n" +
+				"not read stdin.\n",
+		);
+	});
 	test("help lists MIDI import", () => {
 		expect(COMMAND_HELP.import).toContain(".mid");
 		expect(COMMAND_HELP.import).toContain("--tracks");
+		expect(COMMAND_HELP.import).toContain("--chords");
 	});
 });

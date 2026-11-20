@@ -28,6 +28,11 @@ export type MidiImportCode =
 	| "marker-dropped"
 	| "lyrics-other-tracks"
 	| "lyrics-verses-uncertain"
+	| "notes-line"
+	| "notes-short"
+	| "rhythm-rounded"
+	| "pitch-range"
+	| "notes-fallback"
 	| BuildCode;
 
 export type MidiImportDiagnostic = {
@@ -41,13 +46,20 @@ export type MidiImportDiagnostic = {
 };
 
 export type MidiImportOptions = {
-	/** The tracks that carry the harmony: 1-based numbers or track names (any case). Default: chosen (5.2). */
+	/**
+	 * The tracks read: 1-based numbers or track names (any case). They are
+	 * what the line test reads, and when the notes are not one line, the
+	 * tracks that carry the harmony. Default: every track for the line test,
+	 * and the harmony chosen (5.2).
+	 */
 	tracks?: (number | string)[];
 	/** Read lyric events into lyric rows (default true). */
 	lyrics?: boolean;
 	/** As sync's BuildOptions. */
 	simile?: boolean;
 	barsPerLine?: number;
+	/** Write a file that is one line of notes as its notes (default true); false: read chords from it, as before 0.4. */
+	notes?: boolean;
 };
 
 export type MidiImportResult = { text: string; diagnostics: MidiImportDiagnostic[] };

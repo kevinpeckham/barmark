@@ -127,7 +127,7 @@ Fallow, CI, Swamp), the grammar, `examples/`, the scripts and FINDINGS.md.
   - `tests/`: `bun test`; `tests/fixtures/` holds real ChordMini output on
     two songs (numbers and labels only), which `bun
     scripts/detection-fixtures.ts` regenerates on the VM only, never in CI
-- `packages/midi/`: `@barmark/midi`, MIDI export (and later import) of a
+- `packages/midi/`: `@barmark/midi`, MIDI export and import of a
   chart's play order; the performance core (chart to timed notes) is the
   `@barmark/midi/perform` subpath, which imports nothing from `smf/`,
   `export/` or `import/`
@@ -142,6 +142,19 @@ Fallow, CI, Swamp), the grammar, `examples/`, the scripts and FINDINGS.md.
     (`index.ts`)
   - `src/smf/`: the hand-written Standard MIDI File writer (`write.ts`,
     `vlq.ts`, `types.ts`): no runtime MIDI library
+  - `src/import/`: `importMidi`, one module per stage: read the file,
+    pair the notes (`notes.ts`, first in first out for a line), choose
+    the harmony (`streams.ts`) or the line (`attacks.ts`, the line
+    test), the bar grid (`grid.ts`), key, meter and tempo
+    (`directives.ts`), chords (`segments.ts`, `build.ts` through sync)
+    or the line (`line.ts`: pitch names `pitch.ts`, the beat's division
+    `quantize.ts`, where notes end `ends.ts`, the bars' text `cells.ts`,
+    and a self-check), markers (`markers.ts`), lyrics (`lyrics.ts`);
+    `index.ts` tries the line on both pairings and falls back to chords
+    when the line reading cannot finish
+  - `tests/notes-node.test.ts` times the pairing under Node (V8's
+    `Array.shift` takes time linear in the array's length, Bun's constant,
+    so `bun test` alone cannot see a queue drained with it)
   - `tests/`: `bun test`; every file is read back with `midi-file`
     (a devDependency, pinned exactly), an independent parser, and
     `helpers/player.ts` hears it beat by beat against the chart;
