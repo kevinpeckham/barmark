@@ -44,9 +44,9 @@ describe("the home page, prerendered", () => {
 		const template = doc.querySelector("main barmark-score template[shadowrootmode=open]");
 		expect(template?.innerHTML).toContain("Greensleeves");
 	});
-	test("the render window is a <barmark-score>: the grid drawn, a Grid / Score switch on Grid, the text carried", () => {
+	test("the render window is a <barmark-score>, drawn for its light panel: the grid drawn, its switch on Grid, the text carried", () => {
 		const score = doc.querySelector("main barmark-score");
-		expect(score?.getAttribute("theme")).toBe("dark");
+		expect(score?.getAttribute("theme")).toBe("light");
 		expect(score?.hasAttribute("view")).toBe(false);
 		const shadow = score?.querySelector("template")?.innerHTML ?? "";
 		expect(shadow).toContain('role="radiogroup" aria-label="View"');
@@ -58,9 +58,10 @@ describe("the home page, prerendered", () => {
 	test("the render window leaves a lead sheet's melody out of the grid, for the score to show", () => {
 		expect(doc.querySelector("main barmark-score")?.getAttribute("melody")).toBe("off");
 	});
-	test("the score preloads the lighter Verovio on intent, from jsDelivr, checked", () => {
+	test("the score loads the lighter Verovio from jsDelivr, checked, and not before a reader reaches for it", () => {
 		const score = doc.querySelector("main barmark-score");
-		expect(score?.getAttribute("preload")).toBe("intent");
+		// The page raises `preload` when the reader reaches for Score, or for an example that opens in it.
+		expect(score?.hasAttribute("preload")).toBe(false);
 		expect(score?.getAttribute("verovio-url")).toBe(ENGRAVER_CDN_URL);
 		expect(score?.getAttribute("verovio-integrity")).toBe(ENGRAVER_CDN_INTEGRITY);
 		expect(score?.getAttribute("verovio-wasm-integrity")).toBe(ENGRAVER_WASM_INTEGRITY);

@@ -88,6 +88,15 @@ describe("chartHtml", () => {
 	test("charts use the dark palette", () => {
 		expect(chartHtml(demo)).toContain('data-theme="dark"');
 	});
+	test("a chart is drawn for the dark page unless it asks for a light panel; a score may open in the score", () => {
+		expect(chartHtml(demo, { theme: "light" })).toContain('data-theme="light"');
+		expect(chartHtml(demo, { theme: "light" })).not.toContain('data-theme="dark"');
+		const light = scoreHtml(demo, { theme: "light", view: "score" });
+		expect(light).toMatch(/<barmark-score[^>]* theme="light"/);
+		expect(light).toMatch(/<barmark-score[^>]* view="score"/);
+		expect(scoreHtml(demo)).not.toMatch(/<barmark-score[^>]* view=/);
+		expect(scoreHtml(demo)).toMatch(/<barmark-score[^>]* theme="dark"/);
+	});
 	test("a chart can open with its guitar diagrams, one for each distinct chord; without the flag it has none", () => {
 		const host = (html: string) => html.slice(0, html.indexOf(">") + 1);
 		const html = chartHtml("| C | Am | C |", { chordDiagrams: true });
