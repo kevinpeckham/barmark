@@ -91,6 +91,19 @@ describe("the home page, prerendered", () => {
 		]);
 		expect(radios.map((r) => r.hasAttribute("checked"))).toEqual([true, false, false]);
 	});
+	test("the render window's header switches Grid and Score, Grid first and checked; the chart's own switch is off", () => {
+		const group = doc.querySelector('main header [role="radiogroup"][aria-label="View"]');
+		const radios = [...(group?.querySelectorAll('input[type="radio"]') ?? [])];
+		expect(radios.map((r) => r.closest("label")?.textContent?.trim())).toEqual(["Grid", "Score"]);
+		expect(radios.map((r) => r.hasAttribute("checked"))).toEqual([true, false]);
+		// It sits with the other controls, and looks as the chord spelling does.
+		const spelling = doc.querySelector('[role="radiogroup"][aria-label="Chord spelling"]');
+		expect(group?.parentElement).toBe(spelling?.parentElement ?? null);
+		expect(group?.getAttribute("class")).toBe(
+			spelling?.getAttribute("class")?.replace(" opacity-40", "") ?? "",
+		);
+		expect(doc.querySelector("main barmark-score")?.getAttribute("switch")).toBe("off");
+	});
 	test("the render window offers guitar diagrams, beside the spelling, off: the chart prerenders without them", () => {
 		const toggle = [...doc.querySelectorAll("main button[aria-pressed]")].filter(
 			(b) => b.textContent?.trim() === "Guitar diagrams",

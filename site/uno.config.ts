@@ -72,6 +72,17 @@ export default defineConfig({
 		[
 			"barmark-look",
 			[
+				"[--barmark-size:15.5px] [--barmark-paper:oklch(96.89%_0.01_251.56/0.12)]",
+				"[--barmark-ink:#fff] [--barmark-note:#ece8e0] [--barmark-accent:#e8a56a]",
+				"[--barmark-muted:oklch(98.51%_0_0/0.8)] [--barmark-rule:oklch(98.51%_0_0/0.8)]",
+				"[--barmark-directive:oklch(98.51%_0_0/0.8)]",
+				'[--barmark-text-font:"Noto_Serif",Georgia,serif] [--barmark-label-font:"Noto_Sans",system-ui,sans-serif]',
+			].join(" "),
+		],
+		// The same chart on a light panel (the home page's): dark ink, no paper of its own.
+		[
+			"barmark-look-light",
+			[
 				"[--barmark-size:15.5px]",
 				"[--barmark-paper:transparent]",
 				"[--barmark-ink:oklch(13.96%_0.05_262.12)]",

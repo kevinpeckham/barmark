@@ -3,6 +3,7 @@ import Button from "#lib/components/Button.svelte";
 import ChartRender from "#lib/components/ChartRender.svelte";
 import DiagramSwitch from "#lib/components/DiagramSwitch.svelte";
 import KeyMenu from "#lib/components/KeyMenu.svelte";
+import Segmented from "#lib/components/Segmented.svelte";
 import SourceEditor from "#lib/components/SourceEditor.svelte";
 import Window from "#lib/components/Window.svelte";
 import { EXAMPLES, type Example, exampleFile, flipped, viewOf } from "#lib/examples.js";
@@ -40,6 +41,12 @@ function flip(step: number) {
 	semitones = 0;
 }
 
+/** The reader reached for Next (1) or Previous (-1): if that example would open in the score, Verovio starts loading. */
+function reach(step: number) {
+	const next = EXAMPLES[flipped(index, step)];
+	if (next && (picked ?? viewOf(next)) === "score") reached = true;
+}
+
 /** Back to the example as written, forgetting its edit. */
 function reset() {
 	edits.delete(example.id);
@@ -58,6 +65,13 @@ let semitones = $state(0);
 const key = $derived(chartKey(text));
 /** The grid's guitar chord diagrams: a viewing choice like the key, off on the prerendered page, not kept. */
 let diagrams = $state(false);
+/** The render window's two views: the header's switch, in place of the element's own. */
+const VIEWS = [
+	{ id: "grid", label: "Grid", title: "The bar grid" },
+	{ id: "score", label: "Score", title: "The full score" },
+] as const;
+/** The reader reached for Score, or for an example that opens in it: Verovio starts loading. */
+let reached = $state(false);
 /** The view the reader picked, Grid or Score; null until they pick one. */
 let picked: "grid" | "score" | null = $state(null);
 /** The view on show: the reader's pick, else the example's own. The score has no chord spelling or diagrams: they are the grid's. */
@@ -119,10 +133,26 @@ const description =
 				</div>
 
 				<div class="flex gap-4 text-.85rem">
-					<button type="button" class="button" aria-label="Previous example" onclick={() => flip(-1)}>
+					<button
+						type="button"
+						class="button"
+						aria-label="Previous example"
+						onclick={() => flip(-1)}
+						onpointerenter={() => reach(-1)}
+						onfocus={() => reach(-1)}
+						ontouchstart={() => reach(-1)}
+					>
 						<span class="i-ph-caret-left" aria-hidden="true"></span>
 					</button>
-					<button type="button" class="button" aria-label="Next example" onclick={() => flip(1)}>
+					<button
+						type="button"
+						class="button"
+						aria-label="Next example"
+						onclick={() => flip(1)}
+						onpointerenter={() => reach(1)}
+						onfocus={() => reach(1)}
+						ontouchstart={() => reach(1)}
+					>
 						<span class="i-ph-caret-right" aria-hidden="true"></span>
 					</button>
 				</div>
@@ -130,7 +160,8 @@ const description =
 		</div>
 
 		<!-- edit and render panels -->
-		<div class="gap-8 grid grid-cols-1 min-h-600px xl-grid-cols-2 w-full">
+		<!-- Side by side from 1280: the render window a little the wider (1.08), so Amazing Grace's grid, 544px and its padding, fits it there without scrolling. -->
+		<div class="gap-8 grid grid-cols-1 min-h-600px xl-grid-cols-[minmax(0,1fr)_minmax(0,1.08fr)] w-full">
 			<Window title="Source · edit me">
 				<div class="flex flex-col h-full bg-white/8">
 					<SourceEditor bind:value={text} label="Barmark source of the chart" />
@@ -150,30 +181,24 @@ const description =
 			<Window title="Rendered · @barmark/score">
 				{#snippet controls()}
 					<div class="ml-auto flex flex-wrap items-center gap-2">
+						<Segmented
+							label="View"
+							name="view"
+							options={VIEWS}
+							bind:value={() => view, (v) => (picked = v)}
+							onreach={(v) => {
+								if (v === "score") reached = true;
+							}}
+						/>
 						<KeyMenu {key} bind:semitones />
-						<div
-							role="radiogroup"
-							aria-label="Chord spelling"
+						<Segmented
+							label="Chord spelling"
+							name="spelling"
+							options={SPELLINGS}
+							bind:value={spelling}
+							disabled={view === "score"}
 							title={view === "score" ? "Chord spelling is the grid's: switch to Grid to use it" : undefined}
-							class="inline-flex flex-wrap rounded-md border border-white/45 text-xs overflow-hidden {view === 'score' ? 'opacity-40' : ''}"
-						>
-							{#each SPELLINGS as s (s.id)}
-								<!-- The group clips an outside ring, so the ring is inset: accent on the dark items, dark on the accent-filled one. -->
-								<label
-									title={s.title}
-									class="relative px-2.5 py-1 cursor-pointer opacity-80 hover-opacity-100 has-[:checked]:(bg-accent text-on-accent opacity-100) has-[:focus-visible]:(outline-2 outline-accent -outline-offset-2) [&:has(:checked:focus-visible)]:outline-on-accent"
-								>
-									<input
-										type="radio"
-										name="spelling"
-										value={s.id}
-										bind:group={spelling}
-										disabled={view === "score"}
-										class="absolute inset-0 m-0 opacity-0 cursor-pointer disabled:cursor-not-allowed"
-									/>{s.label}
-								</label>
-							{/each}
-						</div>
+						/>
 						<DiagramSwitch bind:on={diagrams} disabled={view === "score"} />
 					</div>
 				{/snippet}
@@ -182,11 +207,12 @@ const description =
 					<ChartRender
 						{text}
 						score
-						preload="intent"
+						preload={reached ? "idle" : "none"}
 						{semitones}
 						numerals={spelling === "names" ? null : spelling}
 						{diagrams}
 						melody={false}
+						theme="light"
 						label="The chart, rendered"
 						{view}
 						onviewchange={(v) => {

@@ -3,21 +3,30 @@ import { ENGRAVER_CDN_INTEGRITY, ENGRAVER_CDN_URL, ENGRAVER_WASM_INTEGRITY } fro
 import { renderScoreHtml } from "@barmark/score/server";
 
 // The site's charts never wrap: a section wider than its box keeps its rows, and the box scrolls.
-const options = { theme: "dark", rehearsalLetters: true, wrap: false } as const;
+const options = { rehearsalLetters: true, wrap: false } as const;
+
+/** A chart's ground: the site's dark page, or a light panel (the home page's). */
+export type Theme = "dark" | "light";
 
 /**
  * What a chart on the site may change: its bar numbers, a strip of guitar chord
- * diagrams, and whether a lead sheet's melody line is drawn in the grid (the
- * score always engraves it).
+ * diagrams, whether a lead sheet's melody line is drawn in the grid (the
+ * score always engraves it), and the ground it is drawn for.
  */
-type Look = { barNumbers?: boolean; chordDiagrams?: boolean; melody?: boolean };
+type Look = { barNumbers?: boolean; chordDiagrams?: boolean; melody?: boolean; theme?: Theme };
 
 /**
  * The renderer's options for a look; with diagrams off or the melody shown the
  * option is left out, so the markup is as before.
  */
-const chosen = ({ barNumbers = true, chordDiagrams = false, melody = true }: Look) => ({
+const chosen = ({
+	barNumbers = true,
+	chordDiagrams = false,
+	melody = true,
+	theme = "dark",
+}: Look) => ({
 	...options,
+	theme,
 	barNumbers,
 	...(chordDiagrams ? { chordDiagrams: "guitar" as const } : {}),
 	...(melody ? {} : { melody: false }),

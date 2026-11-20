@@ -126,16 +126,31 @@ const flip = (page: Page, to: "Next" | "Previous", title: string) =>
 		await expect(position(page)).toContainText(title, { timeout: 1_000 });
 	}).toPass({ timeout: 15_000 });
 
+/**
+ * A chart's Grid or Score radio: the page's own switch where it has one (the
+ * home page's window header; the element's is then not drawn, so it is not
+ * found), else the element's.
+ */
+const viewRadio = (page: Page, name: "Grid" | "Score", scope = "main") =>
+	page
+		.locator(scope)
+		.getByRole("radiogroup", { name: "View" })
+		.first()
+		.getByRole("radio", { name });
+
 /** Presses Score in the first chart's switch, repeated until the element has upgraded and shows it. */
 const pressScore = (page: Page, scope = "main") =>
 	expect(async () => {
-		await page
-			.locator(`${scope} barmark-score`)
-			.first()
-			.getByRole("radio", { name: "Score" })
-			.click();
+		await viewRadio(page, "Score", scope).click();
 		await expect.poll(() => scoreText(page, scope), { timeout: 15_000 }).not.toBe("");
 	}).toPass({ timeout: 40_000 });
+
+/** Presses Grid, repeated until the page's script has run and the radio is checked. */
+const pressGrid = (page: Page, scope = "main") =>
+	expect(async () => {
+		await viewRadio(page, "Grid", scope).click();
+		await expect(viewRadio(page, "Grid", scope)).toBeChecked({ timeout: 1_000 });
+	}).toPass({ timeout: 15_000 });
 
 const watchErrors = (page: Page) => {
 	const errors: string[] = [];
@@ -303,10 +318,10 @@ test.describe("home: the examples", () => {
 
 	test("Next and Previous flip through every example, round and back", async ({ page }) => {
 		await page.goto("/");
-		await expect(position(page)).toHaveText(`Greensleeves 1 of ${n}`);
+		await expect(position(page)).toHaveText(`"Greensleeves" 1 of ${n}`);
 		for (const [i, title] of titles.entries()) {
 			if (i > 0) await flip(page, "Next", title);
-			await expect(position(page)).toHaveText(`${title} ${i + 1} of ${n}`);
+			await expect(position(page)).toHaveText(`"${title}" ${i + 1} of ${n}`);
 			await expect(source(page)).toHaveValue(new RegExp(`^# ${title}\\n`));
 			await expect.poll(() => chartText(page)).toContain(title);
 		}
@@ -356,9 +371,10 @@ test.describe("home: the examples", () => {
 		page,
 	}) => {
 		await page.goto("/");
+		// It opens in the Score view, where its melody is: no press.
 		await flip(page, "Next", "Amazing Grace");
-		await pressScore(page);
 		await expect.poll(() => scoreText(page), { timeout: 15_000 }).toContain("Amazing Grace");
+		await expect(viewRadio(page, "Score")).toBeChecked();
 		const drawn = await drawnScore(page);
 		// New Britain's 33 notes, "me" and "see" each tied into the bar after: 35 noteheads.
 		expect(drawn.notes).toBe(35);
@@ -388,6 +404,7 @@ test.describe("home: the examples", () => {
 	}) => {
 		await page.goto("/");
 		await flip(page, "Next", "Amazing Grace");
+		await pressGrid(page);
 		await expect.poll(() => chartText(page)).toContain("Amazing Grace");
 		const grid = await drawnGrid(page);
 		expect(grid.melody).toBe("off");
@@ -408,7 +425,7 @@ test.describe("home: the examples", () => {
 		const score = await drawnScore(page);
 		expect(score.notes).toBeGreaterThanOrEqual(35);
 		expect(score.syllables).toBeGreaterThanOrEqual(56);
-		await page.locator("main barmark-score").getByRole("radio", { name: "Grid" }).click();
+		await pressGrid(page);
 		await expect.poll(async () => (await drawnGrid(page)).syllables).toBe(56);
 		expect((await drawnGrid(page)).pitches).toBe(0);
 	});
@@ -420,6 +437,7 @@ test.describe("home: the examples", () => {
 		// eighth-note steps and no extender, so the grid is as narrow as plain lyric rows.
 		await page.goto("/");
 		await flip(page, "Next", "Amazing Grace");
+		await pressGrid(page);
 		await expect.poll(() => chartText(page)).toContain("Amazing Grace");
 		const grid = await drawnGrid(page);
 		expect(grid.pitches).toBe(0);
@@ -461,13 +479,55 @@ test.describe("home: the examples", () => {
 		expect(drawn.ledgers).toBe(0);
 	});
 
-	test("flipping keeps the Score view, and engraves the new example", async ({ page }) => {
+	test("each example opens in its own view, until the reader picks one", async ({ page }) => {
+		await page.goto("/");
+		await expect(viewRadio(page, "Grid")).toBeChecked();
+		// Amazing Grace opens in the score, where its melody is drawn; the next opens in the grid again.
+		await flip(page, "Next", "Amazing Grace");
+		await expect(viewRadio(page, "Score")).toBeChecked();
+		await expect.poll(() => scoreText(page), { timeout: 15_000 }).toContain("Amazing Grace");
+		await flip(page, "Next", "Blues in F");
+		await expect(viewRadio(page, "Grid")).toBeChecked();
+		await expect.poll(() => chartText(page)).toContain("Blues in F");
+		await expect(
+			page.locator("main barmark-score").getByRole("img", { name: "Blues in F" }),
+		).toBeHidden();
+		// Back to Amazing Grace: the score again.
+		await flip(page, "Previous", "Amazing Grace");
+		await expect(viewRadio(page, "Score")).toBeChecked();
+		// The reader picks Grid there: every example then opens in the grid, Amazing Grace too.
+		await pressGrid(page);
+		await flip(page, "Next", "Blues in F");
+		await flip(page, "Previous", "Amazing Grace");
+		await expect(viewRadio(page, "Grid")).toBeChecked();
+	});
+
+	test("the window's header holds the only Grid / Score switch: the element's own is not drawn", async ({
+		page,
+	}) => {
+		await page.goto("/");
+		await page.waitForFunction(() => customElements.get("barmark-score"));
+		const header = page.locator("main header").getByRole("radiogroup", { name: "View" });
+		await expect(header.getByRole("radio")).toHaveCount(2);
+		await expect(page.locator("main barmark-score .bms-switch")).toBeHidden();
+		await expect(page.locator("main").getByRole("radiogroup", { name: "View" })).toHaveCount(1);
+		// From the keyboard: an arrow moves to Score and picks it, as any radio group.
+		await expect(async () => {
+			await header.getByRole("radio", { name: "Grid" }).focus();
+			await page.keyboard.press("ArrowRight");
+			await expect(header.getByRole("radio", { name: "Score" })).toBeChecked({ timeout: 1_000 });
+		}).toPass({ timeout: 15_000 });
+		await expect.poll(() => scoreText(page), { timeout: 15_000 }).toContain("Greensleeves");
+	});
+
+	test("flipping keeps the Score view the reader picked, and engraves the new example", async ({
+		page,
+	}) => {
 		await page.goto("/");
 		await pressScore(page);
-		const score = page.locator("main barmark-score");
 		await flip(page, "Previous", "Peaceful Dreams");
 		await expect.poll(() => scoreText(page), { timeout: 15_000 }).toContain("Peaceful Dreams");
-		await expect(score.getByRole("radio", { name: "Score" })).toBeChecked();
+		await expect(viewRadio(page, "Score")).toBeChecked();
 		// Power chords as the chart spells them, never as "no3".
 		const chords = await scoreChords(page);
 		expect(chords.slice(0, 2)).toEqual(["D7sus4", "D7sus4"]);
@@ -475,13 +535,13 @@ test.describe("home: the examples", () => {
 		expect(chords.filter((c) => c.includes("no3"))).toEqual([]);
 		await flip(page, "Next", "Greensleeves");
 		await expect.poll(() => scoreText(page), { timeout: 15_000 }).toContain("Greensleeves");
-		await expect(score.getByRole("radio", { name: "Score" })).toBeChecked();
+		await expect(viewRadio(page, "Score")).toBeChecked();
 		await flip(page, "Next", "Amazing Grace");
 		await expect.poll(() => scoreText(page), { timeout: 15_000 }).toContain("Amazing Grace");
-		await expect(score.getByRole("radio", { name: "Score" })).toBeChecked();
-		await score.getByRole("radio", { name: "Grid" }).click();
+		await expect(viewRadio(page, "Score")).toBeChecked();
+		await pressGrid(page);
 		await flip(page, "Next", "Blues in F");
-		await expect(score.getByRole("radio", { name: "Grid" })).toBeChecked();
+		await expect(viewRadio(page, "Grid")).toBeChecked();
 		await expect.poll(() => chartText(page)).toContain("Blues in F");
 	});
 
@@ -599,6 +659,8 @@ test.describe("home: guitar diagrams", () => {
 	}) => {
 		await page.goto("/");
 		await flip(page, "Next", "Amazing Grace");
+		// Amazing Grace opens in the score; the diagrams are the grid's.
+		await pressGrid(page);
 		await expect(toggle(page)).toHaveAttribute("aria-pressed", "false");
 		expect(await diagramLabels(page)).toBeNull();
 		const chords = new Set(await gridChords(page));
@@ -633,14 +695,14 @@ test.describe("home: guitar diagrams", () => {
 		await expect(toggle(page)).toBeDisabled();
 		// The reason is the button's own, so assistive technology reaches it.
 		await expect(toggle(page)).toHaveAttribute("title", /switch to Grid/);
-		await page.locator("main barmark-score").getByRole("radio", { name: "Grid" }).click();
+		await pressGrid(page);
 		await expect(toggle(page)).not.toHaveAttribute("title");
 		await expect(toggle(page)).toBeEnabled();
 		await toggle(page).click();
 		await expect.poll(() => diagramLabels(page)).not.toBeNull();
 	});
 
-	test("the strip wears the site's dark window: light strings and dots on the dark ground", async ({
+	test("the strip wears the home page's light panel: dark strings and dots on the light ground", async ({
 		page,
 	}) => {
 		await page.goto("/");
@@ -649,20 +711,21 @@ test.describe("home: guitar diagrams", () => {
 			await expect.poll(() => diagramLabels(page), { timeout: 1_000 }).not.toBeNull();
 		}).toPass({ timeout: 15_000 });
 		const [dot, ground] = await page.evaluate(() => {
-			const el = document
-				.querySelector("main barmark-score")
-				?.shadowRoot?.querySelector(".bm-dg-dot");
-			const window = document.querySelectorAll("main section.device-window")[1];
+			const score = document.querySelector("main barmark-score");
+			const el = score?.shadowRoot?.querySelector(".bm-dg-dot");
+			// The panel is the chart's own wrapper's parent, inside the window.
+			const panel = score?.parentElement?.parentElement;
 			return [
 				el ? getComputedStyle(el).fill : "",
-				window ? getComputedStyle(window).backgroundColor : "",
+				panel ? getComputedStyle(panel).backgroundColor : "",
 			];
 		});
 		const [dotRgba, groundRgba] = await toRgba(page, [dot ?? "", ground ?? ""]);
-		// Light on dark: the dots' channels well above the middle, the window's well below, both opaque.
-		for (const c of dotRgba?.slice(0, 3) ?? []) expect(c).toBeGreaterThan(160);
-		for (const c of groundRgba?.slice(0, 3) ?? []) expect(c).toBeLessThan(60);
-		expect([dotRgba?.[3], groundRgba?.[3]]).toEqual([255, 255]);
+		// Dark on light: the dots' channels well below the middle, the panel's well above, both all but opaque.
+		for (const c of dotRgba?.slice(0, 3) ?? []) expect(c).toBeLessThan(90);
+		for (const c of groundRgba?.slice(0, 3) ?? []) expect(c).toBeGreaterThan(200);
+		expect(dotRgba?.[3]).toBeGreaterThan(220);
+		expect(groundRgba?.[3]).toBeGreaterThan(220);
 	});
 
 	test("on, then off, before the element arrives: the latest press wins", async ({ page }) => {
@@ -1109,7 +1172,7 @@ test.describe("in a browser without setHTMLUnsafe", () => {
 	});
 });
 
-test("the chart wears the site's look: 15.5px chords, its colours and the Noto fonts", async ({
+test("the home page's chart wears the light look: 15.5px chords, dark ink and the Noto fonts", async ({
 	page,
 }) => {
 	await page.goto("/");
@@ -1140,17 +1203,43 @@ test("the chart wears the site's look: 15.5px chords, its colours and the Noto f
 		};
 	});
 	expect(look.chord).toBe("15.5px");
-	expect(look.ink).toBe("rgb(255, 255, 255)");
+	// The ink of the light panel: the page's own dark blue, the muted text and directives at three quarters of it.
+	expect(look.ink).toBe("oklch(0.1396 0.05 262.12)");
 	expect(look.muted).toBe(look.directive);
-	expect(look.muted).toContain("0.8)");
-	expect(look.note).toBe("rgb(236, 232, 224)");
-	expect(look.accent).toBe("#e8a56a");
+	expect(look.muted).toContain("0.75)");
+	expect(look.note).toBe(look.ink);
+	expect(look.accent).toContain("13.96%");
 	expect(look.lyrics).toContain("Noto Serif");
 	expect(look.noteFont).toMatch(/^italic .*Noto Serif/);
 	for (const family of look.labels) expect(family).toContain("Noto Sans");
 	expect(look.letter).toBe("A");
 	expect(look.italic).toBe(true);
 	expect(look.upright).toBe(true);
+});
+
+test("a chart on the dark page keeps the dark look: white ink, the amber accent", async ({
+	page,
+}) => {
+	// Every page but the home page draws its charts straight on the dark ground.
+	for (const path of ["/get-started", "/syntax", `/try?q=${encodeURIComponent("| D | A |")}`]) {
+		await page.goto(path);
+		const look = await page.evaluate(() => {
+			const el = document.querySelector("main :is(barmark-chart, barmark-score)");
+			const chart = el?.shadowRoot?.querySelector(".bm-chart") as Element;
+			const chord = el?.shadowRoot?.querySelector(".bm-chord") as Element;
+			return {
+				theme: el?.getAttribute("theme"),
+				ink: getComputedStyle(chord).color,
+				accent: getComputedStyle(chart).getPropertyValue("--bm-accent").trim(),
+			};
+		});
+		expect({ path, ...look }).toEqual({
+			path,
+			theme: "dark",
+			ink: "rgb(255, 255, 255)",
+			accent: "#e8a56a",
+		});
+	}
 });
 
 test("the editor drives one <barmark-score> element through its text property", async ({
@@ -1169,7 +1258,7 @@ test("the editor drives one <barmark-score> element through its text property", 
 		text: (el as HTMLElement & { text: string | null }).text,
 		theme: el?.shadowRoot?.querySelector(".bm-chart")?.getAttribute("data-theme"),
 	}));
-	expect(same).toEqual({ connected: true, text: "## Bridge\n| Ebm7 |", theme: "dark" });
+	expect(same).toEqual({ connected: true, text: "## Bridge\n| Ebm7 |", theme: "light" });
 	expect(errors).toEqual([]);
 });
 
@@ -1443,7 +1532,7 @@ test.describe("the score", () => {
 		await page.waitForLoadState("networkidle");
 		expect(engine).toEqual([]);
 		const cdn = page.waitForRequest(ENGRAVER_MODULE);
-		await page.locator("main barmark-score").getByRole("radio", { name: "Score" }).hover();
+		await viewRadio(page, "Score").hover();
 		await cdn;
 	});
 
@@ -1481,7 +1570,7 @@ test.describe("the score", () => {
 		expect(warnings.filter((w) => w.includes("Verovio"))).toEqual([]);
 		expect(await scoreText(page)).toContain("Greensleeves");
 		const score = page.locator("main barmark-score");
-		await expect(score.getByRole("radio", { name: "Score" })).toBeChecked();
+		await expect(viewRadio(page, "Score")).toBeChecked();
 		await expect(score.getByRole("img", { name: "Greensleeves" })).toBeVisible();
 		// Chord symbols as the chart spells them.
 		const chords = await scoreChords(page);
@@ -1543,7 +1632,7 @@ test.describe("the score", () => {
 		const spelling = page.getByRole("radiogroup", { name: "Chord spelling" });
 		await pressScore(page);
 		await expect(spelling.getByRole("radio", { name: "Nashville" })).toBeDisabled();
-		await page.locator("main barmark-score").getByRole("radio", { name: "Grid" }).click();
+		await pressGrid(page);
 		await expect(spelling.getByRole("radio", { name: "Nashville" })).toBeEnabled();
 	});
 
@@ -1577,10 +1666,11 @@ test.describe("the score", () => {
 		expect(await scoreChords(page)).toEqual(["C\uEA66m7", "B\uEA64"]);
 	});
 
-	test("the Grid / Score switch is legible on the dark page, themed by the element itself", async ({
+	test("the element's own Grid / Score switch is legible on the dark page, themed by the element itself", async ({
 		page,
 	}) => {
-		await page.goto("/");
+		// Get Started's score keeps the element's switch (the home page draws its own, in its window's header).
+		await page.goto("/get-started");
 		await page.waitForFunction(() => customElements.get("barmark-score"));
 		const looks = await page.evaluate(() => {
 			const root = document.querySelector("main barmark-score")?.shadowRoot;
@@ -1642,9 +1732,8 @@ test.describe("the score without JavaScript", () => {
 		page,
 	}) => {
 		await page.goto("/");
-		const score = page.locator("main barmark-score");
-		await expect(score.getByRole("radio", { name: "Grid" })).toBeChecked();
-		await expect(score.getByRole("radio", { name: "Score" })).not.toBeChecked();
+		await expect(viewRadio(page, "Grid")).toBeChecked();
+		await expect(viewRadio(page, "Score")).not.toBeChecked();
 		expect(await chartText(page)).toContain("Greensleeves");
 	});
 });
