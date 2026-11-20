@@ -6,6 +6,8 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-11-20
+
 ### Added
 
 - **`switch="off"`** leaves the element's Grid / Score switch out, for a
@@ -340,7 +342,8 @@ First release.
   needs no config; Vite 7 needs `optimizeDeps.exclude` and
   `worker.format: "es"`.
 
-[Unreleased]: https://github.com/kevinpeckham/barmark/compare/score-v0.7.0...HEAD
+[Unreleased]: https://github.com/kevinpeckham/barmark/compare/score-v0.8.0...HEAD
+[0.8.0]: https://github.com/kevinpeckham/barmark/compare/score-v0.7.0...score-v0.8.0
 [0.7.0]: https://github.com/kevinpeckham/barmark/compare/score-v0.6.3...score-v0.7.0
 [0.6.3]: https://github.com/kevinpeckham/barmark/compare/score-v0.6.2...score-v0.6.3
 [0.6.2]: https://github.com/kevinpeckham/barmark/compare/score-v0.6.1...score-v0.6.2
