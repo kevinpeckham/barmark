@@ -37,6 +37,36 @@ function pasteGrowth(): number {
 const demo = await Bun.file(
 	join(import.meta.dir, "../src/lib/examples/peaceful-dreams.chart.md"),
 ).text();
+/** A lead sheet: chords on Vox, the tune on Vox.Mel, two verses of words. */
+const leadSheet = await Bun.file(
+	join(import.meta.dir, "../src/lib/examples/amazing-grace.chart.md"),
+).text();
+/** Chord names and syllables a lead sheet's grid must still draw without its melody. */
+const CHORDS = ["G7", "Em", "D7"];
+/** Amazing Grace's chord symbols: one a bar, two in the bars of G and G7. */
+const CHORD_COUNT = 18;
+const WORDS = [
+	"maz",
+	"grace",
+	"wretch",
+	"once",
+	"blind",
+	"see",
+	"Twas",
+	"taught",
+	"fears",
+	"hour",
+	"first",
+];
+/** The grid's chord names (not a melody's pitch names), and its syllables. */
+const drawn = (html: string) => ({
+	// Chord symbols (a melody note is "bm-chord bm-pitch"), and the grid's text without its tags.
+	chords: html.match(/class="bm-chord"/g)?.length ?? 0,
+	text: html.replace(/<style[\s\S]*?<\/style>/g, "").replace(/<[^>]+>/g, ""),
+	// A melody note's class; the stylesheet names `.bm-pitch` too, which is not a note.
+	pitches: html.match(/class="[^"]*\bbm-pitch\b/g)?.length ?? 0,
+	syllables: html.match(/class="bm-syllable"/g)?.length ?? 0,
+});
 
 describe("chartHtml", () => {
 	test("an empty source is an empty chart, not an exception", () => {
@@ -69,6 +99,24 @@ describe("chartHtml", () => {
 			expect(host(plain)).not.toContain("chord-diagrams");
 			expect(plain).not.toContain(`class="bm-diagrams"`);
 		}
+	});
+	test("a chart can leave a lead sheet's melody out of the grid: chords and words stay", () => {
+		const host = (html: string) => html.slice(0, html.indexOf(">") + 1);
+		const off = chartHtml(leadSheet, { melody: false });
+		expect(host(off)).toContain('melody="off"');
+		const shown = drawn(off);
+		expect(shown.pitches).toBe(0);
+		expect(shown.chords).toBe(CHORD_COUNT);
+		for (const c of CHORDS) expect(shown.text).toContain(c);
+		for (const w of WORDS) expect(shown.text).toContain(w);
+		// Both verses, 28 syllables each, as with the melody.
+		expect(shown.syllables).toBe(drawn(chartHtml(leadSheet)).syllables);
+		// Without the option the melody is drawn and the markup is as before.
+		const on = chartHtml(leadSheet);
+		expect(host(on)).not.toContain("melody");
+		expect(drawn(on).pitches).toBeGreaterThan(30);
+		expect(chartHtml(leadSheet, { melody: true })).toBe(on);
+		expect(chartHtml(demo, { melody: true })).toBe(chartHtml(demo));
 	});
 	test("sections are lettered A, B, C in play order", () => {
 		expect(chartHtml(demo)).toContain('<span class="bm-rehearsal"');
@@ -129,6 +177,19 @@ describe("scoreHtml", () => {
 		expect(html).toContain('class="bm-diagrams"');
 		expect(attr(scoreHtml("| G | D |"), "chord-diagrams")).toBeNull();
 		expect(scoreHtml("| G | D |")).not.toContain(`class="bm-diagrams"`);
+	});
+	test("a score's grid can leave a lead sheet's melody out; the attribute is on the host", () => {
+		const off = scoreHtml(leadSheet, { melody: false });
+		expect(attr(off, "melody")).toBe("off");
+		expect(drawn(off).pitches).toBe(0);
+		expect(drawn(off).chords).toBe(CHORD_COUNT);
+		for (const c of CHORDS) expect(drawn(off).text).toContain(c);
+		for (const w of WORDS) expect(drawn(off).text).toContain(w);
+		// The score engraves from the text, which still carries the melody.
+		expect(off).toContain("Vox.Mel");
+		expect(attr(scoreHtml(leadSheet), "melody")).toBeNull();
+		expect(drawn(scoreHtml(leadSheet)).pitches).toBeGreaterThan(30);
+		expect(scoreHtml(leadSheet, { melody: true })).toBe(scoreHtml(leadSheet));
 	});
 	test("preloads only when asked", () => {
 		expect(attr(scoreHtml(demo), "preload")).toBeNull();

@@ -2219,6 +2219,13 @@ are still worth reporting upstream.
   and run `bun install` again; check with
   `grep '/barmark": \["barmark@' site/bun.lock` (no lines) after every
   site bump. RELEASING.md step 12.
+- **Again with `@barmark/render` (2026-11-19).** Raising the site's
+  render pin from 0.21.0 to 0.21.1 left `@barmark/score/@barmark/render`
+  at 0.21.0, though score asks for `^0.21.0`. `<barmark-score>` draws its
+  grid with its own render, so the home page would have kept the bug the
+  patch fixed. The same fix: delete the nested entry, `bun install`, and
+  check `grep '/@barmark/render": \[' site/bun.lock` shows only what an
+  exact pin (the CLI's) requires.
 
 ### Dorico's .mxl has no mimetype entry (2026-11-07, .mxl fixtures)
 

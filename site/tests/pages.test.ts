@@ -725,6 +725,16 @@ describe("the Syntax Guide's score section", () => {
 		expect(section?.querySelectorAll("[data-score-note]").length).toBeGreaterThan(8);
 		expect(section?.querySelector("barmark-score template[shadowrootmode=open]")).not.toBeNull();
 	});
+	test("its lead sheet keeps the melody in the grid: only the home page leaves it out", () => {
+		const score = doc()
+			.querySelector("#in-the-score")
+			?.parentElement?.querySelector("barmark-score");
+		expect(score?.hasAttribute("melody")).toBe(false);
+		// A melody note's class; the stylesheet's `.bm-pitch` rule is not a note.
+		const pitches = score?.querySelector("template")?.innerHTML.match(/class="[^"]*\bbm-pitch\b/g);
+		// Its seven melody notes: G B C E D A G.
+		expect(pitches?.length ?? 0).toBe(7);
+	});
 });
 
 describe("every score on the site", () => {

@@ -12,9 +12,9 @@ import {
 } from "../src/lib/site.ts";
 import { build, page } from "./built.ts";
 
-/** The default example, Amazing Grace: the one the page prerenders. */
+/** The default example, Greensleeves: the one the page prerenders. */
 const demo = await Bun.file(
-	join(import.meta.dir, "../src/lib/examples/amazing-grace.chart.md"),
+	join(import.meta.dir, "../src/lib/examples/greensleeves.chart.md"),
 ).text();
 let doc: Document;
 beforeAll(() => {
@@ -42,7 +42,7 @@ describe("the home page, prerendered", () => {
 	});
 	test("the render window shows the chart without JavaScript", () => {
 		const template = doc.querySelector("main barmark-score template[shadowrootmode=open]");
-		expect(template?.innerHTML).toContain("Amazing Grace");
+		expect(template?.innerHTML).toContain("Greensleeves");
 	});
 	test("the render window is a <barmark-score>: the grid drawn, a Grid / Score switch on Grid, the text carried", () => {
 		const score = doc.querySelector("main barmark-score");
@@ -54,6 +54,9 @@ describe("the home page, prerendered", () => {
 		expect(shadow).toContain('data-view="score" aria-checked="false"');
 		expect(score?.querySelector('script[type="text/barmark"]')?.textContent).toBe(demo);
 		expect(doc.querySelector("main barmark-chart")).toBeNull();
+	});
+	test("the render window leaves a lead sheet's melody out of the grid, for the score to show", () => {
+		expect(doc.querySelector("main barmark-score")?.getAttribute("melody")).toBe("off");
 	});
 	test("the score preloads the lighter Verovio on intent, from jsDelivr, checked", () => {
 		const score = doc.querySelector("main barmark-score");
@@ -68,10 +71,10 @@ describe("the home page, prerendered", () => {
 		);
 		expect(urls.filter((u) => /worker|verovio|wasm/i.test(u))).toEqual([]);
 	});
-	test("the render window offers the key, named for the demo's own, G", () => {
+	test("the render window offers the key, named for the demo's own, Am", () => {
 		const button = doc.querySelector('main button[aria-haspopup="menu"]');
-		expect(button?.getAttribute("aria-label")).toBe("Key: G");
-		expect(button?.textContent?.trim()).toBe("G");
+		expect(button?.getAttribute("aria-label")).toBe("Key: Am");
+		expect(button?.textContent?.trim()).toBe("Am");
 	});
 	test("the render window's chart scrolls rather than wrapping its rows", () => {
 		const chart = doc.querySelector("main barmark-score");
@@ -130,13 +133,13 @@ describe("the examples", () => {
 		expect(buttons.map((b) => b.getAttribute("type"))).toEqual(["button", "button"]);
 		const status = group()?.querySelector('[role="status"]');
 		expect(status?.textContent?.replace(/\s+/g, " ").trim()).toBe(
-			`Amazing Grace ${1} of ${EXAMPLES.length}`,
+			`Greensleeves ${1} of ${EXAMPLES.length}`,
 		);
 	});
-	test("the default is Amazing Grace, credited as public domain", () => {
-		expect(EXAMPLES[0]?.id).toBe("amazing-grace");
+	test("the default is Greensleeves, credited as public domain", () => {
+		expect(EXAMPLES[0]?.id).toBe("greensleeves");
 		const credit = doc.querySelector("[data-credit]")?.textContent?.replace(/\s+/g, " ");
-		expect(credit).toContain("John Newton");
+		expect(credit).toContain("traditional English tune");
 		expect(credit).toContain("public domain");
 	});
 });

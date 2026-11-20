@@ -1104,7 +1104,173 @@
 	},
 	"amazing-grace.chart.md": {
 		"P1": {
-			"notes": [],
+			"notes": [
+				{
+					"pitch": 62,
+					"at": "0/1",
+					"length": "1/1"
+				},
+				{
+					"pitch": 67,
+					"at": "1/1",
+					"length": "2/1"
+				},
+				{
+					"pitch": 71,
+					"at": "3/1",
+					"length": "1/2"
+				},
+				{
+					"pitch": 67,
+					"at": "7/2",
+					"length": "1/2"
+				},
+				{
+					"pitch": 71,
+					"at": "4/1",
+					"length": "2/1"
+				},
+				{
+					"pitch": 69,
+					"at": "6/1",
+					"length": "1/1"
+				},
+				{
+					"pitch": 67,
+					"at": "7/1",
+					"length": "2/1"
+				},
+				{
+					"pitch": 64,
+					"at": "9/1",
+					"length": "1/1"
+				},
+				{
+					"pitch": 62,
+					"at": "10/1",
+					"length": "2/1"
+				},
+				{
+					"pitch": 62,
+					"at": "12/1",
+					"length": "1/1"
+				},
+				{
+					"pitch": 67,
+					"at": "13/1",
+					"length": "2/1"
+				},
+				{
+					"pitch": 71,
+					"at": "15/1",
+					"length": "1/2"
+				},
+				{
+					"pitch": 67,
+					"at": "31/2",
+					"length": "1/2"
+				},
+				{
+					"pitch": 71,
+					"at": "16/1",
+					"length": "2/1"
+				},
+				{
+					"pitch": 69,
+					"at": "18/1",
+					"length": "1/1"
+				},
+				{
+					"pitch": 74,
+					"at": "19/1",
+					"length": "5/1"
+				},
+				{
+					"pitch": 71,
+					"at": "24/1",
+					"length": "1/1"
+				},
+				{
+					"pitch": 74,
+					"at": "25/1",
+					"length": "2/1"
+				},
+				{
+					"pitch": 74,
+					"at": "27/1",
+					"length": "1/2"
+				},
+				{
+					"pitch": 71,
+					"at": "55/2",
+					"length": "1/2"
+				},
+				{
+					"pitch": 67,
+					"at": "28/1",
+					"length": "2/1"
+				},
+				{
+					"pitch": 62,
+					"at": "30/1",
+					"length": "1/1"
+				},
+				{
+					"pitch": 64,
+					"at": "31/1",
+					"length": "2/1"
+				},
+				{
+					"pitch": 67,
+					"at": "33/1",
+					"length": "1/2"
+				},
+				{
+					"pitch": 64,
+					"at": "67/2",
+					"length": "1/2"
+				},
+				{
+					"pitch": 62,
+					"at": "34/1",
+					"length": "2/1"
+				},
+				{
+					"pitch": 62,
+					"at": "36/1",
+					"length": "1/1"
+				},
+				{
+					"pitch": 67,
+					"at": "37/1",
+					"length": "2/1"
+				},
+				{
+					"pitch": 71,
+					"at": "39/1",
+					"length": "1/2"
+				},
+				{
+					"pitch": 67,
+					"at": "79/2",
+					"length": "1/2"
+				},
+				{
+					"pitch": 71,
+					"at": "40/1",
+					"length": "2/1"
+				},
+				{
+					"pitch": 69,
+					"at": "42/1",
+					"length": "1/1"
+				},
+				{
+					"pitch": 67,
+					"at": "43/1",
+					"length": "6/1"
+				}
+			],
 			"harmonies": [
 				{
 					"text": "D",
@@ -1179,10 +1345,6 @@
 					"at": "43/1"
 				}
 			]
-		},
-		"P2": {
-			"notes": [],
-			"harmonies": []
 		}
 	},
 	"three-parts.chart.md": {
