@@ -270,6 +270,9 @@ const cell = "px-3 py-3 align-top lt-sm:(block px-0 py-1)";
 			and the lyrics. It is a guide to the harmony, not an arrangement.
 			<code class={code}>importMidi</code> reads a MIDI file back as a chart, naming each chord from
 			the notes that sound; repeats come back written out, and a change between beats lands on the beat.
+			A file that is one line of notes, a bass line or a melody, comes back as that line: its notes
+			with their octaves, holds and rests (<code class={code}>notes: false</code>, or
+			<code class={code}>import --chords</code> from the terminal, reads chords from it instead).
 			Neither throws: what MIDI can't hold comes back as a loss or a diagnostic, each with its bar.
 		</p>
 		<Code title="Terminal" code={INSTALL_MIDI} />

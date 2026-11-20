@@ -219,6 +219,7 @@ if (exported.ok) {
 }
 
 // A MIDI file back to a chart, each chord named from the notes that sound
+// (a file that is one line of notes comes back as that line)
 const imported = importMidi(bytes);
 imported.text; // "# Example Song\\nkey: D, time: 4/4, tempo: 145\\n\\n## Verse\\n| D | A | Bm | G |\\n…"`;
 
