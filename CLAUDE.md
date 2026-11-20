@@ -149,8 +149,11 @@ Fallow, CI, Swamp), the grammar, `examples/`, the scripts and FINDINGS.md.
     (`directives.ts`), chords (`segments.ts`, `build.ts` through sync)
     or the line (`line.ts`: pitch names `pitch.ts`, the beat's division
     `quantize.ts`, where notes end `ends.ts`, the bars' text `cells.ts`,
-    a self-check and the chord fallback), markers (`markers.ts`), lyrics
-    (`lyrics.ts`)
+    and a self-check), markers (`markers.ts`), lyrics (`lyrics.ts`);
+    `index.ts` tries the line on both pairings and falls back to chords
+    when the line reading cannot finish
+  - `tests/notes-node.test.ts` times the pairing under Node (V8's
+    `Array.shift` is linear where Bun's is not)
   - `tests/`: `bun test`; every file is read back with `midi-file`
     (a devDependency, pinned exactly), an independent parser, and
     `helpers/player.ts` hears it beat by beat against the chart;

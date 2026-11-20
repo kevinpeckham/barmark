@@ -252,6 +252,18 @@ octaves. The line comes back as written.
 - **`tracks`** also says which tracks the line is read from, so
   `tracks: [4]` reads one track of a band's file as a line.
 
+The line reading has limits of its own:
+
+- **Note lengths are approximate.** Attacks are exact; an end is moved
+  to a point the beat's attacks already make, and never divides a beat.
+- **Rhythm finer than the divisions is rounded.** 32nd notes,
+  quintuplets, and sixteenths in a half-note beat (2/2) move to the
+  nearest point, attacks landing on one point are joined, and
+  `rhythm-rounded` names the bars.
+- **A grace note joins its main note** as a double stop.
+- **A file is one line only if few attacks overlap.** A short line with
+  one overlap, or with a note-on never released, reads as chords.
+
 Lyric rows go on as for any file, and have two limits for a melody. The
 words are not on the notes: with no `part:` declared nobody is the
 singer, so a converter engraves the words apart from the line. And a
