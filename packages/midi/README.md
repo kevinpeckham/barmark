@@ -232,11 +232,16 @@ octaves. The line comes back as written.
   a bass part cut into regions, one per track, is one line. A line
   played with the sustain pedal down has notes ringing under each other,
   so it reads as harmony.
+- **A line is read by its keys.** Once a file is one line, the sustain
+  pedal is not read: each note is as long as its key was down, so a
+  stray key press the pedal held is a short note and is left out, and a
+  note released under the pedal ends at its note-off.
 - **Holds and rests.** A note rings to the next attack (`/`) unless a
   beat or more is silent before it; that silence is a rest, `--` (never
   `N.C.`).
 - **Played files.** An attack up to a 128th note early belongs to the
-  beat it is early for. A beat is divided into 1, 2, 3, 4 or 6 parts,
+  beat it is early for. A beat is divided into 1, 2, 3, 4 or 6 parts
+  (a half-note beat, as in 2/2, into 8 too, so its sixteenths are read),
   the smallest that holds its attacks within a 128th note; an attack
   that fits none moves to the nearest point (`rhythm-rounded`).
 - **Pairing.** In a line, a note-off ends the oldest sounding note of its
@@ -257,10 +262,9 @@ The line reading has limits of its own:
 
 - **Note lengths are approximate.** Attacks are exact; an end is moved
   to a point the beat's attacks already make, and never divides a beat.
-- **Rhythm finer than the divisions is rounded.** 32nd notes,
-  quintuplets, and sixteenths in a half-note beat (2/2) move to the
-  nearest point, attacks landing on one point are joined, and
-  `rhythm-rounded` names the bars.
+- **Rhythm finer than the divisions is rounded.** 32nd notes and
+  quintuplets move to the nearest point, attacks landing on one point
+  are joined, and `rhythm-rounded` names the bars.
 - **A grace note joins its main note** as a double stop.
 - **A file is one line only if few attacks overlap.** A short line with
   one overlap, or a line with a note-on that is never released and whose

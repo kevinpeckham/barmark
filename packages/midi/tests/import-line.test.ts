@@ -169,6 +169,21 @@ describe("the grid", () => {
 			"| {C4}_{D4}_{E4}_{F4} {G4}_{A4} {B4}_{C5}_{D5} {E5} |",
 		]);
 	});
+	test("sixteenths in 2/2 are eight parts of the half-note beat (Kevin, 2026-11-20)", () => {
+		const notes = [...run([48, 50, 52, 53, 55, 57, 59, 60], 0, Q / 4), n(48, 2 * Q, 2 * Q)];
+		const r = importMidi(file(notes, [at(0, { time: [2, 2] })]));
+		expect(barLines(r.text)).toEqual(["| {C3}_{D3}_{E3}_{F3}_{G3}_{A3}_{B3}_{C4} {C3} |"]);
+		expect(codes(r)).toEqual(["notes-line"]);
+	});
+	test("a 2/2 chart with sixteenths, eighths and a dotted figure comes back as written", () => {
+		const bars =
+			"| {C3}_{D3}_{E3}_{F3}_{G3}_{A3}_{B3}_{C4} {C3}_{E3}_{G3}_{C4} | {C3}_/_/_{D3}_/_/_{E3}_/ {C3}._{D3} |";
+		const out = exportMidi(`time: 2/2, tempo: 60\n${bars}\n`);
+		if (!out.ok) throw new Error("export failed");
+		const r = importMidi(out.bytes);
+		expect(barLines(r.text)).toEqual([bars]);
+		expect(codes(r)).toEqual(["notes-line"]);
+	});
 	test("a 6/8 bar is two beats of three eighths", () => {
 		const r = importMidi(file(run([60, 62, 64, 65, 67, 69], 0, Q / 2), [at(0, { time: [6, 8] })]));
 		expect(r.text).toBe("time: 6/8, tempo: 80\n| {C4}_{D4}_{E4} {F4}_{G4}_{A4} |\n");
@@ -750,5 +765,68 @@ describe("the last attack near the bar line that ends the grid", () => {
 	test("a long final note is unchanged", () => {
 		const r = importMidi(file([...four.slice(0, 3), n(65, 3 * Q, 2 * BAR)]));
 		expect(barLines(r.text)).toEqual(["| {C4} {D4} {E4} {F4} | / | / / / -- |"]);
+	});
+});
+
+describe("a line is read by its keys: the sustain pedal holds nothing (Kevin, 2026-11-20)", () => {
+	const pedal = (down: number, up: number): At[] => [
+		at(down, { control: [0, 64, 127] }),
+		at(up, { control: [0, 64, 0] }),
+	];
+	const twoBars = run([48, 50, 52, 53, 55, 57, 59, 60], 0, Q);
+	test("a 15-tick key press the pedal holds is a short note, left out and counted", () => {
+		const notes = [...twoBars, n(72, 2 * BAR + Q, 15), n(48, 3 * BAR, BAR)];
+		const extra = pedal(2 * BAR + Q - 10, 3 * BAR - 10);
+		const r = importMidi(file(notes, [], { extra }));
+		expect(barLines(r.text)).toEqual(["| {C3} {D3} {E3} {F3} | {G3} {A3} {B3} {C4} | -- | {C3} |"]);
+		expect(codes(r)).toEqual(["notes-line", "notes-short"]);
+		expect(r.diagnostics[1]?.message).toContain("1 note ");
+	});
+	test("a note released under the pedal ends where its key did: the silence after it is a rest", () => {
+		const notes = [...twoBars, n(48, 2 * BAR, Q), n(50, 2 * BAR + 3 * Q, Q)];
+		const extra = pedal(2 * BAR + 100, 2 * BAR + 3 * Q - 10);
+		const r = importMidi(file(notes, [], { extra }));
+		expect(barLines(r.text).at(-1)?.endsWith("| {C3} -- -- {D3} |")).toBe(true);
+		expect(codes(r)).toEqual(["notes-line"]);
+	});
+	test("with no pedal in the file the line is the same line", () => {
+		const notes = [...twoBars, n(48, 2 * BAR, Q), n(50, 2 * BAR + 3 * Q, Q)];
+		expect(
+			barLines(importMidi(file(notes)).text)
+				.at(-1)
+				?.endsWith("| {C3} -- -- {D3} |"),
+		).toBe(true);
+	});
+	test("notes ringing under one another through the pedal are still harmony, read as chords", () => {
+		const r = importMidi(file(twoBars, [], { extra: pedal(0, 2 * BAR) }));
+		expect(codes(r)).not.toContain("notes-line");
+		expect(r.text).toBe(
+			importMidi(file(twoBars, [], { extra: pedal(0, 2 * BAR) }), { notes: false }).text,
+		);
+	});
+	test("a line found on MIDI 5.2's pairing is read by its keys in that pairing", () => {
+		// a doubled note-on of the first C3 rings under everything first in, first out; the pedal holds
+		// bar 2's C3 a beat past its key, which was down for one beat of the three before D3
+		const doubled = at(0, { on: [0, 48, 80] });
+		const notes = [
+			...run([48, 50, 52, 53], 0, Q),
+			n(48, BAR, Q),
+			n(50, BAR + 3 * Q, Q),
+			...run([52, 53, 55, 57], 2 * BAR, Q),
+		];
+		const extra = [doubled, ...pedal(BAR + 100, BAR + 2 * Q)];
+		const r = importMidi(file(notes, [], { extra }));
+		expect(barLines(r.text)).toEqual([
+			"| {C3} {D3} {E3} {F3} | {C3} -- -- {D3} | {E3} {F3} {G3} {A3} |",
+		]);
+	});
+	test("a pedalled line whose keys overlap themselves is read first in, first out, by its keys", () => {
+		// E, A, A, F, each released 5 ticks after the next is struck, a pedal pressed and lifted inside the first note
+		const starts = [0, Q, 2 * Q, 3 * Q];
+		const notes = [40, 45, 45, 41].map((p, i) => n(p, starts[i] as number, Q + 5));
+		const r = importMidi(
+			file([...notes, ...run([43, 45, 47, 48], BAR, Q)], [], { extra: pedal(10, 20) }),
+		);
+		expect(barLines(r.text)).toEqual(["| {E2} {A2} {A2} {F2} | {G2} {A2} {B2} {C3} |"]);
 	});
 });

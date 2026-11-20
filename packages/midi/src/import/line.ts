@@ -12,7 +12,7 @@
 import { type Meter, type PlayedBar, parseChart, parseMeter, printChart } from "barmark";
 import { perform } from "../perform/index.js";
 import type { Smf } from "../smf/types.js";
-import type { Attack } from "./attacks.js";
+import type { Line } from "./attacks.js";
 import { built, detectionsOf, failed, writable } from "./build.js";
 import { barTexts, withSimile } from "./cells.js";
 import { directivesOf } from "./directives.js";
@@ -25,9 +25,6 @@ import { type Named, named } from "./pitch.js";
 import { pointTick, type Quantized, quantize, TOLERANCE } from "./quantize.js";
 import { andList, createReport, type Report } from "./report.js";
 import type { MidiImportOptions } from "./types.js";
-
-/** The line as `lineOf` gives it. */
-export type Line = { attacks: Attack[]; notes: Note[]; short: number };
 
 /** Rewrites the finished chart before the self-check plays it: a test seam. */
 export type LineSeam = (chart: string) => string;

@@ -4,7 +4,7 @@ import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { existsSync } from "node:fs";
 import { parseChart, printChart } from "barmark";
-import { attacksOf, lineOf } from "../src/import/attacks.js";
+import { attacksOf, lineFrom, lineOf } from "../src/import/attacks.js";
 import { notesOf } from "../src/import/notes.js";
 import { createReport } from "../src/import/report.js";
 import { selectedNotes } from "../src/import/streams.js";
@@ -15,18 +15,24 @@ import { fixtureBytes, fixtureChart } from "./helpers/fixtures.js";
 
 const NAME = "interbellum-bass-09";
 
-/** The file's pitched notes (outside channel 10), as the import pairs a line's: the notes, and the file's ppq. */
+/**
+ * The file's pitched notes (outside channel 10), as the import reads a
+ * line's: paired first in, first out and tested with the pedal read, then
+ * paired again by their keys, the pedal unread. `pedalled` is the test's
+ * line, `line` the one written.
+ */
 function lineRead() {
 	const report = createReport();
 	const { smf, names } = readSmfInto(fixtureBytes(NAME), report);
 	if (smf === null) throw new Error("no file");
-	const pitched = selectedNotes(
-		notesOf(smf, report, { overlaps: "keep" }),
-		names,
-		{},
-		report,
-	).pitched;
-	return { pitched, line: lineOf(pitched, smf.ppq) };
+	const paired = (pedal: boolean) =>
+		selectedNotes(notesOf(smf, report, { overlaps: "keep", pedal }), names, {}, report).pitched;
+	const pitched = paired(false);
+	return {
+		pitched,
+		pedalled: lineOf(paired(true), smf.ppq),
+		line: lineFrom(pitched, smf.ppq),
+	};
 }
 
 const attackTimes = (text: string) => {
@@ -48,39 +54,44 @@ describe("interbellum-bass-09.mid", () => {
 		expect(printChart(r.text)).toBe(r.text);
 	});
 
-	test("its diagnostics: a line, 22 short notes, rounded bars, nine marks dropped", () => {
+	test("its diagnostics: a line, 23 short notes, rounded bars, nine marks dropped", () => {
 		expect(r.diagnostics.map((d) => [d.severity, d.code])).toEqual([
 			["info", "notes-line"],
 			["info", "notes-short"],
 			["warning", "rhythm-rounded"],
 			["info", "marker-dropped"],
 		]);
-		expect(r.diagnostics[1]?.message).toBe("22 notes shorter than a 64th note left out");
+		expect(r.diagnostics[1]?.message).toBe("23 notes shorter than a 64th note left out");
 		expect(r.diagnostics[2]?.message).toContain("in bars 39, 62, 63 and 64");
 		expect(r.diagnostics[3]?.message).toContain("9 times");
 	});
 
-	test("its attacks: 491 notes, 22 short, 465 attacks, none joined, every pitch kept in order", () => {
-		const { pitched, line } = lineRead();
-		expect(line).not.toBeNull();
-		if (line === null) return;
+	test("its attacks: 491 notes, 23 short, 464 attacks, none joined, every pitch kept in order", () => {
+		const { pitched, pedalled, line } = lineRead();
+		// the test reads the pedal: 22 short notes and 465 attacks, one of them a 15-tick C4 (track 9,
+		// tick 119545) the sustain pedal holds for 735 ticks
+		expect([pedalled?.short, pedalled?.attacks.length]).toEqual([22, 465]);
+		// the line is read by its keys (Kevin, 2026-11-20): that C4 is a short note too
 		expect(pitched).toHaveLength(491);
-		expect(line.short).toBe(22);
-		// 491 notes less 22 short are 469 notes, and the 32nd window groups them in 465 attacks
-		expect(line.notes).toHaveLength(491 - 22);
-		expect(line.attacks).toHaveLength(465);
-		expect(attacksOf(line.notes, 480)).toHaveLength(465);
+		expect(line.short).toBe(23);
+		// 491 notes less 23 short are 468 notes, and the 32nd window groups them in 464 attacks
+		expect(line.notes).toHaveLength(491 - 23);
+		expect(line.attacks).toHaveLength(464);
+		expect(attacksOf(line.notes, 480)).toHaveLength(464);
 		// rounding put no two attacks on one point, so the chart sounds as many attack times as the line has
 		// attacks and as many notes as it has notes. The 4 more notes than attacks are three closing chords,
-		// one of three pitches and two of two. One of the 469 kept notes is a 15-tick C4 (track 9, tick
-		// 119545) that the sustain pedal holds for 735 ticks, so the count depends on the pedal (spec 3
-		// pairs "the sustain pedal included").
+		// one of three pitches and two of two.
 		const sounded = attackTimes(r.text);
-		expect(sounded.notes).toBe(469);
-		expect(sounded.attacks).toHaveLength(465);
+		expect(sounded.notes).toBe(468);
+		expect(sounded.attacks).toHaveLength(464);
 		expect(sounded.attacks.map(([, p]) => [...p].sort((a, b) => a - b))).toEqual(
 			line.attacks.map((a) => a.pitches),
 		);
+	});
+
+	test("the Outro: the first closing chord ends where its keys did, and no pedal-held C4 is written", () => {
+		expect(r.text).toContain("| / -- --_{G4 A4} / | / -- -- {E4 G4} | / / / -- |");
+		expect(r.text).not.toContain("| / {C4} /_{G4 A4} / |");
 	});
 
 	test("every region is there and nothing sounds as N.C.", () => {

@@ -110,6 +110,26 @@ everything after it, so when the notes paired this way are not one line
 the test is tried again on MIDI 5.2's notes, and the line is read from
 those.
 
+**A line is read by its keys (Kevin, 2026-11-20: "there shouldn't be
+any sustain pedal holds in a bass line").** The test above reads the
+sustain pedal, so notes ringing under one another through it stay
+harmony. Once the notes are one line, the file is paired again in the
+pairing that passed with controller 64 unread, and the line is read
+from those notes: each is as long as its key was down. A key press
+shorter than a 64th note is then a short note (4.1) even where the
+pedal held it, and a note released under the pedal ends at its
+note-off. The test is not run again: the file is a line by its notes as
+they sound, and its keys are how that line is written. In Kevin's file the pedal lengthened four notes: the three of
+`{F3 F4 A4}`, the first of the three closing chords, and a 15-tick C4
+that was written as a note in the Outro's first bar and is now left
+out. The line written therefore has 23 short notes and 464 attacks,
+where the test, and the tables in sections 1 and 3, count 22 and 465.
+
+Two consequences **(design calls, 2026-11-20)**: the short-note
+exception (4.1) is decided on the keys, so a line with more than a
+quarter of its key presses that short keeps them all; and a line's
+lyric rows follow the keys, as its bars do.
+
 1. **Short notes** are set aside first (4.1).
 2. The notes, by start, are grouped into **attacks**: a note joins the
    attack before it when it starts less than a 32nd note after that
@@ -171,12 +191,17 @@ quarter).
 - **A beat's division.** Each beat is divided into 1, 2, 3, 4 or 6
   equal parts, never into parts shorter than a 32nd note: a quarter or
   a dotted quarter may take any of the five, an eighth (3/8, 5/8, 7/8)
-  1 to 4, a sixteenth 1 or 2. An attack **fits** a division when it
+  1 to 4, a sixteenth 1 or 2. **A half-note beat (2/2, 3/2, 4/2) may
+  take 8 parts too (Kevin, 2026-11-20),** so its sixteenths are read.
+  (No meter a chart writes has a longer beat or a dotted beat that
+  long: 6/4 is six quarter beats.) An attack **fits** a division when it
   lies within a 128th note of one of its points. The beat takes the
   smallest division that every attack in it fits with no two attacks at
   one point.
 - **Rounded.** When no division holds a beat's attacks, the beat takes
-  4 parts, or 6 where the beat is a dotted note (6/8, 9/8, 12/8), or
+  4 parts, or 6 where the beat is a dotted note (6/8, 9/8, 12/8), or 8
+  where it may take 8 (**design call, 2026-11-20:** a rounded beat's
+  points are then sixteenths in 2/2 as they are in 4/4), or
   the finest division it may take when that is coarser; and each attack
   moves to its nearest point. **The beat's end is a point too:** an
   attack nearer the next beat than any point inside its own moves
@@ -191,7 +216,9 @@ quarter).
 
 The tolerance is small on purpose: the points of 3 and of 4 parts lie a
 twelfth of a beat apart, so anything looser could take a triplet for
-sixteenths. Five of the 465 attacks in Kevin's file fit no division.
+sixteenths. Four of the 464 attacks written from Kevin's file fit no
+division (the fifth, before the line was read by its keys, was the
+pedal-held C4).
 
 ### 4.3 Pitches
 
@@ -413,8 +440,13 @@ short notes left out and counted; `interbellum-bass-09.mid` may be
 committed as a fixture, credited as section 9 says ("arranged and
 played is correct").
 
+**Kevin's, made (2026-11-20):** Karl Ward's permission is in hand; a
+line has no sustain pedal holds (3: a line is read by its keys); a
+half-note beat takes up to 8 parts (4.2).
+
 **Design calls** (mine; each is marked where it is made): a pedalled
-line reads as harmony (3); a line's notes are paired first in, first
+line reads as harmony (3), the test reading the pedal though the line
+found does not; a rounded beat that may take 8 parts takes 8 (4.2); a line's notes are paired first in, first
 out (3); the short-note exception (4.1); `--` for a
 line's rest, and an end never dividing a beat (5); dotted figures
 (6.1); sync unchanged, the cells replaced after it builds (6.2); lyric
@@ -428,5 +460,5 @@ package has it), the wording of each diagnostic, how the bars' cells
 are found in sync's chart, and the constants' names. The numbers in
 this document (a 64th note, a 32nd note for an attack and for the
 shortest part, a 128th note of tolerance, one in ten, a quarter of the
-notes, one beat of silence, divisions 1, 2, 3, 4 and 6, eight bars
-named) are the design's and are used as written.
+notes, one beat of silence, divisions 1, 2, 3, 4 and 6, and 8 for a
+plain beat of a half note or longer, eight bars named) are the design's and are used as written.

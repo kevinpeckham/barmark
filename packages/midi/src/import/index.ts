@@ -12,14 +12,14 @@
  */
 import { readSmfInto } from "../smf/read.js";
 import type { Smf } from "../smf/types.js";
-import { lineOf } from "./attacks.js";
+import { type Line, lineFrom, lineOf } from "./attacks.js";
 import { built, detectionsOf, failed, writable } from "./build.js";
 import { directivesOf } from "./directives.js";
 import { gridOf, lastHeard } from "./grid.js";
 import { type LineSeam, lineChart } from "./line.js";
 import { lastLyric, withLyrics } from "./lyrics.js";
 import { sectionsOf, titleOf } from "./markers.js";
-import { type Note, notesOf } from "./notes.js";
+import { type Note, notesOf, type Overlaps } from "./notes.js";
 import { createReport, type Report } from "./report.js";
 import { chordRuns } from "./segments.js";
 import { harmonyOf, selectedNotes } from "./streams.js";
@@ -63,30 +63,55 @@ function chordChart(
 	return options.lyrics === false ? chart : withLyrics(chart, smf, grid, notes, report);
 }
 
-type LineRead = { line: NonNullable<ReturnType<typeof lineOf>>; notes: Note[] };
+type LineRead = { line: Line; notes: Note[] };
+
+/**
+ * A line's notes, read by its keys (Kevin, 2026-11-20: a line has no
+ * sustain pedal holds): the file paired again with the pedal unread, so
+ * every note is as long as its key was down, and the short notes and the
+ * attacks taken from those. The test is not run again: the file is a line
+ * by the notes as they sound, and its keys are how that line is written.
+ * (The keys are not the tested notes made shorter: more of them can be
+ * short and leave, or so many that none is left out, and a key press with
+ * no length that the pedal held is no note at all; a file left with no
+ * note falls back to chords.)
+ */
+function byKeys(
+	smf: Smf,
+	names: (string | null)[],
+	options: MidiImportOptions,
+	overlaps: Overlaps,
+): LineRead {
+	const scratch = createReport();
+	const notes = notesOf(smf, scratch, { overlaps, pedal: false });
+	const { pitched } = selectedNotes(notes, names, options, scratch);
+	return { line: lineFrom(pitched, smf.ppq), notes };
+}
 
 /**
  * The line test (spec 3): on the notes paired first in, first out; when
- * they are not one line, on MIDI 5.2's (`notes`, already paired and
+ * they are not one line, on MIDI 5.2's (`classic`, already paired and
  * selected), so a stuck or doubled note-on, which first in, first out
- * never recovers from, does not cost the line. The line and the notes it
- * was read from, or null when neither is one line. The second pairing and
- * its choice of tracks report into a scratch report: the file's `notesOf`
- * and `selectedNotes` have reported the same already (their bounds, drums
- * and unknown tracks), so nothing is said twice.
+ * never recovers from, does not cost the line. The test reads the sustain
+ * pedal, so notes ringing under one another through it are harmony; the
+ * line it finds is then read by its keys, in the pairing that passed. The
+ * line and the notes it was read from, or null when neither pairing is one
+ * line. These pairings and their choice of tracks report into scratch
+ * reports: the file's `notesOf` and `selectedNotes` have reported the same
+ * already (their bounds, drums and unknown tracks), so nothing is said
+ * twice.
  */
 function lineReading(
 	smf: Smf,
 	names: (string | null)[],
 	options: MidiImportOptions,
-	classic: { notes: Note[]; pitched: Note[] },
+	classic: Note[],
 ): LineRead | null {
 	const scratch = createReport();
 	const kept = notesOf(smf, scratch, { overlaps: "keep" });
 	const first = lineOf(selectedNotes(kept, names, options, scratch).pitched, smf.ppq);
-	if (first !== null) return { line: first, notes: kept };
-	const second = lineOf(classic.pitched, smf.ppq);
-	return second === null ? null : { line: second, notes: classic.notes };
+	if (first !== null) return byKeys(smf, names, options, "keep");
+	return lineOf(classic, smf.ppq) === null ? null : byKeys(smf, names, options, "end");
 }
 
 /** The chart, "" once an error is reported, or null when the line reading asks to read chords instead. */
@@ -101,10 +126,7 @@ function chartOf(
 	const notes = notesOf(smf, report);
 	if (failed(report)) return "";
 	const selected = selectedNotes(notes, names, options, report);
-	const line =
-		options.notes === false
-			? null
-			: lineReading(smf, names, options, { notes, pitched: selected.pitched });
+	const line = options.notes === false ? null : lineReading(smf, names, options, selected.pitched);
 	if (line !== null) return lineChart(line.line, smf, names, line.notes, options, report, seam);
 	const harmony = harmonyOf(selected, names, report);
 	if (failed(report)) return "";

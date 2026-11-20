@@ -214,6 +214,27 @@ describe("notesOf", () => {
 		]);
 	});
 
+	test("with pedal: false a note ends at its note-off, whatever the pedal holds", () => {
+		const file = read([
+			[
+				{ dt: 0, control: [0, 64, 127] },
+				...track(chords(0, [C_E_G], 480)),
+				{ dt: 480, on: [0, 64, 80] },
+				{ dt: 480, off: [0, 64] },
+				{ dt: 480, control: [0, 64, 0] },
+				{ dt: 0, on: [0, 72, 80] },
+				{ dt: 240, off: [0, 72] },
+			],
+		]);
+		for (const overlaps of ["end", "keep"] as const)
+			expect(notesOf(file.smf, createReport(), { overlaps, pedal: false })).toEqual([
+				note(1, 60, 0, 480),
+				note(1, 64, 0, 480),
+				note(1, 67, 0, 480),
+				note(1, 64, 960, 1440),
+				note(1, 72, 1920, 2160),
+			]);
+	});
 	test("the pedal is down at 64 and above, on its own channel", () => {
 		const { notes } = notesFrom([
 			[

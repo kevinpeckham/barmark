@@ -16,6 +16,11 @@
  * pitch still sounding, and a note-off ends the oldest. Everything else is
  * as above; a note the pedal holds still ends when its pitch is struck
  * again.
+ *
+ * A line is read by its keys (Kevin, 2026-11-20; `pedal: false`):
+ * controller 64 is not read, so every note ends at its note-off. Nothing
+ * is then held, so a note-on written before a note-off of its pitch at one
+ * tick moves after it only when the pitch is sounding by its key.
  */
 import type { Smf, SmfEvent } from "../smf/types.js";
 import type { Report } from "./report.js";
@@ -37,7 +42,8 @@ export type Overlaps = "end" | "keep";
 /**
  * The notes so far: per channel, the starts of the notes sounding and of
  * those held by the pedal, by `voiceKey`, oldest first (one at most while
- * `overlaps` is "end"); the pedal per channel; each track's last tick.
+ * `overlaps` is "end"); the pedal per channel; each track's last tick;
+ * `pedals` false when the pedal is not read.
  */
 type Pairing = {
 	out: Note[];
@@ -46,6 +52,7 @@ type Pairing = {
 	pedal: boolean[];
 	last: number[];
 	overlaps: Overlaps;
+	pedals: boolean;
 };
 
 /**
@@ -126,7 +133,7 @@ function step(p: Pairing, { track, e }: Placed) {
 	if (e.kind === "on") {
 		strike(p, e.channel, voiceKey(track, e.pitch), e.tick);
 	} else if (e.kind === "off") release(p, e.channel, voiceKey(track, e.pitch), e.tick);
-	else if (e.kind === "control" && e.control === SUSTAIN)
+	else if (p.pedals && e.kind === "control" && e.control === SUSTAIN)
 		sustain(p, e.channel, e.value >= 64, e.tick);
 }
 
@@ -206,12 +213,13 @@ const byStart = (a: Note, b: Note) =>
 /**
  * Every note of the file, by start, then track, channel and pitch; none
  * past `MAX_NOTES` (`too-large`). `overlaps: "keep"` pairs first in, first
- * out (a line's pairing); the default is MIDI 5.2's.
+ * out (a line's pairing); the default is MIDI 5.2's. `pedal: false` leaves
+ * the sustain pedal unread (a line's notes, as long as their keys).
  */
 export function notesOf(
 	smf: Smf,
 	report: Report,
-	{ overlaps = "end" }: { overlaps?: Overlaps } = {},
+	{ overlaps = "end", pedal = true }: { overlaps?: Overlaps; pedal?: boolean } = {},
 ): Note[] {
 	const notes: Note[] = [];
 	const last = [0, ...smf.tracks.map((events) => events[events.length - 1]?.tick ?? 0)];
@@ -222,6 +230,7 @@ export function notesOf(
 		pedal: [],
 		last,
 		overlaps,
+		pedals: pedal,
 	};
 	for (const tick of ticksOf(merged(smf))) stepTick(p, tick);
 	endAll(p);

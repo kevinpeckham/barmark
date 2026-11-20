@@ -56,13 +56,18 @@ export function isLine(attacks: Attack[], ppq: number): boolean {
 	return several * SHARE <= attacks.length && under * SHARE <= attacks.length;
 }
 
-/** The short notes set aside, the attacks and the test, in order; null when the notes are not one line. */
-export function lineOf(
-	pitched: Note[],
-	ppq: number,
-): { attacks: Attack[]; notes: Note[]; short: number } | null {
+/** A line's notes: the short ones set aside, the rest by start, and their attacks. */
+export type Line = { attacks: Attack[]; notes: Note[]; short: number };
+
+/** The short notes set aside and the attacks, in order, with no test. */
+export function lineFrom(pitched: Note[], ppq: number): Line {
 	const { kept, short } = withoutShort(pitched, ppq);
 	const notes = [...kept].sort((a, b) => a.start - b.start);
-	const attacks = attacksOf(notes, ppq);
-	return isLine(attacks, ppq) ? { attacks, notes, short } : null;
+	return { attacks: attacksOf(notes, ppq), notes, short };
+}
+
+/** The short notes set aside, the attacks and the test, in order; null when the notes are not one line. */
+export function lineOf(pitched: Note[], ppq: number): Line | null {
+	const line = lineFrom(pitched, ppq);
+	return isLine(line.attacks, ppq) ? line : null;
 }
