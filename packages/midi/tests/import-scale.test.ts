@@ -1,5 +1,7 @@
 /** Import's scale (Review Focus 6): linear time, and the 500,000-note bound. */
 import { expect, test } from "bun:test";
+import { parseChart } from "barmark";
+import { growth, TIMING_TIMEOUT } from "../../../test-support/growth.js";
 import { importMidi } from "../src/index.js";
 import { type Event, smf } from "./helpers/smf.js";
 
@@ -113,4 +115,40 @@ test(
 		]);
 	},
 	TIMEOUT,
+);
+
+/** `bars` bars of 4/4 in eighths, one pitch a note, each ringing to the next: one line. */
+function lineFile(bars: number): Uint8Array {
+	const notes: Event[] = [];
+	for (let k = 0; k < bars * 8; k++) {
+		notes.push({ dt: 0, on: [0, 36 + (k % 12), 80] });
+		notes.push({ dt: PPQ / 2, off: [0, 36 + (k % 12)] });
+	}
+	const conductor: Event[] = [
+		{ dt: 0, tempo: 120 },
+		{ dt: 0, time: [4, 4] },
+	];
+	return smf({ format: 1, ppq: PPQ, running: true, tracks: [conductor, notes] });
+}
+
+test(
+	"a line of 1,000 bars imports as a line in linear time: 1,000 bars within its factor of 250",
+	() => {
+		// This guards the glue in line.ts (each stage has its own scale test). The line reading costs about
+		// twice the chord reading here (0.92 against 0.50 ms a bar), so the pair is 250 and 1,000 bars.
+		const small = lineFile(250);
+		const large = lineFile(1000);
+		const r = importMidi(large);
+		expect(r.diagnostics.map((d) => d.code)).toContain("notes-line");
+		expect(r.diagnostics.filter((d) => d.severity === "error")).toEqual([]);
+		expect(parseChart(r.text).diagnostics.filter((d) => d.severity === "error")).toEqual([]);
+		const ratio = growth(
+			() => importMidi(small),
+			() => importMidi(large),
+			{ balance: 4, runs: 2 },
+		);
+		// four times the bars, at most eight times as long
+		expect(ratio).toBeLessThan(8);
+	},
+	TIMING_TIMEOUT,
 );

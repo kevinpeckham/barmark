@@ -8,13 +8,14 @@
  * report does too; the grid's bars are its bars one for one, from the
  * first full bar as 1.
  */
-import type { BuildDiagnostic, Detections } from "@barmark/sync";
+import { type BuildDiagnostic, chartFromDetections, type Detections } from "@barmark/sync";
 import { beatsOf, type Meter, parseMeter } from "barmark";
 import type { Directives } from "./directives.js";
 import { barAt, type Grid } from "./grid.js";
 import type { SectionAt } from "./markers.js";
+import type { Report } from "./report.js";
 import type { ChordRun } from "./segments.js";
-import type { MidiImportDiagnostic } from "./types.js";
+import type { MidiImportDiagnostic, MidiImportOptions } from "./types.js";
 
 const nominal = (grid: Grid, tick: number) => tick / grid.ppq / 2;
 
@@ -39,7 +40,7 @@ function syncWritesPickup(grid: Grid): boolean {
 }
 
 /** The grid with a pickup only where sync writes it (`syncWritesPickup`); a new grid, the one read unchanged. */
-export function withWritablePickup(grid: Grid): Grid {
+function withWritablePickup(grid: Grid): Grid {
 	return { ...grid, pickup: syncWritesPickup(grid) };
 }
 
@@ -126,11 +127,7 @@ function startOf(path: string | undefined, input: Detections): number | undefine
  * it gives none, the bar of what its `path` names; `path` and `at` (both
  * nominal) dropped, and `tempo-grid-disagree` too.
  */
-export function mapBuild(
-	d: BuildDiagnostic,
-	grid: Grid,
-	input: Detections,
-): MidiImportDiagnostic | null {
+function mapBuild(d: BuildDiagnostic, grid: Grid, input: Detections): MidiImportDiagnostic | null {
 	if (d.code === "tempo-grid-disagree") return null;
 	const out: MidiImportDiagnostic = {
 		severity: d.severity,
@@ -147,4 +144,29 @@ export function mapBuild(
 			: d.bar + (grid.pickup ? 1 : 0);
 	if (bar !== undefined) out.bar = bar;
 	return out;
+}
+
+/** Whether an error has been reported. */
+export const failed = (report: Report) => report.list.some((d) => d.severity === "error");
+
+/** Sync's chart from the detections, its diagnostics reported as the import's. */
+export function built(
+	input: Detections,
+	grid: Grid,
+	options: MidiImportOptions,
+	report: Report,
+): string {
+	const { chart, diagnostics } = chartFromDetections(input, options);
+	for (const d of diagnostics) {
+		const mapped = mapBuild(d, grid, input);
+		if (mapped) report.add(mapped.code, mapped.severity, mapped.message, { bar: mapped.bar });
+	}
+	return chart;
+}
+
+/** The grid with a pickup only where sync writes it; the report then numbers the pickup 0. */
+export function writable(read: Grid, report: Report): Grid {
+	const grid = withWritablePickup(read);
+	if (grid.pickup) report.writtenBars();
+	return grid;
 }

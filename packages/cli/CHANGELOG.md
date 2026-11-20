@@ -6,6 +6,25 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.15.0] - 2026-11-20
+
+### Added
+
+- **`import --chords`** reads chords from a MIDI file that is one line of
+  notes, as `import` did before (`notes: false` in `@barmark/midi`). With
+  a MusicXML score it is a usage error, as `--tracks` is. `--tracks` also
+  chooses the tracks a line is read from.
+
+### Changed
+
+- **`import` of a MIDI file that is one line of notes (a bass line, a
+  melody) writes its notes**, with their octaves, holds and rests, not
+  chords named from them. `--chords` is the way back, and its message
+  (`notes-line`) says so.
+- **Uses** @barmark/midi 0.4.0 and @barmark/render 0.21.1. With 0.21.1,
+  nothing `render` draws changes: its fix is to the renderer's `melody`
+  option, which is not a flag here.
+
 ## [0.14.1] - 2026-11-19
 
 ### Changed
@@ -442,7 +461,8 @@ The first release of the `barmark` command. Uses `barmark` 0.8.0 and
 - **The `barmark` command:** `check`, `format`, `render` and `transpose`
   for `.chart.md` files, on npm and as standalone binaries.
 
-[Unreleased]: https://github.com/kevinpeckham/barmark/compare/cli-v0.14.1...HEAD
+[Unreleased]: https://github.com/kevinpeckham/barmark/compare/cli-v0.15.0...HEAD
+[0.15.0]: https://github.com/kevinpeckham/barmark/compare/cli-v0.14.1...cli-v0.15.0
 [0.14.1]: https://github.com/kevinpeckham/barmark/compare/cli-v0.14.0...cli-v0.14.1
 [0.14.0]: https://github.com/kevinpeckham/barmark/compare/cli-v0.13.0...cli-v0.14.0
 [0.13.0]: https://github.com/kevinpeckham/barmark/compare/cli-v0.12.0...cli-v0.13.0

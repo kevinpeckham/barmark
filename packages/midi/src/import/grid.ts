@@ -108,6 +108,18 @@ export function barAt(grid: Grid, tick: number): number {
 	return lo + 1;
 }
 
+/** A legato release may ring this share of a quarter (a sixteenth) past a bar line without adding a bar. */
+const RELEASE = 4;
+
+/**
+ * Where a note counts for the grid's end (the exclusive end `gridOf`
+ * takes): its end, less the 16th a legato release may ring past a bar
+ * line (so it adds no bar of N.C. or rest); and at least `kept`, the tick
+ * after the last its attack is read in (the chord reading: its start).
+ */
+export const lastHeard = (n: { start: number; end: number }, ppq: number, kept = n.start + 1) =>
+	Math.max(kept, n.end - ppq / RELEASE);
+
 /**
  * The bars up to the end of the one in which `lastTick` falls, a bar
  * ending at its next bar's start exclusive: so `lastTick` is the end of

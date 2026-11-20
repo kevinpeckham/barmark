@@ -33,6 +33,7 @@ export const switchStyles = `:host{${colours(SWITCH_PALETTES.light)}}
 @media print{:host,:host([theme="dark"]),${AUTO}{${colours(SWITCH_PALETTES.light)}}}
 .bms-switch,.bms-note{font-family:var(--barmark-label-font,system-ui,-apple-system,"Segoe UI",sans-serif)}
 .bms-switch{display:inline-flex;margin:0 0 .5rem;border:1px solid var(--bms-rule);border-radius:.4rem;overflow:hidden}
+:host([switch="off"]) .bms-switch{display:none}
 .bms-switch button{font:inherit;color:var(--bms-ink);background:transparent;border:0;padding:.25rem .75rem;cursor:pointer}
 .bms-switch button[aria-checked="true"]{font-weight:bold;text-decoration:underline}
 .bms-switch button:focus-visible{outline:2px solid currentColor;outline-offset:-2px}

@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import { parseChart, printChart } from "barmark";
 import { mulberry32 } from "../../sync/tests/helpers/fuzz.js";
-import { exportMidi, importMidi } from "../src/index.js";
+import { exportMidi, importMidi, type MidiImportOptions } from "../src/index.js";
 import { readSmf } from "../src/smf/read.js";
 import type { SmfEvent } from "../src/smf/types.js";
 import { CHARTS } from "./helpers/charts.js";
@@ -169,8 +169,8 @@ test("2,000 seeded mutations never throw", () => {
 });
 
 /** What import promises for any bytes: no internal error; "" exactly on an error, else a chart that parses cleanly and prints unchanged. */
-function importBroken(bytes: Uint8Array): string | null {
-	const r = importMidi(bytes);
+function importBroken(bytes: Uint8Array, options: MidiImportOptions = {}): string | null {
+	const r = importMidi(bytes, options);
 	const internal = r.diagnostics.find((d) => d.message.startsWith("internal error"));
 	if (internal) return internal.message;
 	const failed = r.diagnostics.some((d) => d.severity === "error");
@@ -190,6 +190,72 @@ test("2,000 seeded mutations import to a valid chart or an error", () => {
 			bytes = (MUTATIONS[int(r, MUTATIONS.length)] ?? ((_, b) => b))(r, bytes);
 		const problem = importBroken(bytes);
 		if (problem !== null) failures.push(`seed ${seed}: ${problem}`);
+	}
+	expect(failures).toEqual([]);
+}, 120_000);
+
+/** Well-formed files of one line of notes: sixteenths and triplets in 4/4 with a pickup-sized first rest, and a 6/8 line of long and short notes. */
+const LINES: Uint8Array[] = [
+	smf({
+		tracks: [
+			[
+				{ dt: 0, tempo: 100 },
+				{ dt: 0, time: [4, 4] },
+				{ dt: 0, key: [-2, 0] },
+			],
+			Array.from({ length: 48 }, (_, i): Event[] => [
+				{ dt: i === 0 ? 120 : 0, on: [0, 36 + (i % 9), 90] },
+				{ dt: i % 4 === 3 ? 160 : 120, off: [0, 36 + (i % 9)] },
+			]).flat(),
+		],
+	}),
+	smf({
+		running: true,
+		tracks: [
+			[
+				{ dt: 0, time: [6, 8] },
+				{ dt: 0, marker: "A" },
+			],
+			Array.from({ length: 30 }, (_, i): Event[] => [
+				{ dt: i % 5 === 4 ? 480 : 0, on: [i % 2, 40 + (i % 7), 80] },
+				{ dt: i % 3 === 0 ? 720 : 240, off: [i % 2, 40 + (i % 7)] },
+			]).flat(),
+		],
+	}),
+	// a small division, where a 128th note is a fraction of a tick (Review Focus 2)
+	...[24, 7].map((ppq) =>
+		smf({
+			ppq,
+			tracks: [
+				[
+					{ dt: 0, tempo: 90 },
+					{ dt: 0, time: [4, 4] },
+				],
+				Array.from({ length: 40 }, (_, i): Event[] => [
+					{ dt: i % 6 === 5 ? ppq : 0, on: [0, 36 + (i % 7), 80] },
+					{ dt: i % 3 === 0 ? ppq : Math.max(1, ppq >> 2), off: [0, 36 + (i % 7)] },
+				]).flat(),
+			],
+		}),
+	),
+];
+
+test("the line bases are read as lines", () => {
+	for (const bytes of LINES)
+		expect(importMidi(bytes).diagnostics.map((d) => d.code)).toContain("notes-line");
+});
+
+test("500 seeded mutations of a line import to a valid chart or an error, with the line reading on and with notes: false", () => {
+	const failures: string[] = [];
+	for (let seed = 1; seed <= 500; seed++) {
+		const r = mulberry32(seed);
+		let bytes = LINES[int(r, LINES.length)] ?? new Uint8Array();
+		for (let n = 1 + int(r, 3); n > 0; n--)
+			bytes = (MUTATIONS[int(r, MUTATIONS.length)] ?? ((_, b) => b))(r, bytes);
+		for (const options of [{}, { notes: false }]) {
+			const problem = importBroken(bytes, options);
+			if (problem !== null) failures.push(`seed ${seed} ${JSON.stringify(options)}: ${problem}`);
+		}
 	}
 	expect(failures).toEqual([]);
 }, 120_000);
