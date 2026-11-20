@@ -17,7 +17,8 @@ package uses [semantic versioning](https://semver.org/).
 
 - **`import` of a MIDI file that is one line of notes (a bass line, a
   melody) writes its notes**, with their octaves, holds and rests, not
-  chords named from them. `--chords` is the way back.
+  chords named from them. `--chords` is the way back, and its message
+  (`notes-line`) says so.
 
 ## [0.14.1] - 2026-11-19
 

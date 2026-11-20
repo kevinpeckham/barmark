@@ -74,7 +74,17 @@ function midiImport(
 		...(tracks === undefined ? {} : { tracks }),
 		...(chords ? { notes: false } : {}),
 	});
-	return { text: result.text, lines: result.diagnostics.map((d) => midiLine(path, d)) };
+	return {
+		text: result.text,
+		lines: result.diagnostics.map((d) => midiLine(path, forTheCli(d))),
+	};
+}
+
+/** The library's `notes-line` names its option; the CLI's reader needs the flag. */
+function forTheCli(d: MidiImportDiagnostic): MidiImportDiagnostic {
+	return d.code === "notes-line"
+		? { ...d, message: d.message.replace("notes: false reads chords", "--chords reads chords") }
+		: d;
 }
 
 async function scoreImport(

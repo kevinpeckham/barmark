@@ -124,6 +124,10 @@ describe("barmark import of a MIDI file", () => {
 		expect(io.out()).toBe(importMidi(LINE).text);
 		expect(io.out()).toContain("{E1}");
 		expect(io.err()).toContain("info: the notes are one line");
+		expect(io.err()).toContain(
+			"line.mid: info: the notes are one line and are written as notes; --chords reads chords from them\n",
+		);
+		expect(io.err()).not.toContain("notes: false");
 	});
 	test("--chords reads chords from a line of notes", async () => {
 		const io = withFiles({ "line.mid": LINE });
@@ -136,6 +140,14 @@ describe("barmark import of a MIDI file", () => {
 		const xml = withFiles({ "s.musicxml": "<score-partwise/>" });
 		expect(await main(["import", "s.musicxml", "--chords"], xml)).toBe(2);
 		expect(xml.err()).toBe("barmark: --chords is for MIDI; a MusicXML score takes --part\n");
+	});
+	test("help's MIDI paragraph wraps as its neighbours do", () => {
+		expect(COMMAND_HELP.import).toContain(
+			"bass line or a melody, is written as those notes), lyrics as lyric rows;\n" +
+				"its messages as file: bar N (track T): message. Exits 0 when a chart\n" +
+				"came out, even with warnings; 1 when none did or the file is bad. Does\n" +
+				"not read stdin.\n",
+		);
 	});
 	test("help lists MIDI import", () => {
 		expect(COMMAND_HELP.import).toContain(".mid");
