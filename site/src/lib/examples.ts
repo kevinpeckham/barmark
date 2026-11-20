@@ -2,7 +2,8 @@
  * The home page's example charts, in the order a reader flips through them.
  * The first is the default, the one the page prerenders: Greensleeves, the
  * simplest to read; Amazing Grace, a lead sheet with its melody and two
- * verses, comes next to show more. Each chart is
+ * verses, comes next to show more, and opens in the Score view, where its
+ * melody is drawn (`view`; the others open in the grid). Each chart is
  * `src/lib/examples/<id>.chart.md`, the same text as the repository's
  * `examples/<id>.chart.md` (tests/examples.test.ts holds them equal).
  */
@@ -16,6 +17,7 @@ export const EXAMPLES = [
 	{
 		id: "amazing-grace",
 		title: "Amazing Grace",
+		view: "score",
 		credit:
 			"“Amazing Grace”: words by John Newton (1779), sung to the traditional American tune New Britain; both are in the public domain. The chart is Barmark's own.",
 	},
@@ -40,6 +42,10 @@ export const EXAMPLES = [
 ] as const;
 
 export type Example = (typeof EXAMPLES)[number];
+
+/** The view an example opens in: its own, or the grid. */
+export const viewOf = (example: Example): "grid" | "score" =>
+	"view" in example ? example.view : "grid";
 
 /** The example's chart file, in `src/lib/examples/` and the repository's `examples/`. */
 export const exampleFile = (example: Example): string => `${example.id}.chart.md`;

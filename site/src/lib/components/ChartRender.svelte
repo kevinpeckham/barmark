@@ -1,14 +1,15 @@
 <script lang="ts">
 import { onMount, untrack } from "svelte";
-import { chartHtml, type Preload, scoreHtml } from "#lib/chart.js";
+import { chartHtml, type Preload, scoreHtml, type Theme, type View } from "#lib/chart.js";
 import { transposed } from "#lib/key.js";
 
 type Numerals = "nashville" | "roman";
-type View = "grid" | "score";
 type ChartElement = HTMLElement & {
 	text: string | null;
 	numerals?: Numerals | null;
 	chordDiagrams?: "guitar" | null;
+	/** A <barmark-score>'s. */
+	view?: View;
 };
 
 let {
@@ -21,6 +22,9 @@ let {
 	score = false,
 	preload = "none",
 	semitones = 0,
+	theme = "dark",
+	ownSwitch = true,
+	view = "grid",
 	onviewchange,
 }: {
 	text: string;
@@ -41,11 +45,24 @@ let {
 	melody?: boolean;
 	/** A <barmark-score>, with its Grid / Score switch, rather than a <barmark-chart>. Read once. */
 	score?: boolean;
-	/** A score's: when it starts loading Verovio, ahead of the reader's first press. Read once. */
+	/**
+	 * A score's: when it starts loading Verovio, ahead of the view that needs it. A page
+	 * with its own switch (`ownSwitch: false`) raises it to "idle" when the reader reaches
+	 * for Score: the element then has no switch of its own to watch.
+	 */
 	preload?: Preload;
+	/** A score's own Grid / Score switch; false: the page draws one and sets `view`. Read once. */
+	ownSwitch?: boolean;
 	/** Draw the chart this many semitones from its own key; the text itself never changes. */
 	semitones?: number;
-	/** The reader switched a score between Grid and Score. */
+	/**
+	 * The ground the chart is drawn for: the site's dark page, or "light" for a light
+	 * panel (dark ink; the panel is the page's own). Read once.
+	 */
+	theme?: Theme;
+	/** A score's view. The page sets it; the element says what it shows through `onviewchange`. */
+	view?: View;
+	/** A score now shows this view: the reader switched it, or the score could not be drawn and the grid is back. */
 	onviewchange?: (view: View) => void;
 } = $props();
 
@@ -68,11 +85,21 @@ let rendered = untrack(() => text);
 let moved = untrack(() => semitones);
 const initial = (asScore ? scoreHtml : chartHtml)(
 	transposed(rendered, moved),
-	untrack(() => ({ barNumbers, preload, chordDiagrams: diagrams, melody })),
+	untrack(() => ({
+		barNumbers,
+		preload,
+		chordDiagrams: diagrams,
+		melody,
+		view,
+		theme,
+		ownSwitch,
+	})),
 );
+const look = untrack(() => (theme === "light" ? "barmark-look-light" : "barmark-look"));
 let host: HTMLDivElement;
 
 const chart = () => host.querySelector(tag) as ChartElement;
+
 const draw = () => {
 	chart().text = transposed(rendered, moved);
 };
@@ -91,6 +118,7 @@ onMount(() => {
 // order: so whichever runs last applies the option as it is NOW, never as it was
 // when its change was made (a stale value could otherwise win).
 let spelled = untrack(() => numerals);
+
 $effect(() => {
 	if (numerals === spelled) return;
 	spelled = numerals;
@@ -107,6 +135,7 @@ $effect(() => {
 });
 
 let shown = untrack(() => diagrams);
+
 $effect(() => {
 	if (diagrams === shown) return;
 	shown = diagrams;
@@ -118,6 +147,28 @@ $effect(() => {
 		else if (next) el.setAttribute("chord-diagrams", "guitar");
 		else el.removeAttribute("chord-diagrams");
 		draw();
+	});
+});
+
+// When to load Verovio, raised by the page: the element reads its attribute.
+let primed = untrack(() => preload);
+$effect(() => {
+	if (!asScore || preload === primed) return;
+	primed = preload;
+	void load().then(() => chart().setAttribute("preload", preload));
+});
+
+// The view, as the options above: the element shows what the page asks for now.
+// It may refuse (a score that could not be drawn shows the grid again, and says
+// so with no event when asked once more), so the page is told what it shows.
+let viewed = untrack(() => view);
+$effect(() => {
+	if (!asScore || view === viewed) return;
+	viewed = view;
+	void load().then(() => {
+		const el = chart();
+		el.view = view;
+		if (el.view !== view) onviewchange?.(el.view ?? "grid");
 	});
 });
 
@@ -146,7 +197,7 @@ $effect(() => {
 <div
 	bind:this={host}
 	hidden={tooLong}
-	class="barmark-look min-w-0"
+	class="{look} min-w-0"
 	role={label ? "region" : undefined}
 	aria-label={label}
 >

@@ -38,5 +38,7 @@ const edwin = `<style data-barmark-font>${fontFaceCss("/fonts/Edwin-Roman.otf")}
 </svelte:head>
 
 <SiteNav />
-{@render children()}
+<div class="relative w-full max-w-screen place-self-stretch">
+  {@render children?.()}
+</div>
 <SiteFooter />

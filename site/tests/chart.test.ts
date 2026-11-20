@@ -88,6 +88,18 @@ describe("chartHtml", () => {
 	test("charts use the dark palette", () => {
 		expect(chartHtml(demo)).toContain('data-theme="dark"');
 	});
+	test("a chart is drawn for the dark page unless it asks for a light panel; a score may open in the score", () => {
+		expect(chartHtml(demo, { theme: "light" })).toMatch(/<barmark-chart[^>]* theme="light"/);
+		expect(chartHtml(demo)).toMatch(/<barmark-chart[^>]* theme="dark"/);
+		const light = scoreHtml(demo, { theme: "light", view: "score" });
+		expect(light).toMatch(/<barmark-score[^>]* theme="light"/);
+		expect(light).toMatch(/<barmark-score[^>]* view="score"/);
+		expect(scoreHtml(demo)).not.toMatch(/<barmark-score[^>]* view=/);
+		// A page that draws its own Grid / Score switch turns the element's off.
+		expect(scoreHtml(demo, { ownSwitch: false })).toMatch(/<barmark-score[^>]* switch="off"/);
+		expect(scoreHtml(demo)).not.toMatch(/<barmark-score[^>]* switch=/);
+		expect(scoreHtml(demo)).toMatch(/<barmark-score[^>]* theme="dark"/);
+	});
 	test("a chart can open with its guitar diagrams, one for each distinct chord; without the flag it has none", () => {
 		const host = (html: string) => html.slice(0, html.indexOf(">") + 1);
 		const html = chartHtml("| C | Am | C |", { chordDiagrams: true });

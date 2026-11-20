@@ -3,21 +3,30 @@ import { ENGRAVER_CDN_INTEGRITY, ENGRAVER_CDN_URL, ENGRAVER_WASM_INTEGRITY } fro
 import { renderScoreHtml } from "@barmark/score/server";
 
 // The site's charts never wrap: a section wider than its box keeps its rows, and the box scrolls.
-const options = { theme: "dark", rehearsalLetters: true, wrap: false } as const;
+const options = { rehearsalLetters: true, wrap: false } as const;
+
+/** A chart's ground: the site's dark page, or a light panel (the home page's). */
+export type Theme = "dark" | "light";
 
 /**
  * What a chart on the site may change: its bar numbers, a strip of guitar chord
- * diagrams, and whether a lead sheet's melody line is drawn in the grid (the
- * score always engraves it).
+ * diagrams, whether a lead sheet's melody line is drawn in the grid (the
+ * score always engraves it), and the ground it is drawn for.
  */
-type Look = { barNumbers?: boolean; chordDiagrams?: boolean; melody?: boolean };
+type Look = { barNumbers?: boolean; chordDiagrams?: boolean; melody?: boolean; theme?: Theme };
 
 /**
  * The renderer's options for a look; with diagrams off or the melody shown the
  * option is left out, so the markup is as before.
  */
-const chosen = ({ barNumbers = true, chordDiagrams = false, melody = true }: Look) => ({
+const chosen = ({
+	barNumbers = true,
+	chordDiagrams = false,
+	melody = true,
+	theme = "dark",
+}: Look) => ({
 	...options,
+	theme,
 	barNumbers,
 	...(chordDiagrams ? { chordDiagrams: "guitar" as const } : {}),
 	...(melody ? {} : { melody: false }),
@@ -37,6 +46,9 @@ export function chartHtml(text: string, look: Look = {}): string {
 	}
 }
 
+/** A `<barmark-score>`'s two views. */
+export type View = "grid" | "score";
+
 /** When `<barmark-score>` starts loading Verovio: on its first switch, on intent, or once the page is idle. */
 export type Preload = "none" | "intent" | "idle";
 
@@ -54,13 +66,25 @@ function engineAttributes(preload: Preload): string {
 /**
  * The chart as `<barmark-score>` markup: the same grid, with the Grid / Score
  * switch, and the chart's text carried for the score. Verovio is never
- * imported here; the element engraves once a reader picks Score.
+ * imported here; the element engraves once a reader picks Score, or once it
+ * loads when `view` is `"score"` (the grid is what the markup shows). With
+ * `ownSwitch: false` the element leaves its switch out (`switch="off"`): the
+ * page draws its own and sets the element's `view`.
  */
 export function scoreHtml(
 	text: string,
-	{ preload = "none", ...look }: Look & { preload?: Preload } = {},
+	{
+		preload = "none",
+		view = "grid",
+		ownSwitch = true,
+		...look
+	}: Look & { preload?: Preload; view?: View; ownSwitch?: boolean } = {},
 ): string {
-	const opts = chosen(look);
+	const opts = {
+		...chosen(look),
+		...(view === "score" ? { view } : {}),
+		...(ownSwitch ? {} : { switch: false }),
+	};
 	let html: string;
 	try {
 		html = renderScoreHtml(text, opts);

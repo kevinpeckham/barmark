@@ -4,7 +4,7 @@ import { FILES, LINKS } from "#lib/site.js";
 const link = "underline decoration-white/30 underline-offset-3 hover-text-accent";
 </script>
 
-<footer class="home-page-x-padding py-6 border-t border-line text-xs opacity-70">
+<footer class="page-x-padding py-6 border-t border-line text-xs opacity-70">
 	Code <a href={LINKS.license} class={link}>MIT</a> · grammar
 	<a href={LINKS.specLicense} class={link}>CC BY 4.0</a> · scores engraved by a
 	<a href={LINKS.engraverNotice} class={link}>modified build</a> of

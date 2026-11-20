@@ -87,6 +87,24 @@ describe("the MIDI code Get Started shows", () => {
 		expect(USE_MIDI).toContain(`imported.text; // "${shown.replaceAll("\n", "\\n")}…"`);
 		expect(USE_MIDI).toContain('import { exportMidi, importMidi } from "@barmark/midi";');
 	});
+	test("a file that is one line of notes comes back as that line, as the page says", () => {
+		const bass = "| {E1} {E1} {G1} {A1} | {E1} / {B1} / |\n";
+		const exported = exportMidi(bass);
+		if (!exported.ok) throw new Error(exported.diagnostics.map((d) => d.message).join("; "));
+		// The line itself, octaves and re-struck notes kept (two half notes are written as two slots);
+		// `notes: false` reads chords from it instead.
+		expect(importMidi(exported.bytes).text).toContain("| {E1} {E1} {G1} {A1} | {E1} {B1} |");
+		expect(importMidi(exported.bytes, { notes: false }).text).not.toContain("{E1} {E1} {G1} {A1}");
+		const prose = page("get-started.html")
+			.querySelector("#midi")
+			?.parentElement?.textContent?.replace(/\s+/g, " ");
+		expect(prose).toContain(
+			"A file that is one line of notes, a bass line or a melody, comes back as that line: its notes with their octaves, holds and rests",
+		);
+		expect(prose).toContain("notes: false");
+		expect(prose).toContain("import --chords");
+		expect(USE_MIDI).toContain("// (a file that is one line of notes comes back as that line)");
+	}, 120_000);
 	test("the perform subpath times the sample chart as the page says", () => {
 		const p = perform(parseChart(SAMPLE_CHART));
 		expect(p.tracks.flatMap((t) => t.notes).length).toBeGreaterThan(0);

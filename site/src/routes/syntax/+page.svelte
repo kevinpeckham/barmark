@@ -38,7 +38,7 @@ const description =
 	<meta property="og:description" content={description} />
 </svelte:head>
 
-<main class="home-page-x-padding py-10 flex flex-col gap-6 min-w-0">
+<main class="page-x-padding py-10 flex flex-col gap-6 min-w-0">
 	<div>
 		<h1 class="marketing-headline text-ink">The syntax</h1>
 		<p class="max-w-prose opacity-80">
