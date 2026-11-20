@@ -23,7 +23,7 @@ import { sectionsOf, titleOf } from "./markers.js";
 import type { Note } from "./notes.js";
 import { type Named, named } from "./pitch.js";
 import { pointTick, type Quantized, quantize, TOLERANCE } from "./quantize.js";
-import { andList, type Report } from "./report.js";
+import { andList, createReport, type Report } from "./report.js";
 import type { MidiImportOptions } from "./types.js";
 
 /** The line as `lineOf` gives it. */
@@ -123,11 +123,17 @@ const adjacent = (lines: string[], from: number, to: number) =>
 /**
  * Each bar's cell replaced by its text (spec 6.2), a leading `[n/d]`
  * kept, `%` for a repeat when `simile` (6.1). Null when sync's bars are
- * not the grid's one for one.
+ * not the grid's one for one, or its first bar is not in the meter the
+ * line was quantized in (`first`).
  */
-function withCells(chart: string, texts: string[], simile: boolean): string | null {
+function withCells(
+	chart: string,
+	texts: string[],
+	simile: boolean,
+	first: Meter | undefined,
+): string | null {
 	const { bars } = parseChart(chart);
-	if (bars.length !== texts.length) return null;
+	if (bars.length !== texts.length || !sameMeter(bars[0]?.meter, first)) return null;
 	const lines = chart.split("\n");
 	const rows = rowsOf(lines, bars);
 	if (rows === null) return null;
@@ -189,13 +195,12 @@ function soundsAsStruck(chart: string, q: Quantized<Named>, ppq: number): boolea
 	}
 }
 
-/** The line on the grid, as one text a bar; reports `pitch-range` and `rhythm-rounded`. Null when no pitch can be written. */
-function lineTexts(
+/** The line's attacks named; reports `pitch-range`. Null when no pitch can be written. */
+function namedAttacks(
 	line: Line,
-	grid: Grid,
 	keys: Parameters<typeof named>[1],
 	report: Report,
-): { texts: string[]; q: Quantized<Named> } | null {
+): Named[] | null {
 	const { attacks, outOfRange } = named(line.attacks, keys);
 	if (outOfRange > 0)
 		report.add(
@@ -203,10 +208,53 @@ function lineTexts(
 			"warning",
 			`${plural(outOfRange, "pitch", "pitches")} outside C0 to B8 left out: a chart cannot write ${outOfRange === 1 ? "it" : "them"}`,
 		);
-	if (attacks.length === 0) return null;
-	const q = quantize(attacks, grid);
-	reportRounded(q, grid, report);
-	return { texts: barTexts(statesOf(q, grid), q), q };
+	return attacks.length === 0 ? null : attacks;
+}
+
+/**
+ * The grid in the meters the chart is written in (final review, 2): a
+ * written pickup in the unit of the meter after it, as sync writes its
+ * `[k/d]`; every other bar as read. `withCells` holds the chart to it.
+ */
+function chartGrid(grid: Grid): Grid {
+	const [pickup, next] = grid.bars;
+	if (!grid.pickup || pickup === undefined || next === undefined) return grid;
+	const n = ((next.start - pickup.start) * next.meter.d) / (4 * grid.ppq);
+	if (!Number.isInteger(n)) return grid;
+	return { ...grid, bars: [{ ...pickup, meter: { n, d: next.meter.d } }, ...grid.bars.slice(1)] };
+}
+
+/**
+ * Whether the chart's final beat was rounded and an attack in it lies
+ * nearer the beat's end than the point it was given, on the file's clock
+ * (final review, 3): the final beat has no end point to carry it to.
+ */
+function endsEarly(q: Quantized): boolean {
+	const b = q.beats.length - 1;
+	const beat = q.beats[b];
+	if (beat === undefined || q.rounded.at(-1) !== beat.bar) return false;
+	const end = beat.start + beat.length;
+	const step = beat.length / (q.parts[b] ?? 1);
+	return q.struck.some(
+		(s) =>
+			s.beat === b &&
+			s.attacks.some((a) => end - a.tick < Math.abs(a.tick - (beat.start + s.point * step))),
+	);
+}
+
+/**
+ * The grid's exclusive end: `lastTick`, or one bar more when the last
+ * attack would be written early in the final beat (`endsEarly`), unless
+ * that bar is past the bar limit. Trial grids report nothing.
+ */
+function gridEnd(line: Line, smf: Smf, options: MidiImportOptions): number {
+	const last = lastTick(line, smf, options);
+	const trial = createReport();
+	const read = gridOf(smf, last, trial);
+	if (failed(trial) || !endsEarly(quantize(line.attacks, read))) return last;
+	const longer = createReport();
+	gridOf(smf, read.end + 1, longer);
+	return failed(longer) ? last : read.end + 1;
 }
 
 /**
@@ -226,19 +274,22 @@ export function lineChart(
 	seam: LineSeam = (chart) => chart,
 ): string | null {
 	reportLine(line, report);
-	const read = gridOf(smf, lastTick(line, smf, options), report);
+	const read = gridOf(smf, gridEnd(line, smf, options), report);
 	if (failed(report)) return null;
 	const grid = writable(read, report);
 	const directives = directivesOf(smf, grid, line.notes, report);
-	const written = lineTexts(line, grid, directives.keys, report);
-	if (written === null) return null;
-	const { texts, q } = written;
+	const attacks = namedAttacks(line, directives.keys, report);
+	if (attacks === null) return null;
+	const written = chartGrid(grid);
+	const q = quantize(attacks, written);
+	reportRounded(q, grid, report);
+	const texts = barTexts(statesOf(q, grid), q);
 	const placeholder = [{ start: grid.bars[0]?.start ?? 0, end: grid.end, symbol: "C" }];
 	const sections = sectionsOf(smf, grid, report);
 	const input = detectionsOf(grid, placeholder, directives, sections, titleOf(smf, names));
 	const chart = built(input, grid, options, report);
 	if (failed(report)) return null;
-	const cells = withCells(chart, texts, options.simile !== false);
+	const cells = withCells(chart, texts, options.simile !== false, written.bars[0]?.meter);
 	if (cells === null) return null;
 	const rows = options.lyrics === false ? cells : withLyrics(cells, smf, grid, allNotes, report);
 	const out = seam(rows);

@@ -691,3 +691,47 @@ describe("the line's own notes", () => {
 		expect(lines).toContain("lyrics: | one two / / | three |");
 	});
 });
+
+describe("a pickup in another beat is quantized in the meter the chart writes", () => {
+	const clean = (text: string) => parseChart(text).diagnostics;
+	test("3/4 before 12/8: the pickup is [6/8], in dotted beats, with no parse diagnostic", () => {
+		const notes = [n(47, 0, 470), n(44, 480, 470), n(40, 960, 470)];
+		for (let k = 0; k < 4; k++) notes.push(n(40 + k, 3 * Q + k * 720, 700));
+		const r = importMidi(file(notes, [at(0, { time: [3, 4] }), at(3 * Q, { time: [12, 8] })]));
+		expect(barLines(r.text)).toEqual(["| [6/8] {B2}_/_{Ab2} /_{E2}_/ | {E2} {F2} {F#2} {G2} |"]);
+		expect(clean(r.text)).toEqual([]);
+		expect(codes(r)).toEqual(["notes-line"]);
+	});
+	test("6/8 before 4/4: the pickup is [3/4], in quarters, with no parse diagnostic", () => {
+		const notes = [0, 1, 2, 3, 4, 5].map((k) => n(50 + k, k * 240, 230));
+		for (let k = 0; k < 8; k++) notes.push(n(45 + k, 3 * Q + k * Q, 470));
+		const r = importMidi(file(notes, [at(0, { time: [6, 8] }), at(3 * Q, { time: [4, 4] })]));
+		expect(barLines(r.text)).toEqual([
+			"| [3/4] {D3}_{Eb3} {E3}_{F3} {F#3}_{G3} | {A2} {Bb2} {B2} {C3} | {C#3} {D3} {Eb3} {E3} |",
+		]);
+		expect(clean(r.text)).toEqual([]);
+	});
+});
+
+describe("the last attack near the bar line that ends the grid", () => {
+	const four = run([60, 62, 64, 65], 0, Q);
+	test("16 ticks early (past a 128th): carried to a bar of its own, rounded", () => {
+		const r = importMidi(
+			file([...four.slice(0, 3), n(65, 3 * Q, (3 * Q) / 4 - 16), n(67, BAR - 16, 100)]),
+		);
+		expect(barLines(r.text)).toEqual(["| {C4} {D4} {E4} {F4} | {G4} -- -- -- |"]);
+		expect(codes(r)).toEqual(["notes-line", "rhythm-rounded"]);
+	});
+	test("100 ticks early (nearer the last sixteenth): stays in the bar", () => {
+		const r = importMidi(file([...four.slice(0, 3), n(65, 3 * Q, Q - 100), n(67, BAR - 100, 100)]));
+		expect(barLines(r.text)).toEqual(["| {C4} {D4} {E4} {F4}._{G4} |"]);
+	});
+	test("15 ticks early (within a 128th): the next bar's, as before", () => {
+		const r = importMidi(file([...four.slice(0, 3), n(65, 3 * Q, Q - 15), n(67, BAR - 15, 100)]));
+		expect(barLines(r.text)).toEqual(["| {C4} {D4} {E4} {F4} | {G4} -- -- -- |"]);
+	});
+	test("a long final note is unchanged", () => {
+		const r = importMidi(file([...four.slice(0, 3), n(65, 3 * Q, 2 * BAR)]));
+		expect(barLines(r.text)).toEqual(["| {C4} {D4} {E4} {F4} | / | / / / -- |"]);
+	});
+});
