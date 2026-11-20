@@ -41,20 +41,30 @@ export type Overlaps = "end" | "keep";
  */
 type Pairing = {
 	out: Note[];
-	sounding: Map<number, number[]>[];
-	held: Map<number, number[]>[];
+	sounding: Map<number, Queue>[];
+	held: Map<number, Queue>[];
 	pedal: boolean[];
 	last: number[];
 	overlaps: Overlaps;
 };
 
-const channels = () => Array.from({ length: 16 }, () => new Map<number, number[]>());
+/**
+ * A key's starts, oldest first, from `head`: a note-off moves the head
+ * rather than shifting the array, which V8 does in time linear in its
+ * length (FINDINGS: quadratic under Node, unseen under Bun).
+ */
+type Queue = { starts: number[]; head: number };
+
+const channels = () => Array.from({ length: 16 }, () => new Map<number, Queue>());
+
+/** The starts still queued. */
+const queued = (queue: Queue | undefined) => queue?.starts.slice(queue.head) ?? [];
 
 /** Adds a start to a key's queue. */
-function push(map: Map<number, number[]> | undefined, key: number, start: number) {
+function push(map: Map<number, Queue> | undefined, key: number, start: number) {
 	const queue = map?.get(key);
-	if (queue) queue.push(start);
-	else map?.set(key, [start]);
+	if (queue) queue.starts.push(start);
+	else map?.set(key, { starts: [start], head: 0 });
 }
 
 /** A track's pitch, as a key in one channel's maps. */
@@ -68,13 +78,13 @@ function end(p: Pairing, channel: number, key: number, start: number, tick: numb
 /** Ends every note of a key in these maps. */
 function endIn(
 	p: Pairing,
-	maps: (Map<number, number[]> | undefined)[],
+	maps: (Map<number, Queue> | undefined)[],
 	channel: number,
 	key: number,
 	tick: number,
 ) {
 	for (const map of maps) {
-		for (const start of map?.get(key) ?? []) end(p, channel, key, start, tick);
+		for (const start of queued(map?.get(key))) end(p, channel, key, start, tick);
 		map?.delete(key);
 	}
 }
@@ -94,9 +104,10 @@ function strike(p: Pairing, channel: number, key: number, tick: number) {
 /** A note-off ends the oldest note sounding of its pitch, or hands it to the pedal. */
 function release(p: Pairing, channel: number, key: number, tick: number) {
 	const queue = p.sounding[channel]?.get(key);
-	const start = queue?.shift();
-	if (start === undefined) return;
-	if (queue?.length === 0) p.sounding[channel]?.delete(key);
+	const start = queue?.starts[queue.head];
+	if (queue === undefined || start === undefined) return;
+	queue.head++;
+	if (queue.head === queue.starts.length) p.sounding[channel]?.delete(key);
 	if (p.pedal[channel]) push(p.held[channel], key, start);
 	else end(p, channel, key, start, tick);
 }
@@ -106,8 +117,8 @@ function sustain(p: Pairing, channel: number, down: boolean, tick: number) {
 	p.pedal[channel] = down;
 	if (down) return;
 	const held = p.held[channel];
-	for (const [key, starts] of held ?? [])
-		for (const start of starts) end(p, channel, key, start, tick);
+	for (const [key, queue] of held ?? [])
+		for (const start of queued(queue)) end(p, channel, key, start, tick);
 	held?.clear();
 }
 
