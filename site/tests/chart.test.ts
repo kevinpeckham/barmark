@@ -89,8 +89,8 @@ describe("chartHtml", () => {
 		expect(chartHtml(demo)).toContain('data-theme="dark"');
 	});
 	test("a chart is drawn for the dark page unless it asks for a light panel; a score may open in the score", () => {
-		expect(chartHtml(demo, { theme: "light" })).toContain('data-theme="light"');
-		expect(chartHtml(demo, { theme: "light" })).not.toContain('data-theme="dark"');
+		expect(chartHtml(demo, { theme: "light" })).toMatch(/<barmark-chart[^>]* theme="light"/);
+		expect(chartHtml(demo)).toMatch(/<barmark-chart[^>]* theme="dark"/);
 		const light = scoreHtml(demo, { theme: "light", view: "score" });
 		expect(light).toMatch(/<barmark-score[^>]* theme="light"/);
 		expect(light).toMatch(/<barmark-score[^>]* view="score"/);
