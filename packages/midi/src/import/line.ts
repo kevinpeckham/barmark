@@ -9,7 +9,7 @@
  * line's attacks, the same pitches at the same times, or the caller reads
  * the file as chords instead (null).
  */
-import { type Meter, type PlayedBar, parseChart, printChart } from "barmark";
+import { type Meter, type PlayedBar, parseChart, parseMeter, printChart } from "barmark";
 import { perform } from "../perform/index.js";
 import type { Smf } from "../smf/types.js";
 import type { Attack } from "./attacks.js";
@@ -243,6 +243,15 @@ function endsEarly(q: Quantized): boolean {
 }
 
 /**
+ * Whether a chart can write every bar's meter (grammar 2.1: 1 to 32 over 2,
+ * 4, 8 or 16). A bar cut by a time signature can come out as thousands of
+ * sixteenths; sync leaves such a meter out, so the line could not be
+ * written in it, and counting its beats first would cost a small file
+ * millions of them. Asked before any beat is counted.
+ */
+const writes = (grid: Grid) => grid.bars.every((b) => parseMeter(`${b.meter.n}/${b.meter.d}`));
+
+/**
  * The grid's exclusive end: `lastTick`, or one bar more when the last
  * attack would be written early in the final beat (`endsEarly`), unless
  * that bar is past the bar limit. Trial grids report nothing.
@@ -251,7 +260,7 @@ function gridEnd(line: Line, smf: Smf, options: MidiImportOptions): number {
 	const last = lastTick(line, smf, options);
 	const trial = createReport();
 	const read = gridOf(smf, last, trial);
-	if (failed(trial) || !endsEarly(quantize(line.attacks, read))) return last;
+	if (failed(trial) || !writes(read) || !endsEarly(quantize(line.attacks, read))) return last;
 	const longer = createReport();
 	gridOf(smf, read.end + 1, longer);
 	return failed(longer) ? last : read.end + 1;
@@ -275,7 +284,7 @@ export function lineChart(
 ): string | null {
 	reportLine(line, report);
 	const read = gridOf(smf, gridEnd(line, smf, options), report);
-	if (failed(report)) return null;
+	if (failed(report) || !writes(read)) return null;
 	const grid = writable(read, report);
 	const directives = directivesOf(smf, grid, line.notes, report);
 	const attacks = namedAttacks(line, directives.keys, report);

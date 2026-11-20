@@ -246,8 +246,9 @@ octaves. The line comes back as written.
   notes paired this way are not one line, the chord reading's pairing is
   tried before the file is read as chords.
 - **`notes: false`** reads chords from any file, as before 0.4. Anything
-  that stops the line reading (an error such as `too-large`, no pitch
-  left that a chart can write, a line that does not play back as read)
+  that stops the line reading (an error such as `too-large`, a bar in a
+  meter a chart cannot write, no pitch left that a chart can write, a
+  line that does not play back as read)
   falls back to the chord reading with a `notes-fallback` warning.
 - **`tracks`** also says which tracks the line is read from, so
   `tracks: [4]` reads one track of a band's file as a line.

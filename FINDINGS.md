@@ -3294,3 +3294,24 @@ those never reached, or reached in a repeat with passes enough for their verse (
   Whatever it reads from `ctx.bars` it must read once a line, and a new
   option gets a test in `scale.test.ts` in the same change, not after a
   reviewer asks.
+
+### A bar cut by a time signature can have thousands of beats (2026-11-20, midi)
+
+- **The symptom.** A file under 100 KB (one held note; a 255/2 time
+  signature every 2,039 ticks at 4 ticks a quarter) made the line reading
+  build 20 million beat objects, inside every bound the import states.
+  Vercel's security review of pull request #348 found it; the chord
+  reading never counts beats, so `main` was not affected.
+- **The cause.** `gridOf` cuts a bar at a time signature inside it and
+  gives it a meter in sixteenths (`cutMeter`), here 2039/16. `quantize`
+  makes a beat for each, and `statesOf` an array for each beat. The bar
+  limit (10,000) bounds bars, not beats.
+- **The fix.** Before any beat is counted, `line.ts` (`writes`) asks
+  whether a chart can write every bar's meter (1 to 32 over 2, 4, 8 or
+  16, `parseMeter`). If not, the line reading stops and the file is read
+  as chords: sync would have left such a meter out, so the line could not
+  have been written in it anyway. That also bounds the beats at 32 a bar.
+- **The rule.** A new stage that expands the grid (beats, points, cells)
+  states its own bound in the units it expands, and checks it before it
+  allocates. The reviewers' scale runs grew notes and bars; none grew a
+  bar's meter.

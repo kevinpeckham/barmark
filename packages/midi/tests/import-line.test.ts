@@ -501,6 +501,23 @@ describe("what falls back", () => {
 		);
 		fellBack(importMidi(bytes), bytes);
 	});
+	test("a bar in a meter no chart can write costs the line before a beat of it is counted", () => {
+		// 255/2 signatures 2,039 ticks apart at ppq 4: each bar is cut to 2039/16, 2,039 beats a bar.
+		const bars = 1000;
+		const cuts = Array.from({ length: bars }, (_, i) => at(i * 2039, { time: [255, 2] }));
+		const bytes = file([n(48, 0, bars * 2039)], cuts, { ppq: 4 });
+		const time = (options?: { notes: false }) => {
+			const start = performance.now();
+			const result = importMidi(bytes, options);
+			return { result, ms: performance.now() - start };
+		};
+		time({ notes: false });
+		const chords = time({ notes: false });
+		const line = time();
+		fellBack(line.result, bytes);
+		// Two million beats would be counted first: the line reading must not cost more than a second look.
+		expect(line.ms).toBeLessThan(chords.ms * 4 + 250);
+	}, 60_000);
 	test("a line with no pitch in range falls back", () => {
 		const bytes = file(run([0, 2, 4, 5, 7, 9, 11, 0], 0, Q));
 		fellBack(importMidi(bytes), bytes);
