@@ -320,6 +320,22 @@ bun scripts/engraver-equivalence.ts   # stock vs the build, byte-identical SVG
 cd site && bun run dev|build|check|test|test:browser   # barmark.dev
 ```
 
+## Agent tooling
+
+What an agent gets in this repository is declared here, not in anyone's
+personal Claude Code settings:
+
+- `.claude/settings.json`: the plugins this project uses (Svelte, for
+  `site/`; Playwright, for the browser suites) and the approval of the
+  servers in `.mcp.json`
+- `.mcp.json`: MCP servers (Vercel, where barmark.dev is deployed)
+- `.claude/skills/`: the project's own skills (`release`)
+
+A plugin named there is enabled for the project but not downloaded: run
+`claude plugin install <name>@<marketplace> --scope project` once per clone.
+Add a tool by editing these files in a pull request. Never install one at
+user level for this project's sake.
+
 ## Working agreement
 
 - Test first: a failing test before every fix or feature, and a test that

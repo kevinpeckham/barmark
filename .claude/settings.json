@@ -1,0 +1,15 @@
+{
+	"enabledPlugins": {
+		"playwright@claude-plugins-official": true,
+		"svelte@svelte": true
+	},
+	"extraKnownMarketplaces": {
+		"svelte": {
+			"source": {
+				"source": "github",
+				"repo": "sveltejs/ai-tools"
+			}
+		}
+	},
+	"enabledMcpjsonServers": ["vercel"]
+}
