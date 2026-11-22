@@ -1223,6 +1223,13 @@ test("a chart on the dark page keeps the dark look: white ink, the amber accent"
 	// Every page but the home page draws its charts straight on the dark ground.
 	for (const path of ["/get-started", "/syntax", `/try?q=${encodeURIComponent("| D | A |")}`]) {
 		await page.goto(path);
+		// Try It draws its chart from the link once the page's script has run: until then there
+		// is no chord to read, and reading its colour throws (it failed on CI that way once).
+		await page.waitForFunction(() =>
+			document
+				.querySelector("main :is(barmark-chart, barmark-score)")
+				?.shadowRoot?.querySelector(".bm-chord"),
+		);
 		const look = await page.evaluate(() => {
 			const el = document.querySelector("main :is(barmark-chart, barmark-score)");
 			const chart = el?.shadowRoot?.querySelector(".bm-chart") as Element;

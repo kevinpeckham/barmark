@@ -3332,3 +3332,22 @@ those never reached, or reached in a repeat with passes enough for their verse (
   passed; `publish` had succeeded and is not run again. A failed `confirm`
   means a broken package (RELEASING.md) only when the install reached the
   package: read its log for a 404 on the tarball first.
+
+### A browser test read an element before the page had drawn it (2026-11-22, site tests)
+
+- **The symptom.** `a chart on the dark page keeps the dark look` failed
+  on CI with "Failed to execute 'getComputedStyle' on 'Window': parameter
+  1 is not of type 'Element'", on a pull request that changed no site
+  code. The test had passed locally and in three CI runs since it was
+  written two days before.
+- **The cause.** The test visits three pages and reads the first chord's
+  colour straight after `page.goto`. Two of the pages are prerendered with
+  the chart in them; Try It draws its chart from the link's query only
+  once its script has run. When the read came first there was no chord,
+  and `getComputedStyle(null)` throws.
+- **The fix.** The test waits for the chord to exist
+  (`page.waitForFunction`) before reading it.
+- **The rule.** In a browser test, anything a page draws from script is
+  waited for, never assumed after `goto`: the same race as the early
+  clicks noted above, on the reading side. A test that visits several
+  pages is checked against the slowest of them.
