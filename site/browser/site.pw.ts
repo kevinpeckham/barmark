@@ -1221,31 +1221,38 @@ test("a chart on the dark page keeps the dark look: white ink, the amber accent"
 	page,
 }) => {
 	// Every page but the home page draws its charts straight on the dark ground.
-	for (const path of ["/get-started", "/syntax", `/try?q=${encodeURIComponent("| D | A |")}`]) {
+	// Try It draws the link's chart: its first chord says the chart read is that one.
+	const pages: [path: string, first?: string][] = [
+		["/get-started"],
+		["/syntax"],
+		[`/try?q=${encodeURIComponent("| D | A |")}`, "D"],
+	];
+	for (const [path, first] of pages) {
 		await page.goto(path);
-		// Try It draws its chart from the link once the page's script has run: until then there
-		// is no chord to read, and reading its colour throws (it failed on CI that way once).
-		await page.waitForFunction(() =>
-			document
-				.querySelector("main :is(barmark-chart, barmark-score)")
-				?.shadowRoot?.querySelector(".bm-chord"),
-		);
-		const look = await page.evaluate(() => {
-			const el = document.querySelector("main :is(barmark-chart, barmark-score)");
-			const chart = el?.shadowRoot?.querySelector(".bm-chart") as Element;
-			const chord = el?.shadowRoot?.querySelector(".bm-chord") as Element;
-			return {
-				theme: el?.getAttribute("theme"),
-				ink: getComputedStyle(chord).color,
-				accent: getComputedStyle(chart).getPropertyValue("--bm-accent").trim(),
-			};
-		});
-		expect({ path, ...look }).toEqual({
-			path,
-			theme: "dark",
-			ink: "rgb(255, 255, 255)",
-			accent: "#e8a56a",
-		});
+		// One read, repeated until it answers: on Try It the page's script swaps the
+		// prerendered chart for a new element, which is empty for a few tens of
+		// milliseconds. Waiting for a chord and then reading it in a second step can
+		// land in that gap, where there is no chord and reading its colour throws (it
+		// failed on CI that way twice).
+		const look = () =>
+			page.evaluate(() => {
+				const el = document.querySelector("main :is(barmark-chart, barmark-score)");
+				const chart = el?.shadowRoot?.querySelector(".bm-chart");
+				const chord = el?.shadowRoot?.querySelector(".bm-chord");
+				if (!el || !chart || !chord) return null;
+				return {
+					theme: el.getAttribute("theme"),
+					ink: getComputedStyle(chord).color,
+					accent: getComputedStyle(chart).getPropertyValue("--bm-accent").trim(),
+					first: chord.textContent?.trim(),
+				};
+			});
+		await expect
+			.poll(async () => {
+				const seen = await look();
+				return seen && { path, ...seen, first: first === undefined ? undefined : seen.first };
+			})
+			.toEqual({ path, theme: "dark", ink: "rgb(255, 255, 255)", accent: "#e8a56a", first });
 	}
 });
 
