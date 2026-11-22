@@ -3358,21 +3358,30 @@ those never reached, or reached in a repeat with passes enough for their verse (
   means a broken package (RELEASING.md) only when the install reached the
   package: read its log for a 404 on the tarball first.
 
-### A browser test read an element before the page had drawn it (2026-11-22, site tests)
+### A browser test read an element in the gap where the page swaps it (2026-11-22, site tests)
 
 - **The symptom.** `a chart on the dark page keeps the dark look` failed
   on CI with "Failed to execute 'getComputedStyle' on 'Window': parameter
-  1 is not of type 'Element'", on a pull request that changed no site
-  code. The test had passed locally and in three CI runs since it was
-  written two days before.
-- **The cause.** The test visits three pages and reads the first chord's
-  colour straight after `page.goto`. Two of the pages are prerendered with
-  the chart in them; Try It draws its chart from the link's query only
-  once its script has run. When the read came first there was no chord,
-  and `getComputedStyle(null)` throws.
-- **The fix.** The test waits for the chord to exist
-  (`page.waitForFunction`) before reading it.
-- **The rule.** In a browser test, anything a page draws from script is
-  waited for, never assumed after `goto`: the same race as the early
-  clicks noted above, on the reading side. A test that visits several
-  pages is checked against the slowest of them.
+  1 is not of type 'Element'", twice in one day, on pull requests that
+  changed no site code. It passed locally every time.
+- **The first diagnosis was wrong.** We took it that Try It has no chart
+  until its script runs, and made the test wait for a chord
+  (`page.waitForFunction`) before reading it. It failed again the same
+  day.
+- **The cause, measured.** Sampling the first chart's shadow root on
+  every mutation and frame showed Try It is prerendered with a chart,
+  chord and all, from the first few milliseconds. Some 300 to 550 ms in,
+  the page's script replaces that element with a new one for the link's
+  chart, and the new element is empty for 20 to 30 ms before it draws. So
+  the wait passed at once, on the prerendered chart, and the read that
+  followed in a second step could land in the gap. On a browser slowed
+  eight times the old two-step read fails within four runs.
+- **The fix.** One read that answers `null` until the chart, the chord and
+  the element are all there, repeated with `expect.poll` until it equals
+  what is expected. On Try It it also names the first chord, so the chart
+  read is the link's and not the prerendered one.
+- **The rule.** "Wait for it, then read it" is two steps, and the page can
+  change between them. Read once and poll the whole answer. And when a
+  flaky test is fixed without the failure ever having been reproduced,
+  the fix is a guess: measure what the page does before the next one.
+
