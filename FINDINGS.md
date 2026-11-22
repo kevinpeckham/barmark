@@ -1478,6 +1478,31 @@ and round-trip it through `format`.
 
 ## Tooling
 
+### A Bun minor can refuse a lockfile the previous one wrote (2026-11-22, Bun 1.3.14 to 1.4.5)
+
+- **The symptom.** Two Lightning Jar repositories (slx-mockup-generator,
+  sk-app-template) had failed every CI run for weeks at `bun install
+  --frozen-lockfile`: "lockfile had changes, but lockfile is frozen". The
+  same lockfile installed unchanged on the VM.
+- **The cause.** Their workflows install `bun-version: latest`, which had
+  moved to 1.4.5, while the VM still had 1.3.14. Bun 1.4 settles some
+  duplicated versions differently and drops trees nothing uses, so it
+  counts a 1.3 lockfile as changed. Nothing warns: a floating `latest` in
+  CI and a fixed Bun on the VM drift apart silently.
+- **What it means here.** barmark pins its Bun in CI and in the release
+  workflow, so it could not drift that way; the pin and the VM's Bun are
+  raised together, deliberately. On 2026-11-22 both went to 1.4.5: this
+  lockfile installs frozen under it unchanged, and the build, the 6,291
+  tests, `check` and Fallow pass. The standalone binaries embed the Bun
+  that compiles them, so the pin in `release.yml` decides what the next
+  CLI release ships.
+- **Not re-checked under 1.4.** The entries below that name Bun 1.3.14
+  (the negated `--filter`, the `sideEffects` bundle, the `.js`-to-`.ts`
+  rewrite on a subpath import) record what 1.3.14 did. Their workarounds
+  still hold under 1.4.5; whether they are still needed was not tested.
+- **Where.** `.github/workflows/ci.yml`, `.github/workflows/release.yml`.
+  The old binary is kept on the VM as `~/.bun/bin/bun-1.3.14`.
+
 ### ChordPro reads `[x]` as a chord in `{comment}`, and escapes only inside a quoted label (2026-11-18, lyricsheet)
 
 - **The symptom.** Writing barmark text lines as `{comment: …}`, a text

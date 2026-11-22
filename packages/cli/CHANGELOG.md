@@ -6,6 +6,11 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- **The standalone binaries are built with Bun 1.4.5** (was 1.3.14). The
+  commands and their output are unchanged.
+
 ## [0.15.1] - 2026-11-20
 
 ### Changed
