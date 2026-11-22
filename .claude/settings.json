@@ -11,5 +11,5 @@
 			}
 		}
 	},
-	"enabledMcpjsonServers": ["vercel"]
+	"enabledMcpjsonServers": ["vercel", "varlock-docs-mcp"]
 }
