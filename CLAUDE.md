@@ -328,7 +328,9 @@ personal Claude Code settings:
 - `.claude/settings.json`: the plugins this project uses (Svelte, for
   `site/`; Playwright, for the browser suites) and the approval of the
   servers in `.mcp.json`
-- `.mcp.json`: MCP servers (Vercel, where barmark.dev is deployed)
+- `.mcp.json`: MCP servers (Vercel, where barmark.dev is deployed;
+  Varlock's documentation, to read before changing `.env.schema` or how
+  the environment is loaded)
 - `.claude/skills/`: the project's own skills (`release`)
 
 A plugin named there is enabled for the project but not downloaded: run
