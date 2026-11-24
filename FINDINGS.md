@@ -9,6 +9,31 @@ not here.
 
 ## Testing
 
+### Balanced timing runs still spike: measure again before failing (2026-11-24, render)
+
+- **The symptom.** "melody off: a long melody replayed many times is read
+  once" read 20.04 against a limit of 20, once, in a full `bun test` on a
+  VM that was also building, installing and running browsers. It passed
+  three times alone straight after.
+- **What was measured.** Alone, the same ratio came out between 7 and 15
+  over eight runs, around a true 10: each run lasts 100 to 150 ms and the
+  best of three still moves that much. Under 48 busy loops on 16 cores it
+  stayed under 20 in 28 trials, with three runs or seven. So more runs do
+  not help, and the failure is a rare spike: the load landing on every
+  large run and missing a small one.
+- **The fix.** `growth` takes the test's limit as `under`, and a
+  measurement at or over it is taken again, up to three times, keeping the
+  smallest (`settled`). A quadratic path measures about 100 every time and
+  still fails; a spike does not repeat. Used in `packages/render/tests/scale.test.ts`;
+  give any other timing test that spikes the same one-line change.
+- **Left as they are.** Four tests still hold an absolute time: the
+  expansion cap (32 ms against 1,000), the lyric sheet's hostile inputs
+  (27 ms against 5,000 each), the shape finder over the vocabulary (about
+  200 ms a pass against 2,000) and 100,000 different losses (about 15 ms
+  against 2,000). They guard against a hang, not against growth, and have
+  10 to 100 times the room.
+- **Where.** `test-support/growth.ts`, `packages/render/tests/timing-helper.test.ts`.
+
 ### Text cleaned piece by piece can still make markup when the pieces are joined (2026-11-19, @barmark/lyricsheet)
 
 **Symptom:** the lyric `<b- >loud </b- >soft` wrote the line
@@ -1477,6 +1502,40 @@ when two rules each define "first", test a chart that tells them apart,
 and round-trip it through `format`.
 
 ## Tooling
+
+### The lighter engraver in a plain esbuild bundle: no `.wasm`, and a Node import in the way (2026-11-24, phase 2 check)
+
+- **The question.** Phase 2 of the engraver design makes `@barmark/score`
+  load `@barmark/engraver` as its own copy. One of its five conditions is
+  that the site's Vite 8 build and a plain esbuild bundle of the worker
+  each emit and find the `.wasm`.
+- **What was found.** A worker that imports `@barmark/engraver` and
+  `verovio/esm`, as score's `own()` would:
+  - **Vite 8.3.5:** emits `verovio-module-<hash>.wasm` beside the worker
+    chunk, and Chromium engraves with it (Verovio 6.4.1, no failed
+    request, no warning).
+  - **esbuild 0.27, `--bundle --format=esm`:** stops on the glue's
+    `await import("node:module")` (Emscripten's Node branch) unless
+    `--external:node:*` is given; then bundles, but emits no `.wasm`,
+    because esbuild does not follow `new URL("…", import.meta.url)`. In
+    the browser the module asks for `verovio-module.wasm` beside itself,
+    gets a 404, and engraving fails.
+- **What it means.** Stock `verovio/wasm` carries its WebAssembly inside
+  the JavaScript, so any bundler works. The lighter build's separate file
+  is where its size saving comes from, and it needs a bundler that emits
+  assets. Phase 2 as written would break a reader who bundles score with
+  plain esbuild. Before phase 2: either `own()` falls back to stock when
+  the lighter module cannot load, or the README names the copy step and
+  the `--external`.
+- **The other conditions, on the same day.** The `engraver` checks became
+  required 2026-11-10 20:56 UTC, after both engraver releases that day, so
+  no release has yet gone through them. Score's browser job runs Chromium
+  only. barmark.dev has loaded the lighter build from jsDelivr since
+  2026-11-11 (about 7,200 requests on 12 days, and it loads and engraves
+  today), but nothing on the site records a load failure, so "none in two
+  weeks" cannot be shown.
+- **Where.** `docs/superpowers/specs/2026-11-10-engraver-package-design.md`,
+  "Phase 2".
 
 ### A Bun minor can refuse a lockfile the previous one wrote (2026-11-22, Bun 1.3.14 to 1.4.5)
 
