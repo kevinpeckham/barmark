@@ -3,12 +3,24 @@ import { expect, test } from "bun:test";
 import { growth, TIMING_TIMEOUT } from "../../../test-support/growth.js";
 import { layoutChart } from "../src/index.js";
 
-/** How much longer `large`, ten times `small`, takes to lay out: alternated, balanced best-of-three runs (`growth`). */
+/**
+ * The limit of every test here: ten times the input may cost at most 20 times as long. Linear
+ * measures about 10 and a quadratic path about 100, so 20 tells them apart with room on both sides.
+ */
+const LINEAR = 20;
+
+/**
+ * How much longer `large`, ten times `small`, takes: alternated, balanced best-of-three runs,
+ * measured again when it comes out at the limit (`growth`'s `under`), since the "melody off"
+ * test once read 20.04 on a busy machine where it measures 7 to 15 alone.
+ */
+const tenfold = (small: () => unknown, large: () => unknown) =>
+	growth(small, large, { balance: 10, under: LINEAR });
+
 const layoutGrowth = (small: string, large: string) =>
-	growth(
+	tenfold(
 		() => layoutChart(small),
 		() => layoutChart(large),
-		{ balance: 10 },
 	);
 
 const lines = (count: number) => "| D | G |\n".repeat(count);
@@ -16,8 +28,7 @@ const lines = (count: number) => "| D | G |\n".repeat(count);
 test(
 	"a long chart with no parts lays out in linear time: each line doesn't read every bar",
 	() => {
-		// The ratio catches a quadratic path; ten times the lines may cost at most 20 times as long.
-		expect(layoutGrowth(lines(200), lines(2000))).toBeLessThan(20);
+		expect(layoutGrowth(lines(200), lines(2000))).toBeLessThan(LINEAR);
 	},
 	TIMING_TIMEOUT,
 );
@@ -29,7 +40,7 @@ const systems = (count: number) =>
 test(
 	"a long chart of parts and lyric rows lays out in linear time: each line finds its own bars",
 	() => {
-		expect(layoutGrowth(systems(200), systems(2000))).toBeLessThan(20);
+		expect(layoutGrowth(systems(200), systems(2000))).toBeLessThan(LINEAR);
 	},
 	TIMING_TIMEOUT,
 );
@@ -45,7 +56,7 @@ for (const [shape, chart] of Object.entries(played))
 	test(
 		`one bar of many ${shape} played many times lays out in time linear in the two, not their product`,
 		() => {
-			expect(layoutGrowth(chart(500), chart(5000))).toBeLessThan(20);
+			expect(layoutGrowth(chart(500), chart(5000))).toBeLessThan(LINEAR);
 		},
 		TIMING_TIMEOUT,
 	);
@@ -58,7 +69,7 @@ test(
 	"melody off: a long melody replayed many times is read once, not once a replay",
 	() => {
 		const off = (text: string) => () => layoutChart(text, { melody: false });
-		expect(growth(off(replayed(200)), off(replayed(2000)), { balance: 10 })).toBeLessThan(20);
+		expect(tenfold(off(replayed(200)), off(replayed(2000)))).toBeLessThan(LINEAR);
 	},
 	TIMING_TIMEOUT,
 );
@@ -71,7 +82,7 @@ test(
 	"melody off: a long row of melismas under a left-out melody lays out in linear time",
 	() => {
 		const off = (text: string) => () => layoutChart(text, { melody: false });
-		expect(growth(off(melismas(100)), off(melismas(1000)), { balance: 10 })).toBeLessThan(20);
+		expect(tenfold(off(melismas(100)), off(melismas(1000)))).toBeLessThan(LINEAR);
 	},
 	TIMING_TIMEOUT,
 );
