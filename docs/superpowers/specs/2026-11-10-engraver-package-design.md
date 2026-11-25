@@ -410,6 +410,55 @@ hold:**
 Then `own()` imports `@barmark/engraver`, which becomes an exact
 dependency. `verovio` stays a dependency for `verovio/esm`.
 
+### Phase 2, amended 2026-11-25: the lighter build first, stock behind it
+
+**Decided by Kevin (2026-11-25): score falls back to stock Verovio when the
+lighter build fails to load.** The check of 2026-11-24 (FINDINGS, "The
+lighter engraver in a plain esbuild bundle") is why:
+
+- Vite 8.3.5 emits the `.wasm` beside the worker chunk, and it engraves.
+- A plain esbuild bundle emits no `.wasm`: esbuild does not follow
+  `new URL("…", import.meta.url)`. The browser gets a 404 and nothing
+  engraves. (esbuild also stops on the glue's `node:module` import unless
+  `--external:node:*` is given. Stock Verovio's glue does the same, so
+  that part is not new.)
+
+So condition 4 now reads: **the site's Vite 8 build emits and finds the
+`.wasm`, and a plain esbuild bundle of the worker falls back to stock and
+engraves.** The other four conditions stand.
+
+What "falls back" means, each a design call:
+
+- **The package's own copy is a chain of two.** `own()` tries
+  `@barmark/engraver`; on any failure it loads `verovio/wasm`, stock, and
+  warns once: `<barmark-score>: the lighter Verovio was not used (<reason>);
+  loading stock Verovio instead`. After stock, a failure is the failure.
+- **What counts as a failure of the lighter build:** its import rejects;
+  its `.wasm` cannot be fetched or compiled; its Verovio is not the
+  toolkit's (a lagging build, question 9); or it has not instantiated
+  within `LITE_DEADLINE_MS`.
+- **A hang has a deadline of its own, 20 seconds.** The lighter glue
+  fetches its `.wasm` itself, with no timeout. Without a deadline a hang
+  would run to the engine's 60-second load deadline, and the replacement
+  worker would hang the same way. At 20 seconds the worker moves to stock
+  with 40 seconds left. A connection too slow to fetch 1 MB in 20 seconds
+  cannot fetch stock's 7 MB in 60 either, so this takes nothing from
+  anyone.
+- **A `verovio-url` that fails falls back to that same chain.** "No second
+  fallback" becomes: a URL, then the package's own (the lighter build,
+  then stock), then the failure.
+- **`from` does not say which of the two loaded.** The package's own is
+  `{}` either way, and a replacement worker runs the chain again.
+- **What a bundler ends up with.** Both are dynamic imports. Vite, Rollup
+  and webpack 5 emit the lighter `.wasm` and keep stock as a chunk that is
+  fetched only on a fallback. esbuild without `--splitting` inlines both
+  into the worker, as large as today, and runs stock after one 404. The
+  README says so, with the copy step for anyone who wants the lighter
+  build under esbuild.
+- **barmark.dev drops its `verovio-url`** once score's own copy is the
+  lighter build: the site serves it from its own origin, and no longer
+  depends on jsDelivr for the score.
+
 **(design call) The CLI keeps stock Verovio.** Reasons:
 
 - In Node, engraving speed matters more than size, and `-Oz` costs 20 to
