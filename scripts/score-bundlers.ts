@@ -64,7 +64,14 @@ function serve(dir: string): Promise<{ server: Server; url: string }> {
 	);
 }
 
-type Seen = { drew: boolean; wasm: number; fallbacks: number; messages: string[] };
+type Seen = {
+	drew: boolean;
+	ms: number;
+	wasm: number;
+	fallbacks: number;
+	messages: string[];
+	requested: string[];
+};
 
 /** Opens `dir` in a fresh page; collects the console and responses from before navigation. */
 async function open(dir: string): Promise<Seen> {
@@ -72,14 +79,16 @@ async function open(dir: string): Promise<Seen> {
 	const browser = await chromium.launch();
 	try {
 		const page = await browser.newPage();
-		const seen: Seen = { drew: false, wasm: 0, fallbacks: 0, messages: [] };
+		const seen: Seen = { drew: false, ms: 0, wasm: 0, fallbacks: 0, messages: [], requested: [] };
 		page.on("console", (m) => {
 			seen.messages.push(m.text());
 			if (m.text().includes(FALLBACK)) seen.fallbacks++;
 		});
+		page.on("request", (r) => seen.requested.push(new URL(r.url()).pathname));
 		page.on("response", (r) => {
 			if (r.url().endsWith(".wasm") && r.status() === 200) seen.wasm++;
 		});
+		const start = Date.now();
 		await page.goto(url);
 		seen.drew = await page
 			.locator("barmark-score .bms-score g.measure")
@@ -89,6 +98,7 @@ async function open(dir: string): Promise<Seen> {
 				() => true,
 				() => false,
 			);
+		seen.ms = Date.now() - start;
 		return seen;
 	} finally {
 		await browser.close();
@@ -138,7 +148,7 @@ try {
 		configFile: false,
 		logLevel: "silent",
 		worker: { format: "es" },
-		build: { outDir: viteDir, emptyOutDir: true, target: "es2022" },
+		build: { outDir: viteDir, emptyOutDir: true },
 	});
 	const viteFiles = await files(viteDir);
 	const names = viteFiles.map((f) => f.name);
@@ -147,13 +157,18 @@ try {
 		.filter((f) => f.name.endsWith(".js") && f !== worker)
 		.sort((a, b) => b.size - a.size)[0];
 	const wasm = viteFiles.find((f) => f.name.endsWith(".wasm"));
-	const viteBad = problems(await open(viteDir), { wasm: true, fallbacks: 0 }, names);
+	const viteSeen = await open(viteDir);
+	const viteBad = problems(viteSeen, { wasm: true, fallbacks: 0 }, names);
+	if (biggest && viteSeen.requested.includes(`/${biggest.name}`))
+		viteBad.push(
+			`the stock chunk (${biggest.name}) was fetched: stock should load only on a fallback`,
+		);
 	if (!worker) viteBad.push("no worker file in the output");
 	else if (worker.size >= WORKER_MAX)
 		viteBad.push(`the worker is ${kB(worker.size)}: stock Verovio is inside it`);
 	if (!biggest || biggest.size < 1_000_000) viteBad.push("no separate chunk holds stock Verovio");
 	console.log(
-		`vite: ${viteBad.length ? "FAILED" : "lighter build, .wasm emitted"} (worker ${kB(worker?.size ?? 0)}, wasm ${kB(wasm?.size ?? 0)}, stock chunk ${kB(biggest?.size ?? 0)})`,
+		`vite: ${viteBad.length ? "FAILED" : "lighter build, .wasm emitted"} (worker ${kB(worker?.size ?? 0)}, wasm ${kB(wasm?.size ?? 0)}, stock chunk ${kB(biggest?.size ?? 0)}; drew in ${viteSeen.ms} ms)`,
 	);
 	for (const b of viteBad) failures.push(`vite: ${b}`);
 
@@ -173,12 +188,15 @@ try {
 		logLevel: "silent",
 	});
 	await copyFile(join(fixture, "index.html"), join(esDir, "index.html"));
+	const esSeen = await open(esDir);
 	const esBad = problems(
-		await open(esDir),
+		esSeen,
 		{ wasm: false, fallbacks: 1 },
 		(await files(esDir)).map((f) => f.name),
 	);
-	console.log(`esbuild: ${esBad.length ? "FAILED" : "stock after one fallback"}`);
+	console.log(
+		`esbuild: ${esBad.length ? "FAILED" : "stock after one fallback"} (drew in ${esSeen.ms} ms)`,
+	);
 	for (const b of esBad) failures.push(`esbuild: ${b}`);
 } finally {
 	await rm(tmp, { recursive: true, force: true });
