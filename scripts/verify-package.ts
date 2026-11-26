@@ -61,13 +61,16 @@ const unresolved = Object.entries(dependencies).filter(([, range]) =>
 if (unresolved.length)
 	problems.push(`dependencies left as workspace ranges: ${unresolved.map(([n]) => n).join(", ")}`);
 // bun pm pack takes a workspace package's version from bun.lock, which a version bump does not update.
-// The CLI pins its libraries exactly, so --version names what runs; the libraries take a caret.
+// The CLI pins its libraries exactly, so --version names what runs; the libraries take a caret,
+// except that score pins the engraver exactly (its CDN literals are held to that build's info.ts).
+const PINNED = new Set(["score:engraver"]);
 for (const dep of Object.values(PACKAGES)) {
 	const range = dependencies[dep.name];
 	const { version: local } = JSON.parse(readFileSync(join(dep.dir, "package.json"), "utf8")) as {
 		version: string;
 	};
-	const expected = pkg.key === "cli" ? local : `^${local}`;
+	const exact = pkg.key === "cli" || PINNED.has(`${pkg.key}:${dep.name.replace("@barmark/", "")}`);
+	const expected = exact ? local : `^${local}`;
 	if (range && range !== expected)
 		problems.push(
 			`${dep.name} packs as ${range}, but its version is ${local}: update its "version" in bun.lock`,

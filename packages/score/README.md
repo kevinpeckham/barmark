@@ -115,6 +115,25 @@ imports it from a `blob:` URL, so a worker served with its own
 Content-Security-Policy needs the module's origin (a CDN's, say) in
 `connect-src` and `blob:` in `script-src`.
 
+### Bundlers and the lighter build
+
+The lighter build's `.wasm` has to reach the browser beside the worker.
+Bundlers differ in whether they do that, measured on 2026-11-24:
+
+- **Vite 8** emits the `.wasm` beside the worker chunk, and the lighter
+  build engraves. Rollup and webpack 5 follow the same
+  `new URL(..., import.meta.url)` pattern and also emit the file.
+- **esbuild** (`--bundle --format=esm`) needs `--external:node:*` for either
+  Verovio, because the glue code of both has a Node import. It emits no
+  `.wasm`, so the lighter build is requested, answered with one 404, and
+  stock Verovio loads after one console warning. The score is drawn, but
+  with the 7 MB copy. To keep the lighter build, copy
+  `node_modules/@barmark/engraver/dist/verovio-module.wasm` beside the
+  worker bundle.
+
+`verovio-url` works with any of them (see above): it names the module to
+load first, and the package's own copy is still the fallback.
+
 ### While the score loads
 
 The first score waits for Verovio to download and compile. Until it is
@@ -182,11 +201,28 @@ server.
 ### The lighter build (`@barmark/engraver`)
 
 [`@barmark/engraver`](../engraver/) is a modified, smaller build of the
-same Verovio 6.4.1, made by barmark for this package: about 3 MB where
-stock is about 7 MB, checked before each release to draw SVG byte for
-byte the same as stock over a corpus of charts. Its WebAssembly is a
-separate file, `verovio-module.wasm` beside the module, so it takes a
-digest of its own, `verovio-wasm-integrity`. On jsDelivr:
+same Verovio 6.4.1, made by barmark for this package, and it is what the
+worker loads by default: about 3 MB where stock is about 7 MB, checked
+before each release to draw SVG byte for byte the same as stock over a
+corpus of charts. It is a dependency of this package, so you have it
+already. Its WebAssembly is a separate file, `verovio-module.wasm` beside
+the module.
+
+If the lighter build cannot be loaded (its `.wasm` is missing, or the load
+fails or takes longer than 20 seconds), the worker loads stock Verovio
+instead, once, and writes one warning to the console:
+
+```
+<barmark-score>: the lighter Verovio was not used (<reason>); loading stock Verovio instead
+```
+
+The score is drawn either way. Stock Verovio is still a dependency of this
+package, loaded unchanged: it is what runs on a fallback, and its toolkit
+class is the one this package uses with either build.
+
+You can also load the lighter build from a CDN, with a digest for the
+module and one of its own for the `.wasm`, `verovio-wasm-integrity`. On
+jsDelivr:
 
 ```html
 <barmark-score
@@ -199,8 +235,8 @@ digest of its own, `verovio-wasm-integrity`. On jsDelivr:
 
 The package exports the three as `ENGRAVER_CDN_URL`,
 `ENGRAVER_CDN_INTEGRITY` and `ENGRAVER_WASM_INTEGRITY`. They are written
-into this package, so a site that never uses the lighter build never
-installs it.
+into this package, so the CDN copy can be checked without loading the
+module.
 
 The worker downloads the module and checks it against
 `verovio-integrity`, then downloads the `.wasm` from beside the
@@ -349,11 +385,14 @@ is the export unchanged.
 ## Licence
 
 This package is MIT. It uses [Verovio](https://github.com/rism-digital/verovio),
-which is LGPL-3.0-only, as an ordinary npm dependency, loaded unchanged at
-run time, or, if you choose it, the modified build `@barmark/engraver`
-(LGPL-3.0-only, its source published with each release); its code is
-never copied into this package. barmark's own code
-stays MIT. Verovio © Laurent Pugin and others; its licence text is
+which is LGPL-3.0-only. The worker loads, by default, `@barmark/engraver`,
+a modified build of Verovio (LGPL-3.0-only), an ordinary npm dependency
+of this package. Its
+[`NOTICE.md`](../engraver/NOTICE.md) says what was changed, and the
+Corresponding Source for each release is attached to its GitHub release.
+Stock `verovio` is also a dependency, loaded unchanged: it runs if the
+lighter build does not, and supplies the toolkit class. Verovio's code is
+never copied into this package. barmark's own code stays MIT. Verovio © Laurent Pugin and others; its licence text is
 [COPYING.LESSER](https://github.com/rism-digital/verovio/blob/develop/COPYING.LESSER).
 
 A site that bundles the worker ships Verovio inside its bundle. Keeping

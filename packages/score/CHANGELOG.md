@@ -6,6 +6,21 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- **The worker's own copy of Verovio is now `@barmark/engraver`**, the
+  modified, smaller build (about 3 MB, not 7), now a dependency of this
+  package. If it cannot be loaded or takes longer than 20 seconds, stock
+  Verovio loads instead, once, with one console warning: `<barmark-score>:
+  the lighter Verovio was not used (<reason>); loading stock Verovio
+  instead`. Stock `verovio` stays a dependency.
+- **Bundlers:** Vite 8 emits the lighter build's `.wasm` beside the worker
+  and it engraves. A plain esbuild bundle emits none, so stock Verovio
+  loads after one 404 and the warning; copy
+  `node_modules/@barmark/engraver/dist/verovio-module.wasm` beside the
+  worker bundle to keep the lighter build. The README has a Bundlers
+  section.
+
 ## [0.8.0] - 2026-11-20
 
 ### Added

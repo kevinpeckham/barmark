@@ -246,7 +246,7 @@ const toolkit = toolkitLoader(
 	verovioLoader<VerovioModule, Toolkit>({
 		fetchModule: (url, options) => fetchModule(url, { ...options, fetch: (u) => fetch(u) }),
 		importBlob,
-		own: () => import("verovio/wasm"),
+		own: () => import("@barmark/engraver"),
 		stock: () => import("verovio/wasm"),
 		after: (ms) => {
 			let id: ReturnType<typeof setTimeout> | undefined;

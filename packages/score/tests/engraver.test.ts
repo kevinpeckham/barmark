@@ -42,3 +42,11 @@ test("the package exports the three public constants", async () => {
 			.sort(),
 	).toEqual(["ENGRAVER_CDN_INTEGRITY", "ENGRAVER_CDN_URL", "ENGRAVER_WASM_INTEGRITY"]);
 });
+
+test("score depends on the lighter build exactly, and still on stock Verovio", async () => {
+	const pkg = await Bun.file(new URL("../package.json", import.meta.url)).json();
+	expect(pkg.dependencies["@barmark/engraver"]).toBe("workspace:*");
+	expect(pkg.dependencies.verovio).toMatch(/^\d+\.\d+\.\d+$/);
+	expect(pkg.devDependencies?.["@barmark/engraver"]).toBeUndefined();
+	expect(pkg.description).toContain("@barmark/engraver");
+});
