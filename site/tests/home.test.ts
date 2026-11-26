@@ -1,6 +1,5 @@
 import { beforeAll, describe, expect, test } from "bun:test";
 import { join } from "node:path";
-import { ENGRAVER_CDN_INTEGRITY, ENGRAVER_CDN_URL, ENGRAVER_WASM_INTEGRITY } from "@barmark/score";
 import { EXAMPLES } from "../src/lib/examples.ts";
 import {
 	HEADLINE,
@@ -58,13 +57,13 @@ describe("the home page, prerendered", () => {
 	test("the render window leaves a lead sheet's melody out of the grid, for the score to show", () => {
 		expect(doc.querySelector("main barmark-score")?.getAttribute("melody")).toBe("off");
 	});
-	test("the score loads the lighter Verovio from jsDelivr, checked, and not before a reader reaches for it", () => {
+	test("the score loads the package's own lighter Verovio, from the site, and not before a reader reaches for it", () => {
 		const score = doc.querySelector("main barmark-score");
 		// The page raises `preload` when the reader reaches for Score, or for an example that opens in it.
 		expect(score?.hasAttribute("preload")).toBe(false);
-		expect(score?.getAttribute("verovio-url")).toBe(ENGRAVER_CDN_URL);
-		expect(score?.getAttribute("verovio-integrity")).toBe(ENGRAVER_CDN_INTEGRITY);
-		expect(score?.getAttribute("verovio-wasm-integrity")).toBe(ENGRAVER_WASM_INTEGRITY);
+		// No CDN: the worker loads @barmark/engraver as the site's bundle serves it.
+		for (const name of ["verovio-url", "verovio-integrity", "verovio-wasm-integrity"])
+			expect([name, score?.hasAttribute(name)]).toEqual([name, false]);
 	});
 	test("no script or link on the page loads the score engine", () => {
 		const urls = [...doc.querySelectorAll("script[src], link[href]")].map(

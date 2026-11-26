@@ -37,8 +37,8 @@ export const PACKAGES: {
 	},
 	{
 		name: "@barmark/engraver",
-		does: "A smaller build of the same Verovio, which the score element can load from a CDN.",
-		when: "You use the score and want it to download in under half the bytes.",
+		does: "A smaller build of the same Verovio: the score element's own copy, with stock Verovio behind it.",
+		when: "Comes with the score, which loads it by default. Name it only to load it from a CDN.",
 		step: "#engraver",
 		readme: LINKS.engraverReadme,
 	},
@@ -164,7 +164,7 @@ export const USE_SCORE_ELEMENT = `<script type="module">
 	</script>
 </barmark-score>`;
 
-/** The lighter Verovio from jsDelivr: the score package's values, as this site loads it. */
+/** The lighter Verovio from a CDN instead (jsDelivr): the score package's three values, as its README shows them. */
 export const USE_SCORE_ENGRAVER = `<barmark-score
 	verovio-url="${ENGRAVER_CDN_URL}"
 	verovio-integrity="${ENGRAVER_CDN_INTEGRITY}"
@@ -180,8 +180,10 @@ const html = renderScoreHtml(text, {
 	fontUrl: "/fonts/Edwin-Roman.otf", // as for renderChart
 });`;
 
-/** Vite 7 only; Vite 8 needs nothing (the score package's README). */
-/** Each setting Get Started's Vite config shows, as the score README writes it. */
+/**
+ * Each setting Get Started's Vite config shows, as the score README writes it:
+ * every Vite sets the first, Vite 7 the second too.
+ */
 export const VITE_SETTINGS = [
 	'worker: { format: "es" }',
 	'optimizeDeps: { exclude: ["@barmark/score"] }',
@@ -189,7 +191,7 @@ export const VITE_SETTINGS = [
 
 export const VITE_CONFIG = `// vite.config.js
 export default {
-	${VITE_SETTINGS[0]}, // Vite 8 with verovio-url; Vite 7 always
+	${VITE_SETTINGS[0]}, // every Vite
 	${VITE_SETTINGS[1]}, // Vite 7 only (harmless on Vite 8)
 };`;
 

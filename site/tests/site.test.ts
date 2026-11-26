@@ -1,5 +1,6 @@
 import { beforeAll, describe, expect, test } from "bun:test";
-import { join } from "node:path";
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
 import { parseChart } from "barmark";
 import {
 	HEADLINE,
@@ -9,7 +10,7 @@ import {
 	TAGLINE_LINK,
 	VALUE,
 } from "../src/lib/site.ts";
-import { build, page } from "./built.ts";
+import { build, page, site } from "./built.ts";
 
 const demo = await Bun.file(
 	join(import.meta.dir, "../src/lib/examples/peaceful-dreams.chart.md"),
@@ -71,10 +72,10 @@ describe("the lighter Verovio's licence", () => {
 	const text = (el: Element | null | undefined) => el?.textContent?.replace(/\s+/g, " ") ?? "";
 	test("the footer credits a modified build of Verovio and links its notice and release", () => {
 		expect(LINKS.engraverNotice).toBe(
-			"https://github.com/kevinpeckham/barmark/blob/engraver-v0.1.1/packages/engraver/NOTICE.md",
+			"https://github.com/kevinpeckham/barmark/blob/engraver-v0.1.2/packages/engraver/NOTICE.md",
 		);
 		expect(LINKS.engraverRelease).toBe(
-			"https://github.com/kevinpeckham/barmark/releases/tag/engraver-v0.1.1",
+			"https://github.com/kevinpeckham/barmark/releases/tag/engraver-v0.1.2",
 		);
 		for (const path of ["index.html", "faq.html", "get-started.html"]) {
 			const footer = page(path).querySelector("footer");
@@ -92,6 +93,24 @@ describe("the lighter Verovio's licence", () => {
 		expect(answer).toContain("smaller build");
 		expect(answer).toContain("CLI's standalone binaries carry Verovio unmodified");
 		expect(answer).not.toContain("loaded unchanged when a score is drawn");
+	});
+	test("the footer names the engraver the site serves: the one the score package depends on", () => {
+		const score = JSON.parse(
+			readFileSync(
+				join(dirname(Bun.resolveSync("@barmark/score/package.json", site)), "package.json"),
+				"utf8",
+			),
+		);
+		const version = score.dependencies["@barmark/engraver"];
+		expect(LINKS.engraverNotice).toContain(`/engraver-v${version}/`);
+		expect(LINKS.engraverRelease).toEndWith(`/engraver-v${version}`);
+	});
+	test("Get Started says the score loads the lighter build from the site's own origin, stock behind it", () => {
+		const step = text(page("get-started.html").querySelector("#engraver"));
+		expect(step).toContain("own origin");
+		expect(step).toContain("stock Verovio");
+		expect(step).toContain("one warning");
+		expect(step).not.toContain("which this site uses");
 	});
 	test("Get Started shows the lighter build's attributes beside the stock ones", () => {
 		const step = text(page("get-started.html").querySelector("#score")?.parentElement);

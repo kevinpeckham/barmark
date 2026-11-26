@@ -345,11 +345,12 @@ onMount(() => {
 				<p>
 					<a href={LINKS.verovio} class={link}>Verovio</a>, an open-source music engraver, licensed under
 					the <a href={LINKS.verovioLicense} class={link}>LGPL-3.0</a>.
-					<code class={code}>@barmark/score</code> uses it as an ordinary npm dependency, and this site
-					loads a smaller build of the same Verovio made by Barmark,
+					<code class={code}>@barmark/score</code> uses it as an ordinary npm dependency, with a smaller
+					build of the same Verovio made by Barmark as its own copy,
 					<code class={code}>@barmark/engraver</code> (<a href={LINKS.engraverNotice} class={link}>its
 					notice</a>, <a href={LINKS.engraverRelease} class={link}>its source</a>), which draws the same
-					score in under half the download. None of Verovio's code is copied into Barmark's packages,
+					score in under half the download. This site serves that smaller build from its own origin, and
+					stock Verovio only if the smaller build cannot load. None of Verovio's code is copied into Barmark's packages,
 					which stay MIT. The CLI's standalone binaries carry Verovio unmodified, with its licence in the
 					release.
 				</p>

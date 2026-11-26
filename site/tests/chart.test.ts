@@ -1,6 +1,5 @@
 import { describe, expect, test } from "bun:test";
 import { join } from "node:path";
-import { ENGRAVER_CDN_INTEGRITY, ENGRAVER_CDN_URL, ENGRAVER_WASM_INTEGRITY } from "@barmark/score";
 import { chartHtml, scoreHtml } from "../src/lib/chart.ts";
 
 // The ratio is of alternated best-of-three timings; the timeout only keeps a loaded machine from
@@ -174,14 +173,13 @@ describe("scoreHtml", () => {
 	/** An attribute of the `<barmark-score>` host, or null. */
 	const attr = (html: string, name: string) =>
 		new RegExp(`^<barmark-score[^>]*\\s${name}="([^"]*)"`).exec(html)?.[1] ?? null;
-	test("every score loads the lite build from jsDelivr with both digests", () => {
+	test("every score loads the package's own Verovio: no URL or digest, only when to preload", () => {
 		for (const preload of ["none", "intent", "idle"] as const) {
 			const html = scoreHtml(demo, { preload });
-			expect(attr(html, "verovio-url")).toBe(ENGRAVER_CDN_URL);
-			expect(attr(html, "verovio-integrity")).toBe(ENGRAVER_CDN_INTEGRITY);
-			expect(attr(html, "verovio-wasm-integrity")).toBe(ENGRAVER_WASM_INTEGRITY);
+			for (const name of ["verovio-url", "verovio-integrity", "verovio-wasm-integrity"])
+				expect([name, attr(html, name)]).toEqual([name, null]);
+			expect(attr(html, "preload")).toBe(preload === "none" ? null : preload);
 		}
-		expect(ENGRAVER_CDN_URL).toStartWith("https://cdn.jsdelivr.net/npm/@barmark/engraver@");
 	});
 	test("a score's grid can open with its guitar diagrams; without the flag it has none", () => {
 		const html = scoreHtml("| G | D |", { chordDiagrams: true });

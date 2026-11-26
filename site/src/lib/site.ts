@@ -18,8 +18,8 @@ export const LINKS = {
 	verovioBundled: "https://github.com/rism-digital/verovio/tree/version-6.4.1",
 	/** The modified build the site's scores load: its notice, and the release with its Corresponding Source. */
 	engraverNotice:
-		"https://github.com/kevinpeckham/barmark/blob/engraver-v0.1.1/packages/engraver/NOTICE.md",
-	engraverRelease: "https://github.com/kevinpeckham/barmark/releases/tag/engraver-v0.1.1",
+		"https://github.com/kevinpeckham/barmark/blob/engraver-v0.1.2/packages/engraver/NOTICE.md",
+	engraverRelease: "https://github.com/kevinpeckham/barmark/releases/tag/engraver-v0.1.2",
 	/** This site's source, so it can be rebuilt with another Verovio. */
 	siteSource: "https://github.com/kevinpeckham/barmark/tree/main/site",
 	syncReadme: "https://github.com/kevinpeckham/barmark/tree/main/packages/sync#readme",
