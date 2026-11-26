@@ -170,9 +170,9 @@ Bundlers differ in whether they do that, measured on 2026-11-26 with Vite
   The lighter build's glue then asks for `verovio-module.wasm` three times
   (a streaming compile, an ArrayBuffer fetch, then a synchronous request),
   each answered 404, and logs four error lines of its own; then comes our
-  one warning, and stock Verovio draws the score. (Observed with the
-  `@barmark/engraver` in this repository and esbuild 0.28.2: the count is
-  the glue's, not a promise.) To run the lighter build, copy
+  one warning, and stock Verovio draws the score. (Observed in Chromium
+  with `@barmark/engraver` 0.1.1 and esbuild 0.28.2: the count is the
+  glue's, not a promise.) To run the lighter build, copy
   `node_modules/@barmark/engraver/dist/verovio-module.wasm` beside the
   worker bundle (pnpm does not put a dependency's own dependency there:
   add `@barmark/engraver` to your own dependencies at the exact version

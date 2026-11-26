@@ -22,7 +22,8 @@ package uses [semantic versioning](https://semver.org/).
   glue 29 kB, and stock a separate chunk of about 8.3 MB fetched only on a
   fallback. A plain esbuild bundle (the worker bundled as a second entry
   named `worker`, see the README) inlines both Verovios (without `--splitting`) and emits no
-  `.wasm`, so stock loads after its `.wasm` is not found, with the warning; copying
+  `.wasm`, so stock loads after the lighter build's `.wasm` is not found,
+  with the warning; copying
   `node_modules/@barmark/engraver/dist/verovio-module.wasm` beside the
   worker bundle makes the lighter build run, but not download less. webpack 5
   follows `new URL(..., import.meta.url)` by its documentation (not measured

@@ -1573,11 +1573,13 @@ and round-trip it through `format`.
 
 ### tsc could not find `@barmark/engraver` without a build (2026-11-26, score)
 
-- **The symptom.** `bun run check` failed in CI's `check` job, which
-  installs and checks with no build: `packages/score/src/worker.ts:
-  error TS2307: Cannot find module '@barmark/engraver'`. `release.yml`'s
-  verify job, which downloads only the engraver's `.mjs` and `.wasm`,
-  would have failed the same way (TS7016). It passed on the VM.
+- **The symptom.** `bun run check` would have failed in CI's `check`
+  job, which installs and checks with no build:
+  `packages/score/src/worker.ts: error TS2307: Cannot find module
+  '@barmark/engraver'`. `release.yml`'s verify job, which downloads only
+  the engraver's `.mjs` and `.wasm`, would have failed the same way
+  (TS7016). The branch was never pushed in that state: the whole-branch
+  review saw it in a copy with no `dist/`. It passed on the VM.
 - **The cause.** The worker's `import("@barmark/engraver")` resolves
   through the package's `exports` to `dist/index.d.mts`, which only a
   build writes. The root `tsconfig.json` mapped `@barmark/engraver/info`
@@ -1598,6 +1600,12 @@ and round-trip it through `format`.
   project has. The lesson: a check that counts only the symptom it
   expects (one warning) can pass for the wrong reason; assert the cause
   too (here, that the `.wasm` was requested).
+- **Bun is spared by its version, not by a rule.** Bun 1.4.5 skips a
+  `paths` target that is a declaration file and falls through to
+  `node_modules`, at run time and in `Bun.build`, so the browser suite's
+  worker bundle still holds the lighter build. Bun 1.3.14 took the
+  types file, as esbuild does. If a Bun upgrade changes this, the
+  browser suite's first loading test fails (no `.wasm` request).
 - **The rule.** A "no build" check moves every `dist/` aside, not one,
   or runs in a fresh `git archive` copy.
 - **Where.** `tsconfig.json`, `packages/engraver/tests/ci.test.ts`,
