@@ -1,6 +1,6 @@
 import { beforeAll, describe, expect, test } from "bun:test";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { FILES, LINKS } from "../src/lib/site.ts";
 import { build, out, page, site } from "./built.ts";
 
@@ -15,7 +15,7 @@ describe("the site builds", () => {
 		expect(pkg.dependencies).toEqual({
 			barmark: "0.25.0",
 			"@barmark/render": "0.21.1",
-			"@barmark/score": "0.8.0",
+			"@barmark/score": "0.9.0",
 			"@vercel/analytics": "2.0.1",
 			"@vercel/speed-insights": "2.0.0",
 		});
@@ -116,7 +116,23 @@ describe("the site builds", () => {
 		);
 		expect(users).toEqual([]);
 	});
-	test("the score's worker leaves Verovio in a chunk of its own, fetched only if jsDelivr's copy fails", () => {
+	test("the site serves the lighter Verovio's WebAssembly itself, beside the score's worker", () => {
+		const assets = join(out, "_app/immutable/workers/assets");
+		const wasm = readdirSync(assets).filter((f) => /^verovio-module-[\w-]+\.wasm$/.test(f));
+		expect(wasm).toHaveLength(1);
+		// @barmark/engraver's .wasm, byte for byte: about 2.96 MB (stock embeds its own, so has none).
+		const served = readFileSync(join(assets, wasm[0] ?? ""));
+		const shipped = readFileSync(
+			join(
+				dirname(Bun.resolveSync("@barmark/engraver/package.json", site)),
+				"dist/verovio-module.wasm",
+			),
+		);
+		expect(served.length).toBeGreaterThan(2_500_000);
+		expect(served.length).toBeLessThan(3_500_000);
+		expect(served.equals(shipped)).toBe(true);
+	});
+	test("the score's worker leaves stock Verovio in a chunk of its own, fetched only if the lighter build fails", () => {
 		const workers = join(out, "_app/immutable/workers");
 		const files = readdirSync(workers).filter((f) => f.endsWith(".js"));
 		expect(files).toHaveLength(1);

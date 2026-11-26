@@ -30,14 +30,20 @@ bun run test:browser   # Playwright: live editing, the guide, no JavaScript, pho
   Score switch; Verovio loads only on Score; a flip keeps the view and the
   chord spelling) with a Key menu (`src/lib/key.ts`, as Stem Shovel's, not
   remembered; a flip starts the new chart in its own key).
-- Scores load `@barmark/engraver`, the smaller modified build of Verovio,
-  from jsDelivr with both its digests (`src/lib/chart.ts`, the score
-  package's `ENGRAVER_*` values); if either file fails, the element falls
-  back to the stock Verovio bundled in its worker chunk.
+- Scores load `@barmark/score`'s own copy of Verovio, `@barmark/engraver`
+  (the smaller modified build), served from the site's own origin: Vite
+  emits its `.wasm` beside the score's worker, under
+  `/_app/immutable/workers/assets/`. Scores carry no `verovio-url` or
+  digests (`src/lib/chart.ts`). If the `.wasm` cannot be fetched or
+  compiled, or the build has not answered in 20 seconds, the worker loads
+  stock Verovio, a separate chunk of its own, with one console warning.
+  `vite.config.ts` sets `worker: { format: "es" }` so stock stays out of
+  the worker file.
 - `static/licenses/`: Verovio's LGPL-3.0 and GPL-3.0 texts, copied from
   `packages/cli/licenses/`; the footer credits the modified build, links
   its NOTICE and release, these texts and this folder's source, since the
-  score's worker bundles stock Verovio as the fallback.
+  site serves the modified build itself and bundles stock Verovio as the
+  fallback.
 - `src/lib/guide/score.ts`: the guide's "In the score" rows; each example
   is exported and engraved with Verovio in `tests/score-notes.test.ts`.
 - `uno.config.ts`: theme, shortcuts and fonts. Edwin comes from

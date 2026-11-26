@@ -385,6 +385,8 @@ describe("the score code Get Started shows", () => {
 			expect(readme).toContain(setting);
 			expect(VITE_CONFIG).toContain(setting);
 		}
+		// The whole sample, comments too: every Vite sets the worker's format, Vite 7 the second line.
+		expect(readme).toContain(VITE_CONFIG);
 	});
 });
 
@@ -593,7 +595,7 @@ describe("Get Started, prerendered", () => {
 		const names = rows.map((row) => text(row.querySelector("th a")));
 		expect(names).toHaveLength(11);
 		for (const name of ours) expect(names).toContain(name);
-		expect(names).toContain("@barmark/engraver"); // loaded from a CDN, never installed
+		expect(names).toContain("@barmark/engraver"); // the score's dependency, not the site's own
 		const ids = new Set([...doc().querySelectorAll("main [id]")].map((el) => el.id));
 		for (const row of rows) {
 			const [step, readme] = [...row.querySelectorAll("a")].map((a) => a.getAttribute("href"));
@@ -758,14 +760,12 @@ describe("the Syntax Guide's score section", () => {
 describe("every score on the site", () => {
 	// Try It opens on a chord, drawn as a grid; its chart's score is the browser suite's.
 	for (const path of ["index.html", "syntax.html", "get-started.html"])
-		test(`loads the lighter Verovio from jsDelivr with both digests: ${path}`, () => {
+		test(`loads the package's own lighter Verovio from the site, with no CDN URL or digest: ${path}`, () => {
 			const scores = [...page(path).querySelectorAll("barmark-score")];
 			expect(scores.length).toBeGreaterThan(0);
-			for (const score of scores) {
-				expect(score.getAttribute("verovio-url")).toBe(ENGRAVER_CDN_URL);
-				expect(score.getAttribute("verovio-integrity")).toBe(ENGRAVER_CDN_INTEGRITY);
-				expect(score.getAttribute("verovio-wasm-integrity")).toBe(ENGRAVER_WASM_INTEGRITY);
-			}
+			for (const score of scores)
+				for (const name of ["verovio-url", "verovio-integrity", "verovio-wasm-integrity"])
+					expect([name, score.hasAttribute(name)]).toEqual([name, false]);
 		});
 });
 

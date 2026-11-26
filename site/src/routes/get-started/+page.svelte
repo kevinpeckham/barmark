@@ -192,24 +192,30 @@ const cell = "px-3 py-3 align-top lt-sm:(block px-0 py-1)";
 		</Window>
 		<Code title="index.html" code={USE_SCORE_ELEMENT} />
 		<p class="max-w-prose opacity-80">
-			The score is the heavier of the two. Its engraver, Verovio, is several megabytes, so it loads only
+			The score is the heavier of the two. Its engraver, Verovio, is megabytes even in its smaller build
+			(below), so it loads only
 			the first time a reader presses Score, in a background worker, and one copy serves every score on
 			the page. A reader who stays on the grid never downloads it; when the grid is all you need, use
 			<code class={code}>&lt;barmark-chart&gt;</code>. To have the score sooner,
 			<code class={code}>preload="intent"</code> starts loading Verovio when a reader reaches for Score,
-			and <code class={code}>preload="idle"</code> once the page is idle. With
-			<code class={code}>verovio-url</code> and <code class={code}>verovio-integrity</code> it comes from
-			a CDN, checked against its digest; the package exports jsDelivr's as
-			<code class={code}>VEROVIO_CDN_URL</code> and <code class={code}>VEROVIO_CDN_INTEGRITY</code>.
+			and <code class={code}>preload="idle"</code> once the page is idle.
 		</p>
 		<p id="engraver" class="max-w-prose opacity-80 scroll-mt-6">
-			Or load <code class={code}>@barmark/engraver</code>, a smaller build of the same Verovio made by
-			Barmark: under half the download of stock, drawing the same score. Its WebAssembly is
-			a file of its own, so it takes a second digest,
+			The package's own copy is <code class={code}>@barmark/engraver</code>, a smaller build of the
+			same Verovio made by Barmark: about 3 MB (about 1 MB gzipped) where stock is about 7.4 MB, drawing
+			the same score. It comes with the score, and a bundler that follows the worker (Vite does; the
+			README covers the others) serves it with the worker, its WebAssembly a file beside it. If that
+			file cannot be fetched or compiled, or the build has not answered in 20 seconds, the worker loads stock Verovio instead, with one warning in the console.
+			This site loads it that way, from its own origin.
+		</p>
+		<p class="max-w-prose opacity-80">
+			A CDN is still an option: with <code class={code}>verovio-url</code> and its digests the worker
+			loads the lighter build from there, checking the module and its WebAssembly, the second with
 			<code class={code}>verovio-wasm-integrity</code>. The package exports jsDelivr's three as
 			<code class={code}>ENGRAVER_CDN_URL</code>, <code class={code}>ENGRAVER_CDN_INTEGRITY</code> and
-			<code class={code}>ENGRAVER_WASM_INTEGRITY</code>, which this site uses. If either file fails its
-			digest, the element loads its own copy of stock Verovio instead.
+			<code class={code}>ENGRAVER_WASM_INTEGRITY</code>, and stock Verovio's as
+			<code class={code}>VEROVIO_CDN_URL</code> and <code class={code}>VEROVIO_CDN_INTEGRITY</code>. If
+			a file fails its digest, the element loads its own copy instead.
 		</p>
 		<Code title="index.html" code={USE_SCORE_ENGRAVER} />
 		<p class="max-w-prose opacity-80">
@@ -219,20 +225,21 @@ const cell = "px-3 py-3 align-top lt-sm:(block px-0 py-1)";
 		</p>
 		<Code title="page.ts" code={USE_SCORE_SERVER} />
 		<p class="max-w-prose opacity-80">
-			Vite 8 draws a score with no configuration, but with <code class={code}>verovio-url</code> it needs
-			<code class={code}>worker: {"{"} format: "es" {"}"}</code>, or the worker carries its own copy of Verovio
-			and a reader downloads it twice. Vite 7 needs that setting in any case, and one more, so the worker
-			can find Verovio:
+			Set <code class={code}>worker: {"{"} format: "es" {"}"}</code> with any Vite. On Vite 8 it is about
+			size: with Vite's default worker format, stock Verovio is inlined into the worker, and a reader
+			downloads about 3.5 MB gzipped in all instead of about 1.1 MB. Vite 7 needs it outright, since a
+			default worker cannot load Verovio on demand, and one more setting, because its dev pre-bundler
+			moves the element away from the worker and the font it finds by URL:
 		</p>
 		<Code title="vite.config.js" code={VITE_CONFIG} />
 		<p class="max-w-prose opacity-80">
-			<code class={code}>@barmark/score</code> is MIT, like every Barmark package. It depends on
+			<code class={code}>@barmark/score</code> is MIT and holds none of Verovio's code. It depends on
 			<a href={LINKS.verovio} class={link}>Verovio</a>, which is licensed
-			<a href={LINKS.verovioLicense} class={link}>LGPL-3.0</a>, as an ordinary npm package, loaded
-			unchanged, or, if you choose it, the modified build <code class={code}>@barmark/engraver</code>
-			(LGPL-3.0-only, <a href={LINKS.engraverRelease} class={link}>its source</a> published with each
-			release). A site that bundles the score ships Verovio inside its bundle; the README says how to keep
-			it a separate file and its notice.
+			<a href={LINKS.verovioLicense} class={link}>LGPL-3.0</a>, as ordinary npm packages: Barmark's
+			modified build <code class={code}>@barmark/engraver</code> (LGPL-3.0-only too,
+			<a href={LINKS.engraverRelease} class={link}>its source</a> published with each release), and stock
+			Verovio, loaded unchanged when the lighter build cannot be, whose toolkit class runs either build. A site that bundles the score ships
+			Verovio inside its bundle; the README says how to keep it a separate file and its notice.
 		</p>
 		<p class="max-w-prose opacity-80">
 			Without a web page, <a href="#terminal" class={link}>the CLI</a>'s

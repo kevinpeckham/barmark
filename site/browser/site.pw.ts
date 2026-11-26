@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync } from "node:fs";
+import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { expect, type Page, test } from "@playwright/test";
@@ -1504,10 +1504,25 @@ test.describe("the FAQ", () => {
 	});
 });
 
-/** The lighter Verovio on jsDelivr: its module, and the WebAssembly beside it. */
-const ENGRAVER = "https://cdn.jsdelivr.net/npm/@barmark/engraver@0.1.1/dist/";
-const ENGRAVER_MODULE = `${ENGRAVER}verovio-module.mjs`;
-const ENGRAVER_WASM = `${ENGRAVER}verovio-module.wasm`;
+/** The lighter Verovio's WebAssembly, as the site's own build serves it beside the worker (hashed). */
+const ENGRAVER_WASM =
+	/^http:\/\/localhost:\d+\/_app\/immutable\/workers\/assets\/verovio-module-[\w-]+\.wasm$/;
+
+/**
+ * Stock Verovio's chunk in the built site, the largest file under workers/chunks/ (about 8 MB;
+ * the lighter build's glue, about 29 kB, and a stub are chunks there too). Read when a test
+ * asks, after the web server has built the site.
+ */
+const stockChunk = () => {
+	const dir = fileURLToPath(
+		new URL("../.vercel/output/static/_app/immutable/workers/chunks", import.meta.url),
+	);
+	const [largest] = readdirSync(dir)
+		.map((f) => ({ f, bytes: statSync(join(dir, f)).size }))
+		.sort((a, b) => b.bytes - a.bytes);
+	if (!largest || largest.bytes < 5_000_000) throw new Error("no stock Verovio chunk in the build");
+	return `/_app/immutable/workers/chunks/${largest.f}`;
+};
 
 test.describe("the score", () => {
 	const source = (page: Page) => page.getByRole("textbox", { name: "Barmark source of the chart" });
@@ -1534,7 +1549,7 @@ test.describe("the score", () => {
 		expect(grid.text).toContain("Vox.Mel");
 	});
 
-	test("the home page starts loading Verovio from jsDelivr when a reader reaches for Score", async ({
+	test("the home page starts loading Verovio from the site when a reader reaches for Score", async ({
 		page,
 	}) => {
 		const engine: string[] = [];
@@ -1545,18 +1560,18 @@ test.describe("the score", () => {
 		await page.waitForFunction(() => customElements.get("barmark-score"));
 		await page.waitForLoadState("networkidle");
 		expect(engine).toEqual([]);
-		const cdn = page.waitForRequest(ENGRAVER_MODULE);
+		const wasm = page.waitForRequest(ENGRAVER_WASM);
 		await viewRadio(page, "Score").hover();
-		await cdn;
+		await wasm;
 	});
 
-	test("Try It's chart starts loading Verovio from jsDelivr once the page is idle", async ({
+	test("Try It's chart starts loading Verovio from the site once the page is idle", async ({
 		page,
 	}) => {
-		const cdn = page.waitForRequest(ENGRAVER_MODULE);
+		const wasm = page.waitForRequest(ENGRAVER_WASM);
 		await page.goto(`/try?q=${encodeURIComponent("key: G\n| G | C |")}`);
 		await expect(page.locator("[data-reading] barmark-score")).toHaveAttribute("preload", "idle");
-		await cdn;
+		await wasm;
 	});
 
 	test("the home page loads Verovio only on intent, and draws the score as SVG", async ({
@@ -1575,12 +1590,9 @@ test.describe("the score", () => {
 		await page.waitForLoadState("networkidle");
 		expect(engine).toEqual([]);
 		await pressScore(page);
-		// Verovio came from jsDelivr, its module and its .wasm, and both matched their digests:
-		// the element warns when it falls back to its own copy.
-		expect(engine.filter((u) => u.startsWith("https://cdn.jsdelivr.net/"))).toEqual([
-			ENGRAVER_MODULE,
-			ENGRAVER_WASM,
-		]);
+		// Verovio came from the site itself: the lighter build's .wasm, on the page's own origin.
+		expect(engine.filter((u) => ENGRAVER_WASM.test(u))).toHaveLength(1);
+		expect(engine.filter((u) => !u.startsWith(new URL(page.url()).origin))).toEqual([]);
 		expect(warnings.filter((w) => w.includes("Verovio"))).toEqual([]);
 		expect(await scoreText(page)).toContain("Greensleeves");
 		const score = page.locator("main barmark-score");
@@ -1591,7 +1603,9 @@ test.describe("the score", () => {
 		expect(chords.slice(0, 4)).toEqual(["Am", "G", "F", "E"]);
 	});
 
-	test("a score loads the lite build, with no fallback warning", async ({ page }) => {
+	test("a score loads the lite build from the site's own origin, with no fallback warning", async ({
+		page,
+	}) => {
 		const warnings: string[] = [];
 		page.on("console", (m) => {
 			if (m.type() === "warning") warnings.push(m.text());
@@ -1613,20 +1627,21 @@ test.describe("the score", () => {
 		await expect(
 			page.locator("main barmark-score").getByRole("img", { name: "Greensleeves" }),
 		).toBeVisible();
-		expect(warnings.filter((w) => w.includes("was not used"))).toEqual([]);
-		const wasm = fetched.find((f) => f.url === ENGRAVER_WASM);
-		expect(wasm?.status).toBe(200);
-		expect(fetched.find((f) => f.url === ENGRAVER_MODULE)?.status).toBe(200);
-		// Neither stock Verovio from jsDelivr nor the site's own copy was asked for. The own copy
-		// is the worker's hashed chunk (about 8 MB), the only file under workers/chunks/, imported
-		// only on a fallback; matched by path, as its hash changes with each build.
-		expect(
-			requested.filter((u) => /\/verovio@|\/_app\/immutable\/workers\/chunks\//.test(u)),
-		).toEqual([]);
+		// The .wasm's record is written once its sizes are read: poll the whole answer, not find-then-read.
+		await expect
+			.poll(() => fetched.filter((f) => ENGRAVER_WASM.test(f.url)).map((f) => f.status))
+			.toEqual([200]);
+		expect(warnings.filter((w) => /was not used|Verovio/.test(w))).toEqual([]);
+		// Nothing came from jsDelivr, and stock Verovio's chunk (imported only on a fallback;
+		// matched by its built name, which changes with each build) was not asked for.
+		expect(requested.filter((u) => u.includes("cdn.jsdelivr.net"))).toEqual([]);
+		const stock = stockChunk();
+		expect(requested.filter((u) => u.endsWith(stock))).toEqual([]);
+		const origin = new URL(page.url()).origin;
 		console.log(
 			`engraver transfer: ${fetched
-				.filter((f) => f.url.startsWith(ENGRAVER))
-				.map((f) => `${f.url.slice(ENGRAVER.length)} ${f.bytes} B`)
+				.filter((f) => /\/_app\/immutable\/workers\//.test(f.url))
+				.map((f) => `${f.url.slice(origin.length)} ${f.bytes} B`)
 				.join(", ")}`,
 		);
 	});
