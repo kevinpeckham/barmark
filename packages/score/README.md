@@ -81,12 +81,13 @@ Vite 8 (and Vite+) draws a score with no config, in `vite dev` or a
 build, but set `worker: { format: "es" }`, or a reader downloads more than
 before. Vite builds workers as `iife` by default, which cannot split, so
 the worker holds both Verovios: measured with Vite 8.3.5, the worker file is
-8,372 kB (2,464 kB gzipped), with stock Verovio and the lighter build's glue
-inside it, and the lighter build's 2,957 kB `.wasm` (1,007 kB gzipped) is
-fetched as well. Stock alone was about 7.4 MB (2.4 MB gzipped). With
-`format: "es"` the worker is 8 kB, the lighter glue 29 kB and the `.wasm`
-2,957 kB (1,007 kB gzipped); stock is a separate 8,335 kB chunk, fetched
-only on a fallback. (With `verovio-url` an `iife` worker also makes a reader
+about 8.6 MB (2.5 MB gzipped), with stock Verovio and the lighter build's
+glue inside it, and the lighter build's `.wasm`, about 3.0 MB (1.0 MB
+gzipped), is fetched as well. Stock alone was about 7.4 MB (2.4 MB
+gzipped). With `format: "es"` the worker is about 213 kB (73 kB gzipped),
+the lighter glue 29 kB (11 kB) and the `.wasm` about 3.0 MB (1.0 MB
+gzipped); stock is a separate chunk of about 8.3 MB (2.5 MB gzipped),
+fetched only on a fallback. (With `verovio-url` an `iife` worker also makes a reader
 download Verovio twice, inside the worker and from your URL.) Vite 7 needs
 that line too (an `iife` worker cannot load Verovio on demand) and one
 more: its dev pre-bundler moves the element away from the worker and the
@@ -131,8 +132,31 @@ Bundlers differ in whether they do that, measured on 2026-11-24:
 - **webpack 5** follows `new URL("...", import.meta.url)` natively, by its
   documentation; it was not measured here. Plain Rollup needs a plugin for
   such assets.
-- **esbuild** (`--bundle --format=esm`) needs `--external:node:*` for either
-  Verovio, because the glue code of both has a Node import. Without
+- **esbuild** does not follow `new URL(...)`, so it does not find the worker
+  by itself: bundle `node_modules/@barmark/score/dist/worker.js` as a
+  second entry point and name it so it is written beside the page's bundle
+  as `worker.js`, where the element looks. Give the entries as `{ in, out }`
+  pairs; with plain paths esbuild nests each output under the entries'
+  common ancestor, and the page cannot find the worker.
+
+  ```js
+  import { build } from "esbuild";
+  await build({
+  	entryPoints: [
+  		{ in: "src/main.js", out: "main" },
+  		{ in: "node_modules/@barmark/score/dist/worker.js", out: "worker" },
+  	],
+  	outdir: "dist",
+  	bundle: true,
+  	format: "esm",
+  	external: ["node:*"],
+  });
+  ```
+
+  (On the command line: `esbuild main=src/main.js
+  worker=node_modules/@barmark/score/dist/worker.js --bundle --format=esm
+  '--external:node:*' --outdir=dist`.) `--external:node:*` is needed for
+  either Verovio, because the glue code of both has a Node import. Without
   `--splitting` (esbuild's option for separate chunks, not measured here) it
   inlines both Verovios into the worker bundle, and it emits no `.wasm`, so
   the lighter build is requested, answered with one 404, and stock Verovio

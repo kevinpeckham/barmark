@@ -16,11 +16,12 @@ package uses [semantic versioning](https://semver.org/).
   instead`. Stock `verovio` stays a dependency.
 - **Bundlers:** set `worker: { format: "es" }` in every Vite, Vite 8
   included. Measured with Vite 8.3.5, the default `iife` worker is
-  8,372 kB (2,464 kB gzipped) with both Verovios inside, and the `.wasm`
-  (2,957 kB, 1,007 kB gzipped) is fetched too, more than stock alone before
-  (about 7.4 MB). With `format: "es"` the worker is 8 kB, the lighter glue
-  29 kB, and stock a separate chunk fetched only on a fallback. A plain
-  esbuild bundle inlines both Verovios (without `--splitting`) and emits no
+  about 8.6 MB (2.5 MB gzipped) with both Verovios inside, and the `.wasm`
+  (about 3.0 MB, 1.0 MB gzipped) is fetched too, more than stock alone before
+  (about 7.4 MB). With `format: "es"` the worker is about 213 kB, the lighter
+  glue 29 kB, and stock a separate chunk of about 8.3 MB fetched only on a
+  fallback. A plain esbuild bundle (the worker bundled as a second entry
+  named `worker`, see the README) inlines both Verovios (without `--splitting`) and emits no
   `.wasm`, so stock loads after one 404 and the warning; copying
   `node_modules/@barmark/engraver/dist/verovio-module.wasm` beside the
   worker bundle makes the lighter build run, but not download less. webpack 5
