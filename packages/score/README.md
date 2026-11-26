@@ -14,9 +14,11 @@ npm install @barmark/score
 - **`<barmark-chart>`** from [`@barmark/render`](../render/) is the light
   one: the bar grid, no Verovio.
 - **`<barmark-score>`** from this package is the heavier one: the same grid,
-  plus a Grid / Score switch to a full score. Verovio (the lighter build,
-  about 3 MB, 1.0 MB gzipped) loads on the first switch to the score, never on page load
-  unless you ask (`preload`), and one copy serves every score on the page.
+  plus a Grid / Score switch to a full score. Verovio
+  ([the lighter build](#the-lighter-build-barmarkengraver), about 3 MB,
+  1.0 MB gzipped) loads on the first switch to the score, never on page
+  load unless you ask (`preload`), and one copy serves every score on the
+  page.
 
 Use `<barmark-chart>` when the grid is enough.
 
@@ -74,24 +76,28 @@ page's import map (with `barmark` and `@barmark/render`): the element loads
 
 The engine runs in a module Worker, created as
 `new Worker(new URL("./worker.js", import.meta.url), { type: "module" })`.
-That is the pattern Vite and webpack follow, so a bundler finds the worker
-and Verovio for you.
+A bundler that follows that pattern (Vite; webpack 5, by its
+documentation) finds the worker and Verovio for you; esbuild does not
+(below).
 
 Vite 8 (and Vite+) draws a score with no config, in `vite dev` or a
-build, but set `worker: { format: "es" }`, or a reader downloads more than
-before. Vite builds workers as `iife` by default, which cannot split, so
-the worker holds both Verovios: measured with Vite 8.3.5, the worker file is
-about 8.6 MB (2.5 MB gzipped), with stock Verovio and the lighter build's
-glue inside it, and the lighter build's `.wasm`, about 3.0 MB (1.0 MB
-gzipped), is fetched as well. Stock alone was about 7.4 MB (2.4 MB
-gzipped). With `format: "es"` the worker is about 213 kB (73 kB gzipped),
-the lighter glue 29 kB (11 kB) and the `.wasm` about 3.0 MB (1.0 MB
-gzipped); stock is a separate chunk of about 8.3 MB (2.5 MB gzipped),
-fetched only on a fallback. (With `verovio-url` an `iife` worker also makes a reader
-download Verovio twice, inside the worker and from your URL.) Vite 7 needs
-that line too (an `iife` worker cannot load Verovio on demand) and one
-more: its dev pre-bundler moves the element away from the worker and the
-font it finds by URL.
+build (in `vite dev`, checked with Vite 8.3.5 against this repository's
+own build, the lighter build engraved, with no warning), but set
+`worker: { format: "es" }`, or a reader downloads more than before. Vite
+builds workers as `iife` by default, which cannot split, so the worker
+holds both Verovios: measured with Vite 8.3.5, the worker file is about
+8.6 MB (2.5 MB gzipped), with stock Verovio and the lighter build's glue
+inside it, and the lighter build's `.wasm`, about 3.0 MB (1.0 MB gzipped),
+is fetched as well. Stock alone, the module as the `verovio` package
+publishes it, is about 7.4 MB (2.4 MB gzipped). With `format: "es"` the
+worker is about 213 kB (73 kB gzipped), the lighter glue 29 kB (11 kB)
+and the `.wasm` about 3.0 MB (1.0 MB gzipped); stock is a separate chunk,
+the one Vite writes from that module, about 8.3 MB (2.5 MB gzipped),
+fetched only on a fallback. (With `verovio-url` an `iife` worker also
+makes a reader download Verovio twice, inside the worker and from your
+URL.) Vite 7 needs that line too (an `iife` worker cannot load Verovio on
+demand) and one more: its dev pre-bundler moves the element away from the
+worker and the font it finds by URL.
 
 ```js
 // vite.config.js
@@ -102,9 +108,10 @@ export default {
 ```
 
 Without a bundler, a page's import map does not reach a worker, so the
-worker's bare imports (`verovio/esm`, `barmark`, `@barmark/musicxml`)
-fail. Serve a bundled `worker.js` at the package's URL. `verovio-url` can
-then point at a Verovio module you host (for example
+worker's bare imports (`verovio/esm`, and on demand `@barmark/engraver`
+and `verovio/wasm`; through its engraving code, `barmark` and
+`@barmark/musicxml`) fail. Serve a bundled `worker.js` at the package's
+URL. `verovio-url` can then point at a Verovio module you host (for example
 `verovio/dist/verovio-module.mjs` from the `verovio` package) instead of
 bundling Verovio inside the worker; it only changes where that module
 comes from. The URL is resolved against the page and must be http(s);
@@ -124,11 +131,12 @@ Content-Security-Policy needs the module's origin (a CDN's, say) in
 ### Bundlers and the lighter build
 
 The lighter build's `.wasm` has to reach the browser beside the worker.
-Bundlers differ in whether they do that, measured on 2026-11-24:
+Bundlers differ in whether they do that, measured on 2026-11-26 with Vite
+8.3.5 and esbuild 0.28.2:
 
 - **Vite 8** emits the `.wasm` beside the worker chunk, and the lighter
   build engraves. Set `worker: { format: "es" }` to get the smaller
-  download (see above). Only Vite 8 was measured.
+  download (see above). Of the Vite versions, only Vite 8 was measured.
 - **webpack 5** follows `new URL("...", import.meta.url)` natively, by its
   documentation; it was not measured here. Plain Rollup needs a plugin for
   such assets.
@@ -162,8 +170,20 @@ Bundlers differ in whether they do that, measured on 2026-11-24:
   the lighter build is requested, answered with one 404, and stock Verovio
   loads after one console warning. The score is drawn. To run the lighter
   build, copy `node_modules/@barmark/engraver/dist/verovio-module.wasm`
-  beside the worker bundle. That changes which Verovio runs, not what is
-  downloaded: the bundle still holds stock's 7 MB.
+  beside the worker bundle (pnpm does not put a dependency's own
+  dependency there: add `@barmark/engraver` to your own dependencies at
+  the exact version this package depends on). That changes which Verovio
+  runs, not what is downloaded: the bundle still holds stock Verovio, the
+  7.4 MB module.
+
+  The bundle does not bring the element's font either: the element looks
+  for `@barmark/render`'s `fonts/Edwin-Roman.otf` beside where its own
+  module was, and without it the chart is set in a fallback face (Georgia
+  or another serif), with nothing in the console but the font's 404.
+  Serve that file yourself and register it before the element loads, as
+  [`@barmark/render`'s README](../render/README.md#as-a-web-component)
+  says: a `<style data-barmark-font>` holding `fontFaceCss(yourUrl)`
+  (`fontFaceCss` is exported by `@barmark/render`).
 
 `verovio-url` works with any of them (see above): it names the module to
 load first, and the package's own copy is still the fallback.
@@ -175,9 +195,11 @@ drawn, the score pane shows a status region (`role="status"`) with a
 progress bar, in three phases:
 
 1. **Loading the score engine…**, with how far the download has come
-   when that can be measured: a percentage, and "3.1 of 7.4 MB" only when
-   the total is the size actually transferred.
-2. **Preparing…** while the worker compiles Verovio's WebAssembly.
+   when that can be measured (a `verovio-url` copy, below): a percentage,
+   and "3.1 of 7.4 MB" only when the total is the size actually
+   transferred.
+2. **Preparing…** while the worker compiles Verovio's WebAssembly (and,
+   for the package's own copy, while it downloads it).
 3. **Engraving…** while the chart is engraved.
 
 The live region speaks each phase once; the percentage is the progress
@@ -198,10 +220,13 @@ no build this package knows, shows the bar without a percentage. With
 `verovio-wasm-integrity`, the module's small download is shown without a
 percentage and the `.wasm`'s is the one measured, so the bar runs to
 100% once.
-The package's own copy, without `verovio-url`, is loaded by your
-bundler, so its download is shown without a percentage; so is a worker
-bundled with Verovio inside it, whose download is the worker's own
-script.
+
+The package's own copy, without `verovio-url`, is never measured. The
+lighter build's module comes through your bundler, shown without a
+percentage, and its glue then fetches the `.wasm` (about 1 MB gzipped)
+itself while it compiles, so that download shows as **Preparing…**; after
+a fallback, so does stock Verovio's. A worker bundled with Verovio inside
+it is downloaded as the worker's own script, also without a percentage.
 
 ### A copy from a CDN
 
@@ -236,7 +261,7 @@ server.
 
 [`@barmark/engraver`](../engraver/) is a modified, smaller build of the
 same Verovio 6.4.1, made by barmark for this package, and it is what the
-worker loads by default: about 3 MB where stock is about 7 MB, checked
+worker loads by default: about 3 MB where stock is about 7.4 MB, checked
 before each release to draw SVG byte for byte the same as stock over a
 corpus of charts. It is a dependency of this package, so you have it
 already. Its WebAssembly is a separate file, `verovio-module.wasm` beside
@@ -268,9 +293,9 @@ jsDelivr:
 ```
 
 The package exports the three as `ENGRAVER_CDN_URL`,
-`ENGRAVER_CDN_INTEGRITY` and `ENGRAVER_WASM_INTEGRITY`. They are written
-into this package, so the CDN copy can be checked without loading the
-module.
+`ENGRAVER_CDN_INTEGRITY` and `ENGRAVER_WASM_INTEGRITY`: the `verovio-url`
+and the two integrity values a page passes to the element for that copy.
+They are plain strings, so importing them does not load Verovio.
 
 The worker downloads the module and checks it against
 `verovio-integrity`, then downloads the `.wasm` from beside the
@@ -303,6 +328,12 @@ A page with a Content-Security-Policy needs the CDN's origin in
 `connect-src` (the worker fetches both files), `blob:` in `script-src`
 (the module is imported from a `blob:` URL) and `'wasm-unsafe-eval'` in
 `script-src`, which stock Verovio needs as well.
+
+Without `verovio-url` the same rules apply to the package's own copy: its
+glue fetches `verovio-module.wasm` from beside the worker, on your own
+origin, so `connect-src` must allow that origin, and `script-src` needs
+`'wasm-unsafe-eval'` to compile it. If that fetch is blocked, stock
+Verovio loads instead, with the warning above.
 
 The build leaves out what this package never asks Verovio for: only the
 Leipzig font, no footer, no tablature or staff tunings, and no compressed
