@@ -65,8 +65,9 @@ test("no engine request until the first switch", async ({ page }) => {
 	const { seen, el } = await openQuiet(page, "/score");
 	await switchToScore(el);
 	expect(seen.worker).toBe(1);
-	// engine.js, then the worker (Verovio is bundled into it).
-	expect(seen.engine).toBe(2);
+	// engine.js, the worker, then the lighter build's .wasm beside it (stock, bundled in, is not needed).
+	expect(seen.engine).toBe(3);
+	expect(seen.urls).toContain("/score/verovio-module.wasm");
 });
 
 test("two scores, one engine request", async ({ page }) => {
@@ -369,10 +370,36 @@ test("the indeterminate bar stands still with reduced motion", async ({ page }) 
 
 const LOCAL = "/verovio/verovio-module.mjs";
 
+/**
+ * The page's console warnings, the worker's among them, from now on. Firefox
+ * also reports its own engine's warnings here, prefixed "[JavaScript Warning:"
+ * (it says a Verovio's WebAssembly, stock's and the lighter build's alike, uses
+ * the deprecated exception-handling `try`): they are the browser's, not the
+ * element's, so they are left out.
+ */
+function consoleWarnings(page: Page): string[] {
+	const warnings: string[] = [];
+	page.on(
+		"console",
+		(m) =>
+			m.type() === "warning" &&
+			!m.text().startsWith("[JavaScript Warning:") &&
+			warnings.push(m.text()),
+	);
+	return warnings;
+}
+
+/** Opens `url` and waits for the grid: the element, ready for a press. */
+async function openGrid(page: Page, url: string): Promise<Locator> {
+	await page.goto(url);
+	const el = page.locator("barmark-score");
+	await expect(el.locator(".bms-grid .bm-chart")).toBeVisible();
+	return el;
+}
+
 /** Opens `/score?query`, presses Score and waits for it: the console's warnings and the engine's requests. */
 async function scoreWith(page: Page, query: string) {
-	const warnings: string[] = [];
-	page.on("console", (m) => m.type() === "warning" && warnings.push(m.text()));
+	const warnings = consoleWarnings(page);
 	const seen = countEngine(page);
 	await page.goto(`/score?${query}`);
 	const el = page.locator("barmark-score");
@@ -380,13 +407,13 @@ async function scoreWith(page: Page, query: string) {
 	return { el, warnings, local: seen.urls.filter((u) => u === LOCAL).length };
 }
 
-test("verovio-integrity: a matching copy is used", async ({ page }) => {
+test("@loading verovio-integrity: a matching copy is used", async ({ page }) => {
 	const { warnings, local } = await scoreWith(page, "engine=local&integrity=good");
 	expect(local).toBe(1);
 	expect(warnings).toEqual([]);
 });
 
-test("verovio-integrity: a mismatch falls back to the package's own copy, with a warning", async ({
+test("@loading verovio-integrity: a mismatch falls back to the package's own copy, with a warning", async ({
 	page,
 }) => {
 	const { el, warnings, local } = await scoreWith(page, "engine=local&integrity=bad");
@@ -429,9 +456,10 @@ const lite = (copy: string) => ({
 	wasm: `/engraver/${copy}/verovio-module.wasm`,
 });
 
-test("the lite build: both digests match, it is used, its wasm measured", async ({ page }) => {
-	const warnings: string[] = [];
-	page.on("console", (m) => m.type() === "warning" && warnings.push(m.text()));
+test("@loading the lite build: both digests match, it is used, its wasm measured", async ({
+	page,
+}) => {
+	const warnings = consoleWarnings(page);
 	const seen = countEngine(page);
 	await page.goto("/score?lite=ok");
 	const el = page.locator("barmark-score");
@@ -447,7 +475,7 @@ test("the lite build: both digests match, it is used, its wasm measured", async 
 	expectRisingTo100(nows);
 });
 
-test("a wasm digest mismatch falls back to the package's own copy, with a warning", async ({
+test("@loading a wasm digest mismatch falls back to the package's own copy, with a warning", async ({
 	page,
 }) => {
 	const { el, warnings } = await scoreWith(page, "lite=badwasm");
@@ -458,12 +486,11 @@ test("a wasm digest mismatch falls back to the package's own copy, with a warnin
 	await expect(el.locator(".bms-note")).toHaveCount(0);
 });
 
-test("a missing .wasm falls back in seconds, not at the load deadline", async ({ page }) => {
-	const warnings: string[] = [];
-	page.on("console", (m) => m.type() === "warning" && warnings.push(m.text()));
-	await page.goto("/score?lite=nowasm");
-	const el = page.locator("barmark-score");
-	await expect(el.locator(".bms-grid .bm-chart")).toBeVisible();
+test("@loading a missing .wasm falls back in seconds, not at the load deadline", async ({
+	page,
+}) => {
+	const warnings = consoleWarnings(page);
+	const el = await openGrid(page, "/score?lite=nowasm");
 	await el.getByRole("radio", { name: "Score" }).click();
 	// The hung factory is raced: well inside the engine's 60-second deadline.
 	await expect(scoreSvg(el)).toBeVisible({ timeout: 15_000 });
@@ -471,7 +498,7 @@ test("a missing .wasm falls back in seconds, not at the load deadline", async ({
 	expect(warnings[0]).toContain(lite("nowasm").module);
 });
 
-test("verovio-integrity without verovio-wasm-integrity falls back, saying why", async ({
+test("@loading verovio-integrity without verovio-wasm-integrity falls back, saying why", async ({
 	page,
 }) => {
 	const { el, warnings } = await scoreWith(page, "lite=nowasmintegrity");
@@ -492,6 +519,120 @@ test("stock Verovio with a wasm digest loads cleanly: it never asks for a .wasm"
 	expect(warnings).toEqual([]);
 	expect(seen.urls.some((u) => u.endsWith(".wasm"))).toBe(false);
 	await expect(el.locator(".bms-note")).toHaveCount(0);
+});
+
+/** What the worker warns when the package's lighter Verovio gives way to stock. */
+const NOT_USED = "the lighter Verovio was not used";
+
+/**
+ * Watches a page at `/<scenario>/score`, from before it opens: our warnings
+ * that the lighter build was not used, and the requests for the `.wasm`
+ * beside the worker with the status of each one answered.
+ */
+function watchLite(page: Page, scenario: string) {
+	const wasm = `/${scenario}/score/verovio-module.wasm`;
+	const seen = { notUsed: [] as string[], asked: 0, answered: [] as number[], workers: 0 };
+	page.on("console", (m) => {
+		if (m.text().includes(NOT_USED)) seen.notUsed.push(m.text());
+	});
+	page.on("request", (r) => {
+		const path = new URL(r.url()).pathname;
+		if (path === wasm) seen.asked++;
+		if (path === `/${scenario}/score/worker.js`) seen.workers++;
+	});
+	page.on("response", (r) => {
+		if (new URL(r.url()).pathname === wasm) seen.answered.push(r.status());
+	});
+	return seen;
+}
+
+/** Opens `/<scenario>/score`, presses Score and waits for an engraved bar. */
+async function engraveIn(page: Page, scenario: string) {
+	const seen = watchLite(page, scenario);
+	const el = await openGrid(page, `/${scenario}/score`);
+	await el.getByRole("radio", { name: "Score" }).click();
+	await expect(el.locator(".bms-score svg g.measure").first()).toBeVisible({ timeout: 20_000 });
+	return seen;
+}
+
+/** The lighter build engraved: its `.wasm` was asked for and answered, and nothing gave way to stock. */
+function expectLighter(seen: ReturnType<typeof watchLite>, answers = 1) {
+	expect(seen.answered).toEqual(Array(answers).fill(200));
+	expect(seen.notUsed).toEqual([]);
+}
+
+/** Stock engraved: the lighter build gave way to it, saying so once. */
+function expectStock(seen: ReturnType<typeof watchLite>) {
+	expect(seen.notUsed).toHaveLength(1);
+}
+
+test("@loading the package's own copy is the lighter build", async ({ page }) => {
+	const seen = await engraveIn(page, "ok");
+	expect(seen.asked).toBe(1);
+	expectLighter(seen);
+});
+
+test("@loading a missing .wasm falls back to stock, with the warning", async ({ page }) => {
+	const seen = await engraveIn(page, "nowasm");
+	// The glue asks again after its streaming compile fails: every answer a 404.
+	expect(seen.answered.length).toBeGreaterThan(0);
+	expect(new Set(seen.answered)).toEqual(new Set([404]));
+	expectStock(seen);
+});
+
+test("@loading a .wasm cut short falls back to stock", async ({ page }) => {
+	// Its first half: the magic bytes, then a section running past the end, so it cannot compile.
+	const seen = await engraveIn(page, "badwasm");
+	// The glue asks again after its streaming compile fails: every answer a 200.
+	expect(seen.answered.length).toBeGreaterThan(0);
+	expect(new Set(seen.answered)).toEqual(new Set([200]));
+	expectStock(seen);
+});
+
+test("@loading a .wasm that never arrives falls back at the lighter build's deadline", async ({
+	page,
+}) => {
+	// The hang scenario's worker is built with a 1.5 s deadline, not the package's 20 s.
+	const seen = await engraveIn(page, "hang");
+	expect(seen.asked).toBe(1);
+	expect(seen.answered).toEqual([]);
+	expectStock(seen);
+	expect(seen.notUsed[0]).toContain("no answer in");
+});
+
+test("@loading a .wasm served as text/plain still loads the lighter build", async ({ page }) => {
+	// The glue's streaming compile refuses the type and reads the bytes instead: the browser's warning, not ours.
+	const seen = await engraveIn(page, "plain");
+	expect(seen.asked).toBeGreaterThan(0);
+	expectLighter(seen, seen.asked);
+});
+
+/**
+ * A chart whose engraving takes far past the engine's 3 s grace for a
+ * superseded job (about 15 s here): 9,600 bars, under the parser's
+ * 10,000-bar limit.
+ */
+const LONG_CHART = `# Long\nkey: C, time: 4/4\n\n${"| C | Am7 | Dm7 | G7 |\n".repeat(2400)}`;
+
+/** Gives the element a new chart through its `text` property. */
+const setText = (el: Locator, text: string) =>
+	el.evaluate((host, t) => {
+		(host as HTMLElement & { text: string }).text = t;
+	}, text);
+
+test("@loading a replacement worker loads the lighter build again", async ({ page }) => {
+	const seen = watchLite(page, "ok");
+	const el = await openGrid(page, "/ok/score");
+	await setText(el, LONG_CHART);
+	await el.getByRole("radio", { name: "Score" }).click();
+	await expect.poll(() => seen.answered, { timeout: 20_000 }).toEqual([200]);
+	// A new chart supersedes the long one still engraving: past its grace the worker is cut off,
+	// and a fresh one loads the Verovio the first one loaded, the lighter build.
+	await setText(el, "# Short\n| C | G |\n");
+	await expect(el.locator(".bms-score svg g.measure")).toHaveCount(2, { timeout: 20_000 });
+	await expect(el.locator(".bms-note")).toHaveCount(0);
+	expect(seen.workers).toBe(2);
+	expectLighter(seen, 2);
 });
 
 test('switch="off": no switch to see or tab to; script drives the view', async ({ page }) => {

@@ -3,7 +3,6 @@ import * as info from "@barmark/engraver/info";
 import {
 	ENGRAVER_CDN_INTEGRITY,
 	ENGRAVER_CDN_URL,
-	ENGRAVER_LAGGING,
 	ENGRAVER_MODULE_BYTES,
 	ENGRAVER_VEROVIO_VERSION,
 	ENGRAVER_WASM_BYTES,
@@ -23,8 +22,10 @@ test("the ENGRAVER_* literals are @barmark/engraver's info.ts", () => {
 	expect(ENGRAVER_VEROVIO_VERSION).toBe(info.VEROVIO_VERSION);
 });
 
-test("the lite build's Verovio is the toolkit's, or marked as lagging", () => {
-	expect(ENGRAVER_VEROVIO_VERSION === VEROVIO_VERSION || ENGRAVER_LAGGING).toBe(true);
+// The lighter build is score's default: a score released with it behind stock would make
+// every reader download it, fail the version check and then download stock.
+test("the lighter build's Verovio is the toolkit's: it never lags", () => {
+	expect(ENGRAVER_VEROVIO_VERSION).toBe(VEROVIO_VERSION);
 });
 
 test("known sizes are looked up by declared digest", () => {
@@ -41,4 +42,12 @@ test("the package exports the three public constants", async () => {
 			.filter((k) => k.startsWith("ENGRAVER_"))
 			.sort(),
 	).toEqual(["ENGRAVER_CDN_INTEGRITY", "ENGRAVER_CDN_URL", "ENGRAVER_WASM_INTEGRITY"]);
+});
+
+test("score depends on the lighter build exactly, and still on stock Verovio", async () => {
+	const pkg = await Bun.file(new URL("../package.json", import.meta.url)).json();
+	expect(pkg.dependencies["@barmark/engraver"]).toBe("workspace:*");
+	expect(pkg.dependencies.verovio).toMatch(/^\d+\.\d+\.\d+$/);
+	expect(pkg.devDependencies?.["@barmark/engraver"]).toBeUndefined();
+	expect(pkg.description).toContain("@barmark/engraver");
 });

@@ -1,6 +1,6 @@
 /** The CI wiring around the engraver build: committed state only. */
 import { expect, test } from "bun:test";
-import { readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 
 const read = (path: string) => readFileSync(new URL(path, import.meta.url), "utf8");
 type Step = { if?: string; run?: string; uses?: string; with?: Record<string, string> };
@@ -70,4 +70,16 @@ test("every job with the engraver's dist builds it before bun test", () => {
 	}
 	// release.yml's verify runs bun test with the dist: the rule has something to check.
 	expect(checked).toContain("release.yml verify");
+});
+
+// CI's `check` job runs tsc with no dist: the package's `exports` name
+// dist/index.d.mts, which only a build writes, so tsc must find the module's
+// types through the root tsconfig's `paths`, from the committed source.
+test("tsc finds @barmark/engraver's types without a build", () => {
+	const config = JSON.parse(read("../../../tsconfig.json")) as {
+		compilerOptions: { paths: Record<string, string[]> };
+	};
+	const target = config.compilerOptions.paths["@barmark/engraver"];
+	expect(target).toEqual(["./packages/engraver/src/index.d.mts"]);
+	expect(existsSync(new URL("../src/index.d.mts", import.meta.url))).toBe(true);
 });

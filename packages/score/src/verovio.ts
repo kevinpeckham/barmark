@@ -13,7 +13,7 @@ export const VEROVIO_CDN_INTEGRITY =
 
 /**
  * `@barmark/engraver`, the smaller Verovio build, on jsDelivr: for `verovio-url`.
- * These are literals, so a site that doesn't opt in never installs the build;
+ * These are literals, so importing them does not load the build;
  * tests/engraver.test.ts holds them to `packages/engraver/src/info.ts`.
  */
 export const ENGRAVER_CDN_URL =
@@ -30,12 +30,6 @@ export const ENGRAVER_WASM_INTEGRITY =
 /** The Verovio the build is made from. */
 export const ENGRAVER_VEROVIO_VERSION = "6.4.1";
 
-/**
- * True only while the build trails a newer stock `VEROVIO_VERSION`: score's
- * decision at a stock upgrade, so it lives here, not in the engraver's API.
- */
-export const ENGRAVER_LAGGING = false;
-
 /** The build's module and `.wasm` sizes, decoded. */
 export const ENGRAVER_MODULE_BYTES = 29_534;
 export const ENGRAVER_WASM_BYTES = 2_956_941;
@@ -45,6 +39,15 @@ const KNOWN_SIZES: ReadonlyMap<string, number> = new Map([
 	[ENGRAVER_CDN_INTEGRITY, ENGRAVER_MODULE_BYTES],
 	[ENGRAVER_WASM_INTEGRITY, ENGRAVER_WASM_BYTES],
 ]);
+
+/**
+ * How long the package's lighter Verovio may take to instantiate before
+ * stock Verovio is loaded instead: 20 s, leaving stock 40 of the load's
+ * 60 (`LOAD_DEADLINE_MS`, engine.ts). It lives here, not beside that
+ * deadline, because the worker reads it and engine.ts names worker.js:
+ * an import back would be a cycle.
+ */
+export const LITE_DEADLINE_MS = 20_000;
 
 /** The decoded size of a known build's file, looked up by its declared digest. */
 export function knownSize(integrity: string | undefined): number | undefined {

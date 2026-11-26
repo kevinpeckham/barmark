@@ -10,16 +10,41 @@ type Module = { from: string };
 
 /**
  * A loader over fakes: `bodies` are what each URL serves, `own` is the
- * package's Verovio, `version` what a downloaded module's toolkit reports.
+ * package's Verovio (the lighter build), `version` what a downloaded
+ * module's toolkit reports. `ownVersion` is what the lighter build's
+ * toolkit reports; with `ownHangs`, its instantiate waits for
+ * `releaseOwn`; `stockFails` makes stock's import throw. `clock.pass`
+ * moves the fake time `after` waits on.
  */
 function fakes(
 	bodies: Record<string, string | Error>,
 	own: Error | null = null,
 	version = "6.4.1",
+	{
+		ownVersion,
+		ownHangs = false,
+		stockFails,
+	}: { ownVersion?: string; ownHangs?: boolean; stockFails?: Error } = {},
 ) {
 	const log: string[] = [];
 	const warnings: string[] = [];
 	const wasms: (WasmSource | undefined)[] = [];
+	let now = 0;
+	let timers: { at: number; fire: () => void }[] = [];
+	const clock = {
+		pass(ms: number) {
+			now += ms;
+			const due = timers.filter((t) => t.at <= now);
+			timers = timers.filter((t) => t.at > now);
+			for (const t of due) t.fire();
+		},
+		/** Timers neither fired nor cancelled. */
+		pending: () => timers.length,
+	};
+	let release: (err?: Error) => void = () => {};
+	const hung = new Promise<void>((resolve, reject) => {
+		release = (err) => (err ? reject(err) : resolve());
+	});
 	const deps: LoaderDeps<Module, string> = {
 		fetchModule: async (url, { integrity, onProgress }) => {
 			log.push(`fetch ${url}${integrity ? ` ${integrity}` : ""}`);
@@ -40,17 +65,43 @@ function fakes(
 			if (own) throw own;
 			return { from: "own" };
 		},
+		stock: async () => {
+			log.push("import stock");
+			if (stockFails) throw stockFails;
+			return { from: "stock" };
+		},
 		instantiate: async (m, wasm, report) => {
 			log.push("instantiate");
 			wasms.push(wasm);
+			if (ownHangs && m.from === "own") await hung;
 			report({ phase: "prepare" });
 			return `toolkit ${m.from}`;
 		},
-		versionOf: (t) => (t === "toolkit own" ? "6.4.1" : version),
+		after: (ms) => {
+			let timer: { at: number; fire: () => void } | undefined;
+			const done = new Promise<void>((fire) => {
+				timer = { at: now + ms, fire };
+				timers.push(timer);
+			});
+			return { done, cancel: () => (timers = timers.filter((t) => t !== timer)) };
+		},
+		liteDeadlineMs: 20_000,
+		versionOf: (t) => {
+			if (t === "toolkit own") return ownVersion ?? "6.4.1";
+			if (t === "toolkit stock") return "6.4.1";
+			return version;
+		},
 		toolkitVersion: "6.4.1",
 		warn: (m) => warnings.push(m),
 	};
-	return { load: verovioLoader(deps), log, warnings, wasms };
+	return {
+		load: verovioLoader(deps),
+		log,
+		warnings,
+		wasms,
+		clock,
+		releaseOwn: (err?: Error) => release(err),
+	};
 }
 
 const phases = (seen: LoadStatus[]) =>
@@ -115,12 +166,143 @@ describe("verovioLoader", () => {
 		expect(warnings[0]).toContain("Failed to fetch");
 	});
 
-	test("a fallback that fails too is the failure (no second fallback)", async () => {
-		const { load, log } = fakes({}, new Error("own is gone"));
+	test("a fallback that fails too is the failure (no further fallback)", async () => {
+		const { load, log } = fakes({}, new Error("own is gone"), "6.4.1", {
+			stockFails: new Error("stock is gone"),
+		});
 		await expect(
 			load({ verovioUrl: "https://cdn.test/v.mjs", verovioIntegrity: "ok-x" }, () => {}),
-		).rejects.toThrow("own is gone");
+		).rejects.toThrow("stock is gone");
 		expect(log.filter((l) => l.startsWith("fetch")).length).toBe(1);
+		expect(log.filter((l) => l === "import stock").length).toBe(1);
+	});
+
+	test("the package's own is the lighter build: stock is never imported", async () => {
+		const { load, log } = fakes({});
+		expect(await load({}, () => {})).toEqual({ toolkit: "toolkit own", from: {} });
+		expect(log).toEqual(["import own", "instantiate"]);
+	});
+
+	test("a lighter build that wins leaves no deadline timer pending", async () => {
+		const { load, clock } = fakes({});
+		expect((await load({}, () => {})).toolkit).toBe("toolkit own");
+		expect(clock.pending()).toBe(0);
+	});
+
+	test("a lighter build that fails fast leaves no deadline timer pending", async () => {
+		const { load, clock } = fakes({}, new Error("no wasm"));
+		expect((await load({}, () => {})).toolkit).toBe("toolkit stock");
+		expect(clock.pending()).toBe(0);
+	});
+
+	test("a lighter build that fails to import falls back to stock, with one warning", async () => {
+		const { load, log, warnings } = fakes({}, new Error("404 verovio-module.wasm"));
+		expect(await load({}, () => {})).toEqual({ toolkit: "toolkit stock", from: {} });
+		expect(log).toEqual(["import own", "import stock", "instantiate"]);
+		expect(warnings).toEqual([
+			"<barmark-score>: the lighter Verovio was not used (Error: 404 verovio-module.wasm); loading stock Verovio instead",
+		]);
+	});
+
+	test("a lighter build whose Verovio is not the toolkit's falls back to stock", async () => {
+		// `versionOf` answers 6.3.0 for "toolkit own" in this fake.
+		const { load, warnings } = fakes({}, null, "6.4.1", { ownVersion: "6.3.0" });
+		expect((await load({}, () => {})).toolkit).toBe("toolkit stock");
+		expect(warnings[0]).toContain("6.3.0");
+	});
+
+	test("a lighter build that has not instantiated by its deadline falls back to stock", async () => {
+		const { load, log, clock, warnings } = fakes({}, null, "6.4.1", { ownHangs: true });
+		const loading = load({}, () => {});
+		clock.pass(20_000);
+		expect((await loading).toolkit).toBe("toolkit stock");
+		expect(log).toContain("import stock");
+		expect(warnings).toEqual([
+			"<barmark-score>: the lighter Verovio was not used (no answer in 20 s); loading stock Verovio instead",
+		]);
+	});
+
+	test("a lighter build just short of its deadline is still waited for", async () => {
+		const { load, log, clock, releaseOwn } = fakes({}, null, "6.4.1", { ownHangs: true });
+		const loading = load({}, () => {});
+		clock.pass(19_999);
+		releaseOwn();
+		expect((await loading).toolkit).toBe("toolkit own");
+		expect(log).not.toContain("import stock");
+	});
+
+	test("a lighter build that arrives late is ignored: one toolkit, stock's", async () => {
+		const { load, clock, releaseOwn, warnings } = fakes({}, null, "6.4.1", { ownHangs: true });
+		const loading = load({}, () => {});
+		clock.pass(20_000);
+		const loaded = await loading;
+		releaseOwn();
+		await Promise.resolve();
+		expect(loaded.toolkit).toBe("toolkit stock");
+		expect(warnings.length).toBe(1);
+	});
+
+	test("a lighter build that arrives late reports nothing after the load", async () => {
+		const { load, clock, releaseOwn } = fakes({}, null, "6.4.1", { ownHangs: true });
+		const seen: LoadStatus[] = [];
+		const loading = load({}, (s) => seen.push(s));
+		clock.pass(20_000);
+		await loading;
+		const settled = seen.length;
+		releaseOwn();
+		await new Promise((r) => setTimeout(r, 0));
+		expect(seen.length).toBe(settled);
+	});
+
+	test("a lighter build that fails after its deadline is not an unhandled rejection", async () => {
+		const unhandled: unknown[] = [];
+		const onUnhandled = (reason: unknown) => unhandled.push(reason);
+		process.on("unhandledRejection", onUnhandled);
+		try {
+			const { load, clock, releaseOwn, warnings } = fakes({}, null, "6.4.1", { ownHangs: true });
+			const loading = load({}, () => {});
+			clock.pass(20_000);
+			expect((await loading).toolkit).toBe("toolkit stock");
+			releaseOwn(new Error("late failure"));
+			await new Promise((r) => setTimeout(r, 0));
+			expect(unhandled).toEqual([]);
+			expect(warnings.length).toBe(1);
+		} finally {
+			process.off("unhandledRejection", onUnhandled);
+		}
+	});
+
+	test("both of the package's copies failing is stock's failure, naming the lighter build's reason too", async () => {
+		const { load } = fakes({}, new Error("no wasm"), "6.4.1", {
+			stockFails: new Error("stock is gone"),
+		});
+		await expect(load({}, () => {})).rejects.toThrow(
+			/stock is gone.*no wasm|no wasm.*stock is gone/s,
+		);
+	});
+
+	test("both of the package's copies failing says each reason once, with stock's error as the cause", async () => {
+		const stockErr = new Error("stock is gone");
+		const { load } = fakes({}, new Error("no wasm"), "6.4.1", { stockFails: stockErr });
+		const err = await load({}, () => {}).then(
+			() => undefined,
+			(e: unknown) => e as Error,
+		);
+		expect(err?.message.startsWith("stock is gone")).toBe(true);
+		expect(err?.message).not.toContain("Error: Error:");
+		expect(err?.message).toContain("no wasm");
+		expect(err?.cause).toBe(stockErr);
+	});
+
+	test("a url that fails, then a lighter build that fails: stock, and two warnings in order", async () => {
+		const { load, warnings } = fakes({}, new Error("no wasm"));
+		const r = await load(
+			{ verovioUrl: "https://cdn.test/v.mjs", verovioIntegrity: "ok-x" },
+			() => {},
+		);
+		expect(r).toEqual({ toolkit: "toolkit stock", from: {} });
+		expect(warnings.map((w) => w.includes("https://cdn.test/v.mjs"))).toEqual([true, false]);
+		expect(warnings[1]).toContain("the lighter Verovio was not used");
 	});
 
 	test("integrity without a url is ignored: the package's own loads", async () => {
@@ -189,10 +371,13 @@ describe("the separate .wasm and the version check", () => {
 		expect(phases(seen)).toEqual(["download null", "prepare"]);
 	});
 
-	test("the package's own copy gets no wasm source", async () => {
+	test("the package's own copy gets no wasm source, lighter or stock", async () => {
 		const { load, wasms } = fakes({});
 		await load({}, () => {});
 		expect(wasms).toEqual([undefined]);
+		const fallback = fakes({}, null, "6.4.1", { ownVersion: "6.3.0" });
+		await fallback.load({}, () => {});
+		expect(fallback.wasms).toEqual([undefined, undefined]);
 	});
 
 	test("sameVerovio accepts the stock module's own getVersion()", async () => {

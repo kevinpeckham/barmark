@@ -1,7 +1,7 @@
 {
 	"name": "@barmark/score",
 	"version": "0.8.0",
-	"description": "Show a barmark chord chart as a full engraved score: MusicXML from @barmark/musicxml, engraved by Verovio (LGPL-3.0, a dependency loaded unchanged).",
+	"description": "Show a barmark chord chart as a full engraved score: MusicXML from @barmark/musicxml, engraved by Verovio (LGPL-3.0): @barmark/engraver, a modified smaller build, with stock Verovio behind it.",
 	"type": "module",
 	"exports": {
 		".": {
@@ -49,6 +49,7 @@
 		"url": "https://github.com/kevinpeckham/barmark/issues"
 	},
 	"dependencies": {
+		"@barmark/engraver": "workspace:*",
 		"@barmark/musicxml": "workspace:^",
 		"@barmark/render": "workspace:^",
 		"barmark": "workspace:^",
@@ -57,8 +58,5 @@
 	"scripts": {
 		"build": "rm -rf dist && tsc -p tsconfig.build.json",
 		"prepack": "bun run build"
-	},
-	"devDependencies": {
-		"@barmark/engraver": "workspace:*"
 	}
 }

@@ -98,11 +98,13 @@ jobs:
           save-cache: true
   # The renderer in a real browser: isolation from hostile page CSS, themes,
   # reflow on narrow screens and at 400% zoom, the web component, and what a
-  # screen reader hears.
+  # screen reader hears. Score's loading tests also run in Firefox and WebKit,
+  # and the bundler check (a Vite build and an esbuild bundle of the element)
+  # runs here, after the suites' build.
   browser:
     needs: engraver
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -115,8 +117,11 @@ jobs:
         with:
           name: engraver-dist
           path: packages/engraver/dist
-      - run: bunx playwright install --with-deps chromium
+      - run: bunx playwright install --with-deps chromium firefox webkit
       - run: bun run test:browser
+        env:
+          SCORE_BROWSERS: all
+      - run: bun scripts/score-bundlers.ts
   # Each published package must import and run under every Node it supports.
   package:
     runs-on: ubuntu-latest

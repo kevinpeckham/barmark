@@ -469,6 +469,38 @@ What "falls back" means, each a design call:
 
 RELEASING.md step 13's paragraph is unchanged.
 
+#### Corrections from the build, 2026-11-26
+
+What building and measuring phase 2 showed, against the amendment above:
+
+- **Vite keeps stock as a chunk only with `worker: { format: "es" }`.**
+  With its default worker format (`iife`, which cannot split) it inlines
+  stock into the worker, so a default Vite reader downloads more than
+  before: a worker of 8,577 kB (2,536 kB gzipped) with stock inside, plus
+  the `.wasm`, 2,957 kB (995 kB), against stock alone before, about
+  7.4 MB (2.4 MB). With `format: "es"`: worker 213 kB (73 kB), lighter
+  glue 29 kB (11 kB), `.wasm` 2,957 kB (995 kB), and stock a chunk of
+  8,335 kB (2,451 kB) fetched only on a fallback. Vite 8.3.5, the real
+  element. The README tells every Vite user to set the format.
+- **Rollup and webpack 5 were not measured.** "Vite, Rollup and webpack 5
+  … keep stock as a chunk" above is Vite's, with the format set.
+- **"One 404" is three requests.** In a plain esbuild bundle the lighter
+  glue asks for its missing `.wasm` three times (a streaming compile, an
+  ArrayBuffer fetch, then a synchronous request in the worker), each
+  answered 404, and writes four error lines of its own before our one
+  warning; then stock draws the score (Chromium, esbuild 0.28.2).
+- **`LITE_DEADLINE_MS`** (20 seconds) lives in
+  `packages/score/src/verovio.ts`.
+- **A `.wasm` that compiles and then fails gets no fallback.** A copy with
+  one flipped byte instantiates, and engraving then fails; stock is never
+  tried (FINDINGS, 2026-11-26). Whether to retry on stock, or check the
+  package's own copy's digest, is an open question.
+- **Lagging is no longer permitted on `main`.** With the build as score's
+  default, a score released while the build lagged would make every
+  reader download the build, fail the version check, then download stock.
+  `ENGRAVER_LAGGING` is gone; score's tests hold the build's Verovio
+  equal to the toolkit's, and RELEASING.md says so.
+
 ## LGPL and OFL compliance (not legal advice)
 
 A modified Verovio (the `.wasm` and the glue) is distributed on npm and

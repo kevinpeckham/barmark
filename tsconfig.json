@@ -28,6 +28,7 @@
 			"@barmark/listen/stages": ["./packages/listen/src/stages.ts"],
 			"@barmark/fretboard": ["./packages/fretboard/src/index.ts"],
 			"@barmark/lyricsheet": ["./packages/lyricsheet/src/index.ts"],
+			"@barmark/engraver": ["./packages/engraver/src/index.d.mts"],
 			"@barmark/engraver/info": ["./packages/engraver/src/info.ts"]
 		}
 	},

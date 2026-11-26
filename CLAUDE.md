@@ -100,8 +100,10 @@ Fallow, CI, Swamp), the grammar, `examples/`, the scripts and FINDINGS.md.
   for the server; the heavier sibling of `@barmark/render`'s
   `<barmark-chart>`, which never loads Verovio; score's grid view takes
   render's chord-diagram attributes. Depends on `barmark`,
-  `@barmark/render` and `@barmark/musicxml`; Verovio is LGPL-3.0, loaded
-  unchanged from npm
+  `@barmark/render` and `@barmark/musicxml`, and on `@barmark/engraver`
+  (pinned exactly: `workspace:*` here, an exact version when published),
+  which the worker loads first, with stock `verovio` (LGPL-3.0, unchanged,
+  from npm) behind it
   - `src/`: the engraving core, chart to SVG (`engrave.ts`), safe themed
     markup (`markup.ts`), the shared module Worker and its engine
     (`engine.ts`, `worker.ts`), the shadow-root shell and the Grid / Score
@@ -111,7 +113,9 @@ Fallow, CI, Swamp), the grammar, `examples/`, the scripts and FINDINGS.md.
     the server markup, the MusicXML round trip (`round-trip.test.ts`,
     helpers in `tests/helpers/`)
   - `browser/`: Playwright suite (`bun run test:browser`, port 5261) with
-    its own page server and a bundled worker
+    its own page server and a bundled worker; Chromium only, unless
+    `SCORE_BROWSERS=all`, which also runs the `@loading` tests in Firefox
+    and WebKit (as pull-request CI does)
 - `packages/sync/`: `@barmark/sync`, syncing a chart with a recording; the
   timing map (`chartHash`, `checkTimingMap`, `barAt`, `secondsAtBar`) is
   also the `@barmark/sync/timing` subpath, so a map-only reader gets no
@@ -317,6 +321,7 @@ bun run verify:release <pkg>     # version, CHANGELOG, tag, clean main
 bunx varlock run -- swamp workflow run release-check [--input pkg=render]
 cd packages/engraver && bun run compile [--update]   # emsdk build of Verovio; --update re-anchors info.ts
 bun scripts/engraver-equivalence.ts   # stock vs the build, byte-identical SVG
+bun scripts/score-bundlers.ts    # a Vite build and an esbuild bundle of <barmark-score> both engrave (build first; CI's browser job)
 cd site && bun run dev|build|check|test|test:browser   # barmark.dev
 ```
 
@@ -367,6 +372,8 @@ user level for this project's sake.
   `score` depends on `barmark`, `@barmark/render` and `@barmark/musicxml`
   with carets, so a release of any of them may need a `score` patch
   raising that dependency, as `midi` follows `sync`, and then the CLI.
+  It also depends on `@barmark/engraver` and `verovio`, each pinned
+  exactly (`workspace:*` for the engraver in the repo), not with a caret.
   `listen` is not bundled by the CLI: a listen release needs no CLI
   release, and after a `sync` or `barmark` minor, a `listen` patch
   raises the dependency.
