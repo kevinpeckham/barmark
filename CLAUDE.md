@@ -113,7 +113,9 @@ Fallow, CI, Swamp), the grammar, `examples/`, the scripts and FINDINGS.md.
     the server markup, the MusicXML round trip (`round-trip.test.ts`,
     helpers in `tests/helpers/`)
   - `browser/`: Playwright suite (`bun run test:browser`, port 5261) with
-    its own page server and a bundled worker
+    its own page server and a bundled worker; Chromium only, unless
+    `SCORE_BROWSERS=all`, which also runs the `@loading` tests in Firefox
+    and WebKit (as pull-request CI does)
 - `packages/sync/`: `@barmark/sync`, syncing a chart with a recording; the
   timing map (`chartHash`, `checkTimingMap`, `barAt`, `secondsAtBar`) is
   also the `@barmark/sync/timing` subpath, so a map-only reader gets no

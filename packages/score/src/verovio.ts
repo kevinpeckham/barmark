@@ -30,12 +30,6 @@ export const ENGRAVER_WASM_INTEGRITY =
 /** The Verovio the build is made from. */
 export const ENGRAVER_VEROVIO_VERSION = "6.4.1";
 
-/**
- * True only while the build trails a newer stock `VEROVIO_VERSION`: score's
- * decision at a stock upgrade, so it lives here, not in the engraver's API.
- */
-export const ENGRAVER_LAGGING = false;
-
 /** The build's module and `.wasm` sizes, decoded. */
 export const ENGRAVER_MODULE_BYTES = 29_534;
 export const ENGRAVER_WASM_BYTES = 2_956_941;

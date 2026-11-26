@@ -9,6 +9,21 @@ not here.
 
 ## Testing
 
+### Sizes measured on a spike were not the product's (2026-11-26, score)
+
+- **The symptom.** The README first said Vite's worker was about 8 kB.
+  The element's real worker is 213 kB (73 kB gzipped) with
+  `worker: { format: "es" }`.
+- **The cause.** The 8 kB came from a hand-written worker shaped like
+  score's, with its two dynamic imports of the two Verovios and little
+  else; the element's worker also carries the engraving code, barmark and
+  `@barmark/musicxml`.
+- **The rule.** Measure a size with the real element and its real
+  worker, never a spike's stand-in. `scripts/score-bundlers.ts` now builds
+  the element's fixture page and prints the sizes it measured.
+- **Where.** `packages/score/README.md` ("Bundling the worker"),
+  `scripts/score-bundlers.ts`, `packages/score/tests/fixtures/bundlers/`.
+
 ### A `.wasm` with one flipped byte loads, then breaks engraving, with no fallback (2026-11-26, score)
 
 - **The symptom.** A same-size copy of the lighter build's `.wasm` with
@@ -17,8 +32,9 @@ not here.
   the reader sees the "couldn't be drawn" note and stock Verovio is never
   tried.
 - **The cause.** Score falls back to stock only when the lighter build
-  cannot be fetched or compiled. A file cut short fails to compile and does
-  fall back. A flipped byte passes both steps and fails later, in a
+  cannot be fetched or compiled, or has not instantiated within its
+  20-second deadline (`LITE_DEADLINE_MS`). A file cut short fails to
+  compile and does fall back. A flipped byte passes both steps and fails later, in a
   running engine.
 - **What the tests do.** The suite's `badwasm` scenario serves a cut-short
   file, so it exercises the fallback it names. The `verovio-url` tests keep
@@ -32,7 +48,8 @@ not here.
 ### Firefox hands its own warnings to `page.on("console")` (2026-11-26, score)
 
 - **The symptom.** Six loading tests that counted every console warning
-  failed in Firefox and passed in Chromium and WebKit.
+  failed in Firefox and passed in Chromium. WebKit was not run on the VM:
+  it first runs in CI.
 - **The cause.** Playwright's Firefox delivers the engine's own warnings
   as console messages of type `warning`, text `[JavaScript Warning: …]`.
   The tests took them for the element's.
@@ -50,7 +67,9 @@ not here.
 - **Which Verovio.** Observed with Playwright's Firefox on the VM, logging
   the raw console: the message appears with stock `verovio` (the test that
   loads it alone through `verovio-url`, `engine=local`) and with the
-  lighter build (`lite=ok`). Both are built with the old instruction.
+  lighter build (`lite=ok`). That both are built with the old instruction
+  is inferred from the message appearing for both, not read from the
+  binaries.
 - **Not a fault today.** Everything draws. It is a forward risk: if a
   browser drops the old instruction, both Verovios stop compiling there
   until they are rebuilt. The lighter build is ours to rebuild (emsdk);
@@ -1551,6 +1570,69 @@ when two rules each define "first", test a chart that tells them apart,
 and round-trip it through `format`.
 
 ## Tooling
+
+### tsc could not find `@barmark/engraver` without a build (2026-11-26, score)
+
+- **The symptom.** `bun run check` failed in CI's `check` job, which
+  installs and checks with no build: `packages/score/src/worker.ts:
+  error TS2307: Cannot find module '@barmark/engraver'`. `release.yml`'s
+  verify job, which downloads only the engraver's `.mjs` and `.wasm`,
+  would have failed the same way (TS7016). It passed on the VM.
+- **The cause.** The worker's `import("@barmark/engraver")` resolves
+  through the package's `exports` to `dist/index.d.mts`, which only a
+  build writes. The root `tsconfig.json` mapped `@barmark/engraver/info`
+  to its source but not the package root. On the VM
+  `packages/engraver/dist/` had been built, so tsc found the types there.
+- **The fix.** `paths` maps `@barmark/engraver` to
+  `./packages/engraver/src/index.d.mts`, the committed types. A
+  committed-state test in `packages/engraver/tests/ci.test.ts` holds the
+  mapping and the file. Checked in a `git archive` copy with no `dist/`:
+  tsc failed before the mapping and passed after.
+- **A consequence.** esbuild reads the nearest `tsconfig.json`'s `paths`
+  for every file it bundles, so inside this repository it now sent
+  `@barmark/engraver` to that types file: the bundler check's esbuild
+  bundle had no lighter build at all ("createVerovioModule is not
+  defined"), fell back once, and still passed, because the check counted
+  only the warning. The check now asserts that the `.wasm` is requested
+  and gives esbuild an empty tsconfig (`tsconfigRaw: {}`), as a reader's
+  bundle of `node_modules` would have.
+- **The rule.** A "no build" check moves every `dist/` aside, not one,
+  or runs in a fresh `git archive` copy.
+- **Where.** `tsconfig.json`, `packages/engraver/tests/ci.test.ts`,
+  `scripts/score-bundlers.ts`.
+
+### Vite's default worker format inlines stock Verovio (2026-11-26, score)
+
+- **The symptom.** The design said bundlers "keep stock as a chunk", so a
+  reader would download only the lighter build. With Vite's default
+  worker format, a Vite build of the element writes a worker of 8,577 kB
+  (2,536 kB gzipped) with stock Verovio inside, and the lighter build's
+  `.wasm`, 2,957 kB (995 kB gzipped), is fetched as well: more than stock
+  alone before this change, about 7.4 MB (2.4 MB gzipped).
+- **The cause.** Vite builds workers as `iife` by default, and an `iife`
+  worker cannot split, so the dynamic `import("verovio/wasm")` is inlined.
+  Only `worker: { format: "es" }` keeps stock as a chunk: then the worker
+  is 213 kB (73 kB), the lighter glue 29 kB (11 kB), the `.wasm` 2,957 kB
+  (995 kB) and stock a chunk of 8,335 kB (2,451 kB), fetched only on a
+  fallback (Vite 8.3.5, the real element).
+- **The fix.** The README tells every Vite user to set
+  `worker: { format: "es" }`. `scripts/score-bundlers.ts` builds with it
+  and fails if the worker holds stock or the stock chunk is fetched.
+- **Where.** `packages/score/README.md` ("Bundling the worker"),
+  `scripts/score-bundlers.ts`.
+
+### esbuild writes each entry at its path below the entries' common ancestor (2026-11-26, score)
+
+- **The symptom.** Bundling the page and score's `dist/worker.js` as two
+  plain entry points put the worker in a nested folder, and the page,
+  which looks for `worker.js` beside its own module, could not find it.
+- **The cause.** With more than one entry point, esbuild writes each
+  output at the entry's path relative to the entries' lowest common
+  ancestor.
+- **The fix.** The `{ in, out }` entry form names each output: `main`
+  and `worker`, side by side in `outdir`.
+- **Where.** `packages/score/README.md` ("Bundlers and the lighter
+  build"), `scripts/score-bundlers.ts`.
 
 ### The lighter engraver in a plain esbuild bundle: no `.wasm`, and a Node import in the way (2026-11-24, phase 2 check)
 

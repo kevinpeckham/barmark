@@ -131,9 +131,11 @@ build byte-identical). **A Verovio upgrade is one joint pull request:**
 `packages/engraver/build/versions.env` and `info.ts`, score's exact
 `verovio` pin, score's stock constants and its `ENGRAVER_*` literals, so
 `main` never holds the two half-moved. Then release `@barmark/engraver`,
-then `@barmark/score`, then the CLI, then the site. Stock may lead, with
-score's `ENGRAVER_LAGGING = true`, while the build catches up; phase 2
-(the build as score's default) never ships while it lags. **An engraver
+then `@barmark/score`, then the CLI, then the site. The build is
+score's default Verovio, so stock never leads it: a score released with
+the build behind would make every reader download the build, fail the
+version check and then download stock. score's tests hold
+`ENGRAVER_VEROVIO_VERSION` equal to `VEROVIO_VERSION`. **An engraver
 patch** changes only digests: it needs a `@barmark/score` patch (new
 literal values) and a site bump, and the CLI only if score's code changed.
 
@@ -146,7 +148,7 @@ The same scripts run in three places; `<pkg>` is `barmark`, `render`, `musicxml`
 | Lint and typecheck | `bun run check` | ✓ | ✓ | ✓ |
 | Tests | `bun test` | ✓ | ✓ | ✓ |
 | Dead code, duplication, complexity | `bun run fallow` | ✓ | ✓ | ✓ |
-| The renderer in Chromium | `bun run test:browser` | | ✓ | ✓ |
+| The renderer in Chromium | `bun run test:browser` | | ✓ (with score's loading tests in Firefox and WebKit too) | ✓ (Chromium only) |
 | Package contents, Node import | `bun run verify:package <pkg>` | ✓ | ✓ (Node 20, 22, 24) | ✓ |
 | Version, CHANGELOG, tag, dependencies on npm, clean `main` | `bun run verify:release <pkg>` | ✓ | | ✓ (tag = version) |
 | Engraver build and equivalence | `cd packages/engraver && bun run compile`; `bun scripts/engraver-equivalence.ts` | ✓ (`pkg=engraver`) | ✓ (`engraver`; weekly clean rebuild, with `build/source.sh`: a red Monday `ci` run on main is drift in the engraver build: investigate before the next engraver release) | ✓ (`build-engraver`) |
