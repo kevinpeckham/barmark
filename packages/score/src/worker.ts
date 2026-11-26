@@ -77,8 +77,8 @@ export type LoaderDeps<M, T> = {
 	own(): Promise<M>;
 	/** Stock Verovio (`verovio/wasm`), loaded when the lighter build fails or misses its deadline. */
 	stock(): Promise<M>;
-	/** Resolves after `ms` milliseconds (a test passes a fake clock). */
-	after(ms: number): Promise<void>;
+	/** A timer: `done` resolves after `ms` milliseconds, unless `cancel` is called first (a test passes a fake clock). */
+	after(ms: number): { done: Promise<void>; cancel(): void };
 	/** How long the lighter build may take to instantiate before stock is loaded instead. */
 	liteDeadlineMs: number;
 	/**
@@ -140,16 +140,16 @@ export function verovioLoader<M, T>(deps: LoaderDeps<M, T>) {
 	};
 	/**
 	 * The lighter build's toolkit, or why it was not used. Never rejects:
-	 * the race's loser is settled here, and a build that answers after its
-	 * deadline reports nothing more.
+	 * the race's loser is settled here, a build that answers after its
+	 * deadline reports nothing more, and the deadline's timer is cancelled
+	 * once the race is decided.
 	 */
 	const lite = async (report: Report): Promise<{ toolkit: T } | { reason: string }> => {
 		let live = true;
 		const heard: Report = (status) => live && report(status);
 		const seconds = Math.round(deps.liteDeadlineMs / 1000);
-		const deadline = deps
-			.after(deps.liteDeadlineMs)
-			.then(() => ({ reason: `no answer in ${seconds} s` }));
+		const timer = deps.after(deps.liteDeadlineMs);
+		const deadline = timer.done.then(() => ({ reason: `no answer in ${seconds} s` }));
 		const attempt = (async () =>
 			checked(await deps.instantiate(await deps.own(), undefined, heard)))().then(
 			(toolkit) => ({ toolkit }),
@@ -157,6 +157,7 @@ export function verovioLoader<M, T>(deps: LoaderDeps<M, T>) {
 		);
 		const r = await Promise.race([attempt, deadline]);
 		live = false;
+		timer.cancel();
 		return r;
 	};
 	const stock = async (reason: string, report: Report): Promise<T> => {
@@ -247,7 +248,13 @@ const toolkit = toolkitLoader(
 		importBlob,
 		own: () => import("verovio/wasm"),
 		stock: () => import("verovio/wasm"),
-		after: (ms) => new Promise((r) => setTimeout(r, ms)),
+		after: (ms) => {
+			let id: ReturnType<typeof setTimeout> | undefined;
+			const done = new Promise<void>((r) => {
+				id = setTimeout(r, ms);
+			});
+			return { done, cancel: () => clearTimeout(id) };
+		},
 		liteDeadlineMs: LITE_DEADLINE_MS,
 		instantiate: async (m, wasm, report) => {
 			const module = await createModule(m, wasm, report);

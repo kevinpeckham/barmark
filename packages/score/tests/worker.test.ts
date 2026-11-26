@@ -30,12 +30,16 @@ function fakes(
 	const warnings: string[] = [];
 	const wasms: (WasmSource | undefined)[] = [];
 	let now = 0;
-	const timers: { at: number; fire: () => void }[] = [];
+	let timers: { at: number; fire: () => void }[] = [];
 	const clock = {
 		pass(ms: number) {
 			now += ms;
-			for (const t of timers.filter((t) => t.at <= now)) t.fire();
+			const due = timers.filter((t) => t.at <= now);
+			timers = timers.filter((t) => t.at > now);
+			for (const t of due) t.fire();
 		},
+		/** Timers neither fired nor cancelled. */
+		pending: () => timers.length,
 	};
 	let release: (err?: Error) => void = () => {};
 	const hung = new Promise<void>((resolve, reject) => {
@@ -73,10 +77,14 @@ function fakes(
 			report({ phase: "prepare" });
 			return `toolkit ${m.from}`;
 		},
-		after: (ms) =>
-			new Promise<void>((fire) => {
-				timers.push({ at: now + ms, fire });
-			}),
+		after: (ms) => {
+			let timer: { at: number; fire: () => void } | undefined;
+			const done = new Promise<void>((fire) => {
+				timer = { at: now + ms, fire };
+				timers.push(timer);
+			});
+			return { done, cancel: () => (timers = timers.filter((t) => t !== timer)) };
+		},
 		liteDeadlineMs: 20_000,
 		versionOf: (t) => {
 			if (t === "toolkit own") return ownVersion ?? "6.4.1";
@@ -173,6 +181,18 @@ describe("verovioLoader", () => {
 		const { load, log } = fakes({});
 		expect(await load({}, () => {})).toEqual({ toolkit: "toolkit own", from: {} });
 		expect(log).toEqual(["import own", "instantiate"]);
+	});
+
+	test("a lighter build that wins leaves no deadline timer pending", async () => {
+		const { load, clock } = fakes({});
+		expect((await load({}, () => {})).toolkit).toBe("toolkit own");
+		expect(clock.pending()).toBe(0);
+	});
+
+	test("a lighter build that fails fast leaves no deadline timer pending", async () => {
+		const { load, clock } = fakes({}, new Error("no wasm"));
+		expect((await load({}, () => {})).toolkit).toBe("toolkit stock");
+		expect(clock.pending()).toBe(0);
 	});
 
 	test("a lighter build that fails to import falls back to stock, with one warning", async () => {
