@@ -1595,7 +1595,9 @@ and round-trip it through `format`.
   defined"), fell back once, and still passed, because the check counted
   only the warning. The check now asserts that the `.wasm` is requested
   and gives esbuild an empty tsconfig (`tsconfigRaw: {}`), as a reader's
-  bundle of `node_modules` would have.
+  project has. The lesson: a check that counts only the symptom it
+  expects (one warning) can pass for the wrong reason; assert the cause
+  too (here, that the `.wasm` was requested).
 - **The rule.** A "no build" check moves every `dist/` aside, not one,
   or runs in a fresh `git archive` copy.
 - **Where.** `tsconfig.json`, `packages/engraver/tests/ci.test.ts`,

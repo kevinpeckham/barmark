@@ -484,6 +484,11 @@ What building and measuring phase 2 showed, against the amendment above:
   element. The README tells every Vite user to set the format.
 - **Rollup and webpack 5 were not measured.** "Vite, Rollup and webpack 5
   … keep stock as a chunk" above is Vite's, with the format set.
+- **"One 404" is three requests.** In a plain esbuild bundle the lighter
+  glue asks for its missing `.wasm` three times (a streaming compile, an
+  ArrayBuffer fetch, then a synchronous request in the worker), each
+  answered 404, and writes four error lines of its own before our one
+  warning; then stock draws the score (Chromium, esbuild 0.28.2).
 - **`LITE_DEADLINE_MS`** (20 seconds) lives in
   `packages/score/src/verovio.ts`.
 - **A `.wasm` that compiles and then fails gets no fallback.** A copy with

@@ -166,20 +166,24 @@ Bundlers differ in whether they do that, measured on 2026-11-26 with Vite
   '--external:node:*' --outdir=dist`.) `--external:node:*` is needed for
   either Verovio, because the glue code of both has a Node import. Without
   `--splitting` (esbuild's option for separate chunks, not measured here) it
-  inlines both Verovios into the worker bundle, and it emits no `.wasm`, so
-  the lighter build is requested, answered with one 404, and stock Verovio
-  loads after one console warning. The score is drawn. To run the lighter
-  build, copy `node_modules/@barmark/engraver/dist/verovio-module.wasm`
-  beside the worker bundle (pnpm does not put a dependency's own
-  dependency there: add `@barmark/engraver` to your own dependencies at
-  the exact version this package depends on). That changes which Verovio
+  inlines both Verovios into the worker bundle, and it emits no `.wasm`.
+  The lighter build's glue then asks for `verovio-module.wasm` three times
+  (a streaming compile, an ArrayBuffer fetch, then a synchronous request),
+  each answered 404, and logs four error lines of its own; then comes our
+  one warning, and stock Verovio draws the score. (Observed with the
+  `@barmark/engraver` in this repository and esbuild 0.28.2: the count is
+  the glue's, not a promise.) To run the lighter build, copy
+  `node_modules/@barmark/engraver/dist/verovio-module.wasm` beside the
+  worker bundle (pnpm does not put a dependency's own dependency there:
+  add `@barmark/engraver` to your own dependencies at the exact version
+  this package depends on). That changes which Verovio
   runs, not what is downloaded: the bundle still holds stock Verovio, the
   7.4 MB module.
 
   The bundle does not bring the element's font either: the element looks
   for `@barmark/render`'s `fonts/Edwin-Roman.otf` beside where its own
   module was, and without it the chart is set in a fallback face (Georgia
-  or another serif), with nothing in the console but the font's 404.
+  or another serif), and the only sign is the font's 404 in the console.
   Serve that file yourself and register it before the element loads, as
   [`@barmark/render`'s README](../render/README.md#as-a-web-component)
   says: a `<style data-barmark-font>` holding `fontFaceCss(yourUrl)`
