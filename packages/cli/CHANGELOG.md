@@ -6,8 +6,15 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.15.2] - 2026-11-26
+
 ### Changed
 
+- **Uses** @barmark/score 0.9.0. `render --score` engraves as before, with
+  stock Verovio in-process: score's new default for web pages, the lighter
+  `@barmark/engraver` build, is not loaded here. An npm install now brings
+  `@barmark/engraver` as score's dependency, unused by the command; the
+  binaries do not contain it.
 - **The standalone binaries are built with Bun 1.4.5** (was 1.3.14). The
   commands and their output are unchanged.
 
@@ -473,7 +480,8 @@ The first release of the `barmark` command. Uses `barmark` 0.8.0 and
 - **The `barmark` command:** `check`, `format`, `render` and `transpose`
   for `.chart.md` files, on npm and as standalone binaries.
 
-[Unreleased]: https://github.com/kevinpeckham/barmark/compare/cli-v0.15.1...HEAD
+[Unreleased]: https://github.com/kevinpeckham/barmark/compare/cli-v0.15.2...HEAD
+[0.15.2]: https://github.com/kevinpeckham/barmark/compare/cli-v0.15.1...cli-v0.15.2
 [0.15.1]: https://github.com/kevinpeckham/barmark/compare/cli-v0.15.0...cli-v0.15.1
 [0.15.0]: https://github.com/kevinpeckham/barmark/compare/cli-v0.14.1...cli-v0.15.0
 [0.14.1]: https://github.com/kevinpeckham/barmark/compare/cli-v0.14.0...cli-v0.14.1
