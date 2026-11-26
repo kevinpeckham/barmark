@@ -11,7 +11,7 @@ import type {
 	WorkerMessage,
 } from "./engine.js";
 import { engraveChart } from "./engrave.js";
-import { knownSize, VEROVIO_VERSION } from "./verovio.js";
+import { knownSize, LITE_DEADLINE_MS, VEROVIO_VERSION } from "./verovio.js";
 import { createWith, sameVerovio, type WasmSource, wasmHook } from "./wasm.js";
 
 type Toolkit = VerovioToolkit;
@@ -73,8 +73,14 @@ export type LoaderDeps<M, T> = {
 	): Promise<Blob>;
 	/** Imports a downloaded module. */
 	importBlob(blob: Blob): Promise<M>;
-	/** The package's own Verovio, as the bundler placed it. */
+	/** The package's own Verovio, the lighter build (`@barmark/engraver`), as the bundler placed it. */
 	own(): Promise<M>;
+	/** Stock Verovio (`verovio/wasm`), loaded when the lighter build fails or misses its deadline. */
+	stock(): Promise<M>;
+	/** Resolves after `ms` milliseconds (a test passes a fake clock). */
+	after(ms: number): Promise<void>;
+	/** How long the lighter build may take to instantiate before stock is loaded instead. */
+	liteDeadlineMs: number;
 	/**
 	 * Instantiates the module's WebAssembly, reporting `prepare`: the
 	 * toolkit. `wasm`, for a module from a URL, says where a separate
@@ -113,17 +119,17 @@ const glueProgress = (source: VerovioSource, report: Report) => {
 
 /**
  * Loads Verovio from `source`. The package's own copy comes through the
- * bundler, its download unmeasured. A `verovioUrl` is downloaded here,
- * with progress, and imported from a blob; with `verovioIntegrity` its
- * digest is checked first, and a mismatch, a Verovio other than the
- * toolkit's, or any failure falls back to the package's own copy, once,
- * with a warning. Without one, a failure is the failure.
+ * bundler, its download unmeasured: the lighter build first, then, should
+ * it fail, be a Verovio other than the toolkit's, or not have instantiated
+ * within `liteDeadlineMs`, stock Verovio, with a warning. A lighter build
+ * that answers after its deadline is ignored. After stock, a failure is
+ * the failure. A `verovioUrl` is downloaded here, with progress, and
+ * imported from a blob; with `verovioIntegrity` its digest is checked
+ * first, and a mismatch, a Verovio other than the toolkit's, or any
+ * failure falls back to the package's own copy, with a warning. Without
+ * one, a failure is the failure.
  */
 export function verovioLoader<M, T>(deps: LoaderDeps<M, T>) {
-	const own = async (report: Report): Promise<Loaded<T>> => {
-		report(UNMEASURED);
-		return { toolkit: await deps.instantiate(await deps.own(), undefined, report), from: {} };
-	};
 	const checked = (t: T) => {
 		const got = deps.versionOf(t);
 		if (!sameVerovio(got, deps.toolkitVersion))
@@ -131,6 +137,42 @@ export function verovioLoader<M, T>(deps: LoaderDeps<M, T>) {
 				`Verovio ${got} does not match this package's toolkit (${deps.toolkitVersion})`,
 			);
 		return t;
+	};
+	/**
+	 * The lighter build's toolkit, or why it was not used. Never rejects:
+	 * the race's loser is settled here, and a build that answers after its
+	 * deadline reports nothing more.
+	 */
+	const lite = async (report: Report): Promise<{ toolkit: T } | { reason: string }> => {
+		let live = true;
+		const heard: Report = (status) => live && report(status);
+		const seconds = Math.round(deps.liteDeadlineMs / 1000);
+		const deadline = deps
+			.after(deps.liteDeadlineMs)
+			.then(() => ({ reason: `no answer in ${seconds} s` }));
+		const attempt = (async () =>
+			checked(await deps.instantiate(await deps.own(), undefined, heard)))().then(
+			(toolkit) => ({ toolkit }),
+			(err: unknown) => ({ reason: String(err) }),
+		);
+		const r = await Promise.race([attempt, deadline]);
+		live = false;
+		return r;
+	};
+	const stock = async (reason: string, report: Report): Promise<T> => {
+		deps.warn(
+			`<barmark-score>: the lighter Verovio was not used (${reason}); loading stock Verovio instead`,
+		);
+		try {
+			return await deps.instantiate(await deps.stock(), undefined, report);
+		} catch (err) {
+			throw new Error(`${String(err)} (and the lighter Verovio was not used: ${reason})`);
+		}
+	};
+	const own = async (report: Report): Promise<Loaded<T>> => {
+		report(UNMEASURED);
+		const r = await lite(report);
+		return { toolkit: "toolkit" in r ? r.toolkit : await stock(r.reason, report), from: {} };
 	};
 	const fromUrl = async (verovioUrl: string, source: VerovioSource, report: Report) => {
 		const { verovioIntegrity } = source;
@@ -204,6 +246,9 @@ const toolkit = toolkitLoader(
 		fetchModule: (url, options) => fetchModule(url, { ...options, fetch: (u) => fetch(u) }),
 		importBlob,
 		own: () => import("verovio/wasm"),
+		stock: () => import("verovio/wasm"),
+		after: (ms) => new Promise((r) => setTimeout(r, ms)),
+		liteDeadlineMs: LITE_DEADLINE_MS,
 		instantiate: async (m, wasm, report) => {
 			const module = await createModule(m, wasm, report);
 			enableLog(LOG_OFF, module);

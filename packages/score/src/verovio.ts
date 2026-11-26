@@ -46,6 +46,15 @@ const KNOWN_SIZES: ReadonlyMap<string, number> = new Map([
 	[ENGRAVER_WASM_INTEGRITY, ENGRAVER_WASM_BYTES],
 ]);
 
+/**
+ * How long the package's lighter Verovio may take to instantiate before
+ * stock Verovio is loaded instead: 20 s, leaving stock 40 of the load's
+ * 60 (`LOAD_DEADLINE_MS`, engine.ts). It lives here, not beside that
+ * deadline, because the worker reads it and engine.ts names worker.js:
+ * an import back would be a cycle.
+ */
+export const LITE_DEADLINE_MS = 20_000;
+
 /** The decoded size of a known build's file, looked up by its declared digest. */
 export function knownSize(integrity: string | undefined): number | undefined {
 	return integrity === undefined ? undefined : KNOWN_SIZES.get(integrity.trim());
