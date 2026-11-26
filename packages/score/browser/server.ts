@@ -9,6 +9,7 @@
  */
 import { join } from "node:path";
 import { fontFaceCss } from "@barmark/render";
+import type { BunPlugin } from "bun";
 import { renderScoreHtml } from "../src/server.js";
 import { viewOf } from "../src/switch.js";
 import {
@@ -38,20 +39,57 @@ const CHARTS: Record<string, string> = {
 
 /*
  * A document's import map does not reach a module worker, and worker.js
- * imports bare specifiers (verovio/*, barmark, @barmark/musicxml). So
- * /score/worker.js is served as one bundle with all of them inlined (Verovio
- * embeds its wasm, so there is no .wasm to serve), built once here; the page
- * itself loads dist/ through the import map, as render's suite does.
+ * imports bare specifiers (verovio/*, @barmark/engraver, barmark,
+ * @barmark/musicxml). So /score/worker.js is served as one bundle with all
+ * of them inlined, built once here; the page itself loads dist/ through the
+ * import map, as render's suite does. Stock Verovio embeds its wasm; the
+ * lighter build's glue asks for `verovio-module.wasm` beside the worker,
+ * which Bun.build does not emit: the server answers it (WASM_ANSWERS).
  */
-const built = await Bun.build({
-	entrypoints: [join(root, "packages/score/dist/worker.js")],
-	target: "browser",
-	format: "esm",
-});
-const [workerBundle] = built.outputs;
-if (!built.success || !workerBundle)
-	throw new Error(`worker bundle failed: ${built.logs.join("\n")}`);
-const worker = await workerBundle.text();
+async function bundleWorker(plugins: BunPlugin[] = []): Promise<string> {
+	const built = await Bun.build({
+		entrypoints: [join(root, "packages/score/dist/worker.js")],
+		target: "browser",
+		format: "esm",
+		plugins,
+	});
+	const [bundle] = built.outputs;
+	if (!built.success || !bundle) throw new Error(`worker bundle failed: ${built.logs.join("\n")}`);
+	return bundle.text();
+}
+
+const DEADLINE_LINE = "export const LITE_DEADLINE_MS = 20_000;";
+/** The `hang` scenario's lighter-build deadline: short, so a test waits 1.5 s, not 20. */
+const HANG_DEADLINE_LINE = "export const LITE_DEADLINE_MS = 1_500;";
+
+/**
+ * The worker bundle with the lighter build's deadline at 1.5 s: built
+ * dist/verovio.js has its one deadline line rewritten as it is bundled. No
+ * runtime option: the package's own worker has no way to shorten it.
+ */
+async function hangWorker(): Promise<string> {
+	const target = join(root, "packages/score/dist/verovio.js");
+	let replaced = 0;
+	const shortDeadline: BunPlugin = {
+		name: "hang-deadline",
+		setup(build) {
+			build.onLoad({ filter: new RegExp(`${RegExp.escape(target)}$`) }, async ({ path }) => {
+				const text = await Bun.file(path).text();
+				replaced += text.split(DEADLINE_LINE).length - 1;
+				return { contents: text.replace(DEADLINE_LINE, HANG_DEADLINE_LINE), loader: "js" };
+			});
+		},
+	};
+	const bundle = await bundleWorker([shortDeadline]);
+	if (replaced !== 1)
+		throw new Error(
+			`hang worker: expected one "${DEADLINE_LINE}" in ${target}, replaced ${replaced}`,
+		);
+	return bundle;
+}
+
+const worker = await bundleWorker();
+const hang = await hangWorker();
 
 const IMPORTS = {
 	barmark: "/barmark/index.js",
@@ -59,8 +97,11 @@ const IMPORTS = {
 	"@barmark/render": "/render/index.js",
 	"@barmark/render/element": "/render/element.js",
 };
-const ELEMENT = `<script type="importmap">${JSON.stringify({ imports: IMPORTS })}</script>
-<script type="module" src="/score/element.js"></script>`;
+/** The import map and the element's script, from `/score/`, or `/<scenario>/score/` under a scenario's prefix. */
+const elementScripts = (prefix = "") =>
+	`<script type="importmap">${JSON.stringify({ imports: IMPORTS })}</script>
+<script type="module" src="${prefix}/score/element.js"></script>`;
+const ELEMENT = elementScripts();
 
 const html = (head: string, body: string) =>
 	new Response(
@@ -182,14 +223,18 @@ const chartOf = (p: URLSearchParams) => CHARTS[p.get("chart") ?? ""] ?? CHART;
 const scoreElement = (attrs: string, chart: string) => (i: number) =>
 	`<barmark-score id="s${i}"${attrs}><script type="text/barmark">${chart}</script></barmark-score>`;
 
-/** `count` elements (1 to MAX_COUNT, default 1), each with `theme` and the named `engine`'s verovio-url when given. */
-function scorePage(url: URL): Response {
+/**
+ * `count` elements (1 to MAX_COUNT, default 1), each with `theme` and the
+ * named `engine`'s verovio-url when given; under a scenario's `prefix`,
+ * the element (and so its worker) loads from there.
+ */
+function scorePage(url: URL, prefix = ""): Response {
 	const p = url.searchParams;
 	const why = refusal(p);
 	if (why) return new Response(why, { status: 400 });
 	const one = scoreElement(attrsOf(p), chartOf(p));
 	const count = Number(p.get("count") ?? "1");
-	return html(ELEMENT, Array.from({ length: count }, (_, i) => one(i)).join(""));
+	return html(elementScripts(prefix), Array.from({ length: count }, (_, i) => one(i)).join(""));
 }
 
 /** A server-drawn score, in `view` if given; with `element`, the element's script loads and takes it over. */
@@ -199,8 +244,18 @@ const serverPage = (url: URL) =>
 		renderScoreHtml(CHART, { theme: "dark", view: viewOf(url.searchParams.get("view")) }),
 	);
 
+/*
+ * The loading scenarios, a closed list: how each answers the lighter
+ * build's .wasm beside its worker. `ok` serves it as application/wasm;
+ * `nowasm` answers 404; `hang` never answers; `badwasm` serves the
+ * flipped-byte file; `plain` serves it as text/plain.
+ */
+const SCENARIOS = ["ok", "nowasm", "hang", "badwasm", "plain"] as const;
+type Scenario = (typeof SCENARIOS)[number];
+
 const STATIC: [string, string][] = [
 	["/score/", "packages/score/dist/"],
+	...SCENARIOS.map((s): [string, string] => [`/${s}/score/`, "packages/score/dist/"]),
 	// element.js finds Edwin at ../../render/fonts/ from itself, as under node_modules/@barmark/.
 	["/render/fonts/", "packages/render/fonts/"],
 	["/render/", "packages/render/dist/"],
@@ -249,6 +304,27 @@ badWasm[badWasm.length - 1] = (badWasm.at(-1) ?? 0) ^ 0xff;
 const WASM = "application/wasm";
 const engraverModule = () => new Response(engraver.module, { headers: { "content-type": JS } });
 
+const WASM_ANSWERS: Record<Scenario, () => Response | Promise<Response>> = {
+	ok: () => new Response(engraver.wasm, { headers: { "content-type": WASM } }),
+	nowasm: () => new Response("not found", { status: 404 }),
+	// A promise that never settles: the request is never answered.
+	hang: () => new Promise<Response>(() => {}),
+	badwasm: () => new Response(badWasm, { headers: { "content-type": WASM } }),
+	plain: () => new Response(engraver.wasm, { headers: { "content-type": "text/plain" } }),
+};
+
+/** Each scenario's page, worker and .wasm, under `/<scenario>/`; only `hang`'s worker differs. */
+const scenarioRoutes = Object.fromEntries(
+	SCENARIOS.flatMap((s) => [
+		[`/${s}/score`, (req: Request) => scorePage(new URL(req.url), `/${s}`)],
+		[
+			`/${s}/score/worker.js`,
+			new Response(s === "hang" ? hang : worker, { headers: { "content-type": JS } }),
+		],
+		[`/${s}/score/verovio-module.wasm`, WASM_ANSWERS[s]],
+	]),
+);
+
 const server = Bun.serve({
 	// Loopback only: nothing off this machine needs the suite's pages.
 	hostname: "127.0.0.1",
@@ -257,6 +333,9 @@ const server = Bun.serve({
 		"/score": (req) => scorePage(new URL(req.url)),
 		"/server": (req) => serverPage(new URL(req.url)),
 		"/score/worker.js": new Response(worker, { headers: { "content-type": JS } }),
+		// The package's own copy, the lighter build, asks for this beside the worker: the `ok` answer.
+		"/score/verovio-module.wasm": WASM_ANSWERS.ok,
+		...scenarioRoutes,
 		"/verovio/verovio-module.mjs": () =>
 			new Response(Bun.file(verovio), { headers: { "content-type": JS } }),
 		"/verovio-gz/verovio-module.mjs": () =>
