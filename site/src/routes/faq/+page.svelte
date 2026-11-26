@@ -350,8 +350,8 @@ onMount(() => {
 					<code class={code}>@barmark/engraver</code> (<a href={LINKS.engraverNotice} class={link}>its
 					notice</a>, <a href={LINKS.engraverRelease} class={link}>its source</a>), which draws the same
 					score in under half the download. This site serves that smaller build from its own origin, and
-					stock Verovio only if the smaller build cannot load. None of Verovio's code is copied into Barmark's packages,
-					which stay MIT. The CLI's standalone binaries carry Verovio unmodified, with its licence in the
+					stock Verovio only if the smaller build cannot load. The score package holds none of Verovio's
+					code, and Barmark's own code stays MIT. The CLI's standalone binaries carry Verovio unmodified, with its licence in the
 					release.
 				</p>
 			</section>
