@@ -167,7 +167,8 @@ export function verovioLoader<M, T>(deps: LoaderDeps<M, T>) {
 		try {
 			return await deps.instantiate(await deps.stock(), undefined, report);
 		} catch (err) {
-			throw new Error(`${String(err)} (and the lighter Verovio was not used: ${reason})`);
+			const why = err instanceof Error ? err.message : String(err);
+			throw new Error(`${why} (and the lighter Verovio was not used: ${reason})`, { cause: err });
 		}
 	};
 	const own = async (report: Report): Promise<Loaded<T>> => {

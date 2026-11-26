@@ -332,6 +332,8 @@ const server = Bun.serve({
 	// Loopback only: nothing off this machine needs the suite's pages.
 	hostname: "127.0.0.1",
 	port: Number(process.env.PORT ?? 5261),
+	// No idle timeout: Bun's default (10 s) would close `hang`'s unanswered request.
+	idleTimeout: 0,
 	routes: {
 		"/score": (req) => scorePage(new URL(req.url)),
 		"/server": (req) => serverPage(new URL(req.url)),

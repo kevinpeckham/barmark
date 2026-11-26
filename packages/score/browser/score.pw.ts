@@ -630,6 +630,7 @@ test("@loading a replacement worker loads the lighter build again", async ({ pag
 	// and a fresh one loads the Verovio the first one loaded, the lighter build.
 	await setText(el, "# Short\n| C | G |\n");
 	await expect(el.locator(".bms-score svg g.measure")).toHaveCount(2, { timeout: 20_000 });
+	await expect(el.locator(".bms-note")).toHaveCount(0);
 	expect(seen.workers).toBe(2);
 	expectLighter(seen, 2);
 });

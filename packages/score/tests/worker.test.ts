@@ -281,6 +281,19 @@ describe("verovioLoader", () => {
 		);
 	});
 
+	test("both of the package's copies failing says each reason once, with stock's error as the cause", async () => {
+		const stockErr = new Error("stock is gone");
+		const { load } = fakes({}, new Error("no wasm"), "6.4.1", { stockFails: stockErr });
+		const err = await load({}, () => {}).then(
+			() => undefined,
+			(e: unknown) => e as Error,
+		);
+		expect(err?.message.startsWith("stock is gone")).toBe(true);
+		expect(err?.message).not.toContain("Error: Error:");
+		expect(err?.message).toContain("no wasm");
+		expect(err?.cause).toBe(stockErr);
+	});
+
 	test("a url that fails, then a lighter build that fails: stock, and two warnings in order", async () => {
 		const { load, warnings } = fakes({}, new Error("no wasm"));
 		const r = await load(
