@@ -370,10 +370,21 @@ test("the indeterminate bar stands still with reduced motion", async ({ page }) 
 
 const LOCAL = "/verovio/verovio-module.mjs";
 
-/** The page's console warnings, the worker's among them, from now on. */
+/**
+ * The page's console warnings, the worker's among them, from now on. Firefox
+ * also reports its own engine's warnings here, prefixed "[JavaScript Warning:"
+ * (it says the engraver's WebAssembly uses the deprecated exception-handling
+ * `try`): they are the browser's, not the element's, so they are left out.
+ */
 function consoleWarnings(page: Page): string[] {
 	const warnings: string[] = [];
-	page.on("console", (m) => m.type() === "warning" && warnings.push(m.text()));
+	page.on(
+		"console",
+		(m) =>
+			m.type() === "warning" &&
+			!m.text().startsWith("[JavaScript Warning:") &&
+			warnings.push(m.text()),
+	);
 	return warnings;
 }
 
