@@ -501,6 +501,26 @@ What building and measuring phase 2 showed, against the amendment above:
   `ENGRAVER_LAGGING` is gone; score's tests hold the build's Verovio
   equal to the toolkit's, and RELEASING.md says so.
 
+#### The five conditions, on the day of the release, 2026-11-26
+
+1. **Required checks through one engraver release: met.**
+   `@barmark/engraver` 0.1.2 went through pull request #365 with the
+   required `engraver` and `package (N, engraver)` checks green, and its
+   release run rebuilt it from clean. The weekly clean rebuild was green on
+   16 and 23 November.
+2. **Chromium, Firefox and WebKit: met.** Pull request #364's `browser`
+   job ran the twelve loading tests in all three (60 tests passed with
+   Chromium's whole suite); #365's did again. WebKit's first run was #364.
+3. **Two weeks on barmark.dev with no load failure: time met, absence not
+   shown.** The site has loaded the build from jsDelivr since 2026-11-11,
+   and it loads and engraves today, but nothing on the site records a
+   failure, so "none" rests on no report having reached us.
+4. **Two bundlers: met, as amended.** `scripts/score-bundlers.ts` runs in
+   CI: a Vite 8.3.5 build engraves with the build and never fetches stock;
+   a plain esbuild 0.28.2 bundle falls back once and engraves.
+5. **Kevin agrees: met.** "proceed with releases", 2026-11-26, told of the
+   default Vite worker format's larger download first.
+
 ## LGPL and OFL compliance (not legal advice)
 
 A modified Verovio (the `.wasm` and the glue) is distributed on npm and

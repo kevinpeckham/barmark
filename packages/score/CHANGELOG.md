@@ -6,6 +6,8 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-11-26
+
 ### Changed
 
 - **The worker's own copy of Verovio is now `@barmark/engraver`**, the
@@ -368,7 +370,8 @@ First release.
   needs no config; Vite 7 needs `optimizeDeps.exclude` and
   `worker.format: "es"`.
 
-[Unreleased]: https://github.com/kevinpeckham/barmark/compare/score-v0.8.0...HEAD
+[Unreleased]: https://github.com/kevinpeckham/barmark/compare/score-v0.9.0...HEAD
+[0.9.0]: https://github.com/kevinpeckham/barmark/compare/score-v0.8.0...score-v0.9.0
 [0.8.0]: https://github.com/kevinpeckham/barmark/compare/score-v0.7.0...score-v0.8.0
 [0.7.0]: https://github.com/kevinpeckham/barmark/compare/score-v0.6.3...score-v0.7.0
 [0.6.3]: https://github.com/kevinpeckham/barmark/compare/score-v0.6.2...score-v0.6.3
