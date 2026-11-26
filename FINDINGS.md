@@ -9,6 +9,55 @@ not here.
 
 ## Testing
 
+### A `.wasm` with one flipped byte loads, then breaks engraving, with no fallback (2026-11-26, score)
+
+- **The symptom.** A same-size copy of the lighter build's `.wasm` with
+  its last byte flipped (the byte is in the data section) compiles and
+  instantiates. Engraving then fails with "table index is out of bounds":
+  the reader sees the "couldn't be drawn" note and stock Verovio is never
+  tried.
+- **The cause.** Score falls back to stock only when the lighter build
+  cannot be fetched or compiled. A file cut short fails to compile and does
+  fall back. A flipped byte passes both steps and fails later, in a
+  running engine.
+- **What the tests do.** The suite's `badwasm` scenario serves a cut-short
+  file, so it exercises the fallback it names. The `verovio-url` tests keep
+  the flipped-byte file, where `verovio-wasm-integrity` catches it before
+  it is compiled.
+- **Open, for Kevin.** Retry on stock after an engraving failure, or check
+  the package's own copy's digest before using it? Neither is done.
+- **Where.** `packages/score/browser/server.ts` (the `badwasm` scenario),
+  `packages/score/browser/score.pw.ts`.
+
+### Firefox hands its own warnings to `page.on("console")` (2026-11-26, score)
+
+- **The symptom.** Six loading tests that counted every console warning
+  failed in Firefox and passed in Chromium and WebKit.
+- **The cause.** Playwright's Firefox delivers the engine's own warnings
+  as console messages of type `warning`, text `[JavaScript Warning: …]`.
+  The tests took them for the element's.
+- **The fix.** `consoleWarnings` in `packages/score/browser/score.pw.ts`
+  skips messages with that prefix.
+- **The rule.** Count messages by our own prefix, or skip the engine's;
+  never "any warning".
+
+### Firefox says the WebAssembly `try` instruction is deprecated, for both Verovios (2026-11-26, score)
+
+- **The symptom.** When Firefox compiles Verovio it reports: "The
+  WebAssembly exception handling 'try' instruction is deprecated and should
+  no longer be used. Please recompile to use the 'try_table' instruction
+  instead."
+- **Which Verovio.** Observed with Playwright's Firefox on the VM, logging
+  the raw console: the message appears with stock `verovio` (the test that
+  loads it alone through `verovio-url`, `engine=local`) and with the
+  lighter build (`lite=ok`). Both are built with the old instruction.
+- **Not a fault today.** Everything draws. It is a forward risk: if a
+  browser drops the old instruction, both Verovios stop compiling there
+  until they are rebuilt. The lighter build is ours to rebuild (emsdk);
+  stock is upstream's.
+- **Where.** `consoleWarnings` in `packages/score/browser/score.pw.ts`
+  keeps these out of the tests' counts.
+
 ### Balanced timing runs still spike: measure again before failing (2026-11-24, render)
 
 - **The symptom.** "melody off: a long melody replayed many times is read

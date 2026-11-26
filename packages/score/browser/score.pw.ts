@@ -373,8 +373,9 @@ const LOCAL = "/verovio/verovio-module.mjs";
 /**
  * The page's console warnings, the worker's among them, from now on. Firefox
  * also reports its own engine's warnings here, prefixed "[JavaScript Warning:"
- * (it says the engraver's WebAssembly uses the deprecated exception-handling
- * `try`): they are the browser's, not the element's, so they are left out.
+ * (it says a Verovio's WebAssembly, stock's and the lighter build's alike, uses
+ * the deprecated exception-handling `try`): they are the browser's, not the
+ * element's, so they are left out.
  */
 function consoleWarnings(page: Page): string[] {
 	const warnings: string[] = [];
