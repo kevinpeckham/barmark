@@ -57,8 +57,11 @@ Points that are easy to miss:
   X.Y.Z (LGPL-3.0-only), made by barmark, not by the Verovio project;
   Corresponding Source attached." Afterwards check the release lists
   `verovio-X.Y.Z-source.tar.gz`, `engraver-build-X.Y.Z.tar.gz` and the
-  five licence files. Then a `score` patch (new `ENGRAVER_*` literals) and
-  a site bump. Every release run builds the engraver first
+  five licence files. The engraver's own pull request also updates score's
+  `ENGRAVER_CDN_URL` and `ENGRAVER_CDN_INTEGRITY` literals and both READMEs'
+  snippets (score's tests hold them to `info.ts`); then a `score` release
+  (it pins the engraver exactly), the CLI, and a site bump that raises the
+  footer's `engraver-vX.Y.Z` links. Every release run builds the engraver first
   (`build-engraver`): about 5 minutes on an `engraver-v*` tag or a
   dist-cache miss, which compile from clean; otherwise a cache restore and
   the gate. Start the next release only when the previous has left the

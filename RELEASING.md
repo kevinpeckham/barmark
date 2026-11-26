@@ -136,8 +136,15 @@ score's default Verovio, so stock never leads it: a score released with
 the build behind would make every reader download the build, fail the
 version check and then download stock. score's tests hold
 `ENGRAVER_VEROVIO_VERSION` equal to `VEROVIO_VERSION`. **An engraver
-patch** changes only digests: it needs a `@barmark/score` patch (new
-literal values) and a site bump, and the CLI only if score's code changed.
+patch** changes only digests. Its own pull request also updates score's
+`ENGRAVER_CDN_URL` and `ENGRAVER_CDN_INTEGRITY` literals and the two
+READMEs' snippets, under score's `[Unreleased]`: score's tests hold the
+literals to the engraver's `info.ts`, so CI fails without them. Then a
+`@barmark/score` release, since score pins the engraver exactly and a
+reader gets the new build only through it; the CLI, as after any score
+release; and the site, whose footer links name the engraver release the
+site serves (`site/src/lib/site.ts`; a site test holds them to score's
+dependency).
 
 ## Checks
 

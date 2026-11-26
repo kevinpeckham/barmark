@@ -1571,6 +1571,44 @@ and round-trip it through `format`.
 
 ## Tooling
 
+### `gh run watch` failed on a GitHub 500 while the run passed (2026-11-26, releases)
+
+- **The symptom.** `gh run watch <id> --exit-status` exited 1 on the
+  engraver release's pull request, with every check green. Its last line:
+  `failed to get annotations: HTTP 500
+  (https://api.github.com/repos/…/check-runs/…/annotations)`.
+- **The cause.** The watch fetches each finished job's annotations, and
+  one of those requests failed on GitHub's side. The exit status was the
+  watch's own failure, not the run's.
+- **The fix.** A wait reads the run's own answer: loop on `gh run view
+  <id> --json status,conclusion` until `completed` (or `waiting`, for a
+  release run that stops at the `npm` approval), then read the
+  conclusion. Never take `gh run watch`'s exit status alone as the
+  result.
+- **Where.** The phase 2 releases (engraver 0.1.2, score 0.9.0, CLI
+  0.15.2), 2026-11-26.
+
+### An engraver release's pull request needs score's literals (2026-11-26, releases)
+
+- **The symptom.** RELEASING.md said an engraver patch "needs a
+  `@barmark/score` patch (new literal values)" afterwards. Read that way,
+  the engraver's pull request would fail CI: bumping the engraver changes
+  the banner, so `info.ts`'s module digest and `CDN_URL` change, and
+  `packages/score/tests/engraver.test.ts` holds score's `ENGRAVER_*`
+  literals to them.
+- **The fix.** The engraver's pull request carries score's two literals
+  and both READMEs' snippets too, under score's `[Unreleased]`; score is
+  released next. RELEASING.md and the release skill say so now.
+- **Also learnt.** A Vercel preview is behind Vercel's sign-in; the
+  Vercel connector's share link reads it. Checked there before the site
+  merged: the lighter build's `.wasm` is served as `application/wasm`,
+  compressed, from `/_app/immutable/workers/assets/`, and the home page's
+  score drew with it in under half a second, with no request to jsDelivr
+  and none for stock's chunk. www.barmark.dev did the same after the
+  merge.
+- **Where.** `RELEASING.md` ("`@barmark/engraver`"),
+  `.claude/skills/release/SKILL.md`.
+
 ### tsc could not find `@barmark/engraver` without a build (2026-11-26, score)
 
 - **The symptom.** `bun run check` would have failed in CI's `check`
