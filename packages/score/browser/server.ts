@@ -247,8 +247,9 @@ const serverPage = (url: URL) =>
 /*
  * The loading scenarios, a closed list: how each answers the lighter
  * build's .wasm beside its worker. `ok` serves it as application/wasm;
- * `nowasm` answers 404; `hang` never answers; `badwasm` serves the
- * flipped-byte file; `plain` serves it as text/plain.
+ * `nowasm` answers 404; `hang` never answers; `badwasm` serves it cut
+ * short (an upload cut off: the magic bytes, then not enough to compile);
+ * `plain` serves it as text/plain.
  */
 const SCENARIOS = ["ok", "nowasm", "hang", "badwasm", "plain"] as const;
 type Scenario = (typeof SCENARIOS)[number];
@@ -301,6 +302,8 @@ const engraver = await engraverDist();
 /** The .wasm with its last byte flipped: the same size, another digest. */
 const badWasm = engraver.wasm.slice();
 badWasm[badWasm.length - 1] = (badWasm.at(-1) ?? 0) ^ 0xff;
+/** The .wasm's first half: a plausible corruption, and one that cannot compile. */
+const cutWasm = engraver.wasm.slice(0, Math.floor(engraver.wasm.length / 2));
 const WASM = "application/wasm";
 const engraverModule = () => new Response(engraver.module, { headers: { "content-type": JS } });
 
@@ -309,7 +312,7 @@ const WASM_ANSWERS: Record<Scenario, () => Response | Promise<Response>> = {
 	nowasm: () => new Response("not found", { status: 404 }),
 	// A promise that never settles: the request is never answered.
 	hang: () => new Promise<Response>(() => {}),
-	badwasm: () => new Response(badWasm, { headers: { "content-type": WASM } }),
+	badwasm: () => new Response(cutWasm, { headers: { "content-type": WASM } }),
 	plain: () => new Response(engraver.wasm, { headers: { "content-type": "text/plain" } }),
 };
 

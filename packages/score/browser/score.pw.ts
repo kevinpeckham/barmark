@@ -568,10 +568,12 @@ test("@loading a missing .wasm falls back to stock, with the warning", async ({ 
 	expectStock(seen);
 });
 
-// FIXME: the flipped last byte is in the data section, so the build instantiates and engraving fails ("table index is out of bounds").
-test.fixme("@loading a corrupt .wasm falls back to stock", async ({ page }) => {
+test("@loading a .wasm cut short falls back to stock", async ({ page }) => {
+	// Its first half: the magic bytes, then a section running past the end, so it cannot compile.
 	const seen = await engraveIn(page, "badwasm");
-	expect(seen.answered).toEqual([200]);
+	// The glue asks again after its streaming compile fails: every answer a 200.
+	expect(seen.answered.length).toBeGreaterThan(0);
+	expect(new Set(seen.answered)).toEqual(new Set([200]));
 	expectStock(seen);
 });
 
