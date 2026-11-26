@@ -6,6 +6,22 @@ package uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.1.2] - 2026-11-26
+
+`@barmark/score` 0.9.0 depends on this package and loads it as its own
+copy of Verovio, with stock Verovio behind it.
+
+### Changed
+
+- **The module's banner names 0.1.2**, so `verovio-module.mjs` has a new
+  sha384 (`MODULE_INTEGRITY` and `CDN_URL` in `@barmark/engraver/info`).
+  Its size and the `.wasm` are unchanged, and it draws what 0.1.1 drew.
+- **The README says how the build is loaded now**: as `@barmark/score`
+  0.9.0's own copy, or from a CDN with `verovio-url` as before; and what
+  two bundlers do with the `.wasm`, measured with Vite 8.3.5 and esbuild
+  0.28.2 (Vite emits it; a plain esbuild bundle needs
+  `--external:node:*` and a copy of the file).
+
 ## [0.1.1] - 2026-11-10
 
 The first version on npm. 0.1.0 was tagged but never published: its
@@ -36,6 +52,7 @@ tests before the build (fixed in the workflow, not in the package).
   package. The README states the build's limits: other fonts, footers,
   custom tunings and the importers left out.
 
-[Unreleased]: https://github.com/kevinpeckham/barmark/compare/engraver-v0.1.1...HEAD
+[Unreleased]: https://github.com/kevinpeckham/barmark/compare/engraver-v0.1.2...HEAD
+[0.1.2]: https://github.com/kevinpeckham/barmark/compare/engraver-v0.1.1...engraver-v0.1.2
 [0.1.1]: https://github.com/kevinpeckham/barmark/compare/engraver-v0.1.0...engraver-v0.1.1
 [0.1.0]: https://github.com/kevinpeckham/barmark/releases/tag/engraver-v0.1.0

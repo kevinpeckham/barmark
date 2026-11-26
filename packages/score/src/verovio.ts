@@ -17,11 +17,11 @@ export const VEROVIO_CDN_INTEGRITY =
  * tests/engraver.test.ts holds them to `packages/engraver/src/info.ts`.
  */
 export const ENGRAVER_CDN_URL =
-	"https://cdn.jsdelivr.net/npm/@barmark/engraver@0.1.1/dist/verovio-module.mjs";
+	"https://cdn.jsdelivr.net/npm/@barmark/engraver@0.1.2/dist/verovio-module.mjs";
 
 /** The build's module digest, for `verovio-integrity`. */
 export const ENGRAVER_CDN_INTEGRITY =
-	"sha384-klTppHZB0IPzdIOfSXNr8CbdhJU+1yp5eltjmgp8W3E8uhht5dlRy1mwrBSnmKJO";
+	"sha384-guD8WAQkcCqUJcXtGVcVvWcvygqOUVxOOkZ8/DhYWqASRYgRTgd2Y/B7qtSDv6W8";
 
 /** Its `.wasm`'s digest, for `verovio-wasm-integrity`. */
 export const ENGRAVER_WASM_INTEGRITY =

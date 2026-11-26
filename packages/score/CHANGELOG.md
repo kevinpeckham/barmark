@@ -14,6 +14,9 @@ package uses [semantic versioning](https://semver.org/).
   Verovio loads instead, once, with one console warning: `<barmark-score>:
   the lighter Verovio was not used (<reason>); loading stock Verovio
   instead`. Stock `verovio` stays a dependency.
+- **The lighter build is `@barmark/engraver` 0.1.2.** `ENGRAVER_CDN_URL`
+  and `ENGRAVER_CDN_INTEGRITY` name it (its module's banner changed, so its
+  digest did; the `.wasm` and its digest did not).
 - **Bundlers:** set `worker: { format: "es" }` in every Vite, Vite 8
   included. Measured with Vite 8.3.5, the default `iife` worker is
   about 8.6 MB (2.5 MB gzipped) with both Verovios inside, and the `.wasm`
