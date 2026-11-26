@@ -289,8 +289,8 @@ jsDelivr:
 
 ```html
 <barmark-score
-	verovio-url="https://cdn.jsdelivr.net/npm/@barmark/engraver@0.1.1/dist/verovio-module.mjs"
-	verovio-integrity="sha384-klTppHZB0IPzdIOfSXNr8CbdhJU+1yp5eltjmgp8W3E8uhht5dlRy1mwrBSnmKJO"
+	verovio-url="https://cdn.jsdelivr.net/npm/@barmark/engraver@0.1.2/dist/verovio-module.mjs"
+	verovio-integrity="sha384-guD8WAQkcCqUJcXtGVcVvWcvygqOUVxOOkZ8/DhYWqASRYgRTgd2Y/B7qtSDv6W8"
 	verovio-wasm-integrity="sha384-cBBw1xx6xHEb/I7QDrSFDgImfzzvZVvwru055NG6QbY1zHI/FFLQHjlKdtH7pr5i"
 	src="/charts/peaceful-dreams.chart.md"
 ></barmark-score>

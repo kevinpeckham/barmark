@@ -32,22 +32,30 @@ choice recorded in the design (Q1).
 
 ### With `<barmark-score>`
 
-`@barmark/score` 0.4.0 and later load this build when you point it there,
-with a digest for each file:
+`@barmark/score` 0.9.0 and later depend on this package and load it as
+their own copy of Verovio: nothing to configure. If the build cannot be
+loaded (its `.wasm` is missing or does not compile, or it has not answered
+in 20 seconds), the score warns once in the console and loads stock Verovio
+instead. What each bundler then downloads, and what a Vite or an esbuild
+user must set, is in
+[score's README](../score/README.md#bundlers-and-the-lighter-build).
+
+To serve the build from a CDN instead (`@barmark/score` 0.4.0 and later),
+point the element there, with a digest for each file:
 
 ```html
 <barmark-score
 	src="/charts/peaceful-dreams.chart.md"
-	verovio-url="https://cdn.jsdelivr.net/npm/@barmark/engraver@0.1.1/dist/verovio-module.mjs"
-	verovio-integrity="sha384-klTppHZB0IPzdIOfSXNr8CbdhJU+1yp5eltjmgp8W3E8uhht5dlRy1mwrBSnmKJO"
+	verovio-url="https://cdn.jsdelivr.net/npm/@barmark/engraver@0.1.2/dist/verovio-module.mjs"
+	verovio-integrity="sha384-guD8WAQkcCqUJcXtGVcVvWcvygqOUVxOOkZ8/DhYWqASRYgRTgd2Y/B7qtSDv6W8"
 	verovio-wasm-integrity="sha384-cBBw1xx6xHEb/I7QDrSFDgImfzzvZVvwru055NG6QbY1zHI/FFLQHjlKdtH7pr5i"
 ></barmark-score>
 ```
 
 The worker fetches `verovio-module.wasm` from beside `verovio-url` and
 checks it against `verovio-wasm-integrity` before it runs. If either file
-fails its check, the score falls back to the package's own stock Verovio
-with a warning. `@barmark/score` exports these three values as
+fails its check, the score falls back to the package's own copy with a
+warning. `@barmark/score` exports these three values as
 `ENGRAVER_CDN_URL`, `ENGRAVER_CDN_INTEGRITY` and `ENGRAVER_WASM_INTEGRITY`,
 and this package as `CDN_URL`, `MODULE_INTEGRITY` and `WASM_INTEGRITY` from
 `@barmark/engraver/info`.
@@ -68,10 +76,23 @@ toolkit.loadData(musicXml);
 const svg = toolkit.renderToSVG(1);
 ```
 
-A bundler emits `verovio-module.wasm` beside the chunk, and the module finds
-it with `new URL("verovio-module.wasm", import.meta.url)`. To fetch the
-WebAssembly yourself, pass Emscripten's `instantiateWasm` hook:
+The module finds its WebAssembly with
+`new URL("verovio-module.wasm", import.meta.url)`. To fetch the WebAssembly
+yourself, pass Emscripten's `instantiateWasm` hook:
 `createVerovioModule({ instantiateWasm(imports, receive) { … } })`.
+
+### Bundlers
+
+Measured on 2026-11-26 with Vite 8.3.5 and esbuild 0.28.2:
+
+- **Vite** follows that `new URL(…)` and emits `verovio-module.wasm` beside
+  the chunk. Nothing to do. (webpack 5 follows it too by its
+  documentation; it was not measured here.)
+- **Plain esbuild** stops on the glue's `node:module` import, which only
+  Node runs, unless you pass `--external:node:*`; and it emits no `.wasm`,
+  so the browser's request for it gets a 404. Copy
+  `node_modules/@barmark/engraver/dist/verovio-module.wasm` beside your
+  bundle, or pass `instantiateWasm` and fetch it from where you serve it.
 
 `@barmark/engraver/info` holds the build's facts as constants:
 `VEROVIO_VERSION`, `VEROVIO_COMMIT`, `MODULE_BYTES`, `WASM_BYTES`,
@@ -152,4 +173,4 @@ libraries' notices are in [THIRD-PARTY.md](THIRD-PARTY.md).
 
 The Corresponding Source, Verovio's source at the pinned commit with
 `build/` and the licence files, is attached to each release:
-https://github.com/kevinpeckham/barmark/releases/tag/engraver-v0.1.1.
+https://github.com/kevinpeckham/barmark/releases/tag/engraver-v0.1.2.

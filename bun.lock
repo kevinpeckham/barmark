@@ -43,7 +43,7 @@
     },
     "packages/engraver": {
       "name": "@barmark/engraver",
-      "version": "0.1.1",
+      "version": "0.1.2",
       "devDependencies": {
         "verovio": "6.4.1",
       },
