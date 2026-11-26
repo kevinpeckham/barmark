@@ -14,8 +14,8 @@ npm install @barmark/score
 - **`<barmark-chart>`** from [`@barmark/render`](../render/) is the light
   one: the bar grid, no Verovio.
 - **`<barmark-score>`** from this package is the heavier one: the same grid,
-  plus a Grid / Score switch to a full score. Verovio (about 7 MB, 2.4 MB
-  gzipped) loads on the first switch to the score, never on page load
+  plus a Grid / Score switch to a full score. Verovio (the lighter build,
+  about 3 MB, 1.0 MB gzipped) loads on the first switch to the score, never on page load
   unless you ask (`preload`), and one copy serves every score on the page.
 
 Use `<barmark-chart>` when the grid is enough.
@@ -78,19 +78,24 @@ That is the pattern Vite and webpack follow, so a bundler finds the worker
 and Verovio for you.
 
 Vite 8 (and Vite+) draws a score with no config, in `vite dev` or a
-build. But Vite builds workers as `iife` by default, which cannot split, so
-the worker's fallback copy of Verovio is inlined into it: with
-`verovio-url`, a reader then downloads Verovio twice, inside the worker and
-from your URL. Set `worker: { format: "es" }` and Verovio becomes a chunk
-of its own, fetched only if your URL fails. Vite 7 needs that line in any
-case (an `iife` worker cannot load Verovio on demand) and one more: its dev
-pre-bundler moves the element away from the worker and the font it finds
-by URL.
+build, but set `worker: { format: "es" }`, or a reader downloads more than
+before. Vite builds workers as `iife` by default, which cannot split, so
+the worker holds both Verovios: measured with Vite 8.3.5, the worker file is
+8,372 kB (2,464 kB gzipped), with stock Verovio and the lighter build's glue
+inside it, and the lighter build's 2,957 kB `.wasm` (1,007 kB gzipped) is
+fetched as well. Stock alone was about 7.4 MB (2.4 MB gzipped). With
+`format: "es"` the worker is 8 kB, the lighter glue 29 kB and the `.wasm`
+2,957 kB (1,007 kB gzipped); stock is a separate 8,335 kB chunk, fetched
+only on a fallback. (With `verovio-url` an `iife` worker also makes a reader
+download Verovio twice, inside the worker and from your URL.) Vite 7 needs
+that line too (an `iife` worker cannot load Verovio on demand) and one
+more: its dev pre-bundler moves the element away from the worker and the
+font it finds by URL.
 
 ```js
 // vite.config.js
 export default {
-	worker: { format: "es" }, // Vite 8 with verovio-url; Vite 7 always
+	worker: { format: "es" }, // every Vite
 	optimizeDeps: { exclude: ["@barmark/score"] }, // Vite 7 only (harmless on Vite 8)
 };
 ```
@@ -100,7 +105,7 @@ worker's bare imports (`verovio/esm`, `barmark`, `@barmark/musicxml`)
 fail. Serve a bundled `worker.js` at the package's URL. `verovio-url` can
 then point at a Verovio module you host (for example
 `verovio/dist/verovio-module.mjs` from the `verovio` package) instead of
-bundling the 7 MB inside the worker; it only changes where that module
+bundling Verovio inside the worker; it only changes where that module
 comes from. The URL is resolved against the page and must be http(s);
 anything else is refused and the score is not drawn. Its Verovio must be
 the version this package's toolkit is (`VEROVIO_VERSION`, 6.4.1): any
@@ -121,15 +126,20 @@ The lighter build's `.wasm` has to reach the browser beside the worker.
 Bundlers differ in whether they do that, measured on 2026-11-24:
 
 - **Vite 8** emits the `.wasm` beside the worker chunk, and the lighter
-  build engraves. Rollup and webpack 5 follow the same
-  `new URL(..., import.meta.url)` pattern and also emit the file.
+  build engraves. Set `worker: { format: "es" }` to get the smaller
+  download (see above). Only Vite 8 was measured.
+- **webpack 5** follows `new URL("...", import.meta.url)` natively, by its
+  documentation; it was not measured here. Plain Rollup needs a plugin for
+  such assets.
 - **esbuild** (`--bundle --format=esm`) needs `--external:node:*` for either
-  Verovio, because the glue code of both has a Node import. It emits no
-  `.wasm`, so the lighter build is requested, answered with one 404, and
-  stock Verovio loads after one console warning. The score is drawn, but
-  with the 7 MB copy. To keep the lighter build, copy
-  `node_modules/@barmark/engraver/dist/verovio-module.wasm` beside the
-  worker bundle.
+  Verovio, because the glue code of both has a Node import. Without
+  `--splitting` (esbuild's option for separate chunks, not measured here) it
+  inlines both Verovios into the worker bundle, and it emits no `.wasm`, so
+  the lighter build is requested, answered with one 404, and stock Verovio
+  loads after one console warning. The score is drawn. To run the lighter
+  build, copy `node_modules/@barmark/engraver/dist/verovio-module.wasm`
+  beside the worker bundle. That changes which Verovio runs, not what is
+  downloaded: the bundle still holds stock's 7 MB.
 
 `verovio-url` works with any of them (see above): it names the module to
 load first, and the package's own copy is still the fallback.
@@ -386,8 +396,8 @@ is the export unchanged.
 
 This package is MIT. It uses [Verovio](https://github.com/rism-digital/verovio),
 which is LGPL-3.0-only. The worker loads, by default, `@barmark/engraver`,
-a modified build of Verovio (LGPL-3.0-only), an ordinary npm dependency
-of this package. Its
+a modified build of Verovio 6.4.1 (LGPL-3.0-only), made by barmark, not by
+the Verovio project, and an ordinary npm dependency of this package. Its
 [`NOTICE.md`](../engraver/NOTICE.md) says what was changed, and the
 Corresponding Source for each release is attached to its GitHub release.
 Stock `verovio` is also a dependency, loaded unchanged: it runs if the
@@ -395,11 +405,17 @@ lighter build does not, and supplies the toolkit class. Verovio's code is
 never copied into this package. barmark's own code stays MIT. Verovio © Laurent Pugin and others; its licence text is
 [COPYING.LESSER](https://github.com/rism-digital/verovio/blob/develop/COPYING.LESSER).
 
-A site that bundles the worker ships Verovio inside its bundle. Keeping
-Verovio a separate file (through `verovio-url`, or the bundler's own
-chunk) and keeping its notice is the easy way to meet the LGPL. If it is
-bundled into one file with the worker instead (Vite's default `iife`
-worker format does this), credit it with its copyright and licence, host
-or link the LGPL and GPL texts, and link your site's source so a visitor
-can rebuild it with another Verovio; barmark.dev does all three in its
-footer. This is not legal advice.
+A site that bundles the worker ships Verovio inside its bundle: by default
+`@barmark/engraver`'s modified build, and stock Verovio too unless the
+bundler splits it into a chunk of its own. Keeping each as a separate file
+(through `verovio-url`, or the bundler's own chunk) and keeping its notice
+is the easy way to meet the LGPL. For the lighter build the notice to keep
+is `@barmark/engraver`'s
+[`NOTICE.md`](../engraver/NOTICE.md), and the source to point at is its
+Corresponding Source, attached to each `engraver-v*` GitHub release, not
+only Verovio's own repository. If either is bundled into one file with the
+worker instead (Vite's default `iife` worker format does this), credit it
+with its copyright and licence, host or link the LGPL and GPL texts, and
+link your site's source and the Corresponding Source so a visitor can
+rebuild it with another Verovio; barmark.dev does all three in its footer.
+This is not legal advice.

@@ -13,7 +13,7 @@ export const VEROVIO_CDN_INTEGRITY =
 
 /**
  * `@barmark/engraver`, the smaller Verovio build, on jsDelivr: for `verovio-url`.
- * These are literals, so a site that doesn't opt in never installs the build;
+ * These are literals, so importing them does not load the build;
  * tests/engraver.test.ts holds them to `packages/engraver/src/info.ts`.
  */
 export const ENGRAVER_CDN_URL =
